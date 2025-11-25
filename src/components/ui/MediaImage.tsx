@@ -23,7 +23,7 @@ export const MediaImage: React.FC<MediaImageProps> = ({
   ...props
 }) => {
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_, setIsLoading] = useState(true);
 
   // Extract URI from source
   const uri = typeof source === 'object' && source !== null && 'uri' in source
