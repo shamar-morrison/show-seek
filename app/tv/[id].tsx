@@ -127,8 +127,6 @@ export default function TVShowDetailScreen() {
           <MediaImage
             source={{ uri: backdropUrl }}
             style={styles.backdrop}
-            width={width}
-            height={width * 0.562}
             contentFit="cover"
           />
           <LinearGradient
@@ -149,8 +147,6 @@ export default function TVShowDetailScreen() {
             <MediaImage
               source={{ uri: posterUrl }}
               style={styles.poster}
-              width={120}
-              height={180}
               contentFit="cover"
             />
           </View>
@@ -246,8 +242,6 @@ export default function TVShowDetailScreen() {
                         <MediaImage
                           source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
                           style={styles.providerLogo}
-                          width={60}
-                          height={60}
                           contentFit="contain"
                         />
                         <Text style={styles.providerName} numberOfLines={1}>
@@ -276,8 +270,6 @@ export default function TVShowDetailScreen() {
                         uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium)
                       }}
                       style={styles.castImage}
-                      width={80}
-                      height={80}
                       contentFit="cover"
                     />
                     <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
@@ -304,8 +296,6 @@ export default function TVShowDetailScreen() {
                         uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small)
                       }}
                       style={styles.similarPoster}
-                      width={100}
-                      height={150}
                       contentFit="cover"
                     />
                     <Text style={styles.similarTitle} numberOfLines={2}>{similar.name}</Text>
@@ -347,8 +337,6 @@ export default function TVShowDetailScreen() {
                     <MediaImage
                       source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}
                       style={styles.photoImage}
-                      width={200}
-                      height={113}
                       contentFit="cover"
                     />
                   </TouchableOpacity>

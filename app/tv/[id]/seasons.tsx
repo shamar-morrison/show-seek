@@ -108,8 +108,6 @@ export default function TVSeasonsScreen() {
                 <MediaImage
                   source={{ uri: posterUrl }}
                   style={styles.seasonPoster}
-                  width={92}
-                  height={138}
                   contentFit="cover"
                 />
                 
@@ -149,8 +147,6 @@ export default function TVSeasonsScreen() {
                         <MediaImage
                           source={{ uri: stillUrl }}
                           style={styles.episodeStill}
-                          width={width - 32}
-                          height={(width - 32) * 0.563}
                           contentFit="cover"
                         />
                         

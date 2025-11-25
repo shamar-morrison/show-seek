@@ -125,8 +125,6 @@ export default function PersonDetailScreen() {
           <MediaImage
             source={{ uri: profileUrl }}
             style={styles.profileImage}
-            width={140}
-            height={210}
             contentFit="cover"
           />
           
@@ -194,8 +192,6 @@ export default function PersonDetailScreen() {
                       uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small)
                     }}
                     style={styles.creditPoster}
-                    width={100}
-                    height={150}
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{movie.title}</Text>
@@ -239,8 +235,6 @@ export default function PersonDetailScreen() {
                       uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small)
                     }}
                     style={styles.creditPoster}
-                    width={100}
-                    height={150}
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{show.name}</Text>

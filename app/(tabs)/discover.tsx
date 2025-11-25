@@ -135,8 +135,6 @@ export default function DiscoverScreen() {
         <MediaImage
           source={{ uri: posterUrl }}
           style={styles.resultPoster}
-          width={92}
-          height={138}
           contentFit="cover"
         />
         <View style={styles.resultInfo}>

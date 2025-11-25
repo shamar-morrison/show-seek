@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -18,9 +17,6 @@ import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { Image } from 'expo-image';
-
-const { width } = Dimensions.get('window');
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -139,8 +135,6 @@ export default function MovieDetailScreen() {
           <MediaImage
             source={{ uri: backdropUrl }}
             style={styles.backdrop}
-            width={width}
-            height={width * 0.562}
             contentFit="cover"
           />
           <LinearGradient
@@ -161,8 +155,6 @@ export default function MovieDetailScreen() {
             <MediaImage
               source={{ uri: posterUrl }}
               style={styles.poster}
-              width={120}
-              height={180}
               contentFit="cover"
             />
           </View>
@@ -270,8 +262,6 @@ export default function MovieDetailScreen() {
                         <MediaImage
                           source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
                           style={styles.providerLogo}
-                          width={60}
-                          height={60}
                           contentFit="contain"
                         />
                         <Text style={styles.providerName} numberOfLines={1}>
@@ -300,9 +290,8 @@ export default function MovieDetailScreen() {
                         uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium)
                       }}
                       style={styles.castImage}
-                      width={80}
-                      height={80}
                       contentFit="cover"
+                      placeholderType='person'
                     />
                     <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
                     <Text style={styles.characterName} numberOfLines={1}>{actor.character}</Text>
@@ -328,8 +317,6 @@ export default function MovieDetailScreen() {
                         uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small)
                       }}
                       style={styles.similarPoster}
-                      width={100}
-                      height={150}
                       contentFit="cover"
                     />
                     <Text style={styles.similarTitle} numberOfLines={2}>{similar.title}</Text>
@@ -371,8 +358,6 @@ export default function MovieDetailScreen() {
                     <MediaImage
                       source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}
                       style={styles.photoImage}
-                      width={200}
-                      height={113}
                       contentFit="cover"
                     />
                   </TouchableOpacity>

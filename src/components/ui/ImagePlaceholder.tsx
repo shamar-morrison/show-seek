@@ -1,90 +1,44 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Rect, Path } from 'react-native-svg';
+import { User, Tv, Film } from 'lucide-react-native';
 import { COLORS } from '@/src/constants/theme';
 
+export type PlaceholderType = 'person' | 'tv' | 'movie';
+
 interface ImagePlaceholderProps {
-  width: number;
-  height: number;
+  type?: PlaceholderType;
 }
 
 /**
- * A custom SVG placeholder for images that fail to load or are missing.
- * Displays a film icon on a dark background.
+ * A placeholder for images that fail to load or are missing.
+ * Displays an appropriate Lucide icon based on the type.
+ * Fills its container with a background color and centers the icon.
  */
-export const ImagePlaceholder: React.FC<ImagePlaceholderProps> = ({ width, height }) => {
-  // Calculate icon size based on the smaller dimension (max 60% of smaller side)
-  const iconSize = Math.min(width, height) * 0.4;
-  const iconX = (width - iconSize) / 2;
-  const iconY = (height - iconSize) / 2;
+export const ImagePlaceholder = ({ 
+  type = 'movie' 
+}: ImagePlaceholderProps) => {
+  const IconComponent = type === 'person' ? User : type === 'tv' ? Tv : Film;
 
   return (
-    <View style={[styles.container, { width, height }]}>
-      <Svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-        {/* Background */}
-        <Rect width={width} height={height} fill={COLORS.surface} />
-
-        {/* Film/Media Icon */}
-        <Path
-          d={`M ${iconX + iconSize * 0.2} ${iconY + iconSize * 0.1}
-              L ${iconX + iconSize * 0.8} ${iconY + iconSize * 0.1}
-              C ${iconX + iconSize * 0.85} ${iconY + iconSize * 0.1} ${iconX + iconSize * 0.9} ${iconY + iconSize * 0.15} ${iconX + iconSize * 0.9} ${iconY + iconSize * 0.2}
-              L ${iconX + iconSize * 0.9} ${iconY + iconSize * 0.8}
-              C ${iconX + iconSize * 0.9} ${iconY + iconSize * 0.85} ${iconX + iconSize * 0.85} ${iconY + iconSize * 0.9} ${iconX + iconSize * 0.8} ${iconY + iconSize * 0.9}
-              L ${iconX + iconSize * 0.2} ${iconY + iconSize * 0.9}
-              C ${iconX + iconSize * 0.15} ${iconY + iconSize * 0.9} ${iconX + iconSize * 0.1} ${iconY + iconSize * 0.85} ${iconX + iconSize * 0.1} ${iconY + iconSize * 0.8}
-              L ${iconX + iconSize * 0.1} ${iconY + iconSize * 0.2}
-              C ${iconX + iconSize * 0.1} ${iconY + iconSize * 0.15} ${iconX + iconSize * 0.15} ${iconY + iconSize * 0.1} ${iconX + iconSize * 0.2} ${iconY + iconSize * 0.1}
-              Z
-              M ${iconX + iconSize * 0.25} ${iconY + iconSize * 0.35}
-              L ${iconX + iconSize * 0.75} ${iconY + iconSize * 0.35}
-              L ${iconX + iconSize * 0.75} ${iconY + iconSize * 0.65}
-              L ${iconX + iconSize * 0.25} ${iconY + iconSize * 0.65}
-              Z`}
-          fill={COLORS.textSecondary}
-          opacity={0.3}
-        />
-
-        {/* Film strip holes */}
-        <Rect
-          x={iconX + iconSize * 0.15}
-          y={iconY + iconSize * 0.25}
-          width={iconSize * 0.05}
-          height={iconSize * 0.1}
-          fill={COLORS.surface}
-          opacity={0.8}
-        />
-        <Rect
-          x={iconX + iconSize * 0.15}
-          y={iconY + iconSize * 0.65}
-          width={iconSize * 0.05}
-          height={iconSize * 0.1}
-          fill={COLORS.surface}
-          opacity={0.8}
-        />
-        <Rect
-          x={iconX + iconSize * 0.8}
-          y={iconY + iconSize * 0.25}
-          width={iconSize * 0.05}
-          height={iconSize * 0.1}
-          fill={COLORS.surface}
-          opacity={0.8}
-        />
-        <Rect
-          x={iconX + iconSize * 0.8}
-          y={iconY + iconSize * 0.65}
-          width={iconSize * 0.05}
-          height={iconSize * 0.1}
-          fill={COLORS.surface}
-          opacity={0.8}
-        />
-      </Svg>
+    <View style={[styles.container, type === 'person' && { borderRadius: 9999 }]}>
+      <IconComponent
+        size={48}
+        color={COLORS.textSecondary}
+        opacity={0.3}
+        strokeWidth={1.5}
+        
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
+    height: '100%',
     backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
 });
