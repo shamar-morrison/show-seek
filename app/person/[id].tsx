@@ -101,7 +101,10 @@ export default function PersonDetailScreen() {
 
   const age = calculateAge(person.birthday, person.deathday);
 
-  console.log(person, 'person')
+  // console.log(person, 'person')
+  console.log(age, 'age')
+  console.log(person.birthday, 'birthday')
+  console.log(person.place_of_birth, 'place_of_birth')
 
   return (
     <View style={styles.container}>
@@ -133,7 +136,7 @@ export default function PersonDetailScreen() {
             )}
 
             <View style={styles.detailsContainer}>
-              {person.birthday && person.birthday.trim() !== '' && (
+              {person.birthday && (
                 <View style={styles.detailItem}>
                   <Calendar size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
@@ -143,7 +146,7 @@ export default function PersonDetailScreen() {
                 </View>
               )}
               
-              {person.place_of_birth && person.place_of_birth.trim() !== '' && (
+              {person.place_of_birth && (
                 <View style={styles.detailItem}>
                   <MapPin size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>{person.place_of_birth}</Text>
