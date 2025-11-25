@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { Star, Compass } from 'lucide-react-native';
+import { Star, Compass, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -20,6 +20,7 @@ type MediaType = 'movie' | 'tv';
 
 export default function DiscoverScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('movie');
+  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     sortBy: 'popularity.desc',
     genre: null,
@@ -111,6 +112,15 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discover</Text>
+        <TouchableOpacity
+          style={styles.filterToggle}
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <SlidersHorizontal
+            size={24}
+            color={showFilters ? COLORS.primary : COLORS.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.typeToggleContainer}>
@@ -132,11 +142,13 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      <DiscoverFilters
-        filters={filters}
-        onChange={setFilters}
-        mediaType={mediaType}
-      />
+      {showFilters && (
+        <DiscoverFilters
+          filters={filters}
+          onChange={setFilters}
+          mediaType={mediaType}
+        />
+      )}
 
       {discoverQuery.isLoading ? (
         <View style={styles.centerContainer}>
@@ -166,6 +178,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.m,
     borderBottomWidth: 1,
@@ -175,6 +190,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  filterToggle: {
+    padding: SPACING.s,
   },
   typeToggleContainer: {
     flexDirection: 'row',
