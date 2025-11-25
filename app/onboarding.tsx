@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, useWindowDimensions, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions, TouchableOpacity, Image } from 'react-native';
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/auth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
@@ -29,7 +30,7 @@ const ONBOARDING_DATA = [
 
 export default function OnboardingScreen() {
   const { width, height } = useWindowDimensions();
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlashListRef<any>>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { completeOnboarding } = useAuth();
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <FlashList
         ref={flatListRef}
         data={ONBOARDING_DATA}
         horizontal

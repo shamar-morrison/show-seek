@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE } from '@/src/constants/theme';
@@ -52,7 +53,7 @@ export default function HomeScreen() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {isLoading ? (
-        <FlatList
+        <FlashList
           horizontal
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
@@ -61,7 +62,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.listContent}
         />
       ) : (
-        <FlatList
+        <FlashList
           horizontal
           data={movies || []}
           renderItem={({ item }) => <MovieCard movie={item} />}
@@ -77,7 +78,7 @@ export default function HomeScreen() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {isLoading ? (
-        <FlatList
+        <FlashList
           horizontal
           data={[1, 2, 3, 4]}
           renderItem={() => <MovieCardSkeleton />}
@@ -86,7 +87,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.listContent}
         />
       ) : (
-        <FlatList
+        <FlashList
           horizontal
           data={shows || []}
           renderItem={({ item }) => <TVShowCard show={item} />}

@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  FlatList,
   TouchableOpacity,
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
@@ -167,7 +167,7 @@ export default function SearchScreen() {
           <Text style={styles.emptySubtext}>Try adjusting your search</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={searchResultsQuery.data?.results || []}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
