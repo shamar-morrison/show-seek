@@ -160,6 +160,29 @@ export interface PersonDetails extends Person {
   also_known_as: string[];
 }
 
+export interface ImageData {
+  aspect_ratio: number;
+  file_path: string;
+  height: number;
+  width: number;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface WatchProvider {
+  logo_path: string;
+  provider_id: number;
+  provider_name: string;
+  display_priority: number;
+}
+
+export interface WatchProviderResults {
+  link?: string;
+  flatrate?: WatchProvider[];
+  rent?: WatchProvider[];
+  buy?: WatchProvider[];
+}
+
 export const tmdbApi = {
   getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week') => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
@@ -338,5 +361,33 @@ export const tmdbApi = {
       },
     });
     return data;
+  },
+
+  getMovieImages: async (id: number) => {
+    const { data } = await tmdbClient.get<{ backdrops: ImageData[]; posters: ImageData[] }>(
+      `/movie/${id}/images`
+    );
+    return data;
+  },
+
+  getTVImages: async (id: number) => {
+    const { data } = await tmdbClient.get<{ backdrops: ImageData[]; posters: ImageData[] }>(
+      `/tv/${id}/images`
+    );
+    return data;
+  },
+
+  getMovieWatchProviders: async (id: number) => {
+    const { data } = await tmdbClient.get<{ results: { US?: WatchProviderResults } }>(
+      `/movie/${id}/watch/providers`
+    );
+    return data.results.US || null;
+  },
+
+  getTVWatchProviders: async (id: number) => {
+    const { data } = await tmdbClient.get<{ results: { US?: WatchProviderResults } }>(
+      `/tv/${id}/watch/providers`
+    );
+    return data.results.US || null;
   },
 };

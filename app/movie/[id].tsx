@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -13,9 +13,10 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Star, Clock, Calendar, Plus, Play } from 'lucide-react-native';
+import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 
 const { width } = Dimensions.get('window');
 
@@ -23,6 +24,7 @@ export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const movieId = Number(id);
+  const [trailerModalVisible, setTrailerModalVisible] = useState(false);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -33,6 +35,30 @@ export default function MovieDetailScreen() {
   const creditsQuery = useQuery({
     queryKey: ['movie', movieId, 'credits'],
     queryFn: () => tmdbApi.getMovieCredits(movieId),
+    enabled: !!movieId,
+  });
+
+  const videosQuery = useQuery({
+    queryKey: ['movie', movieId, 'videos'],
+    queryFn: () => tmdbApi.getMovieVideos(movieId),
+    enabled: !!movieId,
+  });
+
+  const similarQuery = useQuery({
+    queryKey: ['movie', movieId, 'similar'],
+    queryFn: () => tmdbApi.getSimilarMovies(movieId),
+    enabled: !!movieId,
+  });
+
+  const watchProvidersQuery = useQuery({
+    queryKey: ['movie', movieId, 'watch-providers'],
+    queryFn: () => tmdbApi.getMovieWatchProviders(movieId),
+    enabled: !!movieId,
+  });
+
+  const imagesQuery = useQuery({
+    queryKey: ['movie', movieId, 'images'],
+    queryFn: () => tmdbApi.getMovieImages(movieId),
     enabled: !!movieId,
   });
 
@@ -58,6 +84,13 @@ export default function MovieDetailScreen() {
   const movie = movieQuery.data;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const director = creditsQuery.data?.crew.find(c => c.job === 'Director');
+  const videos = videosQuery.data || [];
+  const trailer = videos.find(v => v.type === 'Trailer' && v.official) || 
+                  videos.find(v => v.type === 'Trailer') ||
+                  videos[0];
+  const similarMovies = similarQuery.data?.results.slice(0, 10) || [];
+  const watchProviders = watchProvidersQuery.data;
+  const images = imagesQuery.data;
 
   const backdropUrl = getImageUrl(movie.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -67,6 +100,29 @@ export default function MovieDetailScreen() {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h}h ${m}m`;
+  };
+
+  const formatMoney = (amount: number) => {
+    if (!amount) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const handleTrailerPress = () => {
+    if (trailer) {
+      setTrailerModalVisible(true);
+    }
+  };
+
+  const handleCastPress = (personId: number) => {
+    router.push(`/person/${personId}` as any);
+  };
+
+  const handleMoviePress = (id: number) => {
+    router.push(`/movie/${id}` as any);
   };
 
   return (
@@ -136,7 +192,11 @@ export default function MovieDetailScreen() {
           </View>
 
           <View style={styles.actionButtons}>
-             <TouchableOpacity style={styles.playButton}>
+             <TouchableOpacity 
+               style={[styles.playButton, !trailer && styles.disabledButton]} 
+               onPress={handleTrailerPress}
+               disabled={!trailer}
+             >
                 <Play size={20} color={COLORS.white} fill={COLORS.white} />
                 <Text style={styles.playButtonText}>Watch Trailer</Text>
              </TouchableOpacity>
@@ -144,6 +204,32 @@ export default function MovieDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
              </TouchableOpacity>
           </View>
+
+          {/* Budget & Revenue */}
+          {(movie.budget > 0 || movie.revenue > 0) && (
+            <View style={styles.financialContainer}>
+              {movie.budget > 0 && (
+                <View style={styles.financialItem}>
+                  <DollarSign size={16} color={COLORS.textSecondary} />
+                  <View>
+                    <Text style={styles.financialLabel}>Budget</Text>
+                    <Text style={styles.financialValue}>{formatMoney(movie.budget)}</Text>
+                  </View>
+                </View>
+              )}
+              {movie.revenue > 0 && (
+                <View style={styles.financialItem}>
+                  <DollarSign size={16} color={COLORS.success} />
+                  <View>
+                    <Text style={styles.financialLabel}>Revenue</Text>
+                    <Text style={[styles.financialValue, { color: COLORS.success }]}>
+                      {formatMoney(movie.revenue)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.overview}>{movie.overview}</Text>
@@ -155,12 +241,41 @@ export default function MovieDetailScreen() {
             </View>
           )}
 
+          {/* Watch Providers */}
+          {watchProviders && (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+            <>
+              <Text style={styles.sectionTitle}>Where to Watch</Text>
+              {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
+                <View style={styles.providersSection}>
+                  <Text style={styles.providerType}>Streaming</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {watchProviders.flatrate.map(provider => (
+                      <View key={provider.provider_id} style={styles.providerCard}>
+                        <Image
+                          source={{ uri: getImageUrl(provider.logo_path, '/w92') || '' }}
+                          style={styles.providerLogo}
+                        />
+                        <Text style={styles.providerName} numberOfLines={1}>
+                          {provider.provider_name}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
+
           {cast.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Cast</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
                 {cast.map(actor => (
-                  <View key={actor.id} style={styles.castCard}>
+                  <TouchableOpacity 
+                    key={actor.id} 
+                    style={styles.castCard}
+                    onPress={() => handleCastPress(actor.id)}
+                  >
                     <Image 
                       source={{ 
                         uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium) || 'https://via.placeholder.com/100' 
@@ -169,7 +284,47 @@ export default function MovieDetailScreen() {
                     />
                     <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
                     <Text style={styles.characterName} numberOfLines={1}>{actor.character}</Text>
-                  </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {/* Similar Movies */}
+          {similarMovies.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Similar Movies</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarList}>
+                {similarMovies.map(similar => (
+                  <TouchableOpacity 
+                    key={similar.id} 
+                    style={styles.similarCard}
+                    onPress={() => handleMoviePress(similar.id)}
+                  >
+                    <Image 
+                      source={{ 
+                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small) || 'https://via.placeholder.com/185x278' 
+                      }} 
+                      style={styles.similarPoster}
+                    />
+                    <Text style={styles.similarTitle} numberOfLines={2}>{similar.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {/* Photos */}
+          {images && images.backdrops && images.backdrops.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
+                {images.backdrops.slice(0, 10).map((image, index) => (
+                  <Image 
+                    key={index}
+                    source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) || '' }} 
+                    style={styles.photoImage}
+                  />
                 ))}
               </ScrollView>
             </>
@@ -178,6 +333,13 @@ export default function MovieDetailScreen() {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+
+      <VideoPlayerModal
+        visible={trailerModalVisible}
+        onClose={() => setTrailerModalVisible(false)}
+        videoKey={trailer?.key || null}
+        videoTitle={trailer?.name}
+      />
     </View>
   );
 }
@@ -259,7 +421,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: SPACING.l,
-    marginTop: -SPACING.m, // Pull up content slightly
+    marginTop: -SPACING.m,
   },
   title: {
     fontSize: FONT_SIZE.xxl,
@@ -316,6 +478,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     gap: SPACING.s,
   },
+  disabledButton: {
+    opacity: 0.5,
+  },
   playButtonText: {
     color: COLORS.white,
     fontWeight: 'bold',
@@ -328,11 +493,36 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
   },
+  financialContainer: {
+    flexDirection: 'row',
+    gap: SPACING.xl,
+    marginBottom: SPACING.l,
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  financialItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
+  financialLabel: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    marginBottom: 2,
+  },
+  financialValue: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+    fontWeight: 'bold',
+  },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.white,
     marginBottom: SPACING.s,
+    marginTop: SPACING.m,
   },
   overview: {
     color: COLORS.textSecondary,
@@ -350,6 +540,31 @@ const styles = StyleSheet.create({
   },
   value: {
     color: COLORS.text,
+  },
+  providersSection: {
+    marginBottom: SPACING.l,
+  },
+  providerType: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    marginBottom: SPACING.s,
+    fontWeight: '600',
+  },
+  providerCard: {
+    alignItems: 'center',
+    marginRight: SPACING.m,
+    width: 60,
+  },
+  providerLogo: {
+    width: 50,
+    height: 50,
+    borderRadius: BORDER_RADIUS.s,
+    marginBottom: SPACING.xs,
+  },
+  providerName: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    textAlign: 'center',
   },
   castList: {
     marginHorizontal: -SPACING.l,
@@ -375,5 +590,34 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     textAlign: 'center',
+  },
+  similarList: {
+    marginHorizontal: -SPACING.l,
+    paddingHorizontal: SPACING.l,
+  },
+  similarCard: {
+    width: 120,
+    marginRight: SPACING.m,
+  },
+  similarPoster: {
+    width: 120,
+    height: 180,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.s,
+  },
+  similarTitle: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  photosList: {
+    marginHorizontal: -SPACING.l,
+    paddingHorizontal: SPACING.l,
+  },
+  photoImage: {
+    width: 240,
+    height: 135,
+    borderRadius: BORDER_RADIUS.m,
+    marginRight: SPACING.m,
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -13,9 +13,10 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Star, Calendar, Plus, Play, Layers } from 'lucide-react-native';
+import { ArrowLeft, Star, Calendar, Plus, Play, Layers, Tv } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 
 const { width } = Dimensions.get('window');
 
@@ -23,6 +24,7 @@ export default function TVShowDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const tvId = Number(id);
+  const [trailerModalVisible, setTrailerModalVisible] = useState(false);
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -33,6 +35,30 @@ export default function TVShowDetailScreen() {
   const creditsQuery = useQuery({
     queryKey: ['tv', tvId, 'credits'],
     queryFn: () => tmdbApi.getTVCredits(tvId),
+    enabled: !!tvId,
+  });
+
+  const videosQuery = useQuery({
+    queryKey: ['tv', tvId, 'videos'],
+    queryFn: () => tmdbApi.getTVVideos(tvId),
+    enabled: !!tvId,
+  });
+
+  const similarQuery = useQuery({
+    queryKey: ['tv', tvId, 'similar'],
+    queryFn: () => tmdbApi.getSimilarTV(tvId),
+    enabled: !!tvId,
+  });
+
+  const watchProvidersQuery = useQuery({
+    queryKey: ['tv', tvId, 'watch-providers'],
+    queryFn: () => tmdbApi.getTVWatchProviders(tvId),
+    enabled: !!tvId,
+  });
+
+  const imagesQuery = useQuery({
+    queryKey: ['tv', tvId, 'images'],
+    queryFn: () => tmdbApi.getTVImages(tvId),
     enabled: !!tvId,
   });
 
@@ -58,9 +84,34 @@ export default function TVShowDetailScreen() {
   const show = tvQuery.data;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const creator = creditsQuery.data?.crew.find(c => c.job === 'Executive Producer' || c.job === 'Creator');
+  const videos = videosQuery.data || [];
+  const trailer = videos.find(v => v.type === 'Trailer' && v.official) || 
+                  videos.find(v => v.type === 'Trailer') ||
+                  videos[0];
+  const similarShows = similarQuery.data?.results.slice(0, 10) || [];
+  const watchProviders = watchProvidersQuery.data;
+  const images = imagesQuery.data;
 
   const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+
+  const handleTrailerPress = () => {
+    if (trailer) {
+      setTrailerModalVisible(true);
+    }
+  };
+
+  const handleCastPress = (personId: number) => {
+    router.push(`/person/${personId}` as any);
+  };
+
+  const handleShowPress = (id: number) => {
+    router.push(`/tv/${id}` as any);
+  };
+
+  const handleSeasonsPress = () => {
+    router.push(`/tv/${tvId}/seasons` as any);
+  };
 
   return (
     <View style={styles.container}>
@@ -108,9 +159,18 @@ export default function TVShowDetailScreen() {
                 {new Date(show.first_air_date).getFullYear()}
               </Text>
             </View>
+            <TouchableOpacity 
+              style={styles.metaItem}
+              onPress={handleSeasonsPress}
+            >
+              <Layers size={14} color={COLORS.primary} />
+              <Text style={[styles.metaText, { color: COLORS.primary }]}>
+                {show.number_of_seasons} Seasons
+              </Text>
+            </TouchableOpacity>
             <View style={styles.metaItem}>
-              <Layers size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{show.number_of_seasons} Seasons</Text>
+              <Tv size={14} color={COLORS.textSecondary} />
+              <Text style={styles.metaText}>{show.number_of_episodes} Episodes</Text>
             </View>
             <View style={styles.metaItem}>
               <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
@@ -129,7 +189,11 @@ export default function TVShowDetailScreen() {
           </View>
 
           <View style={styles.actionButtons}>
-             <TouchableOpacity style={styles.playButton}>
+             <TouchableOpacity 
+               style={[styles.playButton, !trailer && styles.disabledButton]} 
+               onPress={handleTrailerPress}
+               disabled={!trailer}
+             >
                 <Play size={20} color={COLORS.white} fill={COLORS.white} />
                 <Text style={styles.playButtonText}>Watch Trailer</Text>
              </TouchableOpacity>
@@ -148,12 +212,41 @@ export default function TVShowDetailScreen() {
             </View>
           )}
 
+          {/* Watch Providers */}
+          {watchProviders && (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+            <>
+              <Text style={styles.sectionTitle}>Where to Watch</Text>
+              {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
+                <View style={styles.providersSection}>
+                  <Text style={styles.providerType}>Streaming</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {watchProviders.flatrate.map(provider => (
+                      <View key={provider.provider_id} style={styles.providerCard}>
+                        <Image
+                          source={{ uri: getImageUrl(provider.logo_path, '/w92') || '' }}
+                          style={styles.providerLogo}
+                        />
+                        <Text style={styles.providerName} numberOfLines={1}>
+                          {provider.provider_name}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </>
+          )}
+
           {cast.length > 0 && (
             <>
               <Text style={styles.sectionTitle}>Cast</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
                 {cast.map(actor => (
-                  <View key={actor.id} style={styles.castCard}>
+                  <TouchableOpacity 
+                    key={actor.id} 
+                    style={styles.castCard}
+                    onPress={() => handleCastPress(actor.id)}
+                  >
                     <Image 
                       source={{ 
                         uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium) || 'https://via.placeholder.com/100' 
@@ -162,7 +255,47 @@ export default function TVShowDetailScreen() {
                     />
                     <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
                     <Text style={styles.characterName} numberOfLines={1}>{actor.character}</Text>
-                  </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {/* Similar Shows */}
+          {similarShows.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Similar Shows</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarList}>
+                {similarShows.map(similar => (
+                  <TouchableOpacity 
+                    key={similar.id} 
+                    style={styles.similarCard}
+                    onPress={() => handleShowPress(similar.id)}
+                  >
+                    <Image 
+                      source={{ 
+                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small) || 'https://via.placeholder.com/185x278' 
+                      }} 
+                      style={styles.similarPoster}
+                    />
+                    <Text style={styles.similarTitle} numberOfLines={2}>{similar.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {/* Photos */}
+          {images && images.backdrops && images.backdrops.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
+                {images.backdrops.slice(0, 10).map((image, index) => (
+                  <Image 
+                    key={index}
+                    source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) || '' }} 
+                    style={styles.photoImage}
+                  />
                 ))}
               </ScrollView>
             </>
@@ -171,6 +304,13 @@ export default function TVShowDetailScreen() {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+
+      <VideoPlayerModal
+        visible={trailerModalVisible}
+        onClose={() => setTrailerModalVisible(false)}
+        videoKey={trailer?.key || null}
+        videoTitle={trailer?.name}
+      />
     </View>
   );
 }
@@ -255,7 +395,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: SPACING.l,
-    marginTop: -SPACING.m, // Pull up content slightly
+    marginTop: -SPACING.m,
   },
   title: {
     fontSize: FONT_SIZE.xxl,
@@ -312,6 +452,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     gap: SPACING.s,
   },
+  disabledButton: {
+    opacity: 0.5,
+  },
   playButtonText: {
     color: COLORS.white,
     fontWeight: 'bold',
@@ -329,6 +472,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
     marginBottom: SPACING.s,
+    marginTop: SPACING.m,
   },
   overview: {
     color: COLORS.textSecondary,
@@ -346,6 +490,31 @@ const styles = StyleSheet.create({
   },
   value: {
     color: COLORS.text,
+  },
+  providersSection: {
+    marginBottom: SPACING.l,
+  },
+  providerType: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    marginBottom: SPACING.s,
+    fontWeight: '600',
+  },
+  providerCard: {
+    alignItems: 'center',
+    marginRight: SPACING.m,
+    width: 60,
+  },
+  providerLogo: {
+    width: 50,
+    height: 50,
+    borderRadius: BORDER_RADIUS.s,
+    marginBottom: SPACING.xs,
+  },
+  providerName: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    textAlign: 'center',
   },
   castList: {
     marginHorizontal: -SPACING.l,
@@ -371,5 +540,34 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     textAlign: 'center',
+  },
+  similarList: {
+    marginHorizontal: -SPACING.l,
+    paddingHorizontal: SPACING.l,
+  },
+  similarCard: {
+    width: 120,
+    marginRight: SPACING.m,
+  },
+  similarPoster: {
+    width: 120,
+    height: 180,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.s,
+  },
+  similarTitle: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  photosList: {
+    marginHorizontal: -SPACING.l,
+    paddingHorizontal: SPACING.l,
+  },
+  photoImage: {
+    width: 240,
+    height: 135,
+    borderRadius: BORDER_RADIUS.m,
+    marginRight: SPACING.m,
   },
 });
