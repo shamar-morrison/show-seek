@@ -16,8 +16,6 @@ import { ArrowLeft, Calendar, MapPin } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 
-const { width } = Dimensions.get('window');
-
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -102,6 +100,8 @@ export default function PersonDetailScreen() {
   };
 
   const age = calculateAge(person.birthday, person.deathday);
+
+  console.log(person, 'person')
 
   return (
     <View style={styles.container}>

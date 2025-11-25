@@ -7,7 +7,6 @@ import {
   Image, 
   TouchableOpacity, 
   ActivityIndicator,
-  Dimensions
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -18,8 +17,6 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
-
-const { width } = Dimensions.get('window');
 
 export default function TVShowDetailScreen() {
   const { id } = useLocalSearchParams();
