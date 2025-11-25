@@ -133,7 +133,7 @@ export default function SignUp() {
                 <View style={styles.passwordInputContainer}>
                   <TextInput
                     style={styles.passwordInput}
-                    placeholder="Create a password (min. 6 characters)"
+                    placeholder="Password (min. 6 characters)"
                     placeholderTextColor={COLORS.textSecondary}
                     value={password}
                     onChangeText={setPassword}
@@ -157,7 +157,7 @@ export default function SignUp() {
                 <View style={styles.passwordInputContainer}>
                   <TextInput
                     style={styles.passwordInput}
-                    placeholder="Re-enter your password"
+                    placeholder="Confirm password"
                     placeholderTextColor={COLORS.textSecondary}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
