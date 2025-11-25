@@ -9,7 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const ONBOARDING_DATA = [
   {
     id: '1',
-    title: 'Welcome to Rork',
+    title: 'Welcome to ShowSeek',
     description: 'Your Personal Movie & TV Show Companion. Discover, track, and enjoy.',
     image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
   },
