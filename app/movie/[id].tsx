@@ -247,7 +247,9 @@ export default function MovieDetailScreen() {
           {director && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Director: </Text>
-              <Text style={styles.value}>{director.name}</Text>
+              <TouchableOpacity onPress={() => router.push(`/person/${director.id}` as any)}>
+                <Text style={[styles.value, { color: COLORS.primary }]}>{director.name}</Text>
+              </TouchableOpacity>
             </View>
           )}
 

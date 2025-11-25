@@ -223,7 +223,9 @@ export default function TVShowDetailScreen() {
           {creator && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Creator: </Text>
-              <Text style={styles.value}>{creator.name}</Text>
+              <TouchableOpacity onPress={() => router.push(`/person/${creator.id}` as any)}>
+                <Text style={[styles.value, { color: COLORS.primary }]}>{creator.name}</Text>
+              </TouchableOpacity>
             </View>
           )}
 

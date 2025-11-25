@@ -8,8 +8,12 @@ import { tmdbApi, Movie, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const trendingMoviesQuery = useQuery({
@@ -49,9 +53,26 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, []);
 
-  const renderMovieList = (title: string, movies: Movie[] | undefined, isLoading: boolean) => (
+  const handleCategoryPress = (categoryKey: string, mediaType: 'movie' | 'tv') => {
+    router.push(`/category-list/${categoryKey}?mediaType=${mediaType}` as any);
+  };
+
+  const renderMovieList = (
+    title: string,
+    movies: Movie[] | undefined,
+    isLoading: boolean,
+    categoryKey: string
+  ) => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity 
+          onPress={() => handleCategoryPress(categoryKey, 'movie')}
+          style={styles.chevronButton}
+        >
+          <ChevronRight size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
       {isLoading ? (
         <FlashList
           horizontal
@@ -74,9 +95,22 @@ export default function HomeScreen() {
     </View>
   );
 
-  const renderTVList = (title: string, shows: TVShow[] | undefined, isLoading: boolean) => (
+  const renderTVList = (
+    title: string,
+    shows: TVShow[] | undefined,
+    isLoading: boolean,
+    categoryKey: string
+  ) => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity 
+          onPress={() => handleCategoryPress(categoryKey, 'tv')}
+          style={styles.chevronButton}
+        >
+          <ChevronRight size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
       {isLoading ? (
         <FlashList
           horizontal
@@ -120,31 +154,36 @@ export default function HomeScreen() {
         {renderMovieList(
           'Trending Movies',
           trendingMoviesQuery.data?.results,
-          trendingMoviesQuery.isLoading
+          trendingMoviesQuery.isLoading,
+          'trending-movies'
         )}
 
         {renderTVList(
           'Trending TV Shows',
           trendingTVQuery.data?.results,
-          trendingTVQuery.isLoading
+          trendingTVQuery.isLoading,
+          'trending-tv'
         )}
 
         {renderMovieList(
           'Popular Movies',
           popularMoviesQuery.data?.results,
-          popularMoviesQuery.isLoading
+          popularMoviesQuery.isLoading,
+          'popular-movies'
         )}
 
         {renderMovieList(
           'Top Rated',
           topRatedMoviesQuery.data?.results,
-          topRatedMoviesQuery.isLoading
+          topRatedMoviesQuery.isLoading,
+          'top-rated-movies'
         )}
 
         {renderMovieList(
           'Upcoming',
           upcomingMoviesQuery.data?.results,
-          upcomingMoviesQuery.isLoading
+          upcomingMoviesQuery.isLoading,
+          'upcoming-movies'
         )}
 
         <View style={{ height: 100 }} />
@@ -180,12 +219,20 @@ const styles = StyleSheet.create({
   section: {
     marginTop: SPACING.l,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.l,
+  },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: SPACING.m,
-    paddingHorizontal: SPACING.l,
+  },
+  chevronButton: {
+    padding: 0,
   },
   listContent: {
     paddingHorizontal: SPACING.l,

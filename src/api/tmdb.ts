@@ -186,16 +186,18 @@ export interface WatchProviderResults {
 }
 
 export const tmdbApi = {
-  getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week') => {
+  getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
-      `/trending/movie/${timeWindow}`
+      `/trending/movie/${timeWindow}`,
+      { params: { page } }
     );
     return data;
   },
 
-  getTrendingTV: async (timeWindow: 'day' | 'week' = 'week') => {
+  getTrendingTV: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
     const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(
-      `/trending/tv/${timeWindow}`
+      `/trending/tv/${timeWindow}`,
+      { params: { page } }
     );
     return data;
   },
