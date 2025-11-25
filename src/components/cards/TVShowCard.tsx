@@ -24,20 +24,23 @@ export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
         style={[styles.poster, { width, height: width * 1.5 }]}
         resizeMode="cover"
       />
-      {show.vote_average > 0 && (
-        <View style={styles.ratingContainer}>
-          <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-          <Text style={styles.rating}>{show.vote_average.toFixed(1)}</Text>
-        </View>
-      )}
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>
           {show.name}
         </Text>
         {show.first_air_date && (
-          <Text style={styles.year}>
-            {new Date(show.first_air_date).getFullYear()}
-          </Text>
+          <View style={styles.yearRatingContainer}>
+            <Text style={styles.year}>
+              {new Date(show.first_air_date).getFullYear()}
+            </Text>
+            {show.vote_average > 0 && (
+              <>
+                <Text style={styles.separator}> • </Text>
+                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.rating}>{show.vote_average.toFixed(1)}</Text>
+              </>
+            )}
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -52,23 +55,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },
-  ratingContainer: {
-    position: 'absolute',
-    top: SPACING.s,
-    right: SPACING.s,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.s,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.s,
-    gap: 4,
-  },
-  rating: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-  },
   info: {
     marginTop: SPACING.s,
   },
@@ -77,9 +63,23 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },
+  yearRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 4,
+  },
   year: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    marginTop: 2,
+  },
+  separator: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  rating: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
 });
