@@ -77,35 +77,17 @@ export default function ImageLightbox({
         </ScrollView>
 
         {images.length > 1 && (
-          <>
-            <TouchableOpacity
-              style={[styles.navButton, styles.prevButton]}
-              onPress={handlePrevious}
-              activeOpacity={0.8}
-            >
-              <ChevronLeft size={32} color={COLORS.white} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.navButton, styles.nextButton]}
-              onPress={handleNext}
-              activeOpacity={0.8}
-            >
-              <ChevronRight size={32} color={COLORS.white} />
-            </TouchableOpacity>
-
-            <View style={styles.indicator}>
-              {images.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.dot,
-                    currentIndex === index && styles.activeDot,
-                  ]}
-                />
-              ))}
-            </View>
-          </>
+          <View style={styles.indicator}>
+            {images.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  currentIndex === index && styles.activeDot,
+                ]}
+              />
+            ))}
+          </View>
         )}
       </View>
     </Modal>

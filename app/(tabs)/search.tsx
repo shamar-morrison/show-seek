@@ -77,17 +77,22 @@ export default function SearchScreen() {
           <Text style={styles.resultTitle} numberOfLines={2}>
             {title}
           </Text>
-          {releaseDate && (
-            <Text style={styles.resultYear}>
-              {new Date(releaseDate).getFullYear()}
-            </Text>
-          )}
-          {item.vote_average > 0 && (
-            <View style={styles.ratingContainer}>
-              <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
-              <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-            </View>
-          )}
+          <View style={styles.metaRow}>
+            {releaseDate && (
+              <Text style={styles.resultYear}>
+                {new Date(releaseDate).getFullYear()}
+              </Text>
+            )}
+            {item.vote_average > 0 && releaseDate && (
+              <Text style={styles.separator}> • </Text>
+            )}
+            {item.vote_average > 0 && (
+              <View style={styles.ratingContainer}>
+                <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+              </View>
+            )}
+          </View>
           {item.overview && (
             <Text style={styles.resultOverview} numberOfLines={3}>
               {item.overview}
@@ -109,7 +114,7 @@ export default function SearchScreen() {
           <SearchIcon size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search movies, TV shows..."
+            placeholder="Search movies, TV shows, people..."
             placeholderTextColor={COLORS.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -276,15 +281,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   resultYear: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    marginTop: 2,
+  },
+  separator: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SPACING.s,
     gap: 4,
   },
   rating: {

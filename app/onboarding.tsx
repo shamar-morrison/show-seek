@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    paddingBottom: 100, // Space for footer
+    paddingBottom: 180, // Space for footer and pagination
     width: '100%',
   },
   textContainer: {
