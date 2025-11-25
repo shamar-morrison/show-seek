@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/src/context/auth";
 import { COLORS } from "@/src/constants/theme";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Platform, StatusBar as RNStatusBar } from "react-native";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -59,7 +59,15 @@ function RootLayoutNav() {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
+      {Platform.OS === 'android' && (
+        <View 
+          style={{ 
+            height: RNStatusBar.currentHeight, 
+            backgroundColor: COLORS.background 
+          }} 
+        />
+      )}
       <Stack screenOptions={{ 
         headerStyle: { backgroundColor: COLORS.background },
         headerTintColor: COLORS.text,
