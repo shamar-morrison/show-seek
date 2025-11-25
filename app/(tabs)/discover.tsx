@@ -10,7 +10,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre } from '@/src/api/tmdb';
 import { Star, Compass, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
@@ -30,6 +30,29 @@ export default function DiscoverScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [genreMap, setGenreMap] = useState<Record<number, string>>({});
+
+  // Fetch genres for both movies and TV shows
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const [movieGenres, tvGenres] = await Promise.all([
+          tmdbApi.getGenres('movie'),
+          tmdbApi.getGenres('tv'),
+        ]);
+
+        const map: Record<number, string> = {};
+        [...movieGenres, ...tvGenres].forEach((genre: Genre) => {
+          map[genre.id] = genre.name;
+        });
+        setGenreMap(map);
+      } catch (error) {
+        console.error('Failed to load genres', error);
+      }
+    };
+
+    fetchGenres();
+  }, []);
 
   const discoverQuery = useQuery({
     queryKey: ['discover', mediaType, filters],
@@ -85,6 +108,11 @@ export default function DiscoverScreen() {
       TMDB_IMAGE_SIZES.poster.small
     );
 
+    // Get genre names from genre_ids
+    const genres = item.genre_ids
+      ? item.genre_ids.slice(0, 3).map((id: number) => genreMap[id]).filter(Boolean)
+      : [];
+
     return (
       <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)}>
         <MediaImage
@@ -114,6 +142,11 @@ export default function DiscoverScreen() {
               </View>
             )}
           </View>
+          {genres.length > 0 && (
+            <Text style={styles.genres} numberOfLines={1}>
+              {genres.join(' • ')}
+            </Text>
+          )}
           {item.overview && (
             <Text style={styles.resultOverview} numberOfLines={3}>
               {item.overview}
@@ -315,5 +348,10 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.s,
     lineHeight: 18,
+  },
+  genres: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 4,
   },
 });

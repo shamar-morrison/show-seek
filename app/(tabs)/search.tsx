@@ -11,7 +11,7 @@ import { FlashList } from "@shopify/flash-list";
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre } from '@/src/api/tmdb';
 import { Search as SearchIcon, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -22,6 +22,29 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
+  const [genreMap, setGenreMap] = useState<Record<number, string>>({});
+
+  // Fetch genres for both movies and TV shows
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const [movieGenres, tvGenres] = await Promise.all([
+          tmdbApi.getGenres('movie'),
+          tmdbApi.getGenres('tv'),
+        ]);
+
+        const map: Record<number, string> = {};
+        [...movieGenres, ...tvGenres].forEach((genre: Genre) => {
+          map[genre.id] = genre.name;
+        });
+        setGenreMap(map);
+      } catch (error) {
+        console.error('Failed to load genres', error);
+      }
+    };
+
+    fetchGenres();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -68,6 +91,11 @@ export default function SearchScreen() {
       TMDB_IMAGE_SIZES.poster.small
     );
 
+    // Get genre names from genre_ids
+    const genres = item.genre_ids
+      ? item.genre_ids.slice(0, 3).map((id: number) => genreMap[id]).filter(Boolean)
+      : [];
+
     return (
       <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)}>
         <MediaImage
@@ -85,22 +113,29 @@ export default function SearchScreen() {
             <Text style={styles.department}>{item.known_for_department}</Text>
           )}
           {!isPerson && (
-            <View style={styles.metaRow}>
-              {releaseDate && (
-                <Text style={styles.resultYear}>
-                  {new Date(releaseDate).getFullYear()}
+            <>
+              <View style={styles.metaRow}>
+                {releaseDate && (
+                  <Text style={styles.resultYear}>
+                    {new Date(releaseDate).getFullYear()}
+                  </Text>
+                )}
+                {item.vote_average > 0 && releaseDate && (
+                  <Text style={styles.separator}> • </Text>
+                )}
+                {item.vote_average > 0 && (
+                  <View style={styles.ratingContainer}>
+                    <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                    <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
+              {genres.length > 0 && (
+                <Text style={styles.genres} numberOfLines={1}>
+                  {genres.join(' • ')}
                 </Text>
               )}
-              {item.vote_average > 0 && releaseDate && (
-                <Text style={styles.separator}> • </Text>
-              )}
-              {item.vote_average > 0 && (
-                <View style={styles.ratingContainer}>
-                  <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-                </View>
-              )}
-            </View>
+            </>
           )}
           {isPerson && item.known_for && item.known_for.length > 0 && (
             <Text style={styles.knownFor} numberOfLines={2}>
@@ -334,5 +369,10 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.s,
     lineHeight: 18,
+  },
+  genres: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 4,
   },
 });

@@ -196,6 +196,15 @@ export default function TVShowDetailScreen() {
             ))}
           </View>
 
+          {/* Show status if ended or cancelled */}
+          {(show.status === 'Ended' || show.status === 'Canceled') && (
+            <View style={styles.statusContainer}>
+              <Text style={styles.statusText}>
+                Status: <Text style={styles.statusValue}>{show.status}</Text>
+              </Text>
+            </View>
+          )}
+
           <View style={styles.actionButtons}>
              <TouchableOpacity 
                style={[styles.playButton, !trailer && styles.disabledButton]} 
@@ -211,7 +220,9 @@ export default function TVShowDetailScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{show.overview}</Text>
+          <Text style={styles.overview}>
+            {show.overview || 'No overview available'}
+          </Text>
 
           {creator && (
             <View style={styles.directorContainer}>
@@ -472,6 +483,23 @@ const styles = StyleSheet.create({
   genreText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
+  },
+  statusContainer: {
+    marginTop: SPACING.m,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.error,
+  },
+  statusText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+  },
+  statusValue: {
+    color: COLORS.error,
+    fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',

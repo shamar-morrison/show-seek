@@ -240,7 +240,9 @@ export default function MovieDetailScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{movie.overview}</Text>
+          <Text style={styles.overview}>
+            {movie.overview || 'No overview available'}
+          </Text>
 
           {director && (
             <View style={styles.directorContainer}>
