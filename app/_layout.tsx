@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "@/src/context/auth";
 import { COLORS } from "@/src/constants/theme";
 import { StatusBar } from "expo-status-bar";
-import { View, ActivityIndicator, Platform, StatusBar as RNStatusBar } from "react-native";
+import { View, ActivityIndicator } from "react-native";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
