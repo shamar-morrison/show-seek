@@ -24,7 +24,33 @@ export default function SignIn() {
       await signInWithEmailAndPassword(auth, email, password);
       // Router will automatically redirect in _layout.tsx based on auth state
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message);
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+            errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          case 'auth/user-disabled':
+            errorMessage = 'This account has been disabled. Please contact support.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed login attempts. Please try again later.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection.';
+            break;
+          default:
+            errorMessage = 'Unable to sign in. Please try again later.';
+        }
+      }
+      
+      Alert.alert('Sign In Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -33,11 +59,24 @@ export default function SignIn() {
   const handleGuestSignIn = async () => {
     setLoading(true);
     try {
-        await signInAnonymously(auth);
+      await signInAnonymously(auth);
     } catch (error: any) {
-        Alert.alert('Guest Sign In Failed', error.message);
+      let errorMessage = 'Unable to sign in as guest. Please try again.';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Guest sign-in is not enabled. Please contact support.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection.';
+            break;
+        }
+      }
+      
+      Alert.alert('Guest Sign In Failed', errorMessage);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }
 
