@@ -49,16 +49,18 @@ export default function SearchScreen() {
   });
 
   const handleItemPress = (item: any) => {
-    if ('title' in item || item.media_type === 'movie') {
-      router.push(`/movie/${item.id}` as any);
-    } else if ('name' in item || item.media_type === 'tv') {
-      router.push(`/tv/${item.id}` as any);
-    } else if (item.media_type === 'person') {
+    // Check media_type first to avoid ambiguity
+    if (item.media_type === 'person') {
       router.push(`/person/${item.id}` as any);
+    } else if (item.media_type === 'movie' || 'title' in item) {
+      router.push(`/movie/${item.id}` as any);
+    } else if (item.media_type === 'tv' || 'name' in item) {
+      router.push(`/tv/${item.id}` as any);
     }
   };
 
   const renderMediaItem = ({ item }: { item: any }) => {
+    const isPerson = item.media_type === 'person';
     const title = item.title || item.name;
     const releaseDate = item.release_date || item.first_air_date;
     const posterUrl = getImageUrl(
@@ -77,23 +79,33 @@ export default function SearchScreen() {
           <Text style={styles.resultTitle} numberOfLines={2}>
             {title}
           </Text>
-          <View style={styles.metaRow}>
-            {releaseDate && (
-              <Text style={styles.resultYear}>
-                {new Date(releaseDate).getFullYear()}
-              </Text>
-            )}
-            {item.vote_average > 0 && releaseDate && (
-              <Text style={styles.separator}> • </Text>
-            )}
-            {item.vote_average > 0 && (
-              <View style={styles.ratingContainer}>
-                <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </View>
-            )}
-          </View>
-          {item.overview && (
+          {isPerson && item.known_for_department && (
+            <Text style={styles.department}>{item.known_for_department}</Text>
+          )}
+          {!isPerson && (
+            <View style={styles.metaRow}>
+              {releaseDate && (
+                <Text style={styles.resultYear}>
+                  {new Date(releaseDate).getFullYear()}
+                </Text>
+              )}
+              {item.vote_average > 0 && releaseDate && (
+                <Text style={styles.separator}> • </Text>
+              )}
+              {item.vote_average > 0 && (
+                <View style={styles.ratingContainer}>
+                  <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          {isPerson && item.known_for && item.known_for.length > 0 && (
+            <Text style={styles.knownFor} numberOfLines={2}>
+              Known for: {item.known_for.slice(0, 3).map((work: any) => work.title || work.name).join(', ')}
+            </Text>
+          )}
+          {!isPerson && item.overview && (
             <Text style={styles.resultOverview} numberOfLines={3}>
               {item.overview}
             </Text>
@@ -303,6 +315,17 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
+  },
+  department: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.primary,
+    marginTop: 2,
+  },
+  knownFor: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.s,
+    lineHeight: 18,
   },
   resultOverview: {
     fontSize: FONT_SIZE.s,

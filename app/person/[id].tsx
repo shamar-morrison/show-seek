@@ -133,7 +133,7 @@ export default function PersonDetailScreen() {
             )}
 
             <View style={styles.detailsContainer}>
-              {person.birthday && (
+              {person.birthday && person.birthday.trim() !== '' && (
                 <View style={styles.detailItem}>
                   <Calendar size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
@@ -143,7 +143,7 @@ export default function PersonDetailScreen() {
                 </View>
               )}
               
-              {person.place_of_birth && (
+              {person.place_of_birth && person.place_of_birth.trim() !== '' && (
                 <View style={styles.detailItem}>
                   <MapPin size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>{person.place_of_birth}</Text>
