@@ -167,7 +167,7 @@ export default function TVShowDetailScreen() {
                 {new Date(show.first_air_date).getFullYear()}
               </Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.metaItem}
               onPress={handleSeasonsPress}
             >
@@ -186,6 +186,11 @@ export default function TVShowDetailScreen() {
                 {show.vote_average.toFixed(1)}
               </Text>
             </View>
+            {(show.status === 'Ended' || show.status === 'Canceled') && (
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>{show.status}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.genresContainer}>
@@ -195,15 +200,6 @@ export default function TVShowDetailScreen() {
               </View>
             ))}
           </View>
-
-          {/* Show status if ended or cancelled */}
-          {(show.status === 'Ended' || show.status === 'Canceled') && (
-            <View style={styles.statusContainer}>
-              <Text style={styles.statusText}>
-                Status: <Text style={styles.statusValue}>{show.status}</Text>
-              </Text>
-            </View>
-          )}
 
           <View style={styles.actionButtons}>
              <TouchableOpacity 
@@ -484,22 +480,17 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
   },
-  statusContainer: {
-    marginTop: SPACING.m,
-    paddingVertical: SPACING.s,
-    paddingHorizontal: SPACING.m,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.error,
+  statusBadge: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.s,
   },
-  statusText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  statusValue: {
-    color: COLORS.error,
+  statusBadgeText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.xs,
     fontWeight: '600',
+    textTransform: 'uppercase',
   },
   actionButtons: {
     flexDirection: 'row',

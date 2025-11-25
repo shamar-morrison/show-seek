@@ -49,7 +49,7 @@ export default function SearchScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -163,7 +163,7 @@ export default function SearchScreen() {
           <SearchIcon size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search movies, TV shows, people..."
+            placeholder="Movie, TV show, or Person"
             placeholderTextColor={COLORS.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
