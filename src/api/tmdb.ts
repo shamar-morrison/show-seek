@@ -331,18 +331,32 @@ export const tmdbApi = {
     return data;
   },
 
+  getGenres: async (type: 'movie' | 'tv') => {
+    const { data } = await tmdbClient.get<{ genres: Genre[] }>(`/genre/${type}/list`);
+    return data.genres;
+  },
+
+  getLanguages: async () => {
+    const { data } = await tmdbClient.get<{ iso_639_1: string; english_name: string; name: string }[]>('/configuration/languages');
+    return data.sort((a, b) => a.english_name.localeCompare(b.english_name));
+  },
+
   discoverMovies: async (params?: {
     page?: number;
     genre?: string;
     year?: number;
     sortBy?: string;
+    voteAverageGte?: number;
+    withOriginalLanguage?: string;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
       params: {
         page: params?.page || 1,
         with_genres: params?.genre,
-        year: params?.year,
+        primary_release_year: params?.year,
         sort_by: params?.sortBy || 'popularity.desc',
+        'vote_average.gte': params?.voteAverageGte,
+        with_original_language: params?.withOriginalLanguage,
       },
     });
     return data;
@@ -353,6 +367,8 @@ export const tmdbApi = {
     genre?: string;
     year?: number;
     sortBy?: string;
+    voteAverageGte?: number;
+    withOriginalLanguage?: string;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
       params: {
@@ -360,6 +376,8 @@ export const tmdbApi = {
         with_genres: params?.genre,
         first_air_date_year: params?.year,
         sort_by: params?.sortBy || 'popularity.desc',
+        'vote_average.gte': params?.voteAverageGte,
+        with_original_language: params?.withOriginalLanguage,
       },
     });
     return data;
