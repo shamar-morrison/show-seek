@@ -24,6 +24,7 @@ interface DiscoverFiltersProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
   mediaType: 'movie' | 'tv';
+  onClearFilters: () => void;
 }
 
 const SORT_OPTIONS = [
@@ -134,6 +135,7 @@ export default function DiscoverFilters({
   filters,
   onChange,
   mediaType,
+  onClearFilters,
 }: DiscoverFiltersProps) {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [languages, setLanguages] = useState<{ iso_639_1: string; english_name: string }[]>([]);
@@ -229,6 +231,11 @@ export default function DiscoverFilters({
           maxLength={4}
         />
       </View>
+
+      <TouchableOpacity style={styles.clearButton} onPress={onClearFilters}>
+        <X size={18} color={COLORS.textSecondary} />
+        <Text style={styles.clearButtonText}>Clear Filters</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -320,6 +327,23 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: COLORS.primary,
+    fontWeight: '600',
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    padding: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    marginTop: SPACING.xs,
+  },
+  clearButtonText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
 });

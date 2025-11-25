@@ -18,16 +18,18 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 
 type MediaType = 'movie' | 'tv';
 
+const DEFAULT_FILTERS: FilterState = {
+  sortBy: 'popularity.desc',
+  genre: null,
+  year: '',
+  rating: 0,
+  language: null,
+};
+
 export default function DiscoverScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
-    sortBy: 'popularity.desc',
-    genre: null,
-    year: '',
-    rating: 0,
-    language: null,
-  });
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
   const discoverQuery = useQuery({
     queryKey: ['discover', mediaType, filters],
@@ -52,6 +54,20 @@ export default function DiscoverScreen() {
   useEffect(() => {
     setFilters(prev => ({ ...prev, genre: null }));
   }, [mediaType]);
+
+  const hasActiveFilters = () => {
+    return (
+      filters.sortBy !== DEFAULT_FILTERS.sortBy ||
+      filters.genre !== DEFAULT_FILTERS.genre ||
+      filters.year !== DEFAULT_FILTERS.year ||
+      filters.rating !== DEFAULT_FILTERS.rating ||
+      filters.language !== DEFAULT_FILTERS.language
+    );
+  };
+
+  const clearFilters = () => {
+    setFilters(DEFAULT_FILTERS);
+  };
 
   const handleItemPress = (item: any) => {
     if (mediaType === 'movie') {
@@ -120,6 +136,7 @@ export default function DiscoverScreen() {
             size={24}
             color={showFilters ? COLORS.primary : COLORS.textSecondary}
           />
+          {hasActiveFilters() && <View style={styles.filterBadge} />}
         </TouchableOpacity>
       </View>
 
@@ -147,6 +164,7 @@ export default function DiscoverScreen() {
           filters={filters}
           onChange={setFilters}
           mediaType={mediaType}
+          onClearFilters={clearFilters}
         />
       )}
 
@@ -193,6 +211,16 @@ const styles = StyleSheet.create({
   },
   filterToggle: {
     padding: SPACING.s,
+    position: 'relative',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
   typeToggleContainer: {
     flexDirection: 'row',
