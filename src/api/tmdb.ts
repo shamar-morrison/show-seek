@@ -1,9 +1,5 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
 
-// NOTE: In a real production app, you should not expose API keys on the client side.
-// However, for this demo/requirement, we will use it here. 
-// Ideally, use a proxy server or Firebase Cloud Functions.
 const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY || 'YOUR_TMDB_API_KEY';
 const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -86,3 +82,261 @@ export interface PaginatedResponse<T> {
   total_pages: number;
   total_results: number;
 }
+
+export interface Genre {
+  id: number;
+  name: string;
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+}
+
+export interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface Video {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+}
+
+export interface MovieDetails extends Movie {
+  runtime: number | null;
+  genres: Genre[];
+  status: string;
+  tagline: string | null;
+}
+
+export interface TVShowDetails extends TVShow {
+  number_of_seasons: number;
+  number_of_episodes: number;
+  genres: Genre[];
+  status: string;
+  seasons: Season[];
+  episode_run_time: number[];
+  last_air_date: string;
+}
+
+export interface Season {
+  id: number;
+  name: string;
+  season_number: number;
+  episode_count: number;
+  air_date: string | null;
+  poster_path: string | null;
+  overview: string;
+}
+
+export interface Episode {
+  id: number;
+  name: string;
+  episode_number: number;
+  season_number: number;
+  air_date: string | null;
+  overview: string;
+  still_path: string | null;
+  runtime: number | null;
+  vote_average: number;
+}
+
+export interface PersonDetails extends Person {
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  also_known_as: string[];
+}
+
+export const tmdbApi = {
+  getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week') => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
+      `/trending/movie/${timeWindow}`
+    );
+    return data;
+  },
+
+  getTrendingTV: async (timeWindow: 'day' | 'week' = 'week') => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(
+      `/trending/tv/${timeWindow}`
+    );
+    return data;
+  },
+
+  getPopularMovies: async (page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/movie/popular', {
+      params: { page },
+    });
+    return data;
+  },
+
+  getTopRatedMovies: async (page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/movie/top_rated', {
+      params: { page },
+    });
+    return data;
+  },
+
+  getUpcomingMovies: async (page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/movie/upcoming', {
+      params: { page },
+    });
+    return data;
+  },
+
+  getMovieDetails: async (id: number) => {
+    const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`);
+    return data;
+  },
+
+  getTVShowDetails: async (id: number) => {
+    const { data } = await tmdbClient.get<TVShowDetails>(`/tv/${id}`);
+    return data;
+  },
+
+  getMovieCredits: async (id: number) => {
+    const { data } = await tmdbClient.get<{ cast: CastMember[]; crew: CrewMember[] }>(
+      `/movie/${id}/credits`
+    );
+    return data;
+  },
+
+  getTVCredits: async (id: number) => {
+    const { data } = await tmdbClient.get<{ cast: CastMember[]; crew: CrewMember[] }>(
+      `/tv/${id}/credits`
+    );
+    return data;
+  },
+
+  getMovieVideos: async (id: number) => {
+    const { data } = await tmdbClient.get<{ results: Video[] }>(`/movie/${id}/videos`);
+    return data.results;
+  },
+
+  getTVVideos: async (id: number) => {
+    const { data } = await tmdbClient.get<{ results: Video[] }>(`/tv/${id}/videos`);
+    return data.results;
+  },
+
+  getSimilarMovies: async (id: number) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
+      `/movie/${id}/similar`
+    );
+    return data;
+  },
+
+  getSimilarTV: async (id: number) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/tv/${id}/similar`);
+    return data;
+  },
+
+  getRecommendedMovies: async (id: number) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
+      `/movie/${id}/recommendations`
+    );
+    return data;
+  },
+
+  getRecommendedTV: async (id: number) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(
+      `/tv/${id}/recommendations`
+    );
+    return data;
+  },
+
+  searchMovies: async (query: string, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/search/movie', {
+      params: { query, page },
+    });
+    return data;
+  },
+
+  searchTV: async (query: string, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/search/tv', {
+      params: { query, page },
+    });
+    return data;
+  },
+
+  searchMulti: async (query: string, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie | TVShow | Person>>(
+      '/search/multi',
+      {
+        params: { query, page },
+      }
+    );
+    return data;
+  },
+
+  getPersonDetails: async (id: number) => {
+    const { data } = await tmdbClient.get<PersonDetails>(`/person/${id}`);
+    return data;
+  },
+
+  getPersonMovieCredits: async (id: number) => {
+    const { data } = await tmdbClient.get<{ cast: Movie[]; crew: Movie[] }>(
+      `/person/${id}/movie_credits`
+    );
+    return data;
+  },
+
+  getPersonTVCredits: async (id: number) => {
+    const { data } = await tmdbClient.get<{ cast: TVShow[]; crew: TVShow[] }>(
+      `/person/${id}/tv_credits`
+    );
+    return data;
+  },
+
+  getSeasonDetails: async (tvId: number, seasonNumber: number) => {
+    const { data } = await tmdbClient.get<Season & { episodes: Episode[] }>(
+      `/tv/${tvId}/season/${seasonNumber}`
+    );
+    return data;
+  },
+
+  discoverMovies: async (params?: {
+    page?: number;
+    genre?: string;
+    year?: number;
+    sortBy?: string;
+  }) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
+      params: {
+        page: params?.page || 1,
+        with_genres: params?.genre,
+        year: params?.year,
+        sort_by: params?.sortBy || 'popularity.desc',
+      },
+    });
+    return data;
+  },
+
+  discoverTV: async (params?: {
+    page?: number;
+    genre?: string;
+    year?: number;
+    sortBy?: string;
+  }) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
+      params: {
+        page: params?.page || 1,
+        with_genres: params?.genre,
+        first_air_date_year: params?.year,
+        sort_by: params?.sortBy || 'popularity.desc',
+      },
+    });
+    return data;
+  },
+};
