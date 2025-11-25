@@ -7,17 +7,30 @@ import { auth, db } from '@/src/firebase/config';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignUp() {
-  const [name, setName] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSignUp = async () => {
-    if (!name || !email || !password) {
+    if (!displayName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
@@ -29,13 +42,13 @@ export default function SignUp() {
 
       // 2. Update Profile
       await updateProfile(user, {
-        displayName: name,
+        displayName: displayName,
       });
 
       // 3. Create User Document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
-        displayName: name,
+        displayName: displayName,
         email: email,
         createdAt: new Date(),
         photoURL: null,
@@ -43,7 +56,31 @@ export default function SignUp() {
 
       // Router will automatically redirect in _layout.tsx
     } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message);
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/email-already-in-use':
+            errorMessage = 'This email is already registered. Please sign in or use a different email.';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address.';
+            break;
+          case 'auth/weak-password':
+            errorMessage = 'Password is too weak. Please use at least 6 characters.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+            break;
+          default:
+            errorMessage = 'Unable to create account. Please try again later.';
+        }
+      }
+      
+      Alert.alert('Sign Up Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -68,13 +105,13 @@ export default function SignUp() {
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>Display Name</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your name"
+                  placeholder="Enter your display name"
                   placeholderTextColor={COLORS.textSecondary}
-                  value={name}
-                  onChangeText={setName}
+                  value={displayName}
+                  onChangeText={setDisplayName}
                 />
               </View>
 
@@ -93,14 +130,50 @@ export default function SignUp() {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Create a password"
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Create a password (min. 6 characters)"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Re-enter your password"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity 
@@ -134,6 +207,7 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    marginTop: -50,
     backgroundColor: COLORS.background,
   },
   safeArea: {
@@ -176,6 +250,21 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: SPACING.m,
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+  },
+  eyeIcon: {
+    padding: SPACING.m,
   },
   button: {
     backgroundColor: COLORS.primary,

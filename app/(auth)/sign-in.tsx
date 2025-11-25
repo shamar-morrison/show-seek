@@ -6,12 +6,13 @@ import { auth } from '@/src/firebase/config';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -113,14 +114,26 @@ export default function SignIn() {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Enter your password"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity 
@@ -204,6 +217,21 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: SPACING.m,
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+  },
+  eyeIcon: {
+    padding: SPACING.m,
   },
   button: {
     backgroundColor: COLORS.primary,
