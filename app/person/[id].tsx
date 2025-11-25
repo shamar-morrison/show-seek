@@ -317,7 +317,6 @@ const styles = StyleSheet.create({
   detailText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
-    flex: 1,
   },
   section: {
     paddingHorizontal: SPACING.l,
