@@ -164,7 +164,11 @@ export default function TVShowDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
-                {new Date(show.first_air_date).getFullYear()}
+                {new Date(show.first_air_date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </Text>
             </View>
             <TouchableOpacity

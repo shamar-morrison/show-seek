@@ -176,7 +176,11 @@ export default function MovieDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
-                {new Date(movie.release_date).getFullYear()}
+                {new Date(movie.release_date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </Text>
             </View>
             <View style={styles.metaItem}>
