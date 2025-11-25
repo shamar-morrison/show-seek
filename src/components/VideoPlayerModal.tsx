@@ -9,7 +9,7 @@ import {
   Linking,
   Alert,
 } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { X } from 'lucide-react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '@/src/constants/theme';
 
@@ -35,6 +35,10 @@ export default function VideoPlayerModal({
   const embedUrl = videoKey 
     ? `https://www.youtube.com/embed/${videoKey}?autoplay=1&playsinline=1`
     : null;
+
+  const player = useVideoPlayer(embedUrl || '', player => {
+    player.play();
+  });
 
   const handleError = async () => {
     setHasError(true);
@@ -72,6 +76,7 @@ export default function VideoPlayerModal({
   const handleClose = () => {
     setIsLoading(true);
     setHasError(false);
+    player.pause();
     onClose();
   };
 
@@ -98,15 +103,12 @@ export default function VideoPlayerModal({
           <View style={styles.videoContainer}>
             {!hasError && embedUrl && (
               <>
-                <Video
-                  source={{ uri: embedUrl }}
+                <VideoView
                   style={styles.video}
-                  useNativeControls
-                  resizeMode={ResizeMode.CONTAIN}
-                  onLoadStart={() => setIsLoading(true)}
-                  onLoad={() => setIsLoading(false)}
-                  onError={handleError}
-                  shouldPlay
+                  player={player}
+                  allowsFullscreen
+                  allowsPictureInPicture
+                  nativeControls
                 />
                 {isLoading && (
                   <View style={styles.loadingContainer}>

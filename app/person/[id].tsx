@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -22,6 +22,7 @@ export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const personId = Number(id);
+  const [bioExpanded, setBioExpanded] = useState(false);
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -156,7 +157,19 @@ export default function PersonDetailScreen() {
         {person.biography && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Biography</Text>
-            <Text style={styles.biography}>{person.biography}</Text>
+            <Text 
+              style={styles.biography} 
+              numberOfLines={bioExpanded ? undefined : 4}
+            >
+              {person.biography}
+            </Text>
+            {person.biography.length > 200 && (
+              <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
+                <Text style={styles.readMore}>
+                  {bioExpanded ? 'Read less' : 'Read more'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -165,9 +178,9 @@ export default function PersonDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Known For (Movies)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForMovies.map(movie => (
+              {knownForMovies.map((movie, index) => (
                 <TouchableOpacity 
-                  key={movie.id} 
+                  key={`movie-${movie.id}-${index}`}
                   style={styles.creditCard}
                   onPress={() => handleMoviePress(movie.id)}
                 >
@@ -194,9 +207,9 @@ export default function PersonDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Known For (TV Shows)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForTV.map(show => (
+              {knownForTV.map((show, index) => (
                 <TouchableOpacity 
-                  key={show.id} 
+                  key={`tv-${show.id}-${index}`}
                   style={styles.creditCard}
                   onPress={() => handleTVPress(show.id)}
                 >
@@ -317,6 +330,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     lineHeight: 24,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
+    marginTop: SPACING.s,
+    fontWeight: '600',
   },
   creditCard: {
     width: 120,

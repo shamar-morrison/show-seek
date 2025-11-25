@@ -17,6 +17,7 @@ import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film } from '
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import ImageLightbox from '@/src/components/ImageLightbox';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,8 @@ export default function MovieDetailScreen() {
   const router = useRouter();
   const movieId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -320,11 +323,18 @@ export default function MovieDetailScreen() {
               <Text style={styles.sectionTitle}>Photos</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
                 {images.backdrops.slice(0, 10).map((image, index) => (
-                  <Image 
-                    key={index}
-                    source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) || '' }} 
-                    style={styles.photoImage}
-                  />
+                  <TouchableOpacity 
+                    key={`photo-${index}`}
+                    onPress={() => {
+                      setLightboxIndex(index);
+                      setLightboxVisible(true);
+                    }}
+                  >
+                    <Image 
+                      source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) || '' }} 
+                      style={styles.photoImage}
+                    />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </>
@@ -339,6 +349,15 @@ export default function MovieDetailScreen() {
         onClose={() => setTrailerModalVisible(false)}
         videoKey={trailer?.key || null}
         videoTitle={trailer?.name}
+      />
+
+      <ImageLightbox
+        visible={lightboxVisible}
+        onClose={() => setLightboxVisible(false)}
+        images={images?.backdrops.slice(0, 10).map(img => 
+          getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.large) || ''
+        ) || []}
+        initialIndex={lightboxIndex}
       />
     </View>
   );

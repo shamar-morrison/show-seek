@@ -118,6 +118,8 @@ export interface MovieDetails extends Movie {
   genres: Genre[];
   status: string;
   tagline: string | null;
+  budget: number;
+  revenue: number;
 }
 
 export interface TVShowDetails extends TVShow {
