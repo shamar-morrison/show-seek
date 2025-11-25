@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Calendar, MapPin } from 'lucide-react-native';
+import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -199,11 +199,24 @@ export default function PersonDetailScreen() {
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{movie.title}</Text>
-                  {movie.release_date && (
-                    <Text style={styles.creditYear}>
-                      {new Date(movie.release_date).getFullYear()}
-                    </Text>
-                  )}
+                  <View style={styles.creditMeta}>
+                    {movie.release_date && (
+                      <Text style={styles.creditYear}>
+                        {new Date(movie.release_date).getFullYear()}
+                      </Text>
+                    )}
+                    {movie.vote_average > 0 && (
+                      <>
+                        {movie.release_date && <Text style={styles.creditYear}> • </Text>}
+                        <View style={styles.creditRating}>
+                          <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                          <Text style={styles.creditRatingText}>
+                            {movie.vote_average.toFixed(1)}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -231,11 +244,24 @@ export default function PersonDetailScreen() {
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{show.name}</Text>
-                  {show.first_air_date && (
-                    <Text style={styles.creditYear}>
-                      {new Date(show.first_air_date).getFullYear()}
-                    </Text>
-                  )}
+                  <View style={styles.creditMeta}>
+                    {show.first_air_date && (
+                      <Text style={styles.creditYear}>
+                        {new Date(show.first_air_date).getFullYear()}
+                      </Text>
+                    )}
+                    {show.vote_average > 0 && (
+                      <>
+                        {show.first_air_date && <Text style={styles.creditYear}> • </Text>}
+                        <View style={styles.creditRating}>
+                          <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                          <Text style={styles.creditRatingText}>
+                            {show.vote_average.toFixed(1)}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -366,5 +392,20 @@ const styles = StyleSheet.create({
   creditYear: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
+  },
+  creditMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  creditRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  creditRatingText: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
 });
