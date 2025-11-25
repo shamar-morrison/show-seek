@@ -7,10 +7,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre } from '@/src/api/tmdb';
+import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre, Movie, TVShow } from '@/src/api/tmdb';
 import { Star, Compass, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
@@ -54,15 +54,16 @@ export default function DiscoverScreen() {
     fetchGenres();
   }, []);
 
-  const discoverQuery = useQuery({
+  const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 1 }) => {
       const params = {
         genre: filters.genre?.toString(),
         year: filters.year || undefined,
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
         withOriginalLanguage: filters.language || undefined,
+        page: pageParam,
       };
 
       if (mediaType === 'movie') {
@@ -71,6 +72,13 @@ export default function DiscoverScreen() {
         return await tmdbApi.discoverTV(params);
       }
     },
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
 
   // Reset genre when media type changes
@@ -92,17 +100,26 @@ export default function DiscoverScreen() {
     setFilters(DEFAULT_FILTERS);
   };
 
-  const handleItemPress = (item: any) => {
-    if (mediaType === 'movie') {
+  const handleItemPress = (item: Movie | TVShow) => {
+    if ('title' in item) {
       router.push(`/movie/${item.id}` as any);
     } else {
       router.push(`/tv/${item.id}` as any);
     }
   };
 
-  const renderMediaItem = ({ item }: { item: any }) => {
-    const title = item.title || item.name;
-    const releaseDate = item.release_date || item.first_air_date;
+  const handleLoadMore = () => {
+    if (discoverQuery.hasNextPage && !discoverQuery.isFetchingNextPage) {
+      discoverQuery.fetchNextPage();
+    }
+  };
+
+  // Flatten paginated data
+  const allResults: (Movie | TVShow)[] = discoverQuery.data?.pages.flatMap(page => page.results as (Movie | TVShow)[]) || [];
+
+  const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
+    const title = 'title' in item ? item.title : item.name;
+    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
     const posterUrl = getImageUrl(
       item.poster_path,
       TMDB_IMAGE_SIZES.poster.small
@@ -205,18 +222,27 @@ export default function DiscoverScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
-      ) : discoverQuery.data?.results.length === 0 ? (
+      ) : allResults.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyText}>No results found</Text>
           <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
         </View>
       ) : (
         <FlashList
-          data={discoverQuery.data?.results || []}
+          data={allResults}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${mediaType}-${item.id}`}
           contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            discoverQuery.isFetchingNextPage ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
@@ -353,5 +379,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     marginTop: 4,
+  },
+  loadingMore: {
+    paddingVertical: SPACING.l,
+    alignItems: 'center',
   },
 });

@@ -327,6 +327,22 @@ export default function MovieDetailScreen() {
                       contentFit="cover"
                     />
                     <Text style={styles.similarTitle} numberOfLines={2}>{similar.title}</Text>
+                    <View style={styles.similarMeta}>
+                      {similar.release_date && (
+                        <Text style={styles.similarYear}>
+                          {new Date(similar.release_date).getFullYear()}
+                        </Text>
+                      )}
+                      {similar.vote_average > 0 && similar.release_date && (
+                        <Text style={styles.similarSeparator}> • </Text>
+                      )}
+                      {similar.vote_average > 0 && (
+                        <View style={styles.similarRating}>
+                          <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                          <Text style={styles.similarRatingText}>{similar.vote_average.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -646,6 +662,29 @@ const styles = StyleSheet.create({
   similarTitle: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  similarMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  similarYear: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  similarSeparator: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  similarRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  similarRatingText: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
     fontWeight: '600',
   },
   photosList: {

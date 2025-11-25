@@ -103,7 +103,6 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShowSeek</Text>
-        <Text style={styles.headerSubtitle}>Movies & TV Shows</Text>
       </View>
 
       <ScrollView
