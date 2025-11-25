@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    paddingVertical: SPACING.s,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },

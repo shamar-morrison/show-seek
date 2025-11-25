@@ -60,14 +60,6 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
-      {Platform.OS === 'android' && (
-        <View 
-          style={{ 
-            height: RNStatusBar.currentHeight, 
-            backgroundColor: COLORS.background 
-          }} 
-        />
-      )}
       <Stack screenOptions={{ 
         headerStyle: { backgroundColor: COLORS.background },
         headerTintColor: COLORS.text,

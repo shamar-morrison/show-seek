@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    paddingVertical: SPACING.s,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    paddingVertical: SPACING.s,
   },
   searchInputContainer: {
     flexDirection: 'row',
