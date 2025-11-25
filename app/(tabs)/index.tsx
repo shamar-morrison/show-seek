@@ -1,45 +1,101 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE } from '@/src/constants/theme';
-import { tmdbApi, Movie, TVShow } from '@/src/api/tmdb';
+import { tmdbApi, Movie, TVShow, PaginatedResponse } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
-import { useRouter } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const trendingMoviesQuery = useQuery({
+  const trendingMoviesQuery = useInfiniteQuery({
     queryKey: ['trending', 'movies', 'week'],
-    queryFn: () => tmdbApi.getTrendingMovies('week'),
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getTrendingMovies('week', pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
 
-  const trendingTVQuery = useQuery({
+  const trendingTVQuery = useInfiniteQuery({
     queryKey: ['trending', 'tv', 'week'],
-    queryFn: () => tmdbApi.getTrendingTV('week'),
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getTrendingTV('week', pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<TVShow>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
 
-  const popularMoviesQuery = useQuery({
+  const popularMoviesQuery = useInfiniteQuery({
     queryKey: ['popular', 'movies'],
-    queryFn: () => tmdbApi.getPopularMovies(),
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getPopularMovies(pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
 
-  const topRatedMoviesQuery = useQuery({
+  const topRatedMoviesQuery = useInfiniteQuery({
     queryKey: ['topRated', 'movies'],
-    queryFn: () => tmdbApi.getTopRatedMovies(),
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getTopRatedMovies(pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
 
-  const upcomingMoviesQuery = useQuery({
+  const upcomingMoviesQuery = useInfiniteQuery({
     queryKey: ['upcoming', 'movies'],
-    queryFn: () => tmdbApi.getUpcomingMovies(),
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getUpcomingMovies(pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
   });
+
+  const trendingMovies = React.useMemo(() => {
+    if (!trendingMoviesQuery.data?.pages) return [];
+    return trendingMoviesQuery.data.pages.flatMap(page => page.results);
+  }, [trendingMoviesQuery.data]);
+
+  const trendingTVShows = React.useMemo(() => {
+    if (!trendingTVQuery.data?.pages) return [];
+    return trendingTVQuery.data.pages.flatMap(page => page.results);
+  }, [trendingTVQuery.data]);
+
+  const popularMovies = React.useMemo(() => {
+    if (!popularMoviesQuery.data?.pages) return [];
+    return popularMoviesQuery.data.pages.flatMap(page => page.results);
+  }, [popularMoviesQuery.data]);
+
+  const topRatedMovies = React.useMemo(() => {
+    if (!topRatedMoviesQuery.data?.pages) return [];
+    return topRatedMoviesQuery.data.pages.flatMap(page => page.results);
+  }, [topRatedMoviesQuery.data]);
+
+  const upcomingMovies = React.useMemo(() => {
+    if (!upcomingMoviesQuery.data?.pages) return [];
+    return upcomingMoviesQuery.data.pages.flatMap(page => page.results);
+  }, [upcomingMoviesQuery.data]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -53,85 +109,17 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, []);
 
-  const handleCategoryPress = (categoryKey: string, mediaType: 'movie' | 'tv') => {
-    router.push(`/category-list/${categoryKey}?mediaType=${mediaType}` as any);
+  const handleMovieLoadMore = (query: typeof trendingMoviesQuery) => {
+    if (query.hasNextPage && !query.isFetchingNextPage) {
+      query.fetchNextPage();
+    }
   };
 
-  const renderMovieList = (
-    title: string,
-    movies: Movie[] | undefined,
-    isLoading: boolean,
-    categoryKey: string
-  ) => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity 
-          onPress={() => handleCategoryPress(categoryKey, 'movie')}
-          style={styles.chevronButton}
-        >
-          <ChevronRight size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-      {isLoading ? (
-        <FlashList
-          horizontal
-          data={[1, 2, 3, 4]}
-          renderItem={() => <MovieCardSkeleton />}
-          keyExtractor={(item) => item.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
-      ) : (
-        <FlashList
-          horizontal
-          data={movies || []}
-          renderItem={({ item }) => <MovieCard movie={item} />}
-          keyExtractor={(item) => item.id.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-    </View>
-  );
-
-  const renderTVList = (
-    title: string,
-    shows: TVShow[] | undefined,
-    isLoading: boolean,
-    categoryKey: string
-  ) => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity 
-          onPress={() => handleCategoryPress(categoryKey, 'tv')}
-          style={styles.chevronButton}
-        >
-          <ChevronRight size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-      {isLoading ? (
-        <FlashList
-          horizontal
-          data={[1, 2, 3, 4]}
-          renderItem={() => <MovieCardSkeleton />}
-          keyExtractor={(item) => item.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
-      ) : (
-        <FlashList
-          horizontal
-          data={shows || []}
-          renderItem={({ item }) => <TVShowCard show={item} />}
-          keyExtractor={(item) => item.id.toString()}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
-      )}
-    </View>
-  );
+  const handleTVLoadMore = (query: typeof trendingTVQuery) => {
+    if (query.hasNextPage && !query.isFetchingNextPage) {
+      query.fetchNextPage();
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -151,40 +139,135 @@ export default function HomeScreen() {
           />
         }
       >
-        {renderMovieList(
-          'Trending Movies',
-          trendingMoviesQuery.data?.results,
-          trendingMoviesQuery.isLoading,
-          'trending-movies'
-        )}
+        {/* Trending Movies */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trending Movies</Text>
+          {trendingMoviesQuery.isLoading ? (
+            <FlashList
+              horizontal
+              data={[1, 2, 3, 4]}
+              renderItem={() => <MovieCardSkeleton />}
+              keyExtractor={(item) => item.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlashList
+              horizontal
+              data={trendingMovies}
+              renderItem={({ item }) => <MovieCard movie={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleMovieLoadMore(trendingMoviesQuery)}
+              onEndReachedThreshold={0.5}
+            />
+          )}
+        </View>
 
-        {renderTVList(
-          'Trending TV Shows',
-          trendingTVQuery.data?.results,
-          trendingTVQuery.isLoading,
-          'trending-tv'
-        )}
+        {/* Trending TV Shows */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trending TV Shows</Text>
+          {trendingTVQuery.isLoading ? (
+            <FlashList
+              horizontal
+              data={[1, 2, 3, 4]}
+              renderItem={() => <MovieCardSkeleton />}
+              keyExtractor={(item) => item.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlashList
+              horizontal
+              data={trendingTVShows}
+              renderItem={({ item }) => <TVShowCard show={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleTVLoadMore(trendingTVQuery)}
+              onEndReachedThreshold={0.5}
+            />
+          )}
+        </View>
 
-        {renderMovieList(
-          'Popular Movies',
-          popularMoviesQuery.data?.results,
-          popularMoviesQuery.isLoading,
-          'popular-movies'
-        )}
+        {/* Popular Movies */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Popular Movies</Text>
+          {popularMoviesQuery.isLoading ? (
+            <FlashList
+              horizontal
+              data={[1, 2, 3, 4]}
+              renderItem={() => <MovieCardSkeleton />}
+              keyExtractor={(item) => item.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlashList
+              horizontal
+              data={popularMovies}
+              renderItem={({ item }) => <MovieCard movie={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleMovieLoadMore(popularMoviesQuery)}
+              onEndReachedThreshold={0.5}
+            />
+          )}
+        </View>
 
-        {renderMovieList(
-          'Top Rated',
-          topRatedMoviesQuery.data?.results,
-          topRatedMoviesQuery.isLoading,
-          'top-rated-movies'
-        )}
+        {/* Top Rated */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Rated</Text>
+          {topRatedMoviesQuery.isLoading ? (
+            <FlashList
+              horizontal
+              data={[1, 2, 3, 4]}
+              renderItem={() => <MovieCardSkeleton />}
+              keyExtractor={(item) => item.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlashList
+              horizontal
+              data={topRatedMovies}
+              renderItem={({ item }) => <MovieCard movie={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleMovieLoadMore(topRatedMoviesQuery)}
+              onEndReachedThreshold={0.5}
+            />
+          )}
+        </View>
 
-        {renderMovieList(
-          'Upcoming',
-          upcomingMoviesQuery.data?.results,
-          upcomingMoviesQuery.isLoading,
-          'upcoming-movies'
-        )}
+        {/* Upcoming */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upcoming</Text>
+          {upcomingMoviesQuery.isLoading ? (
+            <FlashList
+              horizontal
+              data={[1, 2, 3, 4]}
+              renderItem={() => <MovieCardSkeleton />}
+              keyExtractor={(item) => item.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+            />
+          ) : (
+            <FlashList
+              horizontal
+              data={upcomingMovies}
+              renderItem={({ item }) => <MovieCard movie={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleMovieLoadMore(upcomingMoviesQuery)}
+              onEndReachedThreshold={0.5}
+            />
+          )}
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -208,31 +291,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
   scrollView: {
     flex: 1,
   },
   section: {
     marginTop: SPACING.l,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.m,
-    paddingHorizontal: SPACING.l,
-  },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.text,
-  },
-  chevronButton: {
-    padding: 0,
+    marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.l,
   },
   listContent: {
     paddingHorizontal: SPACING.l,
