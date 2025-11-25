@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  FlatList,
   TextInput,
+  FlatList,
 } from 'react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { Genre, tmdbApi } from '@/src/api/tmdb';
@@ -15,7 +15,7 @@ import { ChevronDown, Check, X } from 'lucide-react-native';
 export interface FilterState {
   sortBy: string;
   genre: number | null;
-  year: string;
+  year: number | null;
   rating: number;
   language: string | null;
 }
@@ -42,19 +42,12 @@ const RATING_OPTIONS = [
   { label: '9+ Stars', value: 9 },
 ];
 
-const COMMON_LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'hi', name: 'Hindi' },
-];
-
 interface SelectOption {
   label: string;
   value: any;
 }
+
+const ITEM_HEIGHT = 56;
 
 const FilterSelect = ({
   label,
@@ -91,9 +84,9 @@ const FilterSelect = ({
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setVisible(false)}
         >
           <View style={styles.modalContent}>
@@ -115,7 +108,7 @@ const FilterSelect = ({
                   }}
                 >
                   <Text style={[
-                    styles.optionText, 
+                    styles.optionText,
                     item.value === value && styles.optionTextSelected
                   ]}>
                     {item.label}
@@ -177,6 +170,16 @@ export default function DiscoverFilters({
     ...languages.map(l => ({ label: l.english_name, value: l.iso_639_1 }))
   ];
 
+  // Generate year options from current year down to 1950
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [
+    { label: 'All Years', value: null },
+    ...Array.from({ length: currentYear - 1949 }, (_, i) => {
+      const year = currentYear - i;
+      return { label: String(year), value: year };
+    })
+  ];
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -219,17 +222,17 @@ export default function DiscoverFilters({
         </View>
       </View>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.selectLabel}>Release Year</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 2023"
-          placeholderTextColor={COLORS.textSecondary}
-          keyboardType="numeric"
-          value={filters.year}
-          onChangeText={(text) => updateFilter('year', text)}
-          maxLength={4}
-        />
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <FilterSelect
+            label="Release Year"
+            value={filters.year}
+            options={yearOptions}
+            onSelect={(val) => updateFilter('year', val)}
+            placeholder="All Years"
+          />
+        </View>
+        <View style={styles.col} />
       </View>
 
       <TouchableOpacity style={styles.clearButton} onPress={onClearFilters}>
@@ -318,6 +321,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: SPACING.m,
+    height: ITEM_HEIGHT,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },

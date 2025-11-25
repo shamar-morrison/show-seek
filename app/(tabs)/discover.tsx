@@ -21,7 +21,7 @@ type MediaType = 'movie' | 'tv';
 const DEFAULT_FILTERS: FilterState = {
   sortBy: 'popularity.desc',
   genre: null,
-  year: '',
+  year: null,
   rating: 0,
   language: null,
 };
@@ -36,7 +36,7 @@ export default function DiscoverScreen() {
     queryFn: async () => {
       const params = {
         genre: filters.genre?.toString(),
-        year: filters.year ? parseInt(filters.year) : undefined,
+        year: filters.year || undefined,
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
         withOriginalLanguage: filters.language || undefined,
