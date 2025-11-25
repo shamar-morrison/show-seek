@@ -101,11 +101,6 @@ export default function PersonDetailScreen() {
 
   const age = calculateAge(person.birthday, person.deathday);
 
-  // console.log(person, 'person')
-  console.log(age, 'age')
-  console.log(person.birthday, 'birthday')
-  console.log(person.place_of_birth, 'place_of_birth')
-
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -126,6 +121,7 @@ export default function PersonDetailScreen() {
             source={{ uri: profileUrl }}
             style={styles.profileImage}
             contentFit="cover"
+            placeholderType="person"
           />
           
           <View style={styles.profileInfo}>
