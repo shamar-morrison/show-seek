@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { FlashList } from "@shopify/flash-list";
@@ -15,6 +14,7 @@ import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { Star, Compass } from 'lucide-react-native';
 import { router } from 'expo-router';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 
 type MediaType = 'movie' | 'tv';
 
@@ -70,10 +70,12 @@ export default function DiscoverScreen() {
 
     return (
       <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)}>
-        <Image
-          source={{ uri: posterUrl || 'https://via.placeholder.com/92x138' }}
+        <MediaImage
+          source={{ uri: posterUrl }}
           style={styles.resultPoster}
-          resizeMode="cover"
+          width={92}
+          height={138}
+          contentFit="cover"
         />
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>

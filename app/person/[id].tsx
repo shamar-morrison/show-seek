@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -122,10 +122,12 @@ export default function PersonDetailScreen() {
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <Image 
-            source={{ uri: profileUrl || 'https://via.placeholder.com/300' }} 
+          <MediaImage
+            source={{ uri: profileUrl }}
             style={styles.profileImage}
-            resizeMode="cover"
+            width={140}
+            height={210}
+            contentFit="cover"
           />
           
           <View style={styles.profileInfo}>
@@ -187,11 +189,14 @@ export default function PersonDetailScreen() {
                   style={styles.creditCard}
                   onPress={() => handleMoviePress(movie.id)}
                 >
-                  <Image 
-                    source={{ 
-                      uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small) || 'https://via.placeholder.com/185x278' 
-                    }} 
+                  <MediaImage
+                    source={{
+                      uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                    }}
                     style={styles.creditPoster}
+                    width={100}
+                    height={150}
+                    contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{movie.title}</Text>
                   {movie.release_date && (
@@ -216,11 +221,14 @@ export default function PersonDetailScreen() {
                   style={styles.creditCard}
                   onPress={() => handleTVPress(show.id)}
                 >
-                  <Image 
-                    source={{ 
-                      uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small) || 'https://via.placeholder.com/185x278' 
-                    }} 
+                  <MediaImage
+                    source={{
+                      uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                    }}
                     style={styles.creditPoster}
+                    width={100}
+                    height={150}
+                    contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>{show.name}</Text>
                   {show.first_air_date && (

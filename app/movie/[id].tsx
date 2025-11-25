@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
@@ -18,6 +17,8 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import { MediaImage } from '@/src/components/ui/MediaImage';
+import { Image } from 'expo-image';
 
 const { width } = Dimensions.get('window');
 
@@ -135,10 +136,12 @@ export default function MovieDetailScreen() {
       <ScrollView style={styles.scrollView} bounces={false}>
         {/* Hero Section */}
         <View style={styles.heroContainer}>
-          <Image 
-            source={{ uri: backdropUrl || 'https://via.placeholder.com/500x281' }} 
+          <MediaImage
+            source={{ uri: backdropUrl }}
             style={styles.backdrop}
-            resizeMode="cover"
+            width={width}
+            height={width * 0.562}
+            contentFit="cover"
           />
           <LinearGradient
             colors={['transparent', COLORS.background]}
@@ -155,10 +158,12 @@ export default function MovieDetailScreen() {
           </SafeAreaView>
 
           <View style={styles.posterContainer}>
-            <Image 
-              source={{ uri: posterUrl || 'https://via.placeholder.com/154x231' }} 
+            <MediaImage
+              source={{ uri: posterUrl }}
               style={styles.poster}
-              resizeMode="cover"
+              width={120}
+              height={180}
+              contentFit="cover"
             />
           </View>
         </View>
@@ -254,9 +259,12 @@ export default function MovieDetailScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {watchProviders.flatrate.map(provider => (
                       <View key={provider.provider_id} style={styles.providerCard}>
-                        <Image
-                          source={{ uri: getImageUrl(provider.logo_path, '/w92') || '' }}
+                        <MediaImage
+                          source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
                           style={styles.providerLogo}
+                          width={60}
+                          height={60}
+                          contentFit="contain"
                         />
                         <Text style={styles.providerName} numberOfLines={1}>
                           {provider.provider_name}
@@ -279,11 +287,14 @@ export default function MovieDetailScreen() {
                     style={styles.castCard}
                     onPress={() => handleCastPress(actor.id)}
                   >
-                    <Image 
-                      source={{ 
-                        uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium) || 'https://via.placeholder.com/100' 
-                      }} 
+                    <MediaImage
+                      source={{
+                        uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium)
+                      }}
                       style={styles.castImage}
+                      width={80}
+                      height={80}
+                      contentFit="cover"
                     />
                     <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
                     <Text style={styles.characterName} numberOfLines={1}>{actor.character}</Text>
@@ -304,11 +315,14 @@ export default function MovieDetailScreen() {
                     style={styles.similarCard}
                     onPress={() => handleMoviePress(similar.id)}
                   >
-                    <Image 
-                      source={{ 
-                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small) || 'https://via.placeholder.com/185x278' 
-                      }} 
+                    <MediaImage
+                      source={{
+                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                      }}
                       style={styles.similarPoster}
+                      width={100}
+                      height={150}
+                      contentFit="cover"
                     />
                     <Text style={styles.similarTitle} numberOfLines={2}>{similar.title}</Text>
                   </TouchableOpacity>
@@ -330,9 +344,12 @@ export default function MovieDetailScreen() {
                       setLightboxVisible(true);
                     }}
                   >
-                    <Image 
-                      source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) || '' }} 
+                    <MediaImage
+                      source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}
                       style={styles.photoImage}
+                      width={200}
+                      height={113}
+                      contentFit="cover"
                     />
                   </TouchableOpacity>
                 ))}

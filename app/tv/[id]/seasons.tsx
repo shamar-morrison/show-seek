@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
   ActivityIndicator,
   Dimensions
 } from 'react-native';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronDown, ChevronRight, Star, Calendar } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 
 const { width } = Dimensions.get('window');
 
@@ -105,9 +105,12 @@ export default function TVSeasonsScreen() {
                 style={styles.seasonHeader}
                 onPress={() => toggleSeason(season.season_number)}
               >
-                <Image 
-                  source={{ uri: posterUrl || 'https://via.placeholder.com/92x138' }} 
+                <MediaImage
+                  source={{ uri: posterUrl }}
                   style={styles.seasonPoster}
+                  width={92}
+                  height={138}
+                  contentFit="cover"
                 />
                 
                 <View style={styles.seasonInfo}>
@@ -143,9 +146,12 @@ export default function TVSeasonsScreen() {
                     
                     return (
                       <View key={episode.id} style={styles.episodeCard}>
-                        <Image 
-                          source={{ uri: stillUrl || 'https://via.placeholder.com/300x169' }} 
+                        <MediaImage
+                          source={{ uri: stillUrl }}
                           style={styles.episodeStill}
+                          width={width - 32}
+                          height={(width - 32) * 0.563}
+                          contentFit="cover"
                         />
                         
                         <View style={styles.episodeInfo}>

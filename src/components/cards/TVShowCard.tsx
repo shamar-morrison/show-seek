@@ -1,9 +1,10 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Image, View } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { TVShow, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 
 interface TVShowCardProps {
   show: TVShow;
@@ -19,10 +20,12 @@ export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
 
   return (
     <TouchableOpacity onPress={handlePress} style={[styles.container, { width }]}>
-      <Image
-        source={{ uri: posterUrl || 'https://via.placeholder.com/140x210' }}
+      <MediaImage
+        source={{ uri: posterUrl }}
         style={[styles.poster, { width, height: width * 1.5 }]}
-        resizeMode="cover"
+        width={width}
+        height={width * 1.5}
+        contentFit="cover"
       />
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>
