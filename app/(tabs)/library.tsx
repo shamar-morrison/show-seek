@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '@/src/constants/theme';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 export default function LibraryScreen() {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Text style={styles.text}>Library Screen</Text>
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -14,11 +14,19 @@ export default function TabLayout() {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.surfaceLight,
           borderTopWidth: 1,
+          height: 80, // Increased height for better touch area and safe area accommodation
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
+          marginBottom: 4,
         },
+        tabBarItemStyle: {
+           // Ensure items are centered
+           justifyContent: 'center',
+           paddingVertical: 4,
+        }
       }}
     >
       <Tabs.Screen

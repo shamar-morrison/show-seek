@@ -99,7 +99,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Rork</Text>
         <Text style={styles.headerSubtitle}>Movies & TV Shows</Text>
@@ -147,7 +147,7 @@ export default function HomeScreen() {
           upcomingMoviesQuery.isLoading
         )}
 
-        <View style={{ height: SPACING.xl }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );

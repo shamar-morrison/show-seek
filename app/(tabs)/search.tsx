@@ -99,7 +99,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search</Text>
       </View>
@@ -171,7 +171,7 @@ export default function SearchScreen() {
           data={searchResultsQuery.data?.results || []}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
         />
       )}
