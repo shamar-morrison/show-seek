@@ -1,12 +1,13 @@
+import DevIndicator from '@/src/components/DevIndicator';
+import { COLORS } from '@/src/constants/theme';
+import { AuthProvider, useAuth } from '@/src/context/auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AuthProvider, useAuth } from '@/src/context/auth';
-import { COLORS } from '@/src/constants/theme';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +38,12 @@ function RootLayoutNav() {
     if (loading) return;
 
     // Logic for redirection
+    if (
+      require('@/src/utils/dev-navigation').handleDevNavigation(router, isOnboarding, inAuthGroup)
+    ) {
+      return;
+    }
+
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
       router.replace('/onboarding');
@@ -67,6 +74,7 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
+      {__DEV__ && <DevIndicator />}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.background },
