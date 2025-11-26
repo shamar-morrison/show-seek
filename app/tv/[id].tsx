@@ -174,11 +174,13 @@ export default function TVShowDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
-                {new Date(show.first_air_date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {show.first_air_date
+                  ? new Date(show.first_air_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
+                  : 'Unknown'}
               </Text>
             </View>
             <TouchableOpacity
