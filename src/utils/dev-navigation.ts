@@ -58,41 +58,26 @@ export const handleDevNavigation = (
 
   console.log('[DEV NAV] Dev navigation enabled');
 
-  // Check for forced screens
-  if (config.FORCE_SCREENS.ONBOARDING) {
-    console.log('[DEV NAV] Force screen: ONBOARDING');
-    router.replace('/onboarding');
-    return true;
-  }
-  if (config.FORCE_SCREENS.SIGN_IN) {
-    console.log('[DEV NAV] Force screen: SIGN_IN');
-    router.replace('/(auth)/sign-in');
-    return true;
-  }
-  if (config.FORCE_SCREENS.SIGN_UP) {
-    console.log('[DEV NAV] Force screen: SIGN_UP');
-    router.replace('/(auth)/sign-up');
-    return true;
-  }
-  if (config.FORCE_SCREENS.HOME) {
-    console.log('[DEV NAV] Force screen: HOME');
-    router.replace('/(tabs)');
-    return true;
-  }
-  if (config.FORCE_SCREENS.PROFILE) {
-    console.log('[DEV NAV] Force screen: PROFILE');
-    router.replace('/(tabs)/profile');
-    return true;
-  }
-  if (config.FORCE_SCREENS.SEARCH) {
-    console.log('[DEV NAV] Force screen: SEARCH');
-    router.replace('/(tabs)/search');
-    return true;
-  }
-  if (config.FORCE_SCREENS.LIBRARY) {
-    console.log('[DEV NAV] Force screen: LIBRARY');
-    router.replace('/(tabs)/library');
-    return true;
+  // Map of force screen keys to routes
+  const forceScreenRoutes: Record<string, string> = {
+    ONBOARDING: '/onboarding',
+    SIGN_IN: '/(auth)/sign-in',
+    SIGN_UP: '/(auth)/sign-up',
+    HOME: '/(tabs)',
+    PROFILE: '/(tabs)/profile',
+    SEARCH: '/(tabs)/search',
+    LIBRARY: '/(tabs)/library',
+  };
+
+  const activeForceScreen = Object.entries(config.FORCE_SCREENS).find(([_, v]) => v);
+  if (activeForceScreen) {
+    const [screenKey] = activeForceScreen;
+    const route = forceScreenRoutes[screenKey];
+    if (route) {
+      console.log(`[DEV NAV] Force screen: ${screenKey}`);
+      router.replace(route as any);
+      return true;
+    }
   }
 
   // If skipping auth check, allow access to main app
