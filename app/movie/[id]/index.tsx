@@ -1,14 +1,17 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useMediaLists } from '@/src/hooks/useLists';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Calendar,
+  Check,
   ChevronRight,
   Clock,
   DollarSign,
@@ -34,6 +37,10 @@ export default function MovieDetailScreen() {
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [listModalVisible, setListModalVisible] = useState(false);
+
+  const membership = useMediaLists(movieId);
+  const isInAnyList = Object.keys(membership).length > 0;
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -209,8 +216,16 @@ export default function MovieDetailScreen() {
               <Play size={20} color={COLORS.white} fill={COLORS.white} />
               <Text style={styles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
-              <Plus size={24} color={COLORS.white} />
+            <TouchableOpacity
+              style={[styles.addButton, isInAnyList && styles.addedButton]}
+              activeOpacity={ACTIVE_OPACITY}
+              onPress={() => setListModalVisible(true)}
+            >
+              {isInAnyList ? (
+                <Check size={24} color={COLORS.white} />
+              ) : (
+                <Plus size={24} color={COLORS.white} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -424,6 +439,21 @@ export default function MovieDetailScreen() {
         }
         initialIndex={lightboxIndex}
       />
+
+      {movie && (
+        <AddToListModal
+          visible={listModalVisible}
+          onClose={() => setListModalVisible(false)}
+          mediaItem={{
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            media_type: 'movie',
+            vote_average: movie.vote_average,
+            release_date: movie.release_date,
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -576,6 +606,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
+  },
+  addedButton: {
+    backgroundColor: COLORS.success,
   },
   financialContainer: {
     flexDirection: 'row',

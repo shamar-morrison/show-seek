@@ -1,33 +1,35 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  Star,
-  Calendar,
-  Plus,
-  Play,
-  Layers,
-  Tv,
-  ChevronRight,
-} from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { Image } from 'expo-image';
+import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useMediaLists } from '@/src/hooks/useLists';
+import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ChevronRight,
+  Layers,
+  Play,
+  Plus,
+  Star,
+  Tv,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -38,6 +40,10 @@ export default function TVShowDetailScreen() {
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [listModalVisible, setListModalVisible] = useState(false);
+
+  const membership = useMediaLists(tvId);
+  const isInAnyList = Object.keys(membership).length > 0;
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -218,8 +224,16 @@ export default function TVShowDetailScreen() {
               <Play size={20} color={COLORS.white} fill={COLORS.white} />
               <Text style={styles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
-              <Plus size={24} color={COLORS.white} />
+            <TouchableOpacity
+              style={[styles.addButton, isInAnyList && styles.addedButton]}
+              activeOpacity={ACTIVE_OPACITY}
+              onPress={() => setListModalVisible(true)}
+            >
+              {isInAnyList ? (
+                <Check size={24} color={COLORS.white} />
+              ) : (
+                <Plus size={24} color={COLORS.white} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -404,6 +418,21 @@ export default function TVShowDetailScreen() {
         }
         initialIndex={lightboxIndex}
       />
+
+      {show && (
+        <AddToListModal
+          visible={listModalVisible}
+          onClose={() => setListModalVisible(false)}
+          mediaItem={{
+            id: show.id,
+            title: show.name,
+            poster_path: show.poster_path,
+            media_type: 'tv',
+            vote_average: show.vote_average,
+            release_date: show.first_air_date,
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -571,6 +600,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
+  },
+  addedButton: {
+    backgroundColor: COLORS.success,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
