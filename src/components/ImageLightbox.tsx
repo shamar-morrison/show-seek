@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING, ACTIVE_OPACITY } from '@/src/constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,7 +49,7 @@ export default function ImageLightbox({
         <TouchableOpacity
           style={styles.closeButton}
           onPress={onClose}
-          activeOpacity={0.8}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <X size={32} color={COLORS.white} />
         </TouchableOpacity>

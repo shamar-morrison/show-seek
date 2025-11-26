@@ -8,7 +8,7 @@ import {
   TextInput,
   FlatList,
 } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { Genre, tmdbApi } from '@/src/api/tmdb';
 import { ChevronDown, Check, X } from 'lucide-react-native';
 
@@ -71,6 +71,7 @@ const FilterSelect = ({
       <TouchableOpacity
         style={styles.selectButton}
         onPress={() => setVisible(true)}
+        activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -92,7 +93,7 @@ const FilterSelect = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select {label}</Text>
-              <TouchableOpacity onPress={() => setVisible(false)}>
+              <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
                 <X size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
@@ -102,6 +103,7 @@ const FilterSelect = ({
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.optionItem}
+                  activeOpacity={ACTIVE_OPACITY}
                   onPress={() => {
                     onSelect(item.value);
                     setVisible(false);
@@ -235,7 +237,7 @@ export default function DiscoverFilters({
         <View style={styles.col} />
       </View>
 
-      <TouchableOpacity style={styles.clearButton} onPress={onClearFilters}>
+      <TouchableOpacity style={styles.clearButton} onPress={onClearFilters} activeOpacity={ACTIVE_OPACITY}>
         <X size={18} color={COLORS.textSecondary} />
         <Text style={styles.clearButtonText}>Clear Filters</Text>
       </TouchableOpacity>

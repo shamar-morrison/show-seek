@@ -9,7 +9,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre, Movie, TVShow } from '@/src/api/tmdb';
 import { Star, Compass, SlidersHorizontal } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -131,7 +131,7 @@ export default function DiscoverScreen() {
       : [];
 
     return (
-      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)}>
+      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)} activeOpacity={ACTIVE_OPACITY}>
         <MediaImage
           source={{ uri: posterUrl }}
           style={styles.resultPoster}
@@ -179,6 +179,7 @@ export default function DiscoverScreen() {
         <TouchableOpacity
           style={styles.filterToggle}
           onPress={() => setShowFilters(!showFilters)}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <SlidersHorizontal
             size={24}
@@ -192,6 +193,7 @@ export default function DiscoverScreen() {
         <TouchableOpacity
           style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
           onPress={() => setMediaType('movie')}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
             Movies
@@ -200,6 +202,7 @@ export default function DiscoverScreen() {
         <TouchableOpacity
           style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
           onPress={() => setMediaType('tv')}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
             TV Shows

@@ -10,7 +10,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre } from '@/src/api/tmdb';
 import { Search as SearchIcon, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
@@ -97,7 +97,7 @@ export default function SearchScreen() {
       : [];
 
     return (
-      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)}>
+      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)} activeOpacity={ACTIVE_OPACITY}>
         <MediaImage
           source={{ uri: posterUrl }}
           style={styles.resultPoster}
@@ -175,6 +175,7 @@ export default function SearchScreen() {
         <TouchableOpacity
           style={[styles.filterButton, mediaType === 'all' && styles.filterButtonActive]}
           onPress={() => setMediaType('all')}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <Text
             style={[styles.filterText, mediaType === 'all' && styles.filterTextActive]}
@@ -185,6 +186,7 @@ export default function SearchScreen() {
         <TouchableOpacity
           style={[styles.filterButton, mediaType === 'movie' && styles.filterButtonActive]}
           onPress={() => setMediaType('movie')}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <Text
             style={[styles.filterText, mediaType === 'movie' && styles.filterTextActive]}
@@ -195,6 +197,7 @@ export default function SearchScreen() {
         <TouchableOpacity
           style={[styles.filterButton, mediaType === 'tv' && styles.filterButtonActive]}
           onPress={() => setMediaType('tv')}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <Text
             style={[styles.filterText, mediaType === 'tv' && styles.filterTextActive]}

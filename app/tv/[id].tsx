@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Star, Calendar, Plus, Play, Layers, Tv } from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -78,7 +78,7 @@ export default function TVShowDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load TV show details</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -138,6 +138,7 @@ export default function TVShowDetailScreen() {
             <TouchableOpacity 
               style={styles.headerButton} 
               onPress={() => router.back()}
+              activeOpacity={ACTIVE_OPACITY}
             >
               <ArrowLeft size={24} color={COLORS.white} />
             </TouchableOpacity>
@@ -170,6 +171,7 @@ export default function TVShowDetailScreen() {
             <TouchableOpacity
               style={styles.metaItem}
               onPress={handleSeasonsPress}
+              activeOpacity={ACTIVE_OPACITY}
             >
               <Layers size={14} color={COLORS.primary} />
               <Text style={[styles.metaText, { color: COLORS.primary }]}>
@@ -206,11 +208,12 @@ export default function TVShowDetailScreen() {
                style={[styles.playButton, !trailer && styles.disabledButton]} 
                onPress={handleTrailerPress}
                disabled={!trailer}
+               activeOpacity={ACTIVE_OPACITY}
              >
                 <Play size={20} color={COLORS.white} fill={COLORS.white} />
                 <Text style={styles.playButtonText}>Watch Trailer</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={styles.addButton}>
+             <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
                 <Plus size={24} color={COLORS.white} />
              </TouchableOpacity>
           </View>
@@ -223,7 +226,7 @@ export default function TVShowDetailScreen() {
           {creator && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Creator: </Text>
-              <TouchableOpacity onPress={() => router.push(`/person/${creator.id}` as any)}>
+              <TouchableOpacity onPress={() => router.push(`/person/${creator.id}` as any)} activeOpacity={ACTIVE_OPACITY}>
                 <Text style={[styles.value, { color: COLORS.primary }]}>{creator.name}</Text>
               </TouchableOpacity>
             </View>
@@ -264,6 +267,7 @@ export default function TVShowDetailScreen() {
                     key={actor.id} 
                     style={styles.castCard}
                     onPress={() => handleCastPress(actor.id)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
@@ -290,6 +294,7 @@ export default function TVShowDetailScreen() {
                     key={similar.id} 
                     style={styles.similarCard}
                     onPress={() => handleShowPress(similar.id)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
@@ -333,6 +338,7 @@ export default function TVShowDetailScreen() {
                       setLightboxIndex(index);
                       setLightboxVisible(true);
                     }}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}

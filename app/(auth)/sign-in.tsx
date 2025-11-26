@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useRouter, Link } from 'expo-router';
 import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { auth } from '@/src/firebase/config';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -126,6 +126,7 @@ export default function SignIn() {
                   <TouchableOpacity
                     style={styles.eyeIcon}
                     onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     {showPassword ? (
                       <EyeOff size={20} color={COLORS.textSecondary} />
@@ -140,6 +141,7 @@ export default function SignIn() {
                 style={styles.button}
                 onPress={handleSignIn}
                 disabled={loading}
+                activeOpacity={ACTIVE_OPACITY}
               >
                 {loading ? (
                   <ActivityIndicator color={COLORS.white} />
@@ -152,6 +154,7 @@ export default function SignIn() {
                   style={[styles.button, styles.guestButton]}
                   onPress={handleGuestSignIn}
                   disabled={loading}
+                  activeOpacity={ACTIVE_OPACITY}
               >
                   <Text style={styles.guestButtonText}>Continue as Guest</Text>
               </TouchableOpacity>
@@ -159,7 +162,7 @@ export default function SignIn() {
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Don't have an account? </Text>
                 <Link href="/(auth)/sign-up" asChild>
-                  <TouchableOpacity>
+                  <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
                     <Text style={styles.link}>Sign Up</Text>
                   </TouchableOpacity>
                 </Link>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, Text, ActivityIndicator } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, ACTIVE_OPACITY } from '@/src/constants/theme';
 
 interface ButtonProps {
   title: string;
@@ -45,7 +45,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       style={getButtonStyle()}
-      activeOpacity={0.7}
+      activeOpacity={ACTIVE_OPACITY}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'outline' ? COLORS.primary : COLORS.white} />

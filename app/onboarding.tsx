@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, useWindowDimensions, TouchableOpacity, Image } 
 import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/auth';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -99,11 +99,11 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-           <TouchableOpacity onPress={finishOnboarding} style={styles.skipButton}>
+           <TouchableOpacity onPress={finishOnboarding} style={styles.skipButton} activeOpacity={ACTIVE_OPACITY}>
               <Text style={styles.skipText}>Skip</Text>
            </TouchableOpacity>
 
-           <TouchableOpacity onPress={handleNext} style={styles.nextButton}>
+           <TouchableOpacity onPress={handleNext} style={styles.nextButton} activeOpacity={ACTIVE_OPACITY}>
               <Text style={styles.nextText}>
                 {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
               </Text>

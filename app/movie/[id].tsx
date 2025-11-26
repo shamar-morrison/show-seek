@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film } from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -74,7 +74,7 @@ export default function MovieDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load movie details</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -146,6 +146,7 @@ export default function MovieDetailScreen() {
             <TouchableOpacity 
               style={styles.headerButton} 
               onPress={() => router.back()}
+              activeOpacity={ACTIVE_OPACITY}
             >
               <ArrowLeft size={24} color={COLORS.white} />
             </TouchableOpacity>
@@ -200,11 +201,12 @@ export default function MovieDetailScreen() {
                style={[styles.playButton, !trailer && styles.disabledButton]} 
                onPress={handleTrailerPress}
                disabled={!trailer}
+               activeOpacity={ACTIVE_OPACITY}
              >
                 <Play size={20} color={COLORS.white} fill={COLORS.white} />
                 <Text style={styles.playButtonText}>Watch Trailer</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={styles.addButton}>
+             <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
                 <Plus size={24} color={COLORS.white} />
              </TouchableOpacity>
           </View>
@@ -243,7 +245,7 @@ export default function MovieDetailScreen() {
           {director && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Director: </Text>
-              <TouchableOpacity onPress={() => router.push(`/person/${director.id}` as any)}>
+              <TouchableOpacity onPress={() => router.push(`/person/${director.id}` as any)} activeOpacity={ACTIVE_OPACITY}>
                 <Text style={[styles.value, { color: COLORS.primary }]}>{director.name}</Text>
               </TouchableOpacity>
             </View>
@@ -284,6 +286,7 @@ export default function MovieDetailScreen() {
                     key={actor.id} 
                     style={styles.castCard}
                     onPress={() => handleCastPress(actor.id)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
@@ -311,6 +314,7 @@ export default function MovieDetailScreen() {
                     key={similar.id} 
                     style={styles.similarCard}
                     onPress={() => handleMoviePress(similar.id)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
@@ -354,6 +358,7 @@ export default function MovieDetailScreen() {
                       setLightboxIndex(index);
                       setLightboxVisible(true);
                     }}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}

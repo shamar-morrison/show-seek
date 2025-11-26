@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Route, router } from 'expo-router';
 import { Movie, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 
@@ -19,12 +19,10 @@ export function MovieCard({ movie, width = 140 }: MovieCardProps) {
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} style={[styles.container, { width }]}>
+    <TouchableOpacity onPress={handlePress} style={[styles.container, { width }]} activeOpacity={ACTIVE_OPACITY}>
       <MediaImage
         source={{ uri: posterUrl }}
         style={[styles.poster, { width, height: width * 1.5 }]}
-        width={width}
-        height={width * 1.5}
         contentFit="cover"
       />
       <View style={styles.info}>

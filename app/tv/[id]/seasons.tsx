@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, ChevronDown, ChevronRight, Star, Calendar } from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 
@@ -54,7 +54,7 @@ export default function TVSeasonsScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load seasons</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -85,6 +85,7 @@ export default function TVSeasonsScreen() {
         <TouchableOpacity 
           style={styles.headerButton} 
           onPress={() => router.back()}
+          activeOpacity={ACTIVE_OPACITY}
         >
           <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
@@ -104,6 +105,7 @@ export default function TVSeasonsScreen() {
               <TouchableOpacity 
                 style={styles.seasonHeader}
                 onPress={() => toggleSeason(season.season_number)}
+                activeOpacity={ACTIVE_OPACITY}
               >
                 <MediaImage
                   source={{ uri: posterUrl }}

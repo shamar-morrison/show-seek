@@ -41,3 +41,5 @@ export const FONT_SIZE = {
   xxl: 32,
   hero: 40,
 } as const;
+
+export const ACTIVE_OPACITY = 0.9; // the higher the value, the less opacity

@@ -4,7 +4,7 @@ import { useRouter, Link } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/src/firebase/config';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -142,6 +142,7 @@ export default function SignUp() {
                   <TouchableOpacity
                     style={styles.eyeIcon}
                     onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     {showPassword ? (
                       <EyeOff size={20} color={COLORS.textSecondary} />
@@ -166,6 +167,7 @@ export default function SignUp() {
                   <TouchableOpacity
                     style={styles.eyeIcon}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={20} color={COLORS.textSecondary} />
@@ -180,6 +182,7 @@ export default function SignUp() {
                 style={styles.button}
                 onPress={handleSignUp}
                 disabled={loading}
+                activeOpacity={ACTIVE_OPACITY}
               >
                 {loading ? (
                   <ActivityIndicator color={COLORS.white} />
@@ -191,7 +194,7 @@ export default function SignUp() {
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Already have an account? </Text>
                 <Link href="/(auth)/sign-in" asChild>
-                  <TouchableOpacity>
+                  <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
                     <Text style={styles.link}>Sign In</Text>
                   </TouchableOpacity>
                 </Link>
