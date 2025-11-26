@@ -26,7 +26,24 @@ export const getMockUser = (): User | null => {
   const config = getDevConfig();
   if (config?.ENABLE_DEV_NAVIGATION && config.OVERRIDES.MOCK_AUTHENTICATED) {
     console.log('[DEV NAV] Mocking authenticated user');
-    return config.MOCK_USER as User;
+    // Create a minimal mock that satisfies User interface
+    return {
+      ...config.MOCK_USER,
+      emailVerified: true,
+      isAnonymous: false,
+      metadata: {},
+      providerData: [],
+      refreshToken: '',
+      tenantId: null,
+      delete: async () => {},
+      getIdToken: async () => 'mock-token',
+      getIdTokenResult: async () => ({} as any),
+      reload: async () => {},
+      toJSON: () => ({}),
+      phoneNumber: null,
+      photoURL: null,
+      providerId: 'firebase',
+    } as User;
   }
   return null;
 };
