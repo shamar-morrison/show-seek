@@ -1,18 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { auth } from '../firebase/config';
 import { ListMediaItem, listService, UserList } from '../services/ListService';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!userId) return;
 
-    const unsubscribe = listService.subscribeToUserLists((lists) => {
-      queryClient.setQueryData(['lists', userId], lists);
-    });
+    setError(null); // Reset error on new subscription
+
+    const unsubscribe = listService.subscribeToUserLists(
+      (lists) => {
+        queryClient.setQueryData(['lists', userId], lists);
+        setError(null); // Clear error on successful update
+      },
+      (err) => {
+        setError(err);
+        console.error('[useLists] Subscription error:', err);
+      }
+    );
 
     return () => unsubscribe();
   }, [userId, queryClient]);
@@ -26,6 +36,7 @@ export const useLists = () => {
     },
     enabled: !!userId,
     staleTime: Infinity, // Data is updated via subscription
+    meta: { error }, // Attach error to query meta
   });
 };
 

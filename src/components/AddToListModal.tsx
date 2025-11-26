@@ -68,11 +68,12 @@ export default function AddToListModal({
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
   // Track changes for toast summary
   const changesRef = useRef<{ added: number; removed: number }>({ added: 0, removed: 0 });
 
-  const { data: lists, isLoading: isLoadingLists } = useLists();
+  const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
   const membership = useMediaLists(mediaItem.id);
 
   const addMutation = useAddToList();
@@ -84,6 +85,7 @@ export default function AddToListModal({
     if (visible) {
       changesRef.current = { added: 0, removed: 0 };
       setCreateError(null);
+      setOperationError(null);
       setIsCreating(false);
       setNewListName('');
     }
@@ -117,14 +119,21 @@ export default function AddToListModal({
 
   const handleToggleList = async (listId: string, listName: string, isMember: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOperationError(null);
 
-    if (isMember) {
-      removeMutation.mutate({ listId, mediaId: mediaItem.id });
-      changesRef.current.removed++;
-      changesRef.current.added = Math.max(0, changesRef.current.added - 1);
-    } else {
-      addMutation.mutate({ listId, mediaItem, listName });
-      changesRef.current.added++;
+    try {
+      if (isMember) {
+        await removeMutation.mutateAsync({ listId, mediaId: mediaItem.id });
+        changesRef.current.removed++;
+        changesRef.current.added = Math.max(0, changesRef.current.added - 1);
+      } else {
+        await addMutation.mutateAsync({ listId, mediaItem, listName });
+        changesRef.current.added++;
+      }
+    } catch (error) {
+      console.error('Failed to toggle list:', error);
+      setOperationError(error instanceof Error ? error.message : 'Failed to update list');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
@@ -174,6 +183,15 @@ export default function AddToListModal({
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
+
+          {(operationError || listsError) && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>
+                {operationError ||
+                  (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
+              </Text>
+            </View>
+          )}
 
           {isCreating ? (
             <View style={styles.createContainer}>
@@ -382,5 +400,16 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
+  },
+  errorBanner: {
+    backgroundColor: COLORS.error,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+  },
+  errorBannerText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
   },
 });
