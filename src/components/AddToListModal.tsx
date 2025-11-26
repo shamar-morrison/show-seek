@@ -1,8 +1,10 @@
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 import { Check, Plus, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -27,11 +29,48 @@ interface AddToListModalProps {
   visible: boolean;
   onClose: () => void;
   mediaItem: Omit<ListMediaItem, 'addedAt'>;
+  onShowToast?: (message: string) => void;
 }
 
-export default function AddToListModal({ visible, onClose, mediaItem }: AddToListModalProps) {
+const AnimatedCheck = ({ visible }: { visible: boolean }) => {
+  const scale = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 10,
+      }).start();
+    } else {
+      Animated.timing(scale, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [visible]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Check size={14} color={COLORS.white} strokeWidth={3} />
+    </Animated.View>
+  );
+};
+
+export default function AddToListModal({
+  visible,
+  onClose,
+  mediaItem,
+  onShowToast,
+}: AddToListModalProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Track changes for toast summary
+  const changesRef = useRef<{ added: number; removed: number }>({ added: 0, removed: 0 });
 
   const { data: lists, isLoading: isLoadingLists } = useLists();
   const membership = useMediaLists(mediaItem.id);
@@ -40,40 +79,98 @@ export default function AddToListModal({ visible, onClose, mediaItem }: AddToLis
   const removeMutation = useRemoveFromList();
   const createMutation = useCreateList();
 
-  const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
+  // Reset state when modal opens
+  useEffect(() => {
+    if (visible) {
+      changesRef.current = { added: 0, removed: 0 };
+      setCreateError(null);
+      setIsCreating(false);
+      setNewListName('');
+    }
+  }, [visible]);
+
+  const handleClose = useCallback(() => {
+    // Show summary toast if there were changes
+    const { added, removed } = changesRef.current;
+    if (added > 0 || removed > 0) {
+      let message = '';
+      if (added > 0 && removed > 0) {
+        message = 'Lists updated';
+      } else if (added === 1) {
+        message = 'Added to list';
+      } else if (added > 1) {
+        message = `Added to ${added} lists`;
+      } else if (removed === 1) {
+        message = 'Removed from list';
+      } else {
+        message = `Removed from ${removed} lists`;
+      }
+
+      if (onShowToast) {
+        onShowToast(message);
+      }
+    }
+
+    // Close immediately
+    onClose();
+  }, [onClose, onShowToast]);
+
+  const handleToggleList = async (listId: string, listName: string, isMember: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (isMember) {
       removeMutation.mutate({ listId, mediaId: mediaItem.id });
+      changesRef.current.removed++;
+      changesRef.current.added = Math.max(0, changesRef.current.added - 1);
     } else {
       addMutation.mutate({ listId, mediaItem, listName });
+      changesRef.current.added++;
     }
   };
 
-  const handleCreateList = () => {
+  const handleCreateList = async () => {
     if (!newListName.trim()) return;
 
-    createMutation.mutate(newListName.trim(), {
-      onSuccess: (listId) => {
-        // Automatically add to the new list
-        addMutation.mutate({ listId, mediaItem, listName: newListName.trim() });
-        setNewListName('');
-        setIsCreating(false);
-      },
-    });
+    setCreateError(null);
+
+    try {
+      // 1. Create list
+      const listId = await createMutation.mutateAsync(newListName.trim());
+
+      // 2. Add item to new list
+      await addMutation.mutateAsync({
+        listId,
+        mediaItem,
+        listName: newListName.trim(),
+      });
+
+      // 3. Success feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      changesRef.current.added++;
+
+      // 4. Reset UI and return to list view
+      setNewListName('');
+      setIsCreating(false);
+    } catch (error) {
+      console.error('Failed to create list:', error);
+      setCreateError('Failed to create list. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
         <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
 
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={ACTIVE_OPACITY}>
+            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
@@ -88,18 +185,31 @@ export default function AddToListModal({ visible, onClose, mediaItem }: AddToLis
                 onChangeText={setNewListName}
                 autoFocus
                 returnKeyType="done"
+                editable={!createMutation.isPending}
                 onSubmitEditing={handleCreateList}
               />
+              {createError && <Text style={styles.errorText}>{createError}</Text>}
               <View style={styles.createActions}>
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={() => setIsCreating(false)}
                   activeOpacity={ACTIVE_OPACITY}
+                  disabled={createMutation.isPending}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text
+                    style={[
+                      styles.cancelButtonText,
+                      createMutation.isPending && styles.disabledText,
+                    ]}
+                  >
+                    Cancel
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.createButton, !newListName.trim() && styles.disabledButton]}
+                  style={[
+                    styles.createButton,
+                    (!newListName.trim() || createMutation.isPending) && styles.disabledButton,
+                  ]}
                   onPress={handleCreateList}
                   disabled={!newListName.trim() || createMutation.isPending}
                   activeOpacity={ACTIVE_OPACITY}
@@ -128,7 +238,7 @@ export default function AddToListModal({ visible, onClose, mediaItem }: AddToLis
                         activeOpacity={ACTIVE_OPACITY}
                       >
                         <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
-                          {isMember && <Check size={14} color={COLORS.white} strokeWidth={3} />}
+                          <AnimatedCheck visible={isMember} />
                         </View>
                         <Text style={styles.listName}>{list.name}</Text>
                       </TouchableOpacity>
@@ -238,6 +348,10 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
   },
+  errorText: {
+    color: COLORS.error,
+    fontSize: FONT_SIZE.s,
+  },
   createActions: {
     flexDirection: 'row',
     gap: SPACING.m,
@@ -249,6 +363,9 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
+  },
+  disabledText: {
+    opacity: 0.5,
   },
   createButton: {
     backgroundColor: COLORS.primary,

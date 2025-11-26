@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
@@ -41,6 +42,7 @@ export default function TVShowDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
+  const toastRef = React.useRef<ToastRef>(null);
 
   const membership = useMediaLists(tvId);
   const isInAnyList = Object.keys(membership).length > 0;
@@ -431,8 +433,10 @@ export default function TVShowDetailScreen() {
             vote_average: show.vote_average,
             release_date: show.first_air_date,
           }}
+          onShowToast={(message) => toastRef.current?.show(message)}
         />
       )}
+      <Toast ref={toastRef} />
     </View>
   );
 }
