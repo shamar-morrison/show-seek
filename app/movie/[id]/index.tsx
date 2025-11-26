@@ -1,32 +1,31 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  Star,
-  Clock,
-  Calendar,
-  Plus,
-  Play,
-  DollarSign,
-  Film,
-  ChevronRight,
-} from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronRight,
+  Clock,
+  DollarSign,
+  Play,
+  Plus,
+  Star,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();

@@ -1,19 +1,19 @@
+import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useQuery } from '@tanstack/react-query';
+import { Stack, useRouter } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft } from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, CastMember, CrewMember } from '@/src/api/tmdb';
-import { MediaImage } from '@/src/components/ui/MediaImage';
 
 type TabType = 'cast' | 'crew';
 

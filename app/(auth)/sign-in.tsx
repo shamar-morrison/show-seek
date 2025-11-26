@@ -11,7 +11,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useRouter, Link } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { auth } from '@/src/firebase/config';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
@@ -172,7 +172,7 @@ export default function SignIn() {
               </TouchableOpacity>
 
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Text style={styles.footerText}>Don&apos;t have an account? </Text>
                 <Link href="/(auth)/sign-up" asChild>
                   <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
                     <Text style={styles.link}>Sign Up</Text>
