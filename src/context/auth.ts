@@ -1,22 +1,23 @@
-import { useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import createContextHook from '@nkzw/create-context-hook';
 import { auth } from '@/src/firebase/config';
-import { useRouter, useSegments } from 'expo-router';
+import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
 
-  const segments = useSegments();
-  const router = useRouter();
-
   // Check onboarding status
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
+        if (require('@/src/utils/dev-navigation').shouldSkipOnboarding()) {
+          setHasCompletedOnboarding(true);
+          return;
+        }
+
         const value = await AsyncStorage.getItem('hasCompletedOnboarding');
         setHasCompletedOnboarding(value === 'true');
       } catch (e) {
@@ -29,6 +30,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Monitor auth state
   useEffect(() => {
+    const mockUser = require('@/src/utils/dev-navigation').getMockUser();
+    if (mockUser) {
+      setUser(mockUser);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
