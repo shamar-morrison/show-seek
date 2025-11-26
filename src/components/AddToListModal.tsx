@@ -74,7 +74,7 @@ export default function AddToListModal({
   const changesRef = useRef<{ added: number; removed: number }>({ added: 0, removed: 0 });
 
   const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
-  const membership = useMediaLists(mediaItem.id);
+  const { membership } = useMediaLists(mediaItem.id);
 
   const addMutation = useAddToList();
   const removeMutation = useRemoveFromList();

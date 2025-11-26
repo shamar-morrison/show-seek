@@ -44,7 +44,7 @@ export default function TVShowDetailScreen() {
   const [listModalVisible, setListModalVisible] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
-  const membership = useMediaLists(tvId);
+  const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const isInAnyList = Object.keys(membership).length > 0;
 
   const tvQuery = useQuery({
@@ -230,8 +230,11 @@ export default function TVShowDetailScreen() {
               style={[styles.addButton, isInAnyList && styles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
               onPress={() => setListModalVisible(true)}
+              disabled={isLoadingLists}
             >
-              {isInAnyList ? (
+              {isLoadingLists ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : isInAnyList ? (
                 <Check size={24} color={COLORS.white} />
               ) : (
                 <Plus size={24} color={COLORS.white} />

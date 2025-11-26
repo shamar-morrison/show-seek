@@ -41,9 +41,11 @@ export const useLists = () => {
 };
 
 export const useMediaLists = (mediaId: number) => {
-  const { data: lists } = useLists();
+  const { data: lists, isLoading } = useLists();
 
-  if (!lists) return {};
+  if (!lists) {
+    return { membership: {}, isLoading: true };
+  }
 
   const membership: Record<string, boolean> = {};
   lists.forEach((list) => {
@@ -52,7 +54,7 @@ export const useMediaLists = (mediaId: number) => {
     }
   });
 
-  return membership;
+  return { membership, isLoading: isLoading || false };
 };
 
 export const useAddToList = () => {
