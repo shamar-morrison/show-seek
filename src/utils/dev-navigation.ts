@@ -26,6 +26,7 @@ export const getMockUser = (): User | null => {
   const config = getDevConfig();
   if (config?.ENABLE_DEV_NAVIGATION && config.OVERRIDES.MOCK_AUTHENTICATED) {
     console.log('[DEV NAV] Mocking authenticated user');
+
     // Create a minimal mock that satisfies User interface
     return {
       ...config.MOCK_USER,
@@ -37,7 +38,7 @@ export const getMockUser = (): User | null => {
       tenantId: null,
       delete: async () => {},
       getIdToken: async () => 'mock-token',
-      getIdTokenResult: async () => ({} as any),
+      getIdTokenResult: async () => ({}) as any,
       reload: async () => {},
       toJSON: () => ({}),
       phoneNumber: null,
