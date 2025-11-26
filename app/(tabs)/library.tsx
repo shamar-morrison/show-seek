@@ -5,8 +5,8 @@ import { useLists } from '@/src/hooks/useLists';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Bookmark } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { Bookmark, Settings2 } from 'lucide-react-native';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -35,6 +35,13 @@ export default function LibraryScreen() {
     if (!selectedList?.items) return [];
     return Object.values(selectedList.items).sort((a, b) => b.addedAt - a.addedAt);
   }, [selectedList]);
+
+  // Auto-switch to favorites if currently selected list is deleted
+  useEffect(() => {
+    if (lists && !lists.find((l) => l.id === selectedListId)) {
+      setSelectedListId('favorites');
+    }
+  }, [lists, selectedListId]);
 
   const handleItemPress = (item: ListMediaItem) => {
     if (item.media_type === 'movie') {
@@ -73,7 +80,15 @@ export default function LibraryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.headerTitle}>Library</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Library</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/manage-lists')}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <Settings2 size={24} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.tabsContainer}>
         <ScrollView
@@ -106,7 +121,6 @@ export default function LibraryScreen() {
           <FlashList
             data={listItems}
             renderItem={renderItem}
-            estimatedItemSize={180}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -143,6 +157,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.l,
+    marginBottom: SPACING.m,
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,

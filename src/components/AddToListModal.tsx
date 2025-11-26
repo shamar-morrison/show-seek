@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { Check, Plus, X } from 'lucide-react-native';
+import { Check, Plus, Settings2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,16 +14,20 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  Pressable,
 } from 'react-native';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import {
   useAddToList,
   useCreateList,
+  useDeleteList,
   useLists,
   useMediaLists,
   useRemoveFromList,
 } from '../hooks/useLists';
 import { ListMediaItem } from '../services/ListService';
+import { useRouter } from 'expo-router';
 
 interface AddToListModalProps {
   visible: boolean;
@@ -65,6 +69,7 @@ export default function AddToListModal({
   mediaItem,
   onShowToast,
 }: AddToListModalProps) {
+  const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
@@ -79,6 +84,7 @@ export default function AddToListModal({
   const addMutation = useAddToList();
   const removeMutation = useRemoveFromList();
   const createMutation = useCreateList();
+  const deleteMutation = useDeleteList();
 
   // Reset state when modal opens
   useEffect(() => {
@@ -167,6 +173,48 @@ export default function AddToListModal({
     }
   };
 
+  const handleDeleteList = (listId: string, listName: string) => {
+    const DEFAULT_LIST_IDS = ['favorites', 'watchlist', 'dropped'];
+
+    if (DEFAULT_LIST_IDS.includes(listId)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Delete List',
+      `This will remove "${listName}" and all its items. This cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(listId);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (onShowToast) {
+                onShowToast('List deleted');
+              }
+            } catch (error) {
+              console.error('Failed to delete list:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                'Delete Failed',
+                error instanceof Error ? error.message : 'Failed to delete list'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
@@ -249,17 +297,17 @@ export default function AddToListModal({
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
                     return (
-                      <TouchableOpacity
+                      <Pressable
                         key={list.id}
                         style={styles.listItem}
                         onPress={() => handleToggleList(list.id, list.name, isMember)}
-                        activeOpacity={ACTIVE_OPACITY}
+                        onLongPress={() => handleDeleteList(list.id, list.name)}
                       >
                         <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
                           <AnimatedCheck visible={isMember} />
                         </View>
                         <Text style={styles.listName}>{list.name}</Text>
-                      </TouchableOpacity>
+                      </Pressable>
                     );
                   })}
                 </ScrollView>
@@ -272,6 +320,18 @@ export default function AddToListModal({
               >
                 <Plus size={20} color={COLORS.primary} />
                 <Text style={styles.createListText}>Create Custom List</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.manageListsButton}
+                onPress={() => {
+                  handleClose();
+                  router.push('/manage-lists');
+                }}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Settings2 size={20} color={COLORS.textSecondary} />
+                <Text style={styles.manageListsText}>Manage Lists</Text>
               </TouchableOpacity>
             </>
           )}
@@ -411,5 +471,18 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
+  },
+  manageListsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.s,
+    paddingVertical: SPACING.s,
+    gap: SPACING.s,
+  },
+  manageListsText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
 });
