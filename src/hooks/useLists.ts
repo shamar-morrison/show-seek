@@ -7,19 +7,26 @@ export const useLists = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const [error, setError] = useState<Error | null>(null);
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setIsSubscriptionLoading(false);
+      return;
+    }
 
-    setError(null); // Reset error on new subscription
+    setError(null);
+    setIsSubscriptionLoading(true);
 
     const unsubscribe = listService.subscribeToUserLists(
       (lists) => {
         queryClient.setQueryData(['lists', userId], lists);
-        setError(null); // Clear error on successful update
+        setError(null);
+        setIsSubscriptionLoading(false);
       },
       (err) => {
         setError(err);
+        setIsSubscriptionLoading(false);
         console.error('[useLists] Subscription error:', err);
       }
     );
@@ -27,7 +34,7 @@ export const useLists = () => {
     return () => unsubscribe();
   }, [userId, queryClient]);
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['lists', userId],
     queryFn: () => {
       // Initial data is handled by subscription, but we need a queryFn
@@ -38,6 +45,11 @@ export const useLists = () => {
     staleTime: Infinity, // Data is updated via subscription
     meta: { error }, // Attach error to query meta
   });
+
+  return {
+    ...query,
+    isLoading: isSubscriptionLoading,
+  };
 };
 
 export const useMediaLists = (mediaId: number) => {
