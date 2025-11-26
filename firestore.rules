@@ -39,7 +39,7 @@ service cloud.firestore {
           && request.resource.data.items is map;
         allow update: if isOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['items', 'updatedAt', 'name']);
+            .hasOnly(['items', 'updatedAt', 'name', 'createdAt']);
         allow delete: if isOwner(userId)
           && resource.data.get('isCustom', false) == true;
       }
