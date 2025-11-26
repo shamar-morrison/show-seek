@@ -116,7 +116,7 @@ export default function TVSeasonsScreen() {
                     {season.name || `Season ${season.season_number}`}
                   </Text>
                   <Text style={styles.seasonMeta}>
-                    {season.episode_count} Episodes
+                    {season.episode_count || season.episodes?.length || 0} Episodes
                     {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
                   </Text>
                   {season.overview && !isExpanded && (
