@@ -27,6 +27,14 @@ export const getMockUser = (): User | null => {
   if (config?.ENABLE_DEV_NAVIGATION && config.OVERRIDES.MOCK_AUTHENTICATED) {
     console.log('[DEV NAV] Mocking authenticated user');
 
+    // Validate required fields
+    if (!config.MOCK_USER.uid || !config.MOCK_USER.email || !config.MOCK_USER.displayName) {
+      console.error(
+        '[DEV NAV] Missing required fields in MOCK_USER config (uid, email, displayName)'
+      );
+      return null;
+    }
+
     // Create a minimal mock that satisfies User interface
     return {
       ...config.MOCK_USER,
@@ -78,6 +86,8 @@ export const handleDevNavigation = (
       console.log(`[DEV NAV] Force screen: ${screenKey}`);
       router.replace(route as any);
       return true;
+    } else {
+      console.warn(`[DEV NAV] Unknown force screen key: ${screenKey}`);
     }
   }
 
