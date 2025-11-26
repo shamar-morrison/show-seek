@@ -83,7 +83,7 @@ export default function LibraryScreen() {
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>Library</Text>
         <TouchableOpacity
-          onPress={() => router.push('/manage-lists')}
+          onPress={() => router.push('/manage-lists' as any)}
           activeOpacity={ACTIVE_OPACITY}
         >
           <Settings2 size={24} color={COLORS.text} />
