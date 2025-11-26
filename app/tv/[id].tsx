@@ -41,6 +41,7 @@ export default function TVShowDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
@@ -250,7 +251,17 @@ export default function TVShowDetailScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{show.overview || 'No overview available'}</Text>
+          <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+            {show.overview || 'No overview available'}
+          </Text>
+          {show.overview && show.overview.length > 200 && (
+            <TouchableOpacity
+              onPress={() => setOverviewExpanded(!overviewExpanded)}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Text style={styles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+            </TouchableOpacity>
+          )}
 
           {creator && (
             <View style={styles.directorContainer}>
@@ -634,7 +645,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     lineHeight: 24,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
     marginBottom: SPACING.l,
+    fontWeight: '600',
   },
   directorContainer: {
     flexDirection: 'row',

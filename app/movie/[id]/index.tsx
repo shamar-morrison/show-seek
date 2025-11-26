@@ -41,6 +41,7 @@ export default function MovieDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
@@ -271,7 +272,17 @@ export default function MovieDetailScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{movie.overview || 'No overview available'}</Text>
+          <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+            {movie.overview || 'No overview available'}
+          </Text>
+          {movie.overview && movie.overview.length > 200 && (
+            <TouchableOpacity
+              onPress={() => setOverviewExpanded(!overviewExpanded)}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Text style={styles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+            </TouchableOpacity>
+          )}
 
           {director && (
             <View style={styles.directorContainer}>
@@ -441,7 +452,6 @@ export default function MovieDetailScreen() {
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
         videoKey={trailer?.key || null}
-        videoTitle={trailer?.name}
       />
 
       <ImageLightbox
@@ -669,7 +679,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     lineHeight: 24,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
     marginBottom: SPACING.l,
+    fontWeight: '600',
   },
   directorContainer: {
     flexDirection: 'row',
