@@ -1,7 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import {
@@ -62,47 +62,29 @@ export default function ManageListsScreen() {
   const customLists = lists?.filter((list) => !DEFAULT_LIST_IDS.includes(list.id)) || [];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-          <ChevronLeft size={28} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Manage Lists</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+            <ChevronLeft size={28} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Manage Lists</Text>
+          <View style={{ width: 28 }} />
         </View>
-      ) : (
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Default Lists</Text>
-            <Text style={styles.sectionSubtitle}>These lists cannot be deleted</Text>
-            {lists
-              ?.filter((list) => DEFAULT_LIST_IDS.includes(list.id))
-              .map((list) => (
-                <View key={list.id} style={styles.listItem}>
-                  <View style={styles.listInfo}>
-                    <Text style={styles.listName}>{list.name}</Text>
-                    <Text style={styles.listCount}>
-                      {Object.keys(list.items || {}).length} items
-                    </Text>
-                  </View>
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>Default</Text>
-                  </View>
-                </View>
-              ))}
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Custom Lists</Text>
-            {customLists.length > 0 ? (
-              <>
-                <Text style={styles.sectionSubtitle}>Tap the trash icon to delete a list</Text>
-                {customLists.map((list) => (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : (
+          <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Default Lists</Text>
+              <Text style={styles.sectionSubtitle}>These lists cannot be deleted</Text>
+              {lists
+                ?.filter((list) => DEFAULT_LIST_IDS.includes(list.id))
+                .map((list) => (
                   <View key={list.id} style={styles.listItem}>
                     <View style={styles.listInfo}>
                       <Text style={styles.listName}>{list.name}</Text>
@@ -110,23 +92,44 @@ export default function ManageListsScreen() {
                         {Object.keys(list.items || {}).length} items
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteList(list.id, list.name)}
-                      style={styles.deleteButton}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <Trash2 size={20} color={COLORS.error} />
-                    </TouchableOpacity>
+                    <View style={styles.defaultBadge}>
+                      <Text style={styles.defaultBadgeText}>Default</Text>
+                    </View>
                   </View>
                 ))}
-              </>
-            ) : (
-              <Text style={styles.emptyText}>No custom lists yet</Text>
-            )}
-          </View>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Custom Lists</Text>
+              {customLists.length > 0 ? (
+                <>
+                  <Text style={styles.sectionSubtitle}>Tap the trash icon to delete a list</Text>
+                  {customLists.map((list) => (
+                    <View key={list.id} style={styles.listItem}>
+                      <View style={styles.listInfo}>
+                        <Text style={styles.listName}>{list.name}</Text>
+                        <Text style={styles.listCount}>
+                          {Object.keys(list.items || {}).length} items
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteList(list.id, list.name)}
+                        style={styles.deleteButton}
+                        activeOpacity={ACTIVE_OPACITY}
+                      >
+                        <Trash2 size={20} color={COLORS.error} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={styles.emptyText}>No custom lists yet</Text>
+              )}
+            </View>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 
