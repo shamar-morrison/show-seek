@@ -1,5 +1,14 @@
-import { collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
+import {
+  collection,
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 // Error message mapping for user-friendly feedback
@@ -63,10 +72,7 @@ class ListService {
   /**
    * Subscribe to all lists for the current user
    */
-  subscribeToUserLists(
-    callback: (lists: UserList[]) => void,
-    onError?: (error: Error) => void
-  ) {
+  subscribeToUserLists(callback: (lists: UserList[]) => void, onError?: (error: Error) => void) {
     const user = auth.currentUser;
     if (!user) return () => {};
 
@@ -193,24 +199,42 @@ class ListService {
       if (!user) throw new Error('User not authenticated');
 
       // Generate a URL-friendly ID from the name
-      const listId = listName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const listRef = this.getUserListRef(user.uid, listId);
+      const baseId = listName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      let listId = baseId;
+      let attempts = 0;
+      const maxAttempts = 5;
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      // Check for collisions and generate unique ID
+      while (attempts < maxAttempts) {
+        const listRef = this.getUserListRef(user.uid, listId);
+        const docSnap = await getDoc(listRef);
 
-      await Promise.race([
-        setDoc(listRef, {
-          name: listName,
-          items: {},
-          createdAt: Date.now(),
-          isCustom: true,
-        }),
-        timeoutPromise,
-      ]);
+        if (!docSnap.exists()) {
+          // ID is unique, proceed with creation
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Request timed out')), 10000);
+          });
 
-      return listId;
+          await Promise.race([
+            setDoc(listRef, {
+              name: listName,
+              items: {},
+              createdAt: Date.now(),
+              isCustom: true,
+            }),
+            timeoutPromise,
+          ]);
+
+          return listId;
+        }
+
+        // ID collision, append random suffix and try again
+        attempts++;
+        const suffix = Math.random().toString(36).substring(2, 6);
+        listId = `${baseId}-${suffix}`;
+      }
+
+      throw new Error('Could not generate a unique list ID after multiple attempts');
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] createList error:', error);
