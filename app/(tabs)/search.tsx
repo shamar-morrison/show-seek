@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
@@ -58,7 +58,7 @@ export default function SearchScreen() {
     queryKey: ['search', debouncedQuery, mediaType],
     queryFn: async () => {
       if (!debouncedQuery.trim()) return { results: [] };
-      
+
       switch (mediaType) {
         case 'movie':
           return await tmdbApi.searchMovies(debouncedQuery);
@@ -93,16 +93,19 @@ export default function SearchScreen() {
 
     // Get genre names from genre_ids
     const genres = item.genre_ids
-      ? item.genre_ids.slice(0, 3).map((id: number) => genreMap[id]).filter(Boolean)
+      ? item.genre_ids
+          .slice(0, 3)
+          .map((id: number) => genreMap[id])
+          .filter(Boolean)
       : [];
 
     return (
-      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)} activeOpacity={ACTIVE_OPACITY}>
-        <MediaImage
-          source={{ uri: posterUrl }}
-          style={styles.resultPoster}
-          contentFit="cover"
-        />
+      <TouchableOpacity
+        style={styles.resultItem}
+        onPress={() => handleItemPress(item)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
             {title}
@@ -114,13 +117,9 @@ export default function SearchScreen() {
             <>
               <View style={styles.metaRow}>
                 {releaseDate && (
-                  <Text style={styles.resultYear}>
-                    {new Date(releaseDate).getFullYear()}
-                  </Text>
+                  <Text style={styles.resultYear}>{new Date(releaseDate).getFullYear()}</Text>
                 )}
-                {item.vote_average > 0 && releaseDate && (
-                  <Text style={styles.separator}> • </Text>
-                )}
+                {item.vote_average > 0 && releaseDate && <Text style={styles.separator}> • </Text>}
                 {item.vote_average > 0 && (
                   <View style={styles.ratingContainer}>
                     <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
@@ -137,7 +136,11 @@ export default function SearchScreen() {
           )}
           {isPerson && item.known_for && item.known_for.length > 0 && (
             <Text style={styles.knownFor} numberOfLines={2}>
-              Known for: {item.known_for.slice(0, 3).map((work: any) => work.title || work.name).join(', ')}
+              Known for:{' '}
+              {item.known_for
+                .slice(0, 3)
+                .map((work: any) => work.title || work.name)
+                .join(', ')}
             </Text>
           )}
           {!isPerson && item.overview && (
@@ -177,9 +180,7 @@ export default function SearchScreen() {
           onPress={() => setMediaType('all')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text
-            style={[styles.filterText, mediaType === 'all' && styles.filterTextActive]}
-          >
+          <Text style={[styles.filterText, mediaType === 'all' && styles.filterTextActive]}>
             All
           </Text>
         </TouchableOpacity>
@@ -188,9 +189,7 @@ export default function SearchScreen() {
           onPress={() => setMediaType('movie')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text
-            style={[styles.filterText, mediaType === 'movie' && styles.filterTextActive]}
-          >
+          <Text style={[styles.filterText, mediaType === 'movie' && styles.filterTextActive]}>
             Movies
           </Text>
         </TouchableOpacity>
@@ -199,9 +198,7 @@ export default function SearchScreen() {
           onPress={() => setMediaType('tv')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text
-            style={[styles.filterText, mediaType === 'tv' && styles.filterTextActive]}
-          >
+          <Text style={[styles.filterText, mediaType === 'tv' && styles.filterTextActive]}>
             TV Shows
           </Text>
         </TouchableOpacity>

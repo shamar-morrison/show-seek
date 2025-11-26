@@ -39,12 +39,7 @@ export default function ImageLightbox({
   if (!visible || images.length === 0) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -67,11 +62,7 @@ export default function ImageLightbox({
         >
           {images.map((imageUrl, index) => (
             <View key={index} style={styles.imageContainer}>
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.image}
-                resizeMode="contain"
-              />
+              <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
             </View>
           ))}
         </ScrollView>
@@ -79,13 +70,7 @@ export default function ImageLightbox({
         {images.length > 1 && (
           <View style={styles.indicator}>
             {images.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  currentIndex === index && styles.activeDot,
-                ]}
-              />
+              <View key={index} style={[styles.dot, currentIndex === index && styles.activeDot]} />
             ))}
           </View>
         )}

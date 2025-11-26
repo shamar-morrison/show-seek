@@ -19,7 +19,11 @@ export function MovieCard({ movie, width = 140 }: MovieCardProps) {
   };
 
   return (
-    <TouchableOpacity onPress={handlePress} style={[styles.container, { width }]} activeOpacity={ACTIVE_OPACITY}>
+    <TouchableOpacity
+      onPress={handlePress}
+      style={[styles.container, { width }]}
+      activeOpacity={ACTIVE_OPACITY}
+    >
       <MediaImage
         source={{ uri: posterUrl }}
         style={[styles.poster, { width, height: width * 1.5 }]}
@@ -31,9 +35,7 @@ export function MovieCard({ movie, width = 140 }: MovieCardProps) {
         </Text>
         {movie.release_date && (
           <View style={styles.yearRatingContainer}>
-            <Text style={styles.year}>
-              {new Date(movie.release_date).getFullYear()}
-            </Text>
+            <Text style={styles.year}>{new Date(movie.release_date).getFullYear()}</Text>
             {movie.vote_average > 0 && (
               <>
                 <Text style={styles.separator}> • </Text>

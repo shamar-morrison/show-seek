@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE } from '@/src/constants/theme';
@@ -74,27 +74,27 @@ export default function HomeScreen() {
 
   const trendingMovies = React.useMemo(() => {
     if (!trendingMoviesQuery.data?.pages) return [];
-    return trendingMoviesQuery.data.pages.flatMap(page => page.results);
+    return trendingMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [trendingMoviesQuery.data]);
 
   const trendingTVShows = React.useMemo(() => {
     if (!trendingTVQuery.data?.pages) return [];
-    return trendingTVQuery.data.pages.flatMap(page => page.results);
+    return trendingTVQuery.data.pages.flatMap((page) => page.results);
   }, [trendingTVQuery.data]);
 
   const popularMovies = React.useMemo(() => {
     if (!popularMoviesQuery.data?.pages) return [];
-    return popularMoviesQuery.data.pages.flatMap(page => page.results);
+    return popularMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [popularMoviesQuery.data]);
 
   const topRatedMovies = React.useMemo(() => {
     if (!topRatedMoviesQuery.data?.pages) return [];
-    return topRatedMoviesQuery.data.pages.flatMap(page => page.results);
+    return topRatedMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [topRatedMoviesQuery.data]);
 
   const upcomingMovies = React.useMemo(() => {
     if (!upcomingMoviesQuery.data?.pages) return [];
-    return upcomingMoviesQuery.data.pages.flatMap(page => page.results);
+    return upcomingMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [upcomingMoviesQuery.data]);
 
   const onRefresh = React.useCallback(async () => {

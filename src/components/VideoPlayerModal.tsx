@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  Alert,
-  Linking,
-} from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 interface VideoPlayerModalProps {
   visible: boolean;

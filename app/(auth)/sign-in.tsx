@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
 import { auth } from '@/src/firebase/config';
@@ -26,13 +37,14 @@ export default function SignIn() {
       // Router will automatically redirect in _layout.tsx based on auth state
     } catch (error: any) {
       let errorMessage = 'An error occurred. Please try again.';
-      
+
       if (error.code) {
         switch (error.code) {
           case 'auth/invalid-credential':
           case 'auth/user-not-found':
           case 'auth/wrong-password':
-            errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+            errorMessage =
+              'Invalid email or password. Please check your credentials and try again.';
             break;
           case 'auth/invalid-email':
             errorMessage = 'Please enter a valid email address.';
@@ -50,7 +62,7 @@ export default function SignIn() {
             errorMessage = 'Unable to sign in. Please try again later.';
         }
       }
-      
+
       Alert.alert('Sign In Failed', errorMessage);
     } finally {
       setLoading(false);
@@ -63,7 +75,7 @@ export default function SignIn() {
       await signInAnonymously(auth);
     } catch (error: any) {
       let errorMessage = 'Unable to sign in as guest. Please try again.';
-      
+
       if (error.code) {
         switch (error.code) {
           case 'auth/operation-not-allowed':
@@ -74,12 +86,12 @@ export default function SignIn() {
             break;
         }
       }
-      
+
       Alert.alert('Guest Sign In Failed', errorMessage);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -88,7 +100,7 @@ export default function SignIn() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
@@ -137,7 +149,7 @@ export default function SignIn() {
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.button}
                 onPress={handleSignIn}
                 disabled={loading}
@@ -149,14 +161,14 @@ export default function SignIn() {
                   <Text style={styles.buttonText}>Sign In</Text>
                 )}
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                  style={[styles.button, styles.guestButton]}
-                  onPress={handleGuestSignIn}
-                  disabled={loading}
-                  activeOpacity={ACTIVE_OPACITY}
+
+              <TouchableOpacity
+                style={[styles.button, styles.guestButton]}
+                onPress={handleGuestSignIn}
+                disabled={loading}
+                activeOpacity={ACTIVE_OPACITY}
               >
-                  <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                <Text style={styles.guestButtonText}>Continue as Guest</Text>
               </TouchableOpacity>
 
               <View style={styles.footer}>
@@ -253,9 +265,9 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
   },
   guestButtonText: {
-      color: COLORS.white,
-      fontWeight: '600',
-      fontSize: FONT_SIZE.m,
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: FONT_SIZE.m,
   },
   footer: {
     flexDirection: 'row',

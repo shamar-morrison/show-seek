@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-  FlatList,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, FlatList } from 'react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { Genre, tmdbApi } from '@/src/api/tmdb';
 import { ChevronDown, Check, X } from 'lucide-react-native';
@@ -109,10 +101,9 @@ const FilterSelect = ({
                     setVisible(false);
                   }}
                 >
-                  <Text style={[
-                    styles.optionText,
-                    item.value === value && styles.optionTextSelected
-                  ]}>
+                  <Text
+                    style={[styles.optionText, item.value === value && styles.optionTextSelected]}
+                  >
                     {item.label}
                   </Text>
                   {item.value === value && <Check size={20} color={COLORS.primary} />}
@@ -164,12 +155,12 @@ export default function DiscoverFilters({
 
   const genreOptions = [
     { label: 'All Genres', value: null },
-    ...genres.map(g => ({ label: g.name, value: g.id }))
+    ...genres.map((g) => ({ label: g.name, value: g.id })),
   ];
 
   const languageOptions = [
     { label: 'All Languages', value: null },
-    ...languages.map(l => ({ label: l.english_name, value: l.iso_639_1 }))
+    ...languages.map((l) => ({ label: l.english_name, value: l.iso_639_1 })),
   ];
 
   // Generate year options from current year down to 1950
@@ -179,7 +170,7 @@ export default function DiscoverFilters({
     ...Array.from({ length: currentYear - 1949 }, (_, i) => {
       const year = currentYear - i;
       return { label: String(year), value: year };
-    })
+    }),
   ];
 
   return (
@@ -237,7 +228,11 @@ export default function DiscoverFilters({
         <View style={styles.col} />
       </View>
 
-      <TouchableOpacity style={styles.clearButton} onPress={onClearFilters} activeOpacity={ACTIVE_OPACITY}>
+      <TouchableOpacity
+        style={styles.clearButton}
+        onPress={onClearFilters}
+        activeOpacity={ACTIVE_OPACITY}
+      >
         <X size={18} color={COLORS.textSecondary} />
         <Text style={styles.clearButtonText}>Clear Filters</Text>
       </TouchableOpacity>

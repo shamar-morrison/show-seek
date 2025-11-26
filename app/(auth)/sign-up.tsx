@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -57,11 +68,12 @@ export default function SignUp() {
       // Router will automatically redirect in _layout.tsx
     } catch (error: any) {
       let errorMessage = 'An error occurred. Please try again.';
-      
+
       if (error.code) {
         switch (error.code) {
           case 'auth/email-already-in-use':
-            errorMessage = 'This email is already registered. Please sign in or use a different email.';
+            errorMessage =
+              'This email is already registered. Please sign in or use a different email.';
             break;
           case 'auth/invalid-email':
             errorMessage = 'Please enter a valid email address.';
@@ -79,7 +91,7 @@ export default function SignUp() {
             errorMessage = 'Unable to create account. Please try again later.';
         }
       }
-      
+
       Alert.alert('Sign Up Failed', errorMessage);
     } finally {
       setLoading(false);
@@ -93,7 +105,7 @@ export default function SignUp() {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
@@ -178,7 +190,7 @@ export default function SignUp() {
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.button}
                 onPress={handleSignUp}
                 disabled={loading}

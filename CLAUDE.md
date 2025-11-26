@@ -61,10 +61,12 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 ### State Management Pattern
 
 **TanStack Query** is used for all TMDB API data fetching:
+
 - Configured in `app/_layout.tsx` with 2 retries and 5-minute stale time
 - All TMDB API calls should use React Query hooks for caching and automatic refetching
 
 **Firebase Realtime Subscriptions** via custom hooks:
+
 - `src/hooks/useFirestore.ts` exports `useFavorites()`, `useWatchlist()`, and `useRatings()`
 - These hooks subscribe to Firestore collections and update in real-time
 - Automatically clean up subscriptions when user logs out
@@ -72,6 +74,7 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 ### Data Layer Structure
 
 #### TMDB API (`src/api/tmdb.ts`)
+
 - Single source for all TMDB interactions
 - Pre-configured axios client with API key from env
 - Type definitions for all API responses (Movie, TVShow, Person, etc.)
@@ -79,11 +82,13 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 - Main API methods exported as `tmdbApi` object
 
 #### Firebase (`src/firebase/`)
+
 - `config.ts` - Firebase initialization (auth, firestore)
 - `firestore.ts` - Helper functions for favorites, watchlist, and ratings
 - User data structure: `users/{userId}/{favorites|watchlist|ratings}/{mediaId}`
 
 #### Authentication Context (`src/context/auth.ts`)
+
 - Provides: `user`, `loading`, `hasCompletedOnboarding`, `signOut()`, `completeOnboarding()`
 - Uses `@nkzw/create-context-hook` pattern for cleaner context creation
 - Auto-syncs with Firebase Auth state changes
@@ -102,14 +107,17 @@ Always import and use these constants rather than hardcoding values.
 ### Component Architecture
 
 **UI Components** (`src/components/ui/`):
+
 - Reusable primitives (Button, LoadingSkeleton)
 - Should not contain business logic
 
 **Feature Components** (`src/components/`):
+
 - Domain-specific (MovieCard, TVShowCard, VideoPlayerModal, DiscoverFilters, ImageLightbox)
 - Can use hooks and contain feature logic
 
 **Performance Optimization**:
+
 - Use `@shopify/flash-list` (FlashList) instead of FlatList for long lists
 - Lazy load images with `expo-image` (Image component)
 
@@ -136,23 +144,27 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 ## Common Patterns
 
 ### Adding a New API Integration
+
 1. Add TypeScript interface to `src/api/tmdb.ts`
 2. Create API method in `tmdbApi` object
 3. Use with TanStack Query in component: `useQuery({ queryKey: ['...'], queryFn: tmdbApi.method })`
 
 ### Adding User Data Persistence
+
 1. Add Firestore helper to `src/firebase/firestore.ts`
 2. Create subscription function following `subscribeFavorites` pattern
 3. Create custom hook in `src/hooks/useFirestore.ts`
 4. Use hook in components for real-time data
 
 ### Creating New Screens
+
 1. Add file to `app/` directory following Expo Router conventions
 2. Configure screen options in nearest `_layout.tsx`
 3. Use `useAuth()` for protected routes
 4. Import `COLORS` from `@/src/constants/theme` for consistent styling
 
 ### Working with Media Items
+
 - Movies use `title` and `release_date`
 - TV shows use `name` and `first_air_date`
 - Check media type: `'title' in item ? 'movie' : 'tv'`

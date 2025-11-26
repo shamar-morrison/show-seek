@@ -195,10 +195,9 @@ export const tmdbApi = {
   },
 
   getTrendingTV: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(
-      `/trending/tv/${timeWindow}`,
-      { params: { page } }
-    );
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/trending/tv/${timeWindow}`, {
+      params: { page },
+    });
     return data;
   },
 
@@ -258,9 +257,7 @@ export const tmdbApi = {
   },
 
   getSimilarMovies: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
-      `/movie/${id}/similar`
-    );
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(`/movie/${id}/similar`);
     return data;
   },
 
@@ -270,16 +267,12 @@ export const tmdbApi = {
   },
 
   getRecommendedMovies: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
-      `/movie/${id}/recommendations`
-    );
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(`/movie/${id}/recommendations`);
     return data;
   },
 
   getRecommendedTV: async (id: number) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(
-      `/tv/${id}/recommendations`
-    );
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/tv/${id}/recommendations`);
     return data;
   },
 
@@ -339,7 +332,9 @@ export const tmdbApi = {
   },
 
   getLanguages: async () => {
-    const { data } = await tmdbClient.get<{ iso_639_1: string; english_name: string; name: string }[]>('/configuration/languages');
+    const { data } = await tmdbClient.get<
+      { iso_639_1: string; english_name: string; name: string }[]
+    >('/configuration/languages');
     return data.sort((a, b) => a.english_name.localeCompare(b.english_name));
   },
 

@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -52,7 +52,11 @@ export default function PersonDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load person details</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -62,24 +66,20 @@ export default function PersonDetailScreen() {
   const person = personQuery.data;
   const movieCredits = movieCreditsQuery.data?.cast || [];
   const tvCredits = tvCreditsQuery.data?.cast || [];
-  
+
   // Sort by popularity and get top items
-  const knownForMovies = [...movieCredits]
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, 10);
-  
-  const knownForTV = [...tvCredits]
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, 10);
+  const knownForMovies = [...movieCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
+
+  const knownForTV = [...tvCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
 
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
     });
   };
 
@@ -104,11 +104,11 @@ export default function PersonDetailScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <ScrollView style={styles.scrollView} bounces={false}>
         <SafeAreaView edges={['top']}>
-          <TouchableOpacity 
-            style={styles.headerButton} 
+          <TouchableOpacity
+            style={styles.headerButton}
             onPress={() => router.back()}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -124,10 +124,10 @@ export default function PersonDetailScreen() {
             contentFit="cover"
             placeholderType="person"
           />
-          
+
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{person.name}</Text>
-            
+
             {person.known_for_department && (
               <Text style={styles.department}>{person.known_for_department}</Text>
             )}
@@ -142,7 +142,7 @@ export default function PersonDetailScreen() {
                   </Text>
                 </View>
               )}
-              
+
               {person.place_of_birth && (
                 <View style={styles.detailItem}>
                   <MapPin size={14} color={COLORS.textSecondary} />
@@ -157,17 +157,15 @@ export default function PersonDetailScreen() {
         {person.biography && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Biography</Text>
-            <Text 
-              style={styles.biography} 
-              numberOfLines={bioExpanded ? undefined : 4}
-            >
+            <Text style={styles.biography} numberOfLines={bioExpanded ? undefined : 4}>
               {person.biography}
             </Text>
             {person.biography.length > 200 && (
-              <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)} activeOpacity={ACTIVE_OPACITY}>
-                <Text style={styles.readMore}>
-                  {bioExpanded ? 'Read less' : 'Read more'}
-                </Text>
+              <TouchableOpacity
+                onPress={() => setBioExpanded(!bioExpanded)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.readMore}>{bioExpanded ? 'Read less' : 'Read more'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -179,7 +177,7 @@ export default function PersonDetailScreen() {
             <Text style={styles.sectionTitle}>Known For (Movies)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForMovies.map((movie, index) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={`movie-${movie.id}-${index}`}
                   style={styles.creditCard}
                   onPress={() => handleMoviePress(movie.id)}
@@ -187,12 +185,14 @@ export default function PersonDetailScreen() {
                 >
                   <MediaImage
                     source={{
-                      uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                      uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small),
                     }}
                     style={styles.creditPoster}
                     contentFit="cover"
                   />
-                  <Text style={styles.creditTitle} numberOfLines={2}>{movie.title}</Text>
+                  <Text style={styles.creditTitle} numberOfLines={2}>
+                    {movie.title}
+                  </Text>
                   <View style={styles.creditMeta}>
                     {movie.release_date && (
                       <Text style={styles.creditYear}>
@@ -223,7 +223,7 @@ export default function PersonDetailScreen() {
             <Text style={styles.sectionTitle}>Known For (TV Shows)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForTV.map((show, index) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={`tv-${show.id}-${index}`}
                   style={styles.creditCard}
                   onPress={() => handleTVPress(show.id)}
@@ -231,12 +231,14 @@ export default function PersonDetailScreen() {
                 >
                   <MediaImage
                     source={{
-                      uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                      uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small),
                     }}
                     style={styles.creditPoster}
                     contentFit="cover"
                   />
-                  <Text style={styles.creditTitle} numberOfLines={2}>{show.name}</Text>
+                  <Text style={styles.creditTitle} numberOfLines={2}>
+                    {show.name}
+                  </Text>
                   <View style={styles.creditMeta}>
                     {show.first_air_date && (
                       <Text style={styles.creditYear}>

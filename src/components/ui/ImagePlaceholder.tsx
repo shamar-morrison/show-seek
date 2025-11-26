@@ -14,20 +14,12 @@ interface ImagePlaceholderProps {
  * Displays an appropriate Lucide icon based on the type.
  * Fills its container with a background color and centers the icon.
  */
-export const ImagePlaceholder = ({ 
-  type = 'movie' 
-}: ImagePlaceholderProps) => {
+export const ImagePlaceholder = ({ type = 'movie' }: ImagePlaceholderProps) => {
   const IconComponent = type === 'person' ? User : type === 'tv' ? Tv : Film;
 
   return (
     <View style={[styles.container, type === 'person' && { borderRadius: 9999 }]}>
-      <IconComponent
-        size={48}
-        color={COLORS.textSecondary}
-        opacity={0.3}
-        strokeWidth={1.5}
-        
-      />
+      <IconComponent size={48} color={COLORS.textSecondary} opacity={0.3} strokeWidth={1.5} />
     </View>
   );
 };

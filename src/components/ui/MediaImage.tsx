@@ -23,9 +23,7 @@ export const MediaImage = ({
   const [hasError, setHasError] = useState(false);
   const [_, setIsLoading] = useState(true);
 
-  const uri = typeof source === 'object' && source !== null && 'uri' in source
-    ? source.uri
-    : null;
+  const uri = typeof source === 'object' && source !== null && 'uri' in source ? source.uri : null;
 
   const shouldShowPlaceholder = !uri || hasError;
 
@@ -38,9 +36,10 @@ export const MediaImage = ({
   }
 
   // Normalize source to ensure uri is never null (convert null to undefined)
-  const imageSource = typeof source === 'object' && source !== null && 'uri' in source
-    ? { uri: source.uri ?? undefined }
-    : source;
+  const imageSource =
+    typeof source === 'object' && source !== null && 'uri' in source
+      ? { uri: source.uri ?? undefined }
+      : source;
 
   return (
     <Image

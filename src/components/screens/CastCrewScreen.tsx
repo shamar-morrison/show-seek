@@ -28,7 +28,7 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
 
   const creditsQuery = useQuery({
     queryKey: [type, id, 'credits'],
-    queryFn: () => type === 'movie' ? tmdbApi.getMovieCredits(id) : tmdbApi.getTVCredits(id),
+    queryFn: () => (type === 'movie' ? tmdbApi.getMovieCredits(id) : tmdbApi.getTVCredits(id)),
     enabled: !!id,
   });
 
@@ -39,9 +39,9 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
   const renderItem = ({ item }: { item: CastMember | CrewMember }) => {
     const isCast = 'character' in item;
     const role = isCast ? (item as CastMember).character : (item as CrewMember).job;
-    
+
     return (
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.card}
         onPress={() => handlePersonPress(item.id)}
         activeOpacity={ACTIVE_OPACITY}
@@ -53,8 +53,12 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
           placeholderType="person"
         />
         <View style={styles.cardInfo}>
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.role} numberOfLines={1}>{role}</Text>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.role} numberOfLines={1}>
+            {role}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -72,7 +76,11 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load credits</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -84,17 +92,17 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.headerButton} 
+        <TouchableOpacity
+          style={styles.headerButton}
           onPress={() => router.back()}
           activeOpacity={ACTIVE_OPACITY}
         >
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cast & Crew</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.tabContainer}>
@@ -209,7 +217,7 @@ const styles = StyleSheet.create({
   },
   profileImage: {
     width: '100%',
-    aspectRatio: 2/3,
+    aspectRatio: 2 / 3,
     backgroundColor: COLORS.surfaceLight,
   },
   cardInfo: {

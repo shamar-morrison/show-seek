@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -35,8 +35,8 @@ export default function TVSeasonsScreen() {
     queryFn: async () => {
       const show = await tmdbApi.getTVShowDetails(tvId);
       const seasonPromises = show.seasons
-        .filter(s => s.season_number >= 0) // Include season 0 (specials)
-        .map(s => tmdbApi.getSeasonDetails(tvId, s.season_number));
+        .filter((s) => s.season_number >= 0) // Include season 0 (specials)
+        .map((s) => tmdbApi.getSeasonDetails(tvId, s.season_number));
       return Promise.all(seasonPromises);
     },
     enabled: !!tvId,
@@ -54,7 +54,11 @@ export default function TVSeasonsScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load seasons</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -70,27 +74,29 @@ export default function TVSeasonsScreen() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'TBA';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <SafeAreaView edges={['top']} style={styles.header}>
-        <TouchableOpacity 
-          style={styles.headerButton} 
+        <TouchableOpacity
+          style={styles.headerButton}
           onPress={() => router.back()}
           activeOpacity={ACTIVE_OPACITY}
         >
           <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{show.name}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {show.name}
+          </Text>
           <Text style={styles.headerSubtitle}>Seasons & Episodes</Text>
         </View>
       </SafeAreaView>
@@ -102,7 +108,7 @@ export default function TVSeasonsScreen() {
 
           return (
             <View key={season.season_number} style={styles.seasonContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.seasonHeader}
                 onPress={() => toggleSeason(season.season_number)}
                 activeOpacity={ACTIVE_OPACITY}
@@ -112,7 +118,7 @@ export default function TVSeasonsScreen() {
                   style={styles.seasonPoster}
                   contentFit="cover"
                 />
-                
+
                 <View style={styles.seasonInfo}>
                   <Text style={styles.seasonTitle}>
                     {season.name || `Season ${season.season_number}`}
@@ -140,10 +146,10 @@ export default function TVSeasonsScreen() {
                   {season.overview && (
                     <Text style={styles.seasonFullOverview}>{season.overview}</Text>
                   )}
-                  
+
                   {season.episodes.map((episode) => {
                     const stillUrl = getImageUrl(episode.still_path, '/w300');
-                    
+
                     return (
                       <View key={episode.id} style={styles.episodeCard}>
                         <MediaImage
@@ -151,7 +157,7 @@ export default function TVSeasonsScreen() {
                           style={styles.episodeStill}
                           contentFit="cover"
                         />
-                        
+
                         <View style={styles.episodeInfo}>
                           <View style={styles.episodeHeader}>
                             <Text style={styles.episodeNumber}>
@@ -166,11 +172,11 @@ export default function TVSeasonsScreen() {
                               </View>
                             )}
                           </View>
-                          
+
                           <Text style={styles.episodeTitle} numberOfLines={1}>
                             {episode.name}
                           </Text>
-                          
+
                           <View style={styles.episodeMeta}>
                             {episode.air_date && (
                               <View style={styles.metaItem}>
@@ -182,7 +188,7 @@ export default function TVSeasonsScreen() {
                               <Text style={styles.metaText}>• {episode.runtime}m</Text>
                             )}
                           </View>
-                          
+
                           {episode.overview && (
                             <Text style={styles.episodeOverview} numberOfLines={3}>
                               {episode.overview}
@@ -197,7 +203,7 @@ export default function TVSeasonsScreen() {
             </View>
           );
         })}
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </View>

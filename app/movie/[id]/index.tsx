@@ -11,7 +11,17 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film, ChevronRight } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Star,
+  Clock,
+  Calendar,
+  Plus,
+  Play,
+  DollarSign,
+  Film,
+  ChevronRight,
+} from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
@@ -74,7 +84,11 @@ export default function MovieDetailScreen() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load movie details</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -83,11 +97,12 @@ export default function MovieDetailScreen() {
 
   const movie = movieQuery.data;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
-  const director = creditsQuery.data?.crew.find(c => c.job === 'Director');
+  const director = creditsQuery.data?.crew.find((c) => c.job === 'Director');
   const videos = videosQuery.data || [];
-  const trailer = videos.find(v => v.type === 'Trailer' && v.official) || 
-                  videos.find(v => v.type === 'Trailer') ||
-                  videos[0];
+  const trailer =
+    videos.find((v) => v.type === 'Trailer' && v.official) ||
+    videos.find((v) => v.type === 'Trailer') ||
+    videos[0];
   const similarMovies = similarQuery.data?.results.slice(0, 10) || [];
   const watchProviders = watchProvidersQuery.data;
   const images = imagesQuery.data;
@@ -128,23 +143,16 @@ export default function MovieDetailScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       <ScrollView style={styles.scrollView} bounces={false}>
         {/* Hero Section */}
         <View style={styles.heroContainer}>
-          <MediaImage
-            source={{ uri: backdropUrl }}
-            style={styles.backdrop}
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={['transparent', COLORS.background]}
-            style={styles.gradient}
-          />
-          
+          <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
+          <LinearGradient colors={['transparent', COLORS.background]} style={styles.gradient} />
+
           <SafeAreaView style={styles.headerSafe} edges={['top']}>
-            <TouchableOpacity 
-              style={styles.headerButton} 
+            <TouchableOpacity
+              style={styles.headerButton}
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
@@ -153,18 +161,14 @@ export default function MovieDetailScreen() {
           </SafeAreaView>
 
           <View style={styles.posterContainer}>
-            <MediaImage
-              source={{ uri: posterUrl }}
-              style={styles.poster}
-              contentFit="cover"
-            />
+            <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
           </View>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
           <Text style={styles.title}>{movie.title}</Text>
-          
+
           <View style={styles.metaContainer}>
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
@@ -172,7 +176,7 @@ export default function MovieDetailScreen() {
                 {new Date(movie.release_date).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
-                  year: 'numeric'
+                  year: 'numeric',
                 })}
               </Text>
             </View>
@@ -189,7 +193,7 @@ export default function MovieDetailScreen() {
           </View>
 
           <View style={styles.genresContainer}>
-            {movie.genres.map(genre => (
+            {movie.genres.map((genre) => (
               <View key={genre.id} style={styles.genreTag}>
                 <Text style={styles.genreText}>{genre.name}</Text>
               </View>
@@ -197,18 +201,18 @@ export default function MovieDetailScreen() {
           </View>
 
           <View style={styles.actionButtons}>
-             <TouchableOpacity 
-               style={[styles.playButton, !trailer && styles.disabledButton]} 
-               onPress={handleTrailerPress}
-               disabled={!trailer}
-               activeOpacity={ACTIVE_OPACITY}
-             >
-                <Play size={20} color={COLORS.white} fill={COLORS.white} />
-                <Text style={styles.playButtonText}>Watch Trailer</Text>
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
-                <Plus size={24} color={COLORS.white} />
-             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.playButton, !trailer && styles.disabledButton]}
+              onPress={handleTrailerPress}
+              disabled={!trailer}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Play size={20} color={COLORS.white} fill={COLORS.white} />
+              <Text style={styles.playButtonText}>Watch Trailer</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
+              <Plus size={24} color={COLORS.white} />
+            </TouchableOpacity>
           </View>
 
           {/* Budget & Revenue */}
@@ -238,49 +242,51 @@ export default function MovieDetailScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>
-            {movie.overview || 'No overview available'}
-          </Text>
+          <Text style={styles.overview}>{movie.overview || 'No overview available'}</Text>
 
           {director && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Director: </Text>
-              <TouchableOpacity onPress={() => router.push(`/person/${director.id}` as any)} activeOpacity={ACTIVE_OPACITY}>
+              <TouchableOpacity
+                onPress={() => router.push(`/person/${director.id}` as any)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
                 <Text style={[styles.value, { color: COLORS.primary }]}>{director.name}</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* Watch Providers */}
-          {watchProviders && (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
-            <>
-              <Text style={styles.sectionTitle}>Where to Watch</Text>
-              {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
-                <View style={styles.providersSection}>
-                  <Text style={styles.providerType}>Streaming</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {watchProviders.flatrate.map(provider => (
-                      <View key={provider.provider_id} style={styles.providerCard}>
-                        <MediaImage
-                          source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
-                          style={styles.providerLogo}
-                          contentFit="contain"
-                        />
-                        <Text style={styles.providerName} numberOfLines={1}>
-                          {provider.provider_name}
-                        </Text>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </>
-          )}
+          {watchProviders &&
+            (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+              <>
+                <Text style={styles.sectionTitle}>Where to Watch</Text>
+                {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
+                  <View style={styles.providersSection}>
+                    <Text style={styles.providerType}>Streaming</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {watchProviders.flatrate.map((provider) => (
+                        <View key={provider.provider_id} style={styles.providerCard}>
+                          <MediaImage
+                            source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
+                            style={styles.providerLogo}
+                            contentFit="contain"
+                          />
+                          <Text style={styles.providerName} numberOfLines={1}>
+                            {provider.provider_name}
+                          </Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </>
+            )}
 
           {cast.length > 0 && (
             <>
-              <TouchableOpacity 
-                style={styles.sectionHeader} 
+              <TouchableOpacity
+                style={styles.sectionHeader}
                 onPress={() => router.push(`/movie/${movieId}/cast` as any)}
                 activeOpacity={ACTIVE_OPACITY}
               >
@@ -288,23 +294,27 @@ export default function MovieDetailScreen() {
                 <ChevronRight size={20} color={COLORS.primary} />
               </TouchableOpacity>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
-                {cast.map(actor => (
-                  <TouchableOpacity 
-                    key={actor.id} 
+                {cast.map((actor) => (
+                  <TouchableOpacity
+                    key={actor.id}
                     style={styles.castCard}
                     onPress={() => handleCastPress(actor.id)}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
-                        uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium)
+                        uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium),
                       }}
                       style={styles.castImage}
                       contentFit="cover"
-                      placeholderType='person'
+                      placeholderType="person"
                     />
-                    <Text style={styles.castName} numberOfLines={2}>{actor.name}</Text>
-                    <Text style={styles.characterName} numberOfLines={1}>{actor.character}</Text>
+                    <Text style={styles.castName} numberOfLines={2}>
+                      {actor.name}
+                    </Text>
+                    <Text style={styles.characterName} numberOfLines={1}>
+                      {actor.character}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -314,23 +324,31 @@ export default function MovieDetailScreen() {
           {/* Similar Movies */}
           {similarMovies.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, {paddingBottom: SPACING.s}]}>Similar Movies</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarList}>
-                {similarMovies.map(similar => (
-                  <TouchableOpacity 
-                    key={similar.id} 
+              <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
+                Similar Movies
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.similarList}
+              >
+                {similarMovies.map((similar) => (
+                  <TouchableOpacity
+                    key={similar.id}
                     style={styles.similarCard}
                     onPress={() => handleMoviePress(similar.id)}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
                       source={{
-                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small)
+                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small),
                       }}
                       style={styles.similarPoster}
                       contentFit="cover"
                     />
-                    <Text style={styles.similarTitle} numberOfLines={2}>{similar.title}</Text>
+                    <Text style={styles.similarTitle} numberOfLines={2}>
+                      {similar.title}
+                    </Text>
                     <View style={styles.similarMeta}>
                       {similar.release_date && (
                         <Text style={styles.similarYear}>
@@ -343,7 +361,9 @@ export default function MovieDetailScreen() {
                       {similar.vote_average > 0 && (
                         <View style={styles.similarRating}>
                           <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                          <Text style={styles.similarRatingText}>{similar.vote_average.toFixed(1)}</Text>
+                          <Text style={styles.similarRatingText}>
+                            {similar.vote_average.toFixed(1)}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -356,10 +376,14 @@ export default function MovieDetailScreen() {
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
             <>
-              <Text style={[styles.sectionTitle, {paddingBottom: SPACING.s}]}>Photos</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
+              <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>Photos</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.photosList}
+              >
                 {images.backdrops.slice(0, 10).map((image, index) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={`photo-${index}`}
                     onPress={() => {
                       setLightboxIndex(index);
@@ -368,7 +392,9 @@ export default function MovieDetailScreen() {
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <MediaImage
-                      source={{ uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small) }}
+                      source={{
+                        uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small),
+                      }}
                       style={styles.photoImage}
                       contentFit="cover"
                     />
@@ -377,7 +403,7 @@ export default function MovieDetailScreen() {
               </ScrollView>
             </>
           )}
-          
+
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
@@ -392,9 +418,11 @@ export default function MovieDetailScreen() {
       <ImageLightbox
         visible={lightboxVisible}
         onClose={() => setLightboxVisible(false)}
-        images={images?.backdrops.slice(0, 10).map(img => 
-          getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.large) || ''
-        ) || []}
+        images={
+          images?.backdrops
+            .slice(0, 10)
+            .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.large) || '') || []
+        }
         initialIndex={lightboxIndex}
       />
     </View>
@@ -462,12 +490,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: SPACING.l,
     left: SPACING.l,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.30,
+    shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
   },

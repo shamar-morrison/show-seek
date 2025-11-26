@@ -9,7 +9,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
-  
+
   const segments = useSegments();
   const router = useRouter();
 

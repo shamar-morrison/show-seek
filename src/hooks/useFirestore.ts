@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/src/context/auth';
-import { firestoreHelpers, FavoriteItem, WatchlistItem, RatingItem } from '@/src/firebase/firestore';
+import {
+  firestoreHelpers,
+  FavoriteItem,
+  WatchlistItem,
+  RatingItem,
+} from '@/src/firebase/firestore';
 
 export function useFavorites() {
   const { user } = useAuth();

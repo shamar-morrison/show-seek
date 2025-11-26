@@ -24,7 +24,7 @@ export interface RatingItem {
 export const firestoreHelpers = {
   addToFavorites: async (userId: string, mediaId: number, item: Movie | TVShow) => {
     const favRef = doc(db, `users/${userId}/favorites/${mediaId}`);
-    
+
     const favoriteData: FavoriteItem = {
       id: mediaId.toString(),
       mediaType: 'title' in item ? 'movie' : 'tv',
@@ -45,7 +45,7 @@ export const firestoreHelpers = {
 
   addToWatchlist: async (userId: string, mediaId: number, item: Movie | TVShow) => {
     const watchRef = doc(db, `users/${userId}/watchlist/${mediaId}`);
-    
+
     const watchlistData: WatchlistItem = {
       id: mediaId.toString(),
       mediaType: 'title' in item ? 'movie' : 'tv',
@@ -66,7 +66,7 @@ export const firestoreHelpers = {
 
   rateMedia: async (userId: string, mediaId: number, rating: number, mediaType: 'movie' | 'tv') => {
     const ratingRef = doc(db, `users/${userId}/ratings/${mediaId}`);
-    
+
     const ratingData: RatingItem = {
       id: mediaId.toString(),
       mediaType,

@@ -1,12 +1,12 @@
 // template
-const tintColorLight = "#2f95dc";
+const tintColorLight = '#2f95dc';
 
 export default {
   light: {
-    text: "#000",
-    background: "#fff",
+    text: '#000',
+    background: '#fff',
     tint: tintColorLight,
-    tabIconDefault: "#ccc",
+    tabIconDefault: '#ccc',
     tabIconSelected: tintColorLight,
   },
 };

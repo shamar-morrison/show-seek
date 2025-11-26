@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, TouchableOpacity, Image } from 'react-native';
-import { FlashList, FlashListRef } from "@shopify/flash-list";
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/context/auth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
@@ -12,19 +12,23 @@ const ONBOARDING_DATA = [
     id: '1',
     title: 'Welcome to ShowSeek',
     description: 'Your Personal Movie & TV Show Companion. Discover, track, and enjoy.',
-    image: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '2',
     title: 'Discover Content',
     description: 'Browse thousands of movies and TV shows. Trending, popular, and top rated.',
-    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000&auto=format&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '3',
     title: 'Track Favorites',
-    description: 'Save your favorites and rate what you watch. Keep track of everything in one place.',
-    image: 'https://images.unsplash.com/photo-1517604931442-71053e3e2c28?q=80&w=1000&auto=format&fit=crop',
+    description:
+      'Save your favorites and rate what you watch. Keep track of everything in one place.',
+    image:
+      'https://images.unsplash.com/photo-1517604931442-71053e3e2c28?q=80&w=1000&auto=format&fit=crop',
   },
 ];
 
@@ -62,21 +66,21 @@ export default function OnboardingScreen() {
         }}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width, height }]}>
-             <Image 
-                source={{ uri: item.image }} 
-                style={StyleSheet.absoluteFillObject}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <SafeAreaView style={styles.contentContainer}>
-                <View style={styles.textContainer}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  <Text style={styles.description}>{item.description}</Text>
-                </View>
-              </SafeAreaView>
+            <Image
+              source={{ uri: item.image }}
+              style={StyleSheet.absoluteFillObject}
+              resizeMode="cover"
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <SafeAreaView style={styles.contentContainer}>
+              <View style={styles.textContainer}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.description}>{item.description}</Text>
+              </View>
+            </SafeAreaView>
           </View>
         )}
         keyExtractor={(item) => item.id}
@@ -99,15 +103,23 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.buttonContainer}>
-           <TouchableOpacity onPress={finishOnboarding} style={styles.skipButton} activeOpacity={ACTIVE_OPACITY}>
-              <Text style={styles.skipText}>Skip</Text>
-           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={finishOnboarding}
+            style={styles.skipButton}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
 
-           <TouchableOpacity onPress={handleNext} style={styles.nextButton} activeOpacity={ACTIVE_OPACITY}>
-              <Text style={styles.nextText}>
-                {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
-              </Text>
-           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleNext}
+            style={styles.nextButton}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={styles.nextText}>
+              {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </View>

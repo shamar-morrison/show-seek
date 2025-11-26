@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { FlashList } from "@shopify/flash-list";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
@@ -83,7 +77,7 @@ export default function DiscoverScreen() {
 
   // Reset genre when media type changes
   useEffect(() => {
-    setFilters(prev => ({ ...prev, genre: null }));
+    setFilters((prev) => ({ ...prev, genre: null }));
   }, [mediaType]);
 
   const hasActiveFilters = () => {
@@ -115,41 +109,38 @@ export default function DiscoverScreen() {
   };
 
   // Flatten paginated data
-  const allResults: (Movie | TVShow)[] = discoverQuery.data?.pages.flatMap(page => page.results as (Movie | TVShow)[]) || [];
+  const allResults: (Movie | TVShow)[] =
+    discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [];
 
   const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
     const title = 'title' in item ? item.title : item.name;
     const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    const posterUrl = getImageUrl(
-      item.poster_path,
-      TMDB_IMAGE_SIZES.poster.small
-    );
+    const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
     // Get genre names from genre_ids
     const genres = item.genre_ids
-      ? item.genre_ids.slice(0, 3).map((id: number) => genreMap[id]).filter(Boolean)
+      ? item.genre_ids
+          .slice(0, 3)
+          .map((id: number) => genreMap[id])
+          .filter(Boolean)
       : [];
 
     return (
-      <TouchableOpacity style={styles.resultItem} onPress={() => handleItemPress(item)} activeOpacity={ACTIVE_OPACITY}>
-        <MediaImage
-          source={{ uri: posterUrl }}
-          style={styles.resultPoster}
-          contentFit="cover"
-        />
+      <TouchableOpacity
+        style={styles.resultItem}
+        onPress={() => handleItemPress(item)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
             {title}
           </Text>
           <View style={styles.metaRow}>
             {releaseDate && (
-              <Text style={styles.resultYear}>
-                {new Date(releaseDate).getFullYear()}
-              </Text>
+              <Text style={styles.resultYear}>{new Date(releaseDate).getFullYear()}</Text>
             )}
-            {item.vote_average > 0 && releaseDate && (
-              <Text style={styles.separator}> • </Text>
-            )}
+            {item.vote_average > 0 && releaseDate && <Text style={styles.separator}> • </Text>}
             {item.vote_average > 0 && (
               <View style={styles.ratingContainer}>
                 <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
