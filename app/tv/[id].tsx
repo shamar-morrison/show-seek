@@ -25,7 +25,6 @@ import {
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
