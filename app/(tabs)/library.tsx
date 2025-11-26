@@ -135,7 +135,7 @@ export default function LibraryScreen() {
             </Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => router.push('/(tabs)/search')}
+              onPress={() => router.push('/discover')}
               activeOpacity={ACTIVE_OPACITY}
             >
               <Text style={styles.browseButtonText}>Browse Content</Text>
