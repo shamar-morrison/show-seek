@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Star, Calendar, Plus, Play, Layers, Tv } from 'lucide-react-native';
+import { ArrowLeft, Star, Calendar, Plus, Play, Layers, Tv, ChevronRight } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
@@ -260,7 +260,14 @@ export default function TVShowDetailScreen() {
 
           {cast.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Cast</Text>
+              <TouchableOpacity 
+                style={styles.sectionHeader} 
+                onPress={() => router.push(`/tv/${tvId}/cast` as any)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.sectionTitle}>Cast</Text>
+                <ChevronRight size={20} color={COLORS.primary} />
+              </TouchableOpacity>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
                 {cast.map(actor => (
                   <TouchableOpacity 
@@ -542,8 +549,14 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.white,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.s,
     marginTop: SPACING.m,
+    paddingRight: SPACING.l,
   },
   overview: {
     color: COLORS.textSecondary,

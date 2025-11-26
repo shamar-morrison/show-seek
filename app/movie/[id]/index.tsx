@@ -11,7 +11,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film } from 'lucide-react-native';
+import { ArrowLeft, Star, Clock, Calendar, Plus, Play, DollarSign, Film, ChevronRight } from 'lucide-react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
@@ -279,7 +279,14 @@ export default function MovieDetailScreen() {
 
           {cast.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Cast</Text>
+              <TouchableOpacity 
+                style={styles.sectionHeader} 
+                onPress={() => router.push(`/movie/${movieId}/cast` as any)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.sectionTitle}>Cast</Text>
+                <ChevronRight size={20} color={COLORS.primary} />
+              </TouchableOpacity>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
                 {cast.map(actor => (
                   <TouchableOpacity 
@@ -307,7 +314,7 @@ export default function MovieDetailScreen() {
           {/* Similar Movies */}
           {similarMovies.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Similar Movies</Text>
+              <Text style={[styles.sectionTitle, {paddingBottom: SPACING.s}]}>Similar Movies</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarList}>
                 {similarMovies.map(similar => (
                   <TouchableOpacity 
@@ -349,7 +356,7 @@ export default function MovieDetailScreen() {
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Photos</Text>
+              <Text style={[styles.sectionTitle, {paddingBottom: SPACING.s}]}>Photos</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosList}>
                 {images.backdrops.slice(0, 10).map((image, index) => (
                   <TouchableOpacity 
@@ -569,10 +576,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
+    paddingBottom: SPACING.xs,
     fontWeight: 'bold',
     color: COLORS.white,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.s,
     marginTop: SPACING.m,
+    paddingRight: SPACING.l,
   },
   overview: {
     color: COLORS.textSecondary,
