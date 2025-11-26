@@ -1,35 +1,37 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  Star,
-  Calendar,
-  Plus,
-  Play,
-  Layers,
-  Tv,
-  ChevronRight,
-} from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { Image } from 'expo-image';
-
-const { width } = Dimensions.get('window');
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useMediaLists } from '@/src/hooks/useLists';
+import { getLanguageName } from '@/src/utils/languages';
+import { useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ChevronRight,
+  Globe,
+  Layers,
+  Play,
+  Plus,
+  Star,
+  Tv,
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TVShowDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -38,6 +40,12 @@ export default function TVShowDetailScreen() {
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [listModalVisible, setListModalVisible] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const toastRef = React.useRef<ToastRef>(null);
+
+  const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
+  const isInAnyList = Object.keys(membership).length > 0;
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -166,11 +174,13 @@ export default function TVShowDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
-                {new Date(show.first_air_date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {show.first_air_date
+                  ? new Date(show.first_air_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
+                  : 'Unknown'}
               </Text>
             </View>
             <TouchableOpacity
@@ -193,6 +203,12 @@ export default function TVShowDetailScreen() {
                 {show.vote_average.toFixed(1)}
               </Text>
             </View>
+            {show.original_language !== 'en' && (
+              <View style={styles.metaItem}>
+                <Globe size={14} color={COLORS.textSecondary} />
+                <Text style={styles.metaText}>{getLanguageName(show.original_language)}</Text>
+              </View>
+            )}
             {(show.status === 'Ended' || show.status === 'Canceled') && (
               <View style={styles.statusBadge}>
                 <Text style={styles.statusBadgeText}>{show.status}</Text>
@@ -218,13 +234,34 @@ export default function TVShowDetailScreen() {
               <Play size={20} color={COLORS.white} fill={COLORS.white} />
               <Text style={styles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
-              <Plus size={24} color={COLORS.white} />
+            <TouchableOpacity
+              style={[styles.addButton, isInAnyList && styles.addedButton]}
+              activeOpacity={ACTIVE_OPACITY}
+              onPress={() => setListModalVisible(true)}
+              disabled={isLoadingLists}
+            >
+              {isLoadingLists ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : isInAnyList ? (
+                <Check size={24} color={COLORS.white} />
+              ) : (
+                <Plus size={24} color={COLORS.white} />
+              )}
             </TouchableOpacity>
           </View>
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{show.overview || 'No overview available'}</Text>
+          <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+            {show.overview || 'No overview available'}
+          </Text>
+          {show.overview && show.overview.length > 200 && (
+            <TouchableOpacity
+              onPress={() => setOverviewExpanded(!overviewExpanded)}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Text style={styles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+            </TouchableOpacity>
+          )}
 
           {creator && (
             <View style={styles.directorContainer}>
@@ -387,11 +424,10 @@ export default function TVShowDetailScreen() {
         </View>
       </ScrollView>
 
-      <VideoPlayerModal
+      <TrailerPlayer
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
         videoKey={trailer?.key || null}
-        videoTitle={trailer?.name}
       />
 
       <ImageLightbox
@@ -404,6 +440,23 @@ export default function TVShowDetailScreen() {
         }
         initialIndex={lightboxIndex}
       />
+
+      {show && (
+        <AddToListModal
+          visible={listModalVisible}
+          onClose={() => setListModalVisible(false)}
+          mediaItem={{
+            id: show.id,
+            title: show.name,
+            poster_path: show.poster_path,
+            media_type: 'tv',
+            vote_average: show.vote_average,
+            release_date: show.first_air_date,
+          }}
+          onShowToast={(message) => toastRef.current?.show(message)}
+        />
+      )}
+      <Toast ref={toastRef} />
     </View>
   );
 }
@@ -572,6 +625,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
   },
+  addedButton: {
+    backgroundColor: COLORS.success,
+  },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
@@ -589,7 +645,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     lineHeight: 24,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
     marginBottom: SPACING.l,
+    fontWeight: '600',
   },
   directorContainer: {
     flexDirection: 'row',

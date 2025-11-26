@@ -52,6 +52,7 @@ export interface Movie {
   genre_ids: number[];
   video: boolean;
   adult: boolean;
+  original_language: string;
 }
 
 export interface TVShow {
@@ -66,6 +67,7 @@ export interface TVShow {
   vote_count: number;
   popularity: number;
   genre_ids: number[];
+  original_language: string;
 }
 
 export interface Person {

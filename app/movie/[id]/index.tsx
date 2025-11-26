@@ -1,17 +1,23 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useMediaLists } from '@/src/hooks/useLists';
+import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ArrowLeft,
   Calendar,
+  Check,
   ChevronRight,
   Clock,
   DollarSign,
+  Globe,
   Play,
   Plus,
   Star,
@@ -34,6 +40,12 @@ export default function MovieDetailScreen() {
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [listModalVisible, setListModalVisible] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const toastRef = React.useRef<ToastRef>(null);
+
+  const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
+  const isInAnyList = Object.keys(membership).length > 0;
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -172,11 +184,13 @@ export default function MovieDetailScreen() {
             <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={styles.metaText}>
-                {new Date(movie.release_date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {movie.release_date
+                  ? new Date(movie.release_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
+                  : 'Unknown'}
               </Text>
             </View>
             <View style={styles.metaItem}>
@@ -189,6 +203,12 @@ export default function MovieDetailScreen() {
                 {movie.vote_average.toFixed(1)}
               </Text>
             </View>
+            {movie.original_language !== 'en' && (
+              <View style={styles.metaItem}>
+                <Globe size={14} color={COLORS.textSecondary} />
+                <Text style={styles.metaText}>{getLanguageName(movie.original_language)}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.genresContainer}>
@@ -209,8 +229,19 @@ export default function MovieDetailScreen() {
               <Play size={20} color={COLORS.white} fill={COLORS.white} />
               <Text style={styles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} activeOpacity={ACTIVE_OPACITY}>
-              <Plus size={24} color={COLORS.white} />
+            <TouchableOpacity
+              style={[styles.addButton, isInAnyList && styles.addedButton]}
+              activeOpacity={ACTIVE_OPACITY}
+              onPress={() => setListModalVisible(true)}
+              disabled={isLoadingLists}
+            >
+              {isLoadingLists ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : isInAnyList ? (
+                <Check size={24} color={COLORS.white} />
+              ) : (
+                <Plus size={24} color={COLORS.white} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -241,7 +272,17 @@ export default function MovieDetailScreen() {
           )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview}>{movie.overview || 'No overview available'}</Text>
+          <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+            {movie.overview || 'No overview available'}
+          </Text>
+          {movie.overview && movie.overview.length > 200 && (
+            <TouchableOpacity
+              onPress={() => setOverviewExpanded(!overviewExpanded)}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Text style={styles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+            </TouchableOpacity>
+          )}
 
           {director && (
             <View style={styles.directorContainer}>
@@ -407,11 +448,10 @@ export default function MovieDetailScreen() {
         </View>
       </ScrollView>
 
-      <VideoPlayerModal
+      <TrailerPlayer
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
         videoKey={trailer?.key || null}
-        videoTitle={trailer?.name}
       />
 
       <ImageLightbox
@@ -424,6 +464,23 @@ export default function MovieDetailScreen() {
         }
         initialIndex={lightboxIndex}
       />
+
+      {movie && (
+        <AddToListModal
+          visible={listModalVisible}
+          onClose={() => setListModalVisible(false)}
+          mediaItem={{
+            id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            media_type: 'movie',
+            vote_average: movie.vote_average,
+            release_date: movie.release_date,
+          }}
+          onShowToast={(message) => toastRef.current?.show(message)}
+        />
+      )}
+      <Toast ref={toastRef} />
     </View>
   );
 }
@@ -577,6 +634,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
   },
+  addedButton: {
+    backgroundColor: COLORS.success,
+  },
   financialContainer: {
     flexDirection: 'row',
     gap: SPACING.xl,
@@ -619,7 +679,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     lineHeight: 24,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
     marginBottom: SPACING.l,
+    fontWeight: '600',
   },
   directorContainer: {
     flexDirection: 'row',

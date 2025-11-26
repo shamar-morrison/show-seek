@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { Genre, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre } from '@/src/api/tmdb';
-import { Search as SearchIcon, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { MediaImage } from '@/src/components/ui/MediaImage';
+import { Search as SearchIcon, Star } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'all' | 'movie' | 'tv';
 
@@ -174,31 +174,29 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      <View style={styles.filterContainer}>
+      <View style={styles.typeToggleContainer}>
         <TouchableOpacity
-          style={[styles.filterButton, mediaType === 'all' && styles.filterButtonActive]}
+          style={[styles.typeButton, mediaType === 'all' && styles.typeButtonActive]}
           onPress={() => setMediaType('all')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.filterText, mediaType === 'all' && styles.filterTextActive]}>
-            All
-          </Text>
+          <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>All</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, mediaType === 'movie' && styles.filterButtonActive]}
+          style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
           onPress={() => setMediaType('movie')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.filterText, mediaType === 'movie' && styles.filterTextActive]}>
+          <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
             Movies
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, mediaType === 'tv' && styles.filterButtonActive]}
+          style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
           onPress={() => setMediaType('tv')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.filterText, mediaType === 'tv' && styles.filterTextActive]}>
+          <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
             TV Shows
           </Text>
         </TouchableOpacity>
@@ -248,7 +246,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   searchContainer: {
-    paddingHorizontal: SPACING.l,
+    paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.s,
   },
   searchInputContainer: {
@@ -265,27 +263,27 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
   },
-  filterContainer: {
+  typeToggleContainer: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.l,
+    padding: SPACING.m,
     gap: SPACING.m,
-    marginBottom: SPACING.m,
   },
-  filterButton: {
-    paddingHorizontal: SPACING.m,
+  typeButton: {
+    flex: 1,
     paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.round,
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
   },
-  filterButtonActive: {
+  typeButtonActive: {
     backgroundColor: COLORS.primary,
   },
-  filterText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
+  typeText: {
+    fontSize: FONT_SIZE.m,
     fontWeight: '600',
+    color: COLORS.textSecondary,
   },
-  filterTextActive: {
+  typeTextActive: {
     color: COLORS.white,
   },
   centerContainer: {
