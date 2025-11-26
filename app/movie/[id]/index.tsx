@@ -6,6 +6,7 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import VideoPlayerModal from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ import {
   ChevronRight,
   Clock,
   DollarSign,
+  Globe,
   Play,
   Plus,
   Star,
@@ -200,6 +202,12 @@ export default function MovieDetailScreen() {
                 {movie.vote_average.toFixed(1)}
               </Text>
             </View>
+            {movie.original_language !== 'en' && (
+              <View style={styles.metaItem}>
+                <Globe size={14} color={COLORS.textSecondary} />
+                <Text style={styles.metaText}>{getLanguageName(movie.original_language)}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.genresContainer}>
