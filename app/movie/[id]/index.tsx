@@ -3,7 +3,7 @@ import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import VideoPlayerModal from '@/src/components/VideoPlayerModal';
+import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { getLanguageName } from '@/src/utils/languages';
@@ -437,7 +437,7 @@ export default function MovieDetailScreen() {
         </View>
       </ScrollView>
 
-      <VideoPlayerModal
+      <TrailerPlayer
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
         videoKey={trailer?.key || null}

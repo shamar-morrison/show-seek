@@ -1,19 +1,13 @@
 import React from 'react';
 import { Alert, Linking } from 'react-native';
 
-interface VideoPlayerModalProps {
+interface TrailerPlayerProps {
   visible: boolean;
   onClose: () => void;
   videoKey: string | null;
-  videoTitle?: string;
 }
 
-export default function VideoPlayerModal({
-  visible,
-  onClose,
-  videoKey,
-  videoTitle,
-}: VideoPlayerModalProps) {
+export default function TrailerPlayer({ visible, onClose, videoKey }: TrailerPlayerProps) {
   const youtubeUrl = videoKey ? `https://www.youtube.com/watch?v=${videoKey}` : null;
 
   React.useEffect(() => {
