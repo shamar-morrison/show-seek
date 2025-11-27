@@ -5,6 +5,7 @@ import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
+import { type Video } from '@/src/components/detail/types';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -46,6 +47,7 @@ export default function TVDetailScreen() {
   const segments = useSegments();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
@@ -141,6 +143,7 @@ export default function TVDetailScreen() {
 
   const handleTrailerPress = () => {
     if (trailer) {
+      setSelectedVideo(trailer);
       setTrailerModalVisible(true);
     }
   };
@@ -345,7 +348,13 @@ export default function TVDetailScreen() {
           {images && images.backdrops && images.backdrops.length > 0 && <SectionSeparator />}
 
           {/* Videos */}
-          <VideosSection videos={videos} onVideoPress={() => setTrailerModalVisible(true)} />
+          <VideosSection
+            videos={videos}
+            onVideoPress={(video) => {
+              setSelectedVideo(video);
+              setTrailerModalVisible(true);
+            }}
+          />
 
           {videos.length > 0 && <SectionSeparator />}
 
@@ -379,7 +388,7 @@ export default function TVDetailScreen() {
       <TrailerPlayer
         visible={trailerModalVisible}
         onClose={() => setTrailerModalVisible(false)}
-        videoKey={trailer?.key || null}
+        videoKey={selectedVideo?.key || trailer?.key || null}
       />
 
       <ImageLightbox

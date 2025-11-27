@@ -28,6 +28,10 @@ export default function ImageLightbox({
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
+  React.useEffect(() => {
+    setCurrentIndex(initialIndex);
+  }, [initialIndex]);
+
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
   };
