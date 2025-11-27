@@ -1,66 +1,114 @@
-## Bug: Initial Navigation to Detail Screen from Home Tab Fails
+## Performance Issue: Slow Tab Switching with Deep Navigation Stacks
 
 ### Problem Description
 
-There's a bug with the navigation refactoring where navigating to detail screens from the Home tab fails on first launch, but works after visiting detail screens from other tabs first.
+Tab switching becomes noticeably slow (1+ second delay) when navigation stacks become deep. This creates a poor user experience as the app feels sluggish.
 
 **Steps to Reproduce:**
 
-1. Launch the app (Home tab is active by default)
-2. Tap on any movie or TV show card from Home tab
-3. Instead of showing the detail screen, an error screen appears with:
-   - Black background
-   - Text: "Go to home screen!"
-   - Back button in header showing "Oops!"
+1. Start on any tab (e.g., Discover)
+2. Navigate deep into the stack: Discover → Movie Details → Actor Details → Another Movie → Similar Movie → Details (5+ screens deep)
+3. Try switching to a different tab (Home, Search, Library, Profile)
+4. Notice significant lag/delay (1+ seconds) before the tab switches
 
 **Expected Behavior:**
 
-- Should navigate directly to the movie/TV detail screen
-- Should show the detail content, not an error screen
+- Tab switching should be instant (<100ms) regardless of stack depth
+- App should feel snappy and responsive
 
 **Actual Behavior:**
 
-- First navigation from Home tab fails and shows error screen
-- After visiting a detail screen from Search/Library tab FIRST, then Home tab navigation works
-- Subsequent navigations from Home tab work fine after the initial workaround
+- Tab switching gets progressively slower as stacks get deeper
+- Each additional screen in the stack adds to the switching delay
+- Creates a sluggish, unresponsive feel
 
-### Root Cause Analysis
+### Root Cause
 
-This suggests a lazy loading or initialization issue with the Home tab's stack navigator:
+React Navigation keeps ALL screens in the stack mounted in memory by default. When switching tabs, it has to unmount/hide many screens and mount/show the new tab's screens, causing performance issues with deep stacks.
 
-- The detail screen routes may not be properly registered in the Home stack on initial mount
-- Other tabs might be initializing their stacks differently
-- There could be a race condition where the Home tab tries to navigate before its stack screens are fully set up
+### Solution: Implement Lazy Loading and Detaching
 
-### What to Check/Fix
+**Option 1: Lazy Mounting (Recommended)**
 
-1. **Stack Screen Registration:**
-   - Ensure all detail screens are registered in the Home tab's stack navigator BEFORE the initial render
-   - Check if there's conditional rendering preventing screens from being registered initially
+Configure the stack navigators to use lazy mounting so screens are only mounted when navigated to:
 
-2. **Initial Route Configuration:**
-   - Verify the Home stack navigator's `initialRouteName` is set correctly
-   - Ensure all screens in the Home stack are defined, not lazy-loaded
+```javascript
+<Stack.Navigator
+  screenOptions={{
+    lazy: true,
+    detachInactiveScreens: true,
+  }}
+>
+  {/* screens */}
+</Stack.Navigator>
+```
 
-3. **Navigation Parameters:**
-   - Check if the navigation call from Home tab is passing parameters correctly
-   - Verify the route names match exactly between navigation calls and screen definitions
+**Option 2: Limit Stack Depth**
 
-4. **Stack Navigator Setup:**
-   - Compare the Home tab's stack navigator setup with the other tabs (Search, Library)
-   - Ensure all have the same screen definitions and configuration
-   - Check if there's any async initialization that might be delaying the Home stack
+Implement a maximum stack depth and automatically reset the stack when exceeded:
 
-5. **Common Expo Router Issues:**
-   - If using file-based routing, ensure the file structure is correct
-   - Check for any `href` vs `push` navigation method differences
-   - Verify screen components are imported and not undefined
+```javascript
+// When navigating to detail screen, check stack depth
+// If depth > 5, reset the stack and push only the new screen
+if (navigation.getState().routes.length > 5) {
+  navigation.reset({
+    index: 1,
+    routes: [
+      { name: 'TabScreen' }, // Your tab's main screen
+      { name: 'DetailScreen', params: { id } },
+    ],
+  });
+} else {
+  navigation.push('DetailScreen', { id });
+}
+```
 
-### Solution Requirements
+**Option 3: Use Modal Presentation for Detail Screens**
 
-- Fix should ensure Home tab's stack navigator is fully initialized on app launch
-- All detail screens should be immediately navigable from Home tab without requiring workarounds
-- Should not affect the working navigation from other tabs
-- Maintain the persistent tab bar functionality
+Instead of pushing detail screens onto the stack, present them as modals that don't accumulate:
 
-Please analyze the current Home tab stack navigator implementation and fix the initialization issue causing this navigation failure on first launch.
+```javascript
+<Stack.Screen
+  name="DetailScreen"
+  options={{
+    presentation: 'modal',
+    gestureEnabled: true,
+  }}
+/>
+```
+
+**Option 4: Combine Detaching with Freezing**
+
+Use `react-native-screens` with `detachInactiveScreens` and `freezeOnBlur`:
+
+```javascript
+<Stack.Navigator
+  screenOptions={{
+    detachInactiveScreens: true,
+    freezeOnBlur: true,
+  }}
+>
+```
+
+### Implementation Requirements
+
+1. Apply `lazy: true` and `detachInactiveScreens: true` to ALL stack navigators (Home, Search, Discover, Library)
+2. Ensure `react-native-screens` is properly installed and configured
+3. Test that screens still preserve their state when navigating back
+4. Verify tab switching is fast even with 10+ screens in a stack
+5. Consider adding a visual loading state if lazy mounting causes brief flickers
+
+### Additional Optimization
+
+- Add `removeClippedSubviews={true}` to long lists (FlatList, ScrollView)
+- Memoize expensive components with `React.memo`
+- Use `getStateFromPath` and `getPathFromState` for deep linking efficiency
+
+### Expected Outcome
+
+- Tab switching should be instant (<100ms) regardless of stack depth
+- Memory usage should be more efficient as inactive screens are detached
+- App should maintain responsiveness even with complex navigation flows
+- User state should still be preserved appropriately when navigating back
+
+Please implement these performance optimizations, prioritizing Option 1 (lazy mounting with detachInactiveScreens) as it provides the best balance of performance and user experience.

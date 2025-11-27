@@ -31,6 +31,8 @@ export default function TabLayout() {
           justifyContent: 'center',
           paddingVertical: 4,
         },
+        // @ts-expect-error - detachInactiveScreens is supported but not in types
+        detachInactiveScreens: true,
       }}
     >
       <Tabs.Screen
@@ -66,6 +68,8 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          // @ts-expect-error - unmountOnBlur is supported but not in types
+          unmountOnBlur: true,
         }}
       />
     </Tabs>

@@ -1,3 +1,6 @@
+import { enableScreens } from 'react-native-screens';
+enableScreens();
+
 import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';

@@ -12,13 +12,20 @@ export default function HomeStackLayout() {
           headerTitleStyle: { fontWeight: 'bold' },
           contentStyle: { backgroundColor: COLORS.background },
           headerBackTitle: '',
+          freezeOnBlur: true,
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
-        <Stack.Screen name="movie/[id]/cast" options={{ title: 'Cast & Crew' }} />
+        <Stack.Screen
+          name="movie/[id]/cast"
+          options={{ title: 'Cast & Crew', presentation: 'modal', gestureEnabled: true }}
+        />
         <Stack.Screen name="tv/[id]/index" options={{ title: '', headerTransparent: true }} />
-        <Stack.Screen name="tv/[id]/cast" options={{ title: 'Cast & Crew' }} />
+        <Stack.Screen
+          name="tv/[id]/cast"
+          options={{ title: 'Cast & Crew', presentation: 'modal', gestureEnabled: true }}
+        />
         <Stack.Screen name="tv/[id]/seasons" options={{ title: 'Seasons' }} />
         <Stack.Screen name="person/[id]/index" options={{ title: '', headerTransparent: true }} />
       </Stack>
