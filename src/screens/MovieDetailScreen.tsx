@@ -17,7 +17,6 @@ import {
   Check,
   ChevronRight,
   Clock,
-  DollarSign,
   Globe,
   Play,
   Plus,
@@ -262,34 +261,6 @@ export default function MovieDetailScreen() {
               )}
             </TouchableOpacity>
           </View>
-
-          <SectionSeparator />
-
-          {/* Budget & Revenue */}
-          {(movie.budget > 0 || movie.revenue > 0) && (
-            <View style={styles.financialContainer}>
-              {movie.budget > 0 && (
-                <View style={styles.financialItem}>
-                  <DollarSign size={16} color={COLORS.textSecondary} />
-                  <View>
-                    <Text style={styles.financialLabel}>Budget</Text>
-                    <Text style={styles.financialValue}>{formatMoney(movie.budget)}</Text>
-                  </View>
-                </View>
-              )}
-              {movie.revenue > 0 && (
-                <View style={styles.financialItem}>
-                  <DollarSign size={16} color={COLORS.success} />
-                  <View>
-                    <Text style={styles.financialLabel}>Revenue</Text>
-                    <Text style={[styles.financialValue, { color: COLORS.success }]}>
-                      {formatMoney(movie.revenue)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
 
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>

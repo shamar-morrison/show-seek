@@ -265,8 +265,6 @@ export default function TVDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          <SectionSeparator />
-
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
             {show.overview || 'No overview available'}
@@ -370,7 +368,7 @@ export default function TVDetailScreen() {
           {/* Similar Shows */}
           {similarShows.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Similar Shows</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Similar Shows</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -422,7 +420,7 @@ export default function TVDetailScreen() {
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Photos</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Photos</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
