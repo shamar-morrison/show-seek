@@ -58,6 +58,7 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.sectionTitle}>Details</Text>
       {renderRow('Original Title', isMovie ? movie!.original_title : show!.original_name)}
       {renderRow('Status', media.status)}
       {renderRow(
@@ -105,6 +106,11 @@ const styles = StyleSheet.create({
   container: {
     gap: SPACING.m,
     marginBottom: SPACING.l,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.white,
   },
   row: {
     flexDirection: 'row',

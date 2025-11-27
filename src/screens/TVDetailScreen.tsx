@@ -372,7 +372,6 @@ export default function TVDetailScreen() {
           )}
 
           {/* Details */}
-          <Text style={styles.sectionTitle}>Details</Text>
           <MediaDetailsInfo media={show} type="tv" />
         </View>
       </ScrollView>

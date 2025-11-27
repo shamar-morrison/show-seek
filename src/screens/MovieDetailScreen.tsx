@@ -351,7 +351,6 @@ export default function MovieDetailScreen() {
           )}
 
           {/* Details */}
-          <Text style={styles.sectionTitle}>Details</Text>
           <MediaDetailsInfo media={movie} type="movie" />
         </View>
       </ScrollView>

@@ -20,7 +20,7 @@ export const detailStyles = StyleSheet.create({
 
   // Watch Providers
   providersSection: {
-    marginBottom: SPACING.l,
+    marginBottom: SPACING.m,
   },
   providerType: {
     color: COLORS.textSecondary,
