@@ -20,6 +20,9 @@ const DEFAULT_FILTERS: FilterState = {
   language: null,
 };
 
+// Performance: Discover result item height for FlashList optimization
+const RESULT_ITEM_HEIGHT = 138 + SPACING.m * 2 + SPACING.m; // poster height + padding + margin
+
 export default function DiscoverScreen() {
   const segments = useSegments();
   const [mediaType, setMediaType] = useState<MediaType>('movie');
@@ -232,6 +235,8 @@ export default function DiscoverScreen() {
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          removeClippedSubviews={true}
+          drawDistance={400}
           ListFooterComponent={
             discoverQuery.isFetchingNextPage ? (
               <View style={styles.loadingMore}>

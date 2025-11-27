@@ -225,8 +225,10 @@ export default function SearchScreen() {
           data={searchResultsQuery.data?.results || []}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
+          contentContainerStyle={[styles.listContainer]}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          drawDistance={400}
         />
       )}
     </SafeAreaView>

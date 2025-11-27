@@ -1,15 +1,8 @@
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { Image } from 'expo-image';
+import { X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import {
-  View,
-  StyleSheet,
-  Modal,
-  Image,
-  TouchableOpacity,
-  Dimensions,
-  ScrollView,
-} from 'react-native';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { COLORS, SPACING, ACTIVE_OPACITY } from '@/src/constants/theme';
+import { Dimensions, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +20,10 @@ export default function ImageLightbox({
   initialIndex = 0,
 }: ImageLightboxProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+
+  React.useEffect(() => {
+    setCurrentIndex(initialIndex);
+  }, [initialIndex]);
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
@@ -62,7 +59,7 @@ export default function ImageLightbox({
         >
           {images.map((imageUrl, index) => (
             <View key={index} style={styles.imageContainer}>
-              <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
+              <Image source={{ uri: imageUrl }} style={styles.image} contentFit="contain" />
             </View>
           ))}
         </ScrollView>

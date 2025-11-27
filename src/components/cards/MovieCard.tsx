@@ -4,7 +4,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface MovieCardProps {
@@ -12,15 +12,21 @@ interface MovieCardProps {
   width?: number;
 }
 
-export function MovieCard({ movie, width = 140 }: MovieCardProps) {
-  const currentTab = useCurrentTab();
-  const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+export const MovieCard = memo<MovieCardProps>(
+  ({ movie, width = 140 }) => {
+    const currentTab = useCurrentTab();
 
-  const handlePress = () => {
-    const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
+    // Memoize expensive image URL computation
+    const posterUrl = useMemo(
+      () => getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium),
+      [movie.poster_path]
+    );
 
-    router.push(path as Route);
-  };
+    // Stabilize callback reference
+    const handlePress = useCallback(() => {
+      const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
+      router.push(path as Route);
+    }, [currentTab, movie.id]);
 
   return (
     <TouchableOpacity
@@ -52,7 +58,14 @@ export function MovieCard({ movie, width = 140 }: MovieCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: only re-render if movie ID or width changes
+    return prevProps.movie.id === nextProps.movie.id && prevProps.width === nextProps.width;
+  }
+);
+
+MovieCard.displayName = 'MovieCard';
 
 const styles = StyleSheet.create({
   container: {
