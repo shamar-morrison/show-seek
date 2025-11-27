@@ -546,30 +546,6 @@ const styles = StyleSheet.create({
   addedButton: {
     backgroundColor: COLORS.success,
   },
-  financialContainer: {
-    flexDirection: 'row',
-    gap: SPACING.xl,
-    marginBottom: SPACING.l,
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  financialItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-  },
-  financialLabel: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-    marginBottom: 2,
-  },
-  financialValue: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
-  },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     paddingBottom: SPACING.xs,
@@ -590,7 +566,6 @@ const styles = StyleSheet.create({
   },
   directorContainer: {
     flexDirection: 'row',
-    marginBottom: SPACING.l,
   },
   label: {
     color: COLORS.textSecondary,

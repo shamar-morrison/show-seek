@@ -600,7 +600,6 @@ const styles = StyleSheet.create({
   },
   directorContainer: {
     flexDirection: 'row',
-    marginBottom: SPACING.l,
   },
   label: {
     color: COLORS.textSecondary,
