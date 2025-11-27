@@ -1,23 +1,23 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { auth } from '@/src/firebase/config';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Link } from 'expo-router';
+import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
+import { Eye, EyeOff } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Link, useFocusEffect } from 'expo-router';
-import { signInWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
-import { auth } from '@/src/firebase/config';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
