@@ -1,13 +1,13 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
+import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
-import { MediaDetailsInfo } from '@/src/components/MediaDetailsInfo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
