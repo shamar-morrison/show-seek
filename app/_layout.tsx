@@ -1,3 +1,6 @@
+import { enableScreens } from 'react-native-screens';
+enableScreens();
+
 import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
@@ -52,7 +55,7 @@ function RootLayoutNav() {
       router.replace('/(auth)/sign-in');
     } else if (user && (inAuthGroup || isOnboarding)) {
       // If logged in and in auth/onboarding, go to home
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     }
   }, [user, loading, hasCompletedOnboarding, segments, router]);
 
@@ -87,9 +90,6 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
-        <Stack.Screen name="tv/[id]" options={{ title: '', headerTransparent: true }} />
-        <Stack.Screen name="person/[id]" options={{ title: '', headerTransparent: true }} />
       </Stack>
     </>
   );
