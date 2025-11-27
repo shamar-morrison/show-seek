@@ -451,6 +451,46 @@ export default function TVDetailScreen() {
 
           {images && images.backdrops && images.backdrops.length > 0 && <SectionSeparator />}
 
+          {/* Videos */}
+          {videos.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Videos</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.videosList}
+              >
+                {videos.map((video) => (
+                  <TouchableOpacity
+                    key={video.id}
+                    style={styles.videoCard}
+                    onPress={() => {
+                      setTrailerModalVisible(true);
+                    }}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <MediaImage
+                      source={{
+                        uri:
+                          video.site === 'YouTube'
+                            ? `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`
+                            : null,
+                      }}
+                      style={styles.videoThumbnail}
+                      contentFit="cover"
+                    />
+                    <Text style={styles.videoTitle} numberOfLines={2}>
+                      {video.name}
+                    </Text>
+                    <Text style={styles.videoType}>{video.type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
+          {videos.length > 0 && <SectionSeparator />}
+
           {/* Details */}
           <Text style={styles.sectionTitle}>Details</Text>
           <MediaDetailsInfo media={show} type="tv" />
@@ -796,5 +836,29 @@ const styles = StyleSheet.create({
     height: 135,
     borderRadius: BORDER_RADIUS.m,
     marginRight: SPACING.m,
+  },
+  videosList: {
+    marginHorizontal: -SPACING.l,
+    paddingHorizontal: SPACING.l,
+  },
+  videoCard: {
+    width: 240,
+    marginRight: SPACING.m,
+  },
+  videoThumbnail: {
+    width: 240,
+    height: 135,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.s,
+  },
+  videoTitle: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  videoType: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
   },
 });
