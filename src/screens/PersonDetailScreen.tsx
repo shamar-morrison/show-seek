@@ -271,8 +271,6 @@ export default function PersonDetailScreen() {
             </ScrollView>
           </View>
         )}
-
-        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
