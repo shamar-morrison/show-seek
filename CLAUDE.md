@@ -212,13 +212,14 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 
 ```typescript
 import { useRouter } from 'expo-router';
-import { useTabAwarePath } from '@/src/hooks/useNavigation';
+import { useCurrentTab } from '@/src/hooks/useNavigation';
 
 const router = useRouter();
-const getTabAwarePath = useTabAwarePath();
+const currentTab = useCurrentTab();
 
 // Navigate to movie detail within current tab
-router.push(getTabAwarePath(`movie/${movieId}`));
+const path = currentTab ? `/(tabs)/${currentTab}/movie/${movieId}` : `/movie/${movieId}`;
+router.push(path as any);
 ```
 
 **From Tab Root Screens** (where tab is known):
