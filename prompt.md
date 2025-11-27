@@ -1,85 +1,66 @@
-I have an issue with my Expo Router app navigation. When I navigate from a tab screen to a detail screen (movie details or TV show details), the bottom tab bar disappears. I need the tab bar to remain visible on ALL screens, including detail screens, so users can easily navigate between tabs without having to go back multiple times.
+## Bug: Initial Navigation to Detail Screen from Home Tab Fails
 
-## Current Problem
+### Problem Description
 
-- Bottom tab bar is visible on: Home, Search, Library, Profile (main tab screens)
-- Bottom tab bar disappears on: Movie detail screens, TV show detail screens, cast detail screens, season/episode screens
-- Users have to press back button multiple times to get back to tabs
+There's a bug with the navigation refactoring where navigating to detail screens from the Home tab fails on first launch, but works after visiting detail screens from other tabs first.
 
-## Desired Behavior
+**Steps to Reproduce:**
 
-The bottom tab bar should remain visible and accessible on ALL screens in the app, including:
+1. Launch the app (Home tab is active by default)
+2. Tap on any movie or TV show card from Home tab
+3. Instead of showing the detail screen, an error screen appears with:
+   - Black background
+   - Text: "Go to home screen!"
+   - Back button in header showing "Oops!"
 
-- Movie detail screens
-- TV show detail screens
-- Cast/person detail screens
-- Season and episode screens
-- ANY other screen users navigate to
+**Expected Behavior:**
 
-## Solution Requirements
+- Should navigate directly to the movie/TV detail screen
+- Should show the detail content, not an error screen
 
-### Option 1: Nested Stack Navigation (Preferred)
+**Actual Behavior:**
 
-Restructure the navigation so that detail screens are nested within each tab's stack navigator:
+- First navigation from Home tab fails and shows error screen
+- After visiting a detail screen from Search/Library tab FIRST, then Home tab navigation works
+- Subsequent navigations from Home tab work fine after the initial workaround
 
-- Each tab (Home, Search, Library, Profile) should have its own stack navigator
-- Detail screens should be part of each tab's stack, not separate routes
-- This way the tab bar persists because we're navigating within a tab's stack
-- Users can navigate from Home → Movie Detail → Cast Detail and still see tabs
+### Root Cause Analysis
 
-**Example structure:**
+This suggests a lazy loading or initialization issue with the Home tab's stack navigator:
 
-```
-(tabs)/
-  - Each tab file should actually be a stack navigator
-  - Home tab stack: Home Screen → Movie Detail → TV Detail → Cast Detail
-  - Search tab stack: Search Screen → Movie Detail → TV Detail → Cast Detail
-  - Library tab stack: Library Screen → Movie Detail → TV Detail → Cast Detail
-  - Profile remains single screen
-```
+- The detail screen routes may not be properly registered in the Home stack on initial mount
+- Other tabs might be initializing their stacks differently
+- There could be a race condition where the Home tab tries to navigate before its stack screens are fully set up
 
-### Option 2: Shared Detail Screens (Alternative)
+### What to Check/Fix
 
-If you prefer the current structure with detail screens outside tabs:
+1. **Stack Screen Registration:**
+   - Ensure all detail screens are registered in the Home tab's stack navigator BEFORE the initial render
+   - Check if there's conditional rendering preventing screens from being registered initially
 
-- Configure the tab navigator to show the tab bar on ALL screens
-- Set `tabBarStyle` to not hide on specific routes
-- Ensure detail screens are still accessible from any tab
+2. **Initial Route Configuration:**
+   - Verify the Home stack navigator's `initialRouteName` is set correctly
+   - Ensure all screens in the Home stack are defined, not lazy-loaded
 
-### Implementation Details
+3. **Navigation Parameters:**
+   - Check if the navigation call from Home tab is passing parameters correctly
+   - Verify the route names match exactly between navigation calls and screen definitions
 
-1. **Refactor each tab to be a stack navigator:**
-   - Instead of having detail screens as separate routes outside tabs
-   - Make each tab its own stack that contains the tab screen + all possible detail screens
-   - This means movie/TV/cast detail screens will exist in multiple stacks (one per tab)
+4. **Stack Navigator Setup:**
+   - Compare the Home tab's stack navigator setup with the other tabs (Search, Library)
+   - Ensure all have the same screen definitions and configuration
+   - Check if there's any async initialization that might be delaying the Home stack
 
-2. **Shared Detail Components:**
-   - Keep the actual detail screen components in a shared location
-   - Import and use them in each tab's stack
-   - This avoids code duplication
+5. **Common Expo Router Issues:**
+   - If using file-based routing, ensure the file structure is correct
+   - Check for any `href` vs `push` navigation method differences
+   - Verify screen components are imported and not undefined
 
-3. **Navigation Updates:**
-   - Update all navigation calls to use the current stack's routes
-   - When on Home tab and navigating to movie detail, stay in Home stack
-   - When on Search tab and navigating to movie detail, stay in Search stack
+### Solution Requirements
 
-4. **Tab Bar Configuration:**
-   - Ensure tab bar is never hidden
-   - Tab bar should remain visible and functional on all screens
-   - Active tab should stay highlighted even when viewing detail screens
+- Fix should ensure Home tab's stack navigator is fully initialized on app launch
+- All detail screens should be immediately navigable from Home tab without requiring workarounds
+- Should not affect the working navigation from other tabs
+- Maintain the persistent tab bar functionality
 
-## Expected Result
-
-- User is on Home tab
-- User taps a movie → sees movie detail screen with tab bar at bottom
-- User taps cast member → sees cast detail with tab bar at bottom
-- User can tap Search tab → immediately goes to Search screen
-- User can tap any tab at any time without going back first
-
-## Additional Notes
-
-- Keep the back button in headers for going back within a stack
-- Active tab indicator should persist when viewing detail screens in that tab's stack
-- This is the standard pattern used by apps like Netflix, Disney+, etc.
-
-Please restructure the navigation to implement this pattern. Maintain all existing functionality but ensure the tab bar is always visible and accessible.
+Please analyze the current Home tab stack navigator implementation and fix the initialization issue causing this navigation failure on first launch.

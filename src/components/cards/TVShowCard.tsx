@@ -1,7 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, TVShow } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { router, useSegments } from 'expo-router';
+import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,16 +13,14 @@ interface TVShowCardProps {
 }
 
 export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
 
   const handlePress = () => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}/tv/${show.id}` as any);
-    } else {
-      router.push(`/tv/${show.id}` as any);
-    }
+    const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
+
+    console.log('[TVShowCard] currentTab:', currentTab, 'path:', path);
+    router.push(path as any);
   };
 
   return (

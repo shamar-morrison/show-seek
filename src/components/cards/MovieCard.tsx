@@ -1,7 +1,8 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { Route, router, useSegments } from 'expo-router';
+import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,16 +13,14 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, width = 140 }: MovieCardProps) {
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
 
   const handlePress = () => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}/movie/${movie.id}` as Route);
-    } else {
-      router.push(`/movie/${movie.id}` as Route);
-    }
+    const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
+
+    console.log('[MovieCard] currentTab:', currentTab, 'path:', path);
+    router.push(path as Route);
   };
 
   return (

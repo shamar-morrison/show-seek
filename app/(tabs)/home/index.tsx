@@ -1,16 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, FONT_SIZE } from '@/src/constants/theme';
-import { tmdbApi, Movie, TVShow, PaginatedResponse } from '@/src/api/tmdb';
+import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { FlashList } from '@shopify/flash-list';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { usePathname } from 'expo-router';
+import React, { useEffect } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
+  const pathname = usePathname();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  useEffect(() => {
+    console.log('[HomeScreen] Current pathname:', pathname);
+  }, [pathname]);
 
   const trendingMoviesQuery = useInfiniteQuery({
     queryKey: ['trending', 'movies', 'week'],
