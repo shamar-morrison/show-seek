@@ -1,13 +1,21 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '@/src/constants/theme';
-
+import { auth } from '@/src/firebase/config';
+import { signOut } from 'firebase/auth';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <Text style={styles.text}>Profile Screen</Text>
+      <TouchableOpacity
+        style={{}}
+        onPress={() => {
+          signOut(auth);
+        }}
+      >
+        <Text style={styles.text}>SIGN OUT</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
