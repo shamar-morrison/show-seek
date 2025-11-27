@@ -46,6 +46,7 @@ export default function TVDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
@@ -90,7 +91,7 @@ export default function TVDetailScreen() {
   const reviewsQuery = useQuery({
     queryKey: ['tv', tvId, 'reviews'],
     queryFn: () => tmdbApi.getTVReviews(tvId),
-    enabled: !!tvId,
+    enabled: !!tvId && shouldLoadReviews,
   });
 
   if (tvQuery.isLoading) {
@@ -499,70 +500,118 @@ export default function TVDetailScreen() {
 
           {videos.length > 0 && <SectionSeparator />}
 
-          {/* Reviews */}
-          {reviews.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
-              <FlashList
-                horizontal
-                data={reviews}
-                keyExtractor={(item) => item.id}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.reviewsListContent}
-                renderItem={({ item: review }) => {
-                  const getAvatarUrl = () => {
-                    if (!review.author_details.avatar_path) return null;
-                    if (review.author_details.avatar_path.startsWith('/https://')) {
-                      return review.author_details.avatar_path.substring(1);
-                    }
-                    return getImageUrl(
-                      review.author_details.avatar_path,
-                      TMDB_IMAGE_SIZES.profile.small
-                    );
-                  };
-
-                  return (
-                    <TouchableOpacity
-                      style={styles.reviewCard}
-                      onPress={() => {
-                        navigateTo(
-                          `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-                        );
-                      }}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <View style={styles.reviewHeader}>
-                        <MediaImage
-                          source={{ uri: getAvatarUrl() }}
-                          style={styles.reviewAvatar}
-                          contentFit="cover"
-                          placeholderType="person"
-                        />
-                        <View style={styles.reviewAuthorInfo}>
-                          <Text style={styles.reviewAuthor} numberOfLines={1}>
-                            {review.author}
-                          </Text>
-                          {review.author_details.rating && (
-                            <View style={styles.reviewRating}>
-                              <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                              <Text style={styles.reviewRatingText}>
-                                {review.author_details.rating.toFixed(1)}
-                              </Text>
-                            </View>
-                          )}
+          {/* Reviews Section Trigger */}
+          <View
+            onLayout={(event) => {
+              if (!shouldLoadReviews) {
+                setShouldLoadReviews(true);
+              }
+            }}
+          >
+            {/* Reviews */}
+            {reviewsQuery.isLoading && shouldLoadReviews && (
+              <>
+                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.reviewsListContent}
+                >
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} style={styles.reviewCardSkeleton}>
+                      <View style={styles.skeletonHeader}>
+                        <View style={styles.skeletonAvatar} />
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.skeletonText} />
+                          <View style={[styles.skeletonText, { width: '60%' }]} />
                         </View>
                       </View>
-                      <Text style={styles.reviewContent} numberOfLines={4}>
-                        {review.content}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            </>
-          )}
+                      <View style={styles.skeletonText} />
+                      <View style={styles.skeletonText} />
+                      <View style={[styles.skeletonText, { width: '80%' }]} />
+                    </View>
+                  ))}
+                </ScrollView>
+                <SectionSeparator />
+              </>
+            )}
 
-          {reviews.length > 0 && <SectionSeparator />}
+            {reviewsQuery.isError && shouldLoadReviews && (
+              <>
+                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
+                <View style={styles.reviewErrorBox}>
+                  <Text style={styles.reviewErrorText}>Failed to load reviews</Text>
+                </View>
+                <SectionSeparator />
+              </>
+            )}
+
+            {!reviewsQuery.isLoading && !reviewsQuery.isError && reviews.length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
+                <FlashList
+                  horizontal
+                  data={reviews}
+                  keyExtractor={(item) => item.id}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.reviewsListContent}
+                  renderItem={({ item: review }) => {
+                    const getAvatarUrl = () => {
+                      if (!review.author_details.avatar_path) return null;
+                      if (review.author_details.avatar_path.startsWith('/https://')) {
+                        return review.author_details.avatar_path.substring(1);
+                      }
+                      return getImageUrl(
+                        review.author_details.avatar_path,
+                        TMDB_IMAGE_SIZES.profile.small
+                      );
+                    };
+
+                    return (
+                      <TouchableOpacity
+                        style={styles.reviewCard}
+                        onPress={() => {
+                          navigateTo(
+                            `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+                          );
+                        }}
+                        activeOpacity={ACTIVE_OPACITY}
+                      >
+                        <View style={styles.reviewHeader}>
+                          <MediaImage
+                            source={{ uri: getAvatarUrl() }}
+                            style={styles.reviewAvatar}
+                            contentFit="cover"
+                            placeholderType="person"
+                          />
+                          <View style={styles.reviewAuthorInfo}>
+                            <Text style={styles.reviewAuthor} numberOfLines={1}>
+                              {review.author}
+                            </Text>
+                            {review.author_details.rating && (
+                              <View style={styles.reviewRating}>
+                                <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                                <Text style={styles.reviewRatingText}>
+                                  {review.author_details.rating.toFixed(1)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                        <Text style={styles.reviewContent} numberOfLines={4}>
+                          {review.content}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </>
+            )}
+
+            {!reviewsQuery.isLoading && !reviewsQuery.isError && reviews.length > 0 && (
+              <SectionSeparator />
+            )}
+          </View>
 
           {/* Details */}
           <Text style={styles.sectionTitle}>Details</Text>
@@ -978,5 +1027,43 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     lineHeight: 20,
+  },
+  reviewCardSkeleton: {
+    width: 280,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+    marginRight: SPACING.m,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+  },
+  skeletonAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: COLORS.surface,
+    marginRight: SPACING.m,
+  },
+  skeletonText: {
+    height: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.s,
+    marginBottom: SPACING.s,
+  },
+  reviewErrorBox: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.l,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  reviewErrorText: {
+    color: COLORS.error,
+    fontSize: FONT_SIZE.m,
+    textAlign: 'center',
   },
 });
