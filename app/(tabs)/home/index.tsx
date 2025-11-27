@@ -269,7 +269,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: SPACING.xl }} />
       </ScrollView>
     </SafeAreaView>
   );
