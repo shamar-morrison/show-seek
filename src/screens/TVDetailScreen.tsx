@@ -1,5 +1,11 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
+import { CastSection } from '@/src/components/detail/CastSection';
+import { PhotosSection } from '@/src/components/detail/PhotosSection';
+import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
+import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
+import { VideosSection } from '@/src/components/detail/VideosSection';
+import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaDetailsInfo } from '@/src/components/MediaDetailsInfo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -9,7 +15,6 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { getLanguageName } from '@/src/utils/languages';
-import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
@@ -17,7 +22,6 @@ import {
   ArrowLeft,
   Calendar,
   Check,
-  ChevronRight,
   Globe,
   Layers,
   Play,
@@ -305,313 +309,67 @@ export default function TVDetailScreen() {
           {creator && <SectionSeparator />}
 
           {/* Watch Providers */}
-          {watchProviders &&
-            (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
-              <>
-                <Text style={styles.sectionTitle}>Where to Watch</Text>
-                {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
-                  <View style={styles.providersSection}>
-                    <Text style={styles.providerType}>Streaming</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      {watchProviders.flatrate.map((provider) => (
-                        <View key={provider.provider_id} style={styles.providerCard}>
-                          <MediaImage
-                            source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
-                            style={styles.providerLogo}
-                            contentFit="contain"
-                          />
-                          <Text style={styles.providerName} numberOfLines={1}>
-                            {provider.provider_name}
-                          </Text>
-                        </View>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
-              </>
-            )}
+          <WatchProvidersSection watchProviders={watchProviders} />
 
           {watchProviders &&
             (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
               <SectionSeparator />
             )}
 
-          {cast.length > 0 && (
-            <>
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={handleCastViewAll}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.sectionTitle}>Cast</Text>
-                <ChevronRight size={20} color={COLORS.primary} />
-              </TouchableOpacity>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
-                {cast.map((actor) => (
-                  <TouchableOpacity
-                    key={actor.id}
-                    style={styles.castCard}
-                    onPress={() => handleCastPress(actor.id)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <MediaImage
-                      source={{
-                        uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium),
-                      }}
-                      style={styles.castImage}
-                      contentFit="cover"
-                    />
-                    <Text style={styles.castName} numberOfLines={2}>
-                      {actor.name}
-                    </Text>
-                    <Text style={styles.characterName} numberOfLines={1}>
-                      {actor.character}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          )}
+          {/* Cast */}
+          <CastSection cast={cast} onCastPress={handleCastPress} onViewAll={handleCastViewAll} />
 
           {cast.length > 0 && <SectionSeparator />}
 
           {/* Similar Shows */}
-          {similarShows.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Similar Shows</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.similarList}
-              >
-                {similarShows.map((similar) => (
-                  <TouchableOpacity
-                    key={similar.id}
-                    style={styles.similarCard}
-                    onPress={() => handleShowPress(similar.id)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <MediaImage
-                      source={{
-                        uri: getImageUrl(similar.poster_path, TMDB_IMAGE_SIZES.poster.small),
-                      }}
-                      style={styles.similarPoster}
-                      contentFit="cover"
-                    />
-                    <Text style={styles.similarTitle} numberOfLines={2}>
-                      {similar.name}
-                    </Text>
-                    <View style={styles.similarMeta}>
-                      {similar.first_air_date && (
-                        <Text style={styles.similarYear}>
-                          {new Date(similar.first_air_date).getFullYear()}
-                        </Text>
-                      )}
-                      {similar.vote_average > 0 && similar.first_air_date && (
-                        <Text style={styles.similarSeparator}> • </Text>
-                      )}
-                      {similar.vote_average > 0 && (
-                        <View style={styles.similarRating}>
-                          <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                          <Text style={styles.similarRatingText}>
-                            {similar.vote_average.toFixed(1)}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          )}
+          <SimilarMediaSection
+            mediaType="tv"
+            items={similarShows}
+            onMediaPress={handleShowPress}
+            title="Similar Shows"
+          />
 
           {similarShows.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Photos</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.photosList}
-              >
-                {images.backdrops.slice(0, 10).map((image, index) => (
-                  <TouchableOpacity
-                    key={`photo-${index}`}
-                    onPress={() => {
-                      setLightboxIndex(index);
-                      setLightboxVisible(true);
-                    }}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <MediaImage
-                      source={{
-                        uri: getImageUrl(image.file_path, TMDB_IMAGE_SIZES.backdrop.small),
-                      }}
-                      style={styles.photoImage}
-                      contentFit="cover"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
+            <PhotosSection
+              images={images.backdrops}
+              onPhotoPress={(index) => {
+                setLightboxIndex(index);
+                setLightboxVisible(true);
+              }}
+            />
           )}
 
           {images && images.backdrops && images.backdrops.length > 0 && <SectionSeparator />}
 
           {/* Videos */}
-          {videos.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Videos</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.videosList}
-              >
-                {videos.map((video) => (
-                  <TouchableOpacity
-                    key={video.id}
-                    style={styles.videoCard}
-                    onPress={() => {
-                      setTrailerModalVisible(true);
-                    }}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <MediaImage
-                      source={{
-                        uri:
-                          video.site === 'YouTube'
-                            ? `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`
-                            : null,
-                      }}
-                      style={styles.videoThumbnail}
-                      contentFit="cover"
-                    />
-                    <Text style={styles.videoTitle} numberOfLines={2}>
-                      {video.name}
-                    </Text>
-                    <Text style={styles.videoType}>{video.type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
-          )}
+          <VideosSection videos={videos} onVideoPress={() => setTrailerModalVisible(true)} />
 
           {videos.length > 0 && <SectionSeparator />}
 
-          {/* Reviews Section Trigger */}
-          <View
-            onLayout={(event) => {
+          {/* Reviews */}
+          <ReviewsSection
+            isLoading={reviewsQuery.isLoading}
+            isError={reviewsQuery.isError}
+            reviews={reviews}
+            shouldLoad={shouldLoadReviews}
+            onReviewPress={(review) => {
+              navigateTo(
+                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+              );
+            }}
+            onLayout={() => {
               if (!shouldLoadReviews) {
                 setShouldLoadReviews(true);
               }
             }}
-          >
-            {/* Reviews */}
-            {reviewsQuery.isLoading && shouldLoadReviews && (
-              <>
-                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.reviewsListContent}
-                >
-                  {[1, 2, 3].map((i) => (
-                    <View key={i} style={styles.reviewCardSkeleton}>
-                      <View style={styles.skeletonHeader}>
-                        <View style={styles.skeletonAvatar} />
-                        <View style={{ flex: 1 }}>
-                          <View style={styles.skeletonText} />
-                          <View style={[styles.skeletonText, { width: '60%' }]} />
-                        </View>
-                      </View>
-                      <View style={styles.skeletonText} />
-                      <View style={styles.skeletonText} />
-                      <View style={[styles.skeletonText, { width: '80%' }]} />
-                    </View>
-                  ))}
-                </ScrollView>
-                <SectionSeparator />
-              </>
-            )}
+          />
 
-            {reviewsQuery.isError && shouldLoadReviews && (
-              <>
-                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
-                <View style={styles.reviewErrorBox}>
-                  <Text style={styles.reviewErrorText}>Failed to load reviews</Text>
-                </View>
-                <SectionSeparator />
-              </>
-            )}
-
-            {!reviewsQuery.isLoading && !reviewsQuery.isError && reviews.length > 0 && (
-              <>
-                <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
-                <FlashList
-                  horizontal
-                  data={reviews}
-                  keyExtractor={(item) => item.id}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.reviewsListContent}
-                  renderItem={({ item: review }) => {
-                    const getAvatarUrl = () => {
-                      if (!review.author_details.avatar_path) return null;
-                      if (review.author_details.avatar_path.startsWith('/https://')) {
-                        return review.author_details.avatar_path.substring(1);
-                      }
-                      return getImageUrl(
-                        review.author_details.avatar_path,
-                        TMDB_IMAGE_SIZES.profile.small
-                      );
-                    };
-
-                    return (
-                      <TouchableOpacity
-                        style={styles.reviewCard}
-                        onPress={() => {
-                          navigateTo(
-                            `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
-                          );
-                        }}
-                        activeOpacity={ACTIVE_OPACITY}
-                      >
-                        <View style={styles.reviewHeader}>
-                          <MediaImage
-                            source={{ uri: getAvatarUrl() }}
-                            style={styles.reviewAvatar}
-                            contentFit="cover"
-                            placeholderType="person"
-                          />
-                          <View style={styles.reviewAuthorInfo}>
-                            <Text style={styles.reviewAuthor} numberOfLines={1}>
-                              {review.author}
-                            </Text>
-                            {review.author_details.rating && (
-                              <View style={styles.reviewRating}>
-                                <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                                <Text style={styles.reviewRatingText}>
-                                  {review.author_details.rating.toFixed(1)}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                        <Text style={styles.reviewContent} numberOfLines={4}>
-                          {review.content}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </>
-            )}
-
-            {!reviewsQuery.isLoading && !reviewsQuery.isError && reviews.length > 0 && (
-              <SectionSeparator />
-            )}
-          </View>
+          {!reviewsQuery.isLoading && !reviewsQuery.isError && reviews.length > 0 && (
+            <SectionSeparator />
+          )}
 
           {/* Details */}
           <Text style={styles.sectionTitle}>Details</Text>
@@ -828,14 +586,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.s,
-    marginTop: SPACING.m,
-    paddingRight: SPACING.l,
-  },
   overview: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
@@ -858,212 +608,5 @@ const styles = StyleSheet.create({
   },
   value: {
     color: COLORS.text,
-  },
-  providersSection: {
-    marginBottom: SPACING.l,
-  },
-  providerType: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    marginBottom: SPACING.s,
-    fontWeight: '600',
-  },
-  providerCard: {
-    alignItems: 'center',
-    marginRight: SPACING.m,
-    width: 60,
-  },
-  providerLogo: {
-    width: 50,
-    height: 50,
-    borderRadius: BORDER_RADIUS.s,
-    marginBottom: SPACING.xs,
-  },
-  providerName: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-    textAlign: 'center',
-  },
-  castList: {
-    marginHorizontal: -SPACING.l,
-    paddingHorizontal: SPACING.l,
-  },
-  castCard: {
-    width: 120,
-    marginRight: SPACING.m,
-  },
-  castImage: {
-    width: 120,
-    height: 180,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-  },
-  castName: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  characterName: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  similarList: {
-    marginHorizontal: -SPACING.l,
-    paddingHorizontal: SPACING.l,
-  },
-  similarCard: {
-    width: 120,
-    marginRight: SPACING.m,
-  },
-  similarPoster: {
-    width: 120,
-    height: 180,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-  },
-  similarTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  similarMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  similarYear: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  similarSeparator: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  similarRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  similarRatingText: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-  },
-  photosList: {
-    marginHorizontal: -SPACING.l,
-    paddingHorizontal: SPACING.l,
-  },
-  photoImage: {
-    width: 240,
-    height: 135,
-    borderRadius: BORDER_RADIUS.m,
-    marginRight: SPACING.m,
-  },
-  videosList: {
-    marginHorizontal: -SPACING.l,
-    paddingHorizontal: SPACING.l,
-  },
-  videoCard: {
-    width: 240,
-    marginRight: SPACING.m,
-  },
-  videoThumbnail: {
-    width: 240,
-    height: 135,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-  },
-  videoTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  videoType: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  reviewsListContent: {
-    paddingHorizontal: SPACING.l,
-  },
-  reviewCard: {
-    width: 280,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.m,
-    marginRight: SPACING.m,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.round,
-    marginRight: SPACING.m,
-  },
-  reviewAuthorInfo: {
-    flex: 1,
-  },
-  reviewAuthor: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  reviewRatingText: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-  },
-  reviewContent: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    lineHeight: 20,
-  },
-  reviewCardSkeleton: {
-    width: 280,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.m,
-    marginRight: SPACING.m,
-  },
-  skeletonHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  skeletonAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.round,
-    backgroundColor: COLORS.surface,
-    marginRight: SPACING.m,
-  },
-  skeletonText: {
-    height: 14,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.s,
-    marginBottom: SPACING.s,
-  },
-  reviewErrorBox: {
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.l,
-    marginBottom: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  reviewErrorText: {
-    color: COLORS.error,
-    fontSize: FONT_SIZE.m,
-    textAlign: 'center',
   },
 });
