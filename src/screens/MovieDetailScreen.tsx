@@ -733,25 +733,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
   },
   castCard: {
-    width: 100,
+    width: 120,
     marginRight: SPACING.m,
   },
   castImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 180,
+    borderRadius: BORDER_RADIUS.m,
     marginBottom: SPACING.s,
   },
   castName: {
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
-    textAlign: 'center',
   },
   characterName: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
-    textAlign: 'center',
   },
   similarList: {
     marginHorizontal: -SPACING.l,
