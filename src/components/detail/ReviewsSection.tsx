@@ -8,6 +8,9 @@ import { detailStyles } from './detailStyles';
 import { getAvatarUrl } from './detailUtils';
 import type { ReviewsSectionProps } from './types';
 
+// Performance: Review card width for FlashList optimization
+const REVIEW_CARD_WIDTH = 280;
+
 export function ReviewsSection({
   isLoading,
   isError,
@@ -69,6 +72,8 @@ export function ReviewsSection({
           keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={detailStyles.reviewsListContent}
+          removeClippedSubviews={true}
+          drawDistance={400}
           renderItem={({ item: review }) => (
             <TouchableOpacity
               style={detailStyles.reviewCard}

@@ -9,6 +9,10 @@ import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Performance: Card dimensions for FlashList optimization
+const CARD_WIDTH = 140;
+const CARD_HEIGHT = CARD_WIDTH * 1.5; // 210px
+
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -150,6 +154,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.toString()}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           ) : (
             <FlashList
@@ -161,6 +167,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleMovieLoadMore(trendingMoviesQuery)}
               onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           )}
         </View>
@@ -176,6 +184,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.toString()}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           ) : (
             <FlashList
@@ -187,6 +197,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleTVLoadMore(trendingTVQuery)}
               onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           )}
         </View>
@@ -202,6 +214,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.toString()}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           ) : (
             <FlashList
@@ -213,6 +227,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleMovieLoadMore(popularMoviesQuery)}
               onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           )}
         </View>
@@ -228,6 +244,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.toString()}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           ) : (
             <FlashList
@@ -239,6 +257,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleMovieLoadMore(topRatedMoviesQuery)}
               onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           )}
         </View>
@@ -254,6 +274,8 @@ export default function HomeScreen() {
               keyExtractor={(item) => item.toString()}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           ) : (
             <FlashList
@@ -265,6 +287,8 @@ export default function HomeScreen() {
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleMovieLoadMore(upcomingMoviesQuery)}
               onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
             />
           )}
         </View>

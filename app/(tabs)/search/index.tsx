@@ -18,6 +18,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'all' | 'movie' | 'tv';
 
+// Performance: Search result item height for FlashList optimization
+const RESULT_ITEM_HEIGHT = 138 + SPACING.m * 2 + SPACING.m; // poster height + padding + margin
+
 export default function SearchScreen() {
   const segments = useSegments();
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,6 +230,9 @@ export default function SearchScreen() {
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
           contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
+          estimatedItemSize={RESULT_ITEM_HEIGHT}
+          removeClippedSubviews={true}
+          drawDistance={400}
         />
       )}
     </SafeAreaView>

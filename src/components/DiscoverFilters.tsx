@@ -92,6 +92,15 @@ const FilterSelect = ({
             <FlatList
               data={options}
               keyExtractor={(item) => String(item.value)}
+              getItemLayout={(_, index) => ({
+                length: ITEM_HEIGHT,
+                offset: ITEM_HEIGHT * index,
+                index,
+              })}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.optionItem}
