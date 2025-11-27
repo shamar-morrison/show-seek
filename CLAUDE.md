@@ -64,6 +64,7 @@ The root layout (`app/_layout.tsx`) implements protected routing logic:
 Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
 **Development Navigation Utilities** (`src/utils/dev-navigation.ts`):
+
 - Optional dev-only navigation helpers for bypassing auth/onboarding during development
 - Requires `src/config/dev-config.ts` file (git-ignored) with `ENABLE_DEV_NAVIGATION: true`
 - Can force specific screens, skip onboarding, or mock authenticated users
@@ -138,13 +139,9 @@ Always import and use these constants rather than hardcoding values.
 ### Tab-Aware Navigation
 
 **TabContext** (`src/contexts/TabContext.tsx`):
+
 - Provides current tab name to nested screens via `useCurrentTab()` hook
 - Each tab's `_layout.tsx` wraps its Stack in `<TabProvider tabName="home">` (or search/discover/library)
-
-**Navigation Helpers** (`src/hooks/useNavigation.ts`):
-- `useTabAwarePath()`: Builds paths that preserve tab context
-- Example: `useTabAwarePath()("movie/123")` returns `"/(tabs)/home/movie/123"` when in Home tab
-- Use this when navigating from components that can be rendered in multiple tabs
 
 ### TypeScript Configuration
 
@@ -212,6 +209,7 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 ### Navigating Between Screens
 
 **From Tab-Specific Components** (MovieCard, TVShowCard used in multiple tabs):
+
 ```typescript
 import { useRouter } from 'expo-router';
 import { useTabAwarePath } from '@/src/hooks/useNavigation';
@@ -224,6 +222,7 @@ router.push(getTabAwarePath(`movie/${movieId}`));
 ```
 
 **From Tab Root Screens** (where tab is known):
+
 ```typescript
 import { useRouter } from 'expo-router';
 
