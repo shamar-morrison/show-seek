@@ -67,10 +67,13 @@ export const CastSection = memo<CastSectionProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison: check array length and first item ID
+    // Custom comparison: check array length, first item ID, and all props
     return (
       prevProps.cast.length === nextProps.cast.length &&
-      (prevProps.cast.length === 0 || prevProps.cast[0]?.id === nextProps.cast[0]?.id)
+      (prevProps.cast.length === 0 || prevProps.cast[0]?.id === nextProps.cast[0]?.id) &&
+      prevProps.onCastPress === nextProps.onCastPress &&
+      prevProps.onViewAll === nextProps.onViewAll &&
+      prevProps.style === nextProps.style
     );
   }
 );

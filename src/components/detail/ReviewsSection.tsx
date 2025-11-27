@@ -110,10 +110,11 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     return null;
   },
   (prevProps, nextProps) => {
-    // Custom comparison: check reviews array length and loading states
+    // Custom comparison: check reviews array length, loading states, and shouldLoad
     return (
       prevProps.isLoading === nextProps.isLoading &&
       prevProps.isError === nextProps.isError &&
+      prevProps.shouldLoad === nextProps.shouldLoad &&
       prevProps.reviews.length === nextProps.reviews.length &&
       (prevProps.reviews.length === 0 || prevProps.reviews[0]?.id === nextProps.reviews[0]?.id)
     );
