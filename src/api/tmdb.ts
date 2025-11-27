@@ -115,6 +115,37 @@ export interface Video {
   official: boolean;
 }
 
+export interface ProductionCountry {
+  iso_3166_1: string;
+  name: string;
+}
+
+export interface ProductionCompany {
+  id: number;
+  logo_path: string | null;
+  name: string;
+  origin_country: string;
+}
+
+export interface ReleaseDate {
+  certification: string;
+  descriptors: string[];
+  iso_639_1: string;
+  note: string;
+  release_date: string;
+  type: number;
+}
+
+export interface ReleaseDatesResult {
+  iso_3166_1: string;
+  release_dates: ReleaseDate[];
+}
+
+export interface ContentRating {
+  iso_3166_1: string;
+  rating: string;
+}
+
 export interface MovieDetails extends Movie {
   runtime: number | null;
   genres: Genre[];
@@ -122,6 +153,11 @@ export interface MovieDetails extends Movie {
   tagline: string | null;
   budget: number;
   revenue: number;
+  production_countries: ProductionCountry[];
+  production_companies: ProductionCompany[];
+  release_dates: {
+    results: ReleaseDatesResult[];
+  };
 }
 
 export interface TVShowDetails extends TVShow {
@@ -132,6 +168,11 @@ export interface TVShowDetails extends TVShow {
   seasons: Season[];
   episode_run_time: number[];
   last_air_date: string;
+  production_countries: ProductionCountry[];
+  production_companies: ProductionCompany[];
+  content_ratings: {
+    results: ContentRating[];
+  };
 }
 
 export interface Season {
@@ -225,12 +266,20 @@ export const tmdbApi = {
   },
 
   getMovieDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`);
+    const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`, {
+      params: {
+        append_to_response: 'release_dates',
+      },
+    });
     return data;
   },
 
   getTVShowDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<TVShowDetails>(`/tv/${id}`);
+    const { data } = await tmdbClient.get<TVShowDetails>(`/tv/${id}`, {
+      params: {
+        append_to_response: 'content_ratings',
+      },
+    });
     return data;
   },
 

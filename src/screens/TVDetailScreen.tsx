@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import { MediaDetailsInfo } from '@/src/components/MediaDetailsInfo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -448,7 +449,11 @@ export default function TVDetailScreen() {
             </>
           )}
 
-          <View style={{ height: 100 }} />
+          {images && images.backdrops && images.backdrops.length > 0 && <SectionSeparator />}
+
+          {/* Details */}
+          <Text style={styles.sectionTitle}>Details</Text>
+          <MediaDetailsInfo media={show} type="tv" />
         </View>
       </ScrollView>
 
