@@ -1,11 +1,12 @@
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { VideosSectionProps } from './types';
 
-export function VideosSection({ videos, onVideoPress, style }: VideosSectionProps) {
+export const VideosSection = memo<VideosSectionProps>(
+  ({ videos, onVideoPress, style }) => {
   if (videos.length === 0) {
     return null;
   }
@@ -40,4 +41,14 @@ export function VideosSection({ videos, onVideoPress, style }: VideosSectionProp
       </ScrollView>
     </View>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: check array length and first item ID
+    return (
+      prevProps.videos.length === nextProps.videos.length &&
+      (prevProps.videos.length === 0 || prevProps.videos[0]?.id === nextProps.videos[0]?.id)
+    );
+  }
+);
+
+VideosSection.displayName = 'VideosSection';

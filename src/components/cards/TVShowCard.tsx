@@ -4,7 +4,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TVShowCardProps {
@@ -12,14 +12,21 @@ interface TVShowCardProps {
   width?: number;
 }
 
-export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
-  const currentTab = useCurrentTab();
-  const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+export const TVShowCard = memo<TVShowCardProps>(
+  ({ show, width = 140 }) => {
+    const currentTab = useCurrentTab();
 
-  const handlePress = () => {
-    const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
-    router.push(path as any);
-  };
+    // Memoize expensive image URL computation
+    const posterUrl = useMemo(
+      () => getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium),
+      [show.poster_path]
+    );
+
+    // Stabilize callback reference
+    const handlePress = useCallback(() => {
+      const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
+      router.push(path as any);
+    }, [currentTab, show.id]);
 
   return (
     <TouchableOpacity
@@ -51,7 +58,14 @@ export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: only re-render if show ID or width changes
+    return prevProps.show.id === nextProps.show.id && prevProps.width === nextProps.width;
+  }
+);
+
+TVShowCard.displayName = 'TVShowCard';
 
 const styles = StyleSheet.create({
   container: {

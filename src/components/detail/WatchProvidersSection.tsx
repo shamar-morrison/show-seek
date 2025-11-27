@@ -1,11 +1,12 @@
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { WatchProvidersSectionProps } from './types';
 
-export function WatchProvidersSection({ watchProviders, style }: WatchProvidersSectionProps) {
+export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
+  ({ watchProviders, style }) => {
   if (
     !watchProviders ||
     (!watchProviders.flatrate && !watchProviders.rent && !watchProviders.buy)
@@ -37,4 +38,13 @@ export function WatchProvidersSection({ watchProviders, style }: WatchProvidersS
       )}
     </View>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: check if watch providers data changed
+    const prevHasData = prevProps.watchProviders?.flatrate?.length || 0;
+    const nextHasData = nextProps.watchProviders?.flatrate?.length || 0;
+    return prevHasData === nextHasData;
+  }
+);
+
+WatchProvidersSection.displayName = 'WatchProvidersSection';

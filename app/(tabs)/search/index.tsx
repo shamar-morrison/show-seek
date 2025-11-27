@@ -230,7 +230,6 @@ export default function SearchScreen() {
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
           contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
-          estimatedItemSize={RESULT_ITEM_HEIGHT}
           removeClippedSubviews={true}
           drawDistance={400}
         />

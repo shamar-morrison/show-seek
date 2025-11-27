@@ -1,12 +1,13 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { PhotosSectionProps } from './types';
 
-export function PhotosSection({ images, onPhotoPress, style }: PhotosSectionProps) {
+export const PhotosSection = memo<PhotosSectionProps>(
+  ({ images, onPhotoPress, style }) => {
   if (images.length === 0) {
     return null;
   }
@@ -33,4 +34,11 @@ export function PhotosSection({ images, onPhotoPress, style }: PhotosSectionProp
       </ScrollView>
     </View>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: check array length
+    return prevProps.images.length === nextProps.images.length;
+  }
+);
+
+PhotosSection.displayName = 'PhotosSection';
