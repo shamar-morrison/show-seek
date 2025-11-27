@@ -228,6 +228,23 @@ export interface WatchProviderResults {
   buy?: WatchProvider[];
 }
 
+export interface ReviewAuthor {
+  name: string;
+  username: string;
+  avatar_path: string | null;
+  rating: number | null;
+}
+
+export interface Review {
+  id: string;
+  author: string;
+  author_details: ReviewAuthor;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  url: string;
+}
+
 export const tmdbApi = {
   getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
@@ -457,5 +474,19 @@ export const tmdbApi = {
       `/tv/${id}/watch/providers`
     );
     return data.results.US || null;
+  },
+
+  getMovieReviews: async (id: number, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Review>>(`/movie/${id}/reviews`, {
+      params: { page },
+    });
+    return data;
+  },
+
+  getTVReviews: async (id: number, page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Review>>(`/tv/${id}/reviews`, {
+      params: { page },
+    });
+    return data;
   },
 };

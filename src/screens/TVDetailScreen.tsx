@@ -9,6 +9,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { getLanguageName } from '@/src/utils/languages';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
@@ -86,6 +87,12 @@ export default function TVDetailScreen() {
     enabled: !!tvId,
   });
 
+  const reviewsQuery = useQuery({
+    queryKey: ['tv', tvId, 'reviews'],
+    queryFn: () => tmdbApi.getTVReviews(tvId),
+    enabled: !!tvId,
+  });
+
   if (tvQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -122,6 +129,7 @@ export default function TVDetailScreen() {
   const similarShows = similarQuery.data?.results.slice(0, 10) || [];
   const watchProviders = watchProvidersQuery.data;
   const images = imagesQuery.data;
+  const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -490,6 +498,71 @@ export default function TVDetailScreen() {
           )}
 
           {videos.length > 0 && <SectionSeparator />}
+
+          {/* Reviews */}
+          {reviews.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { marginBottom: SPACING.s }]}>Reviews</Text>
+              <FlashList
+                horizontal
+                data={reviews}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.reviewsListContent}
+                renderItem={({ item: review }) => {
+                  const getAvatarUrl = () => {
+                    if (!review.author_details.avatar_path) return null;
+                    if (review.author_details.avatar_path.startsWith('/https://')) {
+                      return review.author_details.avatar_path.substring(1);
+                    }
+                    return getImageUrl(
+                      review.author_details.avatar_path,
+                      TMDB_IMAGE_SIZES.profile.small
+                    );
+                  };
+
+                  return (
+                    <TouchableOpacity
+                      style={styles.reviewCard}
+                      onPress={() => {
+                        navigateTo(
+                          `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+                        );
+                      }}
+                      activeOpacity={ACTIVE_OPACITY}
+                    >
+                      <View style={styles.reviewHeader}>
+                        <MediaImage
+                          source={{ uri: getAvatarUrl() }}
+                          style={styles.reviewAvatar}
+                          contentFit="cover"
+                          placeholderType="person"
+                        />
+                        <View style={styles.reviewAuthorInfo}>
+                          <Text style={styles.reviewAuthor} numberOfLines={1}>
+                            {review.author}
+                          </Text>
+                          {review.author_details.rating && (
+                            <View style={styles.reviewRating}>
+                              <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                              <Text style={styles.reviewRatingText}>
+                                {review.author_details.rating.toFixed(1)}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      <Text style={styles.reviewContent} numberOfLines={4}>
+                        {review.content}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </>
+          )}
+
+          {reviews.length > 0 && <SectionSeparator />}
 
           {/* Details */}
           <Text style={styles.sectionTitle}>Details</Text>
@@ -860,5 +933,50 @@ const styles = StyleSheet.create({
   videoType: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
+  },
+  reviewsListContent: {
+    paddingHorizontal: SPACING.l,
+  },
+  reviewCard: {
+    width: 280,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+    marginRight: SPACING.m,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+  },
+  reviewAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.round,
+    marginRight: SPACING.m,
+  },
+  reviewAuthorInfo: {
+    flex: 1,
+  },
+  reviewAuthor: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reviewRatingText: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+  },
+  reviewContent: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    lineHeight: 20,
   },
 });
