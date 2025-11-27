@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, Genre, Movie, TVShow } from '@/src/api/tmdb';
-import { Star, Compass, SlidersHorizontal } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { Genre, getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { FlashList } from '@shopify/flash-list';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { router, useSegments } from 'expo-router';
+import { SlidersHorizontal, Star } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'movie' | 'tv';
 
@@ -21,6 +21,7 @@ const DEFAULT_FILTERS: FilterState = {
 };
 
 export default function DiscoverScreen() {
+  const segments = useSegments();
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -95,10 +96,13 @@ export default function DiscoverScreen() {
   };
 
   const handleItemPress = (item: Movie | TVShow) => {
+    const currentTab = segments[1];
+    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+
     if ('title' in item) {
-      router.push(`/movie/${item.id}` as any);
+      router.push(`${basePath}/movie/${item.id}` as any);
     } else {
-      router.push(`/tv/${item.id}` as any);
+      router.push(`${basePath}/tv/${item.id}` as any);
     }
   };
 

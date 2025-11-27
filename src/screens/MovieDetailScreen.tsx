@@ -9,7 +9,7 @@ import { useMediaLists } from '@/src/hooks/useLists';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import {
   ArrowLeft,
   Calendar,
@@ -36,6 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const segments = useSegments();
   const movieId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -143,12 +144,28 @@ export default function MovieDetailScreen() {
     }
   };
 
+  const navigateTo = (path: string) => {
+    // Assuming segments are like ['(tabs)', 'home', ...]
+    // We want to keep the first two segments and append the rest
+    const currentTab = segments[1];
+    if (currentTab) {
+      router.push(`/(tabs)/${currentTab}${path}` as any);
+    } else {
+      // Fallback if not in a tab (shouldn't happen with new structure)
+      router.push(path as any);
+    }
+  };
+
   const handleCastPress = (personId: number) => {
-    router.push(`/person/${personId}` as any);
+    navigateTo(`/person/${personId}`);
   };
 
   const handleMoviePress = (id: number) => {
-    router.push(`/movie/${id}` as any);
+    navigateTo(`/movie/${id}`);
+  };
+
+  const handleCastViewAll = () => {
+    navigateTo(`/movie/${movieId}/cast`);
   };
 
   return (
@@ -288,7 +305,7 @@ export default function MovieDetailScreen() {
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Director: </Text>
               <TouchableOpacity
-                onPress={() => router.push(`/person/${director.id}` as any)}
+                onPress={() => navigateTo(`/person/${director.id}`)}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={[styles.value, { color: COLORS.primary }]}>{director.name}</Text>
@@ -327,7 +344,7 @@ export default function MovieDetailScreen() {
             <>
               <TouchableOpacity
                 style={styles.sectionHeader}
-                onPress={() => router.push(`/movie/${movieId}/cast` as any)}
+                onPress={handleCastViewAll}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={styles.sectionTitle}>Cast</Text>
@@ -508,6 +525,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: SPACING.m,
+    paddingTop: SPACING.xl,
   },
   backButtonText: {
     color: COLORS.primary,

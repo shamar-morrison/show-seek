@@ -1,10 +1,10 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { TVShow, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { Star } from 'lucide-react-native';
+import { getImageUrl, TMDB_IMAGE_SIZES, TVShow } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { router, useSegments } from 'expo-router';
+import { Star } from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TVShowCardProps {
   show: TVShow;
@@ -12,10 +12,16 @@ interface TVShowCardProps {
 }
 
 export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
+  const segments = useSegments();
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
 
   const handlePress = () => {
-    router.push(`/tv/${show.id}` as any);
+    const currentTab = segments[1];
+    if (currentTab) {
+      router.push(`/(tabs)/${currentTab}/tv/${show.id}` as any);
+    } else {
+      router.push(`/tv/${show.id}` as any);
+    }
   };
 
   return (

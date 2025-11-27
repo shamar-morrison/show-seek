@@ -9,7 +9,7 @@ import { useMediaLists } from '@/src/hooks/useLists';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import {
   ArrowLeft,
   Calendar,
@@ -33,9 +33,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function TVShowDetailScreen() {
+export default function TVDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const segments = useSegments();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -129,16 +130,29 @@ export default function TVShowDetailScreen() {
     }
   };
 
+  const navigateTo = (path: string) => {
+    const currentTab = segments[1];
+    if (currentTab) {
+      router.push(`/(tabs)/${currentTab}${path}` as any);
+    } else {
+      router.push(path as any);
+    }
+  };
+
   const handleCastPress = (personId: number) => {
-    router.push(`/person/${personId}` as any);
+    navigateTo(`/person/${personId}`);
   };
 
   const handleShowPress = (id: number) => {
-    router.push(`/tv/${id}` as any);
+    navigateTo(`/tv/${id}`);
   };
 
   const handleSeasonsPress = () => {
-    router.push(`/tv/${tvId}/seasons` as any);
+    navigateTo(`/tv/${tvId}/seasons`);
+  };
+
+  const handleCastViewAll = () => {
+    navigateTo(`/tv/${tvId}/cast`);
   };
 
   return (
@@ -267,7 +281,7 @@ export default function TVShowDetailScreen() {
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Creator: </Text>
               <TouchableOpacity
-                onPress={() => router.push(`/person/${creator.id}` as any)}
+                onPress={() => navigateTo(`/person/${creator.id}`)}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={[styles.value, { color: COLORS.primary }]}>{creator.name}</Text>
@@ -306,7 +320,7 @@ export default function TVShowDetailScreen() {
             <>
               <TouchableOpacity
                 style={styles.sectionHeader}
-                onPress={() => router.push(`/tv/${tvId}/cast` as any)}
+                onPress={handleCastViewAll}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={styles.sectionTitle}>Cast</Text>

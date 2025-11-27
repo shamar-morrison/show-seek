@@ -4,7 +4,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useLists } from '@/src/hooks/useLists';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { Bookmark, Settings2 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -24,6 +24,7 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const segments = useSegments();
   const { data: lists, isLoading } = useLists();
   const [selectedListId, setSelectedListId] = useState<string>('favorites');
 
@@ -44,10 +45,13 @@ export default function LibraryScreen() {
   }, [lists, selectedListId]);
 
   const handleItemPress = (item: ListMediaItem) => {
+    const currentTab = segments[1];
+    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+
     if (item.media_type === 'movie') {
-      router.push(`/movie/${item.id}` as any);
+      router.push(`${basePath}/movie/${item.id}` as any);
     } else {
-      router.push(`/tv/${item.id}` as any);
+      router.push(`${basePath}/tv/${item.id}` as any);
     }
   };
 

@@ -2,7 +2,7 @@ import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -24,6 +24,7 @@ interface CastCrewScreenProps {
 
 export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
   const router = useRouter();
+  const segments = useSegments();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
 
   const creditsQuery = useQuery({
@@ -33,7 +34,12 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
   });
 
   const handlePersonPress = (personId: number) => {
-    router.push(`/person/${personId}` as any);
+    const currentTab = segments[1];
+    if (currentTab) {
+      router.push(`/(tabs)/${currentTab}/person/${personId}` as any);
+    } else {
+      router.push(`/person/${personId}` as any);
+    }
   };
 
   const renderItem = ({ item }: { item: CastMember | CrewMember }) => {

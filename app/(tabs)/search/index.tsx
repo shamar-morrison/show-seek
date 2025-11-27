@@ -3,7 +3,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { Search as SearchIcon, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type MediaType = 'all' | 'movie' | 'tv';
 
 export default function SearchScreen() {
+  const segments = useSegments();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
@@ -72,13 +73,16 @@ export default function SearchScreen() {
   });
 
   const handleItemPress = (item: any) => {
+    const currentTab = segments[1];
+    const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+
     // Check media_type first to avoid ambiguity
     if (item.media_type === 'person') {
-      router.push(`/person/${item.id}` as any);
+      router.push(`${basePath}/person/${item.id}` as any);
     } else if (item.media_type === 'movie' || 'title' in item) {
-      router.push(`/movie/${item.id}` as any);
+      router.push(`${basePath}/movie/${item.id}` as any);
     } else if (item.media_type === 'tv' || 'name' in item) {
-      router.push(`/tv/${item.id}` as any);
+      router.push(`${basePath}/tv/${item.id}` as any);
     }
   };
 
