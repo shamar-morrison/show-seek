@@ -235,7 +235,6 @@ export default function DiscoverScreen() {
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          estimatedItemSize={RESULT_ITEM_HEIGHT}
           removeClippedSubviews={true}
           drawDistance={400}
           ListFooterComponent={
