@@ -95,7 +95,7 @@ export const handleDevNavigation = (
   if (config.OVERRIDES.SKIP_AUTH_CHECK) {
     console.log('[DEV NAV] Skipping auth check');
     if (isOnboarding || inAuthGroup) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     }
     // If already in tabs or other screens, do nothing (allow access)
     return true;

@@ -13,9 +13,9 @@ export default function LibraryStackLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="movie/[id]" options={{ title: '', headerTransparent: true }} />
-      <Stack.Screen name="tv/[id]" options={{ title: '', headerTransparent: true }} />
-      <Stack.Screen name="person/[id]" options={{ title: '', headerTransparent: true }} />
+      <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
+      <Stack.Screen name="tv/[id]/index" options={{ title: '', headerTransparent: true }} />
+      <Stack.Screen name="person/[id]/index" options={{ title: '', headerTransparent: true }} />
     </Stack>
   );
 }

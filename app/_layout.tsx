@@ -52,7 +52,7 @@ function RootLayoutNav() {
       router.replace('/(auth)/sign-in');
     } else if (user && (inAuthGroup || isOnboarding)) {
       // If logged in and in auth/onboarding, go to home
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/home');
     }
   }, [user, loading, hasCompletedOnboarding, segments, router]);
 
