@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -264,6 +265,8 @@ export default function TVDetailScreen() {
             </TouchableOpacity>
           </View>
 
+          <SectionSeparator />
+
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
             {show.overview || 'No overview available'}
@@ -277,6 +280,8 @@ export default function TVDetailScreen() {
             </TouchableOpacity>
           )}
 
+          <SectionSeparator />
+
           {creator && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Creator: </Text>
@@ -288,6 +293,8 @@ export default function TVDetailScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {creator && <SectionSeparator />}
 
           {/* Watch Providers */}
           {watchProviders &&
@@ -314,6 +321,11 @@ export default function TVDetailScreen() {
                   </View>
                 )}
               </>
+            )}
+
+          {watchProviders &&
+            (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+              <SectionSeparator />
             )}
 
           {cast.length > 0 && (
@@ -352,6 +364,8 @@ export default function TVDetailScreen() {
               </ScrollView>
             </>
           )}
+
+          {cast.length > 0 && <SectionSeparator />}
 
           {/* Similar Shows */}
           {similarShows.length > 0 && (
@@ -402,6 +416,8 @@ export default function TVDetailScreen() {
               </ScrollView>
             </>
           )}
+
+          {similarShows.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (

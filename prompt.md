@@ -1,114 +1,118 @@
-## Performance Issue: Slow Tab Switching with Deep Navigation Stacks
+## UI/UX Improvement: Add Section Separators for Better Visual Hierarchy
 
-### Problem Description
+### Problem
 
-Tab switching becomes noticeably slow (1+ second delay) when navigation stacks become deep. This creates a poor user experience as the app feels sluggish.
+The detail screen is becoming cluttered as more sections are added. Currently all sections (Overview, Where to Watch, Cast, Similar Movies/Shows, Photos, etc.) flow directly into each other with no clear visual separation, making it harder for users to distinguish where one section ends and another begins.
 
-**Steps to Reproduce:**
+### Goal
 
-1. Start on any tab (e.g., Discover)
-2. Navigate deep into the stack: Discover → Movie Details → Actor Details → Another Movie → Similar Movie → Details (5+ screens deep)
-3. Try switching to a different tab (Home, Search, Library, Profile)
-4. Notice significant lag/delay (1+ seconds) before the tab switches
+Add visual separators between each major section on the movie and TV show detail screens to improve readability, create clear visual hierarchy, and make the content feel more organized and scannable.
 
-**Expected Behavior:**
+### Sections That Need Separation
 
-- Tab switching should be instant (<100ms) regardless of stack depth
-- App should feel snappy and responsive
+The following sections should have clear visual boundaries:
 
-**Actual Behavior:**
+1. Header section (poster, title, metadata, genres, buttons)
+2. Overview section
+3. Director/Creator info
+4. Where to Watch section
+5. Cast section
+6. Similar Movies/TV Shows section
+7. Photos section
+8. Any future sections added
 
-- Tab switching gets progressively slower as stacks get deeper
-- Each additional screen in the stack adds to the switching delay
-- Creates a sluggish, unresponsive feel
+### Separator Design Options
 
-### Root Cause
+Choose the most appropriate visual separator style that matches the app's design language:
 
-React Navigation keeps ALL screens in the stack mounted in memory by default. When switching tabs, it has to unmount/hide many screens and mount/show the new tab's screens, causing performance issues with deep stacks.
+**Option 1: Horizontal Divider Lines (Subtle)**
 
-### Solution: Implement Lazy Loading and Detaching
+- Thin horizontal line between sections
+- Light gray or subtle color that contrasts with dark background
+- Adds minimal visual weight while clearly dividing content
+- Simple and clean
 
-**Option 1: Lazy Mounting (Recommended)**
+**Option 2: Spacing with Subtle Background Change**
 
-Configure the stack navigators to use lazy mounting so screens are only mounted when navigated to:
+- Increased vertical spacing between sections
+- Optional: Alternate very subtle background shade between sections
+- Creates breathing room without adding explicit dividers
+- More modern, minimalist approach
 
-```javascript
-<Stack.Navigator
-  screenOptions={{
-    lazy: true,
-    detachInactiveScreens: true,
-  }}
->
-  {/* screens */}
-</Stack.Navigator>
-```
+**Option 3: Section Headers with Dividers**
 
-**Option 2: Limit Stack Depth**
+- Small divider line or visual element above or below section headers
+- Helps reinforce section titles as boundaries
+- Clear and structured
 
-Implement a maximum stack depth and automatically reset the stack when exceeded:
+**Option 4: Combination Approach (Recommended)**
 
-```javascript
-// When navigating to detail screen, check stack depth
-// If depth > 5, reset the stack and push only the new screen
-if (navigation.getState().routes.length > 5) {
-  navigation.reset({
-    index: 1,
-    routes: [
-      { name: 'TabScreen' }, // Your tab's main screen
-      { name: 'DetailScreen', params: { id } },
-    ],
-  });
-} else {
-  navigation.push('DetailScreen', { id });
-}
-```
-
-**Option 3: Use Modal Presentation for Detail Screens**
-
-Instead of pushing detail screens onto the stack, present them as modals that don't accumulate:
-
-```javascript
-<Stack.Screen
-  name="DetailScreen"
-  options={{
-    presentation: 'modal',
-    gestureEnabled: true,
-  }}
-/>
-```
-
-**Option 4: Combine Detaching with Freezing**
-
-Use `react-native-screens` with `detachInactiveScreens` and `freezeOnBlur`:
-
-```javascript
-<Stack.Navigator
-  screenOptions={{
-    detachInactiveScreens: true,
-    freezeOnBlur: true,
-  }}
->
-```
+- Increased vertical spacing between all sections for breathing room
+- Thin horizontal divider line for major section breaks
+- Consistent padding within sections
+- Creates rhythm and visual flow
 
 ### Implementation Requirements
 
-1. Apply `lazy: true` and `detachInactiveScreens: true` to ALL stack navigators (Home, Search, Discover, Library)
-2. Ensure `react-native-screens` is properly installed and configured
-3. Test that screens still preserve their state when navigating back
-4. Verify tab switching is fast even with 10+ screens in a stack
-5. Consider adding a visual loading state if lazy mounting causes brief flickers
+**Spacing:**
 
-### Additional Optimization
+- Add consistent vertical spacing between sections (e.g., 24-32px)
+- Maintain consistent padding within each section
+- Ensure spacing feels balanced and not too cramped or too loose
 
-- Add `removeClippedSubviews={true}` to long lists (FlatList, ScrollView)
-- Memoize expensive components with `React.memo`
-- Use `getStateFromPath` and `getPathFromState` for deep linking efficiency
+**Divider Styling (if using lines):**
+
+- Color: Subtle gray that works with dark theme (e.g., rgba(255,255,255,0.1) or similar)
+- Thickness: Thin (1px)
+- Width: Either full width or inset with horizontal margins for visual interest
+- Position: Between sections, not within them
+
+**Section Organization:**
+
+- Each section should feel like a distinct content block
+- Headers should clearly indicate what section follows
+- Content should be visually grouped within its section
+
+**Consistency:**
+
+- Apply the same separator style throughout both movie AND TV show detail screens
+- Use the same spacing and divider approach for all sections
+- Maintain consistency with the rest of the app's design language
+
+### Visual Hierarchy Goals
+
+After implementation, users should be able to:
+
+- Quickly scan the page and identify different sections
+- Understand where one section ends and another begins
+- Navigate to their desired content section easily
+- Experience less cognitive load when viewing the detail screen
+
+### Additional Considerations
+
+**Don't Overdo It:**
+
+- Separators should be subtle, not dominating
+- Goal is clarity, not adding more visual clutter
+- Less is more - use whitespace effectively
+
+**Maintain Performance:**
+
+- Separators should not impact scroll performance
+- Keep implementation simple and lightweight
+
+**Responsive Design:**
+
+- Separators should work well with the scrolling behavior
+- Should look good whether content is collapsed or expanded (e.g., "Read more" in overview)
+
+**Future-Proofing:**
+
+- Design should accommodate additional sections being added later
+- Separator pattern should be reusable and consistent
 
 ### Expected Outcome
 
-- Tab switching should be instant (<100ms) regardless of stack depth
-- Memory usage should be more efficient as inactive screens are detached
-- App should maintain responsiveness even with complex navigation flows
-- User state should still be preserved appropriately when navigating back
+The detail screen should feel more organized, with clear visual boundaries between sections that make the content easier to scan and digest. Users should experience improved readability and a less cluttered interface while maintaining all existing functionality.
 
-Please implement these performance optimizations, prioritizing Option 1 (lazy mounting with detachInactiveScreens) as it provides the best balance of performance and user experience.
+Please implement section separators for the movie and TV show detail screens using a clean, subtle approach that enhances visual hierarchy without adding clutter.

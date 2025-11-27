@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -262,6 +263,8 @@ export default function MovieDetailScreen() {
             </TouchableOpacity>
           </View>
 
+          <SectionSeparator />
+
           {/* Budget & Revenue */}
           {(movie.budget > 0 || movie.revenue > 0) && (
             <View style={styles.financialContainer}>
@@ -301,6 +304,8 @@ export default function MovieDetailScreen() {
             </TouchableOpacity>
           )}
 
+          <SectionSeparator />
+
           {director && (
             <View style={styles.directorContainer}>
               <Text style={styles.label}>Director: </Text>
@@ -312,6 +317,8 @@ export default function MovieDetailScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {director && <SectionSeparator />}
 
           {/* Watch Providers */}
           {watchProviders &&
@@ -338,6 +345,11 @@ export default function MovieDetailScreen() {
                   </View>
                 )}
               </>
+            )}
+
+          {watchProviders &&
+            (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
+              <SectionSeparator />
             )}
 
           {cast.length > 0 && (
@@ -377,6 +389,8 @@ export default function MovieDetailScreen() {
               </ScrollView>
             </>
           )}
+
+          {cast.length > 0 && <SectionSeparator />}
 
           {/* Similar Movies */}
           {similarMovies.length > 0 && (
@@ -429,6 +443,8 @@ export default function MovieDetailScreen() {
               </ScrollView>
             </>
           )}
+
+          {similarMovies.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
