@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { ChevronRight } from 'lucide-react-native';
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -13,7 +13,7 @@ export function CastSection({ cast, onCastPress, onViewAll, style }: CastSection
   }
 
   return (
-    <View style={style}>
+    <View style={[style, { marginTop: -SPACING.m }]}>
       <TouchableOpacity
         style={detailStyles.sectionHeader}
         onPress={onViewAll}
