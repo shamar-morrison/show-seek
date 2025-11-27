@@ -132,7 +132,6 @@ Always import and use these constants rather than hardcoding values.
 
 - Use `@shopify/flash-list` (FlashList) instead of FlatList for long lists
 - Lazy load images with `expo-image` (Image component)
-- Screen freezing enabled via `freezeOnBlur: true` in Stack navigators (prevents unnecessary re-renders)
 - Tab screens use `detachInactiveScreens: true` to unmount inactive tabs
 - Profile tab uses `unmountOnBlur: true` for privacy/performance
 
