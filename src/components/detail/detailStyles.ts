@@ -15,7 +15,6 @@ export const detailStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.s,
     marginTop: SPACING.m,
-    paddingRight: SPACING.l,
   },
 
   // Watch Providers
