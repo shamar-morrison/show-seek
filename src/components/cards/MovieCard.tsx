@@ -19,7 +19,6 @@ export function MovieCard({ movie, width = 140 }: MovieCardProps) {
   const handlePress = () => {
     const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
 
-    console.log('[MovieCard] currentTab:', currentTab, 'path:', path);
     router.push(path as Route);
   };
 

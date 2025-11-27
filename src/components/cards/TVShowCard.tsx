@@ -18,8 +18,6 @@ export function TVShowCard({ show, width = 140 }: TVShowCardProps) {
 
   const handlePress = () => {
     const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
-
-    console.log('[TVShowCard] currentTab:', currentTab, 'path:', path);
     router.push(path as any);
   };
 
