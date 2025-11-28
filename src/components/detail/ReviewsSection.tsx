@@ -18,7 +18,7 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={detailStyles.reviewsListContent}
+            style={detailStyles.similarList}
           >
             {[1, 2, 3].map((i) => (
               <View key={i} style={detailStyles.reviewCardSkeleton}>
@@ -56,15 +56,15 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Reviews</Text>
-          <FlashList
-            horizontal
-            data={reviews}
-            keyExtractor={(item) => item.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={detailStyles.reviewsListContent}
-            removeClippedSubviews={true}
-            drawDistance={400}
-            renderItem={({ item: review }) => (
+          <View style={detailStyles.similarList}>
+            <FlashList
+              horizontal
+              data={reviews}
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              removeClippedSubviews={true}
+              drawDistance={400}
+              renderItem={({ item: review }) => (
               <TouchableOpacity
                 style={detailStyles.reviewCard}
                 onPress={() => onReviewPress(review)}
@@ -96,7 +96,8 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
                 </Text>
               </TouchableOpacity>
             )}
-          />
+            />
+          </View>
         </View>
       );
     }

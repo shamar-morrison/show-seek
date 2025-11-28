@@ -225,6 +225,31 @@ export const detailStyles = StyleSheet.create({
     marginBottom: SPACING.s,
   },
 
+  // Recommendation Card Skeleton
+  recommendationCardSkeleton: {
+    width: 120,
+    marginRight: SPACING.m,
+  },
+  skeletonPoster: {
+    width: 120,
+    height: 180,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+    marginBottom: SPACING.s,
+  },
+  skeletonTitle: {
+    height: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.s,
+    marginBottom: SPACING.xs,
+  },
+  skeletonMeta: {
+    height: 10,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.s,
+    width: '70%',
+  },
+
   // Review Error State
   reviewErrorBox: {
     backgroundColor: COLORS.surfaceLight,

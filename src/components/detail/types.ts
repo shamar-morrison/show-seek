@@ -98,3 +98,14 @@ export interface ReviewsSectionProps {
   onLayout?: () => void;
   style?: ViewStyle;
 }
+
+export interface RecommendationsSectionProps {
+  mediaType: 'movie' | 'tv';
+  items: SimilarMediaItem[];
+  isLoading: boolean;
+  isError: boolean;
+  shouldLoad: boolean;
+  onMediaPress: (id: number) => void;
+  onLayout?: () => void;
+  style?: ViewStyle;
+}

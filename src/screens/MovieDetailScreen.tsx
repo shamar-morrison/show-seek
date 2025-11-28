@@ -3,6 +3,7 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
+import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { type Video } from '@/src/components/detail/types';
@@ -43,6 +44,7 @@ export default function MovieDetailScreen() {
   const [listModalVisible, setListModalVisible] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
+  const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
@@ -90,6 +92,12 @@ export default function MovieDetailScreen() {
     enabled: !!movieId && shouldLoadReviews,
   });
 
+  const recommendationsQuery = useQuery({
+    queryKey: ['movie', movieId, 'recommendations'],
+    queryFn: () => tmdbApi.getRecommendedMovies(movieId),
+    enabled: !!movieId && shouldLoadRecommendations,
+  });
+
   if (movieQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -125,6 +133,7 @@ export default function MovieDetailScreen() {
   const watchProviders = watchProvidersQuery.data;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
+  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(movie.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -336,6 +345,23 @@ export default function MovieDetailScreen() {
           />
 
           {videos.length > 0 && <SectionSeparator />}
+
+          {/* Recommendations */}
+          <RecommendationsSection
+            mediaType="movie"
+            items={recommendations}
+            isLoading={recommendationsQuery.isLoading}
+            isError={recommendationsQuery.isError}
+            shouldLoad={shouldLoadRecommendations}
+            onMediaPress={handleMoviePress}
+            onLayout={() => {
+              if (!shouldLoadRecommendations) {
+                setShouldLoadRecommendations(true);
+              }
+            }}
+          />
+
+          {recommendations.length > 0 && <SectionSeparator />}
 
           {/* Reviews */}
           <ReviewsSection

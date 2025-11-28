@@ -3,6 +3,7 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
+import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { type Video } from '@/src/components/detail/types';
@@ -53,6 +54,7 @@ export default function TVDetailScreen() {
   const [listModalVisible, setListModalVisible] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
+  const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
@@ -100,6 +102,12 @@ export default function TVDetailScreen() {
     enabled: !!tvId && shouldLoadReviews,
   });
 
+  const recommendationsQuery = useQuery({
+    queryKey: ['tv', tvId, 'recommendations'],
+    queryFn: () => tmdbApi.getRecommendedTV(tvId),
+    enabled: !!tvId && shouldLoadRecommendations,
+  });
+
   if (tvQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -137,6 +145,7 @@ export default function TVDetailScreen() {
   const watchProviders = watchProvidersQuery.data;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
+  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -357,6 +366,23 @@ export default function TVDetailScreen() {
           />
 
           {videos.length > 0 && <SectionSeparator />}
+
+          {/* Recommendations */}
+          <RecommendationsSection
+            mediaType="tv"
+            items={recommendations}
+            isLoading={recommendationsQuery.isLoading}
+            isError={recommendationsQuery.isError}
+            shouldLoad={shouldLoadRecommendations}
+            onMediaPress={handleShowPress}
+            onLayout={() => {
+              if (!shouldLoadRecommendations) {
+                setShouldLoadRecommendations(true);
+              }
+            }}
+          />
+
+          {recommendations.length > 0 && <SectionSeparator />}
 
           {/* Reviews */}
           <ReviewsSection
