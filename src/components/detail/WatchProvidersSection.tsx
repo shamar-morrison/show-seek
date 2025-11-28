@@ -1,5 +1,6 @@
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { COLORS, FONT_SIZE } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -16,7 +17,12 @@ export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={detailStyles.sectionTitle}>Where to Watch</Text>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <Text style={detailStyles.sectionTitle}>Where to Watch</Text>
+          <Text style={{ color: COLORS.textSecondary, fontSize: FONT_SIZE.xs }}>by JustWatch</Text>
+        </View>
         {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
           <View style={detailStyles.providersSection}>
             <Text style={detailStyles.providerType}>Streaming</Text>
