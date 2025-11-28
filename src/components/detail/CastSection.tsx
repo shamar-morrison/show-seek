@@ -1,7 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
-import { ChevronRight } from 'lucide-react-native';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -56,7 +55,7 @@ export const CastSection = memo<CastSectionProps>(
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={detailStyles.sectionTitle}>Cast</Text>
-          <ChevronRight size={20} color={COLORS.primary} />
+          <Text style={detailStyles.viewAll}>View All</Text>
         </TouchableOpacity>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
           {cast.map((actor) => (

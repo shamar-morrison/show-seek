@@ -26,7 +26,7 @@ export const detailStyles = StyleSheet.create({
   },
   readMore: {
     color: COLORS.primary,
-    fontSize: FONT_SIZE.m,
+    fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },
 
@@ -92,6 +92,11 @@ export const detailStyles = StyleSheet.create({
   characterName: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
+  },
+  viewAll: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 
   // Similar Media
