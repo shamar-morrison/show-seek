@@ -23,7 +23,7 @@ export const getGenres = async (): Promise<Record<number, string>> => {
       const isExpired = Date.now() - timestamp > CACHE_DURATION;
 
       if (!isExpired) {
-        console.log('Using cached genres');
+        // Use cached genres
         return data;
       }
       console.log('Genre cache expired, fetching fresh data');
