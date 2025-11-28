@@ -94,7 +94,7 @@ export const detailStyles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
   },
   viewAll: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: FONT_SIZE.s,
     fontWeight: '600',
     color: COLORS.primary,
   },
