@@ -11,12 +11,16 @@ import { type Video } from '@/src/components/detail/types';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import RatingButton from '@/src/components/RatingButton';
+import RatingModal from '@/src/components/RatingModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,12 +66,14 @@ export default function TVDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
+  const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const isInAnyList = Object.keys(membership).length > 0;
 
   const tvQuery = useQuery({
@@ -299,7 +305,16 @@ export default function TVDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
+            <View style={styles.ratingButtonContainer}>
+              <RatingButton
+                onPress={() => setRatingModalVisible(true)}
+                isRated={userRating > 0}
+                isLoading={isLoadingRating}
+              />
+            </View>
           </View>
+
+          {userRating > 0 && <UserRating rating={userRating} />}
 
           <Text style={detailStyles.sectionTitle}>Overview</Text>
           <Text style={detailStyles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
@@ -310,7 +325,9 @@ export default function TVDetailScreen() {
               onPress={() => setOverviewExpanded(!overviewExpanded)}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={detailStyles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+              <Text style={detailStyles.readMore}>
+                {overviewExpanded ? 'Read less' : 'Read more'}
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -436,19 +453,30 @@ export default function TVDetailScreen() {
       />
 
       {show && (
-        <AddToListModal
-          visible={listModalVisible}
-          onClose={() => setListModalVisible(false)}
-          mediaItem={{
-            id: show.id,
-            title: show.name,
-            poster_path: show.poster_path,
-            media_type: 'tv',
-            vote_average: show.vote_average,
-            release_date: show.first_air_date,
-          }}
-          onShowToast={(message) => toastRef.current?.show(message)}
-        />
+        <>
+          <AddToListModal
+            visible={listModalVisible}
+            onClose={() => setListModalVisible(false)}
+            mediaItem={{
+              id: show.id,
+              title: show.name,
+              poster_path: show.poster_path,
+              media_type: 'tv',
+              vote_average: show.vote_average,
+              release_date: show.first_air_date,
+            }}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+          <RatingModal
+            visible={ratingModalVisible}
+            onClose={() => setRatingModalVisible(false)}
+            mediaId={show.id}
+            mediaType="tv"
+            initialRating={userRating}
+            onRatingSuccess={() => {}}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+        </>
       )}
       <Toast ref={toastRef} />
     </View>
@@ -621,5 +649,12 @@ const styles = StyleSheet.create({
   },
   addedButton: {
     backgroundColor: COLORS.success,
+  },
+  ratingButtonContainer: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
 });
