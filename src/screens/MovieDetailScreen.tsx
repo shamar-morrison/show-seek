@@ -595,7 +595,6 @@ const styles = StyleSheet.create({
   readMore: {
     color: COLORS.primary,
     fontSize: FONT_SIZE.m,
-    marginBottom: SPACING.l,
     fontWeight: '600',
   },
   directorContainer: {
