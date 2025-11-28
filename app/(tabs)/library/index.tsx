@@ -21,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
-const ITEM_HEIGHT = ITEM_WIDTH * 1.5 + SPACING.m; // Poster height + bottom margin
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -129,9 +128,7 @@ export default function LibraryScreen() {
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            // Performance optimizations
             keyExtractor={(item) => `${item.id}-${item.media_type}`}
-            removeClippedSubviews={true}
             drawDistance={400}
           />
         ) : (
