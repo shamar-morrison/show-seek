@@ -11,18 +11,22 @@ import { type Video } from '@/src/components/detail/types';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import RatingButton from '@/src/components/RatingButton';
+import RatingModal from '@/src/components/RatingModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { ratingService } from '@/src/services/RatingService';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -52,6 +56,9 @@ export default function MovieDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [isLoadingRating, setIsLoadingRating] = useState(true);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
@@ -59,6 +66,20 @@ export default function MovieDetailScreen() {
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const isInAnyList = Object.keys(membership).length > 0;
+
+  useEffect(() => {
+    const loadRating = async () => {
+      if (movieId) {
+        setIsLoadingRating(true);
+        const ratingItem = await ratingService.getRating(movieId);
+        if (ratingItem) {
+          setUserRating(ratingItem.rating);
+        }
+        setIsLoadingRating(false);
+      }
+    };
+    loadRating();
+  }, [movieId]);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -278,7 +299,16 @@ export default function MovieDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
+            <View style={styles.ratingButtonContainer}>
+              <RatingButton
+                onPress={() => setRatingModalVisible(true)}
+                isRated={userRating > 0}
+                isLoading={isLoadingRating}
+              />
+            </View>
           </View>
+
+          {userRating > 0 && <UserRating rating={userRating} />}
 
           <Text style={detailStyles.sectionTitle}>Overview</Text>
           <Text style={detailStyles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
@@ -289,7 +319,9 @@ export default function MovieDetailScreen() {
               onPress={() => setOverviewExpanded(!overviewExpanded)}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={detailStyles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+              <Text style={detailStyles.readMore}>
+                {overviewExpanded ? 'Read less' : 'Read more'}
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -415,19 +447,29 @@ export default function MovieDetailScreen() {
       />
 
       {movie && (
-        <AddToListModal
-          visible={listModalVisible}
-          onClose={() => setListModalVisible(false)}
-          mediaItem={{
-            id: movie.id,
-            title: movie.title,
-            poster_path: movie.poster_path,
-            media_type: 'movie',
-            vote_average: movie.vote_average,
-            release_date: movie.release_date,
-          }}
-          onShowToast={(message) => toastRef.current?.show(message)}
-        />
+        <>
+          <AddToListModal
+            visible={listModalVisible}
+            onClose={() => setListModalVisible(false)}
+            mediaItem={{
+              id: movie.id,
+              title: movie.title,
+              poster_path: movie.poster_path,
+              media_type: 'movie',
+              vote_average: movie.vote_average,
+              release_date: movie.release_date,
+            }}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+          <RatingModal
+            visible={ratingModalVisible}
+            onClose={() => setRatingModalVisible(false)}
+            mediaId={movie.id}
+            mediaType="movie"
+            initialRating={userRating}
+            onRatingSuccess={(rating) => setUserRating(rating)}
+          />
+        </>
       )}
       <Toast ref={toastRef} />
     </View>
@@ -586,5 +628,12 @@ const styles = StyleSheet.create({
   },
   addedButton: {
     backgroundColor: COLORS.success,
+  },
+  ratingButtonContainer: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
 });

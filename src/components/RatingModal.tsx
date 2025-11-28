@@ -1,0 +1,256 @@
+import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import { Star, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
+import { ratingService } from '../services/RatingService';
+import { getRatingText } from '../utils/ratingHelpers';
+
+interface RatingModalProps {
+  visible: boolean;
+  onClose: () => void;
+  mediaId: number;
+  mediaType: 'movie' | 'tv';
+  initialRating?: number;
+  onRatingSuccess: (rating: number) => void;
+}
+
+export default function RatingModal({
+  visible,
+  onClose,
+  mediaId,
+  mediaType,
+  initialRating = 0,
+  onRatingSuccess,
+}: RatingModalProps) {
+  const [rating, setRating] = useState(initialRating);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setRating(initialRating);
+      setError(null);
+      setIsSubmitting(false);
+    }
+  }, [visible, initialRating]);
+
+  const handleRatingSelect = (selectedRating: number) => {
+    Haptics.selectionAsync();
+    setRating(selectedRating);
+  };
+
+  const handleSubmit = async () => {
+    if (rating === 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await ratingService.saveRating(mediaId, mediaType, rating);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onRatingSuccess(rating);
+      onClose();
+    } catch (err) {
+      console.error('Failed to save rating:', err);
+      setError(err instanceof Error ? err.message : 'Failed to save rating');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Rate this Title</Text>
+            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
+              <X size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          {error && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>{error}</Text>
+            </View>
+          )}
+
+          <View style={styles.starsContainer}>
+            {[...Array(10)].map((_, index) => {
+              const starValue = index + 1;
+              const isFilled = starValue <= rating;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => handleRatingSelect(starValue)}
+                  activeOpacity={0.7}
+                  style={styles.starButton}
+                >
+                  <Star
+                    size={28}
+                    color={isFilled ? COLORS.primary : COLORS.textSecondary}
+                    fill={isFilled ? COLORS.primary : 'transparent'}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.ratingTextContainer}>
+            <Text style={styles.ratingScore}>{rating > 0 ? `${rating}/10` : 'Tap to rate'}</Text>
+            {rating > 0 && <Text style={styles.ratingDescription}>{getRatingText(rating)}</Text>}
+          </View>
+
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleClose}
+              activeOpacity={ACTIVE_OPACITY}
+              disabled={isSubmitting}
+            >
+              <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitButton, (rating === 0 || isSubmitting) && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={rating === 0 || isSubmitting}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <Text style={styles.submitButtonText}>Confirm Rating</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.l,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  content: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.l,
+  },
+  title: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  errorBanner: {
+    backgroundColor: COLORS.error,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+  },
+  errorBannerText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: SPACING.m,
+  },
+  starButton: {
+    padding: 2,
+  },
+  ratingTextContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    height: 50, // Fixed height to prevent jumping
+  },
+  ratingScore: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: SPACING.xs,
+  },
+  ratingDescription: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.m,
+  },
+  cancelButton: {
+    padding: SPACING.m,
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+  },
+  submitButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    minWidth: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    opacity: 0.5,
+  },
+});

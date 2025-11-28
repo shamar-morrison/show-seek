@@ -1,118 +1,93 @@
-## UI/UX Improvement: Add Section Separators for Better Visual Hierarchy
+I need to implement a user rating feature for my React Native/Expo movie tracking app. Here are the detailed requirements:
 
-### Problem
+## Feature Overview
 
-The detail screen is becoming cluttered as more sections are added. Currently all sections (Overview, Where to Watch, Cast, Similar Movies/Shows, Photos, etc.) flow directly into each other with no clear visual separation, making it harder for users to distinguish where one section ends and another begins.
+Add a rating system that allows users to rate movies and TV shows on a scale of 1-10 stars, with ratings stored in Firestore and displayed on detail screens.
 
-### Goal
+## UI Components Needed
 
-Add visual separators between each major section on the movie and TV show detail screens to improve readability, create clear visual hierarchy, and make the content feel more organized and scannable.
+### 1. Rating Trigger Button
 
-### Sections That Need Separation
+- Location: Movie/TV show detail screen, positioned next to the poster image
+- Design: Star icon button matching the style of the existing "add to list" button
+- Icon: Use a star icon (outline when no rating, filled when rated)
+- Action: Opens rating modal on press
 
-The following sections should have clear visual boundaries:
+### 2. Rating Modal
 
-1. Header section (poster, title, metadata, genres, buttons)
-2. Overview section
-3. Director/Creator info
-4. Where to Watch section
-5. Cast section
-6. Similar Movies/TV Shows section
-7. Photos section
-8. Any future sections added
+- Contains 10 interactive star icons in a row
+- Stars should be tappable/selectable
+- Visual feedback: Stars up to selected position should be filled, rest should be outline
+- Allow users to change selection before confirming
+- Display selected rating as "X/10" below the stars
+- Include a "Confirm Rating" button at the bottom
+- Include a "Cancel" or close button to dismiss without saving
+- Modal should have a dark theme consistent with the app design
 
-### Separator Design Options
+### 3. Rating Display
 
-Choose the most appropriate visual separator style that matches the app's design language:
+- Location: Next to the movie/TV show card on the detail screen
+- Show user's rating with descriptive text based on score:
+  - 1-2: "Terrible"
+  - 3-4: "Not Good"
+  - 5: "Average"
+  - 6-7: "Pretty Good"
+  - 8-9: "Great"
+  - 10: "Masterpiece"
+- Format: Display as "Your Rating: 7/10 - Pretty Good"
+- Style: Should be visually distinct but complement the existing UI
 
-**Option 1: Horizontal Divider Lines (Subtle)**
+## Technical Requirements
 
-- Thin horizontal line between sections
-- Light gray or subtle color that contrasts with dark background
-- Adds minimal visual weight while clearly dividing content
-- Simple and clean
+1. **State Management**
+   - Track modal visibility state
+   - Track selected rating (1-10)
+   - Track if user has already rated this item
+   - Load existing rating on component mount
 
-**Option 2: Spacing with Subtle Background Change**
+2. **Functions Needed**
+   - `getRatingText(rating: number): string` - Convert number to descriptive text
+   - `handleRatingSelect(starIndex: number)` - Handle star selection
+   - `saveRating()` - Save/update rating in Firestore
+   - `loadUserRating()` - Fetch existing rating on mount
+   - `deleteRating()` (optional) - Allow users to remove their rating
 
-- Increased vertical spacing between sections
-- Optional: Alternate very subtle background shade between sections
-- Creates breathing room without adding explicit dividers
-- More modern, minimalist approach
+3. **Error Handling**
+   - Handle case when user is not authenticated
+   - Show error message if Firestore operation fails
+   - Loading states while fetching/saving data
 
-**Option 3: Section Headers with Dividers**
+## Implementation Notes
 
-- Small divider line or visual element above or below section headers
-- Helps reinforce section titles as boundaries
-- Clear and structured
+- Use existing Firebase/Firestore setup
+- Follow existing component structure and styling patterns
+- Ensure the feature works for both movie and TV show detail screens
+- The rating should persist across app sessions
+- Add appropriate loading indicators during async operations
 
-**Option 4: Combination Approach (Recommended)**
+## Files to Create/Modify
 
-- Increased vertical spacing between all sections for breathing room
-- Thin horizontal divider line for major section breaks
-- Consistent padding within sections
-- Creates rhythm and visual flow
+1. Create `components/RatingModal.tsx` - The rating modal component
+2. Create `components/RatingButton.tsx` - The trigger button component
+3. Create `components/UserRating.tsx` - Display component for showing user's rating
+4. Modify movie detail screen to integrate rating components
+5. Modify TV show detail screen to integrate rating components
+6. Create `utils/ratingHelpers.ts` - Helper functions for rating logic
+7. Create `services/ratingService.ts` - Firestore operations for ratings
 
-### Implementation Requirements
+## Example Usage in Detail Screen
 
-**Spacing:**
+```typescript
+<View style={styles.ratingContainer}>
+  <RatingButton
+    mediaId={movie.id}
+    mediaType="movie"
+    onRatingChange={() => loadUserRating()}
+  />
+  {userRating && (
+    <UserRating rating={userRating} />
+  )}
+</View>
+```
 
-- Add consistent vertical spacing between sections (e.g., 24-32px)
-- Maintain consistent padding within each section
-- Ensure spacing feels balanced and not too cramped or too loose
-
-**Divider Styling (if using lines):**
-
-- Color: Subtle gray that works with dark theme (e.g., rgba(255,255,255,0.1) or similar)
-- Thickness: Thin (1px)
-- Width: Either full width or inset with horizontal margins for visual interest
-- Position: Between sections, not within them
-
-**Section Organization:**
-
-- Each section should feel like a distinct content block
-- Headers should clearly indicate what section follows
-- Content should be visually grouped within its section
-
-**Consistency:**
-
-- Apply the same separator style throughout both movie AND TV show detail screens
-- Use the same spacing and divider approach for all sections
-- Maintain consistency with the rest of the app's design language
-
-### Visual Hierarchy Goals
-
-After implementation, users should be able to:
-
-- Quickly scan the page and identify different sections
-- Understand where one section ends and another begins
-- Navigate to their desired content section easily
-- Experience less cognitive load when viewing the detail screen
-
-### Additional Considerations
-
-**Don't Overdo It:**
-
-- Separators should be subtle, not dominating
-- Goal is clarity, not adding more visual clutter
-- Less is more - use whitespace effectively
-
-**Maintain Performance:**
-
-- Separators should not impact scroll performance
-- Keep implementation simple and lightweight
-
-**Responsive Design:**
-
-- Separators should work well with the scrolling behavior
-- Should look good whether content is collapsed or expanded (e.g., "Read more" in overview)
-
-**Future-Proofing:**
-
-- Design should accommodate additional sections being added later
-- Separator pattern should be reusable and consistent
-
-### Expected Outcome
-
-The detail screen should feel more organized, with clear visual boundaries between sections that make the content easier to scan and digest. Users should experience improved readability and a less cluttered interface while maintaining all existing functionality.
-
-Please implement section separators for the movie and TV show detail screens using a clean, subtle approach that enhances visual hierarchy without adding clutter.
+Please implement this feature following best practices for React Native, TypeScript, and Firebase. Ensure the UI is responsive and matches the existing app design shown in the screenshot.
