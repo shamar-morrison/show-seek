@@ -49,7 +49,9 @@ The app uses **nested tab navigation** where each tab has its own navigation sta
   - `app/(tabs)/home/person/[id]/index.tsx` - Person details (within Home tab)
   - `app/(tabs)/home/movie/[id]/cast.tsx` - Cast modal (presentation: modal)
   - `app/(tabs)/home/tv/[id]/cast.tsx` - TV cast modal (presentation: modal)
+  - `app/(tabs)/home/tv/[id]/seasons.tsx` - TV seasons list
 - Each tab (search, discover, library) has identical nested structures
+- Global screens (outside tabs): `app/onboarding.tsx`, `app/manage-lists.tsx`, `app/(auth)/*`
 
 **Key Navigation Pattern**: Detail screens (movie, TV, person) are duplicated under each tab to maintain independent navigation stacks. This allows users to browse content within each tab without losing their position in other tabs.
 
@@ -80,8 +82,11 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 **Firebase Realtime Subscriptions** via custom hooks:
 
 - `src/hooks/useFirestore.ts` exports `useFavorites()`, `useWatchlist()`, and `useRatings()`
+- `src/hooks/useLists.ts` exports `useLists()`, `useMediaLists()`, and mutations for managing custom lists
 - These hooks subscribe to Firestore collections and update in real-time
 - Automatically clean up subscriptions when user logs out
+
+**Zustand**: Currently included in dependencies for potential client-side state management needs (not heavily utilized yet as most state is handled by TanStack Query and Firebase subscriptions)
 
 ### Data Layer Structure
 
@@ -96,8 +101,18 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 #### Firebase (`src/firebase/`)
 
 - `config.ts` - Firebase initialization (auth, firestore)
-- `firestore.ts` - Helper functions for favorites, watchlist, and ratings
-- User data structure: `users/{userId}/{favorites|watchlist|ratings}/{mediaId}`
+- `firestore.ts` - Helper functions for favorites, watchlist, and ratings (legacy)
+- User data structure:
+  - Legacy: `users/{userId}/{favorites|watchlist|ratings}/{mediaId}`
+  - Lists: `users/{userId}/lists/{listId}` with items stored as a map
+
+#### Custom Lists System (`src/services/ListService.ts`)
+
+- Centralized service for managing user lists (favorites, watchlist, dropped, and custom lists)
+- Default lists: `favorites`, `watchlist`, `dropped`
+- Users can create/delete custom lists with auto-generated unique IDs
+- All list operations include timeout protection (10s) and user-friendly error messages
+- Lists store items as nested maps: `{ items: { [mediaId]: ListMediaItem } }`
 
 #### Authentication Context (`src/context/auth.ts`)
 
@@ -125,7 +140,9 @@ Always import and use these constants rather than hardcoding values.
 
 **Feature Components** (`src/components/`):
 
-- Domain-specific (MovieCard, TVShowCard, VideoPlayerModal, DiscoverFilters, ImageLightbox)
+- Domain-specific components: `MovieCard`, `TVShowCard`, `VideoPlayerModal`, `DiscoverFilters`, `ImageLightbox`, `AddToListModal`
+- Detail screen components (`src/components/detail/`): `CastSection`, `PhotosSection`, `ReviewsSection`, `SimilarMediaSection`, `VideosSection`, `WatchProvidersSection`, `MediaDetailsInfo`
+- Screen components (`src/components/screens/`): `CastCrewScreen`
 - Can use hooks and contain feature logic
 
 **Performance Optimization**:
@@ -173,6 +190,14 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 3. Use with TanStack Query in component: `useQuery({ queryKey: ['...'], queryFn: tmdbApi.method })`
 
 ### Adding User Data Persistence
+
+**For Custom Lists (Recommended)**:
+
+1. Extend `ListService` in `src/services/ListService.ts` with new methods
+2. Add corresponding hooks in `src/hooks/useLists.ts` using `useMutation` or extending `useLists()`
+3. Use hooks in components with automatic real-time updates via Firestore subscriptions
+
+**For Legacy Favorites/Watchlist/Ratings**:
 
 1. Add Firestore helper to `src/firebase/firestore.ts`
 2. Create subscription function following `subscribeFavorites` pattern
@@ -238,3 +263,16 @@ router.push(`/(tabs)/home/movie/${movieId}`);
 - Firebase queries should always clean up subscriptions (return unsubscribe function)
 - All TMDB images need full URL construction via `getImageUrl()`
 - When creating duplicate screens across tabs, extract shared logic into reusable components to avoid code duplication
+
+### Error Handling Patterns
+
+**Firestore Operations**:
+- All Firestore operations in `ListService` include 10-second timeout protection
+- Firebase errors are mapped to user-friendly messages via `getFirestoreErrorMessage()`
+- Graceful degradation: subscriptions fall back to default lists on error
+- Common error codes handled: `permission-denied`, `unavailable`, `not-found`, `deadline-exceeded`, `resource-exhausted`
+
+**Subscription Pattern**:
+- Real-time subscriptions include both success callback and optional error callback
+- Errors are logged to console for debugging while showing user-friendly messages to users
+- Subscriptions automatically clean up on component unmount
