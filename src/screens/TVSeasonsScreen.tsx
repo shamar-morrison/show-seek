@@ -7,7 +7,6 @@ import { ArrowLeft, Calendar, ChevronDown, ChevronRight, Star } from 'lucide-rea
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,8 +14,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
 
 export default function TVSeasonsScreen() {
   const { id } = useLocalSearchParams();
@@ -203,8 +200,6 @@ export default function TVSeasonsScreen() {
             </View>
           );
         })}
-
-        <View style={{ height: 100 }} />
       </ScrollView>
     </View>
   );
