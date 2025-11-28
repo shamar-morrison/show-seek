@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
+import { detailStyles } from '@/src/components/detail/detailStyles';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -270,8 +271,8 @@ export default function MovieDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+          <Text style={detailStyles.sectionTitle}>Overview</Text>
+          <Text style={detailStyles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
             {movie.overview || 'No overview available'}
           </Text>
           {movie.overview && movie.overview.length > 200 && (
@@ -279,20 +280,20 @@ export default function MovieDetailScreen() {
               onPress={() => setOverviewExpanded(!overviewExpanded)}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
+              <Text style={detailStyles.readMore}>{overviewExpanded ? 'Read less' : 'Read more'}</Text>
             </TouchableOpacity>
           )}
 
           <SectionSeparator />
 
           {director && (
-            <View style={styles.directorContainer}>
-              <Text style={styles.label}>Director: </Text>
+            <View style={detailStyles.directorContainer}>
+              <Text style={detailStyles.label}>Director: </Text>
               <TouchableOpacity
                 onPress={() => navigateTo(`/person/${director.id}`)}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <Text style={[styles.value, { color: COLORS.primary }]}>{director.name}</Text>
+                <Text style={[detailStyles.value, { color: COLORS.primary }]}>{director.name}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -579,32 +580,5 @@ const styles = StyleSheet.create({
   },
   addedButton: {
     backgroundColor: COLORS.success,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.l,
-    paddingBottom: SPACING.xs,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  overview: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    lineHeight: 24,
-    marginBottom: SPACING.s,
-  },
-  readMore: {
-    color: COLORS.primary,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  directorContainer: {
-    flexDirection: 'row',
-  },
-  label: {
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  value: {
-    color: COLORS.text,
   },
 });

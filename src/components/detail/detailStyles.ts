@@ -17,6 +17,31 @@ export const detailStyles = StyleSheet.create({
     marginTop: SPACING.m,
   },
 
+  // Overview Section
+  overview: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    lineHeight: 24,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+
+  // Director/Creator Section
+  directorContainer: {
+    flexDirection: 'row',
+  },
+  label: {
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  value: {
+    color: COLORS.text,
+  },
+
   // Watch Providers
   providersSection: {
     marginBottom: SPACING.m,
