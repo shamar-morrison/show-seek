@@ -37,7 +37,7 @@ export default function RatingModal({
 }: RatingModalProps) {
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -79,7 +79,7 @@ export default function RatingModal({
     onClose();
 
     try {
-      await ratingService.deleteRating(mediaId);
+      await ratingService.deleteRating(mediaId, mediaType);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRatingSuccess(0);
     } catch (err) {
@@ -112,12 +112,6 @@ export default function RatingModal({
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
-
-          {error && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>{error}</Text>
-            </View>
-          )}
 
           <View style={styles.starsContainer}>
             {[...Array(10)].map((_, index) => {

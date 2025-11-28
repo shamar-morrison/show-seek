@@ -43,8 +43,8 @@ export interface RatingItem {
 }
 
 class RatingService {
-  private getUserRatingRef(userId: string, mediaId: string) {
-    return doc(db, 'users', userId, 'ratings', mediaId);
+  private getUserRatingRef(userId: string, mediaType: 'movie' | 'tv', mediaId: string) {
+    return doc(db, 'users', userId, 'ratings', `${mediaType}-${mediaId}`);
   }
 
   private getUserRatingsCollection(userId: string) {
@@ -93,7 +93,7 @@ class RatingService {
       const user = auth.currentUser;
       if (!user) throw new Error('User not authenticated');
 
-      const ratingRef = this.getUserRatingRef(user.uid, mediaId.toString());
+      const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
       const ratingData: RatingItem = {
         id: mediaId.toString(),
@@ -117,12 +117,12 @@ class RatingService {
   /**
    * Delete a rating for a media item
    */
-  async deleteRating(mediaId: number) {
+  async deleteRating(mediaId: number, mediaType: 'movie' | 'tv') {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('User not authenticated');
 
-      const ratingRef = this.getUserRatingRef(user.uid, mediaId.toString());
+      const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
@@ -139,12 +139,12 @@ class RatingService {
   /**
    * Get a single rating for a media item
    */
-  async getRating(mediaId: number): Promise<RatingItem | null> {
+  async getRating(mediaId: number, mediaType: 'movie' | 'tv'): Promise<RatingItem | null> {
     try {
       const user = auth.currentUser;
       if (!user) return null;
 
-      const ratingRef = this.getUserRatingRef(user.uid, mediaId.toString());
+      const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
       const docSnap = await getDoc(ratingRef);
 
       if (docSnap.exists()) {

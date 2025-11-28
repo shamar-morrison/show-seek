@@ -50,14 +50,14 @@ export const useRatings = () => {
   };
 };
 
-export const useMediaRating = (mediaId: number) => {
+export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
   const { data: ratings, isLoading } = useRatings();
 
   if (!ratings) {
     return { userRating: 0, isLoading: true };
   }
 
-  const ratingItem = ratings.find((r) => r.id === mediaId.toString());
+  const ratingItem = ratings.find((r) => r.id === mediaId.toString() && r.mediaType === mediaType);
 
   return {
     userRating: ratingItem?.rating || 0,
@@ -81,6 +81,7 @@ export const useRateMedia = () => {
 
 export const useDeleteRating = () => {
   return useMutation({
-    mutationFn: (mediaId: number) => ratingService.deleteRating(mediaId),
+    mutationFn: ({ mediaId, mediaType }: { mediaId: number; mediaType: 'movie' | 'tv' }) =>
+      ratingService.deleteRating(mediaId, mediaType),
   });
 };

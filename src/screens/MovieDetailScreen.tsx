@@ -63,7 +63,7 @@ export default function MovieDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
-  const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId);
+  const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const isInAnyList = Object.keys(membership).length > 0;
 
   const movieQuery = useQuery({

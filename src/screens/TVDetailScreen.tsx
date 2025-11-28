@@ -73,7 +73,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
-  const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId);
+  const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const isInAnyList = Object.keys(membership).length > 0;
 
   const tvQuery = useQuery({
