@@ -4,6 +4,7 @@ enableScreens();
 import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
+import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -28,6 +29,9 @@ function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  // Handle deep links (showseek://movie/123 or showseek://tv/456)
+  useDeepLinking();
 
   useEffect(() => {
     if (loading) return;
