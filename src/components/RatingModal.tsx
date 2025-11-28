@@ -23,6 +23,7 @@ interface RatingModalProps {
   mediaType: 'movie' | 'tv';
   initialRating?: number;
   onRatingSuccess: (rating: number) => void;
+  onShowToast?: (message: string) => void;
 }
 
 export default function RatingModal({
@@ -32,6 +33,7 @@ export default function RatingModal({
   mediaType,
   initialRating = 0,
   onRatingSuccess,
+  onShowToast,
 }: RatingModalProps) {
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,15 +57,16 @@ export default function RatingModal({
 
     setIsSubmitting(true);
     setError(null);
+    onClose();
 
     try {
       await ratingService.saveRating(mediaId, mediaType, rating);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRatingSuccess(rating);
-      onClose();
     } catch (err) {
       console.error('Failed to save rating:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save rating');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save rating';
+      onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSubmitting(false);
@@ -73,15 +76,16 @@ export default function RatingModal({
   const handleDelete = async () => {
     setIsSubmitting(true);
     setError(null);
+    onClose();
 
     try {
       await ratingService.deleteRating(mediaId);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRatingSuccess(0);
-      onClose();
     } catch (err) {
       console.error('Failed to delete rating:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete rating');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete rating';
+      onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsSubmitting(false);

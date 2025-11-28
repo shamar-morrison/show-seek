@@ -474,6 +474,7 @@ export default function TVDetailScreen() {
             mediaType="tv"
             initialRating={userRating}
             onRatingSuccess={() => {}}
+            onShowToast={(message) => toastRef.current?.show(message)}
           />
         </>
       )}

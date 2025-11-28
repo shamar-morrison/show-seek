@@ -453,6 +453,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             initialRating={userRating}
             onRatingSuccess={() => {}}
+            onShowToast={(message) => toastRef.current?.show(message)}
           />
         </>
       )}
