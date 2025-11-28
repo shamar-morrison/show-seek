@@ -20,7 +20,7 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
-import { ratingService } from '@/src/services/RatingService';
+import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -36,7 +36,7 @@ import {
   Star,
   Tv,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -67,29 +67,14 @@ export default function TVDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [userRating, setUserRating] = useState<number>(0);
-  const [isLoadingRating, setIsLoadingRating] = useState(true);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
+  const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId);
   const isInAnyList = Object.keys(membership).length > 0;
-
-  useEffect(() => {
-    const loadRating = async () => {
-      if (tvId) {
-        setIsLoadingRating(true);
-        const ratingItem = await ratingService.getRating(tvId);
-        if (ratingItem) {
-          setUserRating(ratingItem.rating);
-        }
-        setIsLoadingRating(false);
-      }
-    };
-    loadRating();
-  }, [tvId]);
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -488,7 +473,7 @@ export default function TVDetailScreen() {
             mediaId={show.id}
             mediaType="tv"
             initialRating={userRating}
-            onRatingSuccess={(rating) => setUserRating(rating)}
+            onRatingSuccess={() => {}}
           />
         </>
       )}

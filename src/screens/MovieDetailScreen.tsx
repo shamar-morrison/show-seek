@@ -20,13 +20,13 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
-import { ratingService } from '@/src/services/RatingService';
+import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -57,29 +57,14 @@ export default function MovieDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [userRating, setUserRating] = useState<number>(0);
-  const [isLoadingRating, setIsLoadingRating] = useState(true);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
+  const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId);
   const isInAnyList = Object.keys(membership).length > 0;
-
-  useEffect(() => {
-    const loadRating = async () => {
-      if (movieId) {
-        setIsLoadingRating(true);
-        const ratingItem = await ratingService.getRating(movieId);
-        if (ratingItem) {
-          setUserRating(ratingItem.rating);
-        }
-        setIsLoadingRating(false);
-      }
-    };
-    loadRating();
-  }, [movieId]);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -467,7 +452,7 @@ export default function MovieDetailScreen() {
             mediaId={movie.id}
             mediaType="movie"
             initialRating={userRating}
-            onRatingSuccess={(rating) => setUserRating(rating)}
+            onRatingSuccess={() => {}}
           />
         </>
       )}
