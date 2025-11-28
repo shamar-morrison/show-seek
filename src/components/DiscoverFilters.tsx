@@ -17,6 +17,7 @@ interface DiscoverFiltersProps {
   onChange: (filters: FilterState) => void;
   mediaType: 'movie' | 'tv';
   onClearFilters: () => void;
+  genreMap: Record<number, string>;
 }
 
 const SORT_OPTIONS = [
@@ -131,23 +132,19 @@ export default function DiscoverFilters({
   onChange,
   mediaType,
   onClearFilters,
+  genreMap,
 }: DiscoverFiltersProps) {
-  const [genres, setGenres] = useState<Genre[]>([]);
   const [languages, setLanguages] = useState<{ iso_639_1: string; english_name: string }[]>([]);
 
-  useEffect(() => {
-    loadGenres();
-    loadLanguages();
-  }, [mediaType]);
+  // Convert genreMap to array
+  const genres = Object.entries(genreMap).map(([id, name]) => ({
+    id: Number(id),
+    name,
+  }));
 
-  const loadGenres = async () => {
-    try {
-      const data = await tmdbApi.getGenres(mediaType);
-      setGenres(data);
-    } catch (error) {
-      console.error('Failed to load genres', error);
-    }
-  };
+  useEffect(() => {
+    loadLanguages();
+  }, []);
 
   const loadLanguages = async () => {
     try {

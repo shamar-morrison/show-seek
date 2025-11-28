@@ -1,6 +1,7 @@
 import { Genre, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { getGenres } from '@/src/utils/genreCache';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
@@ -25,26 +26,18 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
 
-  // Fetch genres for both movies and TV shows
+  // Load genres from cache or API
   useEffect(() => {
-    const fetchGenres = async () => {
+    const loadGenres = async () => {
       try {
-        const [movieGenres, tvGenres] = await Promise.all([
-          tmdbApi.getGenres('movie'),
-          tmdbApi.getGenres('tv'),
-        ]);
-
-        const map: Record<number, string> = {};
-        [...movieGenres, ...tvGenres].forEach((genre: Genre) => {
-          map[genre.id] = genre.name;
-        });
+        const map = await getGenres();
         setGenreMap(map);
       } catch (error) {
         console.error('Failed to load genres', error);
       }
     };
 
-    fetchGenres();
+    loadGenres();
   }, []);
 
   useEffect(() => {

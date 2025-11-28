@@ -2,6 +2,7 @@ import { Genre, getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { getGenres } from '@/src/utils/genreCache';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
@@ -20,9 +21,6 @@ const DEFAULT_FILTERS: FilterState = {
   language: null,
 };
 
-// Performance: Discover result item height for FlashList optimization
-const RESULT_ITEM_HEIGHT = 138 + SPACING.m * 2 + SPACING.m; // poster height + padding + margin
-
 export default function DiscoverScreen() {
   const segments = useSegments();
   const [mediaType, setMediaType] = useState<MediaType>('movie');
@@ -30,26 +28,18 @@ export default function DiscoverScreen() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [genreMap, setGenreMap] = useState<Record<number, string>>({});
 
-  // Fetch genres for both movies and TV shows
+  // Load genres from cache or API
   useEffect(() => {
-    const fetchGenres = async () => {
+    const loadGenres = async () => {
       try {
-        const [movieGenres, tvGenres] = await Promise.all([
-          tmdbApi.getGenres('movie'),
-          tmdbApi.getGenres('tv'),
-        ]);
-
-        const map: Record<number, string> = {};
-        [...movieGenres, ...tvGenres].forEach((genre: Genre) => {
-          map[genre.id] = genre.name;
-        });
+        const map = await getGenres();
         setGenreMap(map);
       } catch (error) {
         console.error('Failed to load genres', error);
       }
     };
 
-    fetchGenres();
+    loadGenres();
   }, []);
 
   const discoverQuery = useInfiniteQuery({
@@ -214,6 +204,7 @@ export default function DiscoverScreen() {
           onChange={setFilters}
           mediaType={mediaType}
           onClearFilters={clearFilters}
+          genreMap={genreMap}
         />
       )}
 
