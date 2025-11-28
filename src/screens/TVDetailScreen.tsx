@@ -43,6 +43,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const hasWatchProviders = (providers: any): boolean => {
+  if (!providers) return false;
+  return (
+    (providers.flatrate && providers.flatrate.length > 0) ||
+    (providers.rent && providers.rent.length > 0) ||
+    (providers.buy && providers.buy.length > 0)
+  );
+};
+
 export default function TVDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -324,10 +333,7 @@ export default function TVDetailScreen() {
           {/* Watch Providers */}
           <WatchProvidersSection watchProviders={watchProviders} />
 
-          {watchProviders &&
-            (watchProviders.flatrate || watchProviders.rent || watchProviders.buy) && (
-              <SectionSeparator />
-            )}
+          {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
           {/* Cast */}
           <CastSection cast={cast} onCastPress={handleCastPress} onViewAll={handleCastViewAll} />

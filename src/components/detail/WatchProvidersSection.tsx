@@ -4,14 +4,45 @@ import { COLORS, FONT_SIZE } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';
-import type { WatchProvidersSectionProps } from './types';
+import type { WatchProvider, WatchProviders, WatchProvidersSectionProps } from './types';
+
+const hasAnyProviders = (providers: WatchProviders | null | undefined): boolean => {
+  if (!providers) return false;
+  return !!(
+    (providers.flatrate && providers.flatrate.length > 0) ||
+    (providers.rent && providers.rent.length > 0) ||
+    (providers.buy && providers.buy.length > 0)
+  );
+};
+
+interface ProviderCategoryProps {
+  label: string;
+  providers: WatchProvider[];
+}
+
+const ProviderCategory = ({ label, providers }: ProviderCategoryProps) => (
+  <View style={detailStyles.providersSection}>
+    <Text style={detailStyles.providerType}>{label}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {providers.map((provider) => (
+        <View key={provider.provider_id} style={detailStyles.providerCard}>
+          <MediaImage
+            source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
+            style={detailStyles.providerLogo}
+            contentFit="contain"
+          />
+          <Text style={detailStyles.providerName} numberOfLines={1}>
+            {provider.provider_name}
+          </Text>
+        </View>
+      ))}
+    </ScrollView>
+  </View>
+);
 
 export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
   ({ watchProviders, style }) => {
-    if (
-      !watchProviders ||
-      (!watchProviders.flatrate && !watchProviders.rent && !watchProviders.buy)
-    ) {
+    if (!hasAnyProviders(watchProviders)) {
       return null;
     }
 
@@ -23,24 +54,17 @@ export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
           <Text style={detailStyles.sectionTitle}>Where to Watch</Text>
           <Text style={{ color: COLORS.textSecondary, fontSize: FONT_SIZE.xs }}>by JustWatch</Text>
         </View>
-        {watchProviders.flatrate && watchProviders.flatrate.length > 0 && (
-          <View style={detailStyles.providersSection}>
-            <Text style={detailStyles.providerType}>Streaming</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {watchProviders.flatrate.map((provider) => (
-                <View key={provider.provider_id} style={detailStyles.providerCard}>
-                  <MediaImage
-                    source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
-                    style={detailStyles.providerLogo}
-                    contentFit="contain"
-                  />
-                  <Text style={detailStyles.providerName} numberOfLines={1}>
-                    {provider.provider_name}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
+
+        {watchProviders!.flatrate && watchProviders!.flatrate.length > 0 && (
+          <ProviderCategory label="Streaming" providers={watchProviders!.flatrate} />
+        )}
+
+        {watchProviders!.rent && watchProviders!.rent.length > 0 && (
+          <ProviderCategory label="Rent" providers={watchProviders!.rent} />
+        )}
+
+        {watchProviders!.buy && watchProviders!.buy.length > 0 && (
+          <ProviderCategory label="Buy" providers={watchProviders!.buy} />
         )}
       </View>
     );
@@ -49,7 +73,9 @@ export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
     // Custom comparison: check if watch providers data changed
     return (
       prevProps.style === nextProps.style &&
-      prevProps.watchProviders?.flatrate === nextProps.watchProviders?.flatrate
+      prevProps.watchProviders?.flatrate === nextProps.watchProviders?.flatrate &&
+      prevProps.watchProviders?.rent === nextProps.watchProviders?.rent &&
+      prevProps.watchProviders?.buy === nextProps.watchProviders?.buy
     );
   }
 );
