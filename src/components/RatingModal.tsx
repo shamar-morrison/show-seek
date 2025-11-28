@@ -37,12 +37,10 @@ export default function RatingModal({
 }: RatingModalProps) {
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [_, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       setRating(initialRating);
-      setError(null);
       setIsSubmitting(false);
     }
   }, [visible, initialRating]);
@@ -56,7 +54,6 @@ export default function RatingModal({
     if (rating === 0) return;
 
     setIsSubmitting(true);
-    setError(null);
     onClose();
 
     try {
@@ -75,7 +72,6 @@ export default function RatingModal({
 
   const handleDelete = async () => {
     setIsSubmitting(true);
-    setError(null);
     onClose();
 
     try {
@@ -192,7 +188,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
   },
   content: {
     width: '100%',
