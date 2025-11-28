@@ -27,7 +27,6 @@ export default function TabLayout() {
           marginBottom: 4,
         },
         tabBarItemStyle: {
-          // Ensure items are centered
           justifyContent: 'center',
           paddingVertical: 4,
         },
