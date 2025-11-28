@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tmdbApi } from '@/src/api/tmdb';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GENRE_CACHE_KEY = '@genre_map';
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -65,19 +65,6 @@ export const getGenres = async (): Promise<Record<number, string>> => {
     console.error('Failed to fetch genres from API:', error);
     throw error;
   }
-};
-
-// Helper to extract genre array for specific media type
-export const getGenreArray = (
-  genreMap: Record<number, string>,
-  mediaType: 'movie' | 'tv'
-): Genre[] => {
-  // This is a simplified version - ideally we'd track which IDs belong to which type
-  // For now, just convert the entire map to array since genres overlap between movie/tv
-  return Object.entries(genreMap).map(([id, name]) => ({
-    id: Number(id),
-    name,
-  }));
 };
 
 export const clearGenreCache = async (): Promise<void> => {
