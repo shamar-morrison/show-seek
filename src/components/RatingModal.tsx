@@ -70,6 +70,24 @@ export default function RatingModal({
     }
   };
 
+  const handleDelete = async () => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await ratingService.deleteRating(mediaId);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onRatingSuccess(0);
+      onClose();
+    } catch (err) {
+      console.error('Failed to delete rating:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete rating');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -125,16 +143,6 @@ export default function RatingModal({
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleClose}
-              activeOpacity={ACTIVE_OPACITY}
-              disabled={isSubmitting}
-            >
-              <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.submitButton, (rating === 0 || isSubmitting) && styles.disabledButton]}
               onPress={handleSubmit}
               disabled={rating === 0 || isSubmitting}
@@ -145,6 +153,30 @@ export default function RatingModal({
               ) : (
                 <Text style={styles.submitButtonText}>Confirm Rating</Text>
               )}
+            </TouchableOpacity>
+            {initialRating > 0 && (
+              <TouchableOpacity
+                style={[styles.deleteButton, isSubmitting && styles.disabledButton]}
+                onPress={handleDelete}
+                disabled={isSubmitting}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color={COLORS.error} />
+                ) : (
+                  <Text style={styles.deleteButtonText}>Clear Rating</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleClose}
+              activeOpacity={ACTIVE_OPACITY}
+              disabled={isSubmitting}
+            >
+              <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
+                Cancel
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -221,13 +253,13 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: 'column',
     gap: SPACING.m,
   },
   cancelButton: {
     padding: SPACING.m,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
@@ -238,12 +270,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 120,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitButtonText: {
     color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  deleteButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: COLORS.error,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
   },
