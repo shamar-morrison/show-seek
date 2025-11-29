@@ -1,9 +1,9 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Share2 } from 'lucide-react-native';
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { shareMedia } from '@/src/utils/share';
+import { Share2 } from 'lucide-react-native';
+import React from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACTIVE_OPACITY = 0.9;
 
@@ -35,14 +35,14 @@ export function ShareButton({ id, title, mediaType, onShowToast }: ShareButtonPr
 const styles = StyleSheet.create({
   headerSafe: {
     position: 'absolute',
-    top: 10,
+    top: SPACING.s,
     right: 0,
     zIndex: 10,
   },
   headerButton: {
     padding: SPACING.m,
     marginRight: SPACING.s,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     borderRadius: BORDER_RADIUS.round,
   },
 });
