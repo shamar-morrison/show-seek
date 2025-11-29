@@ -226,8 +226,6 @@ export default function DiscoverScreen() {
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          removeClippedSubviews={true}
-          drawDistance={400}
           ListFooterComponent={
             discoverQuery.isFetchingNextPage ? (
               <View style={styles.loadingMore}>
