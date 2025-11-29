@@ -1,5 +1,6 @@
 import { Genre, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { TabSelector } from '@/src/components/ui/TabSelector';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { getGenres } from '@/src/utils/genreCache';
 import { FlashList } from '@shopify/flash-list';
@@ -18,6 +19,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'all' | 'movie' | 'tv';
+
+const MEDIA_TYPE_OPTIONS = [
+  { value: 'all' as const, label: 'All' },
+  { value: 'movie' as const, label: 'Movies' },
+  { value: 'tv' as const, label: 'TV Shows' },
+];
 
 export default function SearchScreen() {
   const segments = useSegments();
@@ -171,33 +178,11 @@ export default function SearchScreen() {
         </View>
       </View>
 
-      <View style={styles.typeToggleContainer}>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'all' && styles.typeButtonActive]}
-          onPress={() => setMediaType('all')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
-          onPress={() => setMediaType('movie')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            Movies
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
-          onPress={() => setMediaType('tv')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            TV Shows
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TabSelector
+        options={MEDIA_TYPE_OPTIONS}
+        value={mediaType}
+        onChange={setMediaType}
+      />
 
       {searchResultsQuery.isLoading ? (
         <View style={styles.centerContainer}>
@@ -261,29 +246,6 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.m,
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
-  },
-  typeToggleContainer: {
-    flexDirection: 'row',
-    padding: SPACING.m,
-    gap: SPACING.m,
-  },
-  typeButton: {
-    flex: 1,
-    paddingVertical: SPACING.s,
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-  },
-  typeButtonActive: {
-    backgroundColor: COLORS.primary,
-  },
-  typeText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  typeTextActive: {
-    color: COLORS.white,
   },
   centerContainer: {
     flex: 1,

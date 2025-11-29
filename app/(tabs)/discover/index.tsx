@@ -1,6 +1,7 @@
 import { Genre, getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { TabSelector } from '@/src/components/ui/TabSelector';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { getGenres } from '@/src/utils/genreCache';
 import { FlashList } from '@shopify/flash-list';
@@ -20,6 +21,11 @@ const DEFAULT_FILTERS: FilterState = {
   rating: 0,
   language: null,
 };
+
+const MEDIA_TYPE_OPTIONS = [
+  { value: 'movie' as const, label: 'Movies' },
+  { value: 'tv' as const, label: 'TV Shows' },
+];
 
 export default function DiscoverScreen() {
   const segments = useSegments();
@@ -177,26 +183,11 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.typeToggleContainer}>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
-          onPress={() => setMediaType('movie')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            Movies
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
-          onPress={() => setMediaType('tv')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            TV Shows
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TabSelector
+        options={MEDIA_TYPE_OPTIONS}
+        value={mediaType}
+        onChange={setMediaType}
+      />
 
       {showFilters && (
         <DiscoverFilters
@@ -272,29 +263,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.primary,
-  },
-  typeToggleContainer: {
-    flexDirection: 'row',
-    padding: SPACING.m,
-    gap: SPACING.m,
-  },
-  typeButton: {
-    flex: 1,
-    paddingVertical: SPACING.s,
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-  },
-  typeButtonActive: {
-    backgroundColor: COLORS.primary,
-  },
-  typeText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  typeTextActive: {
-    color: COLORS.white,
   },
   centerContainer: {
     flex: 1,

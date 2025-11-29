@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { TabSelector } from '@/src/components/ui/TabSelector';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -10,7 +11,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -36,6 +36,15 @@ export default function LibraryScreen() {
     if (!selectedList?.items) return [];
     return Object.values(selectedList.items).sort((a, b) => b.addedAt - a.addedAt);
   }, [selectedList]);
+
+  const listOptions = useMemo(() => {
+    if (!lists) return [];
+    return lists.map((list) => ({
+      value: list.id,
+      label: list.name,
+      count: list.items ? Object.keys(list.items).length : 0,
+    }));
+  }, [lists]);
 
   // Auto-switch to favorites if currently selected list is deleted
   useEffect(() => {
@@ -94,31 +103,13 @@ export default function LibraryScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContent}
-        >
-          {lists?.map((list) => (
-            <TouchableOpacity
-              key={list.id}
-              style={[styles.tab, selectedListId === list.id && styles.activeTab]}
-              onPress={() => setSelectedListId(list.id)}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Text style={[styles.tabText, selectedListId === list.id && styles.activeTabText]}>
-                {list.name}
-              </Text>
-              {list.items && Object.keys(list.items).length > 0 && (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countText}>{Object.keys(list.items).length}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      <TabSelector
+        options={listOptions}
+        value={selectedListId}
+        onChange={setSelectedListId}
+        scrollable={true}
+        showCounts={true}
+      />
 
       <View style={styles.content}>
         {listItems.length > 0 ? (
@@ -177,45 +168,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
     color: COLORS.white,
-  },
-  tabsContainer: {
-    paddingTop: SPACING.m,
-    marginBottom: SPACING.m,
-  },
-  tabsContent: {
-    paddingHorizontal: SPACING.l,
-    gap: SPACING.m,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-    gap: SPACING.s,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-  },
-  tabText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: COLORS.white,
-  },
-  countBadge: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  countText: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   content: {
     flex: 1,
