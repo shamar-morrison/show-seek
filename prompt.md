@@ -17,7 +17,7 @@ Add a rating system that allows users to rate movies and TV shows on a scale of 
 
 - Contains 10 interactive star icons in a row
 - Stars should be tappable/selectable
-- Visual feedback: Stars up to selected position should be filled, rest should be outline
+- Visual feedback: Stars up to selected medposition should be filled, rest should be outline
 - Allow users to change selection before confirming
 - Display selected rating as "X/10" below the stars
 - Include a "Confirm Rating" button at the bottom
