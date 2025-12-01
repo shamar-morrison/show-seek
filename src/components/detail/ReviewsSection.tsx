@@ -10,7 +10,6 @@ import type { ReviewsSectionProps } from './types';
 
 export const ReviewsSection = memo<ReviewsSectionProps>(
   ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
-    // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
@@ -51,7 +50,6 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
       );
     }
 
-    // Render reviews if available
     if (!isLoading && !isError && reviews.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
@@ -65,37 +63,37 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
               removeClippedSubviews={true}
               drawDistance={400}
               renderItem={({ item: review }) => (
-              <TouchableOpacity
-                style={detailStyles.reviewCard}
-                onPress={() => onReviewPress(review)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <View style={detailStyles.reviewHeader}>
-                  <MediaImage
-                    source={{ uri: getAvatarUrl(review.author_details.avatar_path) }}
-                    style={detailStyles.reviewAvatar}
-                    contentFit="cover"
-                    placeholderType="person"
-                  />
-                  <View style={detailStyles.reviewAuthorInfo}>
-                    <Text style={detailStyles.reviewAuthor} numberOfLines={1}>
-                      {review.author}
-                    </Text>
-                    {review.author_details.rating && (
-                      <View style={detailStyles.reviewRating}>
-                        <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                        <Text style={detailStyles.reviewRatingText}>
-                          {review.author_details.rating.toFixed(1)}
-                        </Text>
-                      </View>
-                    )}
+                <TouchableOpacity
+                  style={detailStyles.reviewCard}
+                  onPress={() => onReviewPress(review)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <View style={detailStyles.reviewHeader}>
+                    <MediaImage
+                      source={{ uri: getAvatarUrl(review.author_details.avatar_path) }}
+                      style={detailStyles.reviewAvatar}
+                      contentFit="cover"
+                      placeholderType="person"
+                    />
+                    <View style={detailStyles.reviewAuthorInfo}>
+                      <Text style={detailStyles.reviewAuthor} numberOfLines={1}>
+                        {review.author}
+                      </Text>
+                      {review.author_details.rating && (
+                        <View style={detailStyles.reviewRating}>
+                          <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                          <Text style={detailStyles.reviewRatingText}>
+                            {review.author_details.rating.toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
-                </View>
-                <Text style={detailStyles.reviewContent} numberOfLines={4}>
-                  {review.content}
-                </Text>
-              </TouchableOpacity>
-            )}
+                  <Text style={detailStyles.reviewContent} numberOfLines={4}>
+                    {review.content}
+                  </Text>
+                </TouchableOpacity>
+              )}
             />
           </View>
         </View>
@@ -107,7 +105,6 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
       return <View style={style} onLayout={onLayout} />;
     }
 
-    // Don't render anything if no reviews
     return null;
   },
   (prevProps, nextProps) => {
