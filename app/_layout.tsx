@@ -30,7 +30,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
-  // Handle deep links (showseek://movie/123 or showseek://tv/456)
+  // Handle deep links
   useDeepLinking();
 
   useEffect(() => {
