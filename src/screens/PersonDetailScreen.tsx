@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: SPACING.m,
     marginLeft: SPACING.s,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     borderRadius: BORDER_RADIUS.round,
     alignSelf: 'flex-start',
   },
