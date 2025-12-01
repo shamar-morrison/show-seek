@@ -170,13 +170,10 @@ export default function MovieDetailScreen() {
   };
 
   const navigateTo = (path: string) => {
-    // Assuming segments are like ['(tabs)', 'home', ...]
-    // We want to keep the first two segments and append the rest
     const currentTab = segments[1];
     if (currentTab) {
       router.push(`/(tabs)/${currentTab}${path}` as any);
     } else {
-      // Fallback if not in a tab (shouldn't happen with new structure)
       router.push(path as any);
     }
   };
