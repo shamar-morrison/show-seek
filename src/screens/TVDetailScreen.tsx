@@ -15,6 +15,7 @@ import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
+import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
@@ -217,6 +218,13 @@ export default function TVDetailScreen() {
               <ArrowLeft size={24} color={COLORS.white} />
             </TouchableOpacity>
           </SafeAreaView>
+
+          <ShareButton
+            id={tvId}
+            title={show.name}
+            mediaType="tv"
+            onShowToast={(msg) => toastRef.current?.show(msg)}
+          />
 
           <View style={styles.posterContainer}>
             <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
