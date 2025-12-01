@@ -73,13 +73,13 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
       {renderRow(
         'Production Countries',
         media.production_countries.length > 0 ? (
-          <Text>
+          <View>
             {media.production_countries.map((c) => (
-              <Text key={c.iso_3166_1}>
-                {c.name} {getCountryFlag(c.iso_3166_1)}{' '}
+              <Text key={c.iso_3166_1} style={styles.listItemValue}>
+                {c.name} {getCountryFlag(c.iso_3166_1)}
               </Text>
             ))}
-          </Text>
+          </View>
         ) : (
           'N/A'
         )
@@ -92,9 +92,17 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
       )}
       {renderRow(
         'Companies',
-        media.production_companies.length > 0
-          ? media.production_companies.map((c) => c.name).join(', ')
-          : 'N/A'
+        media.production_companies.length > 0 ? (
+          <View>
+            {media.production_companies.map((c) => (
+              <Text key={c.id} style={styles.listItemValue}>
+                {c.name}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          'N/A'
+        )
       )}
       {isMovie && renderRow('Budget', formatMoney(movie!.budget))}
       {isMovie && renderRow('Revenue', formatMoney(movie!.revenue))}
@@ -126,6 +134,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     flex: 1,
-    textAlign: 'right',
+    textAlign: 'left',
+  },
+  listItemValue: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    flexShrink: 1,
   },
 });
