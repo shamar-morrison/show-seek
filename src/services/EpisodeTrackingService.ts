@@ -1,5 +1,5 @@
 import { FirebaseError } from 'firebase/app';
-import { deleteField, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Episode, Season } from '../api/tmdb';
 import type {
