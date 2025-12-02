@@ -146,6 +146,34 @@ export interface ContentRating {
   rating: string;
 }
 
+export interface CollectionBasic {
+  id: number;
+  name: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+}
+
+export interface CollectionPart {
+  id: number;
+  title: string;
+  original_title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface CollectionDetails {
+  id: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  parts: CollectionPart[];
+}
+
 export interface MovieDetails extends Movie {
   runtime: number | null;
   genres: Genre[];
@@ -158,6 +186,7 @@ export interface MovieDetails extends Movie {
   release_dates: {
     results: ReleaseDatesResult[];
   };
+  belongs_to_collection: CollectionBasic | null;
 }
 
 export interface TVShowDetails extends TVShow {
@@ -297,6 +326,11 @@ export const tmdbApi = {
         append_to_response: 'content_ratings',
       },
     });
+    return data;
+  },
+
+  getCollectionDetails: async (id: number) => {
+    const { data } = await tmdbClient.get<CollectionDetails>(`/collection/${id}`);
     return data;
   },
 

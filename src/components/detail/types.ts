@@ -109,3 +109,16 @@ export interface RecommendationsSectionProps {
   onLayout?: () => void;
   style?: ViewStyle;
 }
+
+export interface CollectionSectionProps {
+  collection: {
+    id: number;
+    name: string;
+    poster_path: string | null;
+    backdrop_path: string | null;
+  };
+  shouldLoad: boolean;
+  onCollectionPress: (collectionId: number) => void;
+  onLayout?: () => void;
+  style?: ViewStyle;
+}
