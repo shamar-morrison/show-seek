@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -27,6 +27,7 @@ export default function CollectionScreen() {
   const router = useRouter();
   const segments = useSegments();
   const collectionId = Number(id);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   const collectionQuery = useQuery({
     queryKey: ['collection', collectionId],
@@ -92,7 +93,7 @@ export default function CollectionScreen() {
             colors={['transparent', COLORS.overlay, COLORS.background]}
             style={styles.gradient}
           />
-          <SafeAreaView edges={['top']}>
+          <SafeAreaView style={styles.headerSafe} edges={['top']}>
             <TouchableOpacity
               style={styles.headerButton}
               onPress={() => router.back()}
@@ -108,7 +109,21 @@ export default function CollectionScreen() {
           <Text style={styles.title}>{collection.name}</Text>
 
           {collection.overview && (
-            <Text style={styles.overview}>{collection.overview}</Text>
+            <>
+              <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
+                {collection.overview}
+              </Text>
+              {collection.overview.length > 200 && (
+                <TouchableOpacity
+                  onPress={() => setOverviewExpanded(!overviewExpanded)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Text style={styles.readMore}>
+                    {overviewExpanded ? 'Read less' : 'Read more'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
 
           <Text style={styles.sectionTitle}>
@@ -127,7 +142,6 @@ export default function CollectionScreen() {
                 onPress={() => navigateToMovie(movie.id)}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <Text style={styles.movieNumber}>{index + 1}</Text>
                 <MediaImage
                   source={{ uri: posterUrl }}
                   style={styles.poster}
@@ -217,10 +231,15 @@ const styles = StyleSheet.create({
     right: 0,
     height: '100%',
   },
-  headerButton: {
+  headerSafe: {
     position: 'absolute',
-    top: SPACING.m,
-    left: SPACING.m,
+    top: 0,
+    left: 0,
+    zIndex: 10,
+  },
+  headerButton: {
+    marginTop: SPACING.m,
+    marginLeft: SPACING.m,
     width: 40,
     height: 40,
     borderRadius: BORDER_RADIUS.round,
@@ -241,6 +260,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     lineHeight: FONT_SIZE.m * 1.5,
+    marginBottom: SPACING.s,
+  },
+  readMore: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
     marginBottom: SPACING.l,
   },
   sectionTitle: {
@@ -255,15 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
-  },
-  movieNumber: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
-    color: COLORS.textSecondary,
-    alignSelf: 'center',
-    marginLeft: SPACING.m,
-    marginRight: SPACING.s,
-    minWidth: 30,
+    padding: SPACING.m,
   },
   poster: {
     width: 80,
