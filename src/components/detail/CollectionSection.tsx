@@ -1,16 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
 import type { CollectionSectionProps } from './types';
 
 export const CollectionSection = memo<CollectionSectionProps>(
@@ -20,26 +13,16 @@ export const CollectionSection = memo<CollectionSectionProps>(
       return <View style={style} onLayout={onLayout} />;
     }
 
-    const backdropUrl = getImageUrl(
-      collection.backdrop_path,
-      TMDB_IMAGE_SIZES.backdrop.medium
-    );
+    const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
 
     return (
       <View style={style} onLayout={onLayout}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-          Part of a Collection
-        </Text>
         <TouchableOpacity
           style={styles.collectionCard}
           onPress={() => onCollectionPress(collection.id)}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <MediaImage
-            source={{ uri: backdropUrl }}
-            style={styles.backdrop}
-            contentFit="cover"
-          />
+          <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
           <LinearGradient
             colors={['transparent', COLORS.overlay, COLORS.background]}
             style={styles.gradient}
