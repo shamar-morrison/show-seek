@@ -1,7 +1,8 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const GENRE_CACHE_KEY = '@genre_map';
+const MOVIE_GENRE_CACHE_KEY = '@genre_map_movie';
+const TV_GENRE_CACHE_KEY = '@genre_map_tv';
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface Genre {
@@ -14,9 +15,11 @@ interface CachedGenres {
   timestamp: number;
 }
 
-export const getGenres = async (): Promise<Record<number, string>> => {
+export const getGenres = async (type: 'movie' | 'tv'): Promise<Record<number, string>> => {
+  const cacheKey = type === 'movie' ? MOVIE_GENRE_CACHE_KEY : TV_GENRE_CACHE_KEY;
+
   try {
-    const cached = await AsyncStorage.getItem(GENRE_CACHE_KEY);
+    const cached = await AsyncStorage.getItem(cacheKey);
 
     if (cached) {
       const { data, timestamp }: CachedGenres = JSON.parse(cached);
@@ -26,51 +29,57 @@ export const getGenres = async (): Promise<Record<number, string>> => {
         // Use cached genres
         return data;
       }
-      console.log('Genre cache expired, fetching fresh data');
+      console.log(`${type} genre cache expired, fetching fresh data`);
     } else {
-      console.log('No cached genres found, fetching from API');
+      console.log(`No cached ${type} genres found, fetching from API`);
     }
   } catch (error) {
-    console.error('Error reading genre cache:', error);
+    console.error(`Error reading ${type} genre cache:`, error);
   }
 
   // Fetch fresh data
   try {
-    const [movieGenres, tvGenres] = await Promise.all([
-      tmdbApi.getGenres('movie'),
-      tmdbApi.getGenres('tv'),
-    ]);
+    const genres = await tmdbApi.getGenres(type);
 
     const map: Record<number, string> = {};
-    [...movieGenres, ...tvGenres].forEach((genre: Genre) => {
+    genres.forEach((genre: Genre) => {
       map[genre.id] = genre.name;
     });
 
     // Cache the data
     try {
       await AsyncStorage.setItem(
-        GENRE_CACHE_KEY,
+        cacheKey,
         JSON.stringify({
           data: map,
           timestamp: Date.now(),
         })
       );
-      console.log('Genres cached successfully');
+      console.log(`${type} genres cached successfully`);
     } catch (error) {
-      console.error('Error caching genres:', error);
+      console.error(`Error caching ${type} genres:`, error);
     }
 
     return map;
   } catch (error) {
-    console.error('Failed to fetch genres from API:', error);
+    console.error(`Failed to fetch ${type} genres from API:`, error);
     throw error;
   }
 };
 
-export const clearGenreCache = async (): Promise<void> => {
+export const clearGenreCache = async (type?: 'movie' | 'tv'): Promise<void> => {
   try {
-    await AsyncStorage.removeItem(GENRE_CACHE_KEY);
-    console.log('Genre cache cleared');
+    if (type) {
+      const cacheKey = type === 'movie' ? MOVIE_GENRE_CACHE_KEY : TV_GENRE_CACHE_KEY;
+      await AsyncStorage.removeItem(cacheKey);
+      console.log(`${type} genre cache cleared`);
+    } else {
+      await Promise.all([
+        AsyncStorage.removeItem(MOVIE_GENRE_CACHE_KEY),
+        AsyncStorage.removeItem(TV_GENRE_CACHE_KEY),
+      ]);
+      console.log('All genre caches cleared');
+    }
   } catch (error) {
     console.error('Error clearing genre cache:', error);
   }

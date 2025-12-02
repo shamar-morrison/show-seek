@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { getGenres } from '@/src/utils/genreCache';
+import { useAllGenres } from '@/src/hooks/useGenres';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
@@ -24,21 +24,9 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
-  const [genreMap, setGenreMap] = useState<Record<number, string>>({});
 
-  // Load genres from cache or API
-  useEffect(() => {
-    const loadGenres = async () => {
-      try {
-        const map = await getGenres();
-        setGenreMap(map);
-      } catch (error) {
-        console.error('Failed to load genres', error);
-      }
-    };
-
-    loadGenres();
-  }, []);
+  const genresQuery = useAllGenres();
+  const genreMap = genresQuery.data || {};
 
   useEffect(() => {
     const timer = setTimeout(() => {

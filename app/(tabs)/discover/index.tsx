@@ -2,7 +2,7 @@ import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { getGenres } from '@/src/utils/genreCache';
+import { useGenres } from '@/src/hooks/useGenres';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
@@ -26,21 +26,10 @@ export default function DiscoverScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
-  const [genreMap, setGenreMap] = useState<Record<number, string>>({});
 
-  // Load genres from cache or API
-  useEffect(() => {
-    const loadGenres = async () => {
-      try {
-        const map = await getGenres();
-        setGenreMap(map);
-      } catch (error) {
-        console.error('Failed to load genres', error);
-      }
-    };
-
-    loadGenres();
-  }, []);
+  // Load genres based on media type
+  const genresQuery = useGenres(mediaType);
+  const genreMap = genresQuery.data || {};
 
   const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],

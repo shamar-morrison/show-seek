@@ -608,3 +608,89 @@
 [debug] [2025-12-02T07:08:01.354Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
 [debug] [2025-12-02T07:08:01.355Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
 [debug] [2025-12-02T07:08:01.355Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.266Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.267Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.267Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.268Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.271Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.271Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.271Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.271Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.275Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.275Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.275Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.276Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.280Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.280Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.280Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.280Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.281Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.281Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.281Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.281Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.281Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.281Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.282Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.282Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.303Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.303Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.304Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.304Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.304Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [none]
+[debug] [2025-12-02T07:21:55.304Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.305Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.305Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.305Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.305Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.306Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.306Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.307Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [none]
+[debug] [2025-12-02T07:21:55.307Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.308Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.308Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] Checked if tokens are valid: true, expires at: 1764662879863
+[debug] [2025-12-02T07:21:55.309Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.309Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.311Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.311Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.311Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [none]
+[debug] [2025-12-02T07:21:55.311Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.312Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [none]
+[debug] [2025-12-02T07:21:55.312Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com x-goog-quota-user=projects/showseek-app-2025
+[debug] [2025-12-02T07:21:55.710Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com 403
+[debug] [2025-12-02T07:21:55.710Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [omitted]
+[debug] [2025-12-02T07:21:55.711Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com 403
+[debug] [2025-12-02T07:21:55.712Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [omitted]
+[debug] [2025-12-02T07:21:55.713Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com 403
+[debug] [2025-12-02T07:21:55.713Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseio.com [omitted]
+[debug] [2025-12-02T07:21:55.763Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-12-02T07:21:55.763Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.776Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-12-02T07:21:55.776Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.805Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com 200
+[debug] [2025-12-02T07:21:55.805Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.809Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-12-02T07:21:55.809Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.816Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com 200
+[debug] [2025-12-02T07:21:55.816Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.825Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com 200
+[debug] [2025-12-02T07:21:55.825Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/cloudfunctions.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.835Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-12-02T07:21:55.835Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.837Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.837Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.838Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.838Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.852Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com 200
+[debug] [2025-12-02T07:21:55.852Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebasedataconnect.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.869Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com 200
+[debug] [2025-12-02T07:21:55.869Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/showseek-app-2025/services/firebaseapphosting.googleapis.com [omitted]
+[debug] [2025-12-02T07:21:55.870Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.870Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
+[debug] [2025-12-02T07:21:55.871Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-02T07:21:55.871Z] > authorizing via signed-in user (shamar.morrison2000@gmail.com)
