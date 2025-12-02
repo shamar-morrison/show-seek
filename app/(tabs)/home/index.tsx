@@ -5,7 +5,7 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -101,6 +101,22 @@ export default function HomeScreen() {
     return upcomingMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [upcomingMoviesQuery.data]);
 
+  const skeletonList = useMemo(
+    () => (
+      <FlashList
+        horizontal
+        data={[1, 2, 3, 4]}
+        renderItem={() => <MovieCardSkeleton />}
+        keyExtractor={(item) => item.toString()}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        removeClippedSubviews={true}
+        drawDistance={400}
+      />
+    ),
+    []
+  );
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
@@ -147,16 +163,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trending Movies</Text>
           {trendingMoviesQuery.isLoading ? (
-            <FlashList
-              horizontal
-              data={[1, 2, 3, 4]}
-              renderItem={() => <MovieCardSkeleton />}
-              keyExtractor={(item) => item.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
+            skeletonList
           ) : (
             <FlashList
               horizontal
@@ -177,16 +184,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trending TV Shows</Text>
           {trendingTVQuery.isLoading ? (
-            <FlashList
-              horizontal
-              data={[1, 2, 3, 4]}
-              renderItem={() => <MovieCardSkeleton />}
-              keyExtractor={(item) => item.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
+            skeletonList
           ) : (
             <FlashList
               horizontal
@@ -207,16 +205,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Popular Movies</Text>
           {popularMoviesQuery.isLoading ? (
-            <FlashList
-              horizontal
-              data={[1, 2, 3, 4]}
-              renderItem={() => <MovieCardSkeleton />}
-              keyExtractor={(item) => item.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
+            skeletonList
           ) : (
             <FlashList
               horizontal
@@ -237,16 +226,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Top Rated</Text>
           {topRatedMoviesQuery.isLoading ? (
-            <FlashList
-              horizontal
-              data={[1, 2, 3, 4]}
-              renderItem={() => <MovieCardSkeleton />}
-              keyExtractor={(item) => item.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
+            skeletonList
           ) : (
             <FlashList
               horizontal
@@ -267,16 +247,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upcoming</Text>
           {upcomingMoviesQuery.isLoading ? (
-            <FlashList
-              horizontal
-              data={[1, 2, 3, 4]}
-              renderItem={() => <MovieCardSkeleton />}
-              keyExtractor={(item) => item.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
+            skeletonList
           ) : (
             <FlashList
               horizontal

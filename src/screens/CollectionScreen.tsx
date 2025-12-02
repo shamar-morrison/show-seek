@@ -1,12 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
@@ -131,7 +125,7 @@ export default function CollectionScreen() {
           </Text>
 
           {/* Movie List */}
-          {sortedMovies.map((movie, index) => {
+          {sortedMovies.map((movie) => {
             const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small);
             const year = formatYear(movie.release_date);
 
@@ -142,11 +136,7 @@ export default function CollectionScreen() {
                 onPress={() => navigateToMovie(movie.id)}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <MediaImage
-                  source={{ uri: posterUrl }}
-                  style={styles.poster}
-                  contentFit="cover"
-                />
+                <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
                 <View style={styles.movieInfo}>
                   <Text style={styles.movieTitle} numberOfLines={2}>
                     {movie.title}
@@ -276,7 +266,7 @@ const styles = StyleSheet.create({
   },
   movieCard: {
     flexDirection: 'row',
-    marginBottom: SPACING.l,
+    marginBottom: SPACING.m,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
