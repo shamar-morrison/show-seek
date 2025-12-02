@@ -31,10 +31,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Extended Season type to include episodes array
 type SeasonWithEpisodes = Season & { episodes?: Episode[] };
 
-// Separate component for each season to avoid hooks-in-loop issue
 const SeasonItem = memo<{
   season: SeasonWithEpisodes;
   tvId: number;
@@ -62,8 +60,6 @@ const SeasonItem = memo<{
     formatDate,
   }) => {
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
-
-    // Get progress for this season (hook is now at component level, not in loop)
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
 
     return (
@@ -149,7 +145,7 @@ const SeasonItem = memo<{
             {season.overview && <Text style={styles.seasonFullOverview}>{season.overview}</Text>}
 
             {season.episodes.map((episode: Episode) => {
-              const stillUrl = getImageUrl(episode.still_path, '/w300');
+              const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
               const episodeKey = `${season.season_number}_${episode.episode_number}`;
               const isWatched = episodeTracking?.episodes?.[episodeKey];
               const isPending = markWatched.isPending || markUnwatched.isPending;
@@ -233,7 +229,6 @@ const SeasonItem = memo<{
                             },
                             {
                               onSuccess: () => {
-                                // Celebrate season completion
                                 if (willComplete) {
                                   Haptics.notificationAsync(
                                     Haptics.NotificationFeedbackType.Success
