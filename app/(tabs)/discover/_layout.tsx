@@ -28,6 +28,10 @@ export default function DiscoverStackLayout() {
         />
         <Stack.Screen name="tv/[id]/seasons" options={{ title: 'Seasons' }} />
         <Stack.Screen name="person/[id]/index" options={{ title: '', headerTransparent: true }} />
+        <Stack.Screen
+          name="collection/[id]/index"
+          options={{ title: '', headerTransparent: true }}
+        />
       </Stack>
     </TabProvider>
   );

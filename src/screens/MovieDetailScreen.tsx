@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
+import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -61,6 +62,7 @@ export default function MovieDetailScreen() {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
+  const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
@@ -184,6 +186,10 @@ export default function MovieDetailScreen() {
 
   const handleMoviePress = (id: number) => {
     navigateTo(`/movie/${id}`);
+  };
+
+  const handleCollectionPress = (collectionId: number) => {
+    navigateTo(`/collection/${collectionId}`);
   };
 
   const handleCastViewAll = () => {
@@ -391,6 +397,23 @@ export default function MovieDetailScreen() {
           />
 
           {recommendations.length > 0 && <SectionSeparator />}
+
+          {/* Collections */}
+          {movie.belongs_to_collection && (
+            <>
+              <CollectionSection
+                collection={movie.belongs_to_collection}
+                shouldLoad={shouldLoadCollections}
+                onCollectionPress={handleCollectionPress}
+                onLayout={() => {
+                  if (!shouldLoadCollections) {
+                    setShouldLoadCollections(true);
+                  }
+                }}
+              />
+              <SectionSeparator />
+            </>
+          )}
 
           {/* Reviews */}
           <ReviewsSection
