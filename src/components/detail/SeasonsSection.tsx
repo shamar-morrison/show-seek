@@ -50,8 +50,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
     return (
       prevProps.tvShowId === nextProps.tvShowId &&
       prevProps.seasons.length === nextProps.seasons.length &&
-      (prevProps.seasons.length === 0 ||
-        prevProps.seasons[0]?.id === nextProps.seasons[0]?.id)
+      prevProps.seasons.every((s, i) => s.id === nextProps.seasons[i]?.id)
     );
   }
 );
