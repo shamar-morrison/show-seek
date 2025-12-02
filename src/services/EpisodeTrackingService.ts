@@ -1,5 +1,5 @@
 import { FirebaseError } from 'firebase/app';
-import { deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, onSnapshot, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import type { Episode, Season } from '../api/tmdb';
 import type {
@@ -171,6 +171,67 @@ class EpisodeTrackingService {
           [`episodes.${episodeKey}`]: deleteField(),
           'metadata.lastUpdated': Date.now(),
         }),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Mark all episodes in a season as watched (batch operation)
+   */
+  async markAllEpisodesWatched(
+    tvShowId: number,
+    seasonNumber: number,
+    episodes: Episode[],
+    showMetadata: {
+      tvShowName: string;
+      posterPath: string | null;
+    }
+  ): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
+      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+      const now = Date.now();
+
+      // Build the episodes map for batch update
+      const episodesMap: Record<string, WatchedEpisode> = {};
+      episodes.forEach((episode) => {
+        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
+        episodesMap[episodeKey] = {
+          episodeId: episode.id,
+          tvShowId,
+          seasonNumber,
+          episodeNumber: episode.episode_number,
+          watchedAt: now,
+          episodeName: episode.name,
+          episodeAirDate: episode.air_date,
+        };
+      });
+
+      const metadata: EpisodeTrackingMetadata = {
+        tvShowName: showMetadata.tvShowName,
+        posterPath: showMetadata.posterPath,
+        lastUpdated: now,
+      };
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      // Use setDoc with merge to update all episodes at once
+      await Promise.race([
+        setDoc(
+          trackingRef,
+          {
+            episodes: episodesMap,
+            metadata,
+          },
+          { merge: true }
+        ),
         timeoutPromise,
       ]);
     } catch (error) {

@@ -180,3 +180,31 @@ export const useMarkEpisodeUnwatched = () => {
     }) => episodeTrackingService.markEpisodeUnwatched(tvShowId, seasonNumber, episodeNumber),
   });
 };
+
+/**
+ * Mutation hook for marking all episodes in a season as watched
+ */
+export const useMarkAllEpisodesWatched = () => {
+  return useMutation({
+    mutationFn: ({
+      tvShowId,
+      seasonNumber,
+      episodes,
+      showMetadata,
+    }: {
+      tvShowId: number;
+      seasonNumber: number;
+      episodes: Episode[];
+      showMetadata: {
+        tvShowName: string;
+        posterPath: string | null;
+      };
+    }) =>
+      episodeTrackingService.markAllEpisodesWatched(
+        tvShowId,
+        seasonNumber,
+        episodes,
+        showMetadata
+      ),
+  });
+};

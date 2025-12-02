@@ -1,18 +1,23 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import type { Episode } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import {
+  useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useSeasonProgress,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { memo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +25,249 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Separate component for each season to avoid hooks-in-loop issue
+const SeasonItem = memo<{
+  season: any;
+  tvId: number;
+  showName: string;
+  showPosterPath: string | null;
+  isExpanded: boolean;
+  onToggle: () => void;
+  episodeTracking: any;
+  markWatched: any;
+  markUnwatched: any;
+  markAllWatched: any;
+  formatDate: (date: string | null) => string;
+}>(
+  ({
+    season,
+    tvId,
+    showName,
+    showPosterPath,
+    isExpanded,
+    onToggle,
+    episodeTracking,
+    markWatched,
+    markUnwatched,
+    markAllWatched,
+    formatDate,
+  }) => {
+    const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
+
+    // Get progress for this season (hook is now at component level, not in loop)
+    const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
+
+    return (
+      <View key={season.season_number} style={styles.seasonContainer}>
+        <TouchableOpacity style={styles.seasonHeader} onPress={onToggle} activeOpacity={ACTIVE_OPACITY}>
+          <MediaImage source={{ uri: posterUrl }} style={styles.seasonPoster} contentFit="cover" />
+
+          <View style={styles.seasonInfo}>
+            <Text style={styles.seasonTitle}>
+              {season.name || `Season ${season.season_number}`}
+            </Text>
+            <Text style={styles.seasonMeta}>
+              {season.episode_count || season.episodes?.length || 0} Episodes
+              {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
+            </Text>
+            {progress && (
+              <View style={styles.seasonProgressContainer}>
+                <ProgressBar
+                  current={progress.watchedCount}
+                  total={progress.totalAiredCount}
+                  height={4}
+                  showLabel={true}
+                />
+              </View>
+            )}
+            {season.overview && !isExpanded && !progress && (
+              <Text style={styles.seasonOverview} numberOfLines={2}>
+                {season.overview}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.seasonActions}>
+            {isExpanded && season.episodes && season.episodes.length > 0 && (
+              <TouchableOpacity
+                style={styles.markAllButton}
+                onPress={() => {
+                  Alert.alert(
+                    'Mark All as Watched',
+                    `Mark all ${season.episodes.length} episodes in ${season.name} as watched?`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Mark All',
+                        onPress: () => {
+                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                          markAllWatched.mutate({
+                            tvShowId: tvId,
+                            seasonNumber: season.season_number,
+                            episodes: season.episodes,
+                            showMetadata: {
+                              tvShowName: showName,
+                              posterPath: showPosterPath,
+                            },
+                          });
+                        },
+                      },
+                    ]
+                  );
+                }}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.markAllText}>Mark All</Text>
+              </TouchableOpacity>
+            )}
+            {isExpanded ? (
+              <ChevronDown size={24} color={COLORS.primary} />
+            ) : (
+              <ChevronRight size={24} color={COLORS.textSecondary} />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {isExpanded && season.episodes && (
+          <View style={styles.episodesContainer}>
+            {season.overview && (
+              <Text style={styles.seasonFullOverview}>{season.overview}</Text>
+            )}
+
+            {season.episodes.map((episode: Episode) => {
+              const stillUrl = getImageUrl(episode.still_path, '/w300');
+              const episodeKey = `${season.season_number}_${episode.episode_number}`;
+              const isWatched = episodeTracking?.episodes?.[episodeKey];
+              const isPending = markWatched.isPending || markUnwatched.isPending;
+
+              return (
+                <View key={episode.id} style={styles.episodeCard}>
+                  <View style={styles.episodeStillContainer}>
+                    {isWatched && (
+                      <View style={styles.watchedOverlay}>
+                        <Check size={24} color={COLORS.success} />
+                      </View>
+                    )}
+                    <MediaImage
+                      source={{ uri: stillUrl }}
+                      style={[
+                        styles.episodeStill,
+                        isWatched && styles.episodeStillWatched,
+                      ]}
+                      contentFit="cover"
+                    />
+                  </View>
+
+                  <View style={styles.episodeInfo}>
+                    <View style={styles.episodeHeader}>
+                      <Text style={styles.episodeNumber}>
+                        Episode {episode.episode_number}
+                      </Text>
+                      {episode.vote_average > 0 && (
+                        <View style={styles.episodeRating}>
+                          <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                          <Text style={styles.ratingText}>
+                            {episode.vote_average.toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.episodeTitle} numberOfLines={1}>
+                      {episode.name}
+                    </Text>
+
+                    <View style={styles.episodeMeta}>
+                      {episode.air_date && (
+                        <View style={styles.metaItem}>
+                          <Calendar size={12} color={COLORS.textSecondary} />
+                          <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
+                        </View>
+                      )}
+                      {episode.runtime && (
+                        <Text style={styles.metaText}>• {episode.runtime}m</Text>
+                      )}
+                    </View>
+
+                    {episode.overview && (
+                      <Text style={styles.episodeOverview} numberOfLines={3}>
+                        {episode.overview}
+                      </Text>
+                    )}
+
+                    <TouchableOpacity
+                      style={[
+                        styles.watchButton,
+                        isWatched && styles.watchedButton,
+                      ]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+                        if (isWatched) {
+                          markUnwatched.mutate({
+                            tvShowId: tvId,
+                            seasonNumber: season.season_number,
+                            episodeNumber: episode.episode_number,
+                          });
+                        } else {
+                          // Check if this will complete the season
+                          const willComplete =
+                            progress &&
+                            progress.watchedCount + 1 === progress.totalAiredCount;
+
+                          markWatched.mutate(
+                            {
+                              tvShowId: tvId,
+                              seasonNumber: season.season_number,
+                              episodeNumber: episode.episode_number,
+                              episodeData: {
+                                episodeId: episode.id,
+                                episodeName: episode.name,
+                                episodeAirDate: episode.air_date,
+                              },
+                              showMetadata: {
+                                tvShowName: showName,
+                                posterPath: showPosterPath,
+                              },
+                            },
+                            {
+                              onSuccess: () => {
+                                // Celebrate season completion
+                                if (willComplete) {
+                                  Haptics.notificationAsync(
+                                    Haptics.NotificationFeedbackType.Success
+                                  );
+                                }
+                              },
+                            }
+                          );
+                        }
+                      }}
+                      disabled={isPending}
+                      activeOpacity={ACTIVE_OPACITY}
+                    >
+                      {isPending ? (
+                        <ActivityIndicator size="small" color={COLORS.white} />
+                      ) : (
+                        <Text style={styles.watchButtonText}>
+                          {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  }
+);
+
+SeasonItem.displayName = 'SeasonItem';
 
 export default function TVSeasonsScreen() {
   const { id } = useLocalSearchParams();
@@ -49,6 +297,7 @@ export default function TVSeasonsScreen() {
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
+  const markAllWatched = useMarkAllEpisodesWatched();
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
     return (
@@ -110,163 +359,22 @@ export default function TVSeasonsScreen() {
       </SafeAreaView>
 
       <ScrollView style={styles.scrollView}>
-        {seasons.map((season) => {
-          const isExpanded = expandedSeason === season.season_number;
-          const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
-
-          return (
-            <View key={season.season_number} style={styles.seasonContainer}>
-              <TouchableOpacity
-                style={styles.seasonHeader}
-                onPress={() => toggleSeason(season.season_number)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <MediaImage
-                  source={{ uri: posterUrl }}
-                  style={styles.seasonPoster}
-                  contentFit="cover"
-                />
-
-                <View style={styles.seasonInfo}>
-                  <Text style={styles.seasonTitle}>
-                    {season.name || `Season ${season.season_number}`}
-                  </Text>
-                  <Text style={styles.seasonMeta}>
-                    {season.episode_count || season.episodes?.length || 0} Episodes
-                    {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
-                  </Text>
-                  {season.overview && !isExpanded && (
-                    <Text style={styles.seasonOverview} numberOfLines={2}>
-                      {season.overview}
-                    </Text>
-                  )}
-                </View>
-
-                {isExpanded ? (
-                  <ChevronDown size={24} color={COLORS.primary} />
-                ) : (
-                  <ChevronRight size={24} color={COLORS.textSecondary} />
-                )}
-              </TouchableOpacity>
-
-              {isExpanded && season.episodes && (
-                <View style={styles.episodesContainer}>
-                  {season.overview && (
-                    <Text style={styles.seasonFullOverview}>{season.overview}</Text>
-                  )}
-
-                  {season.episodes.map((episode) => {
-                    const stillUrl = getImageUrl(episode.still_path, '/w300');
-                    const episodeKey = `${season.season_number}_${episode.episode_number}`;
-                    const isWatched = episodeTracking?.episodes?.[episodeKey];
-                    const isPending = markWatched.isPending || markUnwatched.isPending;
-
-                    return (
-                      <View key={episode.id} style={styles.episodeCard}>
-                        <View style={styles.episodeStillContainer}>
-                          {isWatched && (
-                            <View style={styles.watchedOverlay}>
-                              <Check size={24} color={COLORS.success} />
-                            </View>
-                          )}
-                          <MediaImage
-                            source={{ uri: stillUrl }}
-                            style={[
-                              styles.episodeStill,
-                              isWatched && styles.episodeStillWatched,
-                            ]}
-                            contentFit="cover"
-                          />
-                        </View>
-
-                        <View style={styles.episodeInfo}>
-                          <View style={styles.episodeHeader}>
-                            <Text style={styles.episodeNumber}>
-                              Episode {episode.episode_number}
-                            </Text>
-                            {episode.vote_average > 0 && (
-                              <View style={styles.episodeRating}>
-                                <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                                <Text style={styles.ratingText}>
-                                  {episode.vote_average.toFixed(1)}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          <Text style={styles.episodeTitle} numberOfLines={1}>
-                            {episode.name}
-                          </Text>
-
-                          <View style={styles.episodeMeta}>
-                            {episode.air_date && (
-                              <View style={styles.metaItem}>
-                                <Calendar size={12} color={COLORS.textSecondary} />
-                                <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
-                              </View>
-                            )}
-                            {episode.runtime && (
-                              <Text style={styles.metaText}>• {episode.runtime}m</Text>
-                            )}
-                          </View>
-
-                          {episode.overview && (
-                            <Text style={styles.episodeOverview} numberOfLines={3}>
-                              {episode.overview}
-                            </Text>
-                          )}
-
-                          <TouchableOpacity
-                            style={[
-                              styles.watchButton,
-                              isWatched && styles.watchedButton,
-                            ]}
-                            onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-                              if (isWatched) {
-                                markUnwatched.mutate({
-                                  tvShowId: tvId,
-                                  seasonNumber: season.season_number,
-                                  episodeNumber: episode.episode_number,
-                                });
-                              } else {
-                                markWatched.mutate({
-                                  tvShowId: tvId,
-                                  seasonNumber: season.season_number,
-                                  episodeNumber: episode.episode_number,
-                                  episodeData: {
-                                    episodeId: episode.id,
-                                    episodeName: episode.name,
-                                    episodeAirDate: episode.air_date,
-                                  },
-                                  showMetadata: {
-                                    tvShowName: show.name,
-                                    posterPath: show.poster_path,
-                                  },
-                                });
-                              }
-                            }}
-                            disabled={isPending}
-                            activeOpacity={ACTIVE_OPACITY}
-                          >
-                            {isPending ? (
-                              <ActivityIndicator size="small" color={COLORS.white} />
-                            ) : (
-                              <Text style={styles.watchButtonText}>
-                                {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          );
-        })}
+        {seasons.map((season) => (
+          <SeasonItem
+            key={season.season_number}
+            season={season}
+            tvId={tvId}
+            showName={show.name}
+            showPosterPath={show.poster_path}
+            isExpanded={expandedSeason === season.season_number}
+            onToggle={() => toggleSeason(season.season_number)}
+            episodeTracking={episodeTracking}
+            markWatched={markWatched}
+            markUnwatched={markUnwatched}
+            markAllWatched={markAllWatched}
+            formatDate={formatDate}
+          />
+        ))}
       </ScrollView>
     </View>
   );
@@ -361,6 +469,25 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     lineHeight: 18,
+  },
+  seasonProgressContainer: {
+    marginTop: SPACING.s,
+  },
+  seasonActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
+  markAllButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.s,
+    borderRadius: BORDER_RADIUS.s,
+  },
+  markAllText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
   seasonFullOverview: {
     fontSize: FONT_SIZE.s,
