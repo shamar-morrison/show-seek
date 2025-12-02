@@ -55,8 +55,10 @@ export interface UserList {
 }
 
 export const DEFAULT_LISTS = [
-  { id: 'favorites', name: 'Favorites' },
   { id: 'watchlist', name: 'Should Watch' },
+  { id: 'currently-watching', name: 'Watching' },
+  { id: 'already-watched', name: 'Already Watched' },
+  { id: 'favorites', name: 'Favorites' },
   { id: 'dropped', name: 'Dropped' },
 ];
 

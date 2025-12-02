@@ -1,21 +1,22 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { Check, Plus, Settings2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  Pressable,
 } from 'react-native';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import {
@@ -27,7 +28,6 @@ import {
   useRemoveFromList,
 } from '../hooks/useLists';
 import { ListMediaItem } from '../services/ListService';
-import { useRouter } from 'expo-router';
 
 interface AddToListModalProps {
   visible: boolean;
@@ -101,21 +101,8 @@ export default function AddToListModal({
     // Show summary toast if there were changes
     const { added, removed } = changesRef.current;
     if (added > 0 || removed > 0) {
-      let message = '';
-      if (added > 0 && removed > 0) {
-        message = 'Lists updated';
-      } else if (added === 1) {
-        message = 'Added to list';
-      } else if (added > 1) {
-        message = `Added to ${added} lists`;
-      } else if (removed === 1) {
-        message = 'Removed from list';
-      } else {
-        message = `Removed from ${removed} lists`;
-      }
-
       if (onShowToast) {
-        onShowToast(message);
+        onShowToast('Lists updated');
       }
     }
 
@@ -174,7 +161,13 @@ export default function AddToListModal({
   };
 
   const handleDeleteList = (listId: string, listName: string) => {
-    const DEFAULT_LIST_IDS = ['favorites', 'watchlist', 'dropped'];
+    const DEFAULT_LIST_IDS = [
+      'favorites',
+      'watchlist', // should watch
+      'currently-watching',
+      'already-watched',
+      'dropped',
+    ];
 
     if (DEFAULT_LIST_IDS.includes(listId)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -293,7 +286,7 @@ export default function AddToListModal({
               {isLoadingLists ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
               ) : (
-                <ScrollView style={styles.listContainer}>
+                <ScrollView style={styles.listContainer} showsVerticalScrollIndicator>
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
                     return (

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const DEFAULT_LIST_IDS = ['favorites', 'watchlist', 'dropped'];
+const DEFAULT_LIST_IDS = ['favorites', 'watchlist', 'currently-watching', 'already-watched', 'dropped'];
 
 export default function ManageListsScreen() {
   const router = useRouter();
