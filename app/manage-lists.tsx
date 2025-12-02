@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
@@ -15,7 +15,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const DEFAULT_LIST_IDS = ['favorites', 'watchlist', 'currently-watching', 'already-watched', 'dropped'];
+const DEFAULT_LIST_IDS = [
+  'favorites',
+  'watchlist',
+  'currently-watching',
+  'already-watched',
+  'dropped',
+];
 
 export default function ManageListsScreen() {
   const router = useRouter();

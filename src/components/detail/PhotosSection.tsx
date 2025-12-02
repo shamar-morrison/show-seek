@@ -1,6 +1,6 @@
+import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';

@@ -1,5 +1,5 @@
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/constants/theme';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';

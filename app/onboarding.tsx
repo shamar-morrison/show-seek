@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions, TouchableOpacity, Image } from 'react-native';
-import { FlashList, FlashListRef } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { useAuth } from '@/src/context/auth';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ONBOARDING_DATA = [
   {

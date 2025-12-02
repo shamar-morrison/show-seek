@@ -1,6 +1,6 @@
+import { COLORS, FONT_SIZE } from '@/constants/theme';
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, FONT_SIZE } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';

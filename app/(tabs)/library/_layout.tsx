@@ -1,5 +1,5 @@
-import { COLORS } from '@/src/constants/theme';
-import { TabProvider } from '@/src/contexts/TabContext';
+import { COLORS } from '@/constants/theme';
+import { TabProvider } from '@/src/context/TabContext';
 import { Stack } from 'expo-router';
 
 export default function LibraryStackLayout() {
@@ -32,10 +32,7 @@ export default function LibraryStackLayout() {
           name="collection/[id]/index"
           options={{ title: '', headerTransparent: true }}
         />
-        <Stack.Screen
-          name="review/[id]"
-          options={{ title: '', headerTransparent: true }}
-        />
+        <Stack.Screen name="review/[id]" options={{ title: '', headerTransparent: true }} />
       </Stack>
     </TabProvider>
   );

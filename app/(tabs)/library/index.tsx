@@ -1,9 +1,12 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import AddToListModal from '@/src/components/AddToListModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { useLists } from '@/src/hooks/useLists';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
+import * as Haptics from 'expo-haptics';
 import { useRouter, useSegments } from 'expo-router';
 import { Bookmark, Settings2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,9 +21,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
-import AddToListModal from '@/src/components/AddToListModal';
-import Toast, { ToastRef } from '@/src/components/ui/Toast';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;

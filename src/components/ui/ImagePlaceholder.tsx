@@ -1,7 +1,7 @@
+import { COLORS } from '@/constants/theme';
+import { Film, Tv, User } from 'lucide-react-native';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { User, Tv, Film } from 'lucide-react-native';
-import { COLORS } from '@/src/constants/theme';
+import { StyleSheet, View } from 'react-native';
 
 export type PlaceholderType = 'person' | 'tv' | 'movie';
 

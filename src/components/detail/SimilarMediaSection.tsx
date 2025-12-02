@@ -1,6 +1,6 @@
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -40,9 +40,7 @@ const SimilarMediaCard = memo<{
       </Text>
       <View style={detailStyles.similarMeta}>
         {year && <Text style={detailStyles.similarYear}>{year}</Text>}
-        {item.vote_average > 0 && year && (
-          <Text style={detailStyles.similarSeparator}> • </Text>
-        )}
+        {item.vote_average > 0 && year && <Text style={detailStyles.similarSeparator}> • </Text>}
         {item.vote_average > 0 && (
           <View style={detailStyles.similarRating}>
             <Star size={10} fill={COLORS.warning} color={COLORS.warning} />

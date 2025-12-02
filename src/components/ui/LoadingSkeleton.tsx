@@ -1,6 +1,6 @@
+import { BORDER_RADIUS, COLORS, SPACING } from '@/constants/theme';
 import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS } from '@/src/constants/theme';
+import { Animated, StyleSheet, View } from 'react-native';
 
 interface LoadingSkeletonProps {
   width?: number | string;

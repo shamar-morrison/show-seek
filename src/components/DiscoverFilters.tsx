@@ -1,8 +1,8 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { tmdbApi } from '@/src/api/tmdb';
+import { Check, ChevronDown, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, FlatList } from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, ACTIVE_OPACITY } from '@/src/constants/theme';
-import { Genre, tmdbApi } from '@/src/api/tmdb';
-import { ChevronDown, Check, X } from 'lucide-react-native';
+import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
   sortBy: string;

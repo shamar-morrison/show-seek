@@ -1,6 +1,6 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';

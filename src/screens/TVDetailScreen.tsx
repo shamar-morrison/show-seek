@@ -1,3 +1,4 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
@@ -19,7 +20,6 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';

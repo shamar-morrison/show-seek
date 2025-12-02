@@ -1,8 +1,8 @@
+import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useMemo } from 'react';

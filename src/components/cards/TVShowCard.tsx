@@ -1,10 +1,10 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, TVShow } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
-import React, { memo, useMemo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TVShowCardProps {
@@ -28,36 +28,36 @@ export const TVShowCard = memo<TVShowCardProps>(
       router.push(path as any);
     }, [currentTab, show.id]);
 
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      style={[styles.container, { width }]}
-      activeOpacity={ACTIVE_OPACITY}
-    >
-      <MediaImage
-        source={{ uri: posterUrl }}
-        style={[styles.poster, { width, height: width * 1.5 }]}
-        contentFit="cover"
-      />
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
-          {show.name}
-        </Text>
-        {show.first_air_date && (
-          <View style={styles.yearRatingContainer}>
-            <Text style={styles.year}>{new Date(show.first_air_date).getFullYear()}</Text>
-            {show.vote_average > 0 && (
-              <>
-                <Text style={styles.separator}> • </Text>
-                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{show.vote_average.toFixed(1)}</Text>
-              </>
-            )}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        style={[styles.container, { width }]}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <MediaImage
+          source={{ uri: posterUrl }}
+          style={[styles.poster, { width, height: width * 1.5 }]}
+          contentFit="cover"
+        />
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={2}>
+            {show.name}
+          </Text>
+          {show.first_air_date && (
+            <View style={styles.yearRatingContainer}>
+              <Text style={styles.year}>{new Date(show.first_air_date).getFullYear()}</Text>
+              {show.vote_average > 0 && (
+                <>
+                  <Text style={styles.separator}> • </Text>
+                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={styles.rating}>{show.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
   },
   (prevProps, nextProps) => {
     // Custom comparison: only re-render if show ID or width changes

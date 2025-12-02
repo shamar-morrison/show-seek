@@ -1,6 +1,6 @@
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import React from 'react';
-import { TouchableOpacity, StyleSheet, Text, ActivityIndicator } from 'react-native';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, ACTIVE_OPACITY } from '@/src/constants/theme';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 interface ButtonProps {
   title: string;

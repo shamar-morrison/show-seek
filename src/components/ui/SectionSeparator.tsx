@@ -1,4 +1,4 @@
-import { SPACING } from '@/src/constants/theme';
+import { SPACING } from '@/constants/theme';
 import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 

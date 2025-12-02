@@ -1,5 +1,5 @@
+import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { MovieDetails, TVShowDetails } from '@/src/api/tmdb';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { getCountryFlag } from '@/src/utils/countries';
 import { getLanguageName } from '@/src/utils/languages';
 import React from 'react';

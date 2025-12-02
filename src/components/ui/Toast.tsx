@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 

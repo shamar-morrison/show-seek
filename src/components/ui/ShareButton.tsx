@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, SPACING } from '@/constants/theme';
 import { shareMedia } from '@/src/utils/share';
 import { Share2 } from 'lucide-react-native';
 import React from 'react';
