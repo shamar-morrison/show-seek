@@ -1,7 +1,7 @@
 import { FirebaseError } from 'firebase/app';
-import { deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { deleteField, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
+import { auth, db } from '../firebase/config';
 import type {
   EpisodeTrackingMetadata,
   SeasonProgress,
@@ -166,6 +166,13 @@ class EpisodeTrackingService {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
       });
 
+      // First check if the document exists to avoid "not-found" errors
+      const snapshot = await getDoc(trackingRef);
+      if (!snapshot.exists()) {
+        // No tracking data exists, nothing to unwatch - return early as no-op
+        return;
+      }
+
       await Promise.race([
         updateDoc(trackingRef, {
           [`episodes.${episodeKey}`]: deleteField(),
@@ -251,9 +258,7 @@ class EpisodeTrackingService {
     const today = new Date();
 
     // Filter to only include aired episodes
-    const airedEpisodes = episodes.filter(
-      (ep) => ep.air_date && new Date(ep.air_date) <= today
-    );
+    const airedEpisodes = episodes.filter((ep) => ep.air_date && new Date(ep.air_date) <= today);
 
     // Count watched episodes
     const watchedCount = airedEpisodes.filter((ep) =>
