@@ -344,12 +344,12 @@ export default function TVDetailScreen() {
           <SectionSeparator />
 
           {/* Seasons Section */}
-          {show.seasons && show.seasons.filter((s) => s.season_number > 0).length > 0 && (
+          {show.seasons && show.seasons.some((s) => s.season_number > 0) && (
             <>
               <SeasonsSection
                 tvShowId={tvId}
                 seasons={show.seasons.filter((s) => s.season_number > 0)}
-                onSeasonPress={() => handleSeasonsPress()}
+                onSeasonPress={handleSeasonsPress}
               />
               <SectionSeparator />
             </>
