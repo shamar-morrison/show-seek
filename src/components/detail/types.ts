@@ -59,6 +59,7 @@ export interface Review {
 // Component Props Interfaces
 export interface WatchProvidersSectionProps {
   watchProviders: WatchProviders | null | undefined;
+  link?: string;
   style?: ViewStyle;
 }
 

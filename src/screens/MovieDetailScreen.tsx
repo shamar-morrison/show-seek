@@ -150,6 +150,7 @@ export default function MovieDetailScreen() {
     videos[0];
   const similarMovies = similarQuery.data?.results.slice(0, 10) || [];
   const watchProviders = watchProvidersQuery.data;
+  const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
   const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
@@ -338,7 +339,7 @@ export default function MovieDetailScreen() {
           {director && <SectionSeparator />}
 
           {/* Watch Providers */}
-          <WatchProvidersSection watchProviders={watchProviders} />
+          <WatchProvidersSection watchProviders={watchProviders} link={watchProvidersLink} />
 
           {hasWatchProviders(watchProviders) && <SectionSeparator />}
 
