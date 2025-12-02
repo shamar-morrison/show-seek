@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import React, { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 

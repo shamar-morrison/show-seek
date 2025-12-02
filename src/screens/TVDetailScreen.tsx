@@ -1,5 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';

@@ -1,13 +1,49 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
+import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
-import type { Episode, Season } from '../api/tmdb';
-import type {
-  SeasonProgress,
-  ShowProgress,
-  TVShowEpisodeTracking,
-} from '../types/episodeTracking';
+import type { TVShowEpisodeTracking } from '../types/episodeTracking';
+
+/**
+ * Parameters for marking an episode as watched
+ */
+export interface MarkEpisodeWatchedParams {
+  tvShowId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  episodeData: {
+    episodeId: number;
+    episodeName: string;
+    episodeAirDate: string | null;
+  };
+  showMetadata: {
+    tvShowName: string;
+    posterPath: string | null;
+  };
+}
+
+/**
+ * Parameters for marking an episode as unwatched
+ */
+export interface MarkEpisodeUnwatchedParams {
+  tvShowId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+}
+
+/**
+ * Parameters for marking all episodes in a season as watched
+ */
+export interface MarkAllEpisodesWatchedParams {
+  tvShowId: number;
+  seasonNumber: number;
+  episodes: Episode[];
+  showMetadata: {
+    tvShowName: string;
+    posterPath: string | null;
+  };
+}
 
 /**
  * Subscribe to episode tracking data for a specific TV show
@@ -79,11 +115,7 @@ export const useIsEpisodeWatched = (
 
   const isWatched = useMemo(() => {
     if (!tracking?.episodes) return false;
-    return episodeTrackingService.isEpisodeWatched(
-      seasonNumber,
-      episodeNumber,
-      tracking.episodes
-    );
+    return episodeTrackingService.isEpisodeWatched(seasonNumber, episodeNumber, tracking.episodes);
   }, [tracking, seasonNumber, episodeNumber]);
 
   return { isWatched, isLoading };
@@ -92,11 +124,7 @@ export const useIsEpisodeWatched = (
 /**
  * Calculate progress for a specific season
  */
-export const useSeasonProgress = (
-  tvShowId: number,
-  seasonNumber: number,
-  episodes: Episode[]
-) => {
+export const useSeasonProgress = (tvShowId: number, seasonNumber: number, episodes: Episode[]) => {
   const { data: tracking, isLoading } = useShowEpisodeTracking(tvShowId);
 
   const progress = useMemo(() => {
@@ -119,11 +147,7 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
 
   const progress = useMemo(() => {
     if (!tracking?.episodes || !allEpisodes.length) return null;
-    return episodeTrackingService.calculateShowProgress(
-      seasons,
-      allEpisodes,
-      tracking.episodes
-    );
+    return episodeTrackingService.calculateShowProgress(seasons, allEpisodes, tracking.episodes);
   }, [tracking, seasons, allEpisodes]);
 
   return { progress, isLoading };
@@ -134,32 +158,13 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
  */
 export const useMarkEpisodeWatched = () => {
   return useMutation({
-    mutationFn: ({
-      tvShowId,
-      seasonNumber,
-      episodeNumber,
-      episodeData,
-      showMetadata,
-    }: {
-      tvShowId: number;
-      seasonNumber: number;
-      episodeNumber: number;
-      episodeData: {
-        episodeId: number;
-        episodeName: string;
-        episodeAirDate: string | null;
-      };
-      showMetadata: {
-        tvShowName: string;
-        posterPath: string | null;
-      };
-    }) =>
+    mutationFn: (params: MarkEpisodeWatchedParams) =>
       episodeTrackingService.markEpisodeWatched(
-        tvShowId,
-        seasonNumber,
-        episodeNumber,
-        episodeData,
-        showMetadata
+        params.tvShowId,
+        params.seasonNumber,
+        params.episodeNumber,
+        params.episodeData,
+        params.showMetadata
       ),
   });
 };
@@ -169,15 +174,12 @@ export const useMarkEpisodeWatched = () => {
  */
 export const useMarkEpisodeUnwatched = () => {
   return useMutation({
-    mutationFn: ({
-      tvShowId,
-      seasonNumber,
-      episodeNumber,
-    }: {
-      tvShowId: number;
-      seasonNumber: number;
-      episodeNumber: number;
-    }) => episodeTrackingService.markEpisodeUnwatched(tvShowId, seasonNumber, episodeNumber),
+    mutationFn: (params: MarkEpisodeUnwatchedParams) =>
+      episodeTrackingService.markEpisodeUnwatched(
+        params.tvShowId,
+        params.seasonNumber,
+        params.episodeNumber
+      ),
   });
 };
 
@@ -186,25 +188,12 @@ export const useMarkEpisodeUnwatched = () => {
  */
 export const useMarkAllEpisodesWatched = () => {
   return useMutation({
-    mutationFn: ({
-      tvShowId,
-      seasonNumber,
-      episodes,
-      showMetadata,
-    }: {
-      tvShowId: number;
-      seasonNumber: number;
-      episodes: Episode[];
-      showMetadata: {
-        tvShowName: string;
-        posterPath: string | null;
-      };
-    }) =>
+    mutationFn: (params: MarkAllEpisodesWatchedParams) =>
       episodeTrackingService.markAllEpisodesWatched(
-        tvShowId,
-        seasonNumber,
-        episodes,
-        showMetadata
+        params.tvShowId,
+        params.seasonNumber,
+        params.episodes,
+        params.showMetadata
       ),
   });
 };

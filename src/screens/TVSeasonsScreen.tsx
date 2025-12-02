@@ -1,6 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import type { Episode, Season } from '@/src/api/tmdb';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
-import type { Episode } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import {
@@ -9,7 +9,12 @@ import {
   useMarkEpisodeWatched,
   useSeasonProgress,
   useShowEpisodeTracking,
+  type MarkAllEpisodesWatchedParams,
+  type MarkEpisodeUnwatchedParams,
+  type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
+import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,18 +31,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Extended Season type to include episodes array
+type SeasonWithEpisodes = Season & { episodes?: Episode[] };
+
 // Separate component for each season to avoid hooks-in-loop issue
 const SeasonItem = memo<{
-  season: any;
+  season: SeasonWithEpisodes;
   tvId: number;
   showName: string;
   showPosterPath: string | null;
   isExpanded: boolean;
   onToggle: () => void;
-  episodeTracking: any;
-  markWatched: any;
-  markUnwatched: any;
-  markAllWatched: any;
+  episodeTracking: TVShowEpisodeTracking | null | undefined;
+  markWatched: UseMutationResult<void, Error, MarkEpisodeWatchedParams>;
+  markUnwatched: UseMutationResult<void, Error, MarkEpisodeUnwatchedParams>;
+  markAllWatched: UseMutationResult<void, Error, MarkAllEpisodesWatchedParams>;
   formatDate: (date: string | null) => string;
 }>(
   ({
@@ -60,7 +68,11 @@ const SeasonItem = memo<{
 
     return (
       <View key={season.season_number} style={styles.seasonContainer}>
-        <TouchableOpacity style={styles.seasonHeader} onPress={onToggle} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          style={styles.seasonHeader}
+          onPress={onToggle}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <MediaImage source={{ uri: posterUrl }} style={styles.seasonPoster} contentFit="cover" />
 
           <View style={styles.seasonInfo}>
@@ -95,7 +107,7 @@ const SeasonItem = memo<{
                 onPress={() => {
                   Alert.alert(
                     'Mark All as Watched',
-                    `Mark all ${season.episodes.length} episodes in ${season.name} as watched?`,
+                    `Mark all ${season.episodes?.length ?? 0} episodes in ${season.name} as watched?`,
                     [
                       { text: 'Cancel', style: 'cancel' },
                       {
@@ -103,15 +115,17 @@ const SeasonItem = memo<{
                         onPress: () => {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                          markAllWatched.mutate({
-                            tvShowId: tvId,
-                            seasonNumber: season.season_number,
-                            episodes: season.episodes,
-                            showMetadata: {
-                              tvShowName: showName,
-                              posterPath: showPosterPath,
-                            },
-                          });
+                          if (season.episodes) {
+                            markAllWatched.mutate({
+                              tvShowId: tvId,
+                              seasonNumber: season.season_number,
+                              episodes: season.episodes,
+                              showMetadata: {
+                                tvShowName: showName,
+                                posterPath: showPosterPath,
+                              },
+                            });
+                          }
                         },
                       },
                     ]
@@ -132,9 +146,7 @@ const SeasonItem = memo<{
 
         {isExpanded && season.episodes && (
           <View style={styles.episodesContainer}>
-            {season.overview && (
-              <Text style={styles.seasonFullOverview}>{season.overview}</Text>
-            )}
+            {season.overview && <Text style={styles.seasonFullOverview}>{season.overview}</Text>}
 
             {season.episodes.map((episode: Episode) => {
               const stillUrl = getImageUrl(episode.still_path, '/w300');
@@ -152,25 +164,18 @@ const SeasonItem = memo<{
                     )}
                     <MediaImage
                       source={{ uri: stillUrl }}
-                      style={[
-                        styles.episodeStill,
-                        isWatched && styles.episodeStillWatched,
-                      ]}
+                      style={[styles.episodeStill, isWatched && styles.episodeStillWatched]}
                       contentFit="cover"
                     />
                   </View>
 
                   <View style={styles.episodeInfo}>
                     <View style={styles.episodeHeader}>
-                      <Text style={styles.episodeNumber}>
-                        Episode {episode.episode_number}
-                      </Text>
+                      <Text style={styles.episodeNumber}>Episode {episode.episode_number}</Text>
                       {episode.vote_average > 0 && (
                         <View style={styles.episodeRating}>
                           <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                          <Text style={styles.ratingText}>
-                            {episode.vote_average.toFixed(1)}
-                          </Text>
+                          <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
                         </View>
                       )}
                     </View>
@@ -186,9 +191,7 @@ const SeasonItem = memo<{
                           <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
                         </View>
                       )}
-                      {episode.runtime && (
-                        <Text style={styles.metaText}>• {episode.runtime}m</Text>
-                      )}
+                      {episode.runtime && <Text style={styles.metaText}>• {episode.runtime}m</Text>}
                     </View>
 
                     {episode.overview && (
@@ -198,10 +201,7 @@ const SeasonItem = memo<{
                     )}
 
                     <TouchableOpacity
-                      style={[
-                        styles.watchButton,
-                        isWatched && styles.watchedButton,
-                      ]}
+                      style={[styles.watchButton, isWatched && styles.watchedButton]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -214,8 +214,7 @@ const SeasonItem = memo<{
                         } else {
                           // Check if this will complete the season
                           const willComplete =
-                            progress &&
-                            progress.watchedCount + 1 === progress.totalAiredCount;
+                            progress && progress.watchedCount + 1 === progress.totalAiredCount;
 
                           markWatched.mutate(
                             {
