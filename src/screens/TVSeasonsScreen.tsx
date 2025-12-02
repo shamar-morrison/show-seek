@@ -97,41 +97,50 @@ const SeasonItem = memo<{
           </View>
 
           <View style={styles.seasonActions}>
-            {isExpanded && season.episodes && season.episodes.length > 0 && (
-              <TouchableOpacity
-                style={styles.markAllButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Mark All as Watched',
-                    `Mark all ${season.episodes?.length ?? 0} episodes in ${season.name} as watched?`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Mark All',
-                        onPress: () => {
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            {isExpanded &&
+              season.episodes &&
+              season.episodes.length > 0 &&
+              (() => {
+                const today = new Date();
+                const airedEpisodes = season.episodes.filter(
+                  (ep) => ep.air_date && new Date(ep.air_date) <= today
+                );
+                const hasAiredEpisodes = airedEpisodes.length > 0;
 
-                          if (season.episodes) {
-                            markAllWatched.mutate({
-                              tvShowId: tvId,
-                              seasonNumber: season.season_number,
-                              episodes: season.episodes,
-                              showMetadata: {
-                                tvShowName: showName,
-                                posterPath: showPosterPath,
-                              },
-                            });
-                          }
-                        },
-                      },
-                    ]
-                  );
-                }}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.markAllText}>Mark All</Text>
-              </TouchableOpacity>
-            )}
+                return hasAiredEpisodes ? (
+                  <TouchableOpacity
+                    style={styles.markAllButton}
+                    onPress={() => {
+                      Alert.alert(
+                        'Mark All as Watched',
+                        `Mark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as watched?`,
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Mark All',
+                            onPress: () => {
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                              markAllWatched.mutate({
+                                tvShowId: tvId,
+                                seasonNumber: season.season_number,
+                                episodes: airedEpisodes,
+                                showMetadata: {
+                                  tvShowName: showName,
+                                  posterPath: showPosterPath,
+                                },
+                              });
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={styles.markAllText}>Mark All</Text>
+                  </TouchableOpacity>
+                ) : null;
+              })()}
             {isExpanded ? (
               <ChevronDown size={24} color={COLORS.primary} />
             ) : (
@@ -149,6 +158,10 @@ const SeasonItem = memo<{
               const episodeKey = `${season.season_number}_${episode.episode_number}`;
               const isWatched = episodeTracking?.episodes?.[episodeKey];
               const isPending = markWatched.isPending || markUnwatched.isPending;
+
+              // Check if episode has aired
+              const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
+              const isDisabled = isPending || (!isWatched && !hasAired);
 
               return (
                 <View key={episode.id} style={styles.episodeCard}>
@@ -197,7 +210,11 @@ const SeasonItem = memo<{
                     )}
 
                     <TouchableOpacity
-                      style={[styles.watchButton, isWatched && styles.watchedButton]}
+                      style={[
+                        styles.watchButton,
+                        isWatched && styles.watchedButton,
+                        isDisabled && styles.disabledButton,
+                      ]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -239,14 +256,18 @@ const SeasonItem = memo<{
                           );
                         }
                       }}
-                      disabled={isPending}
+                      disabled={isDisabled}
                       activeOpacity={ACTIVE_OPACITY}
                     >
                       {isPending ? (
                         <ActivityIndicator size="small" color={COLORS.white} />
                       ) : (
                         <Text style={styles.watchButtonText}>
-                          {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                          {isWatched
+                            ? 'Mark as Unwatched'
+                            : !hasAired
+                              ? 'Not Yet Aired'
+                              : 'Mark as Watched'}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -581,6 +602,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     borderWidth: 1,
     borderColor: COLORS.success,
+  },
+  disabledButton: {
+    backgroundColor: COLORS.surfaceLight,
+    opacity: 0.5,
   },
   watchButtonText: {
     color: COLORS.white,
