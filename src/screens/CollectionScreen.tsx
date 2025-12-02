@@ -239,6 +239,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: SPACING.l,
+    marginTop: -SPACING.xxl,
   },
   title: {
     fontSize: FONT_SIZE.hero,
