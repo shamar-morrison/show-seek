@@ -295,8 +295,8 @@ class EpisodeTrackingService {
       (ep) => ep.air_date && new Date(ep.air_date) <= today
     );
 
-    // Count watched episodes
-    const totalWatched = validEpisodes.filter((ep) =>
+    // Count watched episodes (only from aired episodes to match denominator)
+    const totalWatched = airedEpisodes.filter((ep) =>
       this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
     ).length;
 
