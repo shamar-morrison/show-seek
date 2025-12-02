@@ -7,6 +7,7 @@ import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
+import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { type Video } from '@/src/components/detail/types';
 import { VideosSection } from '@/src/components/detail/VideosSection';
@@ -341,6 +342,18 @@ export default function TVDetailScreen() {
           )}
 
           <SectionSeparator />
+
+          {/* Seasons Section */}
+          {show.seasons && show.seasons.filter((s) => s.season_number > 0).length > 0 && (
+            <>
+              <SeasonsSection
+                tvShowId={tvId}
+                seasons={show.seasons.filter((s) => s.season_number > 0)}
+                onSeasonPress={() => handleSeasonsPress()}
+              />
+              <SectionSeparator />
+            </>
+          )}
 
           {creator && (
             <View style={detailStyles.directorContainer}>

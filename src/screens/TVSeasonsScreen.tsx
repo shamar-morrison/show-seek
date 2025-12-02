@@ -1,9 +1,15 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import {
+  useMarkEpisodeUnwatched,
+  useMarkEpisodeWatched,
+  useShowEpisodeTracking,
+} from '@/src/hooks/useEpisodeTracking';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,6 +44,11 @@ export default function TVSeasonsScreen() {
     },
     enabled: !!tvId,
   });
+
+  // Episode tracking hooks
+  const { data: episodeTracking } = useShowEpisodeTracking(tvId);
+  const markWatched = useMarkEpisodeWatched();
+  const markUnwatched = useMarkEpisodeUnwatched();
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
     return (
@@ -146,14 +157,27 @@ export default function TVSeasonsScreen() {
 
                   {season.episodes.map((episode) => {
                     const stillUrl = getImageUrl(episode.still_path, '/w300');
+                    const episodeKey = `${season.season_number}_${episode.episode_number}`;
+                    const isWatched = episodeTracking?.episodes?.[episodeKey];
+                    const isPending = markWatched.isPending || markUnwatched.isPending;
 
                     return (
                       <View key={episode.id} style={styles.episodeCard}>
-                        <MediaImage
-                          source={{ uri: stillUrl }}
-                          style={styles.episodeStill}
-                          contentFit="cover"
-                        />
+                        <View style={styles.episodeStillContainer}>
+                          {isWatched && (
+                            <View style={styles.watchedOverlay}>
+                              <Check size={24} color={COLORS.success} />
+                            </View>
+                          )}
+                          <MediaImage
+                            source={{ uri: stillUrl }}
+                            style={[
+                              styles.episodeStill,
+                              isWatched && styles.episodeStillWatched,
+                            ]}
+                            contentFit="cover"
+                          />
+                        </View>
 
                         <View style={styles.episodeInfo}>
                           <View style={styles.episodeHeader}>
@@ -191,6 +215,49 @@ export default function TVSeasonsScreen() {
                               {episode.overview}
                             </Text>
                           )}
+
+                          <TouchableOpacity
+                            style={[
+                              styles.watchButton,
+                              isWatched && styles.watchedButton,
+                            ]}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+                              if (isWatched) {
+                                markUnwatched.mutate({
+                                  tvShowId: tvId,
+                                  seasonNumber: season.season_number,
+                                  episodeNumber: episode.episode_number,
+                                });
+                              } else {
+                                markWatched.mutate({
+                                  tvShowId: tvId,
+                                  seasonNumber: season.season_number,
+                                  episodeNumber: episode.episode_number,
+                                  episodeData: {
+                                    episodeId: episode.id,
+                                    episodeName: episode.name,
+                                    episodeAirDate: episode.air_date,
+                                  },
+                                  showMetadata: {
+                                    tvShowName: show.name,
+                                    posterPath: show.poster_path,
+                                  },
+                                });
+                              }
+                            }}
+                            disabled={isPending}
+                            activeOpacity={ACTIVE_OPACITY}
+                          >
+                            {isPending ? (
+                              <ActivityIndicator size="small" color={COLORS.white} />
+                            ) : (
+                              <Text style={styles.watchButtonText}>
+                                {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
                         </View>
                       </View>
                     );
@@ -365,5 +432,38 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     lineHeight: 20,
+  },
+  episodeStillContainer: {
+    position: 'relative',
+  },
+  watchedOverlay: {
+    position: 'absolute',
+    top: SPACING.s,
+    right: SPACING.s,
+    backgroundColor: COLORS.success,
+    borderRadius: BORDER_RADIUS.round,
+    padding: SPACING.xs,
+    zIndex: 1,
+  },
+  episodeStillWatched: {
+    opacity: 0.5,
+  },
+  watchButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    marginTop: SPACING.s,
+  },
+  watchedButton: {
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.success,
+  },
+  watchButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
   },
 });
