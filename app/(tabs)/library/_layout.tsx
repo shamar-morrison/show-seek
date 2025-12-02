@@ -32,6 +32,10 @@ export default function LibraryStackLayout() {
           name="collection/[id]/index"
           options={{ title: '', headerTransparent: true }}
         />
+        <Stack.Screen
+          name="review/[id]"
+          options={{ title: '', headerTransparent: true }}
+        />
       </Stack>
     </TabProvider>
   );
