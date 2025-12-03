@@ -15,7 +15,9 @@ import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSec
 import ImageLightbox from '@/src/components/ImageLightbox';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -41,7 +43,7 @@ import {
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -73,6 +75,7 @@ export default function TVDetailScreen() {
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
+  const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
@@ -205,7 +208,9 @@ export default function TVDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView style={styles.scrollView} bounces={false}>
+      <AnimatedScrollHeader title={show.name} onBackPress={() => router.back()} scrollY={scrollY} />
+
+      <Animated.ScrollView style={styles.scrollView} bounces={false} {...scrollViewProps}>
         {/* Hero Section */}
         <View style={styles.heroContainer}>
           <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
@@ -455,7 +460,7 @@ export default function TVDetailScreen() {
           {/* Details */}
           <MediaDetailsInfo media={show} type="tv" />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <TrailerPlayer
         visible={trailerModalVisible}
