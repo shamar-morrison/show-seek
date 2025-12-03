@@ -8,15 +8,7 @@ import { detailStyles } from './detailStyles';
 import type { RelatedEpisodesSectionProps } from './types';
 
 export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
-  ({
-    episodes,
-    currentEpisodeNumber,
-    seasonNumber,
-    tvId,
-    watchedEpisodes,
-    onEpisodePress,
-    style,
-  }) => {
+  ({ episodes, currentEpisodeNumber, seasonNumber, watchedEpisodes, onEpisodePress, style }) => {
     // Sort episodes by episode number
     const sortedEpisodes = useMemo(() => {
       return [...episodes].sort((a, b) => a.episode_number - b.episode_number);
@@ -65,7 +57,6 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
 
 RelatedEpisodesSection.displayName = 'RelatedEpisodesSection';
 
-// Memoized episode card component
 const EpisodeCard = memo<{
   episode: Episode;
   isCurrent: boolean;
