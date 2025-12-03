@@ -212,7 +212,9 @@ const SeasonItem = memo<{
                             <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
                           </View>
                         )}
-                        {episode.runtime && <Text style={styles.metaText}>• {episode.runtime}m</Text>}
+                        {episode.runtime && (
+                          <Text style={styles.metaText}>• {episode.runtime}m</Text>
+                        )}
                       </View>
 
                       {episode.overview && (
@@ -225,71 +227,69 @@ const SeasonItem = memo<{
 
                   {/* Watch button OUTSIDE TouchableOpacity to prevent navigation */}
                   <TouchableOpacity
-                      style={[
-                        styles.watchButton,
-                        isWatched && styles.watchedButton,
-                        isDisabled && styles.disabledButton,
-                      ]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    style={[
+                      styles.watchButton,
+                      isWatched && styles.watchedButton,
+                      isDisabled && styles.disabledButton,
+                    ]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-                        if (isWatched) {
-                          markUnwatched.mutate({
+                      if (isWatched) {
+                        markUnwatched.mutate({
+                          tvShowId: tvId,
+                          seasonNumber: season.season_number,
+                          episodeNumber: episode.episode_number,
+                        });
+                      } else {
+                        // Check if this will complete the season
+                        const willComplete =
+                          progress && progress.watchedCount + 1 === progress.totalAiredCount;
+
+                        markWatched.mutate(
+                          {
                             tvShowId: tvId,
                             seasonNumber: season.season_number,
                             episodeNumber: episode.episode_number,
-                          });
-                        } else {
-                          // Check if this will complete the season
-                          const willComplete =
-                            progress && progress.watchedCount + 1 === progress.totalAiredCount;
-
-                          markWatched.mutate(
-                            {
-                              tvShowId: tvId,
-                              seasonNumber: season.season_number,
-                              episodeNumber: episode.episode_number,
-                              episodeData: {
-                                episodeId: episode.id,
-                                episodeName: episode.name,
-                                episodeAirDate: episode.air_date,
-                              },
-                              showMetadata: {
-                                tvShowName: showName,
-                                posterPath: showPosterPath,
-                              },
+                            episodeData: {
+                              episodeId: episode.id,
+                              episodeName: episode.name,
+                              episodeAirDate: episode.air_date,
                             },
-                            {
-                              onSuccess: () => {
-                                if (willComplete) {
-                                  Haptics.notificationAsync(
-                                    Haptics.NotificationFeedbackType.Success
-                                  );
-                                }
-                              },
-                              onError: (error) => {
-                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                                console.error('Error marking episode as watched:', error);
-                              },
-                            }
-                          );
-                        }
-                      }}
-                      disabled={isDisabled}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      {isPending ? (
-                        <ActivityIndicator size="small" color={COLORS.white} />
-                      ) : (
-                        <Text style={styles.watchButtonText}>
-                          {isWatched
-                            ? 'Mark as Unwatched'
-                            : !hasAired
-                              ? 'Not Yet Aired'
-                              : 'Mark as Watched'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                            showMetadata: {
+                              tvShowName: showName,
+                              posterPath: showPosterPath,
+                            },
+                          },
+                          {
+                            onSuccess: () => {
+                              if (willComplete) {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                              }
+                            },
+                            onError: (error) => {
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                              console.error('Error marking episode as watched:', error);
+                            },
+                          }
+                        );
+                      }
+                    }}
+                    disabled={isDisabled}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    {isPending ? (
+                      <ActivityIndicator size="small" color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.watchButtonText}>
+                        {isWatched
+                          ? 'Mark as Unwatched'
+                          : !hasAired
+                            ? 'Not Yet Aired'
+                            : 'Mark as Watched'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
               );
             })}
@@ -333,6 +333,15 @@ export default function TVSeasonsScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
 
+  const handleEpisodePress = useCallback(
+    (episode: Episode, seasonNumber: number) => {
+      const currentTab = segments[1];
+      const path = `/(tabs)/${currentTab}/tv/${tvId}/season/${seasonNumber}/episode/${episode.episode_number}`;
+      router.push(path as any);
+    },
+    [tvId, segments, router]
+  );
+
   if (tvQuery.isLoading || seasonQueries.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -371,15 +380,6 @@ export default function TVSeasonsScreen() {
       day: 'numeric',
     });
   };
-
-  const handleEpisodePress = useCallback(
-    (episode: Episode, seasonNumber: number) => {
-      const currentTab = segments[1];
-      const path = `/(tabs)/${currentTab}/tv/${tvId}/season/${seasonNumber}/episode/${episode.episode_number}`;
-      router.push(path as any);
-    },
-    [tvId, segments, router]
-  );
 
   return (
     <View style={styles.container}>
