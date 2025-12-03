@@ -157,7 +157,13 @@ const SeasonItem = memo<{
               const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
               const episodeKey = `${season.season_number}_${episode.episode_number}`;
               const isWatched = episodeTracking?.episodes?.[episodeKey];
-              const isPending = markWatched.isPending || markUnwatched.isPending;
+              const isPending =
+                (markWatched.isPending &&
+                  markWatched.variables?.episodeNumber === episode.episode_number &&
+                  markWatched.variables?.seasonNumber === season.season_number) ||
+                (markUnwatched.isPending &&
+                  markUnwatched.variables?.episodeNumber === episode.episode_number &&
+                  markUnwatched.variables?.seasonNumber === season.season_number);
 
               // Check if episode has aired
               const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
