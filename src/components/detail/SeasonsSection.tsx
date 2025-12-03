@@ -1,8 +1,9 @@
 import { SPACING } from '@/constants/theme';
 import type { Season } from '@/src/api/tmdb';
 import { SeasonCard } from '@/src/components/SeasonCard';
+import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
-import { ScrollView, Text, View, ViewStyle } from 'react-native';
+import { Text, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
 
 interface SeasonsSectionProps {
@@ -28,20 +29,16 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
     return (
       <View style={style}>
         <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Seasons</Text>
-        <ScrollView
+        <FlashList
+          data={seasons}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <SeasonCard tvShowId={tvShowId} season={item} onPress={handleSeasonPress} />
+          )}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={detailStyles.similarList}
-        >
-          {seasons.map((season) => (
-            <SeasonCard
-              key={season.id}
-              tvShowId={tvShowId}
-              season={season}
-              onPress={handleSeasonPress}
-            />
-          ))}
-        </ScrollView>
+        />
       </View>
     );
   },
