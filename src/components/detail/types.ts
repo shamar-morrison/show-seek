@@ -1,3 +1,4 @@
+import { CastMember, CrewMember, Episode, Video } from '@/src/api/tmdb';
 import { ViewStyle } from 'react-native';
 
 export interface WatchProvider {
@@ -48,13 +49,7 @@ export interface WatchProvidersSectionProps {
 }
 
 export interface CastSectionProps {
-  cast: Array<{
-    id: number;
-    name: string;
-    character: string;
-    profile_path: string | null;
-    order: number;
-  }>;
+  cast: CastMember[];
   onCastPress: (personId: number) => void;
   onViewAll: () => void;
   style?: ViewStyle;
@@ -75,22 +70,8 @@ export interface PhotosSectionProps {
 }
 
 export interface VideosSectionProps {
-  videos: Array<{
-    id: string;
-    key: string;
-    name: string;
-    site: string;
-    type: string;
-    official?: boolean;
-  }>;
-  onVideoPress: (video: {
-    id: string;
-    key: string;
-    name: string;
-    site: string;
-    type: string;
-    official?: boolean;
-  }) => void;
+  videos: Video[];
+  onVideoPress: (video: Video) => void;
   style?: ViewStyle;
 }
 
@@ -129,29 +110,13 @@ export interface CollectionSectionProps {
 }
 
 export interface CrewSectionProps {
-  crew: Array<{
-    id: number;
-    name: string;
-    job: string;
-    department: string;
-    profile_path: string | null;
-  }>;
+  crew: CrewMember[];
   onCrewPress: (personId: number) => void;
   style?: ViewStyle;
 }
 
 export interface RelatedEpisodesSectionProps {
-  episodes: Array<{
-    id: number;
-    name: string;
-    episode_number: number;
-    season_number: number;
-    air_date: string | null;
-    overview: string;
-    still_path: string | null;
-    runtime: number | null;
-    vote_average: number;
-  }>;
+  episodes: Episode[];
   currentEpisodeNumber: number;
   seasonNumber: number;
   tvId: number;
