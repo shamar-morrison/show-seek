@@ -73,6 +73,8 @@ const Toast = forwardRef<ToastRef, {}>((props, ref) => {
   );
 });
 
+Toast.displayName = 'Toast';
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',

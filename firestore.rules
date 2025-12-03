@@ -43,6 +43,17 @@ service cloud.firestore {
         allow delete: if isOwner(userId)
           && resource.data.get('isCustom', false) == true;
       }
+
+      // Episode tracking collection
+      match /episode_tracking/{tvShowId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll(['episodes', 'metadata'])
+          && request.resource.data.metadata.keys().hasAll(['tvShowName', 'lastUpdated'])
+          && request.resource.data.episodes is map;
+        allow update: if isOwner(userId)
+          && request.resource.data.keys().hasAll(['episodes', 'metadata']);
+      }
     }
   }
 }

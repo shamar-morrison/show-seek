@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
 import { Image, ImageProps } from 'expo-image';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, ViewStyle } from 'react-native';
 import { ImagePlaceholder, PlaceholderType } from './ImagePlaceholder';
 
 interface MediaImageProps extends Omit<ImageProps, 'source'> {
