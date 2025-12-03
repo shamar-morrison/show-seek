@@ -1,6 +1,8 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
@@ -8,7 +10,7 @@ import { ArrowLeft, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,6 +24,7 @@ export default function CollectionScreen() {
   const segments = useSegments();
   const collectionId = Number(id);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
   const collectionQuery = useQuery({
     queryKey: ['collection', collectionId],
@@ -79,7 +82,13 @@ export default function CollectionScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView style={styles.scrollView} bounces={false}>
+      <AnimatedScrollHeader
+        title={collection.name}
+        onBackPress={() => router.back()}
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView style={styles.scrollView} bounces={false} {...scrollViewProps}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
@@ -163,7 +172,7 @@ export default function CollectionScreen() {
             );
           })}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
