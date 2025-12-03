@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,6 +22,7 @@ export default function PersonDetailScreen() {
   const segments = useSegments();
   const personId = Number(id);
   const [bioExpanded, setBioExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -108,13 +110,36 @@ export default function PersonDetailScreen() {
     navigateTo(`/tv/${id}`);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        personQuery.refetch(),
+        movieCreditsQuery.refetch(),
+        tvCreditsQuery.refetch(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const age = calculateAge(person.birthday, person.deathday);
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView style={styles.scrollView} bounces={false}>
+      <ScrollView
+        style={styles.scrollView}
+        bounces={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         <SafeAreaView edges={['top']}>
           <TouchableOpacity
             style={styles.headerButton}

@@ -41,6 +41,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -72,6 +73,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
@@ -207,6 +209,24 @@ export default function MovieDetailScreen() {
     navigateTo(`/movie/${movieId}/cast`);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        movieQuery.refetch(),
+        creditsQuery.refetch(),
+        videosQuery.refetch(),
+        similarQuery.refetch(),
+        watchProvidersQuery.refetch(),
+        imagesQuery.refetch(),
+        ...(shouldLoadReviews ? [reviewsQuery.refetch()] : []),
+        ...(shouldLoadRecommendations ? [recommendationsQuery.refetch()] : []),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -217,7 +237,18 @@ export default function MovieDetailScreen() {
         scrollY={scrollY}
       />
 
-      <Animated.ScrollView style={styles.scrollView} bounces={false} {...scrollViewProps}>
+      <Animated.ScrollView
+        style={styles.scrollView}
+        bounces={true}
+        {...scrollViewProps}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         {/* Hero Section */}
         <View style={styles.heroContainer}>
           <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
