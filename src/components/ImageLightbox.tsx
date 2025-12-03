@@ -79,17 +79,17 @@ export default function ImageLightbox({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: COLORS.black,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
-    right: SPACING.l,
+    top: '25%',
+    alignSelf: 'center',
     zIndex: 10,
     padding: SPACING.s,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.black,
     borderRadius: 20,
   },
   imageContainer: {
