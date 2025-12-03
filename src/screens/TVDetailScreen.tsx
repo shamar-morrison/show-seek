@@ -246,6 +246,7 @@ export default function TVDetailScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
           />
         }
       >

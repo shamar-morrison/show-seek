@@ -246,6 +246,7 @@ export default function MovieDetailScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
           />
         }
       >

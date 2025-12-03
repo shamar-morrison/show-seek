@@ -137,6 +137,7 @@ export default function PersonDetailScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
           />
         }
       >
