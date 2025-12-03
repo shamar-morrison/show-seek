@@ -1,8 +1,8 @@
-import React from 'react';
-import { Animated, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { ArrowLeft } from 'lucide-react-native';
-import { COLORS, SPACING, FONT_SIZE, ACTIVE_OPACITY } from '@/constants/theme';
+import React from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface AnimatedScrollHeaderProps {
   title: string;
@@ -10,18 +10,14 @@ interface AnimatedScrollHeaderProps {
   scrollY: Animated.Value;
 }
 
-export function AnimatedScrollHeader({
-  title,
-  onBackPress,
-  scrollY,
-}: AnimatedScrollHeaderProps) {
+export function AnimatedScrollHeader({ title, onBackPress, scrollY }: AnimatedScrollHeaderProps) {
   const SCROLL_THRESHOLD = 175;
   const HEADER_HEIGHT = 56;
 
   // Slide animation: header starts above viewport, slides down when scrolling
   const headerTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_THRESHOLD, SCROLL_THRESHOLD + 1],
-    outputRange: [-HEADER_HEIGHT, -HEADER_HEIGHT, 0],
+    inputRange: [SCROLL_THRESHOLD - 30, SCROLL_THRESHOLD],
+    outputRange: [-HEADER_HEIGHT, 0],
     extrapolate: 'clamp',
   });
 
