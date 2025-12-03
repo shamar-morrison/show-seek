@@ -207,19 +207,14 @@ export default function TVDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <AnimatedScrollHeader
-        title={show.name}
-        onBackPress={() => router.back()}
-        scrollY={scrollY}
-      />
+      <AnimatedScrollHeader title={show.name} onBackPress={() => router.back()} scrollY={scrollY} />
 
       <Animated.ScrollView
         style={styles.scrollView}
         bounces={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
       >
         {/* Hero Section */}

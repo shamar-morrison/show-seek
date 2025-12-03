@@ -212,10 +212,9 @@ export default function MovieDetailScreen() {
       <Animated.ScrollView
         style={styles.scrollView}
         bounces={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
       >
         {/* Hero Section */}
