@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: SPACING.s,
-    marginRight: SPACING.m,
+    marginRight: SPACING.s,
   },
   headerContent: {
     flex: 1,
