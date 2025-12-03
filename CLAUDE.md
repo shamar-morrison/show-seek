@@ -49,9 +49,10 @@ The app uses **nested tab navigation** where each tab has its own navigation sta
   - `app/(tabs)/home/person/[id]/index.tsx` - Person details (within Home tab)
   - `app/(tabs)/home/movie/[id]/cast.tsx` - Cast modal (presentation: modal)
   - `app/(tabs)/home/tv/[id]/cast.tsx` - TV cast modal (presentation: modal)
-  - `app/(tabs)/home/tv/[id]/seasons.tsx` - TV seasons list
 - Each tab (search, discover, library) has identical nested structures
 - Global screens (outside tabs): `app/onboarding.tsx`, `app/manage-lists.tsx`, `app/(auth)/*`
+
+**Note**: Earlier versions included `seasons.tsx` screens, but the current implementation manages season/episode viewing inline within TV detail screens.
 
 **Key Navigation Pattern**: Detail screens (movie, TV, person) are duplicated under each tab to maintain independent navigation stacks. This allows users to browse content within each tab without losing their position in other tabs.
 
@@ -81,8 +82,10 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
 **Firebase Realtime Subscriptions** via custom hooks:
 
-- `src/hooks/useFirestore.ts` exports `useFavorites()`, `useWatchlist()`, and `useRatings()`
+- `src/hooks/useFirestore.ts` exports `useFavorites()` and `useWatchlist()` (legacy)
 - `src/hooks/useLists.ts` exports `useLists()`, `useMediaLists()`, and mutations for managing custom lists
+- `src/hooks/useRatings.ts` exports `useRatings()`, `useMediaRating()`, and rating mutations
+- `src/hooks/useEpisodeTracking.ts` exports episode tracking hooks and mutations
 - These hooks subscribe to Firestore collections and update in real-time
 - Automatically clean up subscriptions when user logs out
 
@@ -114,6 +117,24 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 - All list operations include timeout protection (10s) and user-friendly error messages
 - Lists store items as nested maps: `{ items: { [mediaId]: ListMediaItem } }`
 
+#### Episode Tracking System (`src/services/EpisodeTrackingService.ts`)
+
+- Tracks watched episodes for TV shows on a per-episode basis
+- Data structure: `users/{userId}/episode_tracking/{tvShowId}` with episodes map keyed by `{seasonNumber}_{episodeNumber}`
+- Calculates progress for individual seasons and overall show progress
+- Automatically excludes unaired episodes and Season 0 (specials) from progress calculations
+- Hooks: `useShowEpisodeTracking()`, `useIsEpisodeWatched()`, `useSeasonProgress()`, `useShowProgress()`
+- Mutations: `useMarkEpisodeWatched()`, `useMarkEpisodeUnwatched()`, `useMarkAllEpisodesWatched()`
+- Includes 10-second timeout protection and user-friendly error messages
+
+#### Rating System (`src/services/RatingService.ts`)
+
+- Manages user ratings for movies and TV shows
+- Data structure: `users/{userId}/ratings/{mediaType}-{mediaId}`
+- Ratings stored with timestamp (`ratedAt`) and ordered by most recent
+- Hooks: `useRatings()` (all ratings), `useMediaRating()` (specific media), `useRateMedia()`, `useDeleteRating()`
+- All operations include 10-second timeout protection
+
 #### Authentication Context (`src/context/auth.ts`)
 
 - Provides: `user`, `loading`, `hasCompletedOnboarding`, `signOut()`, `completeOnboarding()`
@@ -122,14 +143,15 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
 ### Styling System
 
-All styling constants are centralized in `src/constants/theme.ts`:
+All styling constants are centralized in `constants/theme.ts`:
 
-- **COLORS**: Netflix-inspired dark theme (primary: #E50914)
+- **COLORS**: Netflix-inspired dark theme (primary: #E50914, background: #000000, surface: #121212)
 - **SPACING**: xs (4px) to xxl (48px)
 - **BORDER_RADIUS**: s (4px) to round (9999px)
 - **FONT_SIZE**: xs (12px) to hero (40px)
+- **ACTIVE_OPACITY**: 0.9 (for pressable components)
 
-Always import and use these constants rather than hardcoding values.
+Always import from `@/constants/theme` and use these constants rather than hardcoding values.
 
 ### Component Architecture
 
@@ -197,12 +219,24 @@ EXPO_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
 2. Add corresponding hooks in `src/hooks/useLists.ts` using `useMutation` or extending `useLists()`
 3. Use hooks in components with automatic real-time updates via Firestore subscriptions
 
-**For Legacy Favorites/Watchlist/Ratings**:
+**For Legacy Favorites/Watchlist** (deprecated, prefer Custom Lists):
 
 1. Add Firestore helper to `src/firebase/firestore.ts`
 2. Create subscription function following `subscribeFavorites` pattern
 3. Create custom hook in `src/hooks/useFirestore.ts`
 4. Use hook in components for real-time data
+
+**For Ratings**:
+
+1. Extend `RatingService` in `src/services/RatingService.ts` with new methods
+2. Add corresponding hooks in `src/hooks/useRatings.ts` using `useMutation`
+3. Use hooks in components with automatic real-time updates
+
+**For Episode Tracking**:
+
+1. Extend `EpisodeTrackingService` in `src/services/EpisodeTrackingService.ts` if needed
+2. Add corresponding hooks in `src/hooks/useEpisodeTracking.ts`
+3. Use hooks in components with automatic progress calculation
 
 ### Creating New Screens
 
@@ -267,12 +301,14 @@ router.push(`/(tabs)/home/movie/${movieId}`);
 ### Error Handling Patterns
 
 **Firestore Operations**:
+
 - All Firestore operations in `ListService` include 10-second timeout protection
 - Firebase errors are mapped to user-friendly messages via `getFirestoreErrorMessage()`
 - Graceful degradation: subscriptions fall back to default lists on error
 - Common error codes handled: `permission-denied`, `unavailable`, `not-found`, `deadline-exceeded`, `resource-exhausted`
 
 **Subscription Pattern**:
+
 - Real-time subscriptions include both success callback and optional error callback
 - Errors are logged to console for debugging while showing user-friendly messages to users
 - Subscriptions automatically clean up on component unmount
