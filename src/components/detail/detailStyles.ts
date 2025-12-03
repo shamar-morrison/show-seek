@@ -294,4 +294,116 @@ export const detailStyles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     textAlign: 'center',
   },
+
+  // Episode-specific styles
+  episodeHeroContainer: {
+    height: 300, // Shorter than 400px for movies/TV
+    position: 'relative',
+  },
+  episodeBreadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.s,
+  },
+  episodeBreadcrumbText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginHorizontal: SPACING.xs,
+  },
+  episodeBreadcrumbLink: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.primary,
+  },
+  episodeNumberBadge: {
+    position: 'absolute',
+    top: SPACING.m,
+    left: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  episodeNumberText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  watchStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.success,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.m,
+    marginTop: SPACING.s,
+    alignSelf: 'flex-start',
+  },
+  watchStatusText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginLeft: SPACING.xs,
+  },
+
+  // Crew section layout
+  crewContainer: {
+    marginTop: SPACING.m,
+  },
+  crewItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  crewJob: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  crewName: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    flex: 2,
+    textAlign: 'right',
+  },
+
+  // Related episodes
+  relatedEpisodeCard: {
+    width: 280,
+    marginRight: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    overflow: 'hidden',
+  },
+  relatedEpisodeStill: {
+    width: '100%',
+    height: 157.5, // 16:9 aspect ratio for 280px width
+    backgroundColor: COLORS.surfaceLight,
+  },
+  relatedEpisodeInfo: {
+    padding: SPACING.m,
+  },
+  relatedEpisodeNumber: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+  },
+  relatedEpisodeTitle: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  currentEpisodeBorder: {
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  relatedEpisodeWatchedOverlay: {
+    position: 'absolute',
+    top: SPACING.s,
+    right: SPACING.s,
+    backgroundColor: COLORS.success,
+    borderRadius: BORDER_RADIUS.round,
+    padding: SPACING.xs,
+  },
 });

@@ -17,9 +17,9 @@ import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
-import React, { memo, useState } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -40,6 +40,7 @@ const SeasonItem = memo<{
   showPosterPath: string | null;
   isExpanded: boolean;
   onToggle: () => void;
+  onEpisodePress: (episode: Episode, seasonNumber: number) => void;
   episodeTracking: TVShowEpisodeTracking | null | undefined;
   markWatched: UseMutationResult<void, Error, MarkEpisodeWatchedParams>;
   markUnwatched: UseMutationResult<void, Error, MarkEpisodeUnwatchedParams>;
@@ -53,6 +54,7 @@ const SeasonItem = memo<{
     showPosterPath,
     isExpanded,
     onToggle,
+    onEpisodePress,
     episodeTracking,
     markWatched,
     markUnwatched,
@@ -170,51 +172,59 @@ const SeasonItem = memo<{
 
               return (
                 <View key={episode.id} style={styles.episodeCard}>
-                  <View style={styles.episodeStillContainer}>
-                    {isWatched && (
-                      <View style={styles.watchedOverlay}>
-                        <Check size={24} color={COLORS.success} />
+                  {/* Wrap episode content in TouchableOpacity for navigation */}
+                  <TouchableOpacity
+                    activeOpacity={ACTIVE_OPACITY}
+                    onPress={() => onEpisodePress(episode, season.season_number)}
+                  >
+                    <View style={styles.episodeStillContainer}>
+                      {isWatched && (
+                        <View style={styles.watchedOverlay}>
+                          <Check size={24} color={COLORS.success} />
+                        </View>
+                      )}
+                      <MediaImage
+                        source={{ uri: stillUrl }}
+                        style={[styles.episodeStill, isWatched && styles.episodeStillWatched]}
+                        contentFit="cover"
+                      />
+                    </View>
+
+                    <View style={styles.episodeInfo}>
+                      <View style={styles.episodeHeader}>
+                        <Text style={styles.episodeNumber}>Episode {episode.episode_number}</Text>
+                        {episode.vote_average > 0 && (
+                          <View style={styles.episodeRating}>
+                            <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                            <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                    <MediaImage
-                      source={{ uri: stillUrl }}
-                      style={[styles.episodeStill, isWatched && styles.episodeStillWatched]}
-                      contentFit="cover"
-                    />
-                  </View>
 
-                  <View style={styles.episodeInfo}>
-                    <View style={styles.episodeHeader}>
-                      <Text style={styles.episodeNumber}>Episode {episode.episode_number}</Text>
-                      {episode.vote_average > 0 && (
-                        <View style={styles.episodeRating}>
-                          <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                          <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <Text style={styles.episodeTitle} numberOfLines={1}>
-                      {episode.name}
-                    </Text>
-
-                    <View style={styles.episodeMeta}>
-                      {episode.air_date && (
-                        <View style={styles.metaItem}>
-                          <Calendar size={12} color={COLORS.textSecondary} />
-                          <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
-                        </View>
-                      )}
-                      {episode.runtime && <Text style={styles.metaText}>• {episode.runtime}m</Text>}
-                    </View>
-
-                    {episode.overview && (
-                      <Text style={styles.episodeOverview} numberOfLines={3}>
-                        {episode.overview}
+                      <Text style={styles.episodeTitle} numberOfLines={1}>
+                        {episode.name}
                       </Text>
-                    )}
 
-                    <TouchableOpacity
+                      <View style={styles.episodeMeta}>
+                        {episode.air_date && (
+                          <View style={styles.metaItem}>
+                            <Calendar size={12} color={COLORS.textSecondary} />
+                            <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
+                          </View>
+                        )}
+                        {episode.runtime && <Text style={styles.metaText}>• {episode.runtime}m</Text>}
+                      </View>
+
+                      {episode.overview && (
+                        <Text style={styles.episodeOverview} numberOfLines={3}>
+                          {episode.overview}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Watch button OUTSIDE TouchableOpacity to prevent navigation */}
+                  <TouchableOpacity
                       style={[
                         styles.watchButton,
                         isWatched && styles.watchedButton,
@@ -280,7 +290,6 @@ const SeasonItem = memo<{
                         </Text>
                       )}
                     </TouchableOpacity>
-                  </View>
                 </View>
               );
             })}
@@ -296,6 +305,7 @@ SeasonItem.displayName = 'SeasonItem';
 export default function TVSeasonsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const segments = useSegments();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
 
@@ -362,6 +372,15 @@ export default function TVSeasonsScreen() {
     });
   };
 
+  const handleEpisodePress = useCallback(
+    (episode: Episode, seasonNumber: number) => {
+      const currentTab = segments[1];
+      const path = `/(tabs)/${currentTab}/tv/${tvId}/season/${seasonNumber}/episode/${episode.episode_number}`;
+      router.push(path as any);
+    },
+    [tvId, segments, router]
+  );
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -392,6 +411,7 @@ export default function TVSeasonsScreen() {
             showPosterPath={show.poster_path}
             isExpanded={expandedSeason === season.season_number}
             onToggle={() => toggleSeason(season.season_number)}
+            onEpisodePress={handleEpisodePress}
             episodeTracking={episodeTracking}
             markWatched={markWatched}
             markUnwatched={markUnwatched}

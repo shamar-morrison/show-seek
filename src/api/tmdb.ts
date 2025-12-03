@@ -226,6 +226,25 @@ export interface Episode {
   vote_average: number;
 }
 
+// Extended episode details
+export interface EpisodeDetails extends Episode {
+  crew: CrewMember[];
+  guest_stars: CastMember[];
+  production_code: string;
+}
+
+// Episode credits response
+export interface EpisodeCredits {
+  cast: CastMember[];
+  crew: CrewMember[];
+  guest_stars: CastMember[];
+}
+
+// Episode images response
+export interface EpisodeImages {
+  stills: ImageData[];
+}
+
 export interface PersonDetails extends Person {
   biography: string;
   birthday: string | null;
@@ -424,6 +443,52 @@ export const tmdbApi = {
   getSeasonDetails: async (tvId: number, seasonNumber: number) => {
     const { data } = await tmdbClient.get<Season & { episodes: Episode[] }>(
       `/tv/${tvId}/season/${seasonNumber}`
+    );
+    return data;
+  },
+
+  // Get detailed episode information
+  getEpisodeDetails: async (tvId: number, seasonNumber: number, episodeNumber: number) => {
+    const { data } = await tmdbClient.get<EpisodeDetails>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`
+    );
+    return data;
+  },
+
+  // Get episode credits (guest cast and crew)
+  getEpisodeCredits: async (tvId: number, seasonNumber: number, episodeNumber: number) => {
+    const { data } = await tmdbClient.get<EpisodeCredits>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/credits`
+    );
+    return data;
+  },
+
+  // Get episode videos (clips, trailers)
+  getEpisodeVideos: async (tvId: number, seasonNumber: number, episodeNumber: number) => {
+    const { data } = await tmdbClient.get<{ results: Video[] }>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/videos`
+    );
+    return data.results;
+  },
+
+  // Get episode images (stills)
+  getEpisodeImages: async (tvId: number, seasonNumber: number, episodeNumber: number) => {
+    const { data } = await tmdbClient.get<EpisodeImages>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/images`
+    );
+    return data;
+  },
+
+  // Get episode reviews
+  getEpisodeReviews: async (
+    tvId: number,
+    seasonNumber: number,
+    episodeNumber: number,
+    page: number = 1
+  ) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Review>>(
+      `/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}/reviews`,
+      { params: { page } }
     );
     return data;
   },
