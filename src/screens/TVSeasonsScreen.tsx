@@ -13,11 +13,12 @@ import {
   type MarkEpisodeUnwatchedParams,
   type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
+import { useCurrentTab } from '@/src/hooks/useNavigation';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
 import React, { memo, useCallback, useState } from 'react';
 import {
@@ -305,7 +306,7 @@ SeasonItem.displayName = 'SeasonItem';
 export default function TVSeasonsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
 
@@ -335,11 +336,10 @@ export default function TVSeasonsScreen() {
 
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
-      const currentTab = segments[1];
       const path = `/(tabs)/${currentTab}/tv/${tvId}/season/${seasonNumber}/episode/${episode.episode_number}`;
       router.push(path as any);
     },
-    [tvId, segments, router]
+    [tvId, currentTab, router]
   );
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
