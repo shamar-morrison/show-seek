@@ -1,5 +1,5 @@
 import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, type CastMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import React, { memo, useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -8,7 +8,7 @@ import type { CastSectionProps } from './types';
 
 // Memoized cast card component to prevent unnecessary re-renders
 const CastCard = memo<{
-  actor: { id: number; name: string; character: string; profile_path: string | null };
+  actor: CastMember;
   onPress: (id: number) => void;
 }>(({ actor, onPress }) => {
   const handlePress = useCallback(() => {

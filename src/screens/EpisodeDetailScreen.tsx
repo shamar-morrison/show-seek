@@ -6,14 +6,13 @@ import {
   MAX_CHARACTERS,
   SPACING,
 } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
-import { type Video } from '@/src/components/detail/types';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -30,7 +29,16 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
-import { ArrowLeft, Calendar, Check, ChevronRight, Clock, Play, Share2, Star } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ChevronRight,
+  Clock,
+  Play,
+  Share2,
+  Star,
+} from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -120,15 +128,9 @@ export default function EpisodeDetailScreen() {
   const images = episodeImagesQuery.data;
   const reviews = episodeReviewsQuery.data;
 
-  const isLoading =
-    episodeDetailsQuery.isLoading ||
-    tvShowQuery.isLoading ||
-    seasonQuery.isLoading;
+  const isLoading = episodeDetailsQuery.isLoading || tvShowQuery.isLoading || seasonQuery.isLoading;
 
-  const isError =
-    episodeDetailsQuery.isError ||
-    tvShowQuery.isError ||
-    seasonQuery.isError;
+  const isError = episodeDetailsQuery.isError || tvShowQuery.isError || seasonQuery.isError;
 
   // Tab-aware navigation
   const navigateTo = useCallback(
@@ -204,16 +206,7 @@ export default function EpisodeDetailScreen() {
         },
       });
     }
-  }, [
-    episode,
-    tvShow,
-    isWatched,
-    markWatched,
-    markUnwatched,
-    tvId,
-    seasonNumber,
-    episodeNumber,
-  ]);
+  }, [episode, tvShow, isWatched, markWatched, markUnwatched, tvId, seasonNumber, episodeNumber]);
 
   const handleVideoPress = useCallback((video: Video) => {
     setSelectedVideo(video);
@@ -298,7 +291,6 @@ export default function EpisodeDetailScreen() {
   }
 
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.large);
-  const episodeKey = `${seasonNumber}_${episodeNumber}`;
   const isPending = markWatched.isPending || markUnwatched.isPending;
 
   return (
@@ -321,10 +313,7 @@ export default function EpisodeDetailScreen() {
         {/* Hero Section */}
         <View style={detailStyles.episodeHeroContainer}>
           <MediaImage source={{ uri: stillUrl }} style={styles.heroImage} contentFit="cover" />
-          <LinearGradient
-            colors={['transparent', COLORS.background]}
-            style={styles.heroGradient}
-          />
+          <LinearGradient colors={['transparent', COLORS.background]} style={styles.heroGradient} />
 
           {/* Back Button */}
           <TouchableOpacity
@@ -452,10 +441,7 @@ export default function EpisodeDetailScreen() {
           {episode.overview && (
             <View style={styles.overviewSection}>
               <Text style={styles.sectionTitle}>Overview</Text>
-              <Text
-                style={styles.overviewText}
-                numberOfLines={overviewExpanded ? undefined : 4}
-              >
+              <Text style={styles.overviewText} numberOfLines={overviewExpanded ? undefined : 4}>
                 {episode.overview}
               </Text>
               {episode.overview.length > MAX_CHARACTERS && (
@@ -479,9 +465,7 @@ export default function EpisodeDetailScreen() {
                   <Text style={styles.crewInlineLabel}>Director</Text>
                   <TouchableOpacity
                     onPress={() =>
-                      handlePersonPress(
-                        credits.crew.find((c) => c.job === 'Director')!.id
-                      )
+                      handlePersonPress(credits.crew.find((c) => c.job === 'Director')!.id)
                     }
                     activeOpacity={ACTIVE_OPACITY}
                   >
@@ -497,17 +481,13 @@ export default function EpisodeDetailScreen() {
                   <TouchableOpacity
                     onPress={() =>
                       handlePersonPress(
-                        credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!
-                          .id
+                        credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!.id
                       )
                     }
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <Text style={styles.crewInlineName}>
-                      {
-                        credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!
-                          .name
-                      }
+                      {credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!.name}
                     </Text>
                   </TouchableOpacity>
                 </View>

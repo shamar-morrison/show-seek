@@ -12,13 +12,6 @@ export interface WatchProviders {
   buy?: WatchProvider[];
 }
 
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile_path: string | null;
-}
-
 export interface SimilarMediaItem {
   id: number;
   title?: string; // For movies
@@ -31,15 +24,6 @@ export interface SimilarMediaItem {
 
 export interface BackdropImage {
   file_path: string;
-}
-
-export interface Video {
-  id: string;
-  key: string;
-  name: string;
-  site: string;
-  type: string;
-  official?: boolean;
 }
 
 export interface ReviewAuthorDetails {
@@ -64,7 +48,13 @@ export interface WatchProvidersSectionProps {
 }
 
 export interface CastSectionProps {
-  cast: CastMember[];
+  cast: Array<{
+    id: number;
+    name: string;
+    character: string;
+    profile_path: string | null;
+    order: number;
+  }>;
   onCastPress: (personId: number) => void;
   onViewAll: () => void;
   style?: ViewStyle;
@@ -85,8 +75,22 @@ export interface PhotosSectionProps {
 }
 
 export interface VideosSectionProps {
-  videos: Video[];
-  onVideoPress: (video: Video) => void;
+  videos: Array<{
+    id: string;
+    key: string;
+    name: string;
+    site: string;
+    type: string;
+    official?: boolean;
+  }>;
+  onVideoPress: (video: {
+    id: string;
+    key: string;
+    name: string;
+    site: string;
+    type: string;
+    official?: boolean;
+  }) => void;
   style?: ViewStyle;
 }
 
@@ -124,36 +128,30 @@ export interface CollectionSectionProps {
   style?: ViewStyle;
 }
 
-// Crew member interface
-export interface CrewMember {
-  id: number;
-  name: string;
-  job: string;
-  department: string;
-  profile_path: string | null;
-}
-
-// Episode interface for related episodes
-export interface Episode {
-  id: number;
-  name: string;
-  episode_number: number;
-  season_number: number;
-  air_date: string | null;
-  overview: string;
-  still_path: string | null;
-  runtime: number | null;
-  vote_average: number;
-}
-
 export interface CrewSectionProps {
-  crew: CrewMember[];
+  crew: Array<{
+    id: number;
+    name: string;
+    job: string;
+    department: string;
+    profile_path: string | null;
+  }>;
   onCrewPress: (personId: number) => void;
   style?: ViewStyle;
 }
 
 export interface RelatedEpisodesSectionProps {
-  episodes: Episode[];
+  episodes: Array<{
+    id: number;
+    name: string;
+    episode_number: number;
+    season_number: number;
+    air_date: string | null;
+    overview: string;
+    still_path: string | null;
+    runtime: number | null;
+    vote_average: number;
+  }>;
   currentEpisodeNumber: number;
   seasonNumber: number;
   tvId: number;

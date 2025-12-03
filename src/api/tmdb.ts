@@ -112,7 +112,7 @@ export interface Video {
   name: string;
   site: string;
   type: string;
-  official: boolean;
+  official?: boolean;
 }
 
 export interface ProductionCountry {

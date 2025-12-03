@@ -1,11 +1,11 @@
 import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, type Episode } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { Check } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
-import type { Episode, RelatedEpisodesSectionProps } from './types';
+import type { RelatedEpisodesSectionProps } from './types';
 
 export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
   ({
@@ -29,9 +29,7 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-          More Episodes
-        </Text>
+        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>More Episodes</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {sortedEpisodes.map((episode) => {
             const isCurrent = episode.episode_number === currentEpisodeNumber;

@@ -1,4 +1,5 @@
-import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY } from '@/constants/theme';
+import { type CrewMember } from '@/src/api/tmdb';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -48,13 +49,7 @@ CrewSection.displayName = 'CrewSection';
 
 // Memoized crew item component
 const CrewItem = memo<{
-  member: {
-    id: number;
-    name: string;
-    job: string;
-    department: string;
-    profile_path: string | null;
-  };
+  member: CrewMember;
   onPress: (id: number) => void;
 }>(({ member, onPress }) => {
   const handlePress = useCallback(() => {
