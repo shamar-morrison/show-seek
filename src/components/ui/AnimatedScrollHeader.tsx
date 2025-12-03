@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: SPACING.s,
-    marginRight: SPACING.m,
+    marginRight: SPACING.s,
   },
   title: {
     flex: 1,
