@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  MAX_CHARACTERS,
+  SPACING,
+} from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
@@ -17,12 +24,12 @@ import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
@@ -320,7 +327,7 @@ export default function MovieDetailScreen() {
           <Text style={detailStyles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
             {movie.overview || 'No overview available'}
           </Text>
-          {movie.overview && movie.overview.length > 200 && (
+          {movie.overview && movie.overview.length > MAX_CHARACTERS && (
             <TouchableOpacity
               onPress={() => setOverviewExpanded(!overviewExpanded)}
               activeOpacity={ACTIVE_OPACITY}

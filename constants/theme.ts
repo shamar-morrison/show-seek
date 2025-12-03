@@ -43,3 +43,5 @@ export const FONT_SIZE = {
 } as const;
 
 export const ACTIVE_OPACITY = 0.9; // the higher the value, the less opacity
+
+export const MAX_CHARACTERS = 100; // max characters for overview
