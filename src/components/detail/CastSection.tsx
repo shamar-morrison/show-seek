@@ -49,14 +49,20 @@ export const CastSection = memo<CastSectionProps>(
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
-        <TouchableOpacity
-          style={detailStyles.sectionHeader}
-          onPress={onViewAll}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={detailStyles.sectionTitle}>Cast</Text>
-          <Text style={detailStyles.viewAll}>View All</Text>
-        </TouchableOpacity>
+        {onViewAll ? (
+          <TouchableOpacity
+            style={detailStyles.sectionHeader}
+            onPress={onViewAll}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={detailStyles.sectionTitle}>Cast</Text>
+            <Text style={detailStyles.viewAll}>View All</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={detailStyles.sectionHeader}>
+            <Text style={detailStyles.sectionTitle}>Cast</Text>
+          </View>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
           {cast.map((actor) => (
             <CastCard key={actor.id} actor={actor} onPress={onCastPress} />

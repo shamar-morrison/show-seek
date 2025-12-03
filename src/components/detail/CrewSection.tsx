@@ -1,12 +1,48 @@
-import { ACTIVE_OPACITY } from '@/constants/theme';
-import { type CrewMember } from '@/src/api/tmdb';
+import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
+import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 import React, { memo, useCallback, useMemo } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CrewSectionProps } from './types';
 
 // Priority roles to show (in order)
 const PRIORITY_ROLES = ['Director', 'Writer', 'Screenplay', 'Story', 'Editor', 'Cinematography'];
+
+// Memoized crew card component to prevent unnecessary re-renders
+const CrewCard = memo<{
+  member: CrewMember;
+  onPress: (id: number) => void;
+}>(({ member, onPress }) => {
+  const handlePress = useCallback(() => {
+    onPress(member.id);
+  }, [member.id, onPress]);
+
+  return (
+    <TouchableOpacity
+      style={detailStyles.castCard}
+      onPress={handlePress}
+      activeOpacity={ACTIVE_OPACITY}
+    >
+      <MediaImage
+        source={{
+          uri: getImageUrl(member.profile_path, TMDB_IMAGE_SIZES.profile.medium),
+        }}
+        style={detailStyles.castImage}
+        contentFit="cover"
+        placeholderType="person"
+      />
+      <Text style={detailStyles.castName} numberOfLines={2}>
+        {member.name}
+      </Text>
+      <Text style={detailStyles.characterName} numberOfLines={1}>
+        {member.job}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
+CrewCard.displayName = 'CrewCard';
 
 export const CrewSection = memo<CrewSectionProps>(
   ({ crew, onCrewPress, style }) => {
@@ -27,11 +63,15 @@ export const CrewSection = memo<CrewSectionProps>(
     }
 
     return (
-      <View style={[detailStyles.crewContainer, style]}>
-        <Text style={detailStyles.sectionTitle}>Crew</Text>
-        {priorityCrew.map((member) => (
-          <CrewItem key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} />
-        ))}
+      <View style={[style, { marginTop: -SPACING.m }]}>
+        <View style={detailStyles.sectionHeader}>
+          <Text style={detailStyles.sectionTitle}>Crew</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
+          {priorityCrew.map((member) => (
+            <CrewCard key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} />
+          ))}
+        </ScrollView>
       </View>
     );
   },
@@ -46,28 +86,3 @@ export const CrewSection = memo<CrewSectionProps>(
 );
 
 CrewSection.displayName = 'CrewSection';
-
-// Memoized crew item component
-const CrewItem = memo<{
-  member: CrewMember;
-  onPress: (id: number) => void;
-}>(({ member, onPress }) => {
-  const handlePress = useCallback(() => {
-    onPress(member.id);
-  }, [member.id, onPress]);
-
-  return (
-    <TouchableOpacity
-      style={detailStyles.crewItem}
-      onPress={handlePress}
-      activeOpacity={ACTIVE_OPACITY}
-    >
-      <Text style={detailStyles.crewJob}>{member.job}</Text>
-      <Text style={detailStyles.crewName} numberOfLines={1}>
-        {member.name}
-      </Text>
-    </TouchableOpacity>
-  );
-});
-
-CrewItem.displayName = 'CrewItem';

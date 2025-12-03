@@ -36,7 +36,6 @@ import {
   ChevronRight,
   Clock,
   Play,
-  Share2,
   Star,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -44,7 +43,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -166,18 +164,6 @@ export default function EpisodeDetailScreen() {
     },
     [navigateTo, tvId, seasonNumber]
   );
-
-  const handleShare = useCallback(async () => {
-    if (!tvShow || !episode) return;
-
-    try {
-      await Share.share({
-        message: `${tvShow.name} - S${seasonNumber} E${episodeNumber}: ${episode.name}`,
-      });
-    } catch (error) {
-      console.error('Error sharing episode:', error);
-    }
-  }, [tvShow, episode, seasonNumber, episodeNumber]);
 
   const handleMarkWatched = useCallback(() => {
     if (!episode || !tvShow) return;
@@ -324,15 +310,6 @@ export default function EpisodeDetailScreen() {
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
 
-          {/* Share Button */}
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={handleShare}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Share2 size={24} color={COLORS.text} />
-          </TouchableOpacity>
-
           {/* Episode Number Badge */}
           <View style={detailStyles.episodeNumberBadge}>
             <Text style={detailStyles.episodeNumberText}>
@@ -385,14 +362,6 @@ export default function EpisodeDetailScreen() {
             )}
           </View>
 
-          {/* Watch Status Badge */}
-          {isWatched && (
-            <View style={detailStyles.watchStatusBadge}>
-              <Check size={16} color={COLORS.text} />
-              <Text style={detailStyles.watchStatusText}>Watched</Text>
-            </View>
-          )}
-
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
             <TouchableOpacity
@@ -427,14 +396,6 @@ export default function EpisodeDetailScreen() {
                 <Text style={styles.trailerButtonText}>Play Trailer</Text>
               </TouchableOpacity>
             )}
-
-            <TouchableOpacity
-              style={styles.shareIconButton}
-              onPress={handleShare}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Share2 size={20} color={COLORS.text} />
-            </TouchableOpacity>
           </View>
 
           {/* Overview */}
@@ -503,7 +464,6 @@ export default function EpisodeDetailScreen() {
               <CastSection
                 cast={credits.guest_stars}
                 onCastPress={handlePersonPress}
-                onViewAll={() => {}} // No view all for guest stars
                 style={{ marginTop: SPACING.l }}
               />
               <SectionSeparator />
@@ -664,14 +624,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.round,
     padding: SPACING.s,
   },
-  shareButton: {
-    position: 'absolute',
-    top: SPACING.m,
-    right: SPACING.m,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: BORDER_RADIUS.round,
-    padding: SPACING.s,
-  },
   content: {
     padding: SPACING.l,
   },
@@ -739,13 +691,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontWeight: '600',
-  },
-  shareIconButton: {
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   overviewSection: {
     marginBottom: SPACING.l,

@@ -51,7 +51,7 @@ export interface WatchProvidersSectionProps {
 export interface CastSectionProps {
   cast: CastMember[];
   onCastPress: (personId: number) => void;
-  onViewAll: () => void;
+  onViewAll?: () => void;
   style?: ViewStyle;
 }
 
