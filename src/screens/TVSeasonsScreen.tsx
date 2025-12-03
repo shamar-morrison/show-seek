@@ -165,7 +165,6 @@ const SeasonItem = memo<{
                   markUnwatched.variables?.episodeNumber === episode.episode_number &&
                   markUnwatched.variables?.seasonNumber === season.season_number);
 
-              // Check if episode has aired
               const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
               const isDisabled = isPending || (!isWatched && !hasAired);
 
@@ -257,6 +256,10 @@ const SeasonItem = memo<{
                                     Haptics.NotificationFeedbackType.Success
                                   );
                                 }
+                              },
+                              onError: (error) => {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                                console.error('Error marking episode as watched:', error);
                               },
                             }
                           );
