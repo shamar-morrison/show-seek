@@ -1,281 +1,161 @@
-# Season and Episode Tracking Feature Specification
+# Feature Request: Dynamic Scroll Header for Movie/TV Show Detail Screens
 
-## Overview
+## Context
 
-Implement a comprehensive season and episode tracking feature for TV shows that allows users to monitor their viewing progress across all seasons and episodes.
+Currently, the movie and TV show detail screens have no header when the user is at the top of the screen. I want to implement a dynamic header that appears when the user scrolls down and disappears when they scroll back to the top.
 
----
+## Current State
 
-## Core Requirements
+- Movie and TV show detail screens display content without a header at the top
+- Users can see the full poster, title, and metadata without any header obstruction
+- There is currently no way to see the movie/show title when scrolled down the page
 
-### Season Display (TV Show Detail Screen) Section
+## Feature Requirements
 
-- Add a horizontal FlashList displaying all seasons below the show overview section
-- Season cards should mimic the design style of the "Similar Shows" section cards
-- Each season card should display:
-  - Season poster image
-  - Season title (e.g., "Season 1")
-  - Number of episodes (e.g., "10 Episodes")
-  - Progress bar showing watched status (e.g., "3/10")
-- Tapping a season card navigates to the Episode List Screen
+### Core Functionality
 
-### Episode List Screen
+Implement a collapsing/appearing header for both movie and TV show detail screens with the following behavior:
 
-- Display a vertical list of all episodes for the selected season (use a FlashList)
-- Each episode card should show:
-  - Episode details (number, title, air date, description, thumbnail)
-  - "Mark as Watched" button
-- Header should include:
-  - Show title and season number
-  - "Mark All Watched" button in the top-right corner
-- Episode details should match the styling used on the TV Seasons Screen
+1. **Initial State (Scroll Position = 0)**
+   - No header visible
+   - Full content visible including poster and title
+   - Leave it just as it is right now
 
-### Watch Status Functionality
+2. **Scrolling Down**
+   - When user scrolls down past a threshold (approximately 150-200 pixels), animate a header into view
+   - Header should slide down from the top with smooth animation
+   - Animation duration: 250-300ms
 
-- Users can manually mark individual episodes as watched
-- Users can mark all episodes in a season as watched via header button
-- All watch status data should be persisted in Firestore
+3. **Scrolling Back Up**
+   - When user scrolls back near the top (below threshold), header should animate out
+   - Same animation timing but in reverse
+   - Should feel smooth and responsive to scroll direction
 
----
+### Header Design Specifications
 
-## Visual & Interaction Enhancements
+**Layout:**
 
-### Progress Bar Styling
+- Back button (left side) - standard Android back arrow icon (as used on the Cast and Crew Screen)
+- Movie/TV show title (next to back button)
+- Semi-transparent or solid background (ensure text readability)
+- Height: Standard navigation header height (56px Android)
+- Respect safe area insets for devices with notches
 
-- Specify whether the progress bar should change color/style when a season is fully completed
-- Consider different visual states: In Progress vs. Complete (e.g., blue vs. green)
+**Styling:**
 
-### Watched State Indication
+- Background: Dark background with slight transparency or blur effect
+- Text color: White or light color for contrast
+- Title should truncate with ellipsis if too long (max single line)
+- Include subtle bottom border or shadow for depth
 
-- Define how watched episodes should be visually distinguished in the episode list:
-  - Opacity/transparency change
-  - Checkmark icon or badge
-  - Different background color
+**Animation:**
 
-### Toggle Functionality
+- Smooth slide-down/slide-up animation
+- Optionally include opacity fade for more polish
+- No janky or stuttering motion during scroll
 
-- Clarify that the "Mark as Watched" button should toggle between watched/unwatched states
-- Button should reflect current state (e.g., "Mark as Watched" vs. "Mark as Unwatched")
+### Technical Implementation Guidelines
 
-### Season Card Visual Indicators
+**Recommended Approach:**
 
-- Consider adding a badge or icon on season cards that are 100% complete
-- Completion indicator could be a checkmark, star, or trophy icon
+1. Use `Animated` API from React Native or `react-native-reanimated` for smooth animations
+2. Track scroll position using `onScroll` event from `ScrollView` or `FlashList`
+3. Calculate when to show/hide header based on `scrollY` value
+4. Use `Animated.View` for the header with conditional rendering/positioning
+5. Ensure header is positioned absolutely or fixed at the top
+6. Consider using `React.memo` or `useMemo` for performance optimization
 
-### Empty State Handling
+**State Management:**
 
-- Define what displays on the TV show detail screen if a show has no seasons available yet
-- Consider showing a placeholder message or hiding the seasons section entirely
+- Track scroll position in state
+- Boolean flag for header visibility
+- Smooth interpolation between visible/hidden states
 
----
+**Performance Considerations:**
 
-## User Experience & Feedback
+- Debounce scroll events if necessary to prevent excessive re-renders
+- Use `nativeDriver: true` for animations when possible
+- Test on Android devices
+- Ensure smooth performance even with complex content
 
-### Mark All Confirmation
+### Edge Cases to Handle
 
-- Specify whether marking all episodes as watched should:
-  - Show a confirmation dialog ("Mark all 10 episodes as watched?")
-  - Happen immediately without confirmation
+1. **Rapid Scrolling:**
+   - Header should respond appropriately to fast scroll gestures
+   - No animation glitches or stuck states
 
-### Undo Capability
+2. **Orientation Changes:**
+   - Header should adjust properly on device rotation
+   - Maintain proper safe area handling
 
-- Consider adding an "undo" option after marking episodes/seasons as watched
-- Implement via toast notification with undo button (5-second window)
+3. **Different Device Sizes:**
+   - Test on various screen sizes (small phones, tablets)
+   - Ensure responsive layout
 
-### Success Feedback
+4. **Initial Load:**
+   - Header should be hidden on initial screen mount
+   - No flash of header before hiding
 
-- Define feedback mechanisms when marking episodes:
-  - Toast notification with message
-  - Subtle animation on the card
-  - Haptic feedback (vibration)
-  - Combination of the above
+5. **Navigation:**
+   - Back button should work correctly (navigate to previous screen)
+   - Maintain navigation stack properly
 
-### Season Completion Celebration
+### Platform-Specific Considerations
 
-- Consider a visual celebration/notification when completing a season
-- Could include achievement badge, special message
+**Android:**
 
-### Loading States
+- Use Android-style back arrow icon
+- Respect status bar height
+- Standard Android header height (56dp)
 
-- Specify loading indicators for:
-  - Fetching season data on TV show detail screen
-  - Fetching episode data when opening season
-  - Saving watch status changes to Firestore
+### Files to Modify/Create
 
----
+Expected file structure:
 
-## Data & Functionality
+- Consider creating a reusable `ScrollHeader` component if logic is shared
 
-### Watch History Timestamp
+### Testing Checklist
 
-- Clarify if you're storing when an episode was marked as watched
-- Enables potential features: watch history timeline, recently watched, etc.
+After implementation, verify:
 
-### Progress Calculation Logic
+- [ ] Header is hidden when at top of screen
+- [ ] Header appears smoothly when scrolling down past threshold
+- [ ] Header disappears smoothly when scrolling back to top
+- [ ] Back button navigates correctly
+- [ ] Title displays correctly and truncates if too long
+- [ ] Animation is smooth with no jank
+- [ ] Works on Android
+- [ ] Respects safe areas on devices with notches
+- [ ] No performance issues during scroll
+- [ ] Works with different content lengths (short vs long)
 
-- Define how progress is calculated:
-  - Simple count of watched episodes
-  - Consider only aired episodes (exclude future episodes)
-  - Handle special episodes differently
+### Additional Enhancements (Optional)
 
-### Unaired Episodes Handling
+Consider implementing these enhancements if time permits:
 
-- Specify how episodes that haven't aired yet should be handled:
-  - Exclude from progress calculation
-  - Show as "not available" or grayed out
-  - Include in total but mark as unavailable
+1. **Header Actions:**
+   - Add "add to list" modal button to header
+   - Add share button to header
 
-### Special Episodes (Season 0)
+## Success Criteria
 
-- Clarify handling of Season 0 (specials, extras, behind-the-scenes):
-  - Include in horizontal season list
-  - Track progress separately
-  - Display differently or at the end
+The feature is complete when:
 
-### Real-time Sync
+1. Header smoothly appears/disappears based on scroll position
+2. Animation is performant with no lag or stuttering
+3. Works consistently on Android
+4. Respects safe areas and device-specific constraints
+5. Back button functions correctly
+6. Title displays appropriately (truncated if needed)
+7. User experience feels polished and native to the platform
 
-- Specify whether changes should sync in real-time across the app:
-  - Update show detail screen immediately when navigating back from episode list
-  - Refresh season progress bars automatically
-  - Sync across devices if user is logged in on multiple devices
+## Additional Context
 
----
+Reference the existing app design patterns:
 
-## Navigation & Structure
+- Current detail screens have no header initially
+- App uses a dark theme with good contrast
+- Back navigation is crucial for user flow
+- Smooth animations are important for app polish
 
-### Episode List Screen Header
-
-- Define header content:
-  - Show title
-  - Season number
-  - Overall season progress (e.g., "6/10 watched")
-  - Back button
-  - "Mark All Watched" button
-
-### State Preservation
-
-- Clarify if scroll position should be preserved when navigating between screens
-- Important for user experience when browsing multiple seasons
-
----
-
-## Data Management
-
-### Firestore Data Structure
-
-- Document the data structure format:
-  - Per-user watched status (user-specific collections)
-  - Show → Season → Episode hierarchy
-  - Watched episodes stored as array or map
-  - Include timestamp and progress metadata
-
-### Offline Support
-
-- Specify behavior when marking episodes watched without internet connection:
-  - Queue changes locally
-  - Show "pending sync" indicator
-  - Sync when connection restored
-  - Handle conflicts if data changed on server
-
-### Data Efficiency
-
-- Consider data fetching strategy:
-  - Fetch all episode details upfront
-  - Lazy-load per season (fetch when user opens season)
-  - Cache frequently accessed season data
-
----
-
-## Additional Features to Consider
-
-### Quick Mark from Season Card
-
-- Option to long-press a season card to mark all episodes as watched
-- Bypasses opening the episode list screen
-- Show confirmation dialog for this action
-
-### Overall Show Progress
-
-- Display overall show progress at the show level
-- Example: "Season 3 - 45/100 episodes watched across all seasons"
-- Could appear in the header or summary section
-
-### Filter and Sort Options
-
-- Ability to filter episode list:
-  - Show only unwatched episodes
-  - Show only watched episodes
-  - Show all episodes
-- Sort options (by episode number, air date, etc.)
-
-### Next Episode Highlight
-
-- Automatically highlight or scroll to the next unwatched episode when opening a season
-- Helps users quickly resume where they left off
-
-### Episode Notes and Ratings
-
-- Space for users to add personal notes per episode
-- Optional rating system (stars or thumbs up/down)
-- Could be used for recommendations or personal tracking
-
-### Bulk Actions
-
-- Select multiple episodes to mark as watched at once
-- Useful for binge-watching scenarios
-- Checkbox selection mode in episode list
-
-### Watch Statistics
-
-- Track viewing statistics:
-  - Total episodes watched
-  - Watch time (if episode runtime is available)
-  - Shows completed
-  - Current streak (consecutive days watching)
-
----
-
-## Implementation Priorities
-
-### Phase 1 (MVP)
-
-- Horizontal season list on show detail screen
-- Episode list screen with individual episode tracking
-- Basic watch/unwatch toggle functionality
-- Firestore persistence
-- Simple progress bars
-
-### Phase 2 (Enhanced UX)
-
-- Visual indicators for watched state
-- Mark all watched functionality
-- Loading states and error handling
-- Success feedback (toast notifications)
-
-### Phase 3 (Advanced Features)
-
-- Offline support
-- Undo capability
-- Season completion celebrations
-- Quick mark from long-press
-- Filter and highlight next episode
-
----
-
-## Technical Considerations
-
-### Performance
-
-- Optimize FlashList rendering for many seasons
-- Implement efficient Firestore queries (batch reads/writes)
-
-### Accessibility
-
-- Ensure all interactive elements are accessible
-- Provide clear labels for screen readers
-
-### Error Handling
-
-- Handle network failures gracefully
-- Provide retry mechanisms
-- Clear error messages for users
+Please implement this feature following React Native/Expo best practices, ensuring optimal performance and cross-platform compatibility.

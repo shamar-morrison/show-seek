@@ -15,6 +15,7 @@ import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSec
 import ImageLightbox from '@/src/components/ImageLightbox';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
@@ -28,10 +29,10 @@ import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -64,6 +65,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
@@ -201,7 +203,21 @@ export default function MovieDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView style={styles.scrollView} bounces={false}>
+      <AnimatedScrollHeader
+        title={movie.title}
+        onBackPress={() => router.back()}
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
+        style={styles.scrollView}
+        bounces={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
         {/* Hero Section */}
         <View style={styles.heroContainer}>
           <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
@@ -441,7 +457,7 @@ export default function MovieDetailScreen() {
           {/* Details */}
           <MediaDetailsInfo media={movie} type="movie" />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <TrailerPlayer
         visible={trailerModalVisible}
