@@ -13,14 +13,28 @@ import {
   View,
 } from 'react-native';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { useDeleteEpisodeRating, useRateEpisode } from '../hooks/useRatings';
 import { ratingService } from '../services/RatingService';
 import { getRatingText } from '../utils/ratingHelpers';
 
 interface RatingModalProps {
   visible: boolean;
   onClose: () => void;
-  mediaId: number;
-  mediaType: 'movie' | 'tv';
+
+  // For movies and TV shows
+  mediaId?: number;
+  mediaType?: 'movie' | 'tv';
+
+  // For episodes
+  episodeData?: {
+    tvShowId: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    episodeName: string;
+    tvShowName: string;
+    posterPath: string | null;
+  };
+
   initialRating?: number;
   onRatingSuccess: (rating: number) => void;
   onShowToast?: (message: string) => void;
@@ -31,12 +45,17 @@ export default function RatingModal({
   onClose,
   mediaId,
   mediaType,
+  episodeData,
   initialRating = 0,
   onRatingSuccess,
   onShowToast,
 }: RatingModalProps) {
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Episode rating mutations
+  const rateEpisodeMutation = useRateEpisode();
+  const deleteEpisodeMutation = useDeleteEpisodeRating();
 
   useEffect(() => {
     if (visible) {
@@ -57,7 +76,24 @@ export default function RatingModal({
     onClose();
 
     try {
-      await ratingService.saveRating(mediaId, mediaType, rating);
+      if (episodeData) {
+        // Episode rating
+        await rateEpisodeMutation.mutateAsync({
+          tvShowId: episodeData.tvShowId,
+          seasonNumber: episodeData.seasonNumber,
+          episodeNumber: episodeData.episodeNumber,
+          rating,
+          episodeMetadata: {
+            episodeName: episodeData.episodeName,
+            tvShowName: episodeData.tvShowName,
+            posterPath: episodeData.posterPath,
+          },
+        });
+      } else if (mediaId !== undefined && mediaType) {
+        // Movie/TV rating
+        await ratingService.saveRating(mediaId, mediaType, rating);
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRatingSuccess(rating);
     } catch (err) {
@@ -75,7 +111,18 @@ export default function RatingModal({
     onClose();
 
     try {
-      await ratingService.deleteRating(mediaId, mediaType);
+      if (episodeData) {
+        // Delete episode rating
+        await deleteEpisodeMutation.mutateAsync({
+          tvShowId: episodeData.tvShowId,
+          seasonNumber: episodeData.seasonNumber,
+          episodeNumber: episodeData.episodeNumber,
+        });
+      } else if (mediaId !== undefined && mediaType) {
+        // Delete movie/TV rating
+        await ratingService.deleteRating(mediaId, mediaType);
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onRatingSuccess(0);
     } catch (err) {

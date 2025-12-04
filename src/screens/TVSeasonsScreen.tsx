@@ -17,6 +17,8 @@ import { useCurrentTab } from '@/src/hooks/useNavigation';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
+import { useRatings } from '@/src/hooks/useRatings';
+import type { RatingItem } from '@/src/services/RatingService';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
@@ -47,6 +49,7 @@ const SeasonItem = memo<{
   markUnwatched: UseMutationResult<void, Error, MarkEpisodeUnwatchedParams>;
   markAllWatched: UseMutationResult<void, Error, MarkAllEpisodesWatchedParams>;
   formatDate: (date: string | null) => string;
+  ratings: RatingItem[] | undefined;
 }>(
   ({
     season,
@@ -61,6 +64,7 @@ const SeasonItem = memo<{
     markUnwatched,
     markAllWatched,
     formatDate,
+    ratings,
   }) => {
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
@@ -171,6 +175,13 @@ const SeasonItem = memo<{
               const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
               const isDisabled = isPending || (!isWatched && !hasAired);
 
+              // Find user rating for this episode
+              const episodeDocId = `episode-${tvId}-${season.season_number}-${episode.episode_number}`;
+              const userRatingItem = ratings?.find(
+                (r) => r.id === episodeDocId && r.mediaType === 'episode'
+              );
+              const userRating = userRatingItem?.rating || 0;
+
               return (
                 <View key={episode.id} style={styles.episodeCard}>
                   {/* Wrap episode content in TouchableOpacity for navigation */}
@@ -194,12 +205,24 @@ const SeasonItem = memo<{
                     <View style={styles.episodeInfo}>
                       <View style={styles.episodeHeader}>
                         <Text style={styles.episodeNumber}>Episode {episode.episode_number}</Text>
-                        {episode.vote_average > 0 && (
-                          <View style={styles.episodeRating}>
-                            <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                            <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
-                          </View>
-                        )}
+                        <View style={styles.ratingsContainer}>
+                          {/* User Rating */}
+                          {userRating > 0 && (
+                            <View style={styles.episodeRating}>
+                              <Star size={12} color={COLORS.primary} fill={COLORS.primary} />
+                              <Text style={[styles.ratingText, { color: COLORS.primary }]}>
+                                {userRating.toFixed(1)}
+                              </Text>
+                            </View>
+                          )}
+                          {/* TMDB Rating */}
+                          {episode.vote_average > 0 && (
+                            <View style={styles.episodeRating}>
+                              <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                              <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
 
                       <Text style={styles.episodeTitle} numberOfLines={1}>
@@ -334,6 +357,9 @@ export default function TVSeasonsScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
 
+  // Ratings hook
+  const { data: ratings } = useRatings();
+
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
       if (!currentTab) {
@@ -421,6 +447,7 @@ export default function TVSeasonsScreen() {
             markUnwatched={markUnwatched}
             markAllWatched={markAllWatched}
             formatDate={formatDate}
+            ratings={ratings}
           />
         ))}
       </ScrollView>
@@ -571,6 +598,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  ratingsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
   },
   episodeRating: {
     flexDirection: 'row',

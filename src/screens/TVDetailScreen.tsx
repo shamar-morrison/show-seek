@@ -720,9 +720,11 @@ const styles = StyleSheet.create({
   },
   ratingButtonContainer: {
     width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
 });

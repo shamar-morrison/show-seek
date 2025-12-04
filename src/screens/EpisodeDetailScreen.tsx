@@ -14,9 +14,13 @@ import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import RatingButton from '@/src/components/RatingButton';
+import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -26,6 +30,7 @@ import {
   useMarkEpisodeWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
+import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,9 +61,17 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const toastRef = React.useRef<ToastRef>(null);
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
+
+  const { userRating, isLoading: isLoadingRating } = useEpisodeRating(
+    tvId,
+    seasonNumber,
+    episodeNumber
+  );
 
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const { isWatched } = useIsEpisodeWatched(tvId, seasonNumber, episodeNumber);
@@ -378,7 +391,19 @@ export default function EpisodeDetailScreen() {
                 <Text style={styles.trailerButtonText}>Play Trailer</Text>
               </TouchableOpacity>
             )}
+
+            {/* Rating Button */}
+            <View style={styles.ratingButtonContainer}>
+              <RatingButton
+                onPress={() => setRatingModalVisible(true)}
+                isRated={userRating > 0}
+                isLoading={isLoadingRating}
+              />
+            </View>
           </View>
+
+          {/* User Rating Display */}
+          {userRating > 0 && <UserRating rating={userRating} />}
 
           {/* Overview */}
           {episode.overview && (
@@ -480,6 +505,26 @@ export default function EpisodeDetailScreen() {
         initialIndex={lightboxIndex}
         onClose={() => setLightboxVisible(false)}
       />
+
+      {/* Rating Modal */}
+      {episode && tvShow && (
+        <RatingModal
+          visible={ratingModalVisible}
+          onClose={() => setRatingModalVisible(false)}
+          episodeData={{
+            tvShowId: tvId,
+            seasonNumber,
+            episodeNumber,
+            episodeName: episode.name,
+            tvShowName: tvShow.name,
+            posterPath: tvShow.poster_path,
+          }}
+          initialRating={userRating}
+          onRatingSuccess={() => {}}
+          onShowToast={(message) => toastRef.current?.show(message)}
+        />
+      )}
+      <Toast ref={toastRef} />
     </SafeAreaView>
   );
 }
@@ -612,6 +657,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontWeight: '600',
+  },
+  ratingButtonContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 24,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   overviewSection: {},
   sectionTitle: {
