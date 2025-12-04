@@ -7,7 +7,10 @@ export const useLists = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
+    if (!userId) return true;
+    return !queryClient.getQueryData(['lists', userId]);
+  });
 
   useEffect(() => {
     if (!userId) {
@@ -16,7 +19,9 @@ export const useLists = () => {
     }
 
     setError(null);
-    setIsSubscriptionLoading(true);
+    if (!queryClient.getQueryData(['lists', userId])) {
+      setIsSubscriptionLoading(true);
+    }
 
     const unsubscribe = listService.subscribeToUserLists(
       (lists) => {

@@ -7,7 +7,10 @@ export const useRatings = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
+    if (!userId) return true;
+    return !queryClient.getQueryData(['ratings', userId]);
+  });
 
   useEffect(() => {
     if (!userId) {
@@ -16,7 +19,9 @@ export const useRatings = () => {
     }
 
     setError(null);
-    setIsSubscriptionLoading(true);
+    if (!queryClient.getQueryData(['ratings', userId])) {
+      setIsSubscriptionLoading(true);
+    }
 
     const unsubscribe = ratingService.subscribeToUserRatings(
       (ratings) => {
@@ -86,13 +91,7 @@ export const useDeleteRating = () => {
   });
 };
 
-// Episode rating hooks
-
-export const useEpisodeRating = (
-  tvShowId: number,
-  seasonNumber: number,
-  episodeNumber: number
-) => {
+export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episodeNumber: number) => {
   const { data: ratings, isLoading } = useRatings();
 
   if (!ratings) {
