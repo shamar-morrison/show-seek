@@ -4,17 +4,12 @@ import { COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { FavoritePerson } from '@/src/types/favoritePerson';
-import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 export default function FavoritePeopleScreen() {
   const router = useRouter();
@@ -41,7 +36,7 @@ export default function FavoritePeopleScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: FavoritePerson }) => (
-      <PersonCard person={item} onPress={handlePersonPress} width={ITEM_WIDTH} />
+      <PersonCard person={item} onPress={handlePersonPress} />
     ),
     [handlePersonPress]
   );
@@ -70,11 +65,12 @@ export default function FavoritePeopleScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <FlashList
+      <FlatList
         data={sortedPersons}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        numColumns={COLUMN_COUNT}
+        numColumns={3}
+        columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
@@ -94,8 +90,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
+    padding: SPACING.m,
+  },
+  columnWrapper: {
+    gap: SPACING.m,
+    marginBottom: SPACING.m,
   },
 });

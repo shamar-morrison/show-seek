@@ -1,8 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import React, { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
 interface PersonCardProps {
@@ -11,27 +11,29 @@ interface PersonCardProps {
   width?: number;
 }
 
-export const PersonCard = memo<PersonCardProps>(({ person, onPress, width = 100 }) => {
+export const PersonCard = memo<PersonCardProps>(({ person, onPress }) => {
   const handlePress = useCallback(() => {
     onPress(person.id);
   }, [onPress, person.id]);
 
   return (
-    <Pressable style={[styles.container, { width }]} onPress={handlePress}>
+    <Pressable style={styles.card} onPress={handlePress}>
       <MediaImage
         source={{ uri: getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
-        style={[styles.profileImage, { width, height: width }]}
+        style={styles.profileImage}
         contentFit="cover"
         placeholderType="person"
       />
-      <Text style={styles.name} numberOfLines={2}>
-        {person.name}
-      </Text>
-      {person.known_for_department && (
-        <Text style={styles.department} numberOfLines={1}>
-          {person.known_for_department}
+      <View style={styles.cardInfo}>
+        <Text style={styles.name} numberOfLines={1}>
+          {person.name}
         </Text>
-      )}
+        {person.known_for_department && (
+          <Text style={styles.department} numberOfLines={1}>
+            {person.known_for_department}
+          </Text>
+        )}
+      </View>
     </Pressable>
   );
 });
@@ -39,25 +41,29 @@ export const PersonCard = memo<PersonCardProps>(({ person, onPress, width = 100 
 PersonCard.displayName = 'PersonCard';
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    marginBottom: SPACING.m,
+  card: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    overflow: 'hidden',
+    maxWidth: '31%', // Ensure 3 columns fit with gap
   },
   profileImage: {
-    borderRadius: 50,
+    width: '100%',
+    aspectRatio: 2 / 3,
     backgroundColor: COLORS.surfaceLight,
   },
+  cardInfo: {
+    padding: SPACING.s,
+  },
   name: {
-    marginTop: SPACING.s,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
     color: COLORS.text,
-    textAlign: 'center',
+    marginBottom: 2,
   },
   department: {
-    marginTop: 2,
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    textAlign: 'center',
   },
 });
