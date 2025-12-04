@@ -1,4 +1,4 @@
-import { FirebaseError } from 'firebase/app';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   collection,
   deleteDoc,
@@ -10,30 +10,6 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-
-// Error message mapping for user-friendly feedback
-const getFirestoreErrorMessage = (error: unknown): string => {
-  if (error instanceof FirebaseError) {
-    switch (error.code) {
-      case 'permission-denied':
-        return 'You do not have permission to perform this action';
-      case 'unavailable':
-        return 'Network error. Please check your connection';
-      case 'not-found':
-        return 'The requested rating was not found';
-      case 'deadline-exceeded':
-        return 'Request timed out. Please try again';
-      case 'resource-exhausted':
-        return 'Too many requests. Please wait a moment';
-      default:
-        return `Database error: ${error.message}`;
-    }
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
-};
 
 export interface RatingItem {
   id: string; // mediaId for movies/TV, composite ID for episodes
