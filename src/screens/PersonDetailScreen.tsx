@@ -10,10 +10,10 @@ import {
   useRemoveFavoritePerson,
 } from '@/src/hooks/useFavoritePersons';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
   Animated,
@@ -506,10 +506,10 @@ const styles = StyleSheet.create({
   creditRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: SPACING.xs - 1,
   },
   creditRatingText: {
-    color: COLORS.text,
+    color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
     fontWeight: '600',
   },

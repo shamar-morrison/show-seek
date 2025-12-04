@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { auth } from '../firebase/config';
+import { useAuth } from '../context/auth';
 import { favoritePersonsService } from '../services/FavoritePersonsService';
 import { FavoritePerson } from '../types/favoritePerson';
 
 export const useFavoritePersons = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [error, setError] = useState<Error | null>(null);
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
 
@@ -62,7 +63,7 @@ export const useIsPersonFavorited = (personId: number) => {
 
   return {
     isFavorited,
-    isLoading: isLoading || false,
+    isLoading,
   };
 };
 
