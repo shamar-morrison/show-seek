@@ -406,4 +406,12 @@ export const detailStyles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.round,
     padding: SPACING.xs,
   },
+  ratingButtonContainer: {
+    width: 48,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

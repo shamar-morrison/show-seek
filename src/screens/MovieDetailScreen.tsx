@@ -346,7 +346,7 @@ export default function MovieDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
-            <View style={styles.ratingButtonContainer}>
+            <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
                 onPress={() => setRatingModalVisible(true)}
                 isRated={userRating > 0}
@@ -693,12 +693,5 @@ const styles = StyleSheet.create({
   },
   addedButton: {
     backgroundColor: COLORS.success,
-  },
-  ratingButtonContainer: {
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
   },
 });

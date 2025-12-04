@@ -85,3 +85,68 @@ export const useDeleteRating = () => {
       ratingService.deleteRating(mediaId, mediaType),
   });
 };
+
+// Episode rating hooks
+
+export const useEpisodeRating = (
+  tvShowId: number,
+  seasonNumber: number,
+  episodeNumber: number
+) => {
+  const { data: ratings, isLoading } = useRatings();
+
+  if (!ratings) {
+    return { userRating: 0, isLoading: true };
+  }
+
+  const episodeDocId = `episode-${tvShowId}-${seasonNumber}-${episodeNumber}`;
+  const ratingItem = ratings.find((r) => r.id === episodeDocId && r.mediaType === 'episode');
+
+  return {
+    userRating: ratingItem?.rating || 0,
+    isLoading: isLoading || false,
+  };
+};
+
+export const useRateEpisode = () => {
+  return useMutation({
+    mutationFn: ({
+      tvShowId,
+      seasonNumber,
+      episodeNumber,
+      rating,
+      episodeMetadata,
+    }: {
+      tvShowId: number;
+      seasonNumber: number;
+      episodeNumber: number;
+      rating: number;
+      episodeMetadata: {
+        episodeName: string;
+        tvShowName: string;
+        posterPath: string | null;
+      };
+    }) =>
+      ratingService.saveEpisodeRating(
+        tvShowId,
+        seasonNumber,
+        episodeNumber,
+        rating,
+        episodeMetadata
+      ),
+  });
+};
+
+export const useDeleteEpisodeRating = () => {
+  return useMutation({
+    mutationFn: ({
+      tvShowId,
+      seasonNumber,
+      episodeNumber,
+    }: {
+      tvShowId: number;
+      seasonNumber: number;
+      episodeNumber: number;
+    }) => ratingService.deleteEpisodeRating(tvShowId, seasonNumber, episodeNumber),
+  });
+};
