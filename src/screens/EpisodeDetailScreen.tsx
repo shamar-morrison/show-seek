@@ -234,12 +234,10 @@ export default function EpisodeDetailScreen() {
     return map;
   }, [episodeTracking]);
 
-  // Trailer for "Play Trailer" button
   const trailer = useMemo(() => {
     return videos.find((v) => v.type === 'Trailer' && v.site === 'YouTube');
   }, [videos]);
 
-  // Check if episode has aired
   const hasAired = useMemo(() => {
     if (!episode?.air_date) return false;
     return new Date(episode.air_date) <= new Date();
@@ -332,7 +330,11 @@ export default function EpisodeDetailScreen() {
               <View style={styles.metaItem}>
                 <Calendar size={16} color={COLORS.textSecondary} />
                 <Text style={styles.metaText}>
-                  {new Date(episode.air_date).toLocaleDateString()}
+                  {new Date(episode.air_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </Text>
               </View>
             )}
