@@ -135,10 +135,14 @@ export default function PersonDetailScreen() {
       )
     : tvCreditsQuery.data?.cast || [];
 
-  // Filter out talk shows (genre ID 10767) from TV credits
-  const TALK_SHOW_GENRE_ID = 10767;
+  // Filter out non-scripted shows from TV credits
+  const EXCLUDED_GENRE_IDS = [
+    10767, // Talk shows (The Tonight Show, Jimmy Kimmel, etc.)
+    10763, // News (news programs)
+    10764, // Reality (reality TV shows, awards shows)
+  ];
   const filteredTVCredits = tvCredits.filter(
-    (show) => !show.genre_ids?.includes(TALK_SHOW_GENRE_ID)
+    (show) => !show.genre_ids?.some((genreId) => EXCLUDED_GENRE_IDS.includes(genreId))
   );
 
   // Sort by popularity and get top items
