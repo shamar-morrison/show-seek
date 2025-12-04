@@ -29,15 +29,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
-import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  ChevronRight,
-  Clock,
-  Play,
-  Star,
-} from 'lucide-react-native';
+import { ArrowLeft, Calendar, Check, ChevronRight, Clock, Play, Star } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -253,7 +245,6 @@ export default function EpisodeDetailScreen() {
     return new Date(episode.air_date) <= new Date();
   }, [episode]);
 
-  // Loading state
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -263,7 +254,6 @@ export default function EpisodeDetailScreen() {
     );
   }
 
-  // Error state
   if (isError || !episode) {
     return (
       <SafeAreaView style={styles.errorContainer}>
@@ -309,13 +299,6 @@ export default function EpisodeDetailScreen() {
           >
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
-
-          {/* Episode Number Badge */}
-          <View style={detailStyles.episodeNumberBadge}>
-            <Text style={detailStyles.episodeNumberText}>
-              S{seasonNumber} E{episodeNumber}
-            </Text>
-          </View>
         </View>
 
         {/* Content Section */}
@@ -338,6 +321,13 @@ export default function EpisodeDetailScreen() {
 
           {/* Meta Information */}
           <View style={styles.metaRow}>
+            {/* Episode Number */}
+            <View style={styles.metaItem}>
+              <Text style={[styles.metaText, { fontWeight: '600', color: COLORS.text }]}>
+                S{seasonNumber} E{episodeNumber}
+              </Text>
+            </View>
+
             {episode.air_date && (
               <View style={styles.metaItem}>
                 <Calendar size={16} color={COLORS.textSecondary} />
@@ -418,44 +408,6 @@ export default function EpisodeDetailScreen() {
             </View>
           )}
 
-          {/* Director & Writer */}
-          {credits?.crew && (
-            <View style={styles.crewInline}>
-              {credits.crew.find((c) => c.job === 'Director') && (
-                <View style={styles.crewInlineItem}>
-                  <Text style={styles.crewInlineLabel}>Director</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      handlePersonPress(credits.crew.find((c) => c.job === 'Director')!.id)
-                    }
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <Text style={styles.crewInlineName}>
-                      {credits.crew.find((c) => c.job === 'Director')!.name}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay') && (
-                <View style={styles.crewInlineItem}>
-                  <Text style={styles.crewInlineLabel}>Writer</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      handlePersonPress(
-                        credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!.id
-                      )
-                    }
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <Text style={styles.crewInlineName}>
-                      {credits.crew.find((c) => c.job === 'Writer' || c.job === 'Screenplay')!.name}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
-
           <SectionSeparator />
 
           {/* Guest Cast Section */}
@@ -516,7 +468,6 @@ export default function EpisodeDetailScreen() {
                 tvId={tvId}
                 watchedEpisodes={watchedEpisodesMap}
                 onEpisodePress={handleRelatedEpisodePress}
-                style={{ marginTop: SPACING.l }}
               />
               <SectionSeparator />
             </>
@@ -534,7 +485,6 @@ export default function EpisodeDetailScreen() {
                 setShouldLoadReviews(true);
               }
             }}
-            style={{ marginTop: SPACING.l }}
           />
         </View>
       </ScrollView>
@@ -692,9 +642,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
   },
-  overviewSection: {
-    marginBottom: SPACING.l,
-  },
+  overviewSection: {},
   sectionTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
