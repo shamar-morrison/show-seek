@@ -1,5 +1,5 @@
-import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRouter } from 'expo-router';
 import { Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
 import React, { useCallback } from 'react';
@@ -108,6 +108,7 @@ export default function LibraryScreen() {
   );
 
   const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
+  const ItemSeparator = useCallback(() => <View style={styles.itemSeparator} />, []);
 
   const keyExtractor = useCallback((item: NavigationItem) => item.id, []);
 
@@ -129,7 +130,7 @@ export default function LibraryScreen() {
         contentContainerStyle={styles.content}
         stickySectionHeadersEnabled={false}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        ItemSeparatorComponent={ItemSeparator}
       />
     </SafeAreaView>
   );

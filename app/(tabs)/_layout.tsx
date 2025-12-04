@@ -1,4 +1,4 @@
-import { COLORS } from '@/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { Tabs } from 'expo-router';
 import { Bookmark, Compass, Home, Search, User } from 'lucide-react-native';
 import React from 'react';

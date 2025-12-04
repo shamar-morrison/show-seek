@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { Image } from 'expo-image';
 import { X } from 'lucide-react-native';
 import React, { useState } from 'react';

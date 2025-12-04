@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { auth } from '@/src/firebase/config';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';

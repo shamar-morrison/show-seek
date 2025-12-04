@@ -1,28 +1,30 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
-import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
-import { useCurrentTab } from '@/src/context/TabContext';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
-import { ListMediaItem } from '@/src/services/ListService';
-import * as Haptics from 'expo-haptics';
+import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useRouter } from 'expo-router';
 import { Bookmark } from 'lucide-react-native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WatchStatusScreen() {
   const router = useRouter();
-  const currentTab = useCurrentTab();
   const { data: lists, isLoading } = useLists();
   const [selectedListId, setSelectedListId] = useState<string>('watchlist');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
-    null
-  );
-  const toastRef = useRef<ToastRef>(null);
+
+  const {
+    handleItemPress,
+    handleLongPress,
+    handleCloseModal,
+    handleShowToast,
+    modalVisible,
+    selectedMediaItem,
+    toastRef,
+  } = useMediaGridHandlers(isLoading);
 
   const selectedList = useMemo(() => {
     return lists?.find((l) => l.id === selectedListId);
@@ -32,41 +34,6 @@ export default function WatchStatusScreen() {
     if (!selectedList?.items) return [];
     return Object.values(selectedList.items).sort((a, b) => b.addedAt - a.addedAt);
   }, [selectedList]);
-
-  const handleItemPress = useCallback(
-    (item: ListMediaItem) => {
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-
-      if (item.media_type === 'movie') {
-        router.push(`${basePath}/movie/${item.id}` as any);
-      } else {
-        router.push(`${basePath}/tv/${item.id}` as any);
-      }
-    },
-    [currentTab, router]
-  );
-
-  const handleLongPress = useCallback(
-    (item: ListMediaItem) => {
-      if (isLoading) return;
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      const { addedAt: _addedAt, ...mediaItem } = item;
-      setSelectedMediaItem(mediaItem);
-      setModalVisible(true);
-    },
-    [isLoading]
-  );
-
-  const handleCloseModal = useCallback(() => {
-    setModalVisible(false);
-    setSelectedMediaItem(null);
-  }, []);
-
-  const handleShowToast = useCallback((message: string) => {
-    toastRef.current?.show(message);
-  }, []);
 
   return (
     <>

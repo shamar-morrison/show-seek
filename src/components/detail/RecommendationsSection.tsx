@@ -1,6 +1,6 @@
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';

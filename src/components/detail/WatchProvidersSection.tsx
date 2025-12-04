@@ -1,6 +1,6 @@
-import { COLORS, FONT_SIZE } from '@/constants/theme';
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { COLORS, FONT_SIZE } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -29,11 +29,9 @@ const openJustWatchLink = async (link: string) => {
     }
   } catch (error) {
     console.error('Error opening JustWatch link:', error);
-    Alert.alert(
-      'Error',
-      'An error occurred while trying to open the link. Please try again.',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Error', 'An error occurred while trying to open the link. Please try again.', [
+      { text: 'OK' },
+    ]);
   }
 };
 
@@ -59,10 +57,7 @@ const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => 
           return (
             <Pressable
               key={provider.provider_id}
-              style={({ pressed }) => [
-                detailStyles.providerCard,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
+              style={({ pressed }) => [detailStyles.providerCard, { opacity: pressed ? 0.7 : 1 }]}
               onPress={handlePress}
               accessibilityRole="button"
               accessibilityLabel={`Watch on ${provider.provider_name} via JustWatch`}

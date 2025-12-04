@@ -1,17 +1,10 @@
-import { BORDER_RADIUS, COLORS, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
 
@@ -79,10 +72,7 @@ export const MediaGrid = memo<MediaGridProps>(
       [onItemPress, onItemLongPress, showRatings]
     );
 
-    const keyExtractor = useCallback(
-      (item: ListMediaItem) => `${item.id}-${item.media_type}`,
-      []
-    );
+    const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
 
     if (isLoading) {
       return (

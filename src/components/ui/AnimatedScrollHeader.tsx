@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

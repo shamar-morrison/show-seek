@@ -1,10 +1,4 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { AlertCircle } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -22,11 +16,7 @@ export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) =>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
-        <TouchableOpacity
-          style={styles.button}
-          onPress={onRetry}
-          activeOpacity={ACTIVE_OPACITY}
-        >
+        <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={ACTIVE_OPACITY}>
           <Text style={styles.buttonText}>Retry</Text>
         </TouchableOpacity>
       )}

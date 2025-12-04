@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import { useDeleteEpisodeRating, useRateEpisode } from '../hooks/useRatings';
 import { ratingService } from '../services/RatingService';
 import { getRatingText } from '../utils/ratingHelpers';

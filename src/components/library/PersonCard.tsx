@@ -1,5 +1,5 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
@@ -17,10 +17,7 @@ export const PersonCard = memo<PersonCardProps>(({ person, onPress, width = 100 
   }, [onPress, person.id]);
 
   return (
-    <Pressable
-      style={[styles.container, { width }]}
-      onPress={handlePress}
-    >
+    <Pressable style={[styles.container, { width }]} onPress={handlePress}>
       <MediaImage
         source={{ uri: getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
         style={[styles.profileImage, { width, height: width }]}

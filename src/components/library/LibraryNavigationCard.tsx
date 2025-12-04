@@ -1,8 +1,8 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { ChevronRight, LucideIcon } from 'lucide-react-native';
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 interface LibraryNavigationCardProps {
   icon: LucideIcon;

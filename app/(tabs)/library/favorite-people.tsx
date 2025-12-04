@@ -1,6 +1,6 @@
-import { COLORS, SPACING } from '@/constants/theme';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { FavoritePerson } from '@/src/types/favoritePerson';

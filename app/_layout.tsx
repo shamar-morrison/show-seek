@@ -1,8 +1,8 @@
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
-import { COLORS } from '@/constants/theme';
 import DevIndicator from '@/src/components/DevIndicator';
+import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

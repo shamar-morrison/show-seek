@@ -1,7 +1,7 @@
-import { COLORS } from '@/constants/theme';
 import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
+import { COLORS } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';

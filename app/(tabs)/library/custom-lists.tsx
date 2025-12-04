@@ -1,6 +1,6 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
-import { filterCustomLists } from '@/src/constants/lists';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { filterCustomLists } from '@/src/constants/lists';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';

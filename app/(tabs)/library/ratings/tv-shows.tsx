@@ -1,8 +1,8 @@
-import { BORDER_RADIUS, COLORS, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { FlashList } from '@shopify/flash-list';

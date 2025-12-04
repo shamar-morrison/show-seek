@@ -1,4 +1,4 @@
-import { COLORS } from '@/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { Film, Tv, User } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

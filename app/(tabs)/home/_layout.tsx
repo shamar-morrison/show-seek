@@ -1,4 +1,4 @@
-import { COLORS } from '@/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { TabProvider } from '@/src/context/TabContext';
 import { Stack } from 'expo-router';
 

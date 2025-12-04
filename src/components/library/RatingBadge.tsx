@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
