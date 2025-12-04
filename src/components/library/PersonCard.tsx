@@ -20,7 +20,6 @@ export const PersonCard = memo<PersonCardProps>(({ person, onPress, width = 100 
     <Pressable
       style={[styles.container, { width }]}
       onPress={handlePress}
-      activeOpacity={ACTIVE_OPACITY}
     >
       <MediaImage
         source={{ uri: getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
