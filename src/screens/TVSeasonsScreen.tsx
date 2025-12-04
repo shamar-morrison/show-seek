@@ -14,15 +14,15 @@ import {
   type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { useRatings } from '@/src/hooks/useRatings';
+import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { useRatings } from '@/src/hooks/useRatings';
-import type { RatingItem } from '@/src/services/RatingService';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -35,6 +35,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type SeasonWithEpisodes = Season & { episodes?: Episode[] };
+
+const SCROLL_INITIAL_DELAY = 300;
+const SCROLL_RETRY_INTERVAL = 100;
+const SCROLL_MAX_ATTEMPTS = 20;
 
 const SeasonItem = memo<{
   season: SeasonWithEpisodes;
@@ -219,7 +223,9 @@ const SeasonItem = memo<{
                           {episode.vote_average > 0 && (
                             <View style={styles.episodeRating}>
                               <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                              <Text style={styles.ratingText}>{episode.vote_average.toFixed(1)}</Text>
+                              <Text style={styles.ratingText}>
+                                {episode.vote_average.toFixed(1)}
+                              </Text>
                             </View>
                           )}
                         </View>
@@ -327,11 +333,16 @@ const SeasonItem = memo<{
 SeasonItem.displayName = 'SeasonItem';
 
 export default function TVSeasonsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, season } = useLocalSearchParams();
   const router = useRouter();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
-  const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const seasonRefs = useRef<Map<number, { y: number; height: number }>>(new Map());
+  const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
+    return season ? Number(season) : null;
+  });
+  const [hasScrolledToSeason, setHasScrolledToSeason] = useState(false);
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -357,8 +368,63 @@ export default function TVSeasonsScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
 
-  // Ratings hook
   const { data: ratings } = useRatings();
+
+  // Auto-scroll to selected season when data is loaded and layout is complete
+  useEffect(() => {
+    if (!season || hasScrolledToSeason || !seasonQueries.data || seasonQueries.data.length === 0) {
+      return;
+    }
+
+    const seasonNumber = Number(season);
+    const seasonExists = seasonQueries.data.some((s) => s.season_number === seasonNumber);
+
+    if (!seasonExists) {
+      console.warn(`Season ${seasonNumber} not found in TV show data`);
+      setHasScrolledToSeason(true);
+      return;
+    }
+
+    // Retry mechanism to wait for layout measurements
+    let attempts = 0;
+    const maxAttempts = SCROLL_MAX_ATTEMPTS; // Try for up to 2 seconds (20 * 100ms)
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isCancelled = false;
+
+    const tryScroll = () => {
+      if (isCancelled) return;
+
+      const seasonLayout = seasonRefs.current.get(seasonNumber);
+
+      if (seasonLayout && scrollViewRef.current) {
+        // Layout is ready, perform scroll
+        const scrollToY = Math.max(0, seasonLayout.y - 20);
+
+        scrollViewRef.current.scrollTo({
+          y: scrollToY,
+          animated: true,
+        });
+
+        setHasScrolledToSeason(true);
+      } else if (attempts < maxAttempts) {
+        // Layout not ready yet, try again
+        attempts++;
+        timeoutId = setTimeout(tryScroll, SCROLL_RETRY_INTERVAL);
+      } else {
+        // Give up after max attempts
+        console.warn(`Could not scroll to season ${seasonNumber} - layout not measured`);
+        setHasScrolledToSeason(true);
+      }
+    };
+
+    // Start trying after a short initial delay to let React render
+    timeoutId = setTimeout(tryScroll, SCROLL_INITIAL_DELAY);
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [season, hasScrolledToSeason, seasonQueries.data]);
 
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
@@ -431,24 +497,31 @@ export default function TVSeasonsScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView ref={scrollViewRef} style={styles.scrollView}>
         {seasons.map((season) => (
-          <SeasonItem
+          <View
             key={season.season_number}
-            season={season}
-            tvId={tvId}
-            showName={show.name}
-            showPosterPath={show.poster_path}
-            isExpanded={expandedSeason === season.season_number}
-            onToggle={() => toggleSeason(season.season_number)}
-            onEpisodePress={handleEpisodePress}
-            episodeTracking={episodeTracking}
-            markWatched={markWatched}
-            markUnwatched={markUnwatched}
-            markAllWatched={markAllWatched}
-            formatDate={formatDate}
-            ratings={ratings}
-          />
+            onLayout={(event) => {
+              const { y, height } = event.nativeEvent.layout;
+              seasonRefs.current.set(season.season_number, { y, height });
+            }}
+          >
+            <SeasonItem
+              season={season}
+              tvId={tvId}
+              showName={show.name}
+              showPosterPath={show.poster_path}
+              isExpanded={expandedSeason === season.season_number}
+              onToggle={() => toggleSeason(season.season_number)}
+              onEpisodePress={handleEpisodePress}
+              episodeTracking={episodeTracking}
+              markWatched={markWatched}
+              markUnwatched={markUnwatched}
+              markAllWatched={markAllWatched}
+              formatDate={formatDate}
+              ratings={ratings}
+            />
+          </View>
         ))}
       </ScrollView>
     </View>

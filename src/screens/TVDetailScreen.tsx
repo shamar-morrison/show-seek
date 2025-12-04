@@ -207,8 +207,9 @@ export default function TVDetailScreen() {
     navigateTo(`/tv/${id}`);
   };
 
-  const handleSeasonsPress = () => {
-    navigateTo(`/tv/${tvId}/seasons`);
+  const handleSeasonsPress = (seasonNumber?: number) => {
+    const path = `/tv/${tvId}/seasons${seasonNumber !== undefined ? `?season=${seasonNumber}` : ''}`;
+    navigateTo(path);
   };
 
   const handleCastViewAll = () => {
@@ -298,7 +299,7 @@ export default function TVDetailScreen() {
             </View>
             <TouchableOpacity
               style={styles.metaItem}
-              onPress={handleSeasonsPress}
+              onPress={() => handleSeasonsPress()}
               activeOpacity={ACTIVE_OPACITY}
             >
               <Layers size={14} color={COLORS.primary} />
