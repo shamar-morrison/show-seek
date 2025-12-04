@@ -1,7 +1,7 @@
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING } from '@/constants/theme';
 
 interface RatingButtonProps {
   onPress: () => void;
