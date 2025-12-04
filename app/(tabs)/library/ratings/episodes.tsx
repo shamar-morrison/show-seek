@@ -17,7 +17,7 @@ export default function EpisodeRatingsScreen() {
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
 
-  const ItemSeparator = () => <View style={styles.separator} />;
+  const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
   const episodeRatings = useMemo(() => {
     if (!ratings) return [];
@@ -31,12 +31,11 @@ export default function EpisodeRatingsScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (!currentTab) {
-        console.warn('Cannot navigate to TV show: currentTab is null');
+        console.warn('Cannot navigate to episode: currentTab is null');
         return;
       }
 
-      // Navigate to TV show detail (episode detail navigation can be added if available)
-      const path = `/(tabs)/${currentTab}/tv/${rating.tvShowId}`;
+      const path = `/(tabs)/${currentTab}/tv/${rating.tvShowId}/season/${rating.seasonNumber}/episode/${rating.episodeNumber}`;
       router.push(path as any);
     },
     [currentTab, router]
