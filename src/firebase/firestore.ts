@@ -1,6 +1,7 @@
-import { collection, doc, setDoc, deleteDoc, query, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '@/src/firebase/config';
 import { Movie, TVShow } from '@/src/api/tmdb';
+import { db } from '@/src/firebase/config';
+import { FirebaseError } from 'firebase/app';
+import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 
 export interface FavoriteItem {
   id: string;
@@ -20,6 +21,30 @@ export interface RatingItem {
   rating: number;
   ratedAt: number;
 }
+
+// Error message mapping for user-friendly feedback
+export const getFirestoreErrorMessage = (error: unknown): string => {
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case 'permission-denied':
+        return 'You do not have permission to perform this action';
+      case 'unavailable':
+        return 'Network error. Please check your connection';
+      case 'not-found':
+        return 'The requested rating was not found';
+      case 'deadline-exceeded':
+        return 'Request timed out. Please try again';
+      case 'resource-exhausted':
+        return 'Too many requests. Please wait a moment';
+      default:
+        return `Database error: ${error.message}`;
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unexpected error occurred';
+};
 
 export const firestoreHelpers = {
   addToFavorites: async (userId: string, mediaId: number, item: Movie | TVShow) => {

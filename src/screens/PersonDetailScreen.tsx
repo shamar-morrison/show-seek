@@ -4,9 +4,15 @@ import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import {
+  useAddFavoritePerson,
+  useIsPersonFavorited,
+  useRemoveFavoritePerson,
+} from '@/src/hooks/useFavoritePersons';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,6 +34,11 @@ export default function PersonDetailScreen() {
   const [bioExpanded, setBioExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
+  const addFavoriteMutation = useAddFavoritePerson();
+  const removeFavoriteMutation = useRemoveFavoritePerson();
+  const isLoadingFavorite =
+    isFavoritedLoading || addFavoriteMutation.isPending || removeFavoriteMutation.isPending;
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -130,6 +141,32 @@ export default function PersonDetailScreen() {
     }
   };
 
+  const handleFavoriteToggle = async () => {
+    if (isLoadingFavorite) return;
+
+    try {
+      if (isFavorited) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        await removeFavoriteMutation.mutateAsync({ personId });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        await addFavoriteMutation.mutateAsync({
+          personData: {
+            id: personId,
+            name: person.name,
+            profile_path: person.profile_path,
+            known_for_department: person.known_for_department,
+          },
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
+
   const age = calculateAge(person.birthday, person.deathday);
 
   return (
@@ -201,6 +238,31 @@ export default function PersonDetailScreen() {
               )}
             </View>
           </View>
+        </View>
+
+        {/* Action Row */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.favoriteButton, isFavorited && styles.favoritedButton]}
+            onPress={handleFavoriteToggle}
+            disabled={isLoadingFavorite}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            {isLoadingFavorite ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <>
+                <Heart
+                  size={24}
+                  color={COLORS.white}
+                  fill={isFavorited ? COLORS.white : 'transparent'}
+                />
+                <Text style={styles.favoriteButtonText}>
+                  {isFavorited ? 'Remove from Favorite People' : 'Add to Favorite People'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Biography */}
@@ -444,11 +506,38 @@ const styles = StyleSheet.create({
   creditRating: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: SPACING.xs - 1,
   },
   creditRatingText: {
-    color: COLORS.text,
+    color: COLORS.warning,
     fontSize: FONT_SIZE.xs,
     fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingBottom: SPACING.l,
+  },
+  favoriteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.l,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.primary,
+    minWidth: 200,
+    width: '87%',
+    justifyContent: 'center',
+  },
+  favoritedButton: {
+    backgroundColor: COLORS.surfaceLight,
+    borderColor: COLORS.primary,
+    borderWidth: 1,
+  },
+  favoriteButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+    fontWeight: 'bold',
+    marginLeft: SPACING.s,
   },
 });

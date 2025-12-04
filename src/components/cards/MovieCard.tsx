@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    gap: 4,
+    gap: SPACING.xs,
   },
   year: {
     color: COLORS.textSecondary,

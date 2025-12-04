@@ -9,30 +9,7 @@ import type {
   TVShowEpisodeTracking,
   WatchedEpisode,
 } from '../types/episodeTracking';
-
-// Error message mapping for user-friendly feedback
-const getFirestoreErrorMessage = (error: unknown): string => {
-  if (error instanceof FirebaseError) {
-    switch (error.code) {
-      case 'permission-denied':
-        return 'You do not have permission to track episodes';
-      case 'unavailable':
-        return 'Network error. Please check your connection';
-      case 'not-found':
-        return 'Episode tracking data not found';
-      case 'deadline-exceeded':
-        return 'Request timed out. Please try again';
-      case 'resource-exhausted':
-        return 'Too many requests. Please wait a moment';
-      default:
-        return `Database error: ${error.message}`;
-    }
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return 'An unexpected error occurred';
-};
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 
 class EpisodeTrackingService {
   /**
