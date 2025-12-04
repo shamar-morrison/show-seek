@@ -1,4 +1,4 @@
-import { COLORS } from '@/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { auth } from '@/src/firebase/config';
 import { signOut } from 'firebase/auth';
 import React from 'react';

@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE } from '@/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE } from '@/src/constants/theme';
 import React, { useCallback, useState } from 'react';
 import {
   StyleProp,

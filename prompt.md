@@ -1,294 +1,274 @@
-## Context
-
-The app currently has detail screens for movies and TV shows with a modular component architecture. I need to implement an episode detail screen that follows the same design patterns and component structure.
-
-## Current State
-
-- Movie and TV show detail screens exist with sectioned, reusable components
-- Users can view seasons and episodes in a list format
-- Episodes are displayed using a `<SeasonItem />` component
-- Episodes have a "mark as watched/unwatched" button for tracking progress
-- Need to add ability to view individual episode details in a dedicated screen
-
-## Feature Requirements
-
-### Navigation Behavior
-
-**Trigger:**
-
-- User taps anywhere on the `<SeasonItem />` component
-- **Exception:** Tapping the "mark as watched/unwatched" button should NOT navigate to the detail screen (this button performs its own action)
-
-**Implementation:**
-
-- Wrap the `<SeasonItem />` content in a touchable area
-- Exclude the watched/unwatched button from the touchable area (use separate Pressable/TouchableOpacity)
-- Pass episode data (episode ID, season number, show ID) to the detail screen via navigation params
-- Use standard React Navigation push/navigate method
-
-### Screen Structure & Layout
-
-**Overall Design:**
-The episode detail screen should mirror the UI/UX of the existing movie and TV show detail screens with these characteristics:
-
-1. **Scrollable Content:**
-   - Single ScrollView or FlashList containing all sections
-   - Smooth scrolling performance
-   - Sections load progressively if data is fetched asynchronously
-
-2. **Hero Section (Top):**
-   - Large episode still/thumbnail image (16:9 aspect ratio)
-   - Episode title overlaid or positioned below image
-   - Episode number and season (e.g., "S1 E5")
-   - Air date
-   - Runtime duration
-   - Watch status indicator (watched/unwatched badge or icon)
-
-3. **Action Buttons Row:**
-   - "Mark as Watched/Unwatched" button (toggle functionality)
-   - "Play Trailer" button (if trailer available)
-   - "Share Episode" button
-   - Buttons should match the style of movie/TV detail screen buttons
-
-4. **Sectioned Components:**
-   - Each section should be its own separate, reusable component
-   - Consistent spacing and styling between sections
-   - Sections should only render if data is available (conditional rendering)
-
-### Component Sections to Implement
-
-Create separate, reusable components for each of the following sections:
-
-#### 1. **Episode Overview Component**
-
-- **Content:**
-  - Episode title (if not in hero)
-  - Synopsis/plot summary
-  - "Read more" expansion
-  - Air date, runtime, episode number details
-- **Styling:**
-  - Match overview section from movie/TV detail screens
-
-#### 2. **Episode Photos Component**
-
-- **Content:**
-  - Horizontal scrollable gallery of episode stills/screenshots
-  - Tappable images that open in lightbox
-- **Behavior:**
-  - Smooth horizontal scroll
-  - Thumbnail optimization
-- **Fallback:**
-  - Hide section if no photos available
-
-#### 3. **Episode Videos Component**
-
-- **Content:**
-  - Clips, behind-the-scenes, or related videos
-  - Video thumbnails with play button overlay
-  - Video title and duration
-  - Horizontal scrollable list
-- **Behavior:**
-  - Tapping opens video player or external link
-  - Show video count
-- **Fallback:**
-  - Hide section if no videos available
-
-#### 4. **Episode Reviews Component**
-
-- **Content:**
-  - User reviews or critic reviews from TMDB
-  - Review excerpt with "Read more" option
-  - Reviewer name and rating
-  - Review date
-  - Vertical list of 3-5 reviews with "View All" button
-- **Behavior:**
-  - Expandable review text
-  - Link to full reviews or review detail page
-- **Fallback:**
-  - Show "No reviews yet" or hide section
-
-#### 5. **Guest Cast Component**
-
-- **Content:**
-  - Cast members who appear in this specific episode
-  - Horizontal scrollable list of cast cards
-  - Cast member photo, name, character name
-  - "View All" button if many cast members
-- **Behavior:**
-  - Tapping cast member navigates to actor/person detail screen
-  - Show "Guest Star" or role designation
-- **Fallback:**
-  - Show main series cast if guest cast unavailable
-  - Hide section if no cast data available
-
-#### 6. **Episode Crew Component (Optional)**
-
-- **Content:**
-  - Director, writer, cinematographer for this episode
-  - Horizontal or vertical list format
-  - Crew member photo, name, role
-- **Fallback:**
-  - Hide if no crew data available
-
-#### 7. **Related Episodes Component (Optional)**
-
-- **Content:**
-  - Other episodes from the same season
-  - "Next Episode" and "Previous Episode" cards
-  - Horizontal scrollable list
-- **Behavior:**
-  - Tapping navigates to that episode's detail screen
-  - Show watch status on episode cards
-- **Fallback:**
-  - Hide if only one episode in season
+# Library Screen UI/UX Redesign Prompt
 
-### Data Requirements
-
-**Episode Data to Fetch:**
+## Overview
 
-- Episode ID, season number, episode number
-- Episode title and overview/synopsis
-- Episode still/thumbnail image (high resolution)
-- Air date and runtime
-- Episode rating/vote average (if available)
-- Episode photos/stills collection
-- Episode videos/clips (trailers, behind-the-scenes)
-- Episode guest cast and crew
-- Episode reviews
-- Watch status from Firestore (user-specific)
+Redesign the Library screen navigation and organization to improve user experience and accessibility. The current implementation uses tabs to display all lists, which is no longer sufficient given the expanded number of list types and rating systems.
 
-**API Integration:**
+## Current Problem
 
-- Fetch watch status from Firestore
-- Handle API errors gracefully with fallback UI
+- All lists are displayed in tabs on a single screen
+- Not scalable with 11+ different list types and custom user lists
+- Difficult to navigate and find specific lists
+- Poor UX for organizing diverse content types (lists, ratings, favorites)
 
-### Technical Implementation Guidelines
+## All Available Lists/Sections
 
-**Component Architecture:**
+### Watch Status Lists (5)
 
-1. **Main Screen Component:**
-   - `EpisodeDetailScreen.tsx` - Main screen container
-   - Handles data fetching and state management
-   - Orchestrates child components
+1. Currently Watching List
+2. Already Watched List
+3. Watching List
+4. Dropped List
+5. Should Watch List
 
-2. **Section Components:**
-   - `EpisodeOverview.tsx` - Overview/synopsis section
-   - `EpisodePhotos.tsx` - Photo gallery section
-   - `EpisodeVideos.tsx` - Video clips section
-   - `EpisodeReviews.tsx` - Reviews section
-   - `GuestCast.tsx` - Guest cast section
-   - `EpisodeCrew.tsx` - Crew section (optional)
-   - `RelatedEpisodes.tsx` - Related episodes (optional)
-
-3. **Shared Components:**
-   - Reuse existing components from movie/TV detail screens where possible
-   - `DetailHeader.tsx` - Hero section with image and title
-   - `ActionButtons.tsx` - Action button row
-   - `SectionHeader.tsx` - Section titles with "View All" links
-   - `CastCard.tsx` - Individual cast member cards
-   - `ReviewCard.tsx` - Individual review cards
-
-**Loading States:**
-
-- Show skeleton loaders for each section while data loads
-- Shimmer effect on image placeholders
-
-**Error Handling:**
-
-- Handle network errors gracefully
-- Show error message with retry button
-- Fallback to cached data if available
-
-**Performance Optimization:**
-
-- Memoize components with React.memo
-- Use FlashList for horizontal scrolling sections if needed
-
-### Navigation Configuration
-
-**Screen Options:**
-
-- Screen title: Episode title or "Episode Details"
-- Header back button
-- Optional share button in header
-- Match header styling with other detail screens
-
-### User Interaction Patterns
-
-**SeasonItem Component Modification:**
-
-1. Wrap entire `<SeasonItem />` in a Pressable/TouchableOpacity
-2. Extract "mark as watched" button into separate Pressable
-3. Use `onPress` for navigation, ensure button has `onPress` that stops propagation
-4. Proper hitbox spacing to avoid accidental clicks
-
-**Share Functionality:**
-
-- Share episode details with title, show name, episode number
-- Use similar share functionality on the movie/tv show detail screen
-
-### Styling & Design Consistency
-
-**Colors:**
-
-- Match movie/TV detail screen color scheme
-
-### Edge Cases & Fallbacks
-
-1. **Missing Data:**
-   - Hide sections with no data (don't show empty states)
-   - Provide sensible defaults for missing fields
-   - Show "N/A" if critical data missing
-
-2. **Long Text:**
-   - Truncate long titles with ellipsis
-   - "Read more" for long overviews
-   - Scrollable containers for long lists
-
-3. **Images:**
-   - Error handling for failed image loads
-
-4. **API Failures:**
-   - User-friendly error messages
-
-5. **Network Offline:**
-   - Show offline banner
-   - Display cached data if available
-   - Disable actions that require network
-
-6. **Special Episodes:**
-   - Handle Season 0 (specials) appropriately
-   - Show appropriate metadata for special episodes
-   - Adjust layout if certain data not available
-
-### Testing Checklist
-
-After implementation, verify:
-
-- [ ] Navigation from SeasonItem works correctly
-- [ ] Watched/unwatched button doesn't trigger navigation
-- [ ] All sections load with proper data
-- [ ] Horizontal scrolling is smooth
-- [ ] Sections hide when data unavailable
-- [ ] Loading states display properly
-- [ ] Error states handled gracefully
-- [ ] Back navigation works correctly
-- [ ] Share functionality works
-- [ ] Consistent styling with movie/TV detail screens
-- [ ] Performance is smooth (no lag during scroll)
-- [ ] Works with different episode types (regular, special)
-
-### Success Criteria
-
-The feature is complete when:
-
-1. Users can navigate to episode detail screen from episode list
-2. Watched/unwatched button doesn't trigger navigation
-3. All section components render with appropriate data
-4. Screen matches movie/TV detail screen design consistency
-5. All interactions are smooth and performant
-6. Error handling and loading states work correctly
-7. Components are reusable and follow existing patterns
-8. Code follows project conventions and best practices
-
-Please implement this feature following React Native/Expo best practices for Android, ensuring optimal performance, code reusability, and design consistency with existing detail screens.
+### Favorites (2)
+
+6. Favorites List (movies/shows)
+7. Favorite People List
+
+### Ratings (3)
+
+8. Episode Ratings
+9. Movie Ratings
+10. TV Show Ratings
+
+### Custom (1)
+
+11. User-Created Custom Lists (dynamic)
+
+---
+
+## Desired Solution
+
+### Primary Navigation Structure
+
+Create a **Library Index Screen** that serves as a navigation hub with organized categories. Use cards, sections, or list items to navigate to different list types.
+
+### Suggested Organization Strategy
+
+#### Option A: Category-Based Organization (Recommended)
+
+Group related items into logical categories on the index screen:
+
+**1. My Lists Section**
+
+- Card/Row for "Watch Status Lists" → navigates to tabbed screen with:
+  - Currently Watching
+  - Watching
+  - Already Watched
+  - Dropped
+  - Should Watch
+- Card/Row for "Custom Lists" → navigates to screen showing all user-created lists
+
+**2. Ratings Section**
+
+- Card/Row for "Episode Ratings" → navigates to episode ratings screen
+- Card/Row for "Movie Ratings" → navigates to movie ratings screen
+- Card/Row for "TV Show Ratings" → navigates to TV ratings screen
+
+**3. Favorites Section**
+
+- Card/Row for "Favorite Content" → navigates to favorites list
+- Card/Row for "Favorite People" → navigates to favorite people list
+
+#### Option B: Flat List Organization
+
+Show all 11+ items as individual navigable cards/rows on the index screen, organized by category headers but all on one scrollable screen.
+
+---
+
+## UI/UX Requirements
+
+### Library Index Screen Design
+
+1. **Header**
+   - Title: "Library"
+   - Optional: Search/filter functionality
+   - Optional: Settings/customize icon
+
+2. **Content Organization**
+   - Use clear visual hierarchy with section headers
+   - Each navigatable item should be a card or list item with:
+     - Icon representing the category
+     - Title of the list
+     - Optional: Count badge showing number of items
+     - Optional: Preview thumbnails or last updated info
+     - Chevron/arrow indicating it's tappable
+
+3. **Visual Design**
+   - Maintain consistency with existing app design system
+   - Use spacing and grouping to show relationships
+   - Consider using different card styles for different section types
+
+4. **Navigation Patterns**
+   - Tapping a card/item navigates to that specific list screen
+   - Use Tab Provider to ensure consistency across stacks and screens
+   - Maintain back navigation to return to Library index
+
+### Individual List Screens
+
+1. **Watch Status Lists Screen** (if grouped)
+   - Use tabs to switch between the 5 watch status lists
+   - Tab labels: "Currently Watching", "Watching", "Watched", "Dropped", "Should Watch"
+
+2. **Ratings Screens**
+   - Each rating type (Episodes, Movies, TV Shows) can be a separate screen
+   - OR use tabs if you want to group them together
+   - Show rated items with their ratings prominently
+   - Sort options (by rating, by date, alphabetically)
+
+3. **Favorites Screens**
+   - Separate screens for Favorite Content and Favorite People
+   - Grid or list layout depending on content type
+
+4. **Custom Lists Screen**
+   - Show all user-created lists
+   - Tapping a custom list navigates to that list's content
+
+---
+
+## Implementation Guidelines
+
+### File Structure
+
+```
+    LibraryScreen.tsx               # Main navigation hub
+    WatchStatusListsScreen.tsx      # Grouped watch status lists with tabs
+    EpisodeRatingsScreen.tsx        # Episode ratings
+    MovieRatingsScreen.tsx          # Movie ratings
+    TVShowRatingsScreen.tsx         # TV show ratings
+    FavoritesScreen.tsx             # Favorite movies/shows
+    FavoritePeopleScreen.tsx        # Favorite people
+    CustomListsScreen.tsx           # User custom lists index
+    CustomListDetailScreen.tsx      # Individual custom list
+```
+
+### Component Patterns
+
+- Create reusable `LibraryCard` or `LibraryNavigationItem` component
+- Use consistent navigation actions across all cards
+- Extract section headers into reusable component
+- Consider using `SectionList` for category organization
+
+---
+
+### Performance
+
+- Optimize for smooth scrolling on index screen
+- Use `FlatList` or `SectionList` for better performance with many items
+- Implement lazy loading for list previews if needed
+- Consider using React.memo for list items
+
+### Empty States
+
+- Design appropriate empty states for each list type
+- Provide helpful messaging and calls-to-action
+- Guide users on how to populate lists
+
+### Loading States
+
+- Show skeleton screens or loading indicators while fetching data
+- Maintain layout stability during loading
+
+---
+
+## User Experience Goals
+
+1. **Discoverability**: Users should easily find all their lists and ratings
+2. **Efficiency**: Reduce taps needed to reach specific lists
+3. **Scalability**: Design should accommodate future list types
+4. **Clarity**: Clear visual distinction between different types of content
+5. **Consistency**: Maintain patterns established in the rest of the app
+
+---
+
+## Implementation Steps
+
+1. **Edit LibraryScreen**
+   - Design the main navigation hub layout
+   - Implement category sections with headers
+   - Add navigation cards/items for each category
+   - Wire up navigation to existing screens
+
+2. **Refactor Watch Status Lists**
+   - Group the 5 watch status lists into a tabbed screen
+   - Ensure smooth tab transitions
+   - Maintain existing list functionality
+
+3. **Update Navigation Configuration**
+   - Update app navigation to use new Library index as entry point
+   - Configure screen options (headers, transitions, etc.)
+   - Ensure deep linking still works if implemented
+
+4. **Polish and Test**
+   - Test navigation flow end-to-end
+   - Verify all lists remain fully functional
+   - Test on different screen sizes
+   - Gather feedback and iterate
+
+---
+
+## Example Library Index Layout
+
+```
+┌─────────────────────────────────┐
+│  Library                    ⚙️  │
+├─────────────────────────────────┤
+│                                 │
+│  MY LISTS                       │
+│  ┌───────────────────────────┐ │
+│  │ 📺 Watch Status Lists  >  │ │
+│  │ 5 lists                   │ │
+│  └───────────────────────────┘ │
+│  ┌───────────────────────────┐ │
+│  │ 📋 Custom Lists        >  │ │
+│  │ 3 lists                   │ │
+│  └───────────────────────────┘ │
+│                                 │
+│  RATINGS                        │
+│  ┌───────────────────────────┐ │
+│  │ ⭐ Episode Ratings     >  │ │
+│  │ 156 rated                 │ │
+│  └───────────────────────────┘ │
+│  ┌───────────────────────────┐ │
+│  │ ⭐ Movie Ratings       >  │ │
+│  │ 89 rated                  │ │
+│  └───────────────────────────┘ │
+│  ┌───────────────────────────┐ │
+│  │ ⭐ TV Show Ratings     >  │ │
+│  │ 42 rated                  │ │
+│  └───────────────────────────┘ │
+│                                 │
+│  FAVORITES                      │
+│  ┌───────────────────────────┐ │
+│  │ ❤️ Favorite Content    >  │ │
+│  │ 23 items                  │ │
+│  └───────────────────────────┘ │
+│  ┌───────────────────────────┐ │
+│  │ 👤 Favorite People     >  │ │
+│  │ 15 people                 │ │
+│  └───────────────────────────┘ │
+│                                 │
+└─────────────────────────────────┘
+```
+
+---
+
+## Additional Notes
+
+- All existing functionality should remain unchanged
+- Focus on reorganizing navigation and presentation
+- Reuse existing list rendering components where possible
+- Ensure consistent styling with the rest of the app
+
+---
+
+## Success Criteria
+
+✅ Library index screen serves as clear navigation hub  
+✅ All 11+ list types are easily accessible  
+✅ Logical grouping makes content discoverable  
+✅ Navigation is intuitive and requires minimal taps  
+✅ Design scales to accommodate future list types  
+✅ All existing list functionality remains intact  
+✅ Smooth and performant on target devices

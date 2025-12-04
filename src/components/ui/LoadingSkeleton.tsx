@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, SPACING } from '@/constants/theme';
+import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import React from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 

@@ -1,7 +1,7 @@
 import { Star } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import { getRatingText } from '../utils/ratingHelpers';
 
 interface UserRatingProps {

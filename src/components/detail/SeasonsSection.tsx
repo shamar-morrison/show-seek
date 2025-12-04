@@ -1,6 +1,6 @@
-import { SPACING } from '@/constants/theme';
 import type { Season } from '@/src/api/tmdb';
 import { SeasonCard } from '@/src/components/SeasonCard';
+import { SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
 import { Text, View, ViewStyle } from 'react-native';

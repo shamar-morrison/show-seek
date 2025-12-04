@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';

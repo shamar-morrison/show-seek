@@ -1,7 +1,7 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';

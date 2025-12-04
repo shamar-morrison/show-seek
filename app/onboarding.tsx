@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';

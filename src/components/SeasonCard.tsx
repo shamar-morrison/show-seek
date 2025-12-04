@@ -1,8 +1,8 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import type { Season } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useShowEpisodeTracking } from '@/src/hooks/useEpisodeTracking';
 import React, { memo, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -30,8 +30,7 @@ export const SeasonCard = memo<SeasonCardProps>(({ tvShowId, season, onPress }) 
 
     // For now, use total episode count as aired count
     // (We can't determine unaired episodes without fetching full episode details)
-    const percentage =
-      season.episode_count > 0 ? (watchedCount / season.episode_count) * 100 : 0;
+    const percentage = season.episode_count > 0 ? (watchedCount / season.episode_count) * 100 : 0;
 
     return {
       watchedCount,

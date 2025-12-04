@@ -1,8 +1,8 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import type { Episode, Season } from '@/src/api/tmdb';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
