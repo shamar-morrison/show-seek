@@ -14,11 +14,11 @@ import {
   type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { useRatings } from '@/src/hooks/useRatings';
+import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { useRatings } from '@/src/hooks/useRatings';
-import type { RatingItem } from '@/src/services/RatingService';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronDown, ChevronRight, Star } from 'lucide-react-native';
@@ -35,6 +35,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type SeasonWithEpisodes = Season & { episodes?: Episode[] };
+
+const SCROLL_INITIAL_DELAY = 300;
+const SCROLL_RETRY_INTERVAL = 100;
+const SCROLL_MAX_ATTEMPTS = 20;
 
 const SeasonItem = memo<{
   season: SeasonWithEpisodes;
@@ -383,7 +387,7 @@ export default function TVSeasonsScreen() {
 
     // Retry mechanism to wait for layout measurements
     let attempts = 0;
-    const maxAttempts = 20; // Try for up to 2 seconds (20 * 100ms)
+    const maxAttempts = SCROLL_MAX_ATTEMPTS; // Try for up to 2 seconds (20 * 100ms)
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     let isCancelled = false;
 
@@ -405,7 +409,7 @@ export default function TVSeasonsScreen() {
       } else if (attempts < maxAttempts) {
         // Layout not ready yet, try again
         attempts++;
-        timeoutId = setTimeout(tryScroll, 100);
+        timeoutId = setTimeout(tryScroll, SCROLL_RETRY_INTERVAL);
       } else {
         // Give up after max attempts
         console.warn(`Could not scroll to season ${seasonNumber} - layout not measured`);
@@ -414,7 +418,7 @@ export default function TVSeasonsScreen() {
     };
 
     // Start trying after a short initial delay to let React render
-    timeoutId = setTimeout(tryScroll, 300);
+    timeoutId = setTimeout(tryScroll, SCROLL_INITIAL_DELAY);
 
     return () => {
       isCancelled = true;
