@@ -1,18 +1,13 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/constants/theme';
-import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useLists } from '@/src/hooks/useLists';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Bookmark } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WatchStatusScreen() {
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const { data: lists, isLoading } = useLists();
   const [selectedListId, setSelectedListId] = useState<string>('watchlist');
   const [modalVisible, setModalVisible] = useState(false);
@@ -40,7 +35,6 @@ export default function WatchStatusScreen() {
 
   const handleItemPress = useCallback(
     (item: ListMediaItem) => {
-      const currentTab = segments[1];
       const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
 
       if (item.media_type === 'movie') {
@@ -49,7 +43,7 @@ export default function WatchStatusScreen() {
         router.push(`${basePath}/tv/${item.id}` as any);
       }
     },
-    [segments, router]
+    [currentTab, router]
   );
 
   const handleLongPress = useCallback(

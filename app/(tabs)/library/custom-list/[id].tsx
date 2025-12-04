@@ -1,25 +1,28 @@
 import { COLORS } from '@/constants/theme';
 import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
-import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import Toast from '@/src/components/ui/Toast';
 import { useLists } from '@/src/hooks/useLists';
-import { ListMediaItem } from '@/src/services/ListService';
-import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bookmark } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
-  const segments = useSegments();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
-    null
-  );
-  const toastRef = useRef<ToastRef>(null);
+
+  const {
+    handleItemPress,
+    handleLongPress,
+    handleCloseModal,
+    handleShowToast,
+    modalVisible,
+    selectedMediaItem,
+    toastRef,
+  } = useMediaGridHandlers(isLoading);
 
   const list = useMemo(() => {
     return lists?.find((l) => l.id === id);
@@ -36,42 +39,6 @@ export default function CustomListDetailScreen() {
       router.back();
     }
   }, [isLoading, lists, list, router]);
-
-  const handleItemPress = useCallback(
-    (item: ListMediaItem) => {
-      const currentTab = segments[1];
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-
-      if (item.media_type === 'movie') {
-        router.push(`${basePath}/movie/${item.id}` as any);
-      } else {
-        router.push(`${basePath}/tv/${item.id}` as any);
-      }
-    },
-    [segments, router]
-  );
-
-  const handleLongPress = useCallback(
-    (item: ListMediaItem) => {
-      if (isLoading) return;
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      const { addedAt: _addedAt, ...mediaItem } = item;
-      setSelectedMediaItem(mediaItem);
-      setModalVisible(true);
-    },
-    [isLoading]
-  );
-
-  const handleCloseModal = useCallback(() => {
-    setModalVisible(false);
-    setSelectedMediaItem(null);
-  }, []);
-
-  const handleShowToast = useCallback((message: string) => {
-    toastRef.current?.show(message);
-  }, []);
 
   if (isLoading) {
     return (

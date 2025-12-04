@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { tmdbApi, Movie, TVShow } from '../api/tmdb';
+import { useMemo } from 'react';
+import { Movie, tmdbApi, TVShow } from '../api/tmdb';
 import { useAuth } from '../context/auth';
-import { useRatings } from './useRatings';
 import { RatingItem } from '../services/RatingService';
+import { useRatings } from './useRatings';
 
 export interface EnrichedMovieRating {
   rating: RatingItem;
@@ -55,7 +56,7 @@ async function fetchTVShowsInBatches(tvIds: number[]): Promise<Map<number, TVSho
     const batch = tvIds.slice(i, i + BATCH_SIZE);
     const promises = batch.map((id) =>
       tmdbApi
-        .getTVDetails(id)
+        .getTVShowDetails(id)
         .then((tvShow) => ({ id, tvShow }))
         .catch((error) => {
           console.warn(`Failed to fetch TV show ${id}:`, error);
@@ -81,7 +82,10 @@ export function useEnrichedMovieRatings() {
   const { user } = useAuth();
   const { data: ratings, isLoading: isLoadingRatings, error: ratingsError } = useRatings();
 
-  const movieRatings = ratings?.filter((r) => r.mediaType === 'movie') || [];
+  const movieRatings = useMemo(
+    () => ratings?.filter((r) => r.mediaType === 'movie') || [],
+    [ratings]
+  );
 
   return useQuery({
     queryKey: ['enriched-movie-ratings', user?.uid],
@@ -109,7 +113,7 @@ export function useEnrichedTVRatings() {
   const { user } = useAuth();
   const { data: ratings, isLoading: isLoadingRatings, error: ratingsError } = useRatings();
 
-  const tvRatings = ratings?.filter((r) => r.mediaType === 'tv') || [];
+  const tvRatings = useMemo(() => ratings?.filter((r) => r.mediaType === 'tv') || [], [ratings]);
 
   return useQuery({
     queryKey: ['enriched-tv-ratings', user?.uid],

@@ -1,10 +1,4 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { filterCustomLists } from '@/src/constants/lists';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { useLists } from '@/src/hooks/useLists';
@@ -20,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomListsScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+
+  const ItemSeparator = () => <View style={styles.separator} />;
 
   const customLists = useMemo(() => {
     if (!lists) return [];
@@ -84,8 +80,7 @@ export default function CustomListsScreen() {
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        estimatedItemSize={70}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={ItemSeparator}
       />
     </SafeAreaView>
   );

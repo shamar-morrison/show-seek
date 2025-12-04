@@ -3,10 +3,11 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { useEnrichedTVRatings, EnrichedTVRating } from '@/src/hooks/useEnrichedRatings';
+import { useCurrentTab } from '@/src/context/TabContext';
+import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, View } from 'react-native';
@@ -18,7 +19,7 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 export default function TVShowRatingsScreen() {
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
 
   const sortedRatings = useMemo(() => {
@@ -31,11 +32,10 @@ export default function TVShowRatingsScreen() {
   const handleItemPress = useCallback(
     (tvShowId: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const currentTab = segments[1];
       const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
       router.push(`${basePath}/tv/${tvShowId}` as any);
     },
-    [segments, router]
+    [currentTab, router]
   );
 
   const renderItem = useCallback(
@@ -94,7 +94,6 @@ export default function TVShowRatingsScreen() {
         numColumns={COLUMN_COUNT}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        estimatedItemSize={ITEM_WIDTH * 1.5}
       />
     </SafeAreaView>
   );
@@ -131,7 +130,7 @@ const styles = StyleSheet.create({
   },
   ratingBadgeContainer: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: SPACING.xs,
+    right: SPACING.xs,
   },
 });

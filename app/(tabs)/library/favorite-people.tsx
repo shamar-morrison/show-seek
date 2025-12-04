@@ -1,11 +1,12 @@
 import { COLORS, SPACING } from '@/constants/theme';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native';
@@ -17,7 +18,7 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 export default function FavoritePeopleScreen() {
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const { data: favoritePersons, isLoading } = useFavoritePersons();
 
   const sortedPersons = useMemo(() => {
@@ -28,11 +29,14 @@ export default function FavoritePeopleScreen() {
   const handlePersonPress = useCallback(
     (personId: number) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const currentTab = segments[1];
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-      router.push(`${basePath}/person/${personId}` as any);
+      if (!currentTab) {
+        console.warn('Cannot navigate to person: currentTab is null');
+        return;
+      }
+      const path = `/(tabs)/${currentTab}/person/${personId}`;
+      router.push(path as any);
     },
-    [segments, router]
+    [currentTab, router]
   );
 
   const renderItem = useCallback(
@@ -73,7 +77,6 @@ export default function FavoritePeopleScreen() {
         numColumns={COLUMN_COUNT}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        estimatedItemSize={ITEM_WIDTH + 60}
       />
     </SafeAreaView>
   );

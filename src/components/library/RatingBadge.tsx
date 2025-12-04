@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE } from '@/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
@@ -11,19 +11,19 @@ interface RatingBadgeProps {
 
 const SIZES = {
   small: {
-    container: { paddingHorizontal: 6, paddingVertical: 3 },
+    container: { paddingHorizontal: SPACING.s, paddingVertical: SPACING.xs },
     icon: 12,
-    fontSize: 11,
+    fontSize: FONT_SIZE.xs,
   },
   medium: {
-    container: { paddingHorizontal: 8, paddingVertical: 4 },
+    container: { paddingHorizontal: SPACING.s, paddingVertical: SPACING.xs },
     icon: 14,
-    fontSize: 13,
+    fontSize: FONT_SIZE.s,
   },
   large: {
-    container: { paddingHorizontal: 10, paddingVertical: 5 },
+    container: { paddingHorizontal: SPACING.m, paddingVertical: SPACING.s },
     icon: 16,
-    fontSize: 15,
+    fontSize: FONT_SIZE.m,
   },
 };
 

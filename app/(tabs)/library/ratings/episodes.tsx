@@ -1,11 +1,12 @@
 import { COLORS, SPACING } from '@/constants/theme';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -13,14 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
+
+  const ItemSeparator = () => <View style={styles.separator} />;
 
   const episodeRatings = useMemo(() => {
     if (!ratings) return [];
-    return ratings
-      .filter((r) => r.mediaType === 'episode')
-      .sort((a, b) => b.ratedAt - a.ratedAt);
+    return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
   }, [ratings]);
 
   const handleItemPress = useCallback(
@@ -29,13 +30,16 @@ export default function EpisodeRatingsScreen() {
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      const currentTab = segments[1];
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+      if (!currentTab) {
+        console.warn('Cannot navigate to TV show: currentTab is null');
+        return;
+      }
 
       // Navigate to TV show detail (episode detail navigation can be added if available)
-      router.push(`${basePath}/tv/${rating.tvShowId}` as any);
+      const path = `/(tabs)/${currentTab}/tv/${rating.tvShowId}`;
+      router.push(path as any);
     },
-    [segments, router]
+    [currentTab, router]
   );
 
   const renderItem = useCallback(
@@ -75,8 +79,7 @@ export default function EpisodeRatingsScreen() {
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        estimatedItemSize={110}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={ItemSeparator}
       />
     </SafeAreaView>
   );

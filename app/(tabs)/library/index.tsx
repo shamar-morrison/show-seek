@@ -3,14 +3,7 @@ import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigatio
 import { useRouter } from 'expo-router';
 import { Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
 import React, { useCallback } from 'react';
-import {
-  ActivityIndicator,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavigationItem = {
@@ -114,10 +107,7 @@ export default function LibraryScreen() {
     []
   );
 
-  const renderSectionSeparator = useCallback(
-    () => <View style={styles.sectionSeparator} />,
-    []
-  );
+  const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
   const keyExtractor = useCallback((item: NavigationItem) => item.id, []);
 
@@ -175,7 +165,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: SPACING.m,
   },
   sectionSeparator: {
     height: SPACING.xl,
