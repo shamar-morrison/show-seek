@@ -103,7 +103,7 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
 
   return {
     userRating: ratingItem?.rating || 0,
-    isLoading: isLoading || false,
+    isLoading,
   };
 };
 
