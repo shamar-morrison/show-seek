@@ -393,7 +393,7 @@ export default function EpisodeDetailScreen() {
             )}
 
             {/* Rating Button */}
-            <View style={styles.ratingButtonContainer}>
+            <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
                 onPress={() => setRatingModalVisible(true)}
                 isRated={userRating > 0}
@@ -657,15 +657,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontWeight: '600',
-  },
-  ratingButtonContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 24,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   overviewSection: {},
   sectionTitle: {
