@@ -336,6 +336,10 @@ export default function TVSeasonsScreen() {
 
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
+      if (!currentTab) {
+        console.warn('Cannot navigate to episode: currentTab is null');
+        return;
+      }
       const path = `/(tabs)/${currentTab}/tv/${tvId}/season/${seasonNumber}/episode/${episode.episode_number}`;
       router.push(path as any);
     },

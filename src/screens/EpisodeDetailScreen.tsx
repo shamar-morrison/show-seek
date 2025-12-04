@@ -17,8 +17,8 @@ import ImageLightbox from '@/src/components/ImageLightbox';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
-import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useIsEpisodeWatched,
@@ -29,7 +29,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, ChevronRight, Clock, Play, Star } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -46,7 +46,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function EpisodeDetailScreen() {
   const { id: tvIdStr, seasonNum: seasonStr, episodeNum: episodeStr } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
   const tvId = Number(tvIdStr);
   const seasonNumber = Number(seasonStr);
   const episodeNumber = Number(episodeStr);
@@ -57,7 +56,6 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const toastRef = React.useRef<ToastRef>(null);
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
@@ -116,14 +114,14 @@ export default function EpisodeDetailScreen() {
   // Tab-aware navigation
   const navigateTo = useCallback(
     (path: string) => {
-      const currentTab = segments[1];
+      const currentTab = useCurrentTab();
       if (currentTab) {
         router.push(`/(tabs)/${currentTab}${path}` as any);
       } else {
         router.push(path as any);
       }
     },
-    [router, segments]
+    [router]
   );
 
   const handleBack = useCallback(() => {
@@ -486,8 +484,6 @@ export default function EpisodeDetailScreen() {
         initialIndex={lightboxIndex}
         onClose={() => setLightboxVisible(false)}
       />
-
-      <Toast ref={toastRef} />
     </SafeAreaView>
   );
 }
@@ -637,21 +633,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.primary,
     marginTop: SPACING.xs,
-  },
-  crewInline: {
-    marginBottom: SPACING.l,
-  },
-  crewInlineItem: {
-    marginBottom: SPACING.s,
-  },
-  crewInlineLabel: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  crewInlineName: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.primary,
-    fontWeight: '600',
   },
 });
