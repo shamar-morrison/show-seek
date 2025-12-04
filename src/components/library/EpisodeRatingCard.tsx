@@ -32,7 +32,6 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
     <Pressable
       style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
       onPress={handlePress}
-      activeOpacity={ACTIVE_OPACITY}
     >
       <MediaImage
         source={{ uri: getImageUrl(rating.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
