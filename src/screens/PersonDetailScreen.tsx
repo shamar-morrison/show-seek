@@ -511,9 +511,7 @@ const styles = StyleSheet.create({
   },
   readMore: {
     color: COLORS.primary,
-    fontSize: FONT_SIZE.m,
-    marginTop: SPACING.s,
-    fontWeight: '600',
+    fontSize: FONT_SIZE.s,
   },
   creditCard: {
     width: 120,
