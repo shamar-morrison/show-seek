@@ -135,10 +135,18 @@ export default function PersonDetailScreen() {
       )
     : tvCreditsQuery.data?.cast || [];
 
+  // Filter out talk shows (genre ID 10767) from TV credits
+  const TALK_SHOW_GENRE_ID = 10767;
+  const filteredTVCredits = tvCredits.filter(
+    (show) => !show.genre_ids?.includes(TALK_SHOW_GENRE_ID)
+  );
+
   // Sort by popularity and get top items
   const knownForMovies = [...movieCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
 
-  const knownForTV = [...tvCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
+  const knownForTV = [...filteredTVCredits]
+    .sort((a, b) => b.popularity - a.popularity)
+    .slice(0, 10);
 
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
