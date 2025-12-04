@@ -153,7 +153,12 @@ class RatingService {
       if (!user) return null;
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
-      const docSnap = await getDoc(ratingRef);
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const docSnap = await Promise.race([getDoc(ratingRef), timeoutPromise]);
 
       if (docSnap.exists()) {
         return {
@@ -248,11 +253,7 @@ class RatingService {
   /**
    * Delete a rating for an episode
    */
-  async deleteEpisodeRating(
-    tvShowId: number,
-    seasonNumber: number,
-    episodeNumber: number
-  ) {
+  async deleteEpisodeRating(tvShowId: number, seasonNumber: number, episodeNumber: number) {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('User not authenticated');
@@ -294,7 +295,12 @@ class RatingService {
         seasonNumber,
         episodeNumber
       );
-      const docSnap = await getDoc(ratingRef);
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const docSnap = await Promise.race([getDoc(ratingRef), timeoutPromise]);
 
       if (docSnap.exists()) {
         return {
