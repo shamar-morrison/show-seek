@@ -105,7 +105,7 @@ export default function WatchStatusScreen() {
             emptyState={{
               icon: Bookmark,
               title: 'No items yet',
-              description: `Add movies and TV shows to your ${selectedList?.name.toLowerCase()} list to see them here.`,
+              description: `Add movies and TV shows to your ${selectedList?.name?.toLowerCase() ?? 'watch'} list to see them here.`,
               actionLabel: 'Browse Content',
               onAction: () => router.push('/(tabs)/discover' as any),
             }}
