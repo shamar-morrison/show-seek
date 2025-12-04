@@ -362,7 +362,6 @@ export default function TVSeasonsScreen() {
     enabled: !!tvId,
   });
 
-  // Episode tracking hooks
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
