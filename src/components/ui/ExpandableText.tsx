@@ -1,11 +1,10 @@
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE } from '@/constants/theme';
 import React, { useCallback, useState } from 'react';
 import {
-  NativeSyntheticEvent,
   StyleProp,
   StyleSheet,
   Text,
-  TextLayoutEventData,
+  TextLayoutEvent,
   TextStyle,
   TouchableOpacity,
   View,
@@ -32,7 +31,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
   const [measured, setMeasured] = useState(false);
 
   const onTextLayout = useCallback(
-    (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+    (e: TextLayoutEvent) => {
       if (measured) return;
 
       const lines = e.nativeEvent.lines;
