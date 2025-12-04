@@ -58,6 +58,7 @@ export default function EpisodeDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const currentTab = useCurrentTab();
 
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const { isWatched } = useIsEpisodeWatched(tvId, seasonNumber, episodeNumber);
@@ -114,14 +115,13 @@ export default function EpisodeDetailScreen() {
   // Tab-aware navigation
   const navigateTo = useCallback(
     (path: string) => {
-      const currentTab = useCurrentTab();
       if (currentTab) {
         router.push(`/(tabs)/${currentTab}${path}` as any);
       } else {
         router.push(path as any);
       }
     },
-    [router]
+    [currentTab, router]
   );
 
   const handleBack = useCallback(() => {

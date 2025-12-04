@@ -28,15 +28,16 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -60,7 +61,7 @@ const hasWatchProviders = (providers: any): boolean => {
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const movieId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -128,6 +129,17 @@ export default function MovieDetailScreen() {
     enabled: !!movieId && shouldLoadRecommendations,
   });
 
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (currentTab) {
+        router.push(`/(tabs)/${currentTab}${path}` as any);
+      } else {
+        router.push(path as any);
+      }
+    },
+    [currentTab, router]
+  );
+
   if (movieQuery.isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -180,15 +192,6 @@ export default function MovieDetailScreen() {
     if (trailer) {
       setSelectedVideo(trailer);
       setTrailerModalVisible(true);
-    }
-  };
-
-  const navigateTo = (path: string) => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}${path}` as any);
-    } else {
-      router.push(path as any);
     }
   };
 

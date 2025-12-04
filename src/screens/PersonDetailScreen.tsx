@@ -2,11 +2,12 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/con
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -22,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const personId = Number(id);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,6 +46,17 @@ export default function PersonDetailScreen() {
     queryFn: () => tmdbApi.getPersonTVCredits(personId),
     enabled: !!personId,
   });
+
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (currentTab) {
+        router.push(`/(tabs)/${currentTab}${path}` as any);
+      } else {
+        router.push(path as any);
+      }
+    },
+    [currentTab, router]
+  );
 
   if (personQuery.isLoading) {
     return (
@@ -95,15 +107,6 @@ export default function PersonDetailScreen() {
     const end = deathday ? new Date(deathday) : new Date();
     const age = end.getFullYear() - birth.getFullYear();
     return age;
-  };
-
-  const navigateTo = (path: string) => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}${path}` as any);
-    } else {
-      router.push(path as any);
-    }
   };
 
   const handleMoviePress = (id: number) => {
