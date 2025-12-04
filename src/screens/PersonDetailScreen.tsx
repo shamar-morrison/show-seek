@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -31,7 +32,6 @@ export default function PersonDetailScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const personId = Number(id);
-  const [bioExpanded, setBioExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
@@ -269,17 +269,11 @@ export default function PersonDetailScreen() {
         {person.biography && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Biography</Text>
-            <Text style={styles.biography} numberOfLines={bioExpanded ? undefined : 4}>
-              {person.biography}
-            </Text>
-            {person.biography.length > 200 && (
-              <TouchableOpacity
-                onPress={() => setBioExpanded(!bioExpanded)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.readMore}>{bioExpanded ? 'Read less' : 'Read more'}</Text>
-              </TouchableOpacity>
-            )}
+            <ExpandableText
+              text={person.biography}
+              style={[styles.biography, { marginBottom: SPACING.s }]}
+              readMoreStyle={styles.readMore}
+            />
           </View>
         )}
 
