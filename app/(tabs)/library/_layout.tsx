@@ -16,6 +16,22 @@ export default function LibraryStackLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
+
+        {/* Watch Status & Custom Lists */}
+        <Stack.Screen name="watch-status" options={{ title: 'Watch Status Lists' }} />
+        <Stack.Screen name="custom-lists" options={{ title: 'Custom Lists' }} />
+        <Stack.Screen name="custom-list/[id]" options={{ title: '' }} />
+
+        {/* Ratings */}
+        <Stack.Screen name="ratings/episodes" options={{ title: 'Episode Ratings' }} />
+        <Stack.Screen name="ratings/movies" options={{ title: 'Movie Ratings' }} />
+        <Stack.Screen name="ratings/tv-shows" options={{ title: 'TV Show Ratings' }} />
+
+        {/* Favorites */}
+        <Stack.Screen name="favorites" options={{ title: 'Favorite Content' }} />
+        <Stack.Screen name="favorite-people" options={{ title: 'Favorite People' }} />
+
+        {/* Existing detail screens */}
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
         <Stack.Screen
           name="movie/[id]/cast"

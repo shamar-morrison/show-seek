@@ -1,20 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import AddToListModal from '@/src/components/AddToListModal';
-import { MediaImage } from '@/src/components/ui/MediaImage';
-import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { useLists } from '@/src/hooks/useLists';
-import { ListMediaItem } from '@/src/services/ListService';
-import { FlashList } from '@shopify/flash-list';
-import * as Haptics from 'expo-haptics';
-import { useRouter, useSegments } from 'expo-router';
-import { Bookmark, Settings2 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
+import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
+import { useRouter } from 'expo-router';
+import { Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  Pressable,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,198 +13,141 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+type NavigationItem = {
+  id: string;
+  icon: typeof Tv;
+  title: string;
+  route: string;
+};
+
+type SectionData = {
+  title: string;
+  data: NavigationItem[];
+};
+
+const SECTIONS: SectionData[] = [
+  {
+    title: 'MY LISTS',
+    data: [
+      {
+        id: 'watch-status',
+        icon: Tv,
+        title: 'Watch Status Lists',
+        route: '/(tabs)/library/watch-status',
+      },
+      {
+        id: 'custom-lists',
+        icon: ListPlus,
+        title: 'Custom Lists',
+        route: '/(tabs)/library/custom-lists',
+      },
+    ],
+  },
+  {
+    title: 'RATINGS',
+    data: [
+      {
+        id: 'episode-ratings',
+        icon: TvMinimal,
+        title: 'Episode Ratings',
+        route: '/(tabs)/library/ratings/episodes',
+      },
+      {
+        id: 'movie-ratings',
+        icon: Film,
+        title: 'Movie Ratings',
+        route: '/(tabs)/library/ratings/movies',
+      },
+      {
+        id: 'tv-ratings',
+        icon: Tv,
+        title: 'TV Show Ratings',
+        route: '/(tabs)/library/ratings/tv-shows',
+      },
+    ],
+  },
+  {
+    title: 'FAVORITES',
+    data: [
+      {
+        id: 'favorite-content',
+        icon: Heart,
+        title: 'Favorite Content',
+        route: '/(tabs)/library/favorites',
+      },
+      {
+        id: 'favorite-people',
+        icon: User,
+        title: 'Favorite People',
+        route: '/(tabs)/library/favorite-people',
+      },
+    ],
+  },
+];
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const segments = useSegments();
-  const { data: lists, isLoading } = useLists();
-  const [selectedListId, setSelectedListId] = useState<string>('favorites');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
-    null
-  );
-  const toastRef = useRef<ToastRef>(null);
 
-  const selectedList = useMemo(() => {
-    return lists?.find((l) => l.id === selectedListId);
-  }, [lists, selectedListId]);
-
-  const listItems = useMemo(() => {
-    if (!selectedList?.items) return [];
-    return Object.values(selectedList.items).sort((a, b) => b.addedAt - a.addedAt);
-  }, [selectedList]);
-
-  // Auto-switch to favorites if currently selected list is deleted
-  useEffect(() => {
-    if (lists && !lists.find((l) => l.id === selectedListId)) {
-      setSelectedListId('favorites');
-    }
-  }, [lists, selectedListId]);
-
-  const handleItemPress = useCallback(
-    (item: ListMediaItem) => {
-      const currentTab = segments[1];
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-
-      if (item.media_type === 'movie') {
-        router.push(`${basePath}/movie/${item.id}` as any);
-      } else {
-        router.push(`${basePath}/tv/${item.id}` as any);
-      }
+  const handleNavigate = useCallback(
+    (route: string) => {
+      router.push(route as any);
     },
-    [segments, router]
+    [router]
   );
-
-  const handleLongPress = useCallback(
-    (item: ListMediaItem) => {
-      // Guard: prevent interaction during loading
-      if (isLoading) return;
-
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      // Convert ListMediaItem to modal format (exclude addedAt)
-      const { addedAt: _addedAt, ...mediaItem } = item;
-      setSelectedMediaItem(mediaItem);
-      setModalVisible(true);
-    },
-    [isLoading]
-  );
-
-  const handleCloseModal = useCallback(() => {
-    setModalVisible(false);
-    setSelectedMediaItem(null);
-  }, []);
-
-  const handleShowToast = useCallback((message: string) => {
-    toastRef.current?.show(message);
-  }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: ListMediaItem }) => (
-      <Pressable
-        style={({ pressed }) => [styles.mediaCard, pressed && styles.mediaCardPressed]}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-      >
-        <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-          style={styles.poster}
-          contentFit="cover"
-        />
-        {item.vote_average > 0 && (
-          <View style={styles.ratingBadge}>
-            <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
-          </View>
-        )}
-      </Pressable>
+    ({ item }: { item: NavigationItem }) => (
+      <LibraryNavigationCard
+        icon={item.icon}
+        title={item.title}
+        onPress={() => handleNavigate(item.route)}
+        testID={`library-nav-${item.id}`}
+      />
     ),
-    [handleItemPress, handleLongPress]
+    [handleNavigate]
   );
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: SectionData }) => (
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+    ),
+    []
+  );
+
+  const renderSectionSeparator = useCallback(
+    () => <View style={styles.sectionSeparator} />,
+    []
+  );
+
+  const keyExtractor = useCallback((item: NavigationItem) => item.id, []);
 
   return (
-    <>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Library</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/manage-lists' as any)}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Settings2 size={24} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Library</Text>
+        <TouchableOpacity onPress={() => router.push('/manage-lists' as any)}>
+          <Settings2 size={24} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.tabsContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}
-          >
-            {lists?.map((list) => (
-              <TouchableOpacity
-                key={list.id}
-                style={[styles.tab, selectedListId === list.id && styles.activeTab]}
-                onPress={() => setSelectedListId(list.id)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={[styles.tabText, selectedListId === list.id && styles.activeTabText]}>
-                  {list.name}
-                </Text>
-                {list.items && Object.keys(list.items).length > 0 && (
-                  <View style={styles.countBadge}>
-                    <Text style={styles.countText}>{Object.keys(list.items).length}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.content}>
-          {listItems.length > 0 ? (
-            <FlashList
-              data={listItems}
-              renderItem={renderItem}
-              numColumns={COLUMN_COUNT}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              keyExtractor={(item) => `${item.id}-${item.media_type}`}
-              drawDistance={400}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Bookmark size={48} color={COLORS.surfaceLight} />
-              <Text style={styles.emptyTitle}>No items yet</Text>
-              <Text style={styles.emptyText}>
-                Add movies and TV shows to your {selectedList?.name.toLowerCase()} list to see them
-                here.
-              </Text>
-              <TouchableOpacity
-                style={styles.browseButton}
-                onPress={() => router.push('/discover')}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.browseButtonText}>Browse Content</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </SafeAreaView>
-
-      {selectedMediaItem && (
-        <AddToListModal
-          visible={modalVisible}
-          onClose={handleCloseModal}
-          mediaItem={selectedMediaItem}
-          onShowToast={handleShowToast}
-        />
-      )}
-
-      <Toast ref={toastRef} />
-    </>
+      <SectionList
+        sections={SECTIONS}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        SectionSeparatorComponent={renderSectionSeparator}
+        keyExtractor={keyExtractor}
+        contentContainerStyle={styles.content}
+        stickySectionHeadersEnabled={false}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: COLORS.background,
   },
   headerContainer: {
@@ -230,110 +164,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
-  tabsContainer: {
-    paddingTop: SPACING.m,
-    marginBottom: SPACING.m,
-  },
-  tabsContent: {
-    paddingHorizontal: SPACING.l,
-    gap: SPACING.m,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-    gap: SPACING.s,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-  },
-  tabText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: COLORS.white,
-  },
-  countBadge: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  countText: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
   content: {
-    flex: 1,
-  },
-  listContent: {
     paddingHorizontal: SPACING.l,
-    marginLeft: SPACING.s,
+    paddingTop: SPACING.l,
+    paddingBottom: SPACING.xl,
   },
-  mediaCard: {
-    width: ITEM_WIDTH,
-    marginBottom: SPACING.m,
-    marginRight: SPACING.m,
-  },
-  mediaCardPressed: {
-    transform: [{ scale: 0.95 }],
-  },
-  poster: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  ratingText: {
-    color: COLORS.warning,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.xl,
-    marginTop: -50,
-  },
-  emptyTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    marginTop: SPACING.m,
-    marginBottom: SPACING.s,
-  },
-  emptyText: {
+  sectionTitle: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
     color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
-    lineHeight: 22,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: SPACING.m,
   },
-  browseButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
+  sectionSeparator: {
+    height: SPACING.xl,
   },
-  browseButtonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
+  itemSeparator: {
+    height: SPACING.m,
   },
 });
