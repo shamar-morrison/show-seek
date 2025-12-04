@@ -22,7 +22,6 @@ export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
       <Pressable
         style={({ pressed }) => [styles.container, pressed && styles.pressed]}
         onPress={handlePress}
-        activeOpacity={ACTIVE_OPACITY}
         testID={testID}
       >
         <Icon size={24} color={COLORS.primary} />
