@@ -52,6 +52,7 @@ export interface CastSectionProps {
   cast: CastMember[];
   onCastPress: (personId: number) => void;
   onViewAll?: () => void;
+  title?: string;
   style?: ViewStyle;
 }
 

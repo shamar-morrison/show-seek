@@ -42,7 +42,7 @@ const CastCard = memo<{
 CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
-  ({ cast, onCastPress, onViewAll, style }) => {
+  ({ cast, onCastPress, onViewAll, title = 'Cast', style }) => {
     if (cast.length === 0) {
       return null;
     }
@@ -55,12 +55,12 @@ export const CastSection = memo<CastSectionProps>(
             onPress={onViewAll}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <Text style={detailStyles.sectionTitle}>Cast</Text>
+            <Text style={detailStyles.sectionTitle}>{title}</Text>
             <Text style={detailStyles.viewAll}>View All</Text>
           </TouchableOpacity>
         ) : (
           <View style={detailStyles.sectionHeader}>
-            <Text style={detailStyles.sectionTitle}>Cast</Text>
+            <Text style={detailStyles.sectionTitle}>{title}</Text>
           </View>
         )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>

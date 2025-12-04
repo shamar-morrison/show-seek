@@ -410,7 +410,7 @@ export default function EpisodeDetailScreen() {
               <CastSection
                 cast={credits.guest_stars}
                 onCastPress={handlePersonPress}
-                style={{ marginTop: SPACING.l }}
+                title="Guest Stars"
               />
               <SectionSeparator />
             </>
