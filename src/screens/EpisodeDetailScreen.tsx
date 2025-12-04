@@ -441,11 +441,7 @@ export default function EpisodeDetailScreen() {
           {/* Videos Section */}
           {videos.length > 0 && (
             <>
-              <VideosSection
-                videos={videos}
-                onVideoPress={handleVideoPress}
-                style={{ marginTop: SPACING.l }}
-              />
+              <VideosSection videos={videos} onVideoPress={handleVideoPress} />
               <SectionSeparator />
             </>
           )}
