@@ -12,7 +12,6 @@ import { CrewSection } from '@/src/components/detail/CrewSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
-import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -55,7 +54,6 @@ export default function EpisodeDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
-  const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
@@ -104,19 +102,12 @@ export default function EpisodeDetailScreen() {
     enabled: !!tvId && !!seasonNumber && !!episodeNumber,
   });
 
-  const episodeReviewsQuery = useQuery({
-    queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'reviews'],
-    queryFn: () => tmdbApi.getEpisodeReviews(tvId, seasonNumber, episodeNumber),
-    enabled: shouldLoadReviews && !!tvId && !!seasonNumber && !!episodeNumber,
-  });
-
   const tvShow = tvShowQuery.data;
   const episode = episodeDetailsQuery.data;
   const season = seasonQuery.data;
   const credits = episodeCreditsQuery.data;
   const videos = episodeVideosQuery.data || [];
   const images = episodeImagesQuery.data;
-  const reviews = episodeReviewsQuery.data;
 
   const isLoading = episodeDetailsQuery.isLoading || tvShowQuery.isLoading || seasonQuery.isLoading;
 
@@ -196,11 +187,6 @@ export default function EpisodeDetailScreen() {
     setLightboxVisible(true);
   }, []);
 
-  const handleReviewPress = useCallback((review: any) => {
-    // Could navigate to review detail screen if implemented
-    console.log('Review pressed:', review.id);
-  }, []);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await Promise.all([
@@ -210,7 +196,6 @@ export default function EpisodeDetailScreen() {
       episodeImagesQuery.refetch(),
       seasonQuery.refetch(),
       tvShowQuery.refetch(),
-      ...(shouldLoadReviews ? [episodeReviewsQuery.refetch()] : []),
     ]);
     setRefreshing(false);
   }, [
@@ -220,8 +205,6 @@ export default function EpisodeDetailScreen() {
     episodeImagesQuery,
     seasonQuery,
     tvShowQuery,
-    episodeReviewsQuery,
-    shouldLoadReviews,
   ]);
 
   // Calculate watched episodes for related episodes section
@@ -471,23 +454,8 @@ export default function EpisodeDetailScreen() {
                 watchedEpisodes={watchedEpisodesMap}
                 onEpisodePress={handleRelatedEpisodePress}
               />
-              <SectionSeparator />
             </>
           )}
-
-          {/* Reviews Section (Lazy Loaded) */}
-          <ReviewsSection
-            isLoading={episodeReviewsQuery.isLoading}
-            isError={episodeReviewsQuery.isError}
-            reviews={reviews?.results || []}
-            shouldLoad={shouldLoadReviews}
-            onReviewPress={handleReviewPress}
-            onLayout={() => {
-              if (!shouldLoadReviews) {
-                setShouldLoadReviews(true);
-              }
-            }}
-          />
         </View>
       </ScrollView>
 
