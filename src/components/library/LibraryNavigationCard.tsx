@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { ChevronRight, LucideIcon } from 'lucide-react-native';
 import React, { memo } from 'react';
@@ -47,8 +47,7 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   pressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.8,
+    opacity: ACTIVE_OPACITY,
   },
   title: {
     flex: 1,
