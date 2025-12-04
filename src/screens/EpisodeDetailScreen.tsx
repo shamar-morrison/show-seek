@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: SPACING.m,
-    marginTop: SPACING.l,
+    marginTop: SPACING.s,
     marginBottom: SPACING.l,
   },
   watchButton: {
