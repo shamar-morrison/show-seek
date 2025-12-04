@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 999,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: COLORS.black,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
