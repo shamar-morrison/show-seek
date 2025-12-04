@@ -14,10 +14,12 @@ import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useIsEpisodeWatched,
   useMarkEpisodeUnwatched,
@@ -32,8 +34,8 @@ import { ArrowLeft, Calendar, Check, ChevronRight, Clock, Play, Star } from 'luc
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -57,27 +59,25 @@ export default function EpisodeDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
 
-  // Episode tracking (Firestore)
+  const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+
   const { data: episodeTracking } = useShowEpisodeTracking(tvId);
   const { isWatched } = useIsEpisodeWatched(tvId, seasonNumber, episodeNumber);
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
 
-  // TV show data for metadata
   const tvShowQuery = useQuery({
     queryKey: ['tv', tvId],
     queryFn: () => tmdbApi.getTVShowDetails(tvId),
     enabled: !!tvId,
   });
 
-  // Season data for related episodes
   const seasonQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber],
     queryFn: () => tmdbApi.getSeasonDetails(tvId, seasonNumber),
     enabled: !!tvId && !!seasonNumber,
   });
 
-  // Episode details queries
   const episodeDetailsQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'details'],
     queryFn: () => tmdbApi.getEpisodeDetails(tvId, seasonNumber, episodeNumber),
@@ -249,15 +249,24 @@ export default function EpisodeDetailScreen() {
 
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.large);
   const isPending = markWatched.isPending || markUnwatched.isPending;
+  const headerSubtitle = `Season ${seasonNumber}, Episode ${episodeNumber}`;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView
+      <AnimatedScrollHeader
+        title={tvShow?.name || 'Loading...'}
+        subtitle={headerSubtitle}
+        onBackPress={handleBack}
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        {...scrollViewProps}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -457,7 +466,7 @@ export default function EpisodeDetailScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Modals */}
       <TrailerPlayer
