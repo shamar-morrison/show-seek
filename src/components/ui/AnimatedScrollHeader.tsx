@@ -11,7 +11,12 @@ interface AnimatedScrollHeaderProps {
   scrollY: Animated.Value;
 }
 
-export function AnimatedScrollHeader({ title, subtitle, onBackPress, scrollY }: AnimatedScrollHeaderProps) {
+export function AnimatedScrollHeader({
+  title,
+  subtitle,
+  onBackPress,
+  scrollY,
+}: AnimatedScrollHeaderProps) {
   const SCROLL_THRESHOLD = 175;
   const HEADER_HEIGHT = 56;
 
