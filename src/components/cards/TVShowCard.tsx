@@ -16,13 +16,11 @@ export const TVShowCard = memo<TVShowCardProps>(
   ({ show, width = 140 }) => {
     const currentTab = useCurrentTab();
 
-    // Memoize expensive image URL computation
     const posterUrl = useMemo(
       () => getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium),
       [show.poster_path]
     );
 
-    // Stabilize callback reference
     const handlePress = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
       router.push(path as any);
@@ -60,7 +58,6 @@ export const TVShowCard = memo<TVShowCardProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison: only re-render if show ID or width changes
     return prevProps.show.id === nextProps.show.id && prevProps.width === nextProps.width;
   }
 );

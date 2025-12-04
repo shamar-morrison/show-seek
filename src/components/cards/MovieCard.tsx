@@ -16,13 +16,11 @@ export const MovieCard = memo<MovieCardProps>(
   ({ movie, width = 140 }) => {
     const currentTab = useCurrentTab();
 
-    // Memoize expensive image URL computation
     const posterUrl = useMemo(
       () => getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium),
       [movie.poster_path]
     );
 
-    // Stabilize callback reference
     const handlePress = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
       router.push(path as Route);
@@ -60,7 +58,6 @@ export const MovieCard = memo<MovieCardProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison: only re-render if movie ID or width changes
     return prevProps.movie.id === nextProps.movie.id && prevProps.width === nextProps.width;
   }
 );
