@@ -27,7 +27,6 @@ export const detailStyles = StyleSheet.create({
   readMore: {
     color: COLORS.primary,
     fontSize: FONT_SIZE.s,
-    fontWeight: '600',
   },
 
   // Director/Creator Section
