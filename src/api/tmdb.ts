@@ -252,6 +252,15 @@ export interface PersonDetails extends Person {
   place_of_birth: string | null;
   also_known_as: string[];
 }
+export interface MovieCrewCredit extends Movie {
+  job: string;
+  department: string;
+}
+
+export interface TVCrewCredit extends TVShow {
+  job: string;
+  department: string;
+}
 
 export interface ImageData {
   aspect_ratio: number;
@@ -427,14 +436,14 @@ export const tmdbApi = {
   },
 
   getPersonMovieCredits: async (id: number) => {
-    const { data } = await tmdbClient.get<{ cast: Movie[]; crew: Movie[] }>(
+    const { data } = await tmdbClient.get<{ cast: Movie[]; crew: MovieCrewCredit[] }>(
       `/person/${id}/movie_credits`
     );
     return data;
   },
 
   getPersonTVCredits: async (id: number) => {
-    const { data } = await tmdbClient.get<{ cast: TVShow[]; crew: TVShow[] }>(
+    const { data } = await tmdbClient.get<{ cast: TVShow[]; crew: TVCrewCredit[] }>(
       `/person/${id}/tv_credits`
     );
     return data;

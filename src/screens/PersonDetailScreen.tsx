@@ -93,8 +93,47 @@ export default function PersonDetailScreen() {
   }
 
   const person = personQuery.data;
-  const movieCredits = movieCreditsQuery.data?.cast || [];
-  const tvCredits = tvCreditsQuery.data?.cast || [];
+
+  const isCrewRole =
+    person.known_for_department === 'Directing' || person.known_for_department === 'Writing';
+
+  // For directors/writers, show their crew credits (directed, written, created)
+  // For actors, show their cast credits
+  const relevantCrewJobs = [
+    'Director',
+    'Writer',
+    'Screenplay',
+    'Story',
+    'Creator',
+    'Executive Producer',
+  ];
+
+  // Filter and deduplicate crew credits (a person may have multiple roles on same project)
+  const getUniqueCredits = <T extends { id: number }>(credits: T[]): T[] => {
+    const uniqueMap = new Map<number, T>();
+    credits.forEach((credit) => {
+      if (!uniqueMap.has(credit.id)) {
+        uniqueMap.set(credit.id, credit);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  };
+
+  const movieCredits = isCrewRole
+    ? getUniqueCredits(
+        (movieCreditsQuery.data?.crew || []).filter((credit) =>
+          relevantCrewJobs.some((job) => credit.job?.includes(job))
+        )
+      )
+    : movieCreditsQuery.data?.cast || [];
+
+  const tvCredits = isCrewRole
+    ? getUniqueCredits(
+        (tvCreditsQuery.data?.crew || []).filter((credit) =>
+          relevantCrewJobs.some((job) => credit.job?.includes(job))
+        )
+      )
+    : tvCreditsQuery.data?.cast || [];
 
   // Sort by popularity and get top items
   const knownForMovies = [...movieCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
@@ -280,7 +319,9 @@ export default function PersonDetailScreen() {
         {/* Known For - Movies */}
         {knownForMovies.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Known For (Movies)</Text>
+            <Text style={styles.sectionTitle}>
+              {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForMovies.map((movie, index) => (
                 <TouchableOpacity
@@ -326,7 +367,9 @@ export default function PersonDetailScreen() {
         {/* Known For - TV Shows */}
         {knownForTV.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Known For (TV Shows)</Text>
+            <Text style={styles.sectionTitle}>
+              {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForTV.map((show, index) => (
                 <TouchableOpacity
