@@ -1,12 +1,15 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -23,6 +26,7 @@ export default function PersonDetailScreen() {
   const personId = Number(id);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -129,7 +133,15 @@ export default function PersonDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView
+      <AnimatedScrollHeader
+        title={person.name}
+        subtitle={person.known_for_department}
+        onBackPress={() => router.back()}
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
+        {...scrollViewProps}
         style={styles.scrollView}
         bounces={true}
         refreshControl={
@@ -297,7 +309,7 @@ export default function PersonDetailScreen() {
             </ScrollView>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

@@ -6,7 +6,6 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CastSectionProps } from './types';
 
-// Memoized cast card component to prevent unnecessary re-renders
 const CastCard = memo<{
   actor: CastMember;
   onPress: (id: number) => void;
