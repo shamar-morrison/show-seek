@@ -54,6 +54,17 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata']);
       }
+
+      // Favorite persons collection
+      match /favorite_persons/{personId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll(['id', 'name', 'addedAt'])
+          && request.resource.data.id is int
+          && request.resource.data.name is string
+          && request.resource.data.addedAt is int;
+        allow delete: if isOwner(userId);
+      }
     }
   }
 }
