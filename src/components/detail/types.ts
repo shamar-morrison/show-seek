@@ -1,3 +1,4 @@
+import { CastMember, CrewMember, Episode, Video } from '@/src/api/tmdb';
 import { ViewStyle } from 'react-native';
 
 export interface WatchProvider {
@@ -12,13 +13,6 @@ export interface WatchProviders {
   buy?: WatchProvider[];
 }
 
-export interface CastMember {
-  id: number;
-  name: string;
-  character: string;
-  profile_path: string | null;
-}
-
 export interface SimilarMediaItem {
   id: number;
   title?: string; // For movies
@@ -31,15 +25,6 @@ export interface SimilarMediaItem {
 
 export interface BackdropImage {
   file_path: string;
-}
-
-export interface Video {
-  id: string;
-  key: string;
-  name: string;
-  site: string;
-  type: string;
-  official?: boolean;
 }
 
 export interface ReviewAuthorDetails {
@@ -66,7 +51,8 @@ export interface WatchProvidersSectionProps {
 export interface CastSectionProps {
   cast: CastMember[];
   onCastPress: (personId: number) => void;
-  onViewAll: () => void;
+  onViewAll?: () => void;
+  title?: string;
   style?: ViewStyle;
 }
 
@@ -121,5 +107,21 @@ export interface CollectionSectionProps {
   shouldLoad: boolean;
   onCollectionPress: (collectionId: number) => void;
   onLayout?: () => void;
+  style?: ViewStyle;
+}
+
+export interface CrewSectionProps {
+  crew: CrewMember[];
+  onCrewPress: (personId: number) => void;
+  style?: ViewStyle;
+}
+
+export interface RelatedEpisodesSectionProps {
+  episodes: Episode[];
+  currentEpisodeNumber: number;
+  seasonNumber: number;
+  tvId: number;
+  watchedEpisodes: Record<string, boolean>;
+  onEpisodePress: (episodeNumber: number) => void;
   style?: ViewStyle;
 }

@@ -1,12 +1,16 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useCurrentTab } from '@/src/context/TabContext';
+import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, MapPin, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,10 +23,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const personId = Number(id);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -41,6 +46,17 @@ export default function PersonDetailScreen() {
     queryFn: () => tmdbApi.getPersonTVCredits(personId),
     enabled: !!personId,
   });
+
+  const navigateTo = useCallback(
+    (path: string) => {
+      if (currentTab) {
+        router.push(`/(tabs)/${currentTab}${path}` as any);
+      } else {
+        router.push(path as any);
+      }
+    },
+    [currentTab, router]
+  );
 
   if (personQuery.isLoading) {
     return (
@@ -93,15 +109,6 @@ export default function PersonDetailScreen() {
     return age;
   };
 
-  const navigateTo = (path: string) => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}${path}` as any);
-    } else {
-      router.push(path as any);
-    }
-  };
-
   const handleMoviePress = (id: number) => {
     navigateTo(`/movie/${id}`);
   };
@@ -129,7 +136,15 @@ export default function PersonDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView
+      <AnimatedScrollHeader
+        title={person.name}
+        subtitle={person.known_for_department}
+        onBackPress={() => router.back()}
+        scrollY={scrollY}
+      />
+
+      <Animated.ScrollView
+        {...scrollViewProps}
         style={styles.scrollView}
         bounces={true}
         refreshControl={
@@ -297,7 +312,7 @@ export default function PersonDetailScreen() {
             </ScrollView>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

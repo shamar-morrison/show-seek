@@ -1,161 +1,294 @@
-# Feature Request: Dynamic Scroll Header for Movie/TV Show Detail Screens
-
 ## Context
 
-Currently, the movie and TV show detail screens have no header when the user is at the top of the screen. I want to implement a dynamic header that appears when the user scrolls down and disappears when they scroll back to the top.
+The app currently has detail screens for movies and TV shows with a modular component architecture. I need to implement an episode detail screen that follows the same design patterns and component structure.
 
 ## Current State
 
-- Movie and TV show detail screens display content without a header at the top
-- Users can see the full poster, title, and metadata without any header obstruction
-- There is currently no way to see the movie/show title when scrolled down the page
+- Movie and TV show detail screens exist with sectioned, reusable components
+- Users can view seasons and episodes in a list format
+- Episodes are displayed using a `<SeasonItem />` component
+- Episodes have a "mark as watched/unwatched" button for tracking progress
+- Need to add ability to view individual episode details in a dedicated screen
 
 ## Feature Requirements
 
-### Core Functionality
+### Navigation Behavior
 
-Implement a collapsing/appearing header for both movie and TV show detail screens with the following behavior:
+**Trigger:**
 
-1. **Initial State (Scroll Position = 0)**
-   - No header visible
-   - Full content visible including poster and title
-   - Leave it just as it is right now
+- User taps anywhere on the `<SeasonItem />` component
+- **Exception:** Tapping the "mark as watched/unwatched" button should NOT navigate to the detail screen (this button performs its own action)
 
-2. **Scrolling Down**
-   - When user scrolls down past a threshold (approximately 150-200 pixels), animate a header into view
-   - Header should slide down from the top with smooth animation
-   - Animation duration: 250-300ms
+**Implementation:**
 
-3. **Scrolling Back Up**
-   - When user scrolls back near the top (below threshold), header should animate out
-   - Same animation timing but in reverse
-   - Should feel smooth and responsive to scroll direction
+- Wrap the `<SeasonItem />` content in a touchable area
+- Exclude the watched/unwatched button from the touchable area (use separate Pressable/TouchableOpacity)
+- Pass episode data (episode ID, season number, show ID) to the detail screen via navigation params
+- Use standard React Navigation push/navigate method
 
-### Header Design Specifications
+### Screen Structure & Layout
 
-**Layout:**
+**Overall Design:**
+The episode detail screen should mirror the UI/UX of the existing movie and TV show detail screens with these characteristics:
 
-- Back button (left side) - standard Android back arrow icon (as used on the Cast and Crew Screen)
-- Movie/TV show title (next to back button)
-- Semi-transparent or solid background (ensure text readability)
-- Height: Standard navigation header height (56px Android)
-- Respect safe area insets for devices with notches
+1. **Scrollable Content:**
+   - Single ScrollView or FlashList containing all sections
+   - Smooth scrolling performance
+   - Sections load progressively if data is fetched asynchronously
 
-**Styling:**
+2. **Hero Section (Top):**
+   - Large episode still/thumbnail image (16:9 aspect ratio)
+   - Episode title overlaid or positioned below image
+   - Episode number and season (e.g., "S1 E5")
+   - Air date
+   - Runtime duration
+   - Watch status indicator (watched/unwatched badge or icon)
 
-- Background: Dark background with slight transparency or blur effect
-- Text color: White or light color for contrast
-- Title should truncate with ellipsis if too long (max single line)
-- Include subtle bottom border or shadow for depth
+3. **Action Buttons Row:**
+   - "Mark as Watched/Unwatched" button (toggle functionality)
+   - "Play Trailer" button (if trailer available)
+   - "Share Episode" button
+   - Buttons should match the style of movie/TV detail screen buttons
 
-**Animation:**
+4. **Sectioned Components:**
+   - Each section should be its own separate, reusable component
+   - Consistent spacing and styling between sections
+   - Sections should only render if data is available (conditional rendering)
 
-- Smooth slide-down/slide-up animation
-- Optionally include opacity fade for more polish
-- No janky or stuttering motion during scroll
+### Component Sections to Implement
+
+Create separate, reusable components for each of the following sections:
+
+#### 1. **Episode Overview Component**
+
+- **Content:**
+  - Episode title (if not in hero)
+  - Synopsis/plot summary
+  - "Read more" expansion
+  - Air date, runtime, episode number details
+- **Styling:**
+  - Match overview section from movie/TV detail screens
+
+#### 2. **Episode Photos Component**
+
+- **Content:**
+  - Horizontal scrollable gallery of episode stills/screenshots
+  - Tappable images that open in lightbox
+- **Behavior:**
+  - Smooth horizontal scroll
+  - Thumbnail optimization
+- **Fallback:**
+  - Hide section if no photos available
+
+#### 3. **Episode Videos Component**
+
+- **Content:**
+  - Clips, behind-the-scenes, or related videos
+  - Video thumbnails with play button overlay
+  - Video title and duration
+  - Horizontal scrollable list
+- **Behavior:**
+  - Tapping opens video player or external link
+  - Show video count
+- **Fallback:**
+  - Hide section if no videos available
+
+#### 4. **Episode Reviews Component**
+
+- **Content:**
+  - User reviews or critic reviews from TMDB
+  - Review excerpt with "Read more" option
+  - Reviewer name and rating
+  - Review date
+  - Vertical list of 3-5 reviews with "View All" button
+- **Behavior:**
+  - Expandable review text
+  - Link to full reviews or review detail page
+- **Fallback:**
+  - Show "No reviews yet" or hide section
+
+#### 5. **Guest Cast Component**
+
+- **Content:**
+  - Cast members who appear in this specific episode
+  - Horizontal scrollable list of cast cards
+  - Cast member photo, name, character name
+  - "View All" button if many cast members
+- **Behavior:**
+  - Tapping cast member navigates to actor/person detail screen
+  - Show "Guest Star" or role designation
+- **Fallback:**
+  - Show main series cast if guest cast unavailable
+  - Hide section if no cast data available
+
+#### 6. **Episode Crew Component (Optional)**
+
+- **Content:**
+  - Director, writer, cinematographer for this episode
+  - Horizontal or vertical list format
+  - Crew member photo, name, role
+- **Fallback:**
+  - Hide if no crew data available
+
+#### 7. **Related Episodes Component (Optional)**
+
+- **Content:**
+  - Other episodes from the same season
+  - "Next Episode" and "Previous Episode" cards
+  - Horizontal scrollable list
+- **Behavior:**
+  - Tapping navigates to that episode's detail screen
+  - Show watch status on episode cards
+- **Fallback:**
+  - Hide if only one episode in season
+
+### Data Requirements
+
+**Episode Data to Fetch:**
+
+- Episode ID, season number, episode number
+- Episode title and overview/synopsis
+- Episode still/thumbnail image (high resolution)
+- Air date and runtime
+- Episode rating/vote average (if available)
+- Episode photos/stills collection
+- Episode videos/clips (trailers, behind-the-scenes)
+- Episode guest cast and crew
+- Episode reviews
+- Watch status from Firestore (user-specific)
+
+**API Integration:**
+
+- Fetch watch status from Firestore
+- Handle API errors gracefully with fallback UI
 
 ### Technical Implementation Guidelines
 
-**Recommended Approach:**
+**Component Architecture:**
 
-1. Use `Animated` API from React Native or `react-native-reanimated` for smooth animations
-2. Track scroll position using `onScroll` event from `ScrollView` or `FlashList`
-3. Calculate when to show/hide header based on `scrollY` value
-4. Use `Animated.View` for the header with conditional rendering/positioning
-5. Ensure header is positioned absolutely or fixed at the top
-6. Consider using `React.memo` or `useMemo` for performance optimization
+1. **Main Screen Component:**
+   - `EpisodeDetailScreen.tsx` - Main screen container
+   - Handles data fetching and state management
+   - Orchestrates child components
 
-**State Management:**
+2. **Section Components:**
+   - `EpisodeOverview.tsx` - Overview/synopsis section
+   - `EpisodePhotos.tsx` - Photo gallery section
+   - `EpisodeVideos.tsx` - Video clips section
+   - `EpisodeReviews.tsx` - Reviews section
+   - `GuestCast.tsx` - Guest cast section
+   - `EpisodeCrew.tsx` - Crew section (optional)
+   - `RelatedEpisodes.tsx` - Related episodes (optional)
 
-- Track scroll position in state
-- Boolean flag for header visibility
-- Smooth interpolation between visible/hidden states
+3. **Shared Components:**
+   - Reuse existing components from movie/TV detail screens where possible
+   - `DetailHeader.tsx` - Hero section with image and title
+   - `ActionButtons.tsx` - Action button row
+   - `SectionHeader.tsx` - Section titles with "View All" links
+   - `CastCard.tsx` - Individual cast member cards
+   - `ReviewCard.tsx` - Individual review cards
 
-**Performance Considerations:**
+**Loading States:**
 
-- Debounce scroll events if necessary to prevent excessive re-renders
-- Use `nativeDriver: true` for animations when possible
-- Test on Android devices
-- Ensure smooth performance even with complex content
+- Show skeleton loaders for each section while data loads
+- Shimmer effect on image placeholders
 
-### Edge Cases to Handle
+**Error Handling:**
 
-1. **Rapid Scrolling:**
-   - Header should respond appropriately to fast scroll gestures
-   - No animation glitches or stuck states
+- Handle network errors gracefully
+- Show error message with retry button
+- Fallback to cached data if available
 
-2. **Orientation Changes:**
-   - Header should adjust properly on device rotation
-   - Maintain proper safe area handling
+**Performance Optimization:**
 
-3. **Different Device Sizes:**
-   - Test on various screen sizes (small phones, tablets)
-   - Ensure responsive layout
+- Memoize components with React.memo
+- Use FlashList for horizontal scrolling sections if needed
 
-4. **Initial Load:**
-   - Header should be hidden on initial screen mount
-   - No flash of header before hiding
+### Navigation Configuration
 
-5. **Navigation:**
-   - Back button should work correctly (navigate to previous screen)
-   - Maintain navigation stack properly
+**Screen Options:**
 
-### Platform-Specific Considerations
+- Screen title: Episode title or "Episode Details"
+- Header back button
+- Optional share button in header
+- Match header styling with other detail screens
 
-**Android:**
+### User Interaction Patterns
 
-- Use Android-style back arrow icon
-- Respect status bar height
-- Standard Android header height (56dp)
+**SeasonItem Component Modification:**
 
-### Files to Modify/Create
+1. Wrap entire `<SeasonItem />` in a Pressable/TouchableOpacity
+2. Extract "mark as watched" button into separate Pressable
+3. Use `onPress` for navigation, ensure button has `onPress` that stops propagation
+4. Proper hitbox spacing to avoid accidental clicks
 
-Expected file structure:
+**Share Functionality:**
 
-- Consider creating a reusable `ScrollHeader` component if logic is shared
+- Share episode details with title, show name, episode number
+- Use similar share functionality on the movie/tv show detail screen
+
+### Styling & Design Consistency
+
+**Colors:**
+
+- Match movie/TV detail screen color scheme
+
+### Edge Cases & Fallbacks
+
+1. **Missing Data:**
+   - Hide sections with no data (don't show empty states)
+   - Provide sensible defaults for missing fields
+   - Show "N/A" if critical data missing
+
+2. **Long Text:**
+   - Truncate long titles with ellipsis
+   - "Read more" for long overviews
+   - Scrollable containers for long lists
+
+3. **Images:**
+   - Error handling for failed image loads
+
+4. **API Failures:**
+   - User-friendly error messages
+
+5. **Network Offline:**
+   - Show offline banner
+   - Display cached data if available
+   - Disable actions that require network
+
+6. **Special Episodes:**
+   - Handle Season 0 (specials) appropriately
+   - Show appropriate metadata for special episodes
+   - Adjust layout if certain data not available
 
 ### Testing Checklist
 
 After implementation, verify:
 
-- [ ] Header is hidden when at top of screen
-- [ ] Header appears smoothly when scrolling down past threshold
-- [ ] Header disappears smoothly when scrolling back to top
-- [ ] Back button navigates correctly
-- [ ] Title displays correctly and truncates if too long
-- [ ] Animation is smooth with no jank
-- [ ] Works on Android
-- [ ] Respects safe areas on devices with notches
-- [ ] No performance issues during scroll
-- [ ] Works with different content lengths (short vs long)
+- [ ] Navigation from SeasonItem works correctly
+- [ ] Watched/unwatched button doesn't trigger navigation
+- [ ] All sections load with proper data
+- [ ] Horizontal scrolling is smooth
+- [ ] Sections hide when data unavailable
+- [ ] Loading states display properly
+- [ ] Error states handled gracefully
+- [ ] Back navigation works correctly
+- [ ] Share functionality works
+- [ ] Consistent styling with movie/TV detail screens
+- [ ] Performance is smooth (no lag during scroll)
+- [ ] Works with different episode types (regular, special)
 
-### Additional Enhancements (Optional)
-
-Consider implementing these enhancements if time permits:
-
-1. **Header Actions:**
-   - Add "add to list" modal button to header
-   - Add share button to header
-
-## Success Criteria
+### Success Criteria
 
 The feature is complete when:
 
-1. Header smoothly appears/disappears based on scroll position
-2. Animation is performant with no lag or stuttering
-3. Works consistently on Android
-4. Respects safe areas and device-specific constraints
-5. Back button functions correctly
-6. Title displays appropriately (truncated if needed)
-7. User experience feels polished and native to the platform
+1. Users can navigate to episode detail screen from episode list
+2. Watched/unwatched button doesn't trigger navigation
+3. All section components render with appropriate data
+4. Screen matches movie/TV detail screen design consistency
+5. All interactions are smooth and performant
+6. Error handling and loading states work correctly
+7. Components are reusable and follow existing patterns
+8. Code follows project conventions and best practices
 
-## Additional Context
-
-Reference the existing app design patterns:
-
-- Current detail screens have no header initially
-- App uses a dark theme with good contrast
-- Back navigation is crucial for user flow
-- Smooth animations are important for app polish
-
-Please implement this feature following React Native/Expo best practices, ensuring optimal performance and cross-platform compatibility.
+Please implement this feature following React Native/Expo best practices for Android, ensuring optimal performance, code reusability, and design consistency with existing detail screens.

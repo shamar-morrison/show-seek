@@ -6,11 +6,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface AnimatedScrollHeaderProps {
   title: string;
+  subtitle?: string;
   onBackPress: () => void;
   scrollY: Animated.Value;
 }
 
-export function AnimatedScrollHeader({ title, onBackPress, scrollY }: AnimatedScrollHeaderProps) {
+export function AnimatedScrollHeader({
+  title,
+  subtitle,
+  onBackPress,
+  scrollY,
+}: AnimatedScrollHeaderProps) {
   const SCROLL_THRESHOLD = 175;
   const HEADER_HEIGHT = 56;
 
@@ -47,9 +53,16 @@ export function AnimatedScrollHeader({ title, onBackPress, scrollY }: AnimatedSc
           >
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-            {title}
-          </Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {title}
+            </Text>
+            {subtitle && (
+              <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
+                {subtitle}
+              </Text>
+            )}
+          </View>
           <View style={styles.spacer} />
         </View>
       </SafeAreaView>
@@ -81,11 +94,18 @@ const styles = StyleSheet.create({
     padding: SPACING.s,
     marginRight: SPACING.s,
   },
-  title: {
+  titleContainer: {
     flex: 1,
+  },
+  title: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.white,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   spacer: {
     width: 48, // Balance layout (same as back button width)

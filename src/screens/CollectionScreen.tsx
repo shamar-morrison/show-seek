@@ -2,12 +2,13 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/con
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -21,7 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const segments = useSegments();
+  const currentTab = useCurrentTab();
   const collectionId = Number(id);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -31,6 +32,17 @@ export default function CollectionScreen() {
     queryFn: () => tmdbApi.getCollectionDetails(collectionId),
     enabled: !!collectionId,
   });
+
+  const navigateToMovie = useCallback(
+    (movieId: number) => {
+      if (currentTab) {
+        router.push(`/(tabs)/${currentTab}/movie/${movieId}` as any);
+      } else {
+        router.push(`/movie/${movieId}` as any);
+      }
+    },
+    [currentTab, router]
+  );
 
   if (collectionQuery.isLoading) {
     return (
@@ -63,15 +75,6 @@ export default function CollectionScreen() {
   );
 
   const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.large);
-
-  const navigateToMovie = (movieId: number) => {
-    const currentTab = segments[1];
-    if (currentTab) {
-      router.push(`/(tabs)/${currentTab}/movie/${movieId}` as any);
-    } else {
-      router.push(`/movie/${movieId}` as any);
-    }
-  };
 
   const formatYear = (dateString: string) => {
     if (!dateString) return '';

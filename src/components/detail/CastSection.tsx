@@ -1,14 +1,13 @@
 import { ACTIVE_OPACITY, SPACING } from '@/constants/theme';
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, type CastMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import React, { memo, useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CastSectionProps } from './types';
 
-// Memoized cast card component to prevent unnecessary re-renders
 const CastCard = memo<{
-  actor: { id: number; name: string; character: string; profile_path: string | null };
+  actor: CastMember;
   onPress: (id: number) => void;
 }>(({ actor, onPress }) => {
   const handlePress = useCallback(() => {
@@ -42,21 +41,27 @@ const CastCard = memo<{
 CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
-  ({ cast, onCastPress, onViewAll, style }) => {
+  ({ cast, onCastPress, onViewAll, title = 'Cast', style }) => {
     if (cast.length === 0) {
       return null;
     }
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
-        <TouchableOpacity
-          style={detailStyles.sectionHeader}
-          onPress={onViewAll}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={detailStyles.sectionTitle}>Cast</Text>
-          <Text style={detailStyles.viewAll}>View All</Text>
-        </TouchableOpacity>
+        {onViewAll ? (
+          <TouchableOpacity
+            style={detailStyles.sectionHeader}
+            onPress={onViewAll}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={detailStyles.sectionTitle}>{title}</Text>
+            <Text style={detailStyles.viewAll}>View All</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={detailStyles.sectionHeader}>
+            <Text style={detailStyles.sectionTitle}>{title}</Text>
+          </View>
+        )}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
           {cast.map((actor) => (
             <CastCard key={actor.id} actor={actor} onPress={onCastPress} />
