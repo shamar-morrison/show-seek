@@ -1,11 +1,4 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  MAX_CHARACTERS,
-  SPACING,
-} from '@/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/constants/theme';
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
@@ -17,6 +10,7 @@ import ImageLightbox from '@/src/components/ImageLightbox';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -59,7 +53,6 @@ export default function EpisodeDetailScreen() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -409,19 +402,11 @@ export default function EpisodeDetailScreen() {
           {episode.overview && (
             <View style={styles.overviewSection}>
               <Text style={styles.sectionTitle}>Overview</Text>
-              <Text style={styles.overviewText} numberOfLines={overviewExpanded ? undefined : 4}>
-                {episode.overview}
-              </Text>
-              {episode.overview.length > MAX_CHARACTERS && (
-                <TouchableOpacity
-                  onPress={() => setOverviewExpanded(!overviewExpanded)}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <Text style={styles.readMore}>
-                    {overviewExpanded ? 'Read less' : 'Read more'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <ExpandableText
+                text={episode.overview}
+                style={[styles.overviewText, { marginBottom: SPACING.s }]}
+                readMoreStyle={styles.readMore}
+              />
             </View>
           )}
 
