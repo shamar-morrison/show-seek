@@ -18,6 +18,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useIsEpisodeWatched,
   useMarkEpisodeUnwatched,
@@ -59,6 +60,7 @@ export default function EpisodeDetailScreen() {
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const { userRating, isLoading: isLoadingRating } = useEpisodeRating(
     tvId,
@@ -153,33 +155,45 @@ export default function EpisodeDetailScreen() {
   );
 
   const handleMarkWatched = useCallback(() => {
-    if (!episode || !tvShow) return;
+    requireAuth(() => {
+      if (!episode || !tvShow) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (isWatched) {
-      markUnwatched.mutate({
-        tvShowId: tvId,
-        seasonNumber,
-        episodeNumber,
-      });
-    } else {
-      markWatched.mutate({
-        tvShowId: tvId,
-        seasonNumber,
-        episodeNumber,
-        episodeData: {
-          episodeId: episode.id,
-          episodeName: episode.name,
-          episodeAirDate: episode.air_date,
-        },
-        showMetadata: {
-          tvShowName: tvShow.name,
-          posterPath: tvShow.poster_path,
-        },
-      });
-    }
-  }, [episode, tvShow, isWatched, markWatched, markUnwatched, tvId, seasonNumber, episodeNumber]);
+      if (isWatched) {
+        markUnwatched.mutate({
+          tvShowId: tvId,
+          seasonNumber,
+          episodeNumber,
+        });
+      } else {
+        markWatched.mutate({
+          tvShowId: tvId,
+          seasonNumber,
+          episodeNumber,
+          episodeData: {
+            episodeId: episode.id,
+            episodeName: episode.name,
+            episodeAirDate: episode.air_date,
+          },
+          showMetadata: {
+            tvShowName: tvShow.name,
+            posterPath: tvShow.poster_path,
+          },
+        });
+      }
+    }, 'Sign in to track your watched episodes');
+  }, [
+    episode,
+    tvShow,
+    isWatched,
+    markWatched,
+    markUnwatched,
+    tvId,
+    seasonNumber,
+    episodeNumber,
+    requireAuth,
+  ]);
 
   const handleVideoPress = useCallback((video: Video) => {
     setSelectedVideo(video);
@@ -390,7 +404,9 @@ export default function EpisodeDetailScreen() {
             {/* Rating Button */}
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
-                onPress={() => setRatingModalVisible(true)}
+                onPress={() =>
+                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate episodes')
+                }
                 isRated={userRating > 0}
                 isLoading={isLoadingRating}
               />
@@ -512,6 +528,7 @@ export default function EpisodeDetailScreen() {
         />
       )}
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </SafeAreaView>
   );
 }

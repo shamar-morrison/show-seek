@@ -26,6 +26,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -80,6 +81,7 @@ export default function MovieDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
@@ -388,7 +390,9 @@ export default function MovieDetailScreen() {
             <TouchableOpacity
               style={[styles.addButton, isInAnyList && styles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
-              onPress={() => setListModalVisible(true)}
+              onPress={() =>
+                requireAuth(() => setListModalVisible(true), 'Sign in to add items to your lists')
+              }
               disabled={isLoadingLists}
             >
               {isLoadingLists ? (
@@ -403,14 +407,21 @@ export default function MovieDetailScreen() {
             {/* Reminder Button */}
             <View style={detailStyles.ratingButtonContainer}>
               <ReminderButton
-                onPress={() => setReminderModalVisible(true)}
+                onPress={() =>
+                  requireAuth(
+                    () => setReminderModalVisible(true),
+                    'Sign in to set release reminders'
+                  )
+                }
                 hasReminder={hasReminder}
                 isLoading={isLoadingReminder}
               />
             </View>
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
-                onPress={() => setRatingModalVisible(true)}
+                onPress={() =>
+                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+                }
                 isRated={userRating > 0}
                 isLoading={isLoadingRating}
               />
@@ -604,6 +615,7 @@ export default function MovieDetailScreen() {
         </>
       )}
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </View>
   );
 }

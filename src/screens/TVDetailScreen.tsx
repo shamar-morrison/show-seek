@@ -24,6 +24,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import { getLanguageName } from '@/src/utils/languages';
@@ -78,6 +79,7 @@ export default function TVDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
@@ -344,7 +346,9 @@ export default function TVDetailScreen() {
             <TouchableOpacity
               style={[styles.addButton, isInAnyList && styles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
-              onPress={() => setListModalVisible(true)}
+              onPress={() =>
+                requireAuth(() => setListModalVisible(true), 'Sign in to add items to your lists')
+              }
               disabled={isLoadingLists}
             >
               {isLoadingLists ? (
@@ -357,7 +361,9 @@ export default function TVDetailScreen() {
             </TouchableOpacity>
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
-                onPress={() => setRatingModalVisible(true)}
+                onPress={() =>
+                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+                }
                 isRated={userRating > 0}
                 isLoading={isLoadingRating}
               />
@@ -534,6 +540,7 @@ export default function TVDetailScreen() {
         </>
       )}
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </View>
   );
 }

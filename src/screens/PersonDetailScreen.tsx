@@ -5,6 +5,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useAddFavoritePerson,
   useIsPersonFavorited,
@@ -34,6 +35,7 @@ export default function PersonDetailScreen() {
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
   const addFavoriteMutation = useAddFavoritePerson();
   const removeFavoriteMutation = useRemoveFavoritePerson();
@@ -192,30 +194,32 @@ export default function PersonDetailScreen() {
     }
   };
 
-  const handleFavoriteToggle = async () => {
-    if (isLoadingFavorite) return;
+  const handleFavoriteToggle = () => {
+    requireAuth(async () => {
+      if (isLoadingFavorite) return;
 
-    try {
-      if (isFavorited) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        await removeFavoriteMutation.mutateAsync({ personId });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        await addFavoriteMutation.mutateAsync({
-          personData: {
-            id: personId,
-            name: person.name,
-            profile_path: person.profile_path,
-            known_for_department: person.known_for_department,
-          },
-        });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      try {
+        if (isFavorited) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          await removeFavoriteMutation.mutateAsync({ personId });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          await addFavoriteMutation.mutateAsync({
+            personData: {
+              id: personId,
+              name: person.name,
+              profile_path: person.profile_path,
+              known_for_department: person.known_for_department,
+            },
+          });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      } catch (error) {
+        console.error('Failed to toggle favorite:', error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    } catch (error) {
-      console.error('Failed to toggle favorite:', error);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
+    }, 'Sign in to add people to your favorites');
   };
 
   const age = calculateAge(person.birthday, person.deathday);
@@ -424,6 +428,7 @@ export default function PersonDetailScreen() {
           </View>
         )}
       </Animated.ScrollView>
+      {AuthGuardModal}
     </View>
   );
 }
