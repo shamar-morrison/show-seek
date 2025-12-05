@@ -77,13 +77,14 @@ export async function syncReminders(): Promise<void> {
               `[reminderSync] Release date changed for ${reminder.title}: ${reminder.releaseDate} -> ${movieDetails.release_date}`
             );
 
-            // Update Firestore with new release date before rescheduling
+            // Update Firestore with new release date before rescheduling, with timeout protection
             const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
-            const timeoutPromise = new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Request timed out')), 10000);
-            });
+            await new Promise<void>((resolve, reject) => {
+              const timeoutId = setTimeout(
+                () => reject(new Error('Firestore write timed out')),
+                10000
+              );
 
-            await Promise.race([
               setDoc(
                 reminderRef,
                 {
@@ -91,9 +92,11 @@ export async function syncReminders(): Promise<void> {
                   updatedAt: Date.now(),
                 },
                 { merge: true }
-              ),
-              timeoutPromise,
-            ]);
+              )
+                .then(() => resolve())
+                .catch(reject)
+                .finally(() => clearTimeout(timeoutId));
+            });
 
             // Reschedule notification with updated release date
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
