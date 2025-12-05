@@ -5,15 +5,15 @@ import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Notifications from 'expo-notifications';
-import { initializeReminderSync } from '@/src/utils/reminderSync';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -21,9 +21,10 @@ SplashScreen.preventAutoHideAsync();
 // Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -64,7 +65,9 @@ function RootLayoutNav() {
 
   // Initialize reminder sync on app launch
   useEffect(() => {
-    initializeReminderSync();
+    initializeReminderSync().catch((error) => {
+      console.error('[reminderSync] Failed to initialize', error);
+    });
   }, []);
 
   useEffect(() => {

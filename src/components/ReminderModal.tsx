@@ -28,23 +28,41 @@ interface ReminderModalProps {
   onShowToast?: (message: string) => void;
 }
 
-const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] = [
-  {
-    value: 'on_release_day',
-    label: 'On Release Day',
-    description: 'Get notified on the day of release',
-  },
-  {
-    value: '1_day_before',
-    label: '1 Day Before',
-    description: 'Get notified one day before release',
-  },
-  {
-    value: '1_week_before',
-    label: '1 Week Before',
-    description: 'Get notified one week before release',
-  },
-];
+const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] = __DEV__
+  ? [
+      {
+        value: 'on_release_day',
+        label: 'Test in 10 seconds',
+        description: 'DEV MODE: Notification in 10 seconds',
+      },
+      {
+        value: '1_day_before',
+        label: 'Test in 20 seconds',
+        description: 'DEV MODE: Notification in 20 seconds',
+      },
+      {
+        value: '1_week_before',
+        label: 'Test in 30 seconds',
+        description: 'DEV MODE: Notification in 30 seconds',
+      },
+    ]
+  : [
+      {
+        value: 'on_release_day',
+        label: 'On Release Day',
+        description: 'Get notified on the day of release',
+      },
+      {
+        value: '1_day_before',
+        label: '1 Day Before',
+        description: 'Get notified one day before release',
+      },
+      {
+        value: '1_week_before',
+        label: '1 Week Before',
+        description: 'Get notified one week before release',
+      },
+    ];
 
 export default function ReminderModal({
   visible,
@@ -94,6 +112,20 @@ export default function ReminderModal({
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
+  const isReleaseDateInPast = (date: string) => {
+    // In DEV mode, allow past dates for testing
+    if (__DEV__) {
+      return false;
+    }
+
+    const release = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return release < today;
+  };
+
+  const isPastRelease = releaseDate ? isReleaseDateInPast(releaseDate) : false;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -112,6 +144,15 @@ export default function ReminderModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Dev Mode Banner */}
+            {__DEV__ && (
+              <View style={styles.devBanner}>
+                <Text style={styles.devBannerText}>
+                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
+                </Text>
+              </View>
+            )}
+
             {/* Movie Title */}
             <Text style={styles.movieTitle} numberOfLines={2}>
               {movieTitle}
@@ -119,10 +160,21 @@ export default function ReminderModal({
 
             {/* Release Date Display */}
             {releaseDate ? (
-              <View style={styles.releaseDateContainer}>
-                <Calendar size={16} color={COLORS.textSecondary} />
-                <Text style={styles.releaseDate}>Releases {formatReleaseDate(releaseDate)}</Text>
-              </View>
+              <>
+                <View style={styles.releaseDateContainer}>
+                  <Calendar size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.releaseDate}>
+                    {isPastRelease ? 'Released' : 'Releases'} {formatReleaseDate(releaseDate)}
+                  </Text>
+                </View>
+                {isPastRelease && (
+                  <View style={styles.warningContainer}>
+                    <Text style={styles.warningText}>
+                      ℹ️ This movie has already been released
+                    </Text>
+                  </View>
+                )}
+              </>
             ) : (
               <View style={styles.warningContainer}>
                 <Text style={styles.warningText}>
@@ -132,7 +184,7 @@ export default function ReminderModal({
             )}
 
             {/* Timing Options */}
-            {releaseDate && (
+            {releaseDate && !isPastRelease && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
                 {TIMING_OPTIONS.map((option) => (
@@ -158,7 +210,7 @@ export default function ReminderModal({
             )}
 
             {/* Action Buttons */}
-            {releaseDate && (
+            {releaseDate && !isPastRelease && (
               <View style={styles.actions}>
                 {hasReminder ? (
                   <>
@@ -341,5 +393,17 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: COLORS.error,
+  },
+  devBanner: {
+    backgroundColor: COLORS.warning,
+    padding: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+  },
+  devBannerText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.background,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });

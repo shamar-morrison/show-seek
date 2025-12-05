@@ -1,4 +1,5 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import * as Notifications from 'expo-notifications';
 import {
   collection,
   deleteDoc,
@@ -9,13 +10,12 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore';
-import * as Notifications from 'expo-notifications';
 import { auth, db } from '../firebase/config';
 import {
+  CreateReminderInput,
   Reminder,
   ReminderMediaType,
   ReminderTiming,
-  CreateReminderInput,
 } from '../types/reminder';
 
 class ReminderService {
@@ -79,8 +79,23 @@ class ReminderService {
   /**
    * Calculate notification timestamp based on release date and user preference
    * All notifications scheduled for 9 AM EST (14:00 UTC)
+   * In DEV mode: schedules for 10-30 seconds from now for testing
    */
   private calculateNotificationTime(releaseDate: string, timing: ReminderTiming): number {
+    // DEV MODE: Schedule notifications for immediate testing
+    if (__DEV__) {
+      const now = Date.now();
+      switch (timing) {
+        case 'on_release_day':
+          return now + 10000; // 10 seconds
+        case '1_day_before':
+          return now + 20000; // 20 seconds
+        case '1_week_before':
+          return now + 30000; // 30 seconds
+      }
+    }
+
+    // PRODUCTION MODE: Normal scheduling
     const release = new Date(releaseDate);
     const notificationDate = new Date(release);
 
@@ -130,6 +145,7 @@ class ReminderService {
           priority: Notifications.AndroidNotificationPriority.HIGH,
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: new Date(notificationTime),
         },
       });
@@ -170,6 +186,22 @@ class ReminderService {
   }
 
   /**
+   * Check if a release date is in the past
+   */
+  private isReleaseDateInPast(releaseDate: string): boolean {
+    // In DEV mode, allow past dates for testing
+    if (__DEV__) {
+      return false;
+    }
+
+    const release = new Date(releaseDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return release < today;
+  }
+
+  /**
    * Create a new reminder
    */
   async createReminder(input: CreateReminderInput): Promise<void> {
@@ -180,6 +212,11 @@ class ReminderService {
       // Validate release date
       if (!input.releaseDate) {
         throw new Error('This movie does not have a release date');
+      }
+
+      // Check if release date is in the past
+      if (this.isReleaseDateInPast(input.releaseDate)) {
+        throw new Error('Cannot set reminder for a movie that has already been released');
       }
 
       const reminderId = this.getReminderId(input.mediaType, input.mediaId);
@@ -232,7 +269,11 @@ class ReminderService {
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
       // Get reminder to cancel notification
-      const reminderSnap = await getDoc(reminderRef);
+      const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
       if (reminderSnap.exists()) {
         const reminder = reminderSnap.data() as Reminder;
         if (reminder.localNotificationId) {
@@ -261,7 +302,12 @@ class ReminderService {
       if (!user) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
-      const reminderSnap = await getDoc(reminderRef);
+
+      const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
 
       if (!reminderSnap.exists()) {
         throw new Error('Reminder not found');
@@ -280,10 +326,7 @@ class ReminderService {
         reminderTiming: timing,
       });
 
-      const notificationTime = this.calculateNotificationTime(
-        currentReminder.releaseDate,
-        timing
-      );
+      const notificationTime = this.calculateNotificationTime(currentReminder.releaseDate, timing);
 
       const updatedData: Partial<Reminder> = {
         reminderTiming: timing,
@@ -307,10 +350,7 @@ class ReminderService {
   /**
    * Get reminder for specific media
    */
-  async getReminder(
-    mediaType: ReminderMediaType,
-    mediaId: number
-  ): Promise<Reminder | null> {
+  async getReminder(mediaType: ReminderMediaType, mediaId: number): Promise<Reminder | null> {
     try {
       const user = auth.currentUser;
       if (!user) return null;

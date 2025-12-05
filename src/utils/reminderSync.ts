@@ -18,6 +18,9 @@ export async function shouldSync(): Promise<boolean> {
     if (!lastSync) return true;
 
     const lastSyncTime = parseInt(lastSync, 10);
+    if (Number.isNaN(lastSyncTime)) {
+      return true;
+    }
     const hoursSinceSync = (Date.now() - lastSyncTime) / (1000 * 60 * 60);
 
     return hoursSinceSync >= SYNC_COOLDOWN_HOURS;

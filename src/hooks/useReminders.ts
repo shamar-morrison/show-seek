@@ -71,7 +71,7 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
   const { data: reminders, isLoading } = useReminders();
 
   if (!reminders) {
-    return { reminder: null, hasReminder: false, isLoading: true };
+    return { reminder: null, hasReminder: false, isLoading };
   }
 
   const reminderId = `${mediaType}-${mediaId}`;
@@ -80,7 +80,7 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
   return {
     reminder: reminder || null,
     hasReminder: !!reminder,
-    isLoading: isLoading || false,
+    isLoading,
   };
 };
 
