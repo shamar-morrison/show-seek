@@ -224,7 +224,7 @@ export default function WatchStatusFiltersModal({
               onPress={handleApply}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
+              <Text style={styles.applyButtonText}>Apply</Text>
             </TouchableOpacity>
           </View>
         </View>
