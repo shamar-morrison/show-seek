@@ -139,8 +139,14 @@ export default function WatchStatusFiltersModal({
     }
   }, [visible, filters]);
 
-  const updateFilter = (key: keyof WatchStatusFilterState, value: any) => {
-    setLocalFilters({ ...localFilters, [key]: value });
+  const updateFilter = <K extends keyof WatchStatusFilterState>(
+    key: K,
+    value: WatchStatusFilterState[K]
+  ) => {
+    setLocalFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   const handleApply = () => {
