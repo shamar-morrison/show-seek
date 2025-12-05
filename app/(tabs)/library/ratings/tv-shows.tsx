@@ -2,7 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { FlashList } from '@shopify/flash-list';
@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -57,6 +57,29 @@ export default function TVShowRatingsScreen() {
           <View style={styles.ratingBadgeContainer}>
             <RatingBadge rating={item.rating.rating} size="medium" />
           </View>
+          {item.tvShow && (
+            <View style={styles.info}>
+              <Text style={styles.title} numberOfLines={1}>
+                {item.tvShow.name}
+              </Text>
+              {item.tvShow.first_air_date && (
+                <View style={styles.yearRatingContainer}>
+                  <Text style={styles.year}>
+                    {new Date(item.tvShow.first_air_date).getFullYear()}
+                  </Text>
+                  {item.tvShow.vote_average > 0 && (
+                    <>
+                      <Text style={styles.separator}> • </Text>
+                      <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                      <Text style={styles.rating}>
+                        {item.tvShow.vote_average.toFixed(1)}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
         </Pressable>
       );
     },
@@ -132,5 +155,32 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.xs,
     right: SPACING.xs,
+  },
+  info: {
+    marginTop: SPACING.s,
+  },
+  title: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  yearRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: SPACING.xs,
+  },
+  year: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  separator: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  rating: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
 });
