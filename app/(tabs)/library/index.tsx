@@ -1,7 +1,7 @@
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRouter } from 'expo-router';
-import { Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
+import { Bell, Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,6 +73,17 @@ const SECTIONS: SectionData[] = [
         icon: User,
         title: 'Favorite People',
         route: '/(tabs)/library/favorite-people',
+      },
+    ],
+  },
+  {
+    title: 'NOTIFICATIONS',
+    data: [
+      {
+        id: 'reminders',
+        icon: Bell,
+        title: 'Reminders',
+        route: '/(tabs)/library/reminders',
       },
     ],
   },

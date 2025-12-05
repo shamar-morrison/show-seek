@@ -31,6 +31,9 @@ export default function LibraryStackLayout() {
         <Stack.Screen name="favorites" options={{ title: 'Favorite Content' }} />
         <Stack.Screen name="favorite-people" options={{ title: 'Favorite People' }} />
 
+        {/* Notifications */}
+        <Stack.Screen name="reminders" options={{ title: 'Reminders' }} />
+
         {/* Existing detail screens */}
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
         <Stack.Screen
