@@ -53,7 +53,7 @@ class FavoritePersonsService {
   async addFavoritePerson(personData: Omit<FavoritePerson, 'addedAt'>) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personData.id.toString());
 
@@ -80,7 +80,7 @@ class FavoritePersonsService {
   async removeFavoritePerson(personId: number) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personId.toString());
 

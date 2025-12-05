@@ -507,6 +507,7 @@ export default function MovieDetailScreen() {
               media_type: 'movie',
               vote_average: movie.vote_average,
               release_date: movie.release_date,
+              genre_ids: movie.genres?.map((g) => g.id) || [],
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
@@ -581,7 +582,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: SPACING.m,
     marginLeft: SPACING.s,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     borderRadius: BORDER_RADIUS.round,
   },
   posterContainer: {
@@ -591,11 +592,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: SPACING.xs,
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
-    elevation: 8,
+    elevation: SPACING.s,
   },
   poster: {
     width: 120,
@@ -639,7 +640,7 @@ const styles = StyleSheet.create({
   genreTag: {
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: SPACING.m,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.round,
   },
   genreText: {

@@ -36,8 +36,12 @@ export const getFirestoreErrorMessage = (error: unknown): string => {
         return 'Request timed out. Please try again';
       case 'resource-exhausted':
         return 'Too many requests. Please wait a moment';
+      case 'invalid-argument':
+        return 'Unable to save. Please try again';
+      case 'unauthenticated':
+        return 'Please sign in to continue';
       default:
-        return `Database error: ${error.message}`;
+        return 'Something went wrong. Please try again';
     }
   }
   if (error instanceof Error) {

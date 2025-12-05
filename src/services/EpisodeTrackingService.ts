@@ -81,7 +81,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
@@ -134,7 +134,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
@@ -176,7 +176,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const now = Date.now();

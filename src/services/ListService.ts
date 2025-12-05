@@ -1,4 +1,3 @@
-import { FirebaseError } from 'firebase/app';
 import {
   collection,
   deleteDoc,
@@ -20,6 +19,7 @@ export interface ListMediaItem {
   vote_average: number;
   release_date: string;
   addedAt: number;
+  genre_ids?: number[];
 }
 
 export interface UserList {
@@ -44,6 +44,22 @@ class ListService {
 
   private getUserListsCollection(userId: string) {
     return collection(db, 'users', userId, 'lists');
+  }
+
+  /**
+   * Remove undefined values from an object to make it Firestore-compatible
+   * Firestore doesn't accept undefined values - they must be omitted entirely
+   */
+  private sanitizeForFirestore<T extends Record<string, any>>(obj: T): Partial<T> {
+    const sanitized: any = {};
+
+    Object.keys(obj).forEach((key) => {
+      if (obj[key] !== undefined) {
+        sanitized[key] = obj[key];
+      }
+    });
+
+    return sanitized;
   }
 
   /**
@@ -104,14 +120,17 @@ class ListService {
   async addToList(listId: string, mediaItem: Omit<ListMediaItem, 'addedAt'>, listName?: string) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
+      // Sanitize to remove any undefined values (Firestore doesn't accept undefined)
+      const sanitizedItem = this.sanitizeForFirestore(mediaItem);
+
       const itemToAdd: ListMediaItem = {
-        ...mediaItem,
+        ...sanitizedItem,
         addedAt: Date.now(),
-      };
+      } as ListMediaItem;
 
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
@@ -145,7 +164,7 @@ class ListService {
   async removeFromList(listId: string, mediaId: number) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
@@ -173,7 +192,7 @@ class ListService {
   async createList(listName: string) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       // Generate a URL-friendly ID from the name
       const baseId = listName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -225,7 +244,7 @@ class ListService {
   async deleteList(listId: string) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       // Prevent deleting default lists
       if (DEFAULT_LISTS.some((l) => l.id === listId)) {
