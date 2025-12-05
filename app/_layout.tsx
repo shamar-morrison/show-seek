@@ -5,7 +5,9 @@ import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +17,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// Configure how notifications are handled when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +45,30 @@ function RootLayoutNav() {
 
   // Handle deep links
   useDeepLinking();
+
+  // Handle notification taps
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+
+      if (data.type === 'reminder' && data.mediaType && data.mediaId) {
+        // Navigate to movie detail screen
+        // Use timeout to ensure navigation is ready
+        setTimeout(() => {
+          router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
+        }, 100);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
+  // Initialize reminder sync on app launch
+  useEffect(() => {
+    initializeReminderSync().catch((error) => {
+      console.error('[reminderSync] Failed to initialize', error);
+    });
+  }, []);
 
   useEffect(() => {
     if (loading) return;

@@ -65,6 +65,36 @@ service cloud.firestore {
           && request.resource.data.addedAt is int;
         allow delete: if isOwner(userId);
       }
+
+      // Reminders collection
+      match /reminders/{reminderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.keys().hasAll([
+            'userId', 'mediaType', 'mediaId', 'title', 'releaseDate',
+            'reminderTiming', 'status', 'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.mediaType is string
+          && request.resource.data.mediaType in ['movie']
+          && request.resource.data.mediaId is int
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.releaseDate is string
+          && request.resource.data.releaseDate.size() > 0
+          && request.resource.data.reminderTiming is string
+          && request.resource.data.reminderTiming in ['1_day_before', '1_week_before', 'on_release_day']
+          && request.resource.data.status is string
+          && request.resource.data.status in ['active', 'cancelled']
+          && request.resource.data.createdAt is int
+          && request.resource.data.updatedAt is int;
+        allow update: if isOwner(userId)
+          && resource.data.userId == userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt']);
+        allow delete: if isOwner(userId)
+          && resource.data.userId == userId;
+      }
     }
   }
 }
