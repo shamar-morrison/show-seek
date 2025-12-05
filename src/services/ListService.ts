@@ -1,4 +1,3 @@
-import { FirebaseError } from 'firebase/app';
 import {
   collection,
   deleteDoc,
@@ -20,6 +19,7 @@ export interface ListMediaItem {
   vote_average: number;
   release_date: string;
   addedAt: number;
+  genre_ids?: number[];
 }
 
 export interface UserList {

@@ -507,6 +507,7 @@ export default function MovieDetailScreen() {
               media_type: 'movie',
               vote_average: movie.vote_average,
               release_date: movie.release_date,
+              genre_ids: movie.genre_ids,
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />

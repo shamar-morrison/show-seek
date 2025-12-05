@@ -518,6 +518,7 @@ export default function TVDetailScreen() {
               media_type: 'tv',
               vote_average: show.vote_average,
               release_date: show.first_air_date,
+              genre_ids: show.genre_ids,
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
