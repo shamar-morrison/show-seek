@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { BlurView } from 'expo-blur';
 import { Calendar, X } from 'lucide-react-native';
@@ -67,7 +67,6 @@ const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: strin
 export default function ReminderModal({
   visible,
   onClose,
-  movieId,
   movieTitle,
   releaseDate,
   currentTiming,
@@ -133,7 +132,11 @@ export default function ReminderModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={ACTIVE_OPACITY}
+          onPress={onClose}
+        />
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -169,17 +172,13 @@ export default function ReminderModal({
                 </View>
                 {isPastRelease && (
                   <View style={styles.warningContainer}>
-                    <Text style={styles.warningText}>
-                      ℹ️ This movie has already been released
-                    </Text>
+                    <Text style={styles.warningText}>ℹ️ This movie has already been released</Text>
                   </View>
                 )}
               </>
             ) : (
               <View style={styles.warningContainer}>
-                <Text style={styles.warningText}>
-                  ⚠️ Release date not available for this movie
-                </Text>
+                <Text style={styles.warningText}>⚠️ Release date not available for this movie</Text>
               </View>
             )}
 
@@ -196,6 +195,7 @@ export default function ReminderModal({
                     ]}
                     onPress={() => setSelectedTiming(option.value)}
                     disabled={isLoading}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     <View style={styles.radioOuter}>
                       {selectedTiming === option.value && <View style={styles.radioInner} />}
@@ -218,6 +218,7 @@ export default function ReminderModal({
                       style={[styles.button, styles.updateButton]}
                       onPress={handleSetReminder}
                       disabled={isLoading || selectedTiming === currentTiming}
+                      activeOpacity={ACTIVE_OPACITY}
                     >
                       {isLoading ? (
                         <ActivityIndicator size="small" color={COLORS.white} />
@@ -229,6 +230,7 @@ export default function ReminderModal({
                       style={[styles.button, styles.cancelButton]}
                       onPress={handleCancelReminder}
                       disabled={isLoading}
+                      activeOpacity={ACTIVE_OPACITY}
                     >
                       <Text style={[styles.buttonText, styles.cancelButtonText]}>
                         Cancel Reminder
@@ -240,6 +242,7 @@ export default function ReminderModal({
                     style={[styles.button, styles.setButton]}
                     onPress={handleSetReminder}
                     disabled={isLoading}
+                    activeOpacity={ACTIVE_OPACITY}
                   >
                     {isLoading ? (
                       <ActivityIndicator size="small" color={COLORS.white} />
