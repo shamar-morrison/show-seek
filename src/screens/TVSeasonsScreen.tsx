@@ -3,6 +3,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
@@ -17,7 +18,6 @@ import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { useRatings } from '@/src/hooks/useRatings';
 import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
-import type { UseMutationResult } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -48,10 +48,17 @@ const SeasonItem = memo<{
   isExpanded: boolean;
   onToggle: () => void;
   onEpisodePress: (episode: Episode, seasonNumber: number) => void;
+  onMarkWatched: (
+    params: MarkEpisodeWatchedParams,
+    callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }
+  ) => void;
+  onMarkUnwatched: (params: MarkEpisodeUnwatchedParams) => void;
+  onMarkAllWatched: (params: MarkAllEpisodesWatchedParams) => void;
   episodeTracking: TVShowEpisodeTracking | null | undefined;
-  markWatched: UseMutationResult<void, Error, MarkEpisodeWatchedParams>;
-  markUnwatched: UseMutationResult<void, Error, MarkEpisodeUnwatchedParams>;
-  markAllWatched: UseMutationResult<void, Error, MarkAllEpisodesWatchedParams>;
+  markWatchedPending: boolean;
+  markUnwatchedPending: boolean;
+  markWatchedVariables: MarkEpisodeWatchedParams | undefined;
+  markUnwatchedVariables: MarkEpisodeUnwatchedParams | undefined;
   formatDate: (date: string | null) => string;
   ratings: RatingItem[] | undefined;
 }>(
@@ -63,10 +70,14 @@ const SeasonItem = memo<{
     isExpanded,
     onToggle,
     onEpisodePress,
+    onMarkWatched,
+    onMarkUnwatched,
+    onMarkAllWatched,
     episodeTracking,
-    markWatched,
-    markUnwatched,
-    markAllWatched,
+    markWatchedPending,
+    markUnwatchedPending,
+    markWatchedVariables,
+    markUnwatchedVariables,
     formatDate,
     ratings,
   }) => {
@@ -132,7 +143,7 @@ const SeasonItem = memo<{
                             onPress: () => {
                               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                              markAllWatched.mutate({
+                              onMarkAllWatched({
                                 tvShowId: tvId,
                                 seasonNumber: season.season_number,
                                 episodes: airedEpisodes,
@@ -169,12 +180,12 @@ const SeasonItem = memo<{
               const episodeKey = `${season.season_number}_${episode.episode_number}`;
               const isWatched = episodeTracking?.episodes?.[episodeKey];
               const isPending =
-                (markWatched.isPending &&
-                  markWatched.variables?.episodeNumber === episode.episode_number &&
-                  markWatched.variables?.seasonNumber === season.season_number) ||
-                (markUnwatched.isPending &&
-                  markUnwatched.variables?.episodeNumber === episode.episode_number &&
-                  markUnwatched.variables?.seasonNumber === season.season_number);
+                (markWatchedPending &&
+                  markWatchedVariables?.episodeNumber === episode.episode_number &&
+                  markWatchedVariables?.seasonNumber === season.season_number) ||
+                (markUnwatchedPending &&
+                  markUnwatchedVariables?.episodeNumber === episode.episode_number &&
+                  markUnwatchedVariables?.seasonNumber === season.season_number);
 
               const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
               const isDisabled = isPending || (!isWatched && !hasAired);
@@ -266,7 +277,7 @@ const SeasonItem = memo<{
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
                       if (isWatched) {
-                        markUnwatched.mutate({
+                        onMarkUnwatched({
                           tvShowId: tvId,
                           seasonNumber: season.season_number,
                           episodeNumber: episode.episode_number,
@@ -276,7 +287,7 @@ const SeasonItem = memo<{
                         const willComplete =
                           progress && progress.watchedCount + 1 === progress.totalAiredCount;
 
-                        markWatched.mutate(
+                        onMarkWatched(
                           {
                             tvShowId: tvId,
                             seasonNumber: season.season_number,
@@ -366,6 +377,7 @@ export default function TVSeasonsScreen() {
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const { data: ratings } = useRatings();
 
@@ -435,6 +447,37 @@ export default function TVSeasonsScreen() {
       router.push(path as any);
     },
     [tvId, currentTab, router]
+  );
+
+  // Auth-guarded callbacks for episode tracking
+  const handleMarkWatched = useCallback(
+    (
+      params: MarkEpisodeWatchedParams,
+      callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }
+    ) => {
+      requireAuth(() => {
+        markWatched.mutate(params, callbacks);
+      }, 'Sign in to track your watched episodes');
+    },
+    [requireAuth, markWatched]
+  );
+
+  const handleMarkUnwatched = useCallback(
+    (params: MarkEpisodeUnwatchedParams) => {
+      requireAuth(() => {
+        markUnwatched.mutate(params);
+      }, 'Sign in to track your watched episodes');
+    },
+    [requireAuth, markUnwatched]
+  );
+
+  const handleMarkAllWatched = useCallback(
+    (params: MarkAllEpisodesWatchedParams) => {
+      requireAuth(() => {
+        markAllWatched.mutate(params);
+      }, 'Sign in to track your watched episodes');
+    },
+    [requireAuth, markAllWatched]
   );
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
@@ -513,16 +556,21 @@ export default function TVSeasonsScreen() {
               isExpanded={expandedSeason === season.season_number}
               onToggle={() => toggleSeason(season.season_number)}
               onEpisodePress={handleEpisodePress}
+              onMarkWatched={handleMarkWatched}
+              onMarkUnwatched={handleMarkUnwatched}
+              onMarkAllWatched={handleMarkAllWatched}
               episodeTracking={episodeTracking}
-              markWatched={markWatched}
-              markUnwatched={markUnwatched}
-              markAllWatched={markAllWatched}
+              markWatchedPending={markWatched.isPending}
+              markUnwatchedPending={markUnwatched.isPending}
+              markWatchedVariables={markWatched.variables}
+              markUnwatchedVariables={markUnwatched.variables}
               formatDate={formatDate}
               ratings={ratings}
             />
           </View>
         ))}
       </ScrollView>
+      {AuthGuardModal}
     </View>
   );
 }
