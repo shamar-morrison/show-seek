@@ -3,7 +3,7 @@ import { auth, db } from '@/src/firebase/config';
 import { reminderService } from '@/src/services/ReminderService';
 import { Reminder } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 
 const SYNC_COOLDOWN_KEY = 'lastReminderSyncTimestamp';
 const SYNC_COOLDOWN_HOURS = 24;
@@ -64,16 +64,44 @@ export async function syncReminders(): Promise<void> {
         if (reminder.mediaType === 'movie') {
           const movieDetails = await tmdbApi.getMovieDetails(reminder.mediaId);
 
+          // Case (a): No release date - cancel reminder and delete from Firestore
           if (!movieDetails.release_date) {
             console.log(`[reminderSync] No release date for movie ${reminder.mediaId}, cancelling`);
             await reminderService.cancelReminder(reminder.id);
             continue;
           }
 
+          // Case (b): Release date changed - update Firestore, then reschedule
           if (movieDetails.release_date !== reminder.releaseDate) {
-            console.log(`[reminderSync] Release date changed for ${reminder.title}`);
+            console.log(
+              `[reminderSync] Release date changed for ${reminder.title}: ${reminder.releaseDate} -> ${movieDetails.release_date}`
+            );
+
+            // Update Firestore with new release date before rescheduling
+            const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
+            const timeoutPromise = new Promise<never>((_, reject) => {
+              setTimeout(() => reject(new Error('Request timed out')), 10000);
+            });
+
+            await Promise.race([
+              setDoc(
+                reminderRef,
+                {
+                  releaseDate: movieDetails.release_date,
+                  updatedAt: Date.now(),
+                },
+                { merge: true }
+              ),
+              timeoutPromise,
+            ]);
+
+            // Reschedule notification with updated release date
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
           }
-          await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          // Case (c): No change - reschedule to ensure notification is in sync
+          else {
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          }
         }
       } catch (error) {
         console.error(`[reminderSync] Error syncing reminder ${reminder.id}:`, error);
