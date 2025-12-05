@@ -1,10 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import { tmdbApi } from '@/src/api/tmdb';
-import { reminderService } from '@/src/services/ReminderService';
 import { auth, db } from '@/src/firebase/config';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { reminderService } from '@/src/services/ReminderService';
 import { Reminder } from '@/src/types/reminder';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const SYNC_COOLDOWN_KEY = 'lastReminderSyncTimestamp';
 const SYNC_COOLDOWN_HOURS = 24;
@@ -34,7 +33,12 @@ export async function shouldSync(): Promise<boolean> {
  * Sync all active reminders
  * - Fetches updated release dates from TMDB
  * - Updates Firestore with new data
- * - Reschedules all notifications
+ * - Reschedules notifications per reminder (via ReminderService.updateReminder)
+ *
+ * Note: We do NOT cancel all notifications upfront. Instead, updateReminder
+ * cancels and reschedules each reminder's notification individually. This
+ * ensures that if sync fails partway through, users don't lose all their
+ * notifications—only successfully synced reminders are rescheduled.
  */
 export async function syncReminders(): Promise<void> {
   try {
@@ -43,10 +47,6 @@ export async function syncReminders(): Promise<void> {
 
     console.log('[reminderSync] Starting sync...');
 
-    // Cancel all scheduled notifications
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
-    // Fetch all active reminders
     const remindersRef = collection(db, 'users', user.uid, 'reminders');
     const q = query(remindersRef, where('status', '==', 'active'));
     const snapshot = await getDocs(q);
@@ -62,22 +62,17 @@ export async function syncReminders(): Promise<void> {
     for (const reminder of reminders) {
       try {
         if (reminder.mediaType === 'movie') {
-          // Fetch updated movie details
           const movieDetails = await tmdbApi.getMovieDetails(reminder.mediaId);
 
           if (!movieDetails.release_date) {
-            // Release date removed, cancel reminder
             console.log(`[reminderSync] No release date for movie ${reminder.mediaId}, cancelling`);
             await reminderService.cancelReminder(reminder.id);
             continue;
           }
 
-          // Check if release date changed
           if (movieDetails.release_date !== reminder.releaseDate) {
             console.log(`[reminderSync] Release date changed for ${reminder.title}`);
           }
-
-          // Reschedule notification with potentially updated data
           await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
         }
       } catch (error) {
