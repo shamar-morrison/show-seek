@@ -140,6 +140,27 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 - Provides: `user`, `loading`, `hasCompletedOnboarding`, `signOut()`, `completeOnboarding()`
 - Uses `@nkzw/create-context-hook` pattern for cleaner context creation
 - Auto-syncs with Firebase Auth state changes
+- Guest users are identified by `user.isAnonymous === true`
+
+#### Auth Guards for Protected Actions (`src/hooks/useAuthGuard.tsx`)
+
+Protects write operations (ratings, lists, reminders, favorites) from guest users:
+
+```typescript
+const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+// Wrap protected actions
+<Button onPress={() => requireAuth(() => saveRating(), 'Sign in to rate movies')} />
+
+// Render modal in component
+{AuthGuardModal}
+```
+
+- `requireAuth(action, message?)` - executes action if authenticated, shows modal if guest
+- `isAuthenticated` - `user !== null && user.isAnonymous === false`
+- `AuthGuardModal` - prompts guest users to sign in, navigates to `/(auth)/sign-in`
+
+**Protected screens**: `MovieDetailScreen`, `TVDetailScreen`, `EpisodeDetailScreen`, `PersonDetailScreen`
 
 ### Styling System
 

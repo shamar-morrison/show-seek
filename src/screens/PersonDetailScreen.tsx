@@ -194,7 +194,7 @@ export default function PersonDetailScreen() {
     }
   };
 
-  const handleFavoriteToggle = async () => {
+  const handleFavoriteToggle = () => {
     requireAuth(async () => {
       if (isLoadingFavorite) return;
 
