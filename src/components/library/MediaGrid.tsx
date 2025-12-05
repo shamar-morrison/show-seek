@@ -1,8 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
-import { LucideIcon } from 'lucide-react-native';
+import { LucideIcon, Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -47,11 +47,23 @@ const MediaGridItem = memo<{
         style={styles.poster}
         contentFit="cover"
       />
-      {showRatings && item.vote_average > 0 && (
-        <View style={styles.ratingBadge}>
-          <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
-        </View>
-      )}
+      <View style={styles.info}>
+        <Text style={styles.title} numberOfLines={1}>
+          {item.title}
+        </Text>
+        {item.release_date && (
+          <View style={styles.yearRatingContainer}>
+            <Text style={styles.year}>{new Date(item.release_date).getFullYear()}</Text>
+            {item.vote_average > 0 && (
+              <>
+                <Text style={styles.separator}> • </Text>
+                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+              </>
+            )}
+          </View>
+        )}
+      </View>
     </Pressable>
   );
 });
@@ -103,7 +115,6 @@ export const MediaGrid = memo<MediaGridProps>(
         showsVerticalScrollIndicator={false}
         keyExtractor={keyExtractor}
         drawDistance={400}
-        estimatedItemSize={ITEM_WIDTH * 1.5}
       />
     );
   }
@@ -135,18 +146,31 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },
-  ratingBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
+  info: {
+    marginTop: SPACING.s,
   },
-  ratingText: {
+  title: {
+    color: COLORS.text,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  yearRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: SPACING.xs,
+  },
+  year: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  separator: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  rating: {
     color: COLORS.warning,
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
 });
