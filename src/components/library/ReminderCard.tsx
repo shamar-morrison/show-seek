@@ -1,11 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-} from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import * as Haptics from 'expo-haptics';
@@ -121,9 +115,7 @@ export const ReminderCard = memo<ReminderCardProps>(
                 { backgroundColor: getTimingColor(reminder.reminderTiming) + '20' },
               ]}
             >
-              <Text
-                style={[styles.timingText, { color: getTimingColor(reminder.reminderTiming) }]}
-              >
+              <Text style={[styles.timingText, { color: getTimingColor(reminder.reminderTiming) }]}>
                 {getTimingLabel(reminder.reminderTiming)}
               </Text>
             </View>
@@ -218,7 +210,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'column',
-    gap: SPACING.s,
+    gap: SPACING.m,
   },
   actionButton: {
     padding: SPACING.xs,

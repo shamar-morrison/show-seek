@@ -93,9 +93,7 @@ export default function RemindersScreen() {
   // Sort reminders by notification scheduled time (earliest first)
   const sortedReminders = useMemo(() => {
     if (!reminders) return [];
-    return [...reminders].sort(
-      (a, b) => a.notificationScheduledFor - b.notificationScheduledFor
-    );
+    return [...reminders].sort((a, b) => a.notificationScheduledFor - b.notificationScheduledFor);
   }, [reminders]);
 
   // Group reminders by release date proximity
@@ -172,7 +170,6 @@ export default function RemindersScreen() {
             try {
               setCancellingId(reminderId);
               await cancelMutation.mutateAsync(reminderId);
-              Alert.alert('Success', 'Reminder cancelled');
             } catch (error) {
               Alert.alert(
                 'Error',
