@@ -13,6 +13,8 @@ import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSec
 import ImageLightbox from '@/src/components/ImageLightbox';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
+import ReminderButton from '@/src/components/ReminderButton';
+import ReminderModal from '@/src/components/ReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -26,6 +28,14 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaRating } from '@/src/hooks/useRatings';
+import {
+  useMediaReminder,
+  useCreateReminder,
+  useCancelReminder,
+  useUpdateReminder,
+} from '@/src/hooks/useReminders';
+import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
+import { ReminderTiming } from '@/src/types/reminder';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,6 +73,7 @@ export default function MovieDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
@@ -73,6 +84,12 @@ export default function MovieDetailScreen() {
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const isInAnyList = Object.keys(membership).length > 0;
+
+  const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(movieId, 'movie');
+  const { requestPermission } = useNotificationPermissions();
+  const createReminderMutation = useCreateReminder();
+  const cancelReminderMutation = useCancelReminder();
+  const updateReminderMutation = useUpdateReminder();
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -222,6 +239,41 @@ export default function MovieDetailScreen() {
     }
   };
 
+  const handleSetReminder = async (timing: ReminderTiming) => {
+    // Request permission first
+    const hasPermission = await requestPermission();
+    if (!hasPermission) {
+      throw new Error('Notification permission required');
+    }
+
+    if (!movie?.release_date) {
+      throw new Error('This movie does not have a release date');
+    }
+
+    if (hasReminder && reminder) {
+      // Update existing reminder
+      await updateReminderMutation.mutateAsync({
+        reminderId: reminder.id,
+        timing,
+      });
+    } else {
+      // Create new reminder
+      await createReminderMutation.mutateAsync({
+        mediaId: movieId,
+        mediaType: 'movie',
+        title: movie.title,
+        posterPath: movie.poster_path,
+        releaseDate: movie.release_date,
+        reminderTiming: timing,
+      });
+    }
+  };
+
+  const handleCancelReminder = async () => {
+    if (!reminder) return;
+    await cancelReminderMutation.mutateAsync(reminder.id);
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -339,6 +391,13 @@ export default function MovieDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
+            <View style={detailStyles.ratingButtonContainer}>
+              <ReminderButton
+                onPress={() => setReminderModalVisible(true)}
+                hasReminder={hasReminder}
+                isLoading={isLoadingReminder}
+              />
+            </View>
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
                 onPress={() => setRatingModalVisible(true)}
@@ -518,6 +577,18 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             initialRating={userRating}
             onRatingSuccess={() => {}}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+          <ReminderModal
+            visible={reminderModalVisible}
+            onClose={() => setReminderModalVisible(false)}
+            movieId={movie.id}
+            movieTitle={movie.title}
+            releaseDate={movie.release_date || null}
+            currentTiming={reminder?.reminderTiming}
+            hasReminder={hasReminder}
+            onSetReminder={handleSetReminder}
+            onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
         </>

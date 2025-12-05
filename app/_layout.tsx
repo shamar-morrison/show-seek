@@ -12,9 +12,20 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
+import { initializeReminderSync } from '@/src/utils/reminderSync';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+// Configure how notifications are handled when app is in foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +44,28 @@ function RootLayoutNav() {
 
   // Handle deep links
   useDeepLinking();
+
+  // Handle notification taps
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+
+      if (data.type === 'reminder' && data.mediaType && data.mediaId) {
+        // Navigate to movie detail screen
+        // Use timeout to ensure navigation is ready
+        setTimeout(() => {
+          router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
+        }, 100);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
+  // Initialize reminder sync on app launch
+  useEffect(() => {
+    initializeReminderSync();
+  }, []);
 
   useEffect(() => {
     if (loading) return;

@@ -65,6 +65,15 @@ service cloud.firestore {
           && request.resource.data.addedAt is int;
         allow delete: if isOwner(userId);
       }
+
+      // Reminders collection
+      match /reminders/{reminderId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId;
+        allow update, delete: if isOwner(userId)
+          && resource.data.userId == userId;
+      }
     }
   }
 }

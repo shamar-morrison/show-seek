@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.horizon.showseek"
+      "bundleIdentifier": "app.horizon.showseek",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "We'll notify you when your favorite movies are releasing."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,6 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "app.horizon.showseek",
+      "permissions": ["NOTIFICATIONS"],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -60,8 +64,21 @@
           }
         }
       ],
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#E50914"
+        }
+      ]
     ],
+    "notification": {
+      "icon": "./assets/images/icon.png",
+      "color": "#E50914",
+      "androidMode": "default",
+      "androidCollapsedTitle": "New releases soon!"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
