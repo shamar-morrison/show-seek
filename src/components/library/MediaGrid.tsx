@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.m,
   },
   mediaCardPressed: {
-    transform: [{ scale: 0.95 }],
+    opacity: ACTIVE_OPACITY,
   },
   poster: {
     width: ITEM_WIDTH,
