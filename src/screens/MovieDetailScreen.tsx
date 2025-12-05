@@ -27,14 +27,14 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
-  useMediaReminder,
-  useCreateReminder,
   useCancelReminder,
+  useCreateReminder,
+  useMediaReminder,
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
-import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { ReminderTiming } from '@/src/types/reminder';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
@@ -85,7 +85,11 @@ export default function MovieDetailScreen() {
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const isInAnyList = Object.keys(membership).length > 0;
 
-  const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(movieId, 'movie');
+  const {
+    reminder,
+    hasReminder,
+    isLoading: isLoadingReminder,
+  } = useMediaReminder(movieId, 'movie');
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -367,7 +371,9 @@ export default function MovieDetailScreen() {
             ))}
           </View>
 
+          {/* Action Buttons */}
           <View style={styles.actionButtons}>
+            {/* Watch Trailer Button */}
             <TouchableOpacity
               style={[styles.playButton, !trailer && styles.disabledButton]}
               onPress={handleTrailerPress}
@@ -377,6 +383,8 @@ export default function MovieDetailScreen() {
               <Play size={20} color={COLORS.white} fill={COLORS.white} />
               <Text style={styles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
+
+            {/* Add to List Button */}
             <TouchableOpacity
               style={[styles.addButton, isInAnyList && styles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
@@ -391,6 +399,8 @@ export default function MovieDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
+
+            {/* Reminder Button */}
             <View style={detailStyles.ratingButtonContainer}>
               <ReminderButton
                 onPress={() => setReminderModalVisible(true)}
@@ -720,7 +730,7 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: SPACING.m,
+    gap: SPACING.s,
     marginBottom: SPACING.xl,
   },
   playButton: {
@@ -731,7 +741,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    gap: SPACING.s,
+    gap: SPACING.xs,
   },
   disabledButton: {
     opacity: 0.5,
