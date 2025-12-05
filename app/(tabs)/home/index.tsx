@@ -9,10 +9,6 @@ import React, { useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Performance: Card dimensions for FlashList optimization
-const CARD_WIDTH = 140;
-const CARD_HEIGHT = CARD_WIDTH * 1.5; // 210px
-
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
 
