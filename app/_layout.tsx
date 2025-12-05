@@ -94,8 +94,9 @@ function RootLayoutNav() {
     } else if (hasCompletedOnboarding && !user && !inAuthGroup) {
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
-    } else if (user && (inAuthGroup || isOnboarding)) {
-      // If logged in and in auth/onboarding, go to home
+    } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
+      // If logged in as a real user (not guest) and in auth/onboarding, go to home
+      // Guest users (anonymous) should be allowed to access auth screens to sign in
       router.replace('/(tabs)/home');
     }
   }, [user, loading, hasCompletedOnboarding, segments, router]);
