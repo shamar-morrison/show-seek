@@ -407,10 +407,12 @@ export const detailStyles = StyleSheet.create({
   },
   ratingButtonContainer: {
     width: 48,
+    height: 56,
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
 });

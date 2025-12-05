@@ -352,38 +352,40 @@ export default function EpisodeDetailScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.watchButton,
-                isWatched && styles.unwatchButton,
-                (!hasAired || isPending) && styles.disabledButton,
-              ]}
-              onPress={handleMarkWatched}
-              disabled={!hasAired || isPending}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              {isPending ? (
-                <ActivityIndicator size="small" color={COLORS.text} />
-              ) : (
-                <>
-                  <Check size={20} color={COLORS.text} />
-                  <Text style={styles.watchButtonText}>
-                    {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {trailer && (
+            <View style={styles.primaryActionsContainer}>
               <TouchableOpacity
-                style={styles.trailerButton}
-                onPress={() => handleVideoPress(trailer)}
+                style={[
+                  styles.watchButton,
+                  isWatched && styles.unwatchButton,
+                  (!hasAired || isPending) && styles.disabledButton,
+                ]}
+                onPress={handleMarkWatched}
+                disabled={!hasAired || isPending}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <Play size={20} color={COLORS.text} fill={COLORS.text} />
-                <Text style={styles.trailerButtonText}>Play Trailer</Text>
+                {isPending ? (
+                  <ActivityIndicator size="small" color={COLORS.text} />
+                ) : (
+                  <>
+                    <Check size={20} color={COLORS.text} />
+                    <Text style={styles.watchButtonText}>
+                      {isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
-            )}
+
+              {trailer && (
+                <TouchableOpacity
+                  style={styles.trailerButton}
+                  onPress={() => handleVideoPress(trailer)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Play size={20} color={COLORS.text} fill={COLORS.text} />
+                  <Text style={styles.trailerButtonText}>Play Trailer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* Rating Button */}
             <View style={detailStyles.ratingButtonContainer}>
@@ -604,9 +606,15 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
     marginTop: SPACING.s,
     marginBottom: SPACING.l,
+    alignItems: 'center',
+  },
+  primaryActionsContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: SPACING.s,
   },
   watchButton: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -629,6 +637,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   trailerButton: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
