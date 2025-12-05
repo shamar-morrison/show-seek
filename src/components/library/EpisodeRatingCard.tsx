@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { RatingItem } from '@/src/services/RatingService';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -28,7 +28,7 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(rating.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(rating.posterPath ?? null, TMDB_IMAGE_SIZES.poster.small) }}
         style={styles.poster}
         contentFit="cover"
       />
@@ -59,8 +59,7 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   containerPressed: {
-    transform: [{ scale: 0.98 }],
-    opacity: 0.8,
+    opacity: ACTIVE_OPACITY,
   },
   poster: {
     width: 60,
