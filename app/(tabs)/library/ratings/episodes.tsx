@@ -99,8 +99,10 @@ export default function EpisodeRatingsScreen() {
     episodeRatings.forEach((rating) => {
       if (rating.mediaType !== 'episode' || !rating.tvShowId) return;
 
-      const existing = groupedMap.get(rating.tvShowId) || [];
-      groupedMap.set(rating.tvShowId, [...existing, rating]);
+      if (!groupedMap.has(rating.tvShowId)) {
+        groupedMap.set(rating.tvShowId, []);
+      }
+      groupedMap.get(rating.tvShowId)!.push(rating);
     });
 
     // Convert to sections array
