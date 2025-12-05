@@ -75,7 +75,7 @@ class RatingService {
   async saveRating(mediaId: number, mediaType: 'movie' | 'tv', rating: number) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
@@ -104,7 +104,7 @@ class RatingService {
   async deleteRating(mediaId: number, mediaType: 'movie' | 'tv') {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
@@ -190,7 +190,7 @@ class RatingService {
   ) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,
@@ -232,7 +232,7 @@ class RatingService {
   async deleteEpisodeRating(tvShowId: number, seasonNumber: number, episodeNumber: number) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('User not authenticated');
+      if (!user) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,

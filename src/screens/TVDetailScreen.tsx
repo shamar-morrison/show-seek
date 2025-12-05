@@ -518,7 +518,7 @@ export default function TVDetailScreen() {
               media_type: 'tv',
               vote_average: show.vote_average,
               release_date: show.first_air_date,
-              genre_ids: show.genre_ids,
+              genre_ids: show.genres?.map((g) => g.id) || [],
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: SPACING.m,
     marginLeft: SPACING.s,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.overlay,
     borderRadius: BORDER_RADIUS.round,
   },
   backButtonText: {
@@ -605,11 +605,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: SPACING.xs,
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
-    elevation: 8,
+    elevation: SPACING.s,
   },
   poster: {
     width: 120,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: SPACING.xs,
   },
   metaText: {
     color: COLORS.textSecondary,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   genreTag: {
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: SPACING.m,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.round,
   },
   genreText: {
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     backgroundColor: COLORS.error,
     paddingHorizontal: SPACING.s,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
   },
   statusBadgeText: {
