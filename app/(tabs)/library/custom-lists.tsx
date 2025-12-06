@@ -2,6 +2,7 @@ import CreateListModal from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { filterCustomLists } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
@@ -32,10 +33,14 @@ export default function CustomListsScreen() {
     return filterCustomLists(lists);
   }, [lists]);
 
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
+
   const handleCreateList = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCreateModalVisible(true);
-  }, []);
+    requireAuth(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setCreateModalVisible(true);
+    });
+  }, [requireAuth]);
 
   const handleCreateSuccess = useCallback(
     (listId: string) => {
@@ -117,6 +122,7 @@ export default function CustomListsScreen() {
         onClose={() => setCreateModalVisible(false)}
         onSuccess={handleCreateSuccess}
       />
+      {AuthGuardModal}
     </>
   );
 }
