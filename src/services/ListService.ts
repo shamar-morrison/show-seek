@@ -1,3 +1,4 @@
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   collection,
   deleteDoc,
@@ -9,7 +10,6 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 
 export interface ListMediaItem {
   id: number;
@@ -20,6 +20,9 @@ export interface ListMediaItem {
   release_date: string;
   addedAt: number;
   genre_ids?: number[];
+  // TV show fields (optional, used when media_type is 'tv')
+  name?: string;
+  first_air_date?: string;
 }
 
 export interface UserList {

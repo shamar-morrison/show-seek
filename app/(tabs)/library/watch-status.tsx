@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
@@ -14,7 +15,7 @@ import {
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
 import { useNavigation, useRouter } from 'expo-router';
-import { Bookmark, SlidersHorizontal } from 'lucide-react-native';
+import { ArrowUpDown, Bookmark, SlidersHorizontal } from 'lucide-react-native';
 import React, { useLayoutEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,8 @@ export default function WatchStatusScreen() {
   const [selectedListId, setSelectedListId] = useState<string>('watchlist');
   const [filters, setFilters] = useState<WatchStatusFilterState>(DEFAULT_WATCH_STATUS_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
 
   const {
     handleItemPress,
@@ -44,8 +47,36 @@ export default function WatchStatusScreen() {
 
   const listItems = useMemo(() => {
     if (!selectedList?.items) return [];
-    return Object.values(selectedList.items).sort((a, b) => b.addedAt - a.addedAt);
-  }, [selectedList]);
+    const items = Object.values(selectedList.items);
+
+    // Apply sorting based on current sort state
+    const sortedItems = [...items].sort((a, b) => {
+      // Compute ascending comparison first, then negate for descending
+      const direction = sortState.direction === 'asc' ? 1 : -1;
+
+      switch (sortState.option) {
+        case 'recentlyAdded':
+          // Ascending: oldest first (a.addedAt - b.addedAt)
+          return (a.addedAt - b.addedAt) * direction;
+        case 'releaseDate': {
+          const dateA = a.release_date || '';
+          const dateB = b.release_date || '';
+          // Ascending: earliest date first
+          return dateA.localeCompare(dateB) * direction;
+        }
+        case 'rating':
+          // Ascending: lowest rating first
+          return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
+        case 'alphabetical':
+          // Ascending: A-Z
+          return a.title.localeCompare(b.title) * direction;
+        default:
+          return 0;
+      }
+    });
+
+    return sortedItems;
+  }, [selectedList, sortState]);
 
   const filteredItems = useMemo(() => {
     return filterMediaItems(listItems, filters);
@@ -56,23 +87,38 @@ export default function WatchStatusScreen() {
     setFilterModalVisible(false);
   };
 
-  // Add filter button to header
+  const handleApplySort = (newSortState: SortState) => {
+    setSortState(newSortState);
+  };
+
+  // Add filter and sort buttons to header
   useLayoutEffect(() => {
     const activeFilters = hasActiveFilters(filters);
+    const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
 
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setFilterModalVisible(true)}
-          activeOpacity={ACTIVE_OPACITY}
-          style={styles.headerButton}
-        >
-          <SlidersHorizontal size={24} color={COLORS.text} />
-          {activeFilters && <View style={styles.filterBadge} />}
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            onPress={() => setSortModalVisible(true)}
+            activeOpacity={ACTIVE_OPACITY}
+            style={styles.headerButton}
+          >
+            <ArrowUpDown size={24} color={COLORS.text} />
+            {hasActiveSort && <View style={styles.filterBadge} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(true)}
+            activeOpacity={ACTIVE_OPACITY}
+            style={styles.headerButton}
+          >
+            <SlidersHorizontal size={24} color={COLORS.text} />
+            {activeFilters && <View style={styles.filterBadge} />}
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [filters, navigation]);
+  }, [filters, navigation, sortState]);
 
   return (
     <>
@@ -144,6 +190,13 @@ export default function WatchStatusScreen() {
         genreMap={genreMap || {}}
       />
 
+      <MediaSortModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        sortState={sortState}
+        onApplySort={handleApplySort}
+      />
+
       <Toast ref={toastRef} />
     </>
   );
@@ -185,8 +238,13 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  headerButton: {
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
     marginRight: SPACING.m,
+  },
+  headerButton: {
     position: 'relative',
   },
   filterBadge: {
