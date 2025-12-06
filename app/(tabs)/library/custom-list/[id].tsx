@@ -104,6 +104,9 @@ export default function CustomListDetailScreen() {
               onPress={handleDeleteList}
               style={{ marginRight: SPACING.s }}
               activeOpacity={ACTIVE_OPACITY}
+              accessibilityLabel="Delete list"
+              accessibilityRole="button"
+              hitSlop={SPACING.s}
             >
               <Trash2 size={22} color={COLORS.error} />
             </TouchableOpacity>
