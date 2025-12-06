@@ -134,7 +134,9 @@ export default function CustomListDetailScreen() {
     return null;
   }
 
-  const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
+  const hasActiveSort =
+    sortState.option !== DEFAULT_SORT_STATE.option ||
+    sortState.direction !== DEFAULT_SORT_STATE.direction;
 
   return (
     <>
@@ -231,9 +233,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
     backgroundColor: COLORS.primary,
   },
 });
