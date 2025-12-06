@@ -3,7 +3,7 @@ import { auth, db } from '@/src/firebase/config';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Eye, EyeOff } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -63,6 +63,11 @@ export default function SignUp() {
       } catch (profileError) {
         // Profile update failed, but account exists. Log and continue.
         console.warn('Failed to update profile after sign up:', profileError);
+        Alert.alert(
+          'Note',
+          'Account created successfully. Some profile details may need to be updated later.',
+          [{ text: 'OK' }]
+        );
       }
 
       // 3. Create User Document in Firestore (non-critical)
@@ -71,7 +76,7 @@ export default function SignUp() {
           uid: user.uid,
           displayName: displayName,
           email: email,
-          createdAt: new Date(),
+          createdAt: serverTimestamp(),
           photoURL: null,
         });
       } catch (firestoreError) {
