@@ -90,41 +90,34 @@ export default function CustomListsScreen() {
     );
   }
 
-  if (customLists.length === 0) {
-    return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <EmptyState
-          icon={FolderPlus}
-          title="No Custom Lists"
-          description="Create custom lists to organize your favorite content"
-          actionLabel="Create List"
-          onAction={handleCreateList}
-        />
-        <CreateListModal
-          visible={createModalVisible}
-          onClose={() => setCreateModalVisible(false)}
-          onSuccess={handleCreateSuccess}
-        />
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <FlashList
-        data={customLists}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={ItemSeparator}
-      />
+    <>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        {customLists.length === 0 ? (
+          <EmptyState
+            icon={FolderPlus}
+            title="No Custom Lists"
+            description="Create custom lists to organize your favorite content"
+            actionLabel="Create List"
+            onAction={handleCreateList}
+          />
+        ) : (
+          <FlashList
+            data={customLists}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={ItemSeparator}
+          />
+        )}
+      </SafeAreaView>
       <CreateListModal
         visible={createModalVisible}
         onClose={() => setCreateModalVisible(false)}
         onSuccess={handleCreateSuccess}
       />
-    </SafeAreaView>
+    </>
   );
 }
 
