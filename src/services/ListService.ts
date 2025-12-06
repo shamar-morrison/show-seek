@@ -96,6 +96,27 @@ class ListService {
           }
         });
 
+        // Sort lists: default lists first (in defined order), then custom lists by creation date
+        const defaultListIds = DEFAULT_LISTS.map((l) => l.id);
+        mergedLists.sort((a, b) => {
+          const aDefaultIndex = defaultListIds.indexOf(a.id);
+          const bDefaultIndex = defaultListIds.indexOf(b.id);
+
+          // Both are default lists - sort by defined order
+          if (aDefaultIndex !== -1 && bDefaultIndex !== -1) {
+            return aDefaultIndex - bDefaultIndex;
+          }
+
+          // Only a is a default list - it comes first
+          if (aDefaultIndex !== -1) return -1;
+
+          // Only b is a default list - it comes first
+          if (bDefaultIndex !== -1) return 1;
+
+          // Both are custom lists - sort by creation date (oldest first)
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        });
+
         callback(mergedLists);
       },
       (error) => {

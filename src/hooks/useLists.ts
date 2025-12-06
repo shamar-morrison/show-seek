@@ -75,6 +75,9 @@ export const useMediaLists = (mediaId: number) => {
 };
 
 export const useAddToList = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
   return useMutation({
     mutationFn: ({
       listId,
@@ -85,13 +88,119 @@ export const useAddToList = () => {
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
     }) => listService.addToList(listId, mediaItem, listName),
+
+    // Optimistic update - immediately show the item as added
+    onMutate: async ({ listId, mediaItem, listName }) => {
+      // Cancel any outgoing refetches so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['lists', userId] });
+
+      // Snapshot the previous value
+      const previousLists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+
+      // Optimistically update the cache
+      const newItem: ListMediaItem = {
+        ...mediaItem,
+        addedAt: Date.now(),
+      } as ListMediaItem;
+
+      queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
+        if (!oldLists) {
+          // No lists in cache yet - create array with new list
+          return [
+            {
+              id: listId,
+              name: listName || listId,
+              items: { [mediaItem.id]: newItem },
+              createdAt: Date.now(),
+            },
+          ];
+        }
+
+        // Check if the list exists in the cache
+        const listExists = oldLists.some((list) => list.id === listId);
+
+        if (listExists) {
+          // Update existing list
+          return oldLists.map((list) => {
+            if (list.id === listId) {
+              return {
+                ...list,
+                items: {
+                  ...list.items,
+                  [mediaItem.id]: newItem,
+                },
+              };
+            }
+            return list;
+          });
+        } else {
+          // List doesn't exist - append new list
+          return [
+            ...oldLists,
+            {
+              id: listId,
+              name: listName || listId,
+              items: { [mediaItem.id]: newItem },
+              createdAt: Date.now(),
+            },
+          ];
+        }
+      });
+
+      return { previousLists };
+    },
+
+    // If mutation fails, rollback to the previous value
+    onError: (_err, _variables, context) => {
+      if (context?.previousLists) {
+        queryClient.setQueryData(['lists', userId], context.previousLists);
+      }
+    },
   });
 };
 
 export const useRemoveFromList = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
   return useMutation({
     mutationFn: ({ listId, mediaId }: { listId: string; mediaId: number }) =>
       listService.removeFromList(listId, mediaId),
+
+    // Optimistic update - immediately show the item as removed
+    onMutate: async ({ listId, mediaId }) => {
+      if (!userId) {
+        throw new Error('User must be logged in');
+      }
+
+      await queryClient.cancelQueries({ queryKey: ['lists', userId] });
+
+      const previousLists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+
+      if (previousLists) {
+        queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
+          if (!oldLists) return oldLists;
+          return oldLists.map((list) => {
+            if (list.id === listId) {
+              const { [mediaId]: _, ...remainingItems } = list.items || {};
+              return {
+                ...list,
+                items: remainingItems,
+              };
+            }
+            return list;
+          });
+        });
+      }
+
+      return { previousLists };
+    },
+
+    onError: (_err, _variables, context) => {
+      if (context?.previousLists) {
+        queryClient.setQueryData(['lists', userId], context.previousLists);
+      }
+    },
   });
 };
 
