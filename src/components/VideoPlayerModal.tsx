@@ -12,16 +12,18 @@ export default function TrailerPlayer({ visible, onClose, videoKey }: TrailerPla
 
   React.useEffect(() => {
     if (visible && youtubeUrl) {
-      // Immediately open in YouTube app/browser
-      Linking.canOpenURL(youtubeUrl).then((supported) => {
-        if (supported) {
-          Linking.openURL(youtubeUrl);
+      Linking.openURL(youtubeUrl)
+        .then(() => {
           onClose();
-        } else {
-          Alert.alert('Error', 'Unable to open video');
+        })
+        .catch((error) => {
+          console.error('Failed to open video URL:', error);
+          Alert.alert(
+            'Error',
+            'Unable to open video. Please make sure you have a web browser or YouTube installed.'
+          );
           onClose();
-        }
-      });
+        });
     }
   }, [visible, youtubeUrl]);
 
