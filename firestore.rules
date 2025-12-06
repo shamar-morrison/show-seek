@@ -33,6 +33,8 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
+      // Allow users to delete their own user document (for account deletion)
+      allow delete: if isOwner(userId);
       // Favorites collection
       match /favorites/{favoriteId} {
         allow read, write: if isOwner(userId);

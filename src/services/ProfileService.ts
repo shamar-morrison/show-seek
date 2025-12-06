@@ -85,14 +85,15 @@ class ProfileService {
       }
     }
 
-    // Delete the user document itself if it exists
+    // Delete the user document itself
+    // Note: deleteDoc() does NOT throw if the document doesn't exist, so any error here is a real problem
     try {
       const userDocRef = doc(db, 'users', userId);
       await withTimeout(deleteDoc(userDocRef), 'deleteUserDoc');
       console.log('[ProfileService] Deleted user document');
     } catch (error) {
-      // User document may not exist, that's okay
-      console.log('[ProfileService] User document deletion skipped (may not exist)');
+      console.error('[ProfileService] Error deleting user document:', error);
+      throw error; // Re-throw to surface the actual problem
     }
   }
 
@@ -124,7 +125,7 @@ class ProfileService {
 
       const userId = user.uid;
 
-      // Delete all Firestore data first (each subcollection has its own 10s timeout)
+      // Delete all Firestore data first (each subcollection has its own timeout)
       await withTimeout(this.deleteAllUserData(userId), 'deleteAllUserData');
 
       // Delete the Firebase Auth account
