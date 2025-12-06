@@ -8,7 +8,9 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -203,121 +205,131 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-
-        {/* User Info Section */}
-        <View style={styles.userSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Profile</Text>
           </View>
-          <Text style={styles.displayName}>{displayName}</Text>
-          <Text style={styles.email}>{email}</Text>
-        </View>
 
-        {/* Stats Section */}
-        {!isGuest && (
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>ACTIVITY</Text>
-            <View style={styles.statsGrid}>
-              <StatCard
-                icon={Film}
-                label="Movies Rated"
-                count={stats.movieRatingsCount}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Tv}
-                label="TV Shows Rated"
-                count={stats.tvRatingsCount}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={User}
-                label="Fav People"
-                count={stats.favoritePersonsCount}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Heart}
-                label="Movies Liked"
-                count={stats.favoritesMovieCount}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Heart}
-                label="TV Shows Liked"
-                count={stats.favoritesTvCount}
-                isLoading={statsLoading}
-              />
+          {/* User Info Section */}
+          <View style={styles.userSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <Text style={styles.displayName}>{displayName}</Text>
+            <Text style={styles.email}>{email}</Text>
+          </View>
+
+          {/* Stats Section */}
+          {!isGuest && (
+            <View style={styles.statsSection}>
+              <Text style={styles.sectionTitle}>ACTIVITY</Text>
+              <View style={styles.statsGrid}>
+                <StatCard
+                  icon={Film}
+                  label="Movies Rated"
+                  count={stats.movieRatingsCount}
+                  isLoading={statsLoading}
+                />
+                <StatCard
+                  icon={Tv}
+                  label="TV Shows Rated"
+                  count={stats.tvRatingsCount}
+                  isLoading={statsLoading}
+                />
+                <StatCard
+                  icon={User}
+                  label="Fav People"
+                  count={stats.favoritePersonsCount}
+                  isLoading={statsLoading}
+                />
+                <StatCard
+                  icon={Heart}
+                  label="Movies Liked"
+                  count={stats.favoritesMovieCount}
+                  isLoading={statsLoading}
+                />
+                <StatCard
+                  icon={Heart}
+                  label="TV Shows Liked"
+                  count={stats.favoritesTvCount}
+                  isLoading={statsLoading}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionsSection}>
+            <Text style={styles.sectionTitle}>SETTINGS</Text>
+            <View style={styles.actionsList}>
+              <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} />
+              <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
+              {!isGuest && (
+                <ActionButton
+                  icon={Trash2}
+                  label="Delete Account"
+                  onPress={handleDeleteAccount}
+                  variant="danger"
+                  loading={isDeleting}
+                />
+              )}
             </View>
           </View>
-        )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>SETTINGS</Text>
-          <View style={styles.actionsList}>
-            <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} />
-            <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
-            {!isGuest && (
-              <ActionButton
-                icon={Trash2}
-                label="Delete Account"
-                onPress={handleDeleteAccount}
-                variant="danger"
-                loading={isDeleting}
+          {/* Re-auth Modal (inline) */}
+          {showReauthModal && (
+            <View style={styles.reauthSection}>
+              <Text style={styles.sectionTitle}>CONFIRM IDENTITY</Text>
+              <Text style={styles.reauthDescription}>
+                For security, please enter your password to delete your account.
+              </Text>
+              <TextInput
+                style={styles.reauthInput}
+                placeholder="Enter your password"
+                placeholderTextColor={COLORS.textSecondary}
+                secureTextEntry
+                value={reauthPassword}
+                onChangeText={setReauthPassword}
+                autoFocus
               />
-            )}
-          </View>
-        </View>
+              <View style={styles.reauthButtons}>
+                {/* Cancel Button */}
+                <TouchableOpacity
+                  style={[styles.reauthButton, styles.reauthCancelButton]}
+                  onPress={cancelReauth}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Text style={styles.reauthCancelText}>Cancel</Text>
+                </TouchableOpacity>
 
-        {/* Re-auth Modal (inline) */}
-        {showReauthModal && (
-          <View style={styles.reauthSection}>
-            <Text style={styles.sectionTitle}>CONFIRM IDENTITY</Text>
-            <Text style={styles.reauthDescription}>
-              For security, please enter your password to delete your account.
-            </Text>
-            <TextInput
-              style={styles.reauthInput}
-              placeholder="Enter your password"
-              placeholderTextColor={COLORS.textSecondary}
-              secureTextEntry
-              value={reauthPassword}
-              onChangeText={setReauthPassword}
-              autoFocus
-            />
-            <View style={styles.reauthButtons}>
-              {/* Cancel Button */}
-              <TouchableOpacity
-                style={[styles.reauthButton, styles.reauthCancelButton]}
-                onPress={cancelReauth}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.reauthCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              {/* Delete Account Button */}
-              <TouchableOpacity
-                style={[styles.reauthButton, styles.reauthConfirmButton]}
-                onPress={handleReauthAndDelete}
-                disabled={reauthLoading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                {reauthLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <Text style={styles.reauthConfirmText}>Delete Account</Text>
-                )}
-              </TouchableOpacity>
+                {/* Delete Account Button */}
+                <TouchableOpacity
+                  style={[styles.reauthButton, styles.reauthConfirmButton]}
+                  onPress={handleReauthAndDelete}
+                  disabled={reauthLoading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {reauthLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.reauthConfirmText}>Delete Account</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -326,6 +338,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollContent: {
     paddingBottom: SPACING.xxl,
