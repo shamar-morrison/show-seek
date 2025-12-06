@@ -1,7 +1,8 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/auth';
 import { auth } from '@/src/firebase/config';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -20,6 +21,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignIn() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -73,6 +76,7 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signInAnonymously(auth);
+      router.replace('/(tabs)/home');
     } catch (error: any) {
       let errorMessage = 'Unable to sign in as guest. Please try again.';
 
@@ -162,14 +166,16 @@ export default function SignIn() {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.button, styles.guestButton]}
-                onPress={handleGuestSignIn}
-                disabled={loading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.guestButtonText}>Continue as Guest</Text>
-              </TouchableOpacity>
+              {!user && (
+                <TouchableOpacity
+                  style={[styles.button, styles.guestButton]}
+                  onPress={handleGuestSignIn}
+                  disabled={loading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Don&apos;t have an account? </Text>
