@@ -25,7 +25,7 @@ export const DEFAULT_SORT_STATE: SortState = {
   direction: 'desc',
 };
 
-interface WatchStatusSortModalProps {
+interface MediaSortModalProps {
   visible: boolean;
   onClose: () => void;
   sortState: SortState;
@@ -39,12 +39,12 @@ const SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: SortDi
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 
-export default function WatchStatusSortModal({
+export default function MediaSortModal({
   visible,
   onClose,
   sortState,
   onApplySort,
-}: WatchStatusSortModalProps) {
+}: MediaSortModalProps) {
   const [localSortState, setLocalSortState] = useState<SortState>(sortState);
 
   // Update local state when modal opens

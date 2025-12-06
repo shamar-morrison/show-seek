@@ -1,9 +1,6 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import WatchStatusSortModal, {
-  DEFAULT_SORT_STATE,
-  SortState,
-} from '@/src/components/WatchStatusSortModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
@@ -193,7 +190,7 @@ export default function WatchStatusScreen() {
         genreMap={genreMap || {}}
       />
 
-      <WatchStatusSortModal
+      <MediaSortModal
         visible={sortModalVisible}
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}

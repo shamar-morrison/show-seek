@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
@@ -7,8 +8,8 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bookmark, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import { ArrowUpDown, Bookmark, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
@@ -17,6 +18,8 @@ export default function CustomListDetailScreen() {
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
 
   const {
     handleItemPress,
@@ -34,8 +37,40 @@ export default function CustomListDetailScreen() {
 
   const listItems = useMemo(() => {
     if (!list?.items) return [];
-    return Object.values(list.items).sort((a, b) => b.addedAt - a.addedAt);
-  }, [list]);
+    const items = Object.values(list.items);
+
+    // Apply sorting based on current sort state
+    const sortedItems = [...items].sort((a, b) => {
+      // Compute ascending comparison first, then negate for descending
+      const direction = sortState.direction === 'asc' ? 1 : -1;
+
+      switch (sortState.option) {
+        case 'recentlyAdded':
+          // Ascending: oldest first (a.addedAt - b.addedAt)
+          return (a.addedAt - b.addedAt) * direction;
+        case 'releaseDate': {
+          const dateA = a.release_date || '';
+          const dateB = b.release_date || '';
+          // Ascending: earliest date first
+          return dateA.localeCompare(dateB) * direction;
+        }
+        case 'rating':
+          // Ascending: lowest rating first
+          return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
+        case 'alphabetical':
+          // Ascending: A-Z
+          return a.title.localeCompare(b.title) * direction;
+        default:
+          return 0;
+      }
+    });
+
+    return sortedItems;
+  }, [list, sortState]);
+
+  const handleApplySort = (newSortState: SortState) => {
+    setSortState(newSortState);
+  };
 
   const handleDeleteList = useCallback(() => {
     if (!list || !id || deleteMutation.isPending) return;
@@ -94,22 +129,37 @@ export default function CustomListDetailScreen() {
     return null;
   }
 
+  const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
+
   return (
     <>
       <Stack.Screen
         options={{
           title: list.name,
           headerRight: () => (
-            <TouchableOpacity
-              onPress={handleDeleteList}
-              style={{ marginRight: SPACING.s }}
-              activeOpacity={ACTIVE_OPACITY}
-              accessibilityLabel="Delete list"
-              accessibilityRole="button"
-              hitSlop={SPACING.s}
-            >
-              <Trash2 size={22} color={COLORS.error} />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                onPress={() => setSortModalVisible(true)}
+                activeOpacity={ACTIVE_OPACITY}
+                style={styles.headerButton}
+                accessibilityLabel="Sort items"
+                accessibilityRole="button"
+                hitSlop={SPACING.s}
+              >
+                <ArrowUpDown size={22} color={COLORS.text} />
+                {hasActiveSort && <View style={styles.sortBadge} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeleteList}
+                style={styles.headerButton}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityLabel="Delete list"
+                accessibilityRole="button"
+                hitSlop={SPACING.s}
+              >
+                <Trash2 size={22} color={COLORS.error} />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -139,6 +189,13 @@ export default function CustomListDetailScreen() {
         />
       )}
 
+      <MediaSortModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        sortState={sortState}
+        onApplySort={handleApplySort}
+      />
+
       <Toast ref={toastRef} />
       {AuthGuardModal}
     </>
@@ -155,5 +212,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    marginRight: SPACING.s,
+  },
+  headerButton: {
+    position: 'relative',
+  },
+  sortBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
 });
