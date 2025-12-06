@@ -24,12 +24,12 @@ const KOFI_URL = 'https://ko-fi.com/yourusername'; // TODO: Replace with actual 
  * Extract initials from display name or email
  */
 function getInitials(displayName: string | null, email: string | null): string {
-  if (displayName) {
+  if (displayName && displayName.trim()) {
     const parts = displayName.trim().split(/\s+/);
-    if (parts.length >= 2) {
+    if (parts.length >= 2 && parts[0] && parts[parts.length - 1]) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
-    return displayName.substring(0, 2).toUpperCase();
+    return displayName.trim().substring(0, 2).toUpperCase();
   }
 
   if (email) {
