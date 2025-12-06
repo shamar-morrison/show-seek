@@ -56,6 +56,7 @@ export default function CustomListsScreen() {
           onPress={handleCreateList}
           style={{ marginRight: SPACING.s }}
           activeOpacity={ACTIVE_OPACITY}
+          hitSlop={SPACING.s}
         >
           <Plus size={24} color={COLORS.text} />
         </TouchableOpacity>
