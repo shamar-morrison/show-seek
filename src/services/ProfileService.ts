@@ -2,7 +2,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
-import { Alert } from 'react-native';
 import { auth, db } from '../firebase/config';
 
 // Subcollections to delete when removing user account
@@ -161,12 +160,15 @@ class ProfileService {
       if (error instanceof Error && error.message === 'REQUIRES_REAUTH') {
         throw error;
       }
-      const message = getFirestoreErrorMessage(error);
+
       if (error instanceof FirebaseError) {
-        if (error.code === 'auth/invalid-credential') {
-          Alert.alert('Invalid credentials', 'Please try again.');
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+          console.error('[ProfileService] deleteAccountWithReauth error:', error);
+          throw new Error('Incorrect password. Please try again.');
         }
       }
+
+      const message = getFirestoreErrorMessage(error);
       console.error('[ProfileService] deleteAccountWithReauth error:', error);
       throw new Error(message);
     }
