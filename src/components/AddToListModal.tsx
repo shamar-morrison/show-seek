@@ -75,8 +75,7 @@ export default function AddToListModal({
   const [createError, setCreateError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
 
-  // Track changes for toast summary
-  const changesRef = useRef<{ added: number; removed: number }>({ added: 0, removed: 0 });
+  const hasChangesRef = useRef(false);
 
   const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
   const { membership } = useMediaLists(mediaItem.id);
@@ -89,7 +88,7 @@ export default function AddToListModal({
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
-      changesRef.current = { added: 0, removed: 0 };
+      hasChangesRef.current = false;
       setCreateError(null);
       setOperationError(null);
       setIsCreating(false);
@@ -98,35 +97,28 @@ export default function AddToListModal({
   }, [visible]);
 
   const handleClose = useCallback(() => {
-    // Show summary toast if there were changes
-    const { added, removed } = changesRef.current;
-    if (added > 0 || removed > 0) {
-      if (onShowToast) {
-        onShowToast('Lists updated');
-      }
+    if (hasChangesRef.current && onShowToast) {
+      onShowToast('Lists updated');
     }
-
-    // Close immediately
     onClose();
   }, [onClose, onShowToast]);
 
-  const handleToggleList = async (listId: string, listName: string, isMember: boolean) => {
+  // Error handler for mutations
+  const handleMutationError = useCallback((error: Error) => {
+    console.error('List operation failed:', error);
+    setOperationError(error.message || 'Failed to update list');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  }, []);
+
+  const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setOperationError(null);
+    hasChangesRef.current = true;
 
-    try {
-      if (isMember) {
-        await removeMutation.mutateAsync({ listId, mediaId: mediaItem.id });
-        changesRef.current.removed++;
-        changesRef.current.added = Math.max(0, changesRef.current.added - 1);
-      } else {
-        await addMutation.mutateAsync({ listId, mediaItem, listName });
-        changesRef.current.added++;
-      }
-    } catch (error) {
-      console.error('Failed to toggle list:', error);
-      setOperationError(error instanceof Error ? error.message : 'Failed to update list');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    if (isMember) {
+      removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
+    } else {
+      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
     }
   };
 
@@ -136,21 +128,22 @@ export default function AddToListModal({
     setCreateError(null);
 
     try {
-      // 1. Create list
+      // 1. Create list (must await to get the listId)
       const listId = await createMutation.mutateAsync(newListName.trim());
 
-      // 2. Add item to new list (don't await - optimistic updates will show it immediately)
-      addMutation.mutate({
-        listId,
-        mediaItem,
-        listName: newListName.trim(),
-      });
+      // 2. Add item to new list (fire-and-forget with optimistic update)
+      hasChangesRef.current = true;
+      addMutation.mutate(
+        {
+          listId,
+          mediaItem,
+          listName: newListName.trim(),
+        },
+        { onError: handleMutationError }
+      );
 
-      // 3. Success feedback
+      // 3. Success feedback and reset UI immediately
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      changesRef.current.added++;
-
-      // 4. Reset UI and return to list view immediately
       setNewListName('');
       setIsCreating(false);
     } catch (error) {
