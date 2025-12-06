@@ -231,7 +231,7 @@ export default function ProfileScreen() {
               />
               <StatCard
                 icon={Tv}
-                label="TV Rated"
+                label="TV Shows Rated"
                 count={stats.tvRatingsCount}
                 isLoading={statsLoading}
               />
@@ -249,7 +249,7 @@ export default function ProfileScreen() {
               />
               <StatCard
                 icon={Heart}
-                label="TV Liked"
+                label="TV Shows Liked"
                 count={stats.favoritesTvCount}
                 isLoading={statsLoading}
               />
