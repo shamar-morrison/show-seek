@@ -61,8 +61,7 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['items', 'updatedAt', 'name', 'createdAt']);
-        allow delete: if isOwner(userId)
-          && resource.data.get('isCustom', false) == true;
+        allow delete: if isOwner(userId);
       }
 
       // Episode tracking collection
