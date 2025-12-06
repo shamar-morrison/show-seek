@@ -15,13 +15,33 @@ const USER_SUBCOLLECTIONS = [
   'reminders',
 ] as const;
 
+const FIRESTORE_TIMEOUT_MS = 25000;
+
+class FirestoreTimeoutError extends Error {
+  constructor(operation: string) {
+    super(`Firestore operation timed out after ${FIRESTORE_TIMEOUT_MS / 1000}s: ${operation}`);
+    this.name = 'FirestoreTimeoutError';
+  }
+}
+
+/**
+ * Wraps a Firestore operation with a timeout guard.
+ * Rejects with a FirestoreTimeoutError if the operation exceeds the timeout.
+ */
+async function withTimeout<T>(promise: Promise<T>, operationName: string): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new FirestoreTimeoutError(operationName)), FIRESTORE_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeoutPromise]);
+}
+
 class ProfileService {
   /**
    * Delete all documents in a user's subcollection
    */
   private async deleteSubcollection(userId: string, subcollectionName: string): Promise<number> {
     const collectionRef = collection(db, 'users', userId, subcollectionName);
-    const snapshot = await getDocs(collectionRef);
+    const snapshot = await withTimeout(getDocs(collectionRef), `getDocs(${subcollectionName})`);
 
     if (snapshot.empty) {
       return 0;
@@ -39,7 +59,10 @@ class ProfileService {
         batch.delete(docSnapshot.ref);
       });
 
-      await batch.commit();
+      await withTimeout(
+        batch.commit(),
+        `batch.commit(${subcollectionName}, batch ${Math.floor(i / batchSize) + 1})`
+      );
       deletedCount += chunk.length;
     }
 
@@ -101,16 +124,11 @@ class ProfileService {
 
       const userId = user.uid;
 
-      // Create timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 30000);
-      });
-
-      // Delete all Firestore data first
-      await Promise.race([this.deleteAllUserData(userId), timeoutPromise]);
+      // Delete all Firestore data first (each subcollection has its own 10s timeout)
+      await withTimeout(this.deleteAllUserData(userId), 'deleteAllUserData');
 
       // Delete the Firebase Auth account
-      await Promise.race([deleteUser(user), timeoutPromise]);
+      await withTimeout(deleteUser(user), 'deleteUser');
 
       console.log('[ProfileService] Account deleted successfully');
     } catch (error) {
