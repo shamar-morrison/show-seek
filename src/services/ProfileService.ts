@@ -88,7 +88,7 @@ class ProfileService {
     // Delete the user document itself if it exists
     try {
       const userDocRef = doc(db, 'users', userId);
-      await deleteDoc(userDocRef);
+      await withTimeout(deleteDoc(userDocRef), 'deleteUserDoc');
       console.log('[ProfileService] Deleted user document');
     } catch (error) {
       // User document may not exist, that's okay
@@ -152,6 +152,10 @@ class ProfileService {
       await this.reauthenticateWithPassword(password);
       await this.deleteAccount();
     } catch (error) {
+      // Preserve REQUIRES_REAUTH signal for caller
+      if (error instanceof Error && error.message === 'REQUIRES_REAUTH') {
+        throw error;
+      }
       const message = getFirestoreErrorMessage(error);
       console.error('[ProfileService] deleteAccountWithReauth error:', error);
       throw new Error(message);
