@@ -96,7 +96,7 @@ function RootLayoutNav() {
       router.replace('/(auth)/sign-in');
     } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
       // If logged in as a real user (not guest) and in auth/onboarding, go to home
-      // Guest users (anonymous) should be allowed to access auth screens to sign in
+      // Guest users (anonymous) are allowed to access auth screens to upgrade their account
       router.replace('/(tabs)/home');
     }
   }, [user, loading, hasCompletedOnboarding, segments, router]);
