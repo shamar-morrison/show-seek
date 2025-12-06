@@ -54,19 +54,24 @@ export default function WatchStatusScreen() {
 
     // Apply sorting based on current sort state
     const sortedItems = [...items].sort((a, b) => {
+      // Compute ascending comparison first, then negate for descending
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
         case 'recentlyAdded':
-          return (b.addedAt - a.addedAt) * direction;
+          // Ascending: oldest first (a.addedAt - b.addedAt)
+          return (a.addedAt - b.addedAt) * direction;
         case 'releaseDate': {
           const dateA = a.release_date || '';
           const dateB = b.release_date || '';
+          // Ascending: earliest date first
           return dateA.localeCompare(dateB) * direction;
         }
         case 'rating':
+          // Ascending: lowest rating first
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
         case 'alphabetical':
+          // Ascending: A-Z
           return a.title.localeCompare(b.title) * direction;
         default:
           return 0;
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.s,
+    gap: SPACING.m,
     marginRight: SPACING.m,
   },
   headerButton: {
