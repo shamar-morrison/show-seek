@@ -26,7 +26,7 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.createdAt is timestamp
         // photoURL is optional but if present must be null or string
-        && (!('photoURL' in request.resource.data.keys()) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['displayName', 'photoURL', 'updatedAt'])
