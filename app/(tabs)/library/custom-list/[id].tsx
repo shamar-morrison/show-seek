@@ -39,9 +39,7 @@ export default function CustomListDetailScreen() {
     if (!list?.items) return [];
     const items = Object.values(list.items);
 
-    // Apply sorting based on current sort state
     const sortedItems = [...items].sort((a, b) => {
-      // Compute ascending comparison first, then negate for descending
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
@@ -60,8 +58,8 @@ export default function CustomListDetailScreen() {
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
         case 'alphabetical': {
           // Movies use title, TV shows use name
-          const titleA = a.title || a.name || '';
-          const titleB = b.title || b.name || '';
+          const titleA = (a.title || a.name || '').toLowerCase();
+          const titleB = (b.title || b.name || '').toLowerCase();
           // Ascending: A-Z
           return titleA.localeCompare(titleB) * direction;
         }
