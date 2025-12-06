@@ -18,7 +18,7 @@ export default function LibraryStackLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
 
         {/* Watch Status & Custom Lists */}
-        <Stack.Screen name="watch-status" options={{ title: 'Watch Status Lists' }} />
+        <Stack.Screen name="watch-status" options={{ title: 'Watch Lists' }} />
         <Stack.Screen name="custom-lists" options={{ title: 'Custom Lists' }} />
         <Stack.Screen name="custom-list/[id]" options={{ title: '' }} />
 

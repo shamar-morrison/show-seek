@@ -25,7 +25,7 @@ const SECTIONS: SectionData[] = [
       {
         id: 'watch-status',
         icon: Tv,
-        title: 'Watch Status Lists',
+        title: 'Watch Lists',
         route: '/(tabs)/library/watch-status',
       },
       {
