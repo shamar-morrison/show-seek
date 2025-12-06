@@ -139,8 +139,8 @@ export default function AddToListModal({
       // 1. Create list
       const listId = await createMutation.mutateAsync(newListName.trim());
 
-      // 2. Add item to new list
-      await addMutation.mutateAsync({
+      // 2. Add item to new list (don't await - optimistic updates will show it immediately)
+      addMutation.mutate({
         listId,
         mediaItem,
         listName: newListName.trim(),
@@ -150,7 +150,7 @@ export default function AddToListModal({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       changesRef.current.added++;
 
-      // 4. Reset UI and return to list view
+      // 4. Reset UI and return to list view immediately
       setNewListName('');
       setIsCreating(false);
     } catch (error) {
