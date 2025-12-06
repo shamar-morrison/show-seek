@@ -2,6 +2,7 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { FirebaseError } from 'firebase/app';
 import { deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { collection, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { Alert } from 'react-native';
 import { auth, db } from '../firebase/config';
 
 // Subcollections to delete when removing user account
@@ -115,17 +116,20 @@ class ProfileService {
    * Complete account deletion flow:
    * 1. Delete all Firestore data
    * 2. Delete the Firebase Auth account
+   *
+   * Note: This should only be called after re-authentication (via deleteAccountWithReauth)
+   * to ensure the user has recently authenticated.
    */
   async deleteAccount(): Promise<void> {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No authenticated user found');
+    }
+
+    const userId = user.uid;
+
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-
-      const userId = user.uid;
-
-      // Delete all Firestore data first (each subcollection has its own timeout)
+      // Delete all Firestore data (each subcollection has its own timeout)
       await withTimeout(this.deleteAllUserData(userId), 'deleteAllUserData');
 
       // Delete the Firebase Auth account
@@ -158,6 +162,11 @@ class ProfileService {
         throw error;
       }
       const message = getFirestoreErrorMessage(error);
+      if (error instanceof FirebaseError) {
+        if (error.code === 'auth/invalid-credential') {
+          Alert.alert('Invalid credentials', 'Please try again.');
+        }
+      }
       console.error('[ProfileService] deleteAccountWithReauth error:', error);
       throw new Error(message);
     }

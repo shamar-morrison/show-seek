@@ -102,7 +102,6 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { stats, isLoading: statsLoading } = useProfileStats();
 
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showReauthModal, setShowReauthModal] = useState(false);
   const [reauthPassword, setReauthPassword] = useState('');
   const [reauthLoading, setReauthLoading] = useState(false);
@@ -136,22 +135,6 @@ export default function ProfileScreen() {
     }
   }, [signOut]);
 
-  const performAccountDeletion = useCallback(async () => {
-    setIsDeleting(true);
-    try {
-      await profileService.deleteAccount();
-      // Account deleted successfully, router will handle redirect
-    } catch (error: any) {
-      if (error.message === 'REQUIRES_REAUTH') {
-        setShowReauthModal(true);
-      } else {
-        Alert.alert('Error', error.message || 'Unable to delete account. Please try again.');
-      }
-    } finally {
-      setIsDeleting(false);
-    }
-  }, []);
-
   const handleDeleteAccount = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
@@ -170,11 +153,13 @@ export default function ProfileScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: performAccountDeletion,
+          // Always require password re-authentication before deletion
+          // to ensure user identity is confirmed BEFORE any data is deleted
+          onPress: () => setShowReauthModal(true),
         },
       ]
     );
-  }, [isGuest, performAccountDeletion]);
+  }, [isGuest]);
 
   const handleReauthAndDelete = useCallback(async () => {
     if (!reauthPassword.trim()) {
@@ -280,7 +265,6 @@ export default function ProfileScreen() {
                   label="Delete Account"
                   onPress={handleDeleteAccount}
                   variant="danger"
-                  loading={isDeleting}
                 />
               )}
             </View>

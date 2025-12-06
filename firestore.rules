@@ -74,6 +74,7 @@ service cloud.firestore {
           && request.resource.data.episodes is map;
         allow update: if isOwner(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata']);
+        allow delete: if isOwner(userId);
       }
 
       // Favorite persons collection
