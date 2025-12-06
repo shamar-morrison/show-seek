@@ -2,6 +2,7 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +16,7 @@ export default function CustomListDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
+  const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
 
   const {
     handleItemPress,
@@ -36,7 +38,7 @@ export default function CustomListDetailScreen() {
   }, [list]);
 
   const handleDeleteList = useCallback(() => {
-    if (!list) return;
+    if (!list || !id) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
@@ -51,8 +53,12 @@ export default function CustomListDetailScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (!isAuthenticated) {
+              requireAuth(() => {}, 'Sign in to delete this list');
+              return;
+            }
             try {
-              await deleteMutation.mutateAsync(id!);
+              await deleteMutation.mutateAsync(id);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               router.back();
             } catch (error) {
@@ -67,7 +73,7 @@ export default function CustomListDetailScreen() {
         },
       ]
     );
-  }, [list, id, deleteMutation, router]);
+  }, [list, id, deleteMutation, router, requireAuth, isAuthenticated]);
 
   // Navigate back if list is deleted
   useEffect(() => {
@@ -131,6 +137,7 @@ export default function CustomListDetailScreen() {
       )}
 
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </>
   );
 }
