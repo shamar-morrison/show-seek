@@ -49,17 +49,22 @@ export default function CustomListDetailScreen() {
           // Ascending: oldest first (a.addedAt - b.addedAt)
           return (a.addedAt - b.addedAt) * direction;
         case 'releaseDate': {
-          const dateA = a.release_date || '';
-          const dateB = b.release_date || '';
+          // Movies use release_date, TV shows use first_air_date
+          const dateA = a.release_date || a.first_air_date || '';
+          const dateB = b.release_date || b.first_air_date || '';
           // Ascending: earliest date first
           return dateA.localeCompare(dateB) * direction;
         }
         case 'rating':
           // Ascending: lowest rating first
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
-        case 'alphabetical':
+        case 'alphabetical': {
+          // Movies use title, TV shows use name
+          const titleA = a.title || a.name || '';
+          const titleB = b.title || b.name || '';
           // Ascending: A-Z
-          return a.title.localeCompare(b.title) * direction;
+          return titleA.localeCompare(titleB) * direction;
+        }
         default:
           return 0;
       }
