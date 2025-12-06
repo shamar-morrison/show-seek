@@ -292,6 +292,7 @@ export default function ProfileScreen() {
               autoFocus
             />
             <View style={styles.reauthButtons}>
+              {/* Cancel Button */}
               <TouchableOpacity
                 style={[styles.reauthButton, styles.reauthCancelButton]}
                 onPress={cancelReauth}
@@ -299,6 +300,8 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.reauthCancelText}>Cancel</Text>
               </TouchableOpacity>
+
+              {/* Delete Account Button */}
               <TouchableOpacity
                 style={[styles.reauthButton, styles.reauthConfirmButton]}
                 onPress={handleReauthAndDelete}
@@ -463,6 +466,7 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   reauthCancelButton: {
     backgroundColor: COLORS.surfaceLight,
@@ -479,5 +483,6 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '600',
     fontSize: FONT_SIZE.m,
+    textAlign: 'center',
   },
 });
