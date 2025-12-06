@@ -1,18 +1,22 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
-import { COLORS } from '@/src/constants/theme';
-import { useLists } from '@/src/hooks/useLists';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Bookmark } from 'lucide-react-native';
-import React, { useEffect, useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Bookmark, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
+  const deleteMutation = useDeleteList();
+  const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
 
   const {
     handleItemPress,
@@ -32,6 +36,44 @@ export default function CustomListDetailScreen() {
     if (!list?.items) return [];
     return Object.values(list.items).sort((a, b) => b.addedAt - a.addedAt);
   }, [list]);
+
+  const handleDeleteList = useCallback(() => {
+    if (!list || !id || deleteMutation.isPending) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Delete List',
+      `This will remove "${list.name}" and all its items. This cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!isAuthenticated) {
+              requireAuth(() => {}, 'Sign in to delete this list');
+              return;
+            }
+            try {
+              await deleteMutation.mutateAsync(id);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.back();
+            } catch (error) {
+              console.error('Failed to delete list:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                'Delete Failed',
+                error instanceof Error ? error.message : 'Failed to delete list'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }, [list, id, deleteMutation, router, requireAuth, isAuthenticated]);
 
   // Navigate back if list is deleted
   useEffect(() => {
@@ -57,6 +99,18 @@ export default function CustomListDetailScreen() {
       <Stack.Screen
         options={{
           title: list.name,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleDeleteList}
+              style={{ marginRight: SPACING.s }}
+              activeOpacity={ACTIVE_OPACITY}
+              accessibilityLabel="Delete list"
+              accessibilityRole="button"
+              hitSlop={SPACING.s}
+            >
+              <Trash2 size={22} color={COLORS.error} />
+            </TouchableOpacity>
+          ),
         }}
       />
 
@@ -86,6 +140,7 @@ export default function CustomListDetailScreen() {
       )}
 
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </>
   );
 }
