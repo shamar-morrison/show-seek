@@ -38,7 +38,7 @@ export default function CustomListDetailScreen() {
   }, [list]);
 
   const handleDeleteList = useCallback(() => {
-    if (!list || !id) return;
+    if (!list || !id || deleteMutation.isPending) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
