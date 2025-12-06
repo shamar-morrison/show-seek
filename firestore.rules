@@ -14,6 +14,17 @@ service cloud.firestore {
 
     // User data - each user can only access their own data
     match /users/{userId} {
+      // User profile document - allow users to read their own data and create during sign-up
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt'])
+        && request.resource.data.uid == userId
+        && request.resource.data.displayName is string
+        && request.resource.data.email is string;
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'photoURL', 'updatedAt']);
+
       // Favorites collection
       match /favorites/{favoriteId} {
         allow read, write: if isOwner(userId);

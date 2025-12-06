@@ -47,26 +47,41 @@ export default function SignUp() {
 
     setLoading(true);
     try {
-      // 1. Create User
+      // 1. Create User - This is the critical step that can fail
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Update Profile
-      await updateProfile(user, {
-        displayName: displayName,
-      });
+      // At this point, the account is created and the user is signed in.
+      // The following steps are non-critical - if they fail, the account still exists
+      // and the user will be redirected. We handle these errors silently.
 
-      // 3. Create User Document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        displayName: displayName,
-        email: email,
-        createdAt: new Date(),
-        photoURL: null,
-      });
+      // 2. Update Profile (non-critical)
+      try {
+        await updateProfile(user, {
+          displayName: displayName,
+        });
+      } catch (profileError) {
+        // Profile update failed, but account exists. Log and continue.
+        console.warn('Failed to update profile after sign up:', profileError);
+      }
+
+      // 3. Create User Document in Firestore (non-critical)
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          displayName: displayName,
+          email: email,
+          createdAt: new Date(),
+          photoURL: null,
+        });
+      } catch (firestoreError) {
+        // Firestore document creation failed, but account exists. Log and continue.
+        console.warn('Failed to create user document after sign up:', firestoreError);
+      }
 
       // Router will automatically redirect in _layout.tsx
     } catch (error: any) {
+      // This catch block now only handles actual account creation failures
       let errorMessage = 'An error occurred. Please try again.';
 
       if (error.code) {
