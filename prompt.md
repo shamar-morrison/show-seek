@@ -1,151 +1,110 @@
-# Implement Authentication Guards for Protected Actions
+# Profile Screen Implementation
 
-## Context
+## Overview
 
-I have a React Native/Expo app using Firebase for authentication with an existing AuthProvider at `@/src/firebase/AuthProvider`. The app supports email/password and guest login. I need to restrict certain write operations to authenticated (non-guest) users only.
+Build a user profile screen for this React Native/Expo app that displays user information, activity stats, and account management options.
 
-## Current Auth Setup
+## Tech Stack
 
-- Auth state is managed via `AuthProvider` with a `useAuth()` hook
-- `useAuth()` returns: `{ user, loading, hasCompletedOnboarding, completeOnboarding, signOut }`
-- Guest users are identified by `user.isAnonymous === true`
-- Using Expo Router for navigation
+- **Framework**: React Native with Expo
+- **Navigation**: Expo Router
+- **Backend**: Firebase (Authentication + Firestore)
 
-## Requirements
+## Pre-Implementation Steps
 
-### 1. Create Auth Guard Modal Component
+Before writing any code:
 
-Create a reusable modal component that prompts users to sign in when they attempt a protected action.
+1. **Scan the codebase** for existing:
+   - Color scheme / theme configuration
+   - Reusable components (buttons, cards, containers, etc.)
+   - Style patterns and conventions
+   - Firebase/Firestore utility functions or hooks
+   - Auth context or hooks
 
-**Location**: `@/src/components/AuthGuardModal.tsx`
+2. **Follow the existing design paradigm** - match the look and feel of other screens in the app
 
-**Features**:
+---
 
-- Show modal with clear messaging explaining why sign-in is required
-- Two action buttons:
-  - "Sign In" - navigates to login screen
-  - "Cancel" or "Maybe Later" - closes modal
-- Clean, user-friendly design consistent with app theme
-- Configurable message prop for context-specific messaging
+## Screen Requirements
 
-### 2. Create useAuthGuard Hook
+### 1. User Info Section (Top)
 
-Create a custom hook that checks if a user is authenticated and shows the modal if not.
+- **Avatar**: Display user's initials in a circular badge (extract from displayName, fallback to email)
+- **Display Name**: Show the user's display name prominently
+- **Email**: Show the user's email below the display name (slightly muted styling)
 
-**Location**: `@/src/hooks/useAuthGuard.ts`
+### 2. Stats Section
 
-**Functionality**:
+Display activity counts in a clean, non-cluttered layout (e.g., horizontal row of stat cards or a simple list):
 
-```typescript
-const useAuthGuard = () => {
-  // Returns:
-  // - requireAuth: (action: () => void | Promise<void>, message?: string) => void
-  // - isAuthenticated: boolean
-  // - AuthGuardModal: JSX.Element component to render in parent
-};
-```
+- Number of **movies rated**
+- Number of **TV shows rated**
+- Number of **favorite people** (cast/crew)
+- Number of **movies liked**
+- Number of **TV shows liked**
 
-**Behavior**:
+**Notes:**
 
-- Check if `user` exists and `user.isAnonymous === false`
-- If authenticated: execute the action immediately
-- If not authenticated: show modal with optional custom message
-- Handle both sync and async actions
+- These stats are **purely informational** - no navigation on tap
+- Query the `ratings` and `lists` subcollections to compute counts
+- If displaying all stats creates visual clutter, prioritize the most important ones or group them logically
+- Show loading states while fetching counts
 
-### 3. Implementation Pattern
+### 3. Action Buttons
 
-Wrap all protected actions with the auth guard:
+#### Donate Button
 
-**Protected Actions (Non-exhaustive list)**:
+- Label: "Support Development" or "Buy Me a Coffee" (or similar)
+- Action: Open external link to Ko-fi
+- Link: `https://ko-fi.com/yourusername` (placeholder - replace later)
+- Use `Linking.openURL()` from React Native
 
-- Adding movies/shows/people to lists
-- Creating custom lists
-- Creating reminders
-- Rating movies and shows
+#### Logout Button
 
-**UI Behavior**:
+- Label: "Log Out" or "Sign Out"
+- Action: Sign out from Firebase Auth
+- Should redirect user to login/auth screen after logout
+- Consider showing a brief confirmation or toast
 
-- Keep all UI elements visible (buttons, inputs, etc.)
-- On click/interaction, check authentication before executing action
-- Show auth modal if user is guest/unauthenticated
+#### Delete Account Button
 
-### 4. Example Usage Patterns
+- Label: "Delete Account"
+- **Styling**: Destructive/danger style (red or warning color)
+- **Action flow**:
+  1. Show confirmation alert/modal warning this action is permanent
+  2. If confirmed:
+     - Delete all documents, collections, subcollections and everything that belongs to the user.
+     - Delete the Firebase Auth account (`user.delete()`)
+     - Redirect to login/onboarding screen
+  3. Handle errors gracefully (show error message if deletion fails)
 
-#### Pattern A: In Component with Button
+---
 
-```typescript
-const MyComponent = () => {
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
+## UI/UX Guidelines
 
-  const handleAddToList = () => {
-    requireAuth(async () => {
-      // Actual add to list logic
-      await addMovieToList(movieId, listId);
-    }, "Sign in to add items to your lists");
-  };
+- **Follow existing app design** - scan other screens for patterns
+- **Dark/Light mode**: Match whatever the app currently uses
+- **Loading states**: Show skeletons or spinners while fetching user data and stats
+- **Error handling**: Gracefully handle cases where data fetch fails
 
-  return (
-    <>
-      <Button onPress={handleAddToList}>Add to List</Button>
-      {AuthGuardModal}
-    </>
-  );
-};
-```
+---
 
-#### Pattern B: In Custom Hook
+## Implementation Notes
 
-```typescript
-// In a custom hook like useAddToList
-const useAddToList = () => {
-  const { requireAuth } = useAuthGuard();
+1. **Get current user** from Firebase Auth context/hook
+2. **Initials extraction**: Take first letter of first name + first letter of last name, or first two letters of email if no display name
+3. **Batch delete**: When deleting account, delete subcollection documents first (Firestore doesn't automatically delete subcollections)
+4. **Re-authentication**: Firebase may require recent authentication to delete account - handle `auth/requires-recent-login` error by prompting user to re-authenticate
+5. **Use existing patterns**: If the app has existing hooks for Firestore queries, Firebase auth, or navigation patterns - use them
 
-  const addToList = (movieId: string, listId: string) => {
-    requireAuth(async () => {
-      // Firebase logic here
-    }, 'Sign in to manage your lists');
-  };
+---
 
-  return { addToList };
-};
-```
+## Acceptance Criteria
 
-### 5. Auth Check Logic
-
-- A user is considered **authenticated** if:
-  - `user !== null` AND
-  - `user.isAnonymous === false`
-- Guest users (`user.isAnonymous === true`) are NOT authenticated
-- Loading state should not block actions (assume not authenticated if still loading)
-
-### 6. Navigation
-
-- Use `import { router } from 'expo-router'`
-- Navigate to login or appropriate auth screen path
-- Modal should close after navigation
-
-## Deliverables
-
-1. `AuthGuardModal.tsx` - Modal component
-2. `useAuthGuard.ts` - Custom hook
-3. Update at least 3-5 existing components/hooks as examples:
-   - List management actions
-   - Rating functionality
-   - Reminder creation
-   - Custom list creation
-4. Brief documentation on how to apply this pattern to future protected actions
-
-## Design Considerations
-
-- Modal should be dismissible (user can cancel)
-- Don't block UI rendering - guests can see everything, just can't modify
-- Provide clear, friendly messaging (not punitive)
-- Consider adding custom messages per action type for better UX
-- Modal should be accessible (proper focus management, screen reader support)
-
-## Testing Notes
-
-- Test with authenticated user (should execute actions directly)
-- Test with guest user (should show modal)
-- Test with no user/logged out (should show modal)
-- Test navigation flow from modal to login and back
+- [ ] Profile displays user's initials, display name, and email
+- [ ] Stats section shows counts from Firestore (with loading state)
+- [ ] Donate button opens Ko-fi link in browser
+- [ ] Logout signs out and redirects to auth screen
+- [ ] Delete account shows confirmation, deletes all user data + auth account, then redirects
+- [ ] Screen matches the existing app design language
+- [ ] Proper error handling throughout
