@@ -29,8 +29,10 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data.keys()) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt']);
-
+          .hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
       // Favorites collection
       match /favorites/{favoriteId} {
         allow read, write: if isOwner(userId);
