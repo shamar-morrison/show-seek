@@ -1,7 +1,8 @@
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
+import { hasEpisodeChanged, isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, Tv, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -15,7 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
 
 interface TVReminderModalProps {
   visible: boolean;
@@ -145,6 +145,38 @@ export default function TVReminderModal({
     return selectedFrequency === 'every_episode' ? EPISODE_TIMING_OPTIONS : SEASON_TIMING_OPTIONS;
   }, [selectedFrequency]);
 
+  // Get the relevant release date for the current selection
+  const releaseDate = useMemo(() => {
+    return selectedFrequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
+  }, [selectedFrequency, nextEpisode?.airDate, nextSeasonAirDate]);
+
+  // Determine which timing options have notification times in the past
+  const disabledTimings = useMemo(() => {
+    if (!releaseDate) return new Set<ReminderTiming>();
+    const disabled = new Set<ReminderTiming>();
+    timingOptions.forEach((option) => {
+      if (isNotificationTimeInPast(releaseDate, option.value)) {
+        disabled.add(option.value);
+      }
+    });
+    return disabled;
+  }, [releaseDate, timingOptions]);
+
+  // Get available (non-disabled) timing options
+  const availableTimings = useMemo(() => {
+    return timingOptions.filter((option) => !disabledTimings.has(option.value));
+  }, [disabledTimings, timingOptions]);
+
+  // Check if all timing options are disabled for current frequency
+  const allTimingsDisabled = availableTimings.length === 0;
+
+  // Auto-select first available option if current selection is disabled
+  useEffect(() => {
+    if (disabledTimings.has(selectedTiming) && availableTimings.length > 0) {
+      setSelectedTiming(availableTimings[0].value);
+    }
+  }, [disabledTimings, selectedTiming, availableTimings]);
+
   const handleFrequencyChange = (freq: TVReminderFrequency) => {
     setSelectedFrequency(freq);
     // If switching from season to episode, ensure timing is valid for episodes
@@ -191,10 +223,11 @@ export default function TVReminderModal({
     return d < today;
   };
 
-  // Determine if current selection is valid
+  // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
   const canSetReminder =
-    (selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
-    (selectedFrequency === 'season_premiere' && canSetSeasonReminder);
+    ((selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
+      (selectedFrequency === 'season_premiere' && canSetSeasonReminder)) &&
+    !allTimingsDisabled;
 
   // Get the relevant date for display
   const displayDate =
@@ -319,30 +352,61 @@ export default function TVReminderModal({
               </View>
             )}
 
+            {/* Warning Banner for Past Options */}
+            {canSetReminder && disabledTimings.size > 0 && (
+              <View style={styles.warningBanner}>
+                <Text style={styles.warningBannerText}>
+                  ⚠️ Some notification times have already passed
+                </Text>
+              </View>
+            )}
+
+            {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
+            {((selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
+              (selectedFrequency === 'season_premiere' && canSetSeasonReminder)) &&
+              allTimingsDisabled && (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>
+                    All notification times for this{' '}
+                    {selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.
+                  </Text>
+                </View>
+              )}
+
             {/* Timing Options */}
             {canSetReminder && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
-                {timingOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.timingOption,
-                      selectedTiming === option.value && styles.timingOptionSelected,
-                    ]}
-                    onPress={() => setSelectedTiming(option.value)}
-                    disabled={isLoading}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <View style={styles.radioOuter}>
-                      {selectedTiming === option.value && <View style={styles.radioInner} />}
-                    </View>
-                    <View style={styles.timingTextContainer}>
-                      <Text style={styles.timingLabel}>{option.label}</Text>
-                      <Text style={styles.timingDescription}>{option.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {timingOptions.map((option) => {
+                  const isDisabled = disabledTimings.has(option.value);
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.timingOption,
+                        selectedTiming === option.value && styles.timingOptionSelected,
+                        isDisabled && styles.timingOptionDisabled,
+                      ]}
+                      onPress={() => !isDisabled && setSelectedTiming(option.value)}
+                      disabled={isLoading || isDisabled}
+                      activeOpacity={ACTIVE_OPACITY}
+                    >
+                      <View style={[styles.radioOuter, isDisabled && styles.radioOuterDisabled]}>
+                        {selectedTiming === option.value && !isDisabled && (
+                          <View style={styles.radioInner} />
+                        )}
+                      </View>
+                      <View style={styles.timingTextContainer}>
+                        <Text style={[styles.timingLabel, isDisabled && styles.textDisabled]}>
+                          {option.label}
+                        </Text>
+                        <Text style={[styles.timingDescription, isDisabled && styles.textDisabled]}>
+                          {isDisabled ? 'Notification time has passed' : option.description}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
 
@@ -600,5 +664,40 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  warningBanner: {
+    backgroundColor: COLORS.warning + '20',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+  },
+  warningBannerText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.warning,
+    textAlign: 'center',
+  },
+  errorBanner: {
+    backgroundColor: COLORS.error + '20',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  errorBannerText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.error,
+    textAlign: 'center',
+  },
+  timingOptionDisabled: {
+    opacity: 0.5,
+  },
+  radioOuterDisabled: {
+    borderColor: COLORS.textSecondary,
+  },
+  textDisabled: {
+    color: COLORS.textSecondary,
   },
 });

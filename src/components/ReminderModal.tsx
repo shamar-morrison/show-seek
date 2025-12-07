@@ -2,8 +2,9 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -81,6 +82,33 @@ export default function ReminderModal({
   );
   const [isLoading, setIsLoading] = useState(false);
 
+  // Determine which timing options have notification times in the past
+  const disabledTimings = useMemo(() => {
+    if (!releaseDate) return new Set<ReminderTiming>();
+    const disabled = new Set<ReminderTiming>();
+    TIMING_OPTIONS.forEach((option) => {
+      if (isNotificationTimeInPast(releaseDate, option.value)) {
+        disabled.add(option.value);
+      }
+    });
+    return disabled;
+  }, [releaseDate]);
+
+  // Get available (non-disabled) timing options
+  const availableTimings = useMemo(() => {
+    return TIMING_OPTIONS.filter((option) => !disabledTimings.has(option.value));
+  }, [disabledTimings]);
+
+  // Check if all options are disabled
+  const allOptionsDisabled = availableTimings.length === 0;
+
+  // Auto-select first available option if current selection is disabled
+  useEffect(() => {
+    if (disabledTimings.has(selectedTiming) && availableTimings.length > 0) {
+      setSelectedTiming(availableTimings[0].value);
+    }
+  }, [disabledTimings, selectedTiming, availableTimings]);
+
   const handleSetReminder = async () => {
     try {
       setIsLoading(true);
@@ -155,30 +183,61 @@ export default function ReminderModal({
               </View>
             )}
 
+            {/* Warning Banner for Past Options */}
+            {!allOptionsDisabled && disabledTimings.size > 0 && (
+              <View style={styles.warningBanner}>
+                <Text style={styles.warningBannerText}>
+                  ⚠️ Some notification times have already passed
+                </Text>
+              </View>
+            )}
+
+            {/* All Options Disabled Warning */}
+            {allOptionsDisabled && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>
+                  All notification times for this release have passed. You cannot set a reminder for
+                  this movie.
+                </Text>
+              </View>
+            )}
+
             {/* Timing Options */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notify me:</Text>
-              {TIMING_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timingOption,
-                    selectedTiming === option.value && styles.timingOptionSelected,
-                  ]}
-                  onPress={() => setSelectedTiming(option.value)}
-                  disabled={isLoading}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <View style={styles.radioOuter}>
-                    {selectedTiming === option.value && <View style={styles.radioInner} />}
-                  </View>
-                  <View style={styles.timingTextContainer}>
-                    <Text style={styles.timingLabel}>{option.label}</Text>
-                    <Text style={styles.timingDescription}>{option.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {!allOptionsDisabled && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Notify me:</Text>
+                {TIMING_OPTIONS.map((option) => {
+                  const isDisabled = disabledTimings.has(option.value);
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.timingOption,
+                        selectedTiming === option.value && styles.timingOptionSelected,
+                        isDisabled && styles.timingOptionDisabled,
+                      ]}
+                      onPress={() => !isDisabled && setSelectedTiming(option.value)}
+                      disabled={isLoading || isDisabled}
+                      activeOpacity={ACTIVE_OPACITY}
+                    >
+                      <View style={[styles.radioOuter, isDisabled && styles.radioOuterDisabled]}>
+                        {selectedTiming === option.value && !isDisabled && (
+                          <View style={styles.radioInner} />
+                        )}
+                      </View>
+                      <View style={styles.timingTextContainer}>
+                        <Text style={[styles.timingLabel, isDisabled && styles.textDisabled]}>
+                          {option.label}
+                        </Text>
+                        <Text style={[styles.timingDescription, isDisabled && styles.textDisabled]}>
+                          {isDisabled ? 'Notification time has passed' : option.description}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {/* Action Buttons */}
             <View style={styles.actions}>
@@ -209,9 +268,13 @@ export default function ReminderModal({
                 </>
               ) : (
                 <TouchableOpacity
-                  style={[styles.button, styles.setButton]}
+                  style={[
+                    styles.button,
+                    styles.setButton,
+                    allOptionsDisabled && styles.buttonDisabled,
+                  ]}
                   onPress={handleSetReminder}
-                  disabled={isLoading}
+                  disabled={isLoading || allOptionsDisabled}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {isLoading ? (
@@ -377,5 +440,43 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  warningBanner: {
+    backgroundColor: COLORS.warning + '20',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+  },
+  warningBannerText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.warning,
+    textAlign: 'center',
+  },
+  errorBanner: {
+    backgroundColor: COLORS.error + '20',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+  },
+  errorBannerText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.error,
+    textAlign: 'center',
+  },
+  timingOptionDisabled: {
+    opacity: 0.5,
+  },
+  radioOuterDisabled: {
+    borderColor: COLORS.textSecondary,
+  },
+  textDisabled: {
+    color: COLORS.textSecondary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
