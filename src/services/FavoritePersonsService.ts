@@ -1,8 +1,7 @@
-import { FirebaseError } from 'firebase/app';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { FavoritePerson } from '../types/favoritePerson';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 
 class FavoritePersonsService {
   private getUserFavoritePersonRef(userId: string, personId: string) {

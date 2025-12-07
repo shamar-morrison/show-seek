@@ -1,4 +1,4 @@
-import { FirebaseError } from 'firebase/app';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { deleteField, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
@@ -9,7 +9,6 @@ import type {
   TVShowEpisodeTracking,
   WatchedEpisode,
 } from '../types/episodeTracking';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 
 class EpisodeTrackingService {
   /**
