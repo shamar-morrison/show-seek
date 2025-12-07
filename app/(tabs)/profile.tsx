@@ -303,7 +303,7 @@ export default function ProfileScreen() {
                     <ActivityIndicator size="small" color={COLORS.primary} />
                   ) : (
                     <Switch
-                      value={preferences.autoAddToWatching}
+                      value={!!preferences?.autoAddToWatching}
                       onValueChange={(value) => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         updatePreference.mutate(
@@ -318,7 +318,7 @@ export default function ProfileScreen() {
                           }
                         );
                       }}
-                      disabled={updatePreference.isPending}
+                      disabled={preferencesLoading || updatePreference.isPending}
                       trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
                       thumbColor={COLORS.white}
                     />
