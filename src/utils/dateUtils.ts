@@ -18,7 +18,14 @@
  * @returns Date object set to local midnight
  */
 export function parseTmdbDate(dateString: string): Date {
+  if (!dateString || typeof dateString !== 'string') {
+    throw new Error('Invalid date string: expected non-empty string');
+  }
   const [year, month, day] = dateString.split('-').map(Number);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    throw new Error('Invalid date string: expected YYYY-MM-DD format, received ' + dateString);
+  }
   return new Date(year, month - 1, day); // month is 0-indexed in JavaScript
 }
 
