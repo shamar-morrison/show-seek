@@ -95,8 +95,12 @@ class PreferencesService {
   async getPreferences(): Promise<UserPreferences> {
     return new Promise((resolve) => {
       const unsubscribe = this.subscribeToPreferences((prefs) => {
-        unsubscribe();
-        resolve(prefs);
+        // Use microtask to ensure unsubscribe is defined before calling it
+        // (handles case where subscribeToPreferences calls callback synchronously)
+        Promise.resolve().then(() => {
+          unsubscribe();
+          resolve(prefs);
+        });
       });
     });
   }
