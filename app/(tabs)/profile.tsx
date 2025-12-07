@@ -103,7 +103,12 @@ function ActionButton({
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { stats, isLoading: statsLoading } = useProfileStats();
-  const { preferences, isLoading: preferencesLoading, error: preferencesError } = usePreferences();
+  const {
+    preferences,
+    isLoading: preferencesLoading,
+    error: preferencesError,
+    refetch: refetchPreferences,
+  } = usePreferences();
   const updatePreference = useUpdatePreference();
 
   const [showReauthModal, setShowReauthModal] = useState(false);
@@ -270,15 +275,19 @@ export default function ProfileScreen() {
                     </Text>
                   </View>
                   <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={() => {
-                      // Trigger a re-render by forcing component update
-                      // The usePreferences hook will automatically retry on mount
+                    style={[styles.retryButton, preferencesLoading && styles.retryButtonDisabled]}
+                    onPress={async () => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      refetchPreferences();
                     }}
                     activeOpacity={ACTIVE_OPACITY}
+                    disabled={preferencesLoading}
                   >
-                    <Text style={styles.retryButtonText}>Retry</Text>
+                    {preferencesLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.retryButtonText}>Retry</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -587,5 +596,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.white,
     fontWeight: '600',
+  },
+  retryButtonDisabled: {
+    opacity: 0.6,
   },
 });

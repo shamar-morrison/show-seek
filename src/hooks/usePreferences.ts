@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../firebase/config';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
@@ -13,6 +13,14 @@ export const usePreferences = () => {
   const [subscriptionData, setSubscriptionData] = useState<UserPreferences | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(!!userId);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
+  // Refetch function to retry loading preferences after an error
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRetryTrigger((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -38,7 +46,7 @@ export const usePreferences = () => {
     );
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [userId, retryTrigger]);
 
   // Use query for caching and optimistic updates
   const { data: preferences } = useQuery({
@@ -65,6 +73,7 @@ export const usePreferences = () => {
     preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
     isLoading,
     error,
+    refetch,
   };
 };
 
