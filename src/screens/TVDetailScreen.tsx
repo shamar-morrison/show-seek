@@ -37,6 +37,7 @@ import {
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
+import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
 import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
@@ -445,7 +446,7 @@ export default function TVDetailScreen() {
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={detailStyles.metaText}>
                 {show.first_air_date
-                  ? new Date(show.first_air_date).toLocaleDateString('en-US', {
+                  ? formatTmdbDate(show.first_air_date, {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',

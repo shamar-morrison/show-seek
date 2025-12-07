@@ -37,6 +37,7 @@ import {
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
 import { ReminderTiming } from '@/src/types/reminder';
+import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,7 +67,7 @@ const hasWatchProviders = (providers: any): boolean => {
 const canShowReminder = (releaseDate: string | null | undefined): boolean => {
   if (!releaseDate) return false;
 
-  const release = new Date(releaseDate);
+  const release = parseTmdbDate(releaseDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return release >= today;
@@ -359,7 +360,7 @@ export default function MovieDetailScreen() {
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={detailStyles.metaText}>
                 {movie.release_date
-                  ? new Date(movie.release_date).toLocaleDateString('en-US', {
+                  ? formatTmdbDate(movie.release_date, {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
