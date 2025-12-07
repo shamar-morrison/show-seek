@@ -278,6 +278,11 @@ class ReminderService {
         throw new Error(`Cannot set reminder for a ${mediaLabel} that has already been released`);
       }
 
+      // Validate tvFrequency for TV reminders
+      if (input.mediaType === 'tv' && !input.tvFrequency) {
+        throw new Error('Reminder frequency is required for TV shows');
+      }
+
       const reminderId = this.getReminderId(input.mediaType, input.mediaId);
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
