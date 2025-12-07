@@ -27,6 +27,8 @@ interface TVReminderModalProps {
   nextSeasonNumber: number | null;
   currentTiming?: ReminderTiming;
   currentFrequency?: TVReminderFrequency;
+  /** The episode info stored in the existing reminder (for detecting episode changes) */
+  currentNextEpisode?: NextEpisodeInfo | null;
   hasReminder?: boolean;
   onSetReminder: (
     timing: ReminderTiming,
@@ -35,6 +37,25 @@ interface TVReminderModalProps {
   ) => Promise<void>;
   onCancelReminder: () => Promise<void>;
   onShowToast?: (message: string) => void;
+}
+
+/**
+ * Compare two NextEpisodeInfo objects to detect if episode data has changed
+ */
+function hasEpisodeChanged(
+  current: NextEpisodeInfo | null | undefined,
+  latest: NextEpisodeInfo | null
+): boolean {
+  // If neither exists, no change
+  if (!current && !latest) return false;
+  // If one exists and the other doesn't, there's a change
+  if (!current || !latest) return true;
+  // Compare all fields
+  return (
+    current.seasonNumber !== latest.seasonNumber ||
+    current.episodeNumber !== latest.episodeNumber ||
+    current.airDate !== latest.airDate
+  );
 }
 
 // Timing options for episodes (1 day before or on air day only)
@@ -112,6 +133,7 @@ export default function TVReminderModal({
   nextSeasonNumber,
   currentTiming,
   currentFrequency,
+  currentNextEpisode,
   hasReminder = false,
   onSetReminder,
   onCancelReminder,
@@ -361,7 +383,9 @@ export default function TVReminderModal({
                       onPress={handleSetReminder}
                       disabled={
                         isLoading ||
-                        (selectedTiming === currentTiming && selectedFrequency === currentFrequency)
+                        (selectedTiming === currentTiming &&
+                          selectedFrequency === currentFrequency &&
+                          !hasEpisodeChanged(currentNextEpisode, nextEpisode))
                       }
                       activeOpacity={ACTIVE_OPACITY}
                     >

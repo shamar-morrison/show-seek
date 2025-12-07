@@ -665,6 +665,7 @@ export default function TVDetailScreen() {
             nextSeasonNumber={nextSeasonNumber}
             currentTiming={reminder?.reminderTiming}
             currentFrequency={reminder?.tvFrequency}
+            currentNextEpisode={reminder?.nextEpisode}
             hasReminder={hasReminder}
             onSetReminder={handleSetReminder}
             onCancelReminder={handleCancelReminder}
