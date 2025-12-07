@@ -415,4 +415,180 @@ export const detailStyles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
+
+  // Shared screen layout styles
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  errorText: {
+    color: COLORS.error,
+    marginBottom: SPACING.m,
+  },
+  scrollView: {
+    flex: 1,
+  },
+
+  // Hero section
+  heroContainer: {
+    height: 400,
+    position: 'relative',
+  },
+  backdrop: {
+    width: '100%',
+    height: '100%',
+  },
+  gradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+  },
+  headerSafe: {
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    zIndex: 10,
+  },
+  headerButton: {
+    padding: SPACING.m,
+    marginLeft: SPACING.s,
+    backgroundColor: COLORS.overlay,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  posterContainer: {
+    position: 'absolute',
+    bottom: SPACING.l,
+    left: SPACING.l,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: SPACING.xs,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: SPACING.s,
+  },
+  poster: {
+    width: 120,
+    height: 180,
+    borderRadius: BORDER_RADIUS.m,
+  },
+
+  // Content section
+  content: {
+    paddingHorizontal: SPACING.l,
+    marginTop: -SPACING.m,
+  },
+  title: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    marginBottom: SPACING.s,
+    marginTop: SPACING.s,
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+    flexWrap: 'wrap',
+    gap: SPACING.m,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  metaText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+  },
+  genresContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.s,
+    marginBottom: SPACING.l,
+  },
+  genreTag: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  genreText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+
+  // Action buttons
+  actionButtons: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+    marginBottom: SPACING.xl,
+  },
+  playButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    gap: SPACING.xs,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  playButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  addButton: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  addedButton: {
+    backgroundColor: COLORS.success,
+  },
+
+  // Error screen
+  backButton: {
+    padding: SPACING.m,
+    paddingTop: SPACING.xl,
+  },
+  backButtonText: {
+    color: COLORS.primary,
+  },
+
+  // TV-specific status badge
+  statusBadge: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.s,
+  },
+  statusBadgeText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
 });

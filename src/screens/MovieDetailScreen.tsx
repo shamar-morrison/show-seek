@@ -23,7 +23,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -47,7 +47,6 @@ import {
   ActivityIndicator,
   Animated,
   RefreshControl,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -158,7 +157,7 @@ export default function MovieDetailScreen() {
 
   if (movieQuery.isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={detailStyles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -166,14 +165,14 @@ export default function MovieDetailScreen() {
 
   if (movieQuery.isError || !movieQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load movie details</Text>
+      <View style={detailStyles.errorContainer}>
+        <Text style={detailStyles.errorText}>Failed to load movie details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.backButton}
+          style={detailStyles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={detailStyles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -281,7 +280,7 @@ export default function MovieDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={detailStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -291,7 +290,7 @@ export default function MovieDetailScreen() {
       />
 
       <Animated.ScrollView
-        style={styles.scrollView}
+        style={detailStyles.scrollView}
         bounces={true}
         {...scrollViewProps}
         refreshControl={
@@ -304,13 +303,20 @@ export default function MovieDetailScreen() {
         }
       >
         {/* Hero Section */}
-        <View style={styles.heroContainer}>
-          <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
-          <LinearGradient colors={['transparent', COLORS.background]} style={styles.gradient} />
+        <View style={detailStyles.heroContainer}>
+          <MediaImage
+            source={{ uri: backdropUrl }}
+            style={detailStyles.backdrop}
+            contentFit="cover"
+          />
+          <LinearGradient
+            colors={['transparent', COLORS.background]}
+            style={detailStyles.gradient}
+          />
 
-          <SafeAreaView style={styles.headerSafe} edges={['top']}>
+          <SafeAreaView style={detailStyles.headerSafe} edges={['top']}>
             <TouchableOpacity
-              style={styles.headerButton}
+              style={detailStyles.headerButton}
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
@@ -325,19 +331,23 @@ export default function MovieDetailScreen() {
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
 
-          <View style={styles.posterContainer}>
-            <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
+          <View style={detailStyles.posterContainer}>
+            <MediaImage
+              source={{ uri: posterUrl }}
+              style={detailStyles.poster}
+              contentFit="cover"
+            />
           </View>
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
-          <Text style={styles.title}>{movie.title}</Text>
+        <View style={detailStyles.content}>
+          <Text style={detailStyles.title}>{movie.title}</Text>
 
-          <View style={styles.metaContainer}>
-            <View style={styles.metaItem}>
+          <View style={detailStyles.metaContainer}>
+            <View style={detailStyles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>
+              <Text style={detailStyles.metaText}>
                 {movie.release_date
                   ? new Date(movie.release_date).toLocaleDateString('en-US', {
                       month: 'short',
@@ -347,48 +357,50 @@ export default function MovieDetailScreen() {
                   : 'Unknown'}
               </Text>
             </View>
-            <View style={styles.metaItem}>
+            <View style={detailStyles.metaItem}>
               <Clock size={14} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{formatRuntime(movie.runtime)}</Text>
+              <Text style={detailStyles.metaText}>{formatRuntime(movie.runtime)}</Text>
             </View>
-            <View style={styles.metaItem}>
+            <View style={detailStyles.metaItem}>
               <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-              <Text style={[styles.metaText, { color: COLORS.warning }]}>
+              <Text style={[detailStyles.metaText, { color: COLORS.warning }]}>
                 {movie.vote_average.toFixed(1)}
               </Text>
             </View>
             {movie.original_language !== 'en' && (
-              <View style={styles.metaItem}>
+              <View style={detailStyles.metaItem}>
                 <Globe size={14} color={COLORS.textSecondary} />
-                <Text style={styles.metaText}>{getLanguageName(movie.original_language)}</Text>
+                <Text style={detailStyles.metaText}>
+                  {getLanguageName(movie.original_language)}
+                </Text>
               </View>
             )}
           </View>
 
-          <View style={styles.genresContainer}>
+          <View style={detailStyles.genresContainer}>
             {movie.genres.map((genre) => (
-              <View key={genre.id} style={styles.genreTag}>
-                <Text style={styles.genreText}>{genre.name}</Text>
+              <View key={genre.id} style={detailStyles.genreTag}>
+                <Text style={detailStyles.genreText}>{genre.name}</Text>
               </View>
             ))}
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
+          <View style={detailStyles.actionButtons}>
             {/* Watch Trailer Button */}
             <TouchableOpacity
-              style={[styles.playButton, !trailer && styles.disabledButton]}
+              style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
               onPress={handleTrailerPress}
               disabled={!trailer}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Play size={20} color={COLORS.white} fill={COLORS.white} />
-              <Text style={styles.playButtonText}>Watch Trailer</Text>
+              <Play size={18} color={COLORS.white} fill={COLORS.white} />
+              <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
 
             {/* Add to List Button */}
             <TouchableOpacity
-              style={[styles.addButton, isInAnyList && styles.addedButton]}
+              style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
               onPress={() =>
                 requireAuth(() => setListModalVisible(true), 'Sign in to add items to your lists')
@@ -619,158 +631,3 @@ export default function MovieDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
-  backButton: {
-    padding: SPACING.m,
-    paddingTop: SPACING.xl,
-  },
-  backButtonText: {
-    color: COLORS.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  heroContainer: {
-    height: 400,
-    position: 'relative',
-  },
-  backdrop: {
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '100%',
-  },
-  headerSafe: {
-    position: 'absolute',
-    top: 10,
-    left: 0,
-    zIndex: 10,
-  },
-  headerButton: {
-    padding: SPACING.m,
-    marginLeft: SPACING.s,
-    backgroundColor: COLORS.overlay,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  posterContainer: {
-    position: 'absolute',
-    bottom: SPACING.l,
-    left: SPACING.l,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: SPACING.xs,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: SPACING.s,
-  },
-  poster: {
-    width: 120,
-    height: 180,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  content: {
-    paddingHorizontal: SPACING.l,
-    marginTop: -SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginBottom: SPACING.s,
-    marginTop: SPACING.s,
-  },
-  metaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-    flexWrap: 'wrap',
-    gap: SPACING.m,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  genresContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.s,
-    marginBottom: SPACING.l,
-  },
-  genreTag: {
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  genreText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: SPACING.s,
-    marginBottom: SPACING.xl,
-  },
-  playButton: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    gap: SPACING.xs,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  playButtonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
-  },
-  addButton: {
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  addedButton: {
-    backgroundColor: COLORS.success,
-  },
-});
