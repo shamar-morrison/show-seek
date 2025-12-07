@@ -505,6 +505,8 @@ export default function TVDetailScreen() {
               <Play size={18} color={COLORS.white} fill={COLORS.white} />
               <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
             </TouchableOpacity>
+
+            {/* Add to List Button */}
             <TouchableOpacity
               style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
@@ -521,6 +523,8 @@ export default function TVDetailScreen() {
                 <Plus size={24} color={COLORS.white} />
               )}
             </TouchableOpacity>
+
+            {/* Rating Button */}
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
                 onPress={() =>
@@ -530,18 +534,22 @@ export default function TVDetailScreen() {
                 isLoading={isLoadingRating}
               />
             </View>
-            <View style={detailStyles.ratingButtonContainer}>
-              <ReminderButton
-                onPress={() =>
-                  requireAuth(
-                    () => setReminderModalVisible(true),
-                    'Sign in to set release reminders'
-                  )
-                }
-                hasReminder={hasReminder}
-                isLoading={isLoadingReminder}
-              />
-            </View>
+
+            {/* Reminder Button */}
+            {show.status === 'Returning Series' && (
+              <View style={detailStyles.ratingButtonContainer}>
+                <ReminderButton
+                  onPress={() =>
+                    requireAuth(
+                      () => setReminderModalVisible(true),
+                      'Sign in to set release reminders'
+                    )
+                  }
+                  hasReminder={hasReminder}
+                  isLoading={isLoadingReminder}
+                />
+              </View>
+            )}
           </View>
 
           {userRating > 0 && <UserRating rating={userRating} />}

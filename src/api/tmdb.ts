@@ -193,7 +193,7 @@ export interface TVShowDetails extends TVShow {
   number_of_seasons: number;
   number_of_episodes: number;
   genres: Genre[];
-  status: string;
+  status: 'Returning Series' | 'Ended' | 'Canceled';
   seasons: Season[];
   episode_run_time: number[];
   last_air_date: string;
