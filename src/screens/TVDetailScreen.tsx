@@ -38,6 +38,7 @@ import {
 } from '@/src/hooks/useReminders';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { getLanguageName } from '@/src/utils/languages';
+import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -176,25 +177,7 @@ export default function TVDetailScreen() {
 
   // Compute next season premiere date (must be before early returns)
   const { nextSeasonAirDate, nextSeasonNumber } = useMemo(() => {
-    const show = tvQuery.data;
-    if (!show?.seasons) return { nextSeasonAirDate: null, nextSeasonNumber: null };
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const upcomingSeason = show.seasons
-      .filter((s) => s.season_number > 0)
-      .filter((s) => s.air_date && new Date(s.air_date) > today)
-      .sort((a, b) => new Date(a.air_date!).getTime() - new Date(b.air_date!).getTime())[0];
-
-    if (upcomingSeason?.air_date) {
-      return {
-        nextSeasonAirDate: upcomingSeason.air_date,
-        nextSeasonNumber: upcomingSeason.season_number,
-      };
-    }
-
-    return { nextSeasonAirDate: null, nextSeasonNumber: null };
+    return getNextUpcomingSeason(tvQuery.data?.seasons);
   }, [tvQuery.data]);
 
   // Reminder handlers (must be before early returns)

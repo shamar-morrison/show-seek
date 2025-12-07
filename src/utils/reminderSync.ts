@@ -4,6 +4,7 @@ import { reminderService } from '@/src/services/ReminderService';
 import { Reminder } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { getNextUpcomingSeason } from './seasonHelpers';
 
 const SYNC_COOLDOWN_KEY = 'lastReminderSyncTimestamp';
 const SYNC_COOLDOWN_HOURS = 24;
@@ -161,15 +162,11 @@ export async function syncReminders(): Promise<void> {
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
           } else if (reminder.tvFrequency === 'season_premiere') {
             // Season premiere reminder: check seasons for next premiere
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const { nextSeasonAirDate: upcomingSeasonAirDate } = getNextUpcomingSeason(
+              tvDetails.seasons
+            );
 
-            const upcomingSeason = tvDetails.seasons
-              ?.filter((s) => s.season_number > 0)
-              .filter((s) => s.air_date && new Date(s.air_date) > today)
-              .sort((a, b) => new Date(a.air_date!).getTime() - new Date(b.air_date!).getTime())[0];
-
-            if (!upcomingSeason?.air_date) {
+            if (!upcomingSeasonAirDate) {
               // No upcoming season - cancel reminder
               console.log(
                 `[reminderSync] No upcoming season for TV ${reminder.mediaId}, cancelling`
@@ -178,9 +175,9 @@ export async function syncReminders(): Promise<void> {
               continue;
             }
 
-            if (upcomingSeason.air_date !== reminder.releaseDate) {
+            if (upcomingSeasonAirDate !== reminder.releaseDate) {
               console.log(
-                `[reminderSync] Season premiere changed for ${reminder.title}: ${reminder.releaseDate} -> ${upcomingSeason.air_date}`
+                `[reminderSync] Season premiere changed for ${reminder.title}: ${reminder.releaseDate} -> ${upcomingSeasonAirDate}`
               );
 
               const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
@@ -193,7 +190,7 @@ export async function syncReminders(): Promise<void> {
                 setDoc(
                   reminderRef,
                   {
-                    releaseDate: upcomingSeason.air_date,
+                    releaseDate: upcomingSeasonAirDate,
                     updatedAt: Date.now(),
                   },
                   { merge: true }
