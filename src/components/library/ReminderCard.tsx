@@ -69,13 +69,14 @@ export const ReminderCard = memo<ReminderCardProps>(
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (!currentTab) {
-        console.warn('Cannot navigate to movie: currentTab is null');
+        console.warn('Cannot navigate: currentTab is null');
         return;
       }
 
-      const path = `/(tabs)/${currentTab}/movie/${reminder.mediaId}`;
+      const mediaPath = reminder.mediaType === 'movie' ? 'movie' : 'tv';
+      const path = `/(tabs)/${currentTab}/${mediaPath}/${reminder.mediaId}`;
       router.push(path as any);
-    }, [currentTab, reminder.mediaId, router]);
+    }, [currentTab, reminder.mediaId, reminder.mediaType, router]);
 
     const handleEdit = useCallback(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

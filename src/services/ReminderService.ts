@@ -16,6 +16,7 @@ import {
   Reminder,
   ReminderMediaType,
   ReminderTiming,
+  TVReminderFrequency,
 } from '../types/reminder';
 
 class ReminderService {
@@ -35,8 +36,8 @@ class ReminderService {
 
   /**
    * Generate reminder document ID
-   * Format: "movie-{movieId}"
-   * This ensures one reminder per movie (natural deduplication)
+   * Format: "movie-{movieId}" or "tv-{tvId}"
+   * This ensures one reminder per media item (natural deduplication)
    */
   private getReminderId(mediaType: ReminderMediaType, mediaId: number): string {
     return `${mediaType}-${mediaId}`;
@@ -134,8 +135,18 @@ class ReminderService {
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
-          title: this.getNotificationTitle(reminder.reminderTiming),
-          body: this.getNotificationBody(reminder.title, reminder.reminderTiming),
+          title: this.getNotificationTitle(
+            reminder.mediaType,
+            reminder.reminderTiming,
+            reminder.tvFrequency
+          ),
+          body: this.getNotificationBody(
+            reminder.title,
+            reminder.mediaType,
+            reminder.reminderTiming,
+            reminder.tvFrequency,
+            reminder.nextEpisode
+          ),
           data: {
             mediaType: reminder.mediaType,
             mediaId: reminder.mediaId,
@@ -158,9 +169,25 @@ class ReminderService {
   }
 
   /**
-   * Get notification title based on timing
+   * Get notification title based on media type and timing
    */
-  private getNotificationTitle(timing: ReminderTiming): string {
+  private getNotificationTitle(
+    mediaType: ReminderMediaType,
+    timing: ReminderTiming,
+    tvFrequency?: TVReminderFrequency
+  ): string {
+    if (mediaType === 'tv') {
+      const isEpisode = tvFrequency === 'every_episode';
+      switch (timing) {
+        case 'on_release_day':
+          return isEpisode ? '📺 New Episode Today!' : '📺 Season Premiere Today!';
+        case '1_day_before':
+          return isEpisode ? '📺 New Episode Tomorrow!' : '📺 Season Premiere Tomorrow!';
+        case '1_week_before':
+          return '📺 Season Premiere Next Week!';
+      }
+    }
+    // Movie
     switch (timing) {
       case 'on_release_day':
         return '🎬 New Release Today!';
@@ -172,9 +199,39 @@ class ReminderService {
   }
 
   /**
-   * Get notification body
+   * Get notification body based on media type
    */
-  private getNotificationBody(title: string, timing: ReminderTiming): string {
+  private getNotificationBody(
+    title: string,
+    mediaType: ReminderMediaType,
+    timing: ReminderTiming,
+    tvFrequency?: TVReminderFrequency,
+    nextEpisode?: CreateReminderInput['nextEpisode']
+  ): string {
+    if (mediaType === 'tv') {
+      const isEpisode = tvFrequency === 'every_episode';
+      if (isEpisode && nextEpisode) {
+        const episodeInfo = `S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber}`;
+        switch (timing) {
+          case 'on_release_day':
+            return `${title} ${episodeInfo} - "${nextEpisode.episodeName}" airs today!`;
+          case '1_day_before':
+            return `${title} ${episodeInfo} - "${nextEpisode.episodeName}" airs tomorrow!`;
+          default:
+            return `${title} ${episodeInfo} airs soon!`;
+        }
+      }
+      // Season premiere
+      switch (timing) {
+        case 'on_release_day':
+          return `${title} new season premieres today!`;
+        case '1_day_before':
+          return `${title} new season premieres tomorrow!`;
+        case '1_week_before':
+          return `${title} new season premieres in one week!`;
+      }
+    }
+    // Movie
     switch (timing) {
       case 'on_release_day':
         return `${title} releases today!`;
@@ -211,12 +268,14 @@ class ReminderService {
 
       // Validate release date
       if (!input.releaseDate) {
-        throw new Error('This movie does not have a release date');
+        const mediaLabel = input.mediaType === 'tv' ? 'show' : 'movie';
+        throw new Error(`This ${mediaLabel} does not have a release date`);
       }
 
       // Check if release date is in the past
       if (this.isReleaseDateInPast(input.releaseDate)) {
-        throw new Error('Cannot set reminder for a movie that has already been released');
+        const mediaLabel = input.mediaType === 'tv' ? 'show' : 'movie';
+        throw new Error(`Cannot set reminder for a ${mediaLabel} that has already been released`);
       }
 
       const reminderId = this.getReminderId(input.mediaType, input.mediaId);
@@ -244,6 +303,11 @@ class ReminderService {
         status: 'active',
         createdAt: Date.now(),
         updatedAt: Date.now(),
+        // TV-specific fields
+        ...(input.mediaType === 'tv' && {
+          tvFrequency: input.tvFrequency,
+          nextEpisode: input.nextEpisode,
+        }),
       };
 
       const timeoutPromise = new Promise((_, reject) => {

@@ -105,6 +105,108 @@ export async function syncReminders(): Promise<void> {
           else {
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
           }
+        } else if (reminder.mediaType === 'tv') {
+          // TV show sync logic
+          const tvDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
+
+          if (reminder.tvFrequency === 'every_episode') {
+            // Episode reminder: check for next episode
+            const nextEpisode = tvDetails.next_episode_to_air;
+
+            if (!nextEpisode?.air_date) {
+              // No upcoming episode - cancel reminder
+              console.log(`[reminderSync] No next episode for TV ${reminder.mediaId}, cancelling`);
+              await reminderService.cancelReminder(reminder.id);
+              continue;
+            }
+
+            // Update if episode info changed
+            const currentEpisode = reminder.nextEpisode;
+            if (
+              !currentEpisode ||
+              nextEpisode.air_date !== currentEpisode.airDate ||
+              nextEpisode.episode_number !== currentEpisode.episodeNumber ||
+              nextEpisode.season_number !== currentEpisode.seasonNumber
+            ) {
+              console.log(
+                `[reminderSync] Episode changed for ${reminder.title}: S${nextEpisode.season_number}E${nextEpisode.episode_number}`
+              );
+
+              const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
+              await new Promise<void>((resolve, reject) => {
+                const timeoutId = setTimeout(
+                  () => reject(new Error('Firestore write timed out')),
+                  10000
+                );
+
+                setDoc(
+                  reminderRef,
+                  {
+                    releaseDate: nextEpisode.air_date,
+                    nextEpisode: {
+                      seasonNumber: nextEpisode.season_number,
+                      episodeNumber: nextEpisode.episode_number,
+                      episodeName: nextEpisode.name || 'TBA',
+                      airDate: nextEpisode.air_date,
+                    },
+                    updatedAt: Date.now(),
+                  },
+                  { merge: true }
+                )
+                  .then(() => resolve())
+                  .catch(reject)
+                  .finally(() => clearTimeout(timeoutId));
+              });
+            }
+
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          } else {
+            // Season premiere reminder: check seasons for next premiere
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const upcomingSeason = tvDetails.seasons
+              ?.filter((s) => s.season_number > 0)
+              .filter((s) => s.air_date && new Date(s.air_date) > today)
+              .sort((a, b) => new Date(a.air_date!).getTime() - new Date(b.air_date!).getTime())[0];
+
+            if (!upcomingSeason?.air_date) {
+              // No upcoming season - cancel reminder
+              console.log(
+                `[reminderSync] No upcoming season for TV ${reminder.mediaId}, cancelling`
+              );
+              await reminderService.cancelReminder(reminder.id);
+              continue;
+            }
+
+            if (upcomingSeason.air_date !== reminder.releaseDate) {
+              console.log(
+                `[reminderSync] Season premiere changed for ${reminder.title}: ${reminder.releaseDate} -> ${upcomingSeason.air_date}`
+              );
+
+              const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
+              await new Promise<void>((resolve, reject) => {
+                const timeoutId = setTimeout(
+                  () => reject(new Error('Firestore write timed out')),
+                  10000
+                );
+
+                setDoc(
+                  reminderRef,
+                  {
+                    releaseDate: upcomingSeason.air_date,
+                    updatedAt: Date.now(),
+                  },
+                  { merge: true }
+                )
+                  .then(() => resolve())
+                  .catch(reject)
+                  .finally(() => clearTimeout(timeoutId));
+              });
+            }
+
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          }
         }
       } catch (error) {
         console.error(`[reminderSync] Error syncing reminder ${reminder.id}:`, error);
