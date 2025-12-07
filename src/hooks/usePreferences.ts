@@ -60,8 +60,9 @@ export const usePreferences = () => {
     }
   }, [subscriptionData, userId, queryClient]);
 
+  // Guard by userId: if no user, always return defaults regardless of stale subscriptionData/query cache
   return {
-    preferences: preferences ?? DEFAULT_PREFERENCES,
+    preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
     isLoading,
     error,
   };
