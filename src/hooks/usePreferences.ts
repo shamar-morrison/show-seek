@@ -51,7 +51,6 @@ export const usePreferences = () => {
     return () => unsubscribe();
   }, [userId, retryTrigger]);
 
-  // Use query for caching and optimistic updates
   const { data: preferences } = useQuery({
     queryKey: ['preferences', userId],
     queryFn: () => subscriptionData ?? DEFAULT_PREFERENCES,
@@ -71,7 +70,6 @@ export const usePreferences = () => {
     }
   }, [subscriptionData, userId, queryClient]);
 
-  // Guard by userId: if no user, always return defaults regardless of stale subscriptionData/query cache
   return {
     preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
     isLoading,
