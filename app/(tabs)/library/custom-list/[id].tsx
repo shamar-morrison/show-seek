@@ -98,7 +98,7 @@ export default function CustomListDetailScreen() {
             try {
               await deleteMutation.mutateAsync(id);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              router.replace('/(tabs)/library/custom-lists');
+              // Navigation is handled by useEffect when list is no longer found
             } catch (error) {
               console.error('Failed to delete list:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
