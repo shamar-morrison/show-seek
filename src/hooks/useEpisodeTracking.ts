@@ -172,7 +172,7 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
 
 /**
  * Mutation hook for marking an episode as watched
- * Includes auto-add to Watching list for "Returning Series" shows
+ * Includes auto-add to Watching list when preference is enabled
  */
 export const useMarkEpisodeWatched = () => {
   return useMutation({
@@ -190,7 +190,6 @@ export const useMarkEpisodeWatched = () => {
       const { autoAddOptions } = params;
       if (
         autoAddOptions?.shouldAutoAdd &&
-        autoAddOptions.showStatus === 'Returning Series' &&
         autoAddOptions.listMembership &&
         !autoAddOptions.listMembership['currently-watching']
       ) {
