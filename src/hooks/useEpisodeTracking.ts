@@ -21,6 +21,23 @@ export interface MarkEpisodeWatchedParams {
     tvShowName: string;
     posterPath: string | null;
   };
+  /**
+   * Optional auto-add configuration for adding show to Watching list
+   */
+  autoAddOptions?: {
+    /** TV show status from TMDB (e.g., 'Returning Series', 'Ended', 'Canceled') */
+    showStatus?: string;
+    /** Whether auto-add is enabled (from user preferences) */
+    shouldAutoAdd?: boolean;
+    /** Cached list membership - map of listId to boolean */
+    listMembership?: Record<string, boolean>;
+    /** First air date for show metadata */
+    firstAirDate?: string;
+    /** Vote average for show metadata */
+    voteAverage?: number;
+    /** Genre IDs for show metadata */
+    genreIds?: number[];
+  };
 }
 
 /**
@@ -155,17 +172,58 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
 
 /**
  * Mutation hook for marking an episode as watched
+ * Includes auto-add to Watching list for "Returning Series" shows
  */
 export const useMarkEpisodeWatched = () => {
   return useMutation({
-    mutationFn: (params: MarkEpisodeWatchedParams) =>
-      episodeTrackingService.markEpisodeWatched(
+    mutationFn: async (params: MarkEpisodeWatchedParams) => {
+      // First, mark the episode as watched (primary action)
+      await episodeTrackingService.markEpisodeWatched(
         params.tvShowId,
         params.seasonNumber,
         params.episodeNumber,
         params.episodeData,
         params.showMetadata
-      ),
+      );
+
+      // Then, handle auto-add to Watching list (non-blocking)
+      const { autoAddOptions } = params;
+      if (
+        autoAddOptions?.shouldAutoAdd &&
+        autoAddOptions.showStatus === 'Returning Series' &&
+        autoAddOptions.listMembership &&
+        !autoAddOptions.listMembership['currently-watching']
+      ) {
+        try {
+          // Dynamically import to avoid circular dependencies
+          const { listService } = await import('../services/ListService');
+
+          await listService.addToList(
+            'currently-watching',
+            {
+              id: params.tvShowId,
+              title: params.showMetadata.tvShowName,
+              name: params.showMetadata.tvShowName,
+              poster_path: params.showMetadata.posterPath,
+              media_type: 'tv',
+              vote_average: autoAddOptions.voteAverage ?? 0,
+              release_date: autoAddOptions.firstAirDate ?? '',
+              first_air_date: autoAddOptions.firstAirDate,
+              genre_ids: autoAddOptions.genreIds,
+            },
+            'Watching'
+          );
+
+          console.log(
+            '[useMarkEpisodeWatched] Auto-added to Watching list:',
+            params.showMetadata.tvShowName
+          );
+        } catch (autoAddError) {
+          // Log but don't throw - auto-add is non-critical
+          console.error('[useMarkEpisodeWatched] Auto-add to Watching list failed:', autoAddError);
+        }
+      }
+    },
   });
 };
 

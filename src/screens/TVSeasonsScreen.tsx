@@ -14,7 +14,9 @@ import {
   type MarkEpisodeUnwatchedParams,
   type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
+import { useMediaLists } from '@/src/hooks/useLists';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useRatings } from '@/src/hooks/useRatings';
 import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
@@ -61,6 +63,11 @@ const SeasonItem = memo<{
   markUnwatchedVariables: MarkEpisodeUnwatchedParams | undefined;
   formatDate: (date: string | null) => string;
   ratings: RatingItem[] | undefined;
+  showStatus: string | undefined;
+  autoAddToWatching: boolean;
+  listMembership: Record<string, boolean>;
+  firstAirDate: string | undefined;
+  voteAverage: number | undefined;
 }>(
   ({
     season,
@@ -80,6 +87,11 @@ const SeasonItem = memo<{
     markUnwatchedVariables,
     formatDate,
     ratings,
+    showStatus,
+    autoAddToWatching,
+    listMembership,
+    firstAirDate,
+    voteAverage,
   }) => {
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
@@ -301,6 +313,13 @@ const SeasonItem = memo<{
                               tvShowName: showName,
                               posterPath: showPosterPath,
                             },
+                            autoAddOptions: {
+                              showStatus,
+                              shouldAutoAdd: autoAddToWatching,
+                              listMembership,
+                              firstAirDate,
+                              voteAverage,
+                            },
                           },
                           {
                             onSuccess: () => {
@@ -378,6 +397,10 @@ export default function TVSeasonsScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  // Auto-add to Watching list hooks
+  const { preferences } = usePreferences();
+  const { membership: listMembership } = useMediaLists(tvId);
 
   const { data: ratings } = useRatings();
 
@@ -566,6 +589,11 @@ export default function TVSeasonsScreen() {
               markUnwatchedVariables={markUnwatched.variables}
               formatDate={formatDate}
               ratings={ratings}
+              showStatus={show.status}
+              autoAddToWatching={preferences.autoAddToWatching}
+              listMembership={listMembership}
+              firstAirDate={show.first_air_date}
+              voteAverage={show.vote_average}
             />
           </View>
         ))}
