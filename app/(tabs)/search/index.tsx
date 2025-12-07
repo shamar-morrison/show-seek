@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   typeToggleContainer: {
     flexDirection: 'row',
     padding: SPACING.m,
-    gap: SPACING.m,
+    gap: SPACING.s,
   },
   typeButton: {
     flex: 1,
