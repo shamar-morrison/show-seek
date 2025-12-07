@@ -106,7 +106,6 @@ export async function syncReminders(): Promise<void> {
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
           }
         } else if (reminder.mediaType === 'tv') {
-          // TV show sync logic
           const tvDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
 
           if (reminder.tvFrequency === 'every_episode') {
@@ -160,7 +159,7 @@ export async function syncReminders(): Promise<void> {
             }
 
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
-          } else {
+          } else if (reminder.tvFrequency === 'season_premiere') {
             // Season premiere reminder: check seasons for next premiere
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -206,6 +205,10 @@ export async function syncReminders(): Promise<void> {
             }
 
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          } else {
+            // Unknown/missing tvFrequency - skip or log warning
+            console.warn(`[reminderSync] Unknown tvFrequency for TV reminder ${reminder.id}`);
+            continue;
           }
         }
       } catch (error) {

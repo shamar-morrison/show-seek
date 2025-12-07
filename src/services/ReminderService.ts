@@ -184,7 +184,7 @@ class ReminderService {
         case '1_day_before':
           return isEpisode ? '📺 New Episode Tomorrow!' : '📺 Season Premiere Tomorrow!';
         case '1_week_before':
-          return '📺 Season Premiere Next Week!';
+          return isEpisode ? '📺 New Episode Next Week!' : '📺 Season Premiere Next Week!';
       }
     }
     // Movie
