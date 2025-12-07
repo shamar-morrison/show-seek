@@ -19,6 +19,7 @@ import {
   ReminderTiming,
   TVReminderFrequency,
 } from '../types/reminder';
+import { parseTmdbDate } from '../utils/dateUtils';
 
 class ReminderService {
   /**
@@ -98,7 +99,7 @@ class ReminderService {
     }
 
     // PRODUCTION MODE: Normal scheduling
-    const release = new Date(releaseDate);
+    const release = parseTmdbDate(releaseDate);
     const notificationDate = new Date(release);
 
     // Apply offset based on timing preference
@@ -252,7 +253,7 @@ class ReminderService {
       return false;
     }
 
-    const release = new Date(releaseDate);
+    const release = parseTmdbDate(releaseDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

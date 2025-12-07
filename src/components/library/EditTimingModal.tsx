@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
+import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { BlurView } from 'expo-blur';
 import { Calendar, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -80,8 +81,7 @@ export default function EditTimingModal({
   };
 
   const formatReleaseDate = (date: string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return formatTmdbDate(date, { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const isUpdateDisabled = isLoading || selectedTiming === reminder.reminderTiming;

@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
+import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
@@ -46,8 +47,7 @@ const getTimingColor = (timing: ReminderTiming): string => {
 };
 
 const formatReleaseDate = (date: string): string => {
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatTmdbDate(date, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const formatNotificationTime = (timestamp: number): string => {
