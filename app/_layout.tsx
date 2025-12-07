@@ -1,7 +1,6 @@
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
-import DevIndicator from '@/src/components/DevIndicator';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
@@ -81,13 +80,6 @@ function RootLayoutNav() {
 
     if (loading) return;
 
-    // Logic for redirection
-    if (
-      require('@/src/utils/dev-navigation').handleDevNavigation(router, isOnboarding, inAuthGroup)
-    ) {
-      return;
-    }
-
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
       router.replace('/onboarding');
@@ -119,7 +111,6 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
-      {__DEV__ && <DevIndicator />}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.background },

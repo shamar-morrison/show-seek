@@ -13,11 +13,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     const checkOnboarding = async () => {
       try {
-        if (require('@/src/utils/dev-navigation').shouldSkipOnboarding()) {
-          setHasCompletedOnboarding(true);
-          return;
-        }
-
         const value = await AsyncStorage.getItem('hasCompletedOnboarding');
         setHasCompletedOnboarding(value === 'true');
       } catch (e) {
@@ -30,13 +25,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Monitor auth state
   useEffect(() => {
-    const mockUser = require('@/src/utils/dev-navigation').getMockUser();
-    if (mockUser) {
-      setUser(mockUser);
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);

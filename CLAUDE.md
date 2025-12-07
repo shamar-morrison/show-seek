@@ -66,13 +66,6 @@ The root layout (`app/_layout.tsx`) implements protected routing logic:
 
 Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
-**Development Navigation Utilities** (`src/utils/dev-navigation.ts`):
-
-- Optional dev-only navigation helpers for bypassing auth/onboarding during development
-- Requires `src/config/dev-config.ts` file (git-ignored) with `ENABLE_DEV_NAVIGATION: true`
-- Can force specific screens, skip onboarding, or mock authenticated users
-- Automatically disabled in production builds
-
 ### State Management Pattern
 
 **TanStack Query** is used for all TMDB API data fetching:
