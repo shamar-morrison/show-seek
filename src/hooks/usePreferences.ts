@@ -23,9 +23,12 @@ export const usePreferences = () => {
   }, []);
 
   useEffect(() => {
+    // Reset subscriptionData unconditionally when userId changes
+    // to avoid leaking the previous user's preferences
+    setSubscriptionData(null);
+
     if (!userId) {
       setIsLoading(false);
-      setSubscriptionData(null);
       return;
     }
 
