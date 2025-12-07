@@ -103,7 +103,7 @@ function ActionButton({
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { stats, isLoading: statsLoading } = useProfileStats();
-  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const { preferences, isLoading: preferencesLoading, error: preferencesError } = usePreferences();
   const updatePreference = useUpdatePreference();
 
   const [showReauthModal, setShowReauthModal] = useState(false);
@@ -261,36 +261,61 @@ export default function ProfileScreen() {
           {!isGuest && (
             <View style={styles.preferencesSection}>
               <Text style={styles.sectionTitle}>PREFERENCES</Text>
-              <View style={styles.preferenceItem}>
-                <View style={styles.preferenceInfo}>
-                  <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
-                  <Text style={styles.preferenceSubtitle}>
-                    Automatically add returning series to your Watching list when you mark an
-                    episode as watched
-                  </Text>
-                </View>
-                {preferencesLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <Switch
-                    value={preferences.autoAddToWatching}
-                    onValueChange={(value) => {
+              {preferencesError ? (
+                <View style={styles.preferenceItem}>
+                  <View style={styles.preferenceInfo}>
+                    <Text style={styles.preferenceLabel}>Unable to load preferences</Text>
+                    <Text style={styles.preferenceSubtitle}>
+                      Please check your connection and try again
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() => {
+                      // Trigger a re-render by forcing component update
+                      // The usePreferences hook will automatically retry on mount
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      updatePreference.mutate(
-                        { key: 'autoAddToWatching', value },
-                        {
-                          onError: () => {
-                            Alert.alert('Error', 'Failed to update preference. Please try again.');
-                          },
-                        }
-                      );
                     }}
-                    disabled={updatePreference.isPending}
-                    trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
-                    thumbColor={COLORS.white}
-                  />
-                )}
-              </View>
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.preferenceItem}>
+                  <View style={styles.preferenceInfo}>
+                    <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
+                    <Text style={styles.preferenceSubtitle}>
+                      Automatically add returning series to your Watching list when you mark an
+                      episode as watched
+                    </Text>
+                  </View>
+                  {preferencesLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <Switch
+                      value={preferences.autoAddToWatching}
+                      onValueChange={(value) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        updatePreference.mutate(
+                          { key: 'autoAddToWatching', value },
+                          {
+                            onError: () => {
+                              Alert.alert(
+                                'Error',
+                                'Failed to update preference. Please try again.'
+                              );
+                            },
+                          }
+                        );
+                      }}
+                      disabled={updatePreference.isPending}
+                      trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                      thumbColor={COLORS.white}
+                    />
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -551,5 +576,16 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     lineHeight: 18,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  retryButtonText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.white,
+    fontWeight: '600',
   },
 });
