@@ -4,7 +4,7 @@ import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences'
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
-import { Film, Heart, LogOut, Trash2, Tv, User } from 'lucide-react-native';
+import { Film, Heart, LogOut, Star, Trash2, Tv, User } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,7 +22,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const KOFI_URL = 'https://ko-fi.com/yourusername'; // TODO: Replace with actual Ko-fi URL
+const PACKAGE_ID = 'app.horizon.showseek';
+const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 
 /**
  * Extract initials from display name or email
@@ -120,17 +121,17 @@ export default function ProfileScreen() {
   const email = user?.email || (isGuest ? 'Not signed in' : 'No email');
   const initials = getInitials(user?.displayName || null, user?.email || null);
 
-  const handleDonate = useCallback(async () => {
+  const handleRateApp = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      const supported = await Linking.canOpenURL(KOFI_URL);
-      if (supported) {
-        await Linking.openURL(KOFI_URL);
-      } else {
-        Alert.alert('Error', 'Unable to open the link');
-      }
+      await Linking.openURL(PLAY_STORE_URL);
     } catch (_error) {
-      Alert.alert('Error', 'Unable to open the link');
+      // Fallback to web Play Store URL if market:// fails
+      try {
+        await Linking.openURL(`https://play.google.com/store/apps/details?id=${PACKAGE_ID}`);
+      } catch {
+        Alert.alert('Error', 'Unable to open the Play Store');
+      }
     }
   }, []);
 
@@ -333,6 +334,7 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>SETTINGS</Text>
             <View style={styles.actionsList}>
               {/* <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} /> */}
+              <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
