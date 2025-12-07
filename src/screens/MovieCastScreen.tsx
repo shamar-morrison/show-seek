@@ -1,4 +1,4 @@
-import CastCrewScreen from '@/src/components/screens/CastCrewScreen';
+import CastCrewScreen from '@/src/screens/CastCrewScreen';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 
