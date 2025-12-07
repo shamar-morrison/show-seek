@@ -111,20 +111,6 @@ export default function ReminderModal({
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
-  const isReleaseDateInPast = (date: string) => {
-    // In DEV mode, allow past dates for testing
-    if (__DEV__) {
-      return false;
-    }
-
-    const release = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return release < today;
-  };
-
-  const isPastRelease = releaseDate ? isReleaseDateInPast(releaseDate) : false;
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -162,97 +148,80 @@ export default function ReminderModal({
             </Text>
 
             {/* Release Date Display */}
-            {releaseDate ? (
-              <>
-                <View style={styles.releaseDateContainer}>
-                  <Calendar size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.releaseDate}>
-                    {isPastRelease ? 'Released' : 'Releases'} {formatReleaseDate(releaseDate)}
-                  </Text>
-                </View>
-                {isPastRelease && (
-                  <View style={styles.warningContainer}>
-                    <Text style={styles.warningText}>ℹ️ This movie has already been released</Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <View style={styles.warningContainer}>
-                <Text style={styles.warningText}>⚠️ Release date not available for this movie</Text>
+            {releaseDate && (
+              <View style={styles.releaseDateContainer}>
+                <Calendar size={16} color={COLORS.textSecondary} />
+                <Text style={styles.releaseDate}>Releases {formatReleaseDate(releaseDate)}</Text>
               </View>
             )}
 
             {/* Timing Options */}
-            {releaseDate && !isPastRelease && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Notify me:</Text>
-                {TIMING_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.timingOption,
-                      selectedTiming === option.value && styles.timingOptionSelected,
-                    ]}
-                    onPress={() => setSelectedTiming(option.value)}
-                    disabled={isLoading}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <View style={styles.radioOuter}>
-                      {selectedTiming === option.value && <View style={styles.radioInner} />}
-                    </View>
-                    <View style={styles.timingTextContainer}>
-                      <Text style={styles.timingLabel}>{option.label}</Text>
-                      <Text style={styles.timingDescription}>{option.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Notify me:</Text>
+              {TIMING_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.timingOption,
+                    selectedTiming === option.value && styles.timingOptionSelected,
+                  ]}
+                  onPress={() => setSelectedTiming(option.value)}
+                  disabled={isLoading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <View style={styles.radioOuter}>
+                    {selectedTiming === option.value && <View style={styles.radioInner} />}
+                  </View>
+                  <View style={styles.timingTextContainer}>
+                    <Text style={styles.timingLabel}>{option.label}</Text>
+                    <Text style={styles.timingDescription}>{option.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Action Buttons */}
-            {releaseDate && !isPastRelease && (
-              <View style={styles.actions}>
-                {hasReminder ? (
-                  <>
-                    <TouchableOpacity
-                      style={[styles.button, styles.updateButton]}
-                      onPress={handleSetReminder}
-                      disabled={isLoading || selectedTiming === currentTiming}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={COLORS.white} />
-                      ) : (
-                        <Text style={styles.buttonText}>Update Reminder</Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.cancelButton]}
-                      onPress={handleCancelReminder}
-                      disabled={isLoading}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                        Cancel Reminder
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
+            <View style={styles.actions}>
+              {hasReminder ? (
+                <>
                   <TouchableOpacity
-                    style={[styles.button, styles.setButton]}
+                    style={[styles.button, styles.updateButton]}
                     onPress={handleSetReminder}
-                    disabled={isLoading}
+                    disabled={isLoading || selectedTiming === currentTiming}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     {isLoading ? (
                       <ActivityIndicator size="small" color={COLORS.white} />
                     ) : (
-                      <Text style={styles.buttonText}>Set Reminder</Text>
+                      <Text style={styles.buttonText}>Update Reminder</Text>
                     )}
                   </TouchableOpacity>
-                )}
-              </View>
-            )}
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={handleCancelReminder}
+                    disabled={isLoading}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={[styles.buttonText, styles.cancelButtonText]}>
+                      Cancel Reminder
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.button, styles.setButton]}
+                  onPress={handleSetReminder}
+                  disabled={isLoading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>Set Reminder</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

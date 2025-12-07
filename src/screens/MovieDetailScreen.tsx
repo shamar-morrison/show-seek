@@ -62,6 +62,16 @@ const hasWatchProviders = (providers: any): boolean => {
   );
 };
 
+// Check if a movie can have a reminder (has a future release date)
+const canShowReminder = (releaseDate: string | null | undefined): boolean => {
+  if (!releaseDate) return false;
+
+  const release = new Date(releaseDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return release >= today;
+};
+
 export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -417,18 +427,20 @@ export default function MovieDetailScreen() {
             </TouchableOpacity>
 
             {/* Reminder Button */}
-            <View style={detailStyles.ratingButtonContainer}>
-              <ReminderButton
-                onPress={() =>
-                  requireAuth(
-                    () => setReminderModalVisible(true),
-                    'Sign in to set release reminders'
-                  )
-                }
-                hasReminder={hasReminder}
-                isLoading={isLoadingReminder}
-              />
-            </View>
+            {canShowReminder(movie.release_date) && (
+              <View style={detailStyles.ratingButtonContainer}>
+                <ReminderButton
+                  onPress={() =>
+                    requireAuth(
+                      () => setReminderModalVisible(true),
+                      'Sign in to set release reminders'
+                    )
+                  }
+                  hasReminder={hasReminder}
+                  isLoading={isLoadingReminder}
+                />
+              </View>
+            )}
             <View style={detailStyles.ratingButtonContainer}>
               <RatingButton
                 onPress={() =>
