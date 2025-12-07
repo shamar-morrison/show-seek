@@ -3,7 +3,7 @@ import { useAuth } from '@/src/context/auth';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
-import { Coffee, Film, Heart, LogOut, Trash2, Tv, User } from 'lucide-react-native';
+import { Film, Heart, LogOut, Trash2, Tv, User } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -257,7 +257,7 @@ export default function ProfileScreen() {
           <View style={styles.actionsSection}>
             <Text style={styles.sectionTitle}>SETTINGS</Text>
             <View style={styles.actionsList}>
-              <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} />
+              {/* <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} /> */}
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton

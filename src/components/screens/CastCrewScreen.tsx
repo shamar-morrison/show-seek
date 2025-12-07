@@ -20,9 +20,10 @@ type TabType = 'cast' | 'crew';
 interface CastCrewScreenProps {
   id: number;
   type: 'movie' | 'tv';
+  mediaTitle?: string;
 }
 
-export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
+export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
@@ -107,8 +108,14 @@ export default function CastCrewScreen({ id, type }: CastCrewScreenProps) {
         >
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cast & Crew</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Cast & Crew</Text>
+          {mediaTitle && (
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              {mediaTitle}
+            </Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.tabContainer}>
@@ -170,7 +177,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
@@ -178,11 +184,20 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: SPACING.s,
+    marginRight: SPACING.s,
+  },
+  headerTitleContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   tabContainer: {
     flexDirection: 'row',
