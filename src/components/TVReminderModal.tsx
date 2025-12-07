@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
+import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
 import { BlurView } from 'expo-blur';
 import { Calendar, Tv, X } from 'lucide-react-native';
@@ -179,13 +180,12 @@ export default function TVReminderModal({
   };
 
   const formatDate = (date: string) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return formatTmdbDate(date, { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
   const isDateInPast = (date: string) => {
     if (__DEV__) return false;
-    const d = new Date(date);
+    const d = parseTmdbDate(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return d < today;
