@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Check, Plus, Settings2, X } from 'lucide-react-native';
@@ -28,6 +27,7 @@ import {
   useRemoveFromList,
 } from '../hooks/useLists';
 import { ListMediaItem } from '../services/ListService';
+import { ModalBackground } from './ui/ModalBackground';
 
 interface AddToListModalProps {
   visible: boolean;
@@ -207,7 +207,7 @@ export default function AddToListModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+        <ModalBackground />
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
 
         <View style={styles.content}>

@@ -2,7 +2,6 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
-import { BlurView } from 'expo-blur';
 import { Calendar, Tv, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
 
 interface TVReminderModalProps {
   visible: boolean;
@@ -206,7 +206,7 @@ export default function TVReminderModal({
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+        <ModalBackground />
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={ACTIVE_OPACITY}

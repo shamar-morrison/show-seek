@@ -1,9 +1,9 @@
-import { BlurView } from 'expo-blur';
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRouter } from 'expo-router';
 import { LogIn, X } from 'lucide-react-native';
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 
 interface AuthGuardModalProps {
   visible: boolean;
@@ -37,7 +37,7 @@ export default function AuthGuardModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.container}>
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+        <ModalBackground />
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={styles.content}>

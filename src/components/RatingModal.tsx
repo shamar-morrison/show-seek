@@ -1,4 +1,8 @@
-import { BlurView } from 'expo-blur';
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
+import { ratingService } from '@/src/services/RatingService';
+import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
 import { Star, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -12,10 +16,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
-import { useDeleteEpisodeRating, useRateEpisode } from '../hooks/useRatings';
-import { ratingService } from '../services/RatingService';
-import { getRatingText } from '../utils/ratingHelpers';
 
 interface RatingModalProps {
   visible: boolean;
@@ -145,7 +145,7 @@ export default function RatingModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+        <ModalBackground />
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
 
         <View style={styles.content}>

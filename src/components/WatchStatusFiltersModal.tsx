@@ -1,4 +1,6 @@
-import { BlurView } from 'expo-blur';
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { Check, ChevronDown, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -11,8 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
-import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '../utils/listFilters';
 
 interface WatchStatusFiltersModalProps {
   visible: boolean;
@@ -181,7 +181,7 @@ export default function WatchStatusFiltersModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+        <ModalBackground />
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
         <View style={styles.content}>

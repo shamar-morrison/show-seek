@@ -1,7 +1,7 @@
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
-import { BlurView } from 'expo-blur';
 import { Calendar, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -117,7 +117,7 @@ export default function ReminderModal({
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+        <ModalBackground />
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={ACTIVE_OPACITY}
