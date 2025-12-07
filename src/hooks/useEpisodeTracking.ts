@@ -187,10 +187,12 @@ export const useMarkEpisodeWatched = () => {
       );
 
       // Then, handle auto-add to Watching list (non-blocking)
+      // Default shouldAutoAdd to true when undefined (for new users without preferences field)
       const { autoAddOptions } = params;
+      const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
       if (
-        autoAddOptions?.shouldAutoAdd &&
-        autoAddOptions.listMembership &&
+        shouldAutoAdd &&
+        autoAddOptions?.listMembership &&
         !autoAddOptions.listMembership['currently-watching']
       ) {
         try {
