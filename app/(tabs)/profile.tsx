@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +14,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -101,6 +103,8 @@ function ActionButton({
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { stats, isLoading: statsLoading } = useProfileStats();
+  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const updatePreference = useUpdatePreference();
 
   const [showReauthModal, setShowReauthModal] = useState(false);
   const [reauthPassword, setReauthPassword] = useState('');
@@ -249,6 +253,43 @@ export default function ProfileScreen() {
                   count={stats.favoritesTvCount}
                   isLoading={statsLoading}
                 />
+              </View>
+            </View>
+          )}
+
+          {/* Preferences Section */}
+          {!isGuest && (
+            <View style={styles.preferencesSection}>
+              <Text style={styles.sectionTitle}>PREFERENCES</Text>
+              <View style={styles.preferenceItem}>
+                <View style={styles.preferenceInfo}>
+                  <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
+                  <Text style={styles.preferenceSubtitle}>
+                    Automatically add returning series to your Watching list when you mark an
+                    episode as watched
+                  </Text>
+                </View>
+                {preferencesLoading ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Switch
+                    value={preferences.autoAddToWatching}
+                    onValueChange={(value) => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updatePreference.mutate(
+                        { key: 'autoAddToWatching', value },
+                        {
+                          onError: () => {
+                            Alert.alert('Error', 'Failed to update preference. Please try again.');
+                          },
+                        }
+                      );
+                    }}
+                    disabled={updatePreference.isPending}
+                    trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                    thumbColor={COLORS.white}
+                  />
+                )}
               </View>
             </View>
           )}
@@ -483,5 +524,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: FONT_SIZE.m,
     textAlign: 'center',
+  },
+  preferencesSection: {
+    paddingHorizontal: SPACING.l,
+    marginTop: SPACING.l,
+  },
+  preferenceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.m,
+    gap: SPACING.m,
+  },
+  preferenceInfo: {
+    flex: 1,
+  },
+  preferenceLabel: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    fontWeight: '500',
+    marginBottom: SPACING.xs,
+  },
+  preferenceSubtitle: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
 });

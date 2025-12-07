@@ -25,6 +25,8 @@ import {
   useMarkEpisodeWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
+import { useMediaLists } from '@/src/hooks/useLists';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -72,6 +74,10 @@ export default function EpisodeDetailScreen() {
   const { isWatched } = useIsEpisodeWatched(tvId, seasonNumber, episodeNumber);
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
+
+  // Auto-add to Watching list hooks
+  const { preferences } = usePreferences();
+  const { membership: listMembership } = useMediaLists(tvId);
 
   const tvShowQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -180,6 +186,14 @@ export default function EpisodeDetailScreen() {
             tvShowName: tvShow.name,
             posterPath: tvShow.poster_path,
           },
+          autoAddOptions: {
+            showStatus: tvShow.status,
+            shouldAutoAdd: preferences.autoAddToWatching,
+            listMembership,
+            firstAirDate: tvShow.first_air_date,
+            voteAverage: tvShow.vote_average,
+            genreIds: tvShow.genre_ids,
+          },
         });
       }
     }, 'Sign in to track your watched episodes');
@@ -193,6 +207,8 @@ export default function EpisodeDetailScreen() {
     seasonNumber,
     episodeNumber,
     requireAuth,
+    preferences,
+    listMembership,
   ]);
 
   const handleVideoPress = useCallback((video: Video) => {
