@@ -57,20 +57,53 @@ export interface Reminder {
 }
 
 /**
- * Input for creating a new reminder
+ * Base fields shared by all reminder inputs
  */
-export interface CreateReminderInput {
+interface CreateReminderInputBase {
   mediaId: number;
-  mediaType: ReminderMediaType;
   title: string;
   posterPath: string | null;
   releaseDate: string;
   reminderTiming: ReminderTiming;
+}
 
-  // TV-specific fields (required when mediaType === 'tv')
-  tvFrequency?: TVReminderFrequency;
+/**
+ * Input for creating a movie reminder
+ */
+interface CreateMovieReminderInput extends CreateReminderInputBase {
+  mediaType: 'movie';
+}
+
+/**
+ * Input for creating a TV episode reminder (every_episode frequency)
+ * - nextEpisode is required for episode-level reminders
+ */
+interface CreateTVEpisodeReminderInput extends CreateReminderInputBase {
+  mediaType: 'tv';
+  tvFrequency: 'every_episode';
+  nextEpisode: NextEpisodeInfo;
+}
+
+/**
+ * Input for creating a TV season premiere reminder (season_premiere frequency)
+ * - nextEpisode is optional for season premiere reminders
+ */
+interface CreateTVSeasonReminderInput extends CreateReminderInputBase {
+  mediaType: 'tv';
+  tvFrequency: 'season_premiere';
   nextEpisode?: NextEpisodeInfo;
 }
+
+/**
+ * Discriminated union for creating reminders
+ * - Movie reminders: only base fields required
+ * - TV episode reminders: tvFrequency='every_episode' and nextEpisode required
+ * - TV season reminders: tvFrequency='season_premiere' and nextEpisode optional
+ */
+export type CreateReminderInput =
+  | CreateMovieReminderInput
+  | CreateTVEpisodeReminderInput
+  | CreateTVSeasonReminderInput;
 
 /**
  * Input for updating reminder timing

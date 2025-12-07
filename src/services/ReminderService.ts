@@ -13,6 +13,7 @@ import {
 import { auth, db } from '../firebase/config';
 import {
   CreateReminderInput,
+  NextEpisodeInfo,
   Reminder,
   ReminderMediaType,
   ReminderTiming,
@@ -119,7 +120,7 @@ class ReminderService {
    * Returns the Expo notification identifier
    */
   private async scheduleNotification(
-    reminder: CreateReminderInput & { reminderTiming: ReminderTiming }
+    reminder: CreateReminderInput | Reminder
   ): Promise<string | null> {
     try {
       const notificationTime = this.calculateNotificationTime(
@@ -138,14 +139,14 @@ class ReminderService {
           title: this.getNotificationTitle(
             reminder.mediaType,
             reminder.reminderTiming,
-            reminder.tvFrequency
+            'tvFrequency' in reminder ? reminder.tvFrequency : undefined
           ),
           body: this.getNotificationBody(
             reminder.title,
             reminder.mediaType,
             reminder.reminderTiming,
-            reminder.tvFrequency,
-            reminder.nextEpisode
+            'tvFrequency' in reminder ? reminder.tvFrequency : undefined,
+            'nextEpisode' in reminder ? reminder.nextEpisode : undefined
           ),
           data: {
             mediaType: reminder.mediaType,
@@ -206,7 +207,7 @@ class ReminderService {
     mediaType: ReminderMediaType,
     timing: ReminderTiming,
     tvFrequency?: TVReminderFrequency,
-    nextEpisode?: CreateReminderInput['nextEpisode']
+    nextEpisode?: NextEpisodeInfo
   ): string {
     if (mediaType === 'tv') {
       const isEpisode = tvFrequency === 'every_episode';

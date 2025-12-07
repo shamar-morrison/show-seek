@@ -225,7 +225,12 @@ export default function TVDetailScreen() {
           reminderId: reminder.id,
           timing,
         });
-      } else {
+      } else if (frequency === 'every_episode') {
+        // For episode reminders, nextEpisode is required
+        if (!nextEpisode) {
+          toastRef.current?.show('No upcoming episode available');
+          return;
+        }
         await createReminderMutation.mutateAsync({
           mediaId: show.id,
           mediaType: 'tv',
@@ -234,7 +239,19 @@ export default function TVDetailScreen() {
           releaseDate,
           reminderTiming: timing,
           tvFrequency: frequency,
-          nextEpisode: nextEpisode || undefined,
+          nextEpisode,
+        });
+      } else {
+        // For season premiere reminders, nextEpisode is optional
+        await createReminderMutation.mutateAsync({
+          mediaId: show.id,
+          mediaType: 'tv',
+          title: show.name,
+          posterPath: show.poster_path,
+          releaseDate,
+          reminderTiming: timing,
+          tvFrequency: frequency,
+          ...(nextEpisode && { nextEpisode }),
         });
       }
     },
