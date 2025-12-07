@@ -72,7 +72,6 @@ export const usePreferences = () => {
  */
 export const useUpdatePreference = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationKey: ['updatePreference'],
@@ -82,36 +81,39 @@ export const useUpdatePreference = () => {
 
     // Optimistic update
     onMutate: async ({ key, value }) => {
-      if (!userId) throw new Error('User must be logged in');
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('User must be logged in');
 
-      await queryClient.cancelQueries({ queryKey: ['preferences', userId] });
+      await queryClient.cancelQueries({ queryKey: ['preferences', currentUserId] });
 
       const previousPreferences = queryClient.getQueryData<UserPreferences>([
         'preferences',
-        userId,
+        currentUserId,
       ]);
 
-      queryClient.setQueryData<UserPreferences>(['preferences', userId], (old) => ({
+      queryClient.setQueryData<UserPreferences>(['preferences', currentUserId], (old) => ({
         ...(old ?? DEFAULT_PREFERENCES),
         [key]: value,
       }));
 
-      return { previousPreferences };
+      return { previousPreferences, userId: currentUserId };
     },
 
     // Rollback on error
     onError: (_err, _variables, context) => {
-      if (context?.previousPreferences) {
-        queryClient.setQueryData(['preferences', userId], context.previousPreferences);
+      if (context?.previousPreferences && context.userId) {
+        queryClient.setQueryData(['preferences', context.userId], context.previousPreferences);
       }
     },
 
     // On success, allow subscription to update cache again
-    onSettled: () => {
+    onSettled: (_data, _error, _variables, context) => {
       // Small delay to let Firestore subscription catch up with the correct value
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['preferences', userId] });
-      }, 500);
+      if (context?.userId) {
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });
+        }, 500);
+      }
     },
   });
 };
