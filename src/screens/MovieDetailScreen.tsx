@@ -233,7 +233,7 @@ export default function MovieDetailScreen() {
   };
 
   const handleCastViewAll = () => {
-    navigateTo(`/movie/${movieId}/cast`);
+    navigateTo(`/movie/${movieId}/cast?title=${encodeURIComponent(movie.title)}`);
   };
 
   const handleRefresh = async () => {

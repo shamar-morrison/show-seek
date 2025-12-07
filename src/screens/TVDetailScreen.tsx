@@ -358,7 +358,7 @@ export default function TVDetailScreen() {
   };
 
   const handleCastViewAll = () => {
-    navigateTo(`/tv/${tvId}/cast`);
+    navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(show.name)}`);
   };
 
   const handleRefresh = async () => {
