@@ -97,7 +97,7 @@ service cloud.firestore {
             'reminderTiming', 'status', 'createdAt', 'updatedAt'
           ])
           && request.resource.data.mediaType is string
-          && request.resource.data.mediaType in ['movie']
+          && request.resource.data.mediaType in ['movie', 'tv']
           && request.resource.data.mediaId is int
           && request.resource.data.title is string
           && request.resource.data.title.size() > 0
@@ -108,11 +108,14 @@ service cloud.firestore {
           && request.resource.data.status is string
           && request.resource.data.status in ['active', 'cancelled']
           && request.resource.data.createdAt is int
-          && request.resource.data.updatedAt is int;
+          && request.resource.data.updatedAt is int
+          // TV-specific optional fields
+          && (!('tvFrequency' in request.resource.data) || request.resource.data.tvFrequency in ['every_episode', 'season_premiere'])
+          && (!('nextEpisode' in request.resource.data) || request.resource.data.nextEpisode is map);
         allow update: if isOwner(userId)
           && resource.data.userId == userId
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt']);
+            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate']);
         allow delete: if isOwner(userId)
           && resource.data.userId == userId;
       }

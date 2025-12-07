@@ -13,6 +13,8 @@ import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSec
 import ImageLightbox from '@/src/components/ImageLightbox';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
+import ReminderButton from '@/src/components/ReminderButton';
+import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -26,8 +28,18 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { useMediaRating } from '@/src/hooks/useRatings';
+import {
+  useCancelReminder,
+  useCreateReminder,
+  useMediaReminder,
+  useUpdateReminder,
+} from '@/src/hooks/useReminders';
+import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { getLanguageName } from '@/src/utils/languages';
+import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
+import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -42,7 +54,7 @@ import {
   Star,
   Tv,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -74,6 +86,7 @@ export default function TVDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [listModalVisible, setListModalVisible] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,6 +97,13 @@ export default function TVDetailScreen() {
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const isInAnyList = Object.keys(membership).length > 0;
+
+  // Reminder hooks
+  const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
+  const { requestPermission } = useNotificationPermissions();
+  const createReminderMutation = useCreateReminder();
+  const cancelReminderMutation = useCancelReminder();
+  const updateReminderMutation = useUpdateReminder();
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -143,6 +163,137 @@ export default function TVDetailScreen() {
     },
     [currentTab, router]
   );
+
+  // Compute next episode info for reminders (must be before early returns)
+  const nextEpisodeInfo = useMemo((): NextEpisodeInfo | null => {
+    const show = tvQuery.data;
+    if (!show?.next_episode_to_air?.air_date) return null;
+    return {
+      seasonNumber: show.next_episode_to_air.season_number,
+      episodeNumber: show.next_episode_to_air.episode_number,
+      episodeName: show.next_episode_to_air.name || 'TBA',
+      airDate: show.next_episode_to_air.air_date,
+    };
+  }, [tvQuery.data]);
+
+  // Compute next season premiere date (must be before early returns)
+  const { nextSeasonAirDate, nextSeasonNumber } = useMemo(() => {
+    return getNextUpcomingSeason(tvQuery.data?.seasons);
+  }, [tvQuery.data]);
+
+  // Reminder handlers (must be before early returns)
+  const handleSetReminder = useCallback(
+    async (
+      timing: ReminderTiming,
+      frequency: TVReminderFrequency,
+      nextEpisode: NextEpisodeInfo | null
+    ) => {
+      const show = tvQuery.data;
+      if (!show) return;
+
+      const hasPermission = await requestPermission();
+      if (!hasPermission) {
+        toastRef.current?.show('Please enable notifications in settings');
+        return;
+      }
+
+      const releaseDate = frequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
+
+      if (!releaseDate) {
+        toastRef.current?.show('No upcoming date available');
+        return;
+      }
+
+      if (hasReminder && reminder) {
+        // Check if frequency or nextEpisode have changed
+        const frequencyChanged = frequency !== reminder.tvFrequency;
+        const episodeChanged = hasEpisodeChanged(reminder.nextEpisode, nextEpisode);
+
+        if (frequencyChanged || episodeChanged) {
+          // Frequency or episode data changed - cancel existing and create new reminder
+          await cancelReminderMutation.mutateAsync(reminder.id);
+
+          if (frequency === 'every_episode') {
+            if (!nextEpisode) {
+              toastRef.current?.show('No upcoming episode available');
+              return;
+            }
+            await createReminderMutation.mutateAsync({
+              mediaId: show.id,
+              mediaType: 'tv',
+              title: show.name,
+              posterPath: show.poster_path,
+              releaseDate,
+              reminderTiming: timing,
+              tvFrequency: frequency,
+              nextEpisode,
+            });
+          } else {
+            await createReminderMutation.mutateAsync({
+              mediaId: show.id,
+              mediaType: 'tv',
+              title: show.name,
+              posterPath: show.poster_path,
+              releaseDate,
+              reminderTiming: timing,
+              tvFrequency: frequency,
+              ...(nextEpisode && { nextEpisode }),
+            });
+          }
+        } else {
+          // Only timing changed - use simple update
+          await updateReminderMutation.mutateAsync({
+            reminderId: reminder.id,
+            timing,
+          });
+        }
+      } else if (frequency === 'every_episode') {
+        // For episode reminders, nextEpisode is required
+        if (!nextEpisode) {
+          toastRef.current?.show('No upcoming episode available');
+          return;
+        }
+        await createReminderMutation.mutateAsync({
+          mediaId: show.id,
+          mediaType: 'tv',
+          title: show.name,
+          posterPath: show.poster_path,
+          releaseDate,
+          reminderTiming: timing,
+          tvFrequency: frequency,
+          nextEpisode,
+        });
+      } else {
+        // For season premiere reminders, nextEpisode is optional
+        await createReminderMutation.mutateAsync({
+          mediaId: show.id,
+          mediaType: 'tv',
+          title: show.name,
+          posterPath: show.poster_path,
+          releaseDate,
+          reminderTiming: timing,
+          tvFrequency: frequency,
+          ...(nextEpisode && { nextEpisode }),
+        });
+      }
+    },
+    [
+      tvQuery.data,
+      requestPermission,
+      hasReminder,
+      reminder,
+      cancelReminderMutation,
+      updateReminderMutation,
+      createReminderMutation,
+      nextSeasonAirDate,
+    ]
+  );
+
+  const handleCancelReminder = useCallback(async () => {
+    if (reminder) {
+      await cancelReminderMutation.mutateAsync(reminder.id);
+    }
+  }, [reminder, cancelReminderMutation]);
 
   if (tvQuery.isLoading) {
     return (
@@ -368,6 +519,13 @@ export default function TVDetailScreen() {
                 isLoading={isLoadingRating}
               />
             </View>
+            <ReminderButton
+              onPress={() =>
+                requireAuth(() => setReminderModalVisible(true), 'Sign in to set release reminders')
+              }
+              hasReminder={hasReminder}
+              isLoading={isLoadingReminder}
+            />
           </View>
 
           {userRating > 0 && <UserRating rating={userRating} />}
@@ -535,6 +693,22 @@ export default function TVDetailScreen() {
             mediaType="tv"
             initialRating={userRating}
             onRatingSuccess={() => {}}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+          <TVReminderModal
+            visible={reminderModalVisible}
+            onClose={() => setReminderModalVisible(false)}
+            tvId={show.id}
+            tvTitle={show.name}
+            nextEpisode={nextEpisodeInfo}
+            nextSeasonAirDate={nextSeasonAirDate}
+            nextSeasonNumber={nextSeasonNumber}
+            currentTiming={reminder?.reminderTiming}
+            currentFrequency={reminder?.tvFrequency}
+            currentNextEpisode={reminder?.nextEpisode}
+            hasReminder={hasReminder}
+            onSetReminder={handleSetReminder}
+            onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
         </>

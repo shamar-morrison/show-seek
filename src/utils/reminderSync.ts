@@ -3,7 +3,33 @@ import { auth, db } from '@/src/firebase/config';
 import { reminderService } from '@/src/services/ReminderService';
 import { Reminder } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  DocumentReference,
+  getDocs,
+  query,
+  setDoc,
+  where,
+} from 'firebase/firestore';
+import { getNextUpcomingSeason } from './seasonHelpers';
+
+/**
+ * Wrapper around setDoc with timeout protection to prevent network hangs.
+ */
+async function setDocWithTimeout(
+  docRef: DocumentReference,
+  data: Record<string, unknown>,
+  timeoutMs = 10000
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error('Firestore write timed out')), timeoutMs);
+    setDoc(docRef, data, { merge: true })
+      .then(() => resolve())
+      .catch(reject)
+      .finally(() => clearTimeout(timeoutId));
+  });
+}
 
 const SYNC_COOLDOWN_KEY = 'lastReminderSyncTimestamp';
 const SYNC_COOLDOWN_HOURS = 24;
@@ -77,25 +103,11 @@ export async function syncReminders(): Promise<void> {
               `[reminderSync] Release date changed for ${reminder.title}: ${reminder.releaseDate} -> ${movieDetails.release_date}`
             );
 
-            // Update Firestore with new release date before rescheduling, with timeout protection
+            // Update Firestore with new release date before rescheduling
             const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
-            await new Promise<void>((resolve, reject) => {
-              const timeoutId = setTimeout(
-                () => reject(new Error('Firestore write timed out')),
-                10000
-              );
-
-              setDoc(
-                reminderRef,
-                {
-                  releaseDate: movieDetails.release_date,
-                  updatedAt: Date.now(),
-                },
-                { merge: true }
-              )
-                .then(() => resolve())
-                .catch(reject)
-                .finally(() => clearTimeout(timeoutId));
+            await setDocWithTimeout(reminderRef, {
+              releaseDate: movieDetails.release_date,
+              updatedAt: Date.now(),
             });
 
             // Reschedule notification with updated release date
@@ -104,6 +116,79 @@ export async function syncReminders(): Promise<void> {
           // Case (c): No change - reschedule to ensure notification is in sync
           else {
             await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          }
+        } else if (reminder.mediaType === 'tv') {
+          const tvDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
+
+          if (reminder.tvFrequency === 'every_episode') {
+            // Episode reminder: check for next episode
+            const nextEpisode = tvDetails.next_episode_to_air;
+
+            if (!nextEpisode?.air_date) {
+              // No upcoming episode - cancel reminder
+              console.log(`[reminderSync] No next episode for TV ${reminder.mediaId}, cancelling`);
+              await reminderService.cancelReminder(reminder.id);
+              continue;
+            }
+
+            // Update if episode info changed
+            const currentEpisode = reminder.nextEpisode;
+            if (
+              !currentEpisode ||
+              nextEpisode.air_date !== currentEpisode.airDate ||
+              nextEpisode.episode_number !== currentEpisode.episodeNumber ||
+              nextEpisode.season_number !== currentEpisode.seasonNumber
+            ) {
+              console.log(
+                `[reminderSync] Episode changed for ${reminder.title}: S${nextEpisode.season_number}E${nextEpisode.episode_number}`
+              );
+
+              const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
+              await setDocWithTimeout(reminderRef, {
+                releaseDate: nextEpisode.air_date,
+                nextEpisode: {
+                  seasonNumber: nextEpisode.season_number,
+                  episodeNumber: nextEpisode.episode_number,
+                  episodeName: nextEpisode.name || 'TBA',
+                  airDate: nextEpisode.air_date,
+                },
+                updatedAt: Date.now(),
+              });
+            }
+
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          } else if (reminder.tvFrequency === 'season_premiere') {
+            // Season premiere reminder: check seasons for next premiere
+            const { nextSeasonAirDate: upcomingSeasonAirDate } = getNextUpcomingSeason(
+              tvDetails.seasons
+            );
+
+            if (!upcomingSeasonAirDate) {
+              // No upcoming season - cancel reminder
+              console.log(
+                `[reminderSync] No upcoming season for TV ${reminder.mediaId}, cancelling`
+              );
+              await reminderService.cancelReminder(reminder.id);
+              continue;
+            }
+
+            if (upcomingSeasonAirDate !== reminder.releaseDate) {
+              console.log(
+                `[reminderSync] Season premiere changed for ${reminder.title}: ${reminder.releaseDate} -> ${upcomingSeasonAirDate}`
+              );
+
+              const reminderRef = doc(db, 'users', user.uid, 'reminders', reminder.id);
+              await setDocWithTimeout(reminderRef, {
+                releaseDate: upcomingSeasonAirDate,
+                updatedAt: Date.now(),
+              });
+            }
+
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+          } else {
+            // Unknown/missing tvFrequency - skip or log warning
+            console.warn(`[reminderSync] Unknown tvFrequency for TV reminder ${reminder.id}`);
+            continue;
           }
         }
       } catch (error) {
