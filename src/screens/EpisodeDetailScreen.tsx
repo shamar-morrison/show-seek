@@ -192,7 +192,7 @@ export default function EpisodeDetailScreen() {
             listMembership,
             firstAirDate: tvShow.first_air_date,
             voteAverage: tvShow.vote_average,
-            genreIds: tvShow.genre_ids,
+            genreIds: tvShow.genres?.map((g) => g.id) || [],
           },
         });
       }
