@@ -72,6 +72,7 @@ export default function FavoritePeopleScreen() {
           onPress={toggleViewMode}
           style={{ marginRight: SPACING.s }}
           activeOpacity={ACTIVE_OPACITY}
+          hitSlop={SPACING.s}
         >
           {viewMode === 'grid' ? (
             <List size={24} color={COLORS.text} />

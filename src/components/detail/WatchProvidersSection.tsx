@@ -1,6 +1,6 @@
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -61,7 +61,7 @@ const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => 
               onPress={handlePress}
               accessibilityRole="button"
               accessibilityLabel={`Watch on ${provider.provider_name} via JustWatch`}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={SPACING.s}
             >
               <MediaImage
                 source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
