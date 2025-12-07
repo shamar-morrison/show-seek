@@ -87,8 +87,13 @@ export function useEnrichedMovieRatings() {
     [ratings]
   );
 
-  return useQuery({
-    queryKey: ['enriched-movie-ratings', user?.uid],
+  const movieRatingIds = useMemo(
+    () => movieRatings.map((r) => `${r.id}:${r.rating}`).join(','),
+    [movieRatings]
+  );
+
+  const query = useQuery({
+    queryKey: ['enriched-movie-ratings', user?.uid, movieRatingIds],
     queryFn: async (): Promise<EnrichedMovieRating[]> => {
       if (movieRatings.length === 0) return [];
 
@@ -104,6 +109,12 @@ export function useEnrichedMovieRatings() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  return {
+    ...query,
+    data: !isLoadingRatings && movieRatings.length === 0 ? [] : query.data,
+    isLoading: isLoadingRatings || query.isLoading,
+  };
 }
 
 /**
@@ -115,8 +126,13 @@ export function useEnrichedTVRatings() {
 
   const tvRatings = useMemo(() => ratings?.filter((r) => r.mediaType === 'tv') || [], [ratings]);
 
-  return useQuery({
-    queryKey: ['enriched-tv-ratings', user?.uid],
+  const tvRatingIds = useMemo(
+    () => tvRatings.map((r) => `${r.id}:${r.rating}`).join(','),
+    [tvRatings]
+  );
+
+  const query = useQuery({
+    queryKey: ['enriched-tv-ratings', user?.uid, tvRatingIds],
     queryFn: async (): Promise<EnrichedTVRating[]> => {
       if (tvRatings.length === 0) return [];
 
@@ -132,4 +148,10 @@ export function useEnrichedTVRatings() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  return {
+    ...query,
+    data: !isLoadingRatings && tvRatings.length === 0 ? [] : query.data,
+    isLoading: isLoadingRatings || query.isLoading,
+  };
 }
