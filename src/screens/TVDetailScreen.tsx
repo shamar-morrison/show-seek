@@ -38,6 +38,7 @@ import {
 } from '@/src/hooks/useReminders';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { getLanguageName } from '@/src/utils/languages';
+import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -204,10 +205,48 @@ export default function TVDetailScreen() {
       }
 
       if (hasReminder && reminder) {
-        await updateReminderMutation.mutateAsync({
-          reminderId: reminder.id,
-          timing,
-        });
+        // Check if frequency or nextEpisode have changed
+        const frequencyChanged = frequency !== reminder.tvFrequency;
+        const episodeChanged = hasEpisodeChanged(reminder.nextEpisode, nextEpisode);
+
+        if (frequencyChanged || episodeChanged) {
+          // Frequency or episode data changed - cancel existing and create new reminder
+          await cancelReminderMutation.mutateAsync(reminder.id);
+
+          if (frequency === 'every_episode') {
+            if (!nextEpisode) {
+              toastRef.current?.show('No upcoming episode available');
+              return;
+            }
+            await createReminderMutation.mutateAsync({
+              mediaId: show.id,
+              mediaType: 'tv',
+              title: show.name,
+              posterPath: show.poster_path,
+              releaseDate,
+              reminderTiming: timing,
+              tvFrequency: frequency,
+              nextEpisode,
+            });
+          } else {
+            await createReminderMutation.mutateAsync({
+              mediaId: show.id,
+              mediaType: 'tv',
+              title: show.name,
+              posterPath: show.poster_path,
+              releaseDate,
+              reminderTiming: timing,
+              tvFrequency: frequency,
+              ...(nextEpisode && { nextEpisode }),
+            });
+          }
+        } else {
+          // Only timing changed - use simple update
+          await updateReminderMutation.mutateAsync({
+            reminderId: reminder.id,
+            timing,
+          });
+        }
       } else if (frequency === 'every_episode') {
         // For episode reminders, nextEpisode is required
         if (!nextEpisode) {
@@ -243,6 +282,7 @@ export default function TVDetailScreen() {
       requestPermission,
       hasReminder,
       reminder,
+      cancelReminderMutation,
       updateReminderMutation,
       createReminderMutation,
       nextSeasonAirDate,

@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
+import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
 import { BlurView } from 'expo-blur';
 import { Calendar, Tv, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -37,25 +38,6 @@ interface TVReminderModalProps {
   ) => Promise<void>;
   onCancelReminder: () => Promise<void>;
   onShowToast?: (message: string) => void;
-}
-
-/**
- * Compare two NextEpisodeInfo objects to detect if episode data has changed
- */
-function hasEpisodeChanged(
-  current: NextEpisodeInfo | null | undefined,
-  latest: NextEpisodeInfo | null
-): boolean {
-  // If neither exists, no change
-  if (!current && !latest) return false;
-  // If one exists and the other doesn't, there's a change
-  if (!current || !latest) return true;
-  // Compare all fields
-  return (
-    current.seasonNumber !== latest.seasonNumber ||
-    current.episodeNumber !== latest.episodeNumber ||
-    current.airDate !== latest.airDate
-  );
 }
 
 // Timing options for episodes (1 day before or on air day only)
