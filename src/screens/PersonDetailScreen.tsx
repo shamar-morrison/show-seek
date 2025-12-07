@@ -135,7 +135,7 @@ export default function PersonDetailScreen() {
           relevantCrewJobs.some((job) => credit.job?.includes(job))
         )
       )
-    : tvCreditsQuery.data?.cast || [];
+    : getUniqueCredits(tvCreditsQuery.data?.cast || []);
 
   // Filter out non-scripted shows from TV credits
   const EXCLUDED_GENRE_IDS = [
