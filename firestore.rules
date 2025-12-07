@@ -29,10 +29,15 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt'])
+          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences'])
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
-        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
+        && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
+        // Preferences validation - must be a map with boolean autoAddToWatching
+        && (!('preferences' in request.resource.data) || (
+          request.resource.data.preferences is map
+          && (!('autoAddToWatching' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToWatching is bool)
+        ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);
       // Favorites collection
