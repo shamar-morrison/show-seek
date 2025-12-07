@@ -2,7 +2,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { BlurView } from 'expo-blur';
 import { Calendar, Tv, X } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -125,16 +125,21 @@ export default function TVReminderModal({
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // Determine what's available
+  // Sync state when modal becomes visible or props change
+  useEffect(() => {
+    if (visible) {
+      setSelectedFrequency(currentFrequency || 'every_episode');
+      setSelectedTiming(currentTiming || 'on_release_day');
+    }
+  }, [visible, currentFrequency, currentTiming]);
+
   const canSetEpisodeReminder = !!nextEpisode?.airDate;
   const canSetSeasonReminder = !!nextSeasonAirDate;
 
-  // Get appropriate timing options based on frequency
   const timingOptions = useMemo(() => {
     return selectedFrequency === 'every_episode' ? EPISODE_TIMING_OPTIONS : SEASON_TIMING_OPTIONS;
   }, [selectedFrequency]);
 
-  // Reset timing when frequency changes if current timing is invalid
   const handleFrequencyChange = (freq: TVReminderFrequency) => {
     setSelectedFrequency(freq);
     // If switching from season to episode, ensure timing is valid for episodes
