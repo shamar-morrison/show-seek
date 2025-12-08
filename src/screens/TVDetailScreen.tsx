@@ -188,10 +188,11 @@ export default function TVDetailScreen() {
 
   // Fetch subsequent episode when current next episode airs today
   useEffect(() => {
+    const airDate = nextEpisodeInfo?.airDate;
     // Only fetch if we have a next episode and it airs today
-    if (nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate)) {
+    if (airDate && isReleaseToday(airDate)) {
       setIsLoadingSubsequent(true);
-      getSubsequentEpisode(tvId, nextEpisodeInfo)
+      getSubsequentEpisode(tvId, nextEpisodeInfo!)
         .then(setSubsequentEpisode)
         .catch(() => setSubsequentEpisode(null))
         .finally(() => setIsLoadingSubsequent(false));
@@ -199,7 +200,12 @@ export default function TVDetailScreen() {
       // Clear subsequent episode when not needed
       setSubsequentEpisode(null);
     }
-  }, [tvId, nextEpisodeInfo]);
+  }, [
+    tvId,
+    nextEpisodeInfo?.airDate,
+    nextEpisodeInfo?.seasonNumber,
+    nextEpisodeInfo?.episodeNumber,
+  ]);
 
   // The effective episode to use for reminders:
   // If today's episode is airing, use subsequent episode (if available)
