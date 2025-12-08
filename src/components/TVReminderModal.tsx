@@ -130,7 +130,6 @@ export default function TVReminderModal({
   nextEpisode,
   originalNextEpisode,
   isUsingSubsequentEpisode = false,
-  isLoadingSubsequentEpisode = false,
   nextSeasonAirDate,
   nextSeasonNumber,
   currentTiming,
