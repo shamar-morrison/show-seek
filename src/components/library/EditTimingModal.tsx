@@ -1,9 +1,10 @@
 import {
   DevModeBanner,
+  EPISODE_TIMING_OPTIONS,
+  MOVIE_TIMING_OPTIONS,
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
-  TimingOption,
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -31,70 +32,6 @@ interface EditTimingModalProps {
   onUpdateTiming: (reminderId: string, timing: ReminderTiming) => Promise<void>;
 }
 
-// Timing options for episodes (no "1 week before" - doesn't make sense for weekly releases)
-const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Air Day',
-        description: 'Get notified when the episode airs',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before the episode airs',
-      },
-    ];
-
-// Timing options for movies and season premieres (all three options)
-const FULL_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-      {
-        value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Release Day',
-        description: 'Get notified on the day of release',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before release',
-      },
-      {
-        value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before release',
-      },
-    ];
-
 export default function EditTimingModal({
   visible,
   onClose,
@@ -110,7 +47,7 @@ export default function EditTimingModal({
     if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'every_episode') {
       return EPISODE_TIMING_OPTIONS;
     }
-    return FULL_TIMING_OPTIONS;
+    return MOVIE_TIMING_OPTIONS;
   }, [reminder.mediaType, reminder.tvFrequency]);
 
   // Determine which timing options have notification times in the past

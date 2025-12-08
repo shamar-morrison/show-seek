@@ -1,10 +1,11 @@
 import {
   DevModeBanner,
+  EPISODE_TIMING_OPTIONS,
   ReminderErrorBanner,
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
-  TimingOption,
+  SEASON_TIMING_OPTIONS,
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -58,70 +59,6 @@ interface TVReminderModalProps {
   onCancelReminder: () => Promise<void>;
   onShowToast?: (message: string) => void;
 }
-
-// Timing options for episodes (1 day before or on air day only)
-const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Air Day',
-        description: 'Get notified when the episode airs',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before the episode airs',
-      },
-    ];
-
-// Timing options for seasons (all three options)
-const SEASON_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-      {
-        value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Premiere Day',
-        description: 'Get notified when the season premieres',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before premiere',
-      },
-      {
-        value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before premiere',
-      },
-    ];
 
 export default function TVReminderModal({
   visible,
