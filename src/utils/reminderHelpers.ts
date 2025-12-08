@@ -23,6 +23,24 @@ export function hasEpisodeChanged(
 }
 
 /**
+ * Check if the release date is today (local time).
+ * Used to provide context-aware messaging when the episode/season airs today
+ * but all notification timing options have already passed.
+ *
+ * @param releaseDate - Release date in YYYY-MM-DD format
+ * @returns true if the release date is today
+ */
+export function isReleaseToday(releaseDate: string): boolean {
+  if (__DEV__) return false; // Allow all options in dev mode
+
+  const release = parseTmdbDate(releaseDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  release.setHours(0, 0, 0, 0);
+  return release.getTime() === today.getTime();
+}
+
+/**
  * Calculate the notification timestamp for a given release date and timing preference.
  * Notifications are scheduled for 9 AM EST (14:00 UTC).
  *

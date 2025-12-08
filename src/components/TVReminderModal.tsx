@@ -9,7 +9,11 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import { hasEpisodeChanged, isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
+import {
+  hasEpisodeChanged,
+  isNotificationTimeInPast,
+  isReleaseToday,
+} from '@/src/utils/reminderHelpers';
 import { Calendar, Tv, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -167,12 +171,10 @@ export default function TVReminderModal({
     return disabled;
   }, [releaseDate, timingOptions]);
 
-  // Get available (non-disabled) timing options
   const availableTimings = useMemo(() => {
     return timingOptions.filter((option) => !disabledTimings.has(option.value));
   }, [disabledTimings, timingOptions]);
 
-  // Check if all timing options are disabled for current frequency
   const allTimingsDisabled = availableTimings.length === 0;
 
   // Auto-select first available option if current selection is disabled
@@ -232,6 +234,12 @@ export default function TVReminderModal({
   const hasFrequencyDate =
     (selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
     (selectedFrequency === 'season_premiere' && canSetSeasonReminder);
+
+  // Check if the release date is today (for context-aware messaging)
+  const isReleasingToday = useMemo(() => {
+    if (!releaseDate) return false;
+    return isReleaseToday(releaseDate);
+  }, [releaseDate]);
 
   // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
   const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
@@ -360,7 +368,11 @@ export default function TVReminderModal({
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
             {hasFrequencyDate && allTimingsDisabled && (
               <ReminderErrorBanner
-                message={`All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`}
+                message={
+                  isReleasingToday
+                    ? `This ${selectedFrequency === 'every_episode' ? 'episode airs' : 'season premieres'} today! Reminders will begin with the next ${selectedFrequency === 'every_episode' ? 'episode' : 'season'} once available.`
+                    : `All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`
+                }
               />
             )}
 

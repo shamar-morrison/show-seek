@@ -9,7 +9,7 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
-import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
+import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -116,6 +116,12 @@ export default function ReminderModal({
     }
   }, [disabledTimings, selectedTiming, availableTimings]);
 
+  // Check if the release date is today (for context-aware messaging)
+  const isReleasingToday = useMemo(() => {
+    if (!releaseDate) return false;
+    return isReleaseToday(releaseDate);
+  }, [releaseDate]);
+
   const handleSetReminder = async () => {
     try {
       setIsLoading(true);
@@ -188,7 +194,13 @@ export default function ReminderModal({
 
             {/* All Options Disabled Warning */}
             {allOptionsDisabled && (
-              <ReminderErrorBanner message="All notification times for this release have passed. You cannot set a reminder for this movie." />
+              <ReminderErrorBanner
+                message={
+                  isReleasingToday
+                    ? 'This movie releases today! Notification times have already passed.'
+                    : 'All notification times for this release have passed. You cannot set a reminder for this movie.'
+                }
+              />
             )}
 
             {/* Timing Options */}

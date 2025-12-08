@@ -1,22 +1,7 @@
-### Bug Description
-
----
-
-There is a bug/caveat with setting reminders. currently all reminders are set to trigger at 9AM EST (i think) so take the following flow:
-
-1. User sets a reminder for new episodes/seasons. the current date is december 7, 2025
-2. the reminder modal shows that the new episode/season releases today on december 7, 2025
-3. the user sets an alarm for “on air day” or “one day before”
-
-this flow leads to the reminder banner showing outdated/incorrect information as can be seen in the images.
-
-- Banner 1: Releases Dec. 7, 2025 → Notify: Dec. 6, 2025 (one day before reminder)
-- Banner 2: releases dec. 7, 2025 → notify: dec. 7, 2025 at 9AM (one release day reminder)
-
-As you can see, banner 1 sets a reminder for a date that has already passed and banner 2 sets the reminder for the same day but what happens if 9AM has already passed?
-
----
-
-### Suggested Fix:
-
-If a user is trying to set a reminder for content that is suppose to be released on the current day, notify them in the modal and schedule the release for the next available release. e.g., the user tries to set a reminder for every episode and an episode releases today, show a notification in the modal and schedule the release for the subsequent episode. the same goes for seasons. this functionality should take into account if the information is available to set subsequent releases and handle gracefully if not.
+1. I'm leaving this up to users common sense, if they set a reminder for a show that drops entire seasons at once (so each episode will actually have the same release date), just reminder them for one episode (check out if the code handles this or not already)
+2. they have to set reminders for new seasons, if a season ends they stop receiving reminders
+3. still arrive at 9AM EST
+4. currently reminders can only be set for ongoing series but if a series becomes cancelled then no more reminders should be sent out after the final episode (check if the code already handles this)
+5. check the code and confirm
+6. this is the bug I was trying to fix, if the user is trying to schedule a reminder for episodes/seasons and the next episode/season air date is the same date as today then the user should be notified of such and told the reminders will begin for the subsequent episode/season
+7. check the code but i believe so

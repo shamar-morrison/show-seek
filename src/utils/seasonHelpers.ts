@@ -1,4 +1,5 @@
 import type { Season } from '@/src/api/tmdb';
+import { parseTmdbDate } from './dateUtils';
 
 export interface UpcomingSeasonResult {
   nextSeasonAirDate: string | null;
@@ -23,8 +24,8 @@ export function getNextUpcomingSeason(seasons: Season[] | undefined): UpcomingSe
 
   const upcomingSeason = seasons
     .filter((s) => s.season_number > 0)
-    .filter((s) => s.air_date && new Date(s.air_date) > today)
-    .sort((a, b) => new Date(a.air_date!).getTime() - new Date(b.air_date!).getTime())[0];
+    .filter((s) => s.air_date && parseTmdbDate(s.air_date) > today)
+    .sort((a, b) => parseTmdbDate(a.air_date!).getTime() - parseTmdbDate(b.air_date!).getTime())[0];
 
   if (upcomingSeason?.air_date) {
     return {
