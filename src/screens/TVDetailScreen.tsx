@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
-import AddToListModal from '@/src/components/AddToListModal';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
@@ -56,7 +56,7 @@ import {
   Star,
   Tv,
 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -85,7 +85,7 @@ export default function TVDetailScreen() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [listModalVisible, setListModalVisible] = useState(false);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -544,7 +544,10 @@ export default function TVDetailScreen() {
               style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
               onPress={() =>
-                requireAuth(() => setListModalVisible(true), 'Sign in to add items to your lists')
+                requireAuth(
+                  () => addToListModalRef.current?.present(),
+                  'Sign in to add items to your lists'
+                )
               }
               disabled={isLoadingLists}
             >
@@ -730,8 +733,7 @@ export default function TVDetailScreen() {
       {show && (
         <>
           <AddToListModal
-            visible={listModalVisible}
-            onClose={() => setListModalVisible(false)}
+            ref={addToListModalRef}
             mediaItem={{
               id: show.id,
               title: show.name,

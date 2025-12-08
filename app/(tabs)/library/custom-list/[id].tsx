@@ -24,9 +24,8 @@ export default function CustomListDetailScreen() {
   const {
     handleItemPress,
     handleLongPress,
-    handleCloseModal,
     handleShowToast,
-    modalVisible,
+    addToListModalRef,
     selectedMediaItem,
     toastRef,
   } = useMediaGridHandlers(isLoading);
@@ -187,8 +186,7 @@ export default function CustomListDetailScreen() {
 
       {selectedMediaItem && (
         <AddToListModal
-          visible={modalVisible}
-          onClose={handleCloseModal}
+          ref={addToListModalRef}
           mediaItem={selectedMediaItem}
           onShowToast={handleShowToast}
         />

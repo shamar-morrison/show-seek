@@ -1,4 +1,4 @@
-import CreateListModal from '@/src/components/CreateListModal';
+import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { filterCustomLists } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -9,7 +9,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -24,7 +24,7 @@ export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
-  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const createListModalRef = useRef<CreateListModalRef>(null);
 
   const ItemSeparator = () => <View style={styles.separator} />;
 
@@ -38,7 +38,7 @@ export default function CustomListsScreen() {
   const handleCreateList = useCallback(() => {
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setCreateModalVisible(true);
+      createListModalRef.current?.present();
     });
   }, [requireAuth]);
 
@@ -118,11 +118,7 @@ export default function CustomListsScreen() {
           />
         )}
       </SafeAreaView>
-      <CreateListModal
-        visible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
-        onSuccess={handleCreateSuccess}
-      />
+      <CreateListModal ref={createListModalRef} onSuccess={handleCreateSuccess} />
       {AuthGuardModal}
     </>
   );
