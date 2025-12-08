@@ -1,3 +1,10 @@
+import {
+  DevModeBanner,
+  ReminderErrorBanner,
+  ReminderTimingOptions,
+  ReminderWarningBanner,
+  TimingOption,
+} from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
@@ -30,7 +37,7 @@ interface ReminderModalProps {
   onShowToast?: (message: string) => void;
 }
 
-const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] = __DEV__
+const TIMING_OPTIONS: TimingOption[] = __DEV__
   ? [
       {
         value: 'on_release_day',
@@ -161,14 +168,7 @@ export default function ReminderModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dev Mode Banner */}
-            {__DEV__ && (
-              <View style={styles.devBanner}>
-                <Text style={styles.devBannerText}>
-                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
-                </Text>
-              </View>
-            )}
+            <DevModeBanner />
 
             {/* Movie Title */}
             <Text style={styles.movieTitle} numberOfLines={2}>
@@ -184,58 +184,24 @@ export default function ReminderModal({
             )}
 
             {/* Warning Banner for Past Options */}
-            {!allOptionsDisabled && disabledTimings.size > 0 && (
-              <View style={styles.warningBanner}>
-                <Text style={styles.warningBannerText}>
-                  ⚠️ Some notification times have already passed
-                </Text>
-              </View>
-            )}
+            {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
 
             {/* All Options Disabled Warning */}
             {allOptionsDisabled && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorBannerText}>
-                  All notification times for this release have passed. You cannot set a reminder for
-                  this movie.
-                </Text>
-              </View>
+              <ReminderErrorBanner message="All notification times for this release have passed. You cannot set a reminder for this movie." />
             )}
 
             {/* Timing Options */}
             {!allOptionsDisabled && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
-                {TIMING_OPTIONS.map((option) => {
-                  const isDisabled = disabledTimings.has(option.value);
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.timingOption,
-                        selectedTiming === option.value && styles.timingOptionSelected,
-                        isDisabled && styles.timingOptionDisabled,
-                      ]}
-                      onPress={() => !isDisabled && setSelectedTiming(option.value)}
-                      disabled={isLoading || isDisabled}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <View style={[styles.radioOuter, isDisabled && styles.radioOuterDisabled]}>
-                        {selectedTiming === option.value && !isDisabled && (
-                          <View style={styles.radioInner} />
-                        )}
-                      </View>
-                      <View style={styles.timingTextContainer}>
-                        <Text style={[styles.timingLabel, isDisabled && styles.textDisabled]}>
-                          {option.label}
-                        </Text>
-                        <Text style={[styles.timingDescription, isDisabled && styles.textDisabled]}>
-                          {isDisabled ? 'Notification time has passed' : option.description}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                <ReminderTimingOptions
+                  options={TIMING_OPTIONS}
+                  selectedValue={selectedTiming}
+                  disabledValues={disabledTimings}
+                  onSelect={setSelectedTiming}
+                  disabled={isLoading}
+                />
               </View>
             )}
 
@@ -337,17 +303,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  warningContainer: {
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.l,
-  },
-  warningText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.warning,
-    textAlign: 'center',
-  },
   section: {
     marginBottom: SPACING.l,
   },
@@ -356,48 +311,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: SPACING.m,
-  },
-  timingOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-    gap: SPACING.m,
-  },
-  timingOptionSelected: {
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primary,
-  },
-  timingTextContainer: {
-    flex: 1,
-  },
-  timingLabel: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timingDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   actions: {
     gap: SPACING.m,
@@ -428,53 +341,6 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: COLORS.error,
-  },
-  devBanner: {
-    backgroundColor: COLORS.warning,
-    padding: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-  },
-  devBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  warningBanner: {
-    backgroundColor: COLORS.warning + '20',
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
-  },
-  warningBannerText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.warning,
-    textAlign: 'center',
-  },
-  errorBanner: {
-    backgroundColor: COLORS.error + '20',
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  errorBannerText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.error,
-    textAlign: 'center',
-  },
-  timingOptionDisabled: {
-    opacity: 0.5,
-  },
-  radioOuterDisabled: {
-    borderColor: COLORS.textSecondary,
-  },
-  textDisabled: {
-    color: COLORS.textSecondary,
   },
   buttonDisabled: {
     opacity: 0.5,

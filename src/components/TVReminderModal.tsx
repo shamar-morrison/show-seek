@@ -1,3 +1,10 @@
+import {
+  DevModeBanner,
+  ReminderErrorBanner,
+  ReminderTimingOptions,
+  ReminderWarningBanner,
+  TimingOption,
+} from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
@@ -42,70 +49,68 @@ interface TVReminderModalProps {
 }
 
 // Timing options for episodes (1 day before or on air day only)
-const EPISODE_TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] =
-  __DEV__
-    ? [
-        {
-          value: 'on_release_day',
-          label: 'Test in 10 seconds',
-          description: 'DEV MODE: Notification in 10 seconds',
-        },
-        {
-          value: '1_day_before',
-          label: 'Test in 20 seconds',
-          description: 'DEV MODE: Notification in 20 seconds',
-        },
-      ]
-    : [
-        {
-          value: 'on_release_day',
-          label: 'On Air Day',
-          description: 'Get notified when the episode airs',
-        },
-        {
-          value: '1_day_before',
-          label: '1 Day Before',
-          description: 'Get notified one day before the episode airs',
-        },
-      ];
+const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
+  ? [
+      {
+        value: 'on_release_day',
+        label: 'Test in 10 seconds',
+        description: 'DEV MODE: Notification in 10 seconds',
+      },
+      {
+        value: '1_day_before',
+        label: 'Test in 20 seconds',
+        description: 'DEV MODE: Notification in 20 seconds',
+      },
+    ]
+  : [
+      {
+        value: 'on_release_day',
+        label: 'On Air Day',
+        description: 'Get notified when the episode airs',
+      },
+      {
+        value: '1_day_before',
+        label: '1 Day Before',
+        description: 'Get notified one day before the episode airs',
+      },
+    ];
 
 // Timing options for seasons (all three options)
-const SEASON_TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] =
-  __DEV__
-    ? [
-        {
-          value: 'on_release_day',
-          label: 'Test in 10 seconds',
-          description: 'DEV MODE: Notification in 10 seconds',
-        },
-        {
-          value: '1_day_before',
-          label: 'Test in 20 seconds',
-          description: 'DEV MODE: Notification in 20 seconds',
-        },
-        {
-          value: '1_week_before',
-          label: 'Test in 30 seconds',
-          description: 'DEV MODE: Notification in 30 seconds',
-        },
-      ]
-    : [
-        {
-          value: 'on_release_day',
-          label: 'On Premiere Day',
-          description: 'Get notified when the season premieres',
-        },
-        {
-          value: '1_day_before',
-          label: '1 Day Before',
-          description: 'Get notified one day before premiere',
-        },
-        {
-          value: '1_week_before',
-          label: '1 Week Before',
-          description: 'Get notified one week before premiere',
-        },
-      ];
+const SEASON_TIMING_OPTIONS: TimingOption[] = __DEV__
+  ? [
+      {
+        value: 'on_release_day',
+        label: 'Test in 10 seconds',
+        description: 'DEV MODE: Notification in 10 seconds',
+      },
+      {
+        value: '1_day_before',
+        label: 'Test in 20 seconds',
+        description: 'DEV MODE: Notification in 20 seconds',
+      },
+      {
+        value: '1_week_before',
+        label: 'Test in 30 seconds',
+        description: 'DEV MODE: Notification in 30 seconds',
+      },
+    ]
+  : [
+      {
+        value: 'on_release_day',
+        label: 'On Premiere Day',
+        description: 'Get notified when the season premieres',
+      },
+      {
+        value: '1_day_before',
+        label: '1 Day Before',
+        description: 'Get notified one day before premiere',
+      },
+      {
+        value: '1_week_before',
+        label: '1 Week Before',
+        description: 'Get notified one week before premiere',
+      },
+    ];
 
 export default function TVReminderModal({
   visible,
@@ -257,14 +262,7 @@ export default function TVReminderModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dev Mode Banner */}
-            {__DEV__ && (
-              <View style={styles.devBanner}>
-                <Text style={styles.devBannerText}>
-                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
-                </Text>
-              </View>
-            )}
+            <DevModeBanner />
 
             {/* Show Title */}
             <View style={styles.titleRow}>
@@ -356,57 +354,27 @@ export default function TVReminderModal({
 
             {/* Warning Banner for Past Options */}
             {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
-              <View style={styles.warningBanner}>
-                <Text style={styles.warningBannerText}>
-                  ⚠️ Some notification times have already passed
-                </Text>
-              </View>
+              <ReminderWarningBanner />
             )}
 
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
             {hasFrequencyDate && allTimingsDisabled && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorBannerText}>
-                  All notification times for this{' '}
-                  {selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.
-                </Text>
-              </View>
+              <ReminderErrorBanner
+                message={`All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`}
+              />
             )}
 
             {/* Timing Options */}
             {hasFrequencyDate && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
-                {timingOptions.map((option) => {
-                  const isDisabled = disabledTimings.has(option.value);
-                  return (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={[
-                        styles.timingOption,
-                        selectedTiming === option.value && styles.timingOptionSelected,
-                        isDisabled && styles.timingOptionDisabled,
-                      ]}
-                      onPress={() => !isDisabled && setSelectedTiming(option.value)}
-                      disabled={isLoading || isDisabled}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <View style={[styles.radioOuter, isDisabled && styles.radioOuterDisabled]}>
-                        {selectedTiming === option.value && !isDisabled && (
-                          <View style={styles.radioInner} />
-                        )}
-                      </View>
-                      <View style={styles.timingTextContainer}>
-                        <Text style={[styles.timingLabel, isDisabled && styles.textDisabled]}>
-                          {option.label}
-                        </Text>
-                        <Text style={[styles.timingDescription, isDisabled && styles.textDisabled]}>
-                          {isDisabled ? 'Notification time has passed' : option.description}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                <ReminderTimingOptions
+                  options={timingOptions}
+                  selectedValue={selectedTiming}
+                  disabledValues={disabledTimings}
+                  onSelect={setSelectedTiming}
+                  disabled={isLoading}
+                />
               </View>
             )}
 
@@ -581,19 +549,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  timingOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-    gap: SPACING.m,
-  },
-  timingOptionSelected: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
   radioOuter: {
     width: 20,
     height: 20,
@@ -608,19 +563,6 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: COLORS.primary,
-  },
-  timingTextContainer: {
-    flex: 1,
-  },
-  timingLabel: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timingDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   actions: {
     gap: SPACING.m,
@@ -653,18 +595,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.error,
   },
-  devBanner: {
-    backgroundColor: COLORS.warning,
-    padding: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-  },
-  devBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
   disabledText: {
     color: COLORS.textSecondary,
   },
@@ -681,41 +611,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
-  },
-  warningBanner: {
-    backgroundColor: COLORS.warning + '20',
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.warning,
-  },
-  warningBannerText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.warning,
-    textAlign: 'center',
-  },
-  errorBanner: {
-    backgroundColor: COLORS.error + '20',
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  errorBannerText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.error,
-    textAlign: 'center',
-  },
-  timingOptionDisabled: {
-    opacity: 0.5,
-  },
-  radioOuterDisabled: {
-    borderColor: COLORS.textSecondary,
-  },
-  textDisabled: {
-    color: COLORS.textSecondary,
   },
   buttonDisabled: {
     opacity: 0.5,
