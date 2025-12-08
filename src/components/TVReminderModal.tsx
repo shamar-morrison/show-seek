@@ -190,22 +190,11 @@ export default function TVReminderModal({
   // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
   const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
-  // Check if the selected timing would skip the current notification (for existing reminders)
+  // Check if the existing reminder's timing is now disabled/past
   const willSkipCurrentNotification = useMemo(() => {
-    // Only show warning when updating an existing reminder and the new timing is in the past
-    if (!hasReminder) return false;
-    // If the user hasn't changed anything, no warning needed
-    if (selectedTiming === currentTiming && selectedFrequency === currentFrequency) return false;
-    // Check if the newly selected timing would result in a past notification
-    return disabledTimings.has(selectedTiming);
-  }, [
-    hasReminder,
-    selectedTiming,
-    currentTiming,
-    selectedFrequency,
-    currentFrequency,
-    disabledTimings,
-  ]);
+    // Show warning when the existing reminder's timing has passed
+    return hasReminder && currentTiming && disabledTimings.has(currentTiming);
+  }, [hasReminder, currentTiming, disabledTimings]);
 
   // Get context-aware warning message for skip notification
   const getSkipWarningMessage = () => {
