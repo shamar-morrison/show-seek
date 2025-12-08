@@ -160,9 +160,9 @@ export default function ReminderModal({
             {/* Warning Banner for Past Options */}
             {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
 
-            {/* Timing Skip Warning - shows when updating reminder to a past timing */}
+            {/* Timing Change Info - shows when updating an existing reminder's timing */}
             {willSkipCurrentNotification && (
-              <ReminderInfoBanner message="This timing has already passed for the current release." />
+              <ReminderInfoBanner message="Changing the timing will reschedule your notification." />
             )}
 
             {/* All Options Disabled Warning */}
