@@ -200,16 +200,20 @@ export default function TVDetailScreen() {
   const subsequentEpisode = subsequentEpisodeQuery.data ?? null;
   const isLoadingSubsequent = subsequentEpisodeQuery.isLoading;
 
+  // Whether we should use the subsequent episode instead of the current next episode
+  const isUsingSubsequent = useMemo(() => {
+    return !!(nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode);
+  }, [nextEpisodeInfo, subsequentEpisode]);
+
   // The effective episode to use for reminders:
   // If today's episode is airing, use subsequent episode (if available)
   const effectiveNextEpisode = useMemo(() => {
-    if (nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode) {
+    if (isUsingSubsequent) {
       return subsequentEpisode;
     }
     return nextEpisodeInfo;
-  }, [nextEpisodeInfo, subsequentEpisode]);
+  }, [nextEpisodeInfo, subsequentEpisode, isUsingSubsequent]);
 
-  // Reminder handlers (must be before early returns)
   const handleSetReminder = useCallback(
     async (
       timing: ReminderTiming,
@@ -755,9 +759,7 @@ export default function TVDetailScreen() {
             tvTitle={show.name}
             nextEpisode={effectiveNextEpisode}
             originalNextEpisode={nextEpisodeInfo}
-            isUsingSubsequentEpisode={
-              !!(nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode)
-            }
+            isUsingSubsequentEpisode={isUsingSubsequent}
             isLoadingSubsequentEpisode={isLoadingSubsequent}
             nextSeasonAirDate={nextSeasonAirDate}
             nextSeasonNumber={nextSeasonNumber}
