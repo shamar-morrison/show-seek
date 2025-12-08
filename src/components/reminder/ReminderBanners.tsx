@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   infoBannerText: {
     fontSize: FONT_SIZE.s,
-    color: COLORS.primary,
+    color: COLORS.white,
     textAlign: 'center',
   },
 });
