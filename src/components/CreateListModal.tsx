@@ -1,4 +1,3 @@
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCreateList } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
@@ -7,7 +6,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -15,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Modal, Portal } from 'react-native-paper';
 
 interface CreateListModalProps {
   visible: boolean;
@@ -59,85 +58,92 @@ export default function CreateListModal({ visible, onClose, onSuccess }: CreateL
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={handleClose}
+        contentContainerStyle={styles.modalContainer}
+        style={styles.modal}
       >
-        <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
-
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Create New List</Text>
-            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.createContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="List Name"
-              placeholderTextColor={COLORS.textSecondary}
-              value={listName}
-              onChangeText={setListName}
-              autoFocus
-              returnKeyType="done"
-              editable={!createMutation.isPending}
-              onSubmitEditing={handleCreate}
-            />
-            {error && <Text style={styles.errorText}>{error}</Text>}
-            <View style={styles.createActions}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleClose}
-                activeOpacity={ACTIVE_OPACITY}
-                disabled={createMutation.isPending}
-              >
-                <Text
-                  style={[styles.cancelButtonText, createMutation.isPending && styles.disabledText]}
-                >
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.createButton,
-                  (!listName.trim() || createMutation.isPending) && styles.disabledButton,
-                ]}
-                onPress={handleCreate}
-                disabled={!listName.trim() || createMutation.isPending}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                {createMutation.isPending ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <Text style={styles.createButtonText}>Create</Text>
-                )}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Create New List</Text>
+              <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
+                <X size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
+
+            <View style={styles.createContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="List Name"
+                placeholderTextColor={COLORS.textSecondary}
+                value={listName}
+                onChangeText={setListName}
+                autoFocus
+                returnKeyType="done"
+                editable={!createMutation.isPending}
+                onSubmitEditing={handleCreate}
+              />
+              {error && <Text style={styles.errorText}>{error}</Text>}
+              <View style={styles.createActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={handleClose}
+                  activeOpacity={ACTIVE_OPACITY}
+                  disabled={createMutation.isPending}
+                >
+                  <Text
+                    style={[
+                      styles.cancelButtonText,
+                      createMutation.isPending && styles.disabledText,
+                    ]}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.createButton,
+                    (!listName.trim() || createMutation.isPending) && styles.disabledButton,
+                  ]}
+                  onPress={handleCreate}
+                  disabled={!listName.trim() || createMutation.isPending}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {createMutation.isPending ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.createButtonText}>Create</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+        </KeyboardAvoidingView>
+      </Modal>
+    </Portal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  modal: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.l,
+    margin: SPACING.l,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  content: {
+  modalContainer: {
     width: '100%',
     maxWidth: 400,
+  },
+  keyboardView: {
+    width: '100%',
+  },
+  content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     padding: SPACING.l,
