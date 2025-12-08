@@ -56,7 +56,7 @@ import {
   Star,
   Tv,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -182,30 +182,23 @@ export default function TVDetailScreen() {
     return getNextUpcomingSeason(tvQuery.data?.seasons);
   }, [tvQuery.data]);
 
-  // State for subsequent episode (used when current next episode airs today)
-  const [subsequentEpisode, setSubsequentEpisode] = useState<NextEpisodeInfo | null>(null);
-  const [isLoadingSubsequent, setIsLoadingSubsequent] = useState(false);
-
   // Fetch subsequent episode when current next episode airs today
-  useEffect(() => {
-    const airDate = nextEpisodeInfo?.airDate;
-    // Only fetch if we have a next episode and it airs today
-    if (airDate && isReleaseToday(airDate)) {
-      setIsLoadingSubsequent(true);
-      getSubsequentEpisode(tvId, nextEpisodeInfo!)
-        .then(setSubsequentEpisode)
-        .catch(() => setSubsequentEpisode(null))
-        .finally(() => setIsLoadingSubsequent(false));
-    } else {
-      // Clear subsequent episode when not needed
-      setSubsequentEpisode(null);
-    }
-  }, [
-    tvId,
-    nextEpisodeInfo?.airDate,
-    nextEpisodeInfo?.seasonNumber,
-    nextEpisodeInfo?.episodeNumber,
-  ]);
+  const subsequentEpisodeQuery = useQuery({
+    queryKey: [
+      'tv',
+      tvId,
+      'subsequent-episode',
+      nextEpisodeInfo?.seasonNumber,
+      nextEpisodeInfo?.episodeNumber,
+    ],
+    queryFn: () => getSubsequentEpisode(tvId, nextEpisodeInfo!),
+    enabled: !!(nextEpisodeInfo?.airDate && isReleaseToday(nextEpisodeInfo.airDate)),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+
+  const subsequentEpisode = subsequentEpisodeQuery.data ?? null;
+  const isLoadingSubsequent = subsequentEpisodeQuery.isLoading;
 
   // The effective episode to use for reminders:
   // If today's episode is airing, use subsequent episode (if available)
