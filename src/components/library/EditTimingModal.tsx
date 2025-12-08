@@ -85,11 +85,13 @@ export default function EditTimingModal({
 
   // Check if the selected timing would skip the current notification
   const willSkipCurrentNotification = useMemo(() => {
-    // Only show warning if:
+    // Show warning if:
     // 1. The user is changing to a different timing
-    // 2. The new timing is in the past (disabled)
-    // When an option is disabled, selecting it means accepting that the current notification is skipped
-    return selectedTiming !== reminder.reminderTiming && disabledTimings.has(selectedTiming);
+    // 2. The original reminder timing is now in the past (disabled)
+    // This means saving the new timing would skip the originally scheduled notification
+    return (
+      selectedTiming !== reminder.reminderTiming && disabledTimings.has(reminder.reminderTiming)
+    );
   }, [selectedTiming, reminder.reminderTiming, disabledTimings]);
 
   const handleUpdateTiming = async () => {
