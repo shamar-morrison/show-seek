@@ -1,32 +1,22 @@
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetScrollView,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Check, Plus, Settings2, X } from 'lucide-react-native';
-import React, {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Modal, Portal } from 'react-native-paper';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import {
   useAddToList,
@@ -39,13 +29,10 @@ import {
 import { ListMediaItem } from '../services/ListService';
 
 interface AddToListModalProps {
+  visible: boolean;
+  onClose: () => void;
   mediaItem: Omit<ListMediaItem, 'addedAt'>;
   onShowToast?: (message: string) => void;
-}
-
-export interface AddToListModalRef {
-  present: () => void;
-  dismiss: () => void;
 }
 
 const AnimatedCheck = ({ visible }: { visible: boolean }) => {
@@ -75,331 +62,293 @@ const AnimatedCheck = ({ visible }: { visible: boolean }) => {
   );
 };
 
-const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
-  ({ mediaItem, onShowToast }, ref) => {
-    const router = useRouter();
-    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-    const [isCreating, setIsCreating] = useState(false);
-    const [newListName, setNewListName] = useState('');
-    const [createError, setCreateError] = useState<string | null>(null);
-    const [operationError, setOperationError] = useState<string | null>(null);
+export default function AddToListModal({
+  visible,
+  onClose,
+  mediaItem,
+  onShowToast,
+}: AddToListModalProps) {
+  const router = useRouter();
+  const [isCreating, setIsCreating] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
-    const hasChangesRef = useRef(false);
+  const hasChangesRef = useRef(false);
 
-    const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
-    const { membership } = useMediaLists(mediaItem.id);
+  const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
+  const { membership } = useMediaLists(mediaItem.id);
 
-    const addMutation = useAddToList();
-    const removeMutation = useRemoveFromList();
-    const createMutation = useCreateList();
-    const deleteMutation = useDeleteList();
+  const addMutation = useAddToList();
+  const removeMutation = useRemoveFromList();
+  const createMutation = useCreateList();
+  const deleteMutation = useDeleteList();
 
-    // Snap points for dynamic content
-    const snapPoints = useMemo(() => ['50%', '75%'], []);
-
-    // Expose imperative methods
-    useImperativeHandle(ref, () => ({
-      present: () => {
-        hasChangesRef.current = false;
-        setCreateError(null);
-        setOperationError(null);
-        setIsCreating(false);
-        setNewListName('');
-        bottomSheetModalRef.current?.present();
-      },
-      dismiss: () => {
-        bottomSheetModalRef.current?.dismiss();
-      },
-    }));
-
-    const handleDismiss = useCallback(() => {
-      if (hasChangesRef.current && onShowToast) {
-        onShowToast('Lists updated');
-      }
-    }, [onShowToast]);
-
-    // Error handler for mutations
-    const handleMutationError = useCallback((error: Error) => {
-      console.error('List operation failed:', error);
-      setOperationError(error.message || 'Failed to update list');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }, []);
-
-    const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setOperationError(null);
-      hasChangesRef.current = true;
-
-      if (isMember) {
-        removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
-      } else {
-        addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
-      }
-    };
-
-    const handleCreateList = async () => {
-      if (!newListName.trim()) return;
-
+  // Reset state when modal opens
+  useEffect(() => {
+    if (visible) {
+      hasChangesRef.current = false;
       setCreateError(null);
+      setOperationError(null);
+      setIsCreating(false);
+      setNewListName('');
+    }
+  }, [visible]);
 
-      try {
-        // 1. Create list (must await to get the listId)
-        const listId = await createMutation.mutateAsync(newListName.trim());
+  const handleClose = useCallback(() => {
+    if (hasChangesRef.current && onShowToast) {
+      onShowToast('Lists updated');
+    }
+    onClose();
+  }, [onClose, onShowToast]);
 
-        // 2. Add item to new list (fire-and-forget with optimistic update)
-        hasChangesRef.current = true;
-        addMutation.mutate(
-          {
-            listId,
-            mediaItem,
-            listName: newListName.trim(),
-          },
-          { onError: handleMutationError }
-        );
+  // Error handler for mutations
+  const handleMutationError = useCallback((error: Error) => {
+    console.error('List operation failed:', error);
+    setOperationError(error.message || 'Failed to update list');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+  }, []);
 
-        // 3. Success feedback and reset UI immediately
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setNewListName('');
-        setIsCreating(false);
-      } catch (error) {
-        console.error('Failed to create list:', error);
-        setCreateError('Failed to create list. Please try again.');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    };
+  const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOperationError(null);
+    hasChangesRef.current = true;
 
-    const handleDeleteList = (listId: string, listName: string) => {
-      const DEFAULT_LIST_IDS = [
-        'favorites',
-        'watchlist', // should watch
-        'currently-watching',
-        'already-watched',
-        'dropped',
-      ];
+    if (isMember) {
+      removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
+    } else {
+      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
+    }
+  };
 
-      if (DEFAULT_LIST_IDS.includes(listId)) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
-        return;
-      }
+  const handleCreateList = async () => {
+    if (!newListName.trim()) return;
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Alert.alert(
-        'Delete List',
-        `This will remove "${listName}" and all its items. This cannot be undone.`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteMutation.mutateAsync(listId);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                if (onShowToast) {
-                  onShowToast('List deleted');
-                }
-              } catch (error) {
-                console.error('Failed to delete list:', error);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                Alert.alert(
-                  'Delete Failed',
-                  error instanceof Error ? error.message : 'Failed to delete list'
-                );
-              }
-            },
-          },
-        ]
+    setCreateError(null);
+
+    try {
+      // 1. Create list (must await to get the listId)
+      const listId = await createMutation.mutateAsync(newListName.trim());
+
+      // 2. Add item to new list (fire-and-forget with optimistic update)
+      hasChangesRef.current = true;
+      addMutation.mutate(
+        {
+          listId,
+          mediaItem,
+          listName: newListName.trim(),
+        },
+        { onError: handleMutationError }
       );
-    };
 
-    const handleClose = useCallback(() => {
-      bottomSheetModalRef.current?.dismiss();
-    }, []);
+      // 3. Success feedback and reset UI immediately
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setNewListName('');
+      setIsCreating(false);
+    } catch (error) {
+      console.error('Failed to create list:', error);
+      setCreateError('Failed to create list. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  };
 
-    const handleManageLists = useCallback(() => {
-      handleClose();
-      router.push('/manage-lists');
-    }, [handleClose, router]);
+  const handleDeleteList = (listId: string, listName: string) => {
+    const DEFAULT_LIST_IDS = [
+      'favorites',
+      'watchlist', // should watch
+      'currently-watching',
+      'already-watched',
+      'dropped',
+    ];
 
-    // Custom backdrop with blur effect
-    const renderBackdrop = useCallback(
-      (props: any) => (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={-1}
-          appearsOnIndex={0}
-          opacity={0.7}
-          pressBehavior="close"
-        />
-      ),
-      []
+    if (DEFAULT_LIST_IDS.includes(listId)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      'Delete List',
+      `This will remove "${listName}" and all its items. This cannot be undone.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMutation.mutateAsync(listId);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (onShowToast) {
+                onShowToast('List deleted');
+              }
+            } catch (error) {
+              console.error('Failed to delete list:', error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                'Delete Failed',
+                error instanceof Error ? error.message : 'Failed to delete list'
+              );
+            }
+          },
+        },
+      ]
     );
+  };
 
-    // Handle indicator
-    const renderHandle = useCallback(
-      () => (
-        <View style={styles.handleContainer}>
-          <View style={styles.handle} />
-        </View>
-      ),
-      []
-    );
-
-    return (
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        snapPoints={snapPoints}
-        onDismiss={handleDismiss}
-        backdropComponent={renderBackdrop}
-        handleComponent={renderHandle}
-        backgroundStyle={styles.bottomSheetBackground}
-        keyboardBehavior="interactive"
-        keyboardBlurBehavior="restore"
-        android_keyboardInputMode="adjustResize"
+  return (
+    <Portal>
+      <Modal
+        visible={visible}
+        onDismiss={handleClose}
+        contentContainerStyle={styles.modalContainer}
+        style={styles.modal}
       >
-        <BottomSheetView style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
-            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
-
-          {(operationError || listsError) && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>
-                {operationError ||
-                  (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
-              </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
+              <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
+                <X size={24} color={COLORS.text} />
+              </TouchableOpacity>
             </View>
-          )}
 
-          {isCreating ? (
-            <View style={styles.createContainer}>
-              <BottomSheetTextInput
-                style={styles.input}
-                placeholder="List Name"
-                placeholderTextColor={COLORS.textSecondary}
-                value={newListName}
-                onChangeText={setNewListName}
-                autoFocus
-                returnKeyType="done"
-                editable={!createMutation.isPending}
-                onSubmitEditing={handleCreateList}
-              />
-              {createError && <Text style={styles.errorText}>{createError}</Text>}
-              <View style={styles.createActions}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setIsCreating(false)}
-                  activeOpacity={ACTIVE_OPACITY}
-                  disabled={createMutation.isPending}
-                >
-                  <Text
-                    style={[
-                      styles.cancelButtonText,
-                      createMutation.isPending && styles.disabledText,
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.createButton,
-                    (!newListName.trim() || createMutation.isPending) && styles.disabledButton,
-                  ]}
-                  onPress={handleCreateList}
-                  disabled={!newListName.trim() || createMutation.isPending}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  {createMutation.isPending ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.createButtonText}>Create</Text>
-                  )}
-                </TouchableOpacity>
+            {(operationError || listsError) && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>
+                  {operationError ||
+                    (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
+                </Text>
               </View>
-            </View>
-          ) : (
-            <>
-              {isLoadingLists ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-              ) : (
-                <BottomSheetScrollView style={styles.listContainer} showsVerticalScrollIndicator>
-                  {lists?.map((list) => {
-                    const isMember = !!membership[list.id];
-                    return (
-                      <Pressable
-                        key={list.id}
-                        style={styles.listItem}
-                        onPress={() => handleToggleList(list.id, list.name, isMember)}
-                        onLongPress={() => handleDeleteList(list.id, list.name)}
-                      >
-                        <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
-                          <AnimatedCheck visible={isMember} />
-                        </View>
-                        <Text style={styles.listName}>{list.name}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </BottomSheetScrollView>
-              )}
+            )}
 
-              <TouchableOpacity
-                style={styles.createListButton}
-                onPress={() => setIsCreating(true)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Plus size={20} color={COLORS.primary} />
-                <Text style={styles.createListText}>Create Custom List</Text>
-              </TouchableOpacity>
+            {isCreating ? (
+              <View style={styles.createContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="List Name"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={newListName}
+                  onChangeText={setNewListName}
+                  autoFocus
+                  returnKeyType="done"
+                  editable={!createMutation.isPending}
+                  onSubmitEditing={handleCreateList}
+                />
+                {createError && <Text style={styles.errorText}>{createError}</Text>}
+                <View style={styles.createActions}>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setIsCreating(false)}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={createMutation.isPending}
+                  >
+                    <Text
+                      style={[
+                        styles.cancelButtonText,
+                        createMutation.isPending && styles.disabledText,
+                      ]}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.createButton,
+                      (!newListName.trim() || createMutation.isPending) && styles.disabledButton,
+                    ]}
+                    onPress={handleCreateList}
+                    disabled={!newListName.trim() || createMutation.isPending}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    {createMutation.isPending ? (
+                      <ActivityIndicator size="small" color={COLORS.white} />
+                    ) : (
+                      <Text style={styles.createButtonText}>Create</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                {isLoadingLists ? (
+                  <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+                ) : (
+                  <ScrollView style={styles.listContainer} showsVerticalScrollIndicator>
+                    {lists?.map((list) => {
+                      const isMember = !!membership[list.id];
+                      return (
+                        <Pressable
+                          key={list.id}
+                          style={styles.listItem}
+                          onPress={() => handleToggleList(list.id, list.name, isMember)}
+                          onLongPress={() => handleDeleteList(list.id, list.name)}
+                        >
+                          <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
+                            <AnimatedCheck visible={isMember} />
+                          </View>
+                          <Text style={styles.listName}>{list.name}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
 
-              <TouchableOpacity
-                style={styles.manageListsButton}
-                onPress={handleManageLists}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Settings2 size={20} color={COLORS.textSecondary} />
-                <Text style={styles.manageListsText}>Manage Lists</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </BottomSheetView>
-      </BottomSheetModal>
-    );
-  }
-);
+                <TouchableOpacity
+                  style={styles.createListButton}
+                  onPress={() => setIsCreating(true)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Plus size={20} color={COLORS.primary} />
+                  <Text style={styles.createListText}>Create Custom List</Text>
+                </TouchableOpacity>
 
-AddToListModal.displayName = 'AddToListModal';
-
-export default AddToListModal;
+                <TouchableOpacity
+                  style={styles.manageListsButton}
+                  onPress={() => {
+                    handleClose();
+                    router.push('/manage-lists');
+                  }}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  <Settings2 size={20} color={COLORS.textSecondary} />
+                  <Text style={styles.manageListsText}>Manage Lists</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </Portal>
+  );
+}
 
 const styles = StyleSheet.create({
-  bottomSheetBackground: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: BORDER_RADIUS.xl,
-    borderTopRightRadius: BORDER_RADIUS.xl,
-  },
-  handleContainer: {
+  modal: {
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.s,
+    margin: SPACING.l,
   },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 2,
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.l,
+  keyboardView: {
+    width: '100%',
+  },
+  content: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
   },
   header: {
     flexDirection: 'row',
@@ -416,7 +365,6 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
-    flex: 1,
     maxHeight: 300,
   },
   listItem: {

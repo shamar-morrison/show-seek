@@ -5,7 +5,6 @@ import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -14,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PaperProvider } from 'react-native-paper';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -134,9 +134,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <BottomSheetModalProvider>
+          <PaperProvider>
             <RootLayoutNav />
-          </BottomSheetModalProvider>
+          </PaperProvider>
         </GestureHandlerRootView>
       </AuthProvider>
     </QueryClientProvider>

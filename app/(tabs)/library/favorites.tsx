@@ -18,8 +18,9 @@ export default function FavoritesScreen() {
   const {
     handleItemPress,
     handleLongPress,
+    handleCloseModal,
     handleShowToast,
-    addToListModalRef,
+    modalVisible,
     selectedMediaItem,
     toastRef,
   } = useMediaGridHandlers(isLoading);
@@ -53,7 +54,8 @@ export default function FavoritesScreen() {
 
       {selectedMediaItem && (
         <AddToListModal
-          ref={addToListModalRef}
+          visible={modalVisible}
+          onClose={handleCloseModal}
           mediaItem={selectedMediaItem}
           onShowToast={handleShowToast}
         />
