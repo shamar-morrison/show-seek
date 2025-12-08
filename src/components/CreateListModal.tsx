@@ -59,15 +59,16 @@ export default function CreateListModal({ visible, onClose, onSuccess }: CreateL
 
   return (
     <Portal>
-      <Modal
-        visible={visible}
-        onDismiss={handleClose}
-        contentContainerStyle={styles.modalContainer}
-        style={styles.modal}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+        pointerEvents="box-none"
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+        <Modal
+          visible={visible}
+          onDismiss={handleClose}
+          contentContainerStyle={styles.modalContainer}
+          style={styles.modal}
         >
           <View style={styles.content}>
             <View style={styles.header}>
@@ -124,24 +125,26 @@ export default function CreateListModal({ visible, onClose, onSuccess }: CreateL
               </View>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        </Modal>
+      </KeyboardAvoidingView>
     </Portal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardView: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingTop: 100,
+  },
   modal: {
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     margin: SPACING.l,
   },
   modalContainer: {
     width: '100%',
     maxWidth: 400,
-  },
-  keyboardView: {
-    width: '100%',
   },
   content: {
     backgroundColor: COLORS.surface,
