@@ -223,11 +223,13 @@ export default function TVReminderModal({
     return d < today;
   };
 
+  // Check if the currently selected frequency has a valid date
+  const hasFrequencyDate =
+    (selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
+    (selectedFrequency === 'season_premiere' && canSetSeasonReminder);
+
   // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
-  const canSetReminder =
-    ((selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
-      (selectedFrequency === 'season_premiere' && canSetSeasonReminder)) &&
-    !allTimingsDisabled;
+  const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
   // Get the relevant date for display
   const displayDate =
@@ -343,7 +345,7 @@ export default function TVReminderModal({
             </View>
 
             {/* Date Display */}
-            {displayDate && canSetReminder && (
+            {displayDate && hasFrequencyDate && (
               <View style={styles.dateContainer}>
                 <Calendar size={16} color={COLORS.textSecondary} />
                 <Text style={styles.dateText}>
@@ -353,7 +355,7 @@ export default function TVReminderModal({
             )}
 
             {/* Warning Banner for Past Options */}
-            {canSetReminder && disabledTimings.size > 0 && (
+            {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
               <View style={styles.warningBanner}>
                 <Text style={styles.warningBannerText}>
                   ⚠️ Some notification times have already passed
@@ -362,19 +364,17 @@ export default function TVReminderModal({
             )}
 
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
-            {((selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
-              (selectedFrequency === 'season_premiere' && canSetSeasonReminder)) &&
-              allTimingsDisabled && (
-                <View style={styles.errorBanner}>
-                  <Text style={styles.errorBannerText}>
-                    All notification times for this{' '}
-                    {selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.
-                  </Text>
-                </View>
-              )}
+            {hasFrequencyDate && allTimingsDisabled && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>
+                  All notification times for this{' '}
+                  {selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.
+                </Text>
+              </View>
+            )}
 
             {/* Timing Options */}
-            {canSetReminder && (
+            {hasFrequencyDate && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
                 {timingOptions.map((option) => {
@@ -420,15 +420,20 @@ export default function TVReminderModal({
             )}
 
             {/* Action Buttons */}
-            {canSetReminder && (
+            {(hasReminder || canSetReminder) && (
               <View style={styles.actions}>
                 {hasReminder ? (
                   <>
                     <TouchableOpacity
-                      style={[styles.button, styles.updateButton]}
+                      style={[
+                        styles.button,
+                        styles.updateButton,
+                        !canSetReminder && styles.buttonDisabled,
+                      ]}
                       onPress={handleSetReminder}
                       disabled={
                         isLoading ||
+                        !canSetReminder ||
                         (selectedTiming === currentTiming &&
                           selectedFrequency === currentFrequency &&
                           !hasEpisodeChanged(currentNextEpisode, nextEpisode))
@@ -438,7 +443,11 @@ export default function TVReminderModal({
                       {isLoading ? (
                         <ActivityIndicator size="small" color={COLORS.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Update Reminder</Text>
+                        <Text
+                          style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
+                        >
+                          Update Reminder
+                        </Text>
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -454,15 +463,23 @@ export default function TVReminderModal({
                   </>
                 ) : (
                   <TouchableOpacity
-                    style={[styles.button, styles.setButton]}
+                    style={[
+                      styles.button,
+                      styles.setButton,
+                      !canSetReminder && styles.buttonDisabled,
+                    ]}
                     onPress={handleSetReminder}
-                    disabled={isLoading}
+                    disabled={isLoading || !canSetReminder}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     {isLoading ? (
                       <ActivityIndicator size="small" color={COLORS.white} />
                     ) : (
-                      <Text style={styles.buttonText}>Set Reminder</Text>
+                      <Text
+                        style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
+                      >
+                        Set Reminder
+                      </Text>
                     )}
                   </TouchableOpacity>
                 )}
@@ -698,6 +715,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.textSecondary,
   },
   textDisabled: {
+    color: COLORS.textSecondary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonTextDisabled: {
     color: COLORS.textSecondary,
   },
 });
