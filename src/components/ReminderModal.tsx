@@ -1,9 +1,10 @@
 import {
   DevModeBanner,
+  MOVIE_TIMING_OPTIONS,
   ReminderErrorBanner,
+  ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
-  TimingOption,
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -37,42 +38,6 @@ interface ReminderModalProps {
   onShowToast?: (message: string) => void;
 }
 
-const TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-      {
-        value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Release Day',
-        description: 'Get notified on the day of release',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before release',
-      },
-      {
-        value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before release',
-      },
-    ];
-
 export default function ReminderModal({
   visible,
   onClose,
@@ -89,11 +54,10 @@ export default function ReminderModal({
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // Determine which timing options have notification times in the past
   const disabledTimings = useMemo(() => {
     if (!releaseDate) return new Set<ReminderTiming>();
     const disabled = new Set<ReminderTiming>();
-    TIMING_OPTIONS.forEach((option) => {
+    MOVIE_TIMING_OPTIONS.forEach((option) => {
       if (isNotificationTimeInPast(releaseDate, option.value)) {
         disabled.add(option.value);
       }
@@ -101,12 +65,10 @@ export default function ReminderModal({
     return disabled;
   }, [releaseDate]);
 
-  // Get available (non-disabled) timing options
   const availableTimings = useMemo(() => {
-    return TIMING_OPTIONS.filter((option) => !disabledTimings.has(option.value));
+    return MOVIE_TIMING_OPTIONS.filter((option) => !disabledTimings.has(option.value));
   }, [disabledTimings]);
 
-  // Check if all options are disabled
   const allOptionsDisabled = availableTimings.length === 0;
 
   // Auto-select first available option if current selection is disabled
@@ -116,11 +78,14 @@ export default function ReminderModal({
     }
   }, [disabledTimings, selectedTiming, availableTimings]);
 
-  // Check if the release date is today (for context-aware messaging)
   const isReleasingToday = useMemo(() => {
     if (!releaseDate) return false;
     return isReleaseToday(releaseDate);
   }, [releaseDate]);
+
+  const willSkipCurrentNotification = useMemo(() => {
+    return hasReminder && currentTiming && disabledTimings.has(currentTiming);
+  }, [hasReminder, currentTiming, disabledTimings]);
 
   const handleSetReminder = async () => {
     try {
@@ -192,6 +157,11 @@ export default function ReminderModal({
             {/* Warning Banner for Past Options */}
             {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
 
+            {/* Timing Change Info - shows when updating an existing reminder's timing */}
+            {willSkipCurrentNotification && (
+              <ReminderInfoBanner message="Changing the timing will reschedule your notification." />
+            )}
+
             {/* All Options Disabled Warning */}
             {allOptionsDisabled && (
               <ReminderErrorBanner
@@ -208,7 +178,7 @@ export default function ReminderModal({
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
                 <ReminderTimingOptions
-                  options={TIMING_OPTIONS}
+                  options={MOVIE_TIMING_OPTIONS}
                   selectedValue={selectedTiming}
                   disabledValues={disabledTimings}
                   onSelect={setSelectedTiming}

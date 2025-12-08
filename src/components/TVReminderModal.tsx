@@ -1,10 +1,11 @@
 import {
   DevModeBanner,
+  EPISODE_TIMING_OPTIONS,
   ReminderErrorBanner,
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
-  TimingOption,
+  SEASON_TIMING_OPTIONS,
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -58,70 +59,6 @@ interface TVReminderModalProps {
   onCancelReminder: () => Promise<void>;
   onShowToast?: (message: string) => void;
 }
-
-// Timing options for episodes (1 day before or on air day only)
-const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Air Day',
-        description: 'Get notified when the episode airs',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before the episode airs',
-      },
-    ];
-
-// Timing options for seasons (all three options)
-const SEASON_TIMING_OPTIONS: TimingOption[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-      {
-        value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Premiere Day',
-        description: 'Get notified when the season premieres',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before premiere',
-      },
-      {
-        value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before premiere',
-      },
-    ];
 
 export default function TVReminderModal({
   visible,
@@ -253,6 +190,20 @@ export default function TVReminderModal({
   // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
   const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
+  // Check if the existing reminder's timing is now disabled/past
+  const willSkipCurrentNotification = useMemo(() => {
+    // Show warning when the existing reminder's timing has passed
+    return hasReminder && currentTiming && disabledTimings.has(currentTiming);
+  }, [hasReminder, currentTiming, disabledTimings]);
+
+  // Get context-aware warning message for skip notification
+  const getSkipWarningMessage = () => {
+    if (selectedFrequency === 'every_episode') {
+      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+    }
+    return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+  };
+
   // Get the relevant date for display
   const displayDate =
     selectedFrequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
@@ -382,6 +333,11 @@ export default function TVReminderModal({
             {/* Warning Banner for Past Options */}
             {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
               <ReminderWarningBanner />
+            )}
+
+            {/* Timing Skip Warning - shows when updating reminder to a past timing */}
+            {willSkipCurrentNotification && (
+              <ReminderInfoBanner message={getSkipWarningMessage()} />
             )}
 
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}

@@ -1,9 +1,18 @@
+import {
+  DevModeBanner,
+  EPISODE_TIMING_OPTIONS,
+  MOVIE_TIMING_OPTIONS,
+  ReminderInfoBanner,
+  ReminderTimingOptions,
+  ReminderWarningBanner,
+} from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,42 +32,6 @@ interface EditTimingModalProps {
   onUpdateTiming: (reminderId: string, timing: ReminderTiming) => Promise<void>;
 }
 
-const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] = __DEV__
-  ? [
-      {
-        value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
-      },
-      {
-        value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
-      },
-      {
-        value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
-      },
-    ]
-  : [
-      {
-        value: 'on_release_day',
-        label: 'On Release Day',
-        description: 'Get notified on the day of release',
-      },
-      {
-        value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before release',
-      },
-      {
-        value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before release',
-      },
-    ];
-
 export default function EditTimingModal({
   visible,
   onClose,
@@ -67,6 +40,59 @@ export default function EditTimingModal({
 }: EditTimingModalProps) {
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(reminder.reminderTiming);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Determine which timing options to show based on reminder type
+  const timingOptions = useMemo(() => {
+    // For TV shows with "every_episode" frequency, don't show "1 week before"
+    if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'every_episode') {
+      return EPISODE_TIMING_OPTIONS;
+    }
+    return MOVIE_TIMING_OPTIONS;
+  }, [reminder.mediaType, reminder.tvFrequency]);
+
+  // Determine which timing options have notification times in the past
+  const disabledTimings = useMemo(() => {
+    const disabled = new Set<ReminderTiming>();
+    timingOptions.forEach((option) => {
+      if (isNotificationTimeInPast(reminder.releaseDate, option.value)) {
+        disabled.add(option.value);
+      }
+    });
+    return disabled;
+  }, [reminder.releaseDate, timingOptions]);
+
+  // Get available (non-disabled) timing options
+  const availableTimings = useMemo(() => {
+    return timingOptions.filter((option) => !disabledTimings.has(option.value));
+  }, [disabledTimings, timingOptions]);
+
+  // Check if all options are disabled
+  const allOptionsDisabled = availableTimings.length === 0;
+
+  // Auto-select first available option if current selection is disabled
+  useEffect(() => {
+    if (disabledTimings.has(selectedTiming) && availableTimings.length > 0) {
+      setSelectedTiming(availableTimings[0].value);
+    }
+  }, [disabledTimings, selectedTiming, availableTimings]);
+
+  // Sync state when modal becomes visible or reminder changes
+  useEffect(() => {
+    if (visible) {
+      setSelectedTiming(reminder.reminderTiming);
+    }
+  }, [visible, reminder.reminderTiming]);
+
+  // Check if the selected timing would skip the current notification
+  const willSkipCurrentNotification = useMemo(() => {
+    // Show warning if:
+    // 1. The user is changing to a different timing
+    // 2. The original reminder timing is now in the past (disabled)
+    // This means saving the new timing would skip the originally scheduled notification
+    return (
+      selectedTiming !== reminder.reminderTiming && disabledTimings.has(reminder.reminderTiming)
+    );
+  }, [selectedTiming, reminder.reminderTiming, disabledTimings]);
 
   const handleUpdateTiming = async () => {
     try {
@@ -85,6 +111,28 @@ export default function EditTimingModal({
   };
 
   const isUpdateDisabled = isLoading || selectedTiming === reminder.reminderTiming;
+
+  // Get context-aware label for the release
+  const getReleaseLabel = () => {
+    if (reminder.mediaType === 'tv') {
+      if (reminder.tvFrequency === 'every_episode') {
+        return 'Next episode airs';
+      }
+      return 'Season premieres';
+    }
+    return 'Releases';
+  };
+
+  // Get context-aware warning message
+  const getSkipWarningMessage = () => {
+    if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'every_episode') {
+      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+    }
+    if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'season_premiere') {
+      return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+    }
+    return 'This timing has already passed for the current release.';
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -108,16 +156,9 @@ export default function EditTimingModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dev Mode Banner */}
-            {__DEV__ && (
-              <View style={styles.devBanner}>
-                <Text style={styles.devBannerText}>
-                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
-                </Text>
-              </View>
-            )}
+            <DevModeBanner />
 
-            {/* Movie Title */}
+            {/* Movie/Show Title */}
             <Text style={styles.movieTitle} numberOfLines={2}>
               {reminder.title}
             </Text>
@@ -126,33 +167,28 @@ export default function EditTimingModal({
             <View style={styles.releaseDateContainer}>
               <Calendar size={16} color={COLORS.textSecondary} />
               <Text style={styles.releaseDate}>
-                Releases {formatReleaseDate(reminder.releaseDate)}
+                {getReleaseLabel()} {formatReleaseDate(reminder.releaseDate)}
               </Text>
             </View>
+
+            {/* Warning Banner for Past Options */}
+            {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
+
+            {/* Timing Skip Warning */}
+            {willSkipCurrentNotification && (
+              <ReminderInfoBanner message={getSkipWarningMessage()} />
+            )}
 
             {/* Timing Options */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Notify me:</Text>
-              {TIMING_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timingOption,
-                    selectedTiming === option.value && styles.timingOptionSelected,
-                  ]}
-                  onPress={() => setSelectedTiming(option.value)}
-                  disabled={isLoading}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <View style={styles.radioOuter}>
-                    {selectedTiming === option.value && <View style={styles.radioInner} />}
-                  </View>
-                  <View style={styles.timingTextContainer}>
-                    <Text style={styles.timingLabel}>{option.label}</Text>
-                    <Text style={styles.timingDescription}>{option.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              <ReminderTimingOptions
+                options={timingOptions}
+                selectedValue={selectedTiming}
+                disabledValues={disabledTimings}
+                onSelect={setSelectedTiming}
+                disabled={isLoading}
+              />
             </View>
 
             {/* Update Button */}
@@ -229,48 +265,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: SPACING.m,
   },
-  timingOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-    gap: SPACING.m,
-  },
-  timingOptionSelected: {
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primary,
-  },
-  timingTextContainer: {
-    flex: 1,
-  },
-  timingLabel: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timingDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
   button: {
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.l,
@@ -287,17 +281,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.white,
-  },
-  devBanner: {
-    backgroundColor: COLORS.warning,
-    padding: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-  },
-  devBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    textAlign: 'center',
-    fontWeight: '600',
   },
 });
