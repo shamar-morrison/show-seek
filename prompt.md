@@ -1,10 +1,24 @@
-### Bug Description
+### Feature Request
 
 ---
 
-in the edit reminder timing modal (or any modal that allows me to edit/update the reminder timing) i should be notified if my change will affect the reminder of the current episode/season. consider the following:
+I want to replace the add to list modal with the latest version of @gorhom/react-native-bottom-sheet. it is normally coupled with Portal from https://oss.callstack.com/react-native-paper/docs/components/Portal/ so you can investigate how to implement the two. I want to maintain the functionality and UI of the original implementation, i just want you to move to this new library and implement it. if you have any questions you can ask.
 
-1. i initially set a reminder for every episode to be notified on the release day, the next episode releases may 10, 2025. it is currently may 9, 2025.
-2. i go to update the timing, if i select “one day before” i should be notified that this change will effectively remove the notification for the current episode because the current date is may. 9, 2025 (which is already one day before). the same thing should happen if i select “one week before” (its in the past). essentially, the timing should update but the updates will only affect the subsequent episodes/seasons (if applicable)
+### Example combo (Paper + Gorhom)
 
-in the edit reminder modal i am able to change the notification for episodes to be “one week before” which does not make sense considering episodes are already released weekly for most tv shows. if you have any clarifying questions please ask them in your implementation plan.
+```tsx
+import BottomSheet from '@gorhom/bottom-sheet';
+import { Portal, Button } from 'react-native-paper';
+
+const MySheet = () => {
+  const sheetRef = useRef(null);
+
+  return (
+    <Portal>
+      <BottomSheet ref={sheetRef} snapPoints={['25%', '50%']}>
+        {/* content here */}
+      </BottomSheet>
+    </Portal>
+  );
+};
+```

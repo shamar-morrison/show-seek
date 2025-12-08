@@ -1,19 +1,29 @@
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetTextInput,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Check, Plus, Settings2, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -27,13 +37,15 @@ import {
   useRemoveFromList,
 } from '../hooks/useLists';
 import { ListMediaItem } from '../services/ListService';
-import { ModalBackground } from './ui/ModalBackground';
 
 interface AddToListModalProps {
-  visible: boolean;
-  onClose: () => void;
   mediaItem: Omit<ListMediaItem, 'addedAt'>;
   onShowToast?: (message: string) => void;
+}
+
+export interface AddToListModalRef {
+  present: () => void;
+  dismiss: () => void;
 }
 
 const AnimatedCheck = ({ visible }: { visible: boolean }) => {
@@ -63,154 +75,193 @@ const AnimatedCheck = ({ visible }: { visible: boolean }) => {
   );
 };
 
-export default function AddToListModal({
-  visible,
-  onClose,
-  mediaItem,
-  onShowToast,
-}: AddToListModalProps) {
-  const router = useRouter();
-  const [isCreating, setIsCreating] = useState(false);
-  const [newListName, setNewListName] = useState('');
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [operationError, setOperationError] = useState<string | null>(null);
+const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
+  ({ mediaItem, onShowToast }, ref) => {
+    const router = useRouter();
+    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newListName, setNewListName] = useState('');
+    const [createError, setCreateError] = useState<string | null>(null);
+    const [operationError, setOperationError] = useState<string | null>(null);
 
-  const hasChangesRef = useRef(false);
+    const hasChangesRef = useRef(false);
 
-  const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
-  const { membership } = useMediaLists(mediaItem.id);
+    const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
+    const { membership } = useMediaLists(mediaItem.id);
 
-  const addMutation = useAddToList();
-  const removeMutation = useRemoveFromList();
-  const createMutation = useCreateList();
-  const deleteMutation = useDeleteList();
+    const addMutation = useAddToList();
+    const removeMutation = useRemoveFromList();
+    const createMutation = useCreateList();
+    const deleteMutation = useDeleteList();
 
-  // Reset state when modal opens
-  useEffect(() => {
-    if (visible) {
-      hasChangesRef.current = false;
-      setCreateError(null);
+    // Snap points for dynamic content
+    const snapPoints = useMemo(() => ['50%', '75%'], []);
+
+    // Expose imperative methods
+    useImperativeHandle(ref, () => ({
+      present: () => {
+        hasChangesRef.current = false;
+        setCreateError(null);
+        setOperationError(null);
+        setIsCreating(false);
+        setNewListName('');
+        bottomSheetModalRef.current?.present();
+      },
+      dismiss: () => {
+        bottomSheetModalRef.current?.dismiss();
+      },
+    }));
+
+    const handleDismiss = useCallback(() => {
+      if (hasChangesRef.current && onShowToast) {
+        onShowToast('Lists updated');
+      }
+    }, [onShowToast]);
+
+    // Error handler for mutations
+    const handleMutationError = useCallback((error: Error) => {
+      console.error('List operation failed:', error);
+      setOperationError(error.message || 'Failed to update list');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }, []);
+
+    const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setOperationError(null);
-      setIsCreating(false);
-      setNewListName('');
-    }
-  }, [visible]);
-
-  const handleClose = useCallback(() => {
-    if (hasChangesRef.current && onShowToast) {
-      onShowToast('Lists updated');
-    }
-    onClose();
-  }, [onClose, onShowToast]);
-
-  // Error handler for mutations
-  const handleMutationError = useCallback((error: Error) => {
-    console.error('List operation failed:', error);
-    setOperationError(error.message || 'Failed to update list');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  }, []);
-
-  const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setOperationError(null);
-    hasChangesRef.current = true;
-
-    if (isMember) {
-      removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
-    } else {
-      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
-    }
-  };
-
-  const handleCreateList = async () => {
-    if (!newListName.trim()) return;
-
-    setCreateError(null);
-
-    try {
-      // 1. Create list (must await to get the listId)
-      const listId = await createMutation.mutateAsync(newListName.trim());
-
-      // 2. Add item to new list (fire-and-forget with optimistic update)
       hasChangesRef.current = true;
-      addMutation.mutate(
-        {
-          listId,
-          mediaItem,
-          listName: newListName.trim(),
-        },
-        { onError: handleMutationError }
-      );
 
-      // 3. Success feedback and reset UI immediately
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNewListName('');
-      setIsCreating(false);
-    } catch (error) {
-      console.error('Failed to create list:', error);
-      setCreateError('Failed to create list. Please try again.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-  };
+      if (isMember) {
+        removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
+      } else {
+        addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
+      }
+    };
 
-  const handleDeleteList = (listId: string, listName: string) => {
-    const DEFAULT_LIST_IDS = [
-      'favorites',
-      'watchlist', // should watch
-      'currently-watching',
-      'already-watched',
-      'dropped',
-    ];
+    const handleCreateList = async () => {
+      if (!newListName.trim()) return;
 
-    if (DEFAULT_LIST_IDS.includes(listId)) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
-      return;
-    }
+      setCreateError(null);
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Delete List',
-      `This will remove "${listName}" and all its items. This cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(listId);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              if (onShowToast) {
-                onShowToast('List deleted');
-              }
-            } catch (error) {
-              console.error('Failed to delete list:', error);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert(
-                'Delete Failed',
-                error instanceof Error ? error.message : 'Failed to delete list'
-              );
-            }
+      try {
+        // 1. Create list (must await to get the listId)
+        const listId = await createMutation.mutateAsync(newListName.trim());
+
+        // 2. Add item to new list (fire-and-forget with optimistic update)
+        hasChangesRef.current = true;
+        addMutation.mutate(
+          {
+            listId,
+            mediaItem,
+            listName: newListName.trim(),
           },
-        },
-      ]
+          { onError: handleMutationError }
+        );
+
+        // 3. Success feedback and reset UI immediately
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setNewListName('');
+        setIsCreating(false);
+      } catch (error) {
+        console.error('Failed to create list:', error);
+        setCreateError('Failed to create list. Please try again.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    };
+
+    const handleDeleteList = (listId: string, listName: string) => {
+      const DEFAULT_LIST_IDS = [
+        'favorites',
+        'watchlist', // should watch
+        'currently-watching',
+        'already-watched',
+        'dropped',
+      ];
+
+      if (DEFAULT_LIST_IDS.includes(listId)) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(
+        'Delete List',
+        `This will remove "${listName}" and all its items. This cannot be undone.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteMutation.mutateAsync(listId);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                if (onShowToast) {
+                  onShowToast('List deleted');
+                }
+              } catch (error) {
+                console.error('Failed to delete list:', error);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert(
+                  'Delete Failed',
+                  error instanceof Error ? error.message : 'Failed to delete list'
+                );
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    const handleClose = useCallback(() => {
+      bottomSheetModalRef.current?.dismiss();
+    }, []);
+
+    const handleManageLists = useCallback(() => {
+      handleClose();
+      router.push('/manage-lists');
+    }, [handleClose, router]);
+
+    // Custom backdrop with blur effect
+    const renderBackdrop = useCallback(
+      (props: any) => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          opacity={0.7}
+          pressBehavior="close"
+        />
+      ),
+      []
     );
-  };
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+    // Handle indicator
+    const renderHandle = useCallback(
+      () => (
+        <View style={styles.handleContainer}>
+          <View style={styles.handle} />
+        </View>
+      ),
+      []
+    );
+
+    return (
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        snapPoints={snapPoints}
+        onDismiss={handleDismiss}
+        backdropComponent={renderBackdrop}
+        handleComponent={renderHandle}
+        backgroundStyle={styles.bottomSheetBackground}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
       >
-        <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
-
-        <View style={styles.content}>
+        <BottomSheetView style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
             <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
@@ -229,7 +280,7 @@ export default function AddToListModal({
 
           {isCreating ? (
             <View style={styles.createContainer}>
-              <TextInput
+              <BottomSheetTextInput
                 style={styles.input}
                 placeholder="List Name"
                 placeholderTextColor={COLORS.textSecondary}
@@ -279,7 +330,7 @@ export default function AddToListModal({
               {isLoadingLists ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
               ) : (
-                <ScrollView style={styles.listContainer} showsVerticalScrollIndicator>
+                <BottomSheetScrollView style={styles.listContainer} showsVerticalScrollIndicator>
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
                     return (
@@ -296,7 +347,7 @@ export default function AddToListModal({
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </BottomSheetScrollView>
               )}
 
               <TouchableOpacity
@@ -310,10 +361,7 @@ export default function AddToListModal({
 
               <TouchableOpacity
                 style={styles.manageListsButton}
-                onPress={() => {
-                  handleClose();
-                  router.push('/manage-lists');
-                }}
+                onPress={handleManageLists}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Settings2 size={20} color={COLORS.textSecondary} />
@@ -321,31 +369,37 @@ export default function AddToListModal({
               </TouchableOpacity>
             </>
           )}
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
+        </BottomSheetView>
+      </BottomSheetModal>
+    );
+  }
+);
+
+AddToListModal.displayName = 'AddToListModal';
+
+export default AddToListModal;
 
 const styles = StyleSheet.create({
+  bottomSheetBackground: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: SPACING.m,
+    paddingBottom: SPACING.s,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 2,
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.l,
+    paddingBottom: SPACING.l,
   },
   header: {
     flexDirection: 'row',
@@ -362,6 +416,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
+    flex: 1,
     maxHeight: 300,
   },
   listItem: {

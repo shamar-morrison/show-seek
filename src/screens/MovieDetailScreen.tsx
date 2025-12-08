@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
-import AddToListModal from '@/src/components/AddToListModal';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
@@ -43,7 +43,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -82,7 +82,7 @@ export default function MovieDetailScreen() {
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [listModalVisible, setListModalVisible] = useState(false);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -414,7 +414,10 @@ export default function MovieDetailScreen() {
               style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
               activeOpacity={ACTIVE_OPACITY}
               onPress={() =>
-                requireAuth(() => setListModalVisible(true), 'Sign in to add items to your lists')
+                requireAuth(
+                  () => addToListModalRef.current?.present(),
+                  'Sign in to add items to your lists'
+                )
               }
               disabled={isLoadingLists}
             >
@@ -603,8 +606,7 @@ export default function MovieDetailScreen() {
       {movie && (
         <>
           <AddToListModal
-            visible={listModalVisible}
-            onClose={() => setListModalVisible(false)}
+            ref={addToListModalRef}
             mediaItem={{
               id: movie.id,
               title: movie.title,

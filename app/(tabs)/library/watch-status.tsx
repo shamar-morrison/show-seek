@@ -34,9 +34,8 @@ export default function WatchStatusScreen() {
   const {
     handleItemPress,
     handleLongPress,
-    handleCloseModal,
     handleShowToast,
-    modalVisible,
+    addToListModalRef,
     selectedMediaItem,
     toastRef,
   } = useMediaGridHandlers(isLoading);
@@ -175,8 +174,7 @@ export default function WatchStatusScreen() {
 
       {selectedMediaItem && (
         <AddToListModal
-          visible={modalVisible}
-          onClose={handleCloseModal}
+          ref={addToListModalRef}
           mediaItem={selectedMediaItem}
           onShowToast={handleShowToast}
         />
