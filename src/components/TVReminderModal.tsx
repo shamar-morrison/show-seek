@@ -253,6 +253,31 @@ export default function TVReminderModal({
   // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
   const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
+  // Check if the selected timing would skip the current notification (for existing reminders)
+  const willSkipCurrentNotification = useMemo(() => {
+    // Only show warning when updating an existing reminder and the new timing is in the past
+    if (!hasReminder) return false;
+    // If the user hasn't changed anything, no warning needed
+    if (selectedTiming === currentTiming && selectedFrequency === currentFrequency) return false;
+    // Check if the newly selected timing would result in a past notification
+    return disabledTimings.has(selectedTiming);
+  }, [
+    hasReminder,
+    selectedTiming,
+    currentTiming,
+    selectedFrequency,
+    currentFrequency,
+    disabledTimings,
+  ]);
+
+  // Get context-aware warning message for skip notification
+  const getSkipWarningMessage = () => {
+    if (selectedFrequency === 'every_episode') {
+      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+    }
+    return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+  };
+
   // Get the relevant date for display
   const displayDate =
     selectedFrequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
@@ -382,6 +407,11 @@ export default function TVReminderModal({
             {/* Warning Banner for Past Options */}
             {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
               <ReminderWarningBanner />
+            )}
+
+            {/* Timing Skip Warning - shows when updating reminder to a past timing */}
+            {willSkipCurrentNotification && (
+              <ReminderInfoBanner message={getSkipWarningMessage()} />
             )}
 
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}

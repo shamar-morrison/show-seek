@@ -1,6 +1,7 @@
 import {
   DevModeBanner,
   ReminderErrorBanner,
+  ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
   TimingOption,
@@ -122,6 +123,16 @@ export default function ReminderModal({
     return isReleaseToday(releaseDate);
   }, [releaseDate]);
 
+  // Check if the selected timing would skip the current notification (for existing reminders)
+  const willSkipCurrentNotification = useMemo(() => {
+    // Only show warning when updating an existing reminder and the new timing is in the past
+    if (!hasReminder) return false;
+    // If the user hasn't changed the timing, no warning needed
+    if (selectedTiming === currentTiming) return false;
+    // Check if the newly selected timing would result in a past notification
+    return disabledTimings.has(selectedTiming);
+  }, [hasReminder, selectedTiming, currentTiming, disabledTimings]);
+
   const handleSetReminder = async () => {
     try {
       setIsLoading(true);
@@ -191,6 +202,11 @@ export default function ReminderModal({
 
             {/* Warning Banner for Past Options */}
             {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
+
+            {/* Timing Skip Warning - shows when updating reminder to a past timing */}
+            {willSkipCurrentNotification && (
+              <ReminderInfoBanner message="This timing has already passed for the current release." />
+            )}
 
             {/* All Options Disabled Warning */}
             {allOptionsDisabled && (
