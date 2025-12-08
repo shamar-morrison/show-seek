@@ -39,8 +39,9 @@ import {
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
-import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
+import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
+import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -181,7 +182,38 @@ export default function TVDetailScreen() {
     return getNextUpcomingSeason(tvQuery.data?.seasons);
   }, [tvQuery.data]);
 
-  // Reminder handlers (must be before early returns)
+  // Fetch subsequent episode when current next episode airs today
+  const subsequentEpisodeQuery = useQuery({
+    queryKey: [
+      'tv',
+      tvId,
+      'subsequent-episode',
+      nextEpisodeInfo?.seasonNumber,
+      nextEpisodeInfo?.episodeNumber,
+    ],
+    queryFn: () => getSubsequentEpisode(tvId, nextEpisodeInfo!),
+    enabled: !!(nextEpisodeInfo?.airDate && isReleaseToday(nextEpisodeInfo.airDate)),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+
+  const subsequentEpisode = subsequentEpisodeQuery.data ?? null;
+  const isLoadingSubsequent = subsequentEpisodeQuery.isLoading;
+
+  // Whether we should use the subsequent episode instead of the current next episode
+  const isUsingSubsequent = useMemo(() => {
+    return !!(nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode);
+  }, [nextEpisodeInfo, subsequentEpisode]);
+
+  // The effective episode to use for reminders:
+  // If today's episode is airing, use subsequent episode (if available)
+  const effectiveNextEpisode = useMemo(() => {
+    if (isUsingSubsequent) {
+      return subsequentEpisode;
+    }
+    return nextEpisodeInfo;
+  }, [nextEpisodeInfo, subsequentEpisode, isUsingSubsequent]);
+
   const handleSetReminder = useCallback(
     async (
       timing: ReminderTiming,
@@ -725,7 +757,10 @@ export default function TVDetailScreen() {
             onClose={() => setReminderModalVisible(false)}
             tvId={show.id}
             tvTitle={show.name}
-            nextEpisode={nextEpisodeInfo}
+            nextEpisode={effectiveNextEpisode}
+            originalNextEpisode={nextEpisodeInfo}
+            isUsingSubsequentEpisode={isUsingSubsequent}
+            isLoadingSubsequentEpisode={isLoadingSubsequent}
             nextSeasonAirDate={nextSeasonAirDate}
             nextSeasonNumber={nextSeasonNumber}
             currentTiming={reminder?.reminderTiming}
