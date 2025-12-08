@@ -39,8 +39,9 @@ import {
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
-import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
+import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
+import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -55,7 +56,7 @@ import {
   Star,
   Tv,
 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -180,6 +181,34 @@ export default function TVDetailScreen() {
   const { nextSeasonAirDate, nextSeasonNumber } = useMemo(() => {
     return getNextUpcomingSeason(tvQuery.data?.seasons);
   }, [tvQuery.data]);
+
+  // State for subsequent episode (used when current next episode airs today)
+  const [subsequentEpisode, setSubsequentEpisode] = useState<NextEpisodeInfo | null>(null);
+  const [isLoadingSubsequent, setIsLoadingSubsequent] = useState(false);
+
+  // Fetch subsequent episode when current next episode airs today
+  useEffect(() => {
+    // Only fetch if we have a next episode and it airs today
+    if (nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate)) {
+      setIsLoadingSubsequent(true);
+      getSubsequentEpisode(tvId, nextEpisodeInfo)
+        .then(setSubsequentEpisode)
+        .catch(() => setSubsequentEpisode(null))
+        .finally(() => setIsLoadingSubsequent(false));
+    } else {
+      // Clear subsequent episode when not needed
+      setSubsequentEpisode(null);
+    }
+  }, [tvId, nextEpisodeInfo]);
+
+  // The effective episode to use for reminders:
+  // If today's episode is airing, use subsequent episode (if available)
+  const effectiveNextEpisode = useMemo(() => {
+    if (nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode) {
+      return subsequentEpisode;
+    }
+    return nextEpisodeInfo;
+  }, [nextEpisodeInfo, subsequentEpisode]);
 
   // Reminder handlers (must be before early returns)
   const handleSetReminder = useCallback(
@@ -725,7 +754,12 @@ export default function TVDetailScreen() {
             onClose={() => setReminderModalVisible(false)}
             tvId={show.id}
             tvTitle={show.name}
-            nextEpisode={nextEpisodeInfo}
+            nextEpisode={effectiveNextEpisode}
+            originalNextEpisode={nextEpisodeInfo}
+            isUsingSubsequentEpisode={
+              !!(nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode)
+            }
+            isLoadingSubsequentEpisode={isLoadingSubsequent}
             nextSeasonAirDate={nextSeasonAirDate}
             nextSeasonNumber={nextSeasonNumber}
             currentTiming={reminder?.reminderTiming}

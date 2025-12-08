@@ -53,6 +53,21 @@ export function DevModeBanner({
   );
 }
 
+interface ReminderInfoBannerProps {
+  message: string;
+}
+
+/**
+ * Info banner for informational messages (e.g., using subsequent episode).
+ */
+export function ReminderInfoBanner({ message }: ReminderInfoBannerProps) {
+  return (
+    <View style={styles.infoBanner}>
+      <Text style={styles.infoBannerText}>{message}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   warningBanner: {
     backgroundColor: COLORS.warning + '20',
@@ -91,5 +106,18 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  infoBanner: {
+    backgroundColor: COLORS.primary + '20',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  infoBannerText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.primary,
+    textAlign: 'center',
   },
 });

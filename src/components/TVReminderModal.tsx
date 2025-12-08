@@ -1,6 +1,7 @@
 import {
   DevModeBanner,
   ReminderErrorBanner,
+  ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
   TimingOption,
@@ -33,8 +34,14 @@ interface TVReminderModalProps {
   onClose: () => void;
   tvId: number;
   tvTitle: string;
-  /** The next unaired episode (if any) */
+  /** The next unaired episode to use for reminders (may be subsequent episode if today's is airing) */
   nextEpisode: NextEpisodeInfo | null;
+  /** The original next_episode_to_air (for display when using subsequent) */
+  originalNextEpisode?: NextEpisodeInfo | null;
+  /** Whether we're using a subsequent episode because today's is airing */
+  isUsingSubsequentEpisode?: boolean;
+  /** Whether we're currently loading the subsequent episode */
+  isLoadingSubsequentEpisode?: boolean;
   /** The next season premiere date (if known) */
   nextSeasonAirDate: string | null;
   nextSeasonNumber: number | null;
@@ -121,6 +128,9 @@ export default function TVReminderModal({
   onClose,
   tvTitle,
   nextEpisode,
+  originalNextEpisode,
+  isUsingSubsequentEpisode = false,
+  isLoadingSubsequentEpisode = false,
   nextSeasonAirDate,
   nextSeasonNumber,
   currentTiming,
@@ -360,13 +370,23 @@ export default function TVReminderModal({
               </View>
             )}
 
+            {/* Info Banner for Using Subsequent Episode */}
+            {isUsingSubsequentEpisode &&
+              originalNextEpisode &&
+              nextEpisode &&
+              selectedFrequency === 'every_episode' && (
+                <ReminderInfoBanner
+                  message={`📺 S${originalNextEpisode.seasonNumber}E${originalNextEpisode.episodeNumber} airs today! Setting reminder for S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber} instead.`}
+                />
+              )}
+
             {/* Warning Banner for Past Options */}
             {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
               <ReminderWarningBanner />
             )}
 
             {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
-            {hasFrequencyDate && allTimingsDisabled && (
+            {hasFrequencyDate && allTimingsDisabled && !isUsingSubsequentEpisode && (
               <ReminderErrorBanner
                 message={
                   isReleasingToday
