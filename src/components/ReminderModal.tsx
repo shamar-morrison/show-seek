@@ -123,15 +123,11 @@ export default function ReminderModal({
     return isReleaseToday(releaseDate);
   }, [releaseDate]);
 
-  // Check if the selected timing would skip the current notification (for existing reminders)
+  // Check if the selected timing is different from the current (for existing reminders)
   const willSkipCurrentNotification = useMemo(() => {
-    // Only show warning when updating an existing reminder and the new timing is in the past
-    if (!hasReminder) return false;
-    // If the user hasn't changed the timing, no warning needed
-    if (selectedTiming === currentTiming) return false;
-    // Check if the newly selected timing would result in a past notification
-    return disabledTimings.has(selectedTiming);
-  }, [hasReminder, selectedTiming, currentTiming, disabledTimings]);
+    // Only show info when updating an existing reminder with a different timing
+    return hasReminder && selectedTiming !== currentTiming;
+  }, [hasReminder, selectedTiming, currentTiming]);
 
   const handleSetReminder = async () => {
     try {
