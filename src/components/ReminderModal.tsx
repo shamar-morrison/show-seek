@@ -1,9 +1,17 @@
+import {
+  DevModeBanner,
+  ReminderErrorBanner,
+  ReminderTimingOptions,
+  ReminderWarningBanner,
+  TimingOption,
+} from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -29,7 +37,7 @@ interface ReminderModalProps {
   onShowToast?: (message: string) => void;
 }
 
-const TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] = __DEV__
+const TIMING_OPTIONS: TimingOption[] = __DEV__
   ? [
       {
         value: 'on_release_day',
@@ -80,6 +88,33 @@ export default function ReminderModal({
     currentTiming || 'on_release_day'
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  // Determine which timing options have notification times in the past
+  const disabledTimings = useMemo(() => {
+    if (!releaseDate) return new Set<ReminderTiming>();
+    const disabled = new Set<ReminderTiming>();
+    TIMING_OPTIONS.forEach((option) => {
+      if (isNotificationTimeInPast(releaseDate, option.value)) {
+        disabled.add(option.value);
+      }
+    });
+    return disabled;
+  }, [releaseDate]);
+
+  // Get available (non-disabled) timing options
+  const availableTimings = useMemo(() => {
+    return TIMING_OPTIONS.filter((option) => !disabledTimings.has(option.value));
+  }, [disabledTimings]);
+
+  // Check if all options are disabled
+  const allOptionsDisabled = availableTimings.length === 0;
+
+  // Auto-select first available option if current selection is disabled
+  useEffect(() => {
+    if (disabledTimings.has(selectedTiming) && availableTimings.length > 0) {
+      setSelectedTiming(availableTimings[0].value);
+    }
+  }, [disabledTimings, selectedTiming, availableTimings]);
 
   const handleSetReminder = async () => {
     try {
@@ -133,14 +168,7 @@ export default function ReminderModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dev Mode Banner */}
-            {__DEV__ && (
-              <View style={styles.devBanner}>
-                <Text style={styles.devBannerText}>
-                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
-                </Text>
-              </View>
-            )}
+            <DevModeBanner />
 
             {/* Movie Title */}
             <Text style={styles.movieTitle} numberOfLines={2}>
@@ -155,30 +183,27 @@ export default function ReminderModal({
               </View>
             )}
 
+            {/* Warning Banner for Past Options */}
+            {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
+
+            {/* All Options Disabled Warning */}
+            {allOptionsDisabled && (
+              <ReminderErrorBanner message="All notification times for this release have passed. You cannot set a reminder for this movie." />
+            )}
+
             {/* Timing Options */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notify me:</Text>
-              {TIMING_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.timingOption,
-                    selectedTiming === option.value && styles.timingOptionSelected,
-                  ]}
-                  onPress={() => setSelectedTiming(option.value)}
+            {!allOptionsDisabled && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Notify me:</Text>
+                <ReminderTimingOptions
+                  options={TIMING_OPTIONS}
+                  selectedValue={selectedTiming}
+                  disabledValues={disabledTimings}
+                  onSelect={setSelectedTiming}
                   disabled={isLoading}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <View style={styles.radioOuter}>
-                    {selectedTiming === option.value && <View style={styles.radioInner} />}
-                  </View>
-                  <View style={styles.timingTextContainer}>
-                    <Text style={styles.timingLabel}>{option.label}</Text>
-                    <Text style={styles.timingDescription}>{option.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+                />
+              </View>
+            )}
 
             {/* Action Buttons */}
             <View style={styles.actions}>
@@ -209,9 +234,13 @@ export default function ReminderModal({
                 </>
               ) : (
                 <TouchableOpacity
-                  style={[styles.button, styles.setButton]}
+                  style={[
+                    styles.button,
+                    styles.setButton,
+                    allOptionsDisabled && styles.buttonDisabled,
+                  ]}
                   onPress={handleSetReminder}
-                  disabled={isLoading}
+                  disabled={isLoading || allOptionsDisabled}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {isLoading ? (
@@ -274,17 +303,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  warningContainer: {
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.l,
-  },
-  warningText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.warning,
-    textAlign: 'center',
-  },
   section: {
     marginBottom: SPACING.l,
   },
@@ -293,48 +311,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: SPACING.m,
-  },
-  timingOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-    gap: SPACING.m,
-  },
-  timingOptionSelected: {
-    backgroundColor: COLORS.surfaceLight,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: COLORS.text,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.primary,
-  },
-  timingTextContainer: {
-    flex: 1,
-  },
-  timingLabel: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timingDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   actions: {
     gap: SPACING.m,
@@ -366,16 +342,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.error,
   },
-  devBanner: {
-    backgroundColor: COLORS.warning,
-    padding: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-  },
-  devBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    textAlign: 'center',
-    fontWeight: '600',
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });

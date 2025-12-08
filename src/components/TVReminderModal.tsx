@@ -1,7 +1,15 @@
+import {
+  DevModeBanner,
+  ReminderErrorBanner,
+  ReminderTimingOptions,
+  ReminderWarningBanner,
+  TimingOption,
+} from '@/src/components/reminder';
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import { hasEpisodeChanged } from '@/src/utils/reminderHelpers';
+import { hasEpisodeChanged, isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, Tv, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -15,7 +23,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
 
 interface TVReminderModalProps {
   visible: boolean;
@@ -42,70 +49,68 @@ interface TVReminderModalProps {
 }
 
 // Timing options for episodes (1 day before or on air day only)
-const EPISODE_TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] =
-  __DEV__
-    ? [
-        {
-          value: 'on_release_day',
-          label: 'Test in 10 seconds',
-          description: 'DEV MODE: Notification in 10 seconds',
-        },
-        {
-          value: '1_day_before',
-          label: 'Test in 20 seconds',
-          description: 'DEV MODE: Notification in 20 seconds',
-        },
-      ]
-    : [
-        {
-          value: 'on_release_day',
-          label: 'On Air Day',
-          description: 'Get notified when the episode airs',
-        },
-        {
-          value: '1_day_before',
-          label: '1 Day Before',
-          description: 'Get notified one day before the episode airs',
-        },
-      ];
+const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
+  ? [
+      {
+        value: 'on_release_day',
+        label: 'Test in 10 seconds',
+        description: 'DEV MODE: Notification in 10 seconds',
+      },
+      {
+        value: '1_day_before',
+        label: 'Test in 20 seconds',
+        description: 'DEV MODE: Notification in 20 seconds',
+      },
+    ]
+  : [
+      {
+        value: 'on_release_day',
+        label: 'On Air Day',
+        description: 'Get notified when the episode airs',
+      },
+      {
+        value: '1_day_before',
+        label: '1 Day Before',
+        description: 'Get notified one day before the episode airs',
+      },
+    ];
 
 // Timing options for seasons (all three options)
-const SEASON_TIMING_OPTIONS: { value: ReminderTiming; label: string; description: string }[] =
-  __DEV__
-    ? [
-        {
-          value: 'on_release_day',
-          label: 'Test in 10 seconds',
-          description: 'DEV MODE: Notification in 10 seconds',
-        },
-        {
-          value: '1_day_before',
-          label: 'Test in 20 seconds',
-          description: 'DEV MODE: Notification in 20 seconds',
-        },
-        {
-          value: '1_week_before',
-          label: 'Test in 30 seconds',
-          description: 'DEV MODE: Notification in 30 seconds',
-        },
-      ]
-    : [
-        {
-          value: 'on_release_day',
-          label: 'On Premiere Day',
-          description: 'Get notified when the season premieres',
-        },
-        {
-          value: '1_day_before',
-          label: '1 Day Before',
-          description: 'Get notified one day before premiere',
-        },
-        {
-          value: '1_week_before',
-          label: '1 Week Before',
-          description: 'Get notified one week before premiere',
-        },
-      ];
+const SEASON_TIMING_OPTIONS: TimingOption[] = __DEV__
+  ? [
+      {
+        value: 'on_release_day',
+        label: 'Test in 10 seconds',
+        description: 'DEV MODE: Notification in 10 seconds',
+      },
+      {
+        value: '1_day_before',
+        label: 'Test in 20 seconds',
+        description: 'DEV MODE: Notification in 20 seconds',
+      },
+      {
+        value: '1_week_before',
+        label: 'Test in 30 seconds',
+        description: 'DEV MODE: Notification in 30 seconds',
+      },
+    ]
+  : [
+      {
+        value: 'on_release_day',
+        label: 'On Premiere Day',
+        description: 'Get notified when the season premieres',
+      },
+      {
+        value: '1_day_before',
+        label: '1 Day Before',
+        description: 'Get notified one day before premiere',
+      },
+      {
+        value: '1_week_before',
+        label: '1 Week Before',
+        description: 'Get notified one week before premiere',
+      },
+    ];
 
 export default function TVReminderModal({
   visible,
@@ -144,6 +149,38 @@ export default function TVReminderModal({
   const timingOptions = useMemo(() => {
     return selectedFrequency === 'every_episode' ? EPISODE_TIMING_OPTIONS : SEASON_TIMING_OPTIONS;
   }, [selectedFrequency]);
+
+  // Get the relevant release date for the current selection
+  const releaseDate = useMemo(() => {
+    return selectedFrequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
+  }, [selectedFrequency, nextEpisode?.airDate, nextSeasonAirDate]);
+
+  // Determine which timing options have notification times in the past
+  const disabledTimings = useMemo(() => {
+    if (!releaseDate) return new Set<ReminderTiming>();
+    const disabled = new Set<ReminderTiming>();
+    timingOptions.forEach((option) => {
+      if (isNotificationTimeInPast(releaseDate, option.value)) {
+        disabled.add(option.value);
+      }
+    });
+    return disabled;
+  }, [releaseDate, timingOptions]);
+
+  // Get available (non-disabled) timing options
+  const availableTimings = useMemo(() => {
+    return timingOptions.filter((option) => !disabledTimings.has(option.value));
+  }, [disabledTimings, timingOptions]);
+
+  // Check if all timing options are disabled for current frequency
+  const allTimingsDisabled = availableTimings.length === 0;
+
+  // Auto-select first available option if current selection is disabled
+  useEffect(() => {
+    if (disabledTimings.has(selectedTiming) && availableTimings.length > 0) {
+      setSelectedTiming(availableTimings[0].value);
+    }
+  }, [disabledTimings, selectedTiming, availableTimings]);
 
   const handleFrequencyChange = (freq: TVReminderFrequency) => {
     setSelectedFrequency(freq);
@@ -191,10 +228,13 @@ export default function TVReminderModal({
     return d < today;
   };
 
-  // Determine if current selection is valid
-  const canSetReminder =
+  // Check if the currently selected frequency has a valid date
+  const hasFrequencyDate =
     (selectedFrequency === 'every_episode' && canSetEpisodeReminder) ||
     (selectedFrequency === 'season_premiere' && canSetSeasonReminder);
+
+  // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
+  const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
   // Get the relevant date for display
   const displayDate =
@@ -222,14 +262,7 @@ export default function TVReminderModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dev Mode Banner */}
-            {__DEV__ && (
-              <View style={styles.devBanner}>
-                <Text style={styles.devBannerText}>
-                  🧪 DEV MODE: Notifications scheduled for 10-30 seconds
-                </Text>
-              </View>
-            )}
+            <DevModeBanner />
 
             {/* Show Title */}
             <View style={styles.titleRow}>
@@ -310,7 +343,7 @@ export default function TVReminderModal({
             </View>
 
             {/* Date Display */}
-            {displayDate && canSetReminder && (
+            {displayDate && hasFrequencyDate && (
               <View style={styles.dateContainer}>
                 <Calendar size={16} color={COLORS.textSecondary} />
                 <Text style={styles.dateText}>
@@ -319,30 +352,29 @@ export default function TVReminderModal({
               </View>
             )}
 
+            {/* Warning Banner for Past Options */}
+            {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
+              <ReminderWarningBanner />
+            )}
+
+            {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
+            {hasFrequencyDate && allTimingsDisabled && (
+              <ReminderErrorBanner
+                message={`All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`}
+              />
+            )}
+
             {/* Timing Options */}
-            {canSetReminder && (
+            {hasFrequencyDate && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Notify me:</Text>
-                {timingOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.timingOption,
-                      selectedTiming === option.value && styles.timingOptionSelected,
-                    ]}
-                    onPress={() => setSelectedTiming(option.value)}
-                    disabled={isLoading}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <View style={styles.radioOuter}>
-                      {selectedTiming === option.value && <View style={styles.radioInner} />}
-                    </View>
-                    <View style={styles.timingTextContainer}>
-                      <Text style={styles.timingLabel}>{option.label}</Text>
-                      <Text style={styles.timingDescription}>{option.description}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                <ReminderTimingOptions
+                  options={timingOptions}
+                  selectedValue={selectedTiming}
+                  disabledValues={disabledTimings}
+                  onSelect={setSelectedTiming}
+                  disabled={isLoading}
+                />
               </View>
             )}
 
@@ -356,15 +388,20 @@ export default function TVReminderModal({
             )}
 
             {/* Action Buttons */}
-            {canSetReminder && (
+            {(hasReminder || canSetReminder) && (
               <View style={styles.actions}>
                 {hasReminder ? (
                   <>
                     <TouchableOpacity
-                      style={[styles.button, styles.updateButton]}
+                      style={[
+                        styles.button,
+                        styles.updateButton,
+                        !canSetReminder && styles.buttonDisabled,
+                      ]}
                       onPress={handleSetReminder}
                       disabled={
                         isLoading ||
+                        !canSetReminder ||
                         (selectedTiming === currentTiming &&
                           selectedFrequency === currentFrequency &&
                           !hasEpisodeChanged(currentNextEpisode, nextEpisode))
@@ -374,7 +411,11 @@ export default function TVReminderModal({
                       {isLoading ? (
                         <ActivityIndicator size="small" color={COLORS.white} />
                       ) : (
-                        <Text style={styles.buttonText}>Update Reminder</Text>
+                        <Text
+                          style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
+                        >
+                          Update Reminder
+                        </Text>
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -390,15 +431,23 @@ export default function TVReminderModal({
                   </>
                 ) : (
                   <TouchableOpacity
-                    style={[styles.button, styles.setButton]}
+                    style={[
+                      styles.button,
+                      styles.setButton,
+                      !canSetReminder && styles.buttonDisabled,
+                    ]}
                     onPress={handleSetReminder}
-                    disabled={isLoading}
+                    disabled={isLoading || !canSetReminder}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     {isLoading ? (
                       <ActivityIndicator size="small" color={COLORS.white} />
                     ) : (
-                      <Text style={styles.buttonText}>Set Reminder</Text>
+                      <Text
+                        style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
+                      >
+                        Set Reminder
+                      </Text>
                     )}
                   </TouchableOpacity>
                 )}
@@ -500,19 +549,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  timingOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
-    gap: SPACING.m,
-  },
-  timingOptionSelected: {
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
   radioOuter: {
     width: 20,
     height: 20,
@@ -527,19 +563,6 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: COLORS.primary,
-  },
-  timingTextContainer: {
-    flex: 1,
-  },
-  timingLabel: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  timingDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   actions: {
     gap: SPACING.m,
@@ -572,18 +595,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.error,
   },
-  devBanner: {
-    backgroundColor: COLORS.warning,
-    padding: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-  },
-  devBannerText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
   disabledText: {
     color: COLORS.textSecondary,
   },
@@ -600,5 +611,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonTextDisabled: {
+    color: COLORS.textSecondary,
   },
 });

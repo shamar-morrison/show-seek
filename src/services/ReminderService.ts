@@ -20,6 +20,7 @@ import {
   TVReminderFrequency,
 } from '../types/reminder';
 import { parseTmdbDate } from '../utils/dateUtils';
+import { calculateNotificationTime as calculateProductionNotificationTime } from '../utils/reminderHelpers';
 
 class ReminderService {
   /**
@@ -98,22 +99,8 @@ class ReminderService {
       }
     }
 
-    // PRODUCTION MODE: Normal scheduling
-    const release = parseTmdbDate(releaseDate);
-    const notificationDate = new Date(release);
-
-    // Apply offset based on timing preference
-    if (timing === '1_day_before') {
-      notificationDate.setDate(notificationDate.getDate() - 1);
-    } else if (timing === '1_week_before') {
-      notificationDate.setDate(notificationDate.getDate() - 7);
-    }
-    // 'on_release_day' uses release date as-is
-
-    // Set to 9 AM EST (14:00 UTC)
-    notificationDate.setUTCHours(14, 0, 0, 0);
-
-    return notificationDate.getTime();
+    // PRODUCTION MODE: Use shared helper to keep UI and scheduling in sync
+    return calculateProductionNotificationTime(releaseDate, timing);
   }
 
   /**
