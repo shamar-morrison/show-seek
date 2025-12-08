@@ -78,15 +78,12 @@ export default function ReminderModal({
     }
   }, [disabledTimings, selectedTiming, availableTimings]);
 
-  // Check if the release date is today (for context-aware messaging)
   const isReleasingToday = useMemo(() => {
     if (!releaseDate) return false;
     return isReleaseToday(releaseDate);
   }, [releaseDate]);
 
-  // Check if the existing reminder's timing is now disabled/past
   const willSkipCurrentNotification = useMemo(() => {
-    // Show warning when the existing reminder's timing has passed
     return hasReminder && currentTiming && disabledTimings.has(currentTiming);
   }, [hasReminder, currentTiming, disabledTimings]);
 
