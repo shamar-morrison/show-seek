@@ -85,6 +85,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const [newListName, setNewListName] = useState('');
     // Key to force ScrollView remount when switching back from creation mode
     const [scrollKey, setScrollKey] = useState(0);
+    // Flag to scroll to bottom only once after list creation
+    const shouldScrollToBottomRef = useRef(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [operationError, setOperationError] = useState<string | null>(null);
 
@@ -167,10 +169,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         setIsCreating(false);
         // Increment key to force ScrollView remount, fixing scroll issues
         setScrollKey((k) => k + 1);
-        // Auto-scroll to bottom after remount to show newly created list
-        setTimeout(() => {
-          scrollRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        // Flag to scroll to bottom on next content size change
+        shouldScrollToBottomRef.current = true;
       } catch (error) {
         console.error('Failed to create list:', error);
         setCreateError('Failed to create list. Please try again.');
@@ -301,6 +301,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                   showsVerticalScrollIndicator
                   nestedScrollEnabled={true}
                   contentContainerStyle={{ flexGrow: 1 }}
+                  onContentSizeChange={() => {
+                    if (shouldScrollToBottomRef.current) {
+                      shouldScrollToBottomRef.current = false;
+                      scrollRef.current?.scrollToEnd({ animated: true });
+                    }
+                  }}
                 >
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
