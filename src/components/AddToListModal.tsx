@@ -11,7 +11,7 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Settings2, X } from 'lucide-react-native';
+import { Check, Plus, Settings2 } from 'lucide-react-native';
 import React, {
   forwardRef,
   useCallback,
@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SHEET_HEIGHT = SCREEN_HEIGHT * 0.8;
+const LIST_HEIGHT = SHEET_HEIGHT * 0.5;
 
 export interface AddToListModalRef {
   present: () => Promise<void>;
@@ -214,7 +219,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     return (
       <TrueSheet
         ref={sheetRef}
-        detents={['auto', 1]}
+        detents={[0.8]}
+        scrollable
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         onDidDismiss={handleDismiss}
@@ -223,12 +229,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
-            <TouchableOpacity
-              onPress={() => sheetRef.current?.dismiss()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
           </View>
 
           {(operationError || listsError) && (
@@ -292,7 +292,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               {isLoadingLists ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
               ) : (
-                <ScrollView style={styles.listContainer} showsVerticalScrollIndicator>
+                <ScrollView
+                  style={styles.listContainer}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled={true}
+                  contentContainerStyle={{ flexGrow: 1 }}
+                >
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
                     return (
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
-    maxHeight: 300,
+    maxHeight: LIST_HEIGHT,
   },
   listItem: {
     flexDirection: 'row',
