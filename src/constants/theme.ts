@@ -44,4 +44,8 @@ export const FONT_SIZE = {
 
 export const ACTIVE_OPACITY = 0.9; // the higher the value, the less opacity
 
-export const MAX_CHARACTERS = 100; // max characters for overview
+export const HIT_SLOP = {
+  s: 8, // for medium icons (~32px)
+  m: 12, // for smaller icons (~24px)
+  l: 16, // for tiny icons (~16-20px)
+} as const;

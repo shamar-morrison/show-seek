@@ -23,7 +23,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, HIT_SLOP } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -473,6 +473,7 @@ export default function MovieDetailScreen() {
               <TouchableOpacity
                 onPress={() => navigateTo(`/person/${director.id}`)}
                 activeOpacity={ACTIVE_OPACITY}
+                hitSlop={HIT_SLOP.m}
               >
                 <Text style={[detailStyles.value, { color: COLORS.primary }]}>{director.name}</Text>
               </TouchableOpacity>

@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type CastMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -53,6 +53,7 @@ export const CastSection = memo<CastSectionProps>(
             style={detailStyles.sectionHeader}
             onPress={onViewAll}
             activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.m}
           >
             <Text style={detailStyles.sectionTitle}>{title}</Text>
             <Text style={detailStyles.viewAll}>View All</Text>
