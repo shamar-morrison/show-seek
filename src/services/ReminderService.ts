@@ -10,6 +10,7 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore';
+import { Platform } from 'react-native';
 import { auth, db } from '../firebase/config';
 import {
   CreateReminderInput,
@@ -147,6 +148,8 @@ class ReminderService {
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: new Date(notificationTime),
+          // Android-specific: use our custom high-importance channel
+          ...(Platform.OS === 'android' && { channelId: 'default' }),
         },
       });
 
