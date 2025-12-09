@@ -168,13 +168,28 @@ export default function TVDetailScreen() {
   // Compute next episode info for reminders (must be before early returns)
   const nextEpisodeInfo = useMemo((): NextEpisodeInfo | null => {
     const show = tvQuery.data;
-    if (!show?.next_episode_to_air?.air_date) return null;
-    return {
-      seasonNumber: show.next_episode_to_air.season_number,
-      episodeNumber: show.next_episode_to_air.episode_number,
-      episodeName: show.next_episode_to_air.name || 'TBA',
-      airDate: show.next_episode_to_air.air_date,
-    };
+
+    // If we have next_episode_to_air, use it
+    if (show?.next_episode_to_air?.air_date) {
+      return {
+        seasonNumber: show.next_episode_to_air.season_number,
+        episodeNumber: show.next_episode_to_air.episode_number,
+        episodeName: show.next_episode_to_air.name || 'TBA',
+        airDate: show.next_episode_to_air.air_date,
+      };
+    }
+
+    // Fallback: Use first_air_date for series premiere (S1E1)
+    if (show?.first_air_date) {
+      return {
+        seasonNumber: 1,
+        episodeNumber: 1,
+        episodeName: 'Series Premiere',
+        airDate: show.first_air_date,
+      };
+    }
+
+    return null;
   }, [tvQuery.data]);
 
   // Compute next season premiere date (must be before early returns)
@@ -572,7 +587,10 @@ export default function TVDetailScreen() {
             </View>
 
             {/* Reminder Button */}
-            {show.status === 'Returning Series' && (
+            {(show.status === 'Returning Series' ||
+              show.status === 'In Production' ||
+              show.status === 'Planned' ||
+              show.status === 'Pilot') && (
               <View style={detailStyles.ratingButtonContainer}>
                 <ReminderButton
                   onPress={() =>
