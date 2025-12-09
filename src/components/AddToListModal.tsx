@@ -167,6 +167,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         setIsCreating(false);
         // Increment key to force ScrollView remount, fixing scroll issues
         setScrollKey((k) => k + 1);
+        // Auto-scroll to bottom after remount to show newly created list
+        setTimeout(() => {
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }, 100);
       } catch (error) {
         console.error('Failed to create list:', error);
         setCreateError('Failed to create list. Please try again.');
