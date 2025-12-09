@@ -11,7 +11,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -26,6 +26,19 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+// Create notification channel for Android - required for Android 13+ permission prompt
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Release Reminders',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: COLORS.primary,
+    sound: 'default',
+  }).catch((error) => {
+    console.error('[NotificationChannel] Failed to create default channel', error);
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
