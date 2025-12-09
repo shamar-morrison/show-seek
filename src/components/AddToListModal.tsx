@@ -80,8 +80,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
     const router = useRouter();
     const sheetRef = useRef<TrueSheet>(null);
+    const scrollRef = useRef<ScrollView>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newListName, setNewListName] = useState('');
+    // Key to force ScrollView remount when switching back from creation mode
+    const [scrollKey, setScrollKey] = useState(0);
     const [createError, setCreateError] = useState<string | null>(null);
     const [operationError, setOperationError] = useState<string | null>(null);
 
@@ -162,6 +165,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setNewListName('');
         setIsCreating(false);
+        // Increment key to force ScrollView remount, fixing scroll issues
+        setScrollKey((k) => k + 1);
       } catch (error) {
         console.error('Failed to create list:', error);
         setCreateError('Failed to create list. Please try again.');
@@ -286,6 +291,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
               ) : (
                 <ScrollView
+                  key={scrollKey}
+                  ref={scrollRef}
                   style={styles.listContainer}
                   showsVerticalScrollIndicator
                   nestedScrollEnabled={true}
