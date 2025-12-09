@@ -36,7 +36,7 @@ if (Platform.OS === 'android') {
     lightColor: COLORS.primary,
     sound: 'default',
   }).catch((error) => {
-    console.error('[reminderSync] Failed to initialize', error);
+    console.error('[NotificationChannel] Failed to create default channel', error);
   });
 }
 
