@@ -180,13 +180,25 @@ export default function TVDetailScreen() {
     }
 
     // Fallback: Use first_air_date for series premiere (S1E1)
+    // Only when: show is in pre-air status OR first_air_date is in the future
     if (show?.first_air_date) {
-      return {
-        seasonNumber: 1,
-        episodeNumber: 1,
-        episodeName: 'Series Premiere',
-        airDate: show.first_air_date,
-      };
+      const preAirStatuses = ['Planned', 'Pilot', 'In Production'];
+      const isPreAirStatus = preAirStatuses.includes(show.status || '');
+
+      // Check if first_air_date is today or in the future
+      const firstAirDate = new Date(show.first_air_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isFirstAirDateFuture = firstAirDate >= today;
+
+      if (isPreAirStatus || isFirstAirDateFuture) {
+        return {
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Series Premiere',
+          airDate: show.first_air_date,
+        };
+      }
     }
 
     return null;
