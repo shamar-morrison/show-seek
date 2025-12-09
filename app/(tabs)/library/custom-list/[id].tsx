@@ -2,7 +2,7 @@ import AddToListModal from '@/src/components/AddToListModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -148,7 +148,7 @@ export default function CustomListDetailScreen() {
                 style={styles.headerButton}
                 accessibilityLabel="Sort items"
                 accessibilityRole="button"
-                hitSlop={SPACING.s}
+                hitSlop={HIT_SLOP.m}
               >
                 <ArrowUpDown size={22} color={COLORS.text} />
                 {hasActiveSort && <View style={styles.sortBadge} />}
@@ -159,7 +159,7 @@ export default function CustomListDetailScreen() {
                 activeOpacity={ACTIVE_OPACITY}
                 accessibilityLabel="Delete list"
                 accessibilityRole="button"
-                hitSlop={SPACING.s}
+                hitSlop={HIT_SLOP.m}
               >
                 <Trash2 size={22} color={COLORS.error} />
               </TouchableOpacity>
