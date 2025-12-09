@@ -1,24 +1,10 @@
-### Feature Request
+### Bug Description
 
 ---
 
-I want to replace the add to list modal with the latest version of @gorhom/react-native-bottom-sheet. it is normally coupled with Portal from https://oss.callstack.com/react-native-paper/docs/components/Portal/ so you can investigate how to implement the two. I want to maintain the functionality and UI of the original implementation, i just want you to move to this new library and implement it. if you have any questions you can ask.
+I previously had an issue where selecting a list from the add to list modal would make that list jump to the bottom of the modal, it was fixed but I recently changed from a modal to using TrueSheet from a library and now the problem is back. Consider the following:
 
-### Example combo (Paper + Gorhom)
+1. We have the following list of lists: [ “Should Watch”, “Watching”, “Already Watched”, “Favorites”, “Dropped”, “Mike”, “Luna”, “Jessie”, “James” ]
+2. We select “Luna” from the list, so it jumps to the bottom and the list order is now: [ “Should Watch”, “Watching”, “Already Watched”, “Favorites”, “Dropped”, “Mike”, “Jessie”, “James”, “Luna” ]
 
-```tsx
-import BottomSheet from '@gorhom/bottom-sheet';
-import { Portal, Button } from 'react-native-paper';
-
-const MySheet = () => {
-  const sheetRef = useRef(null);
-
-  return (
-    <Portal>
-      <BottomSheet ref={sheetRef} snapPoints={['25%', '50%']}>
-        {/* content here */}
-      </BottomSheet>
-    </Portal>
-  );
-};
-```
+The list we selected “Luna” is now at the end of the list, which doesn’t make sense, it should maintain its original position, if every time a user selects a list and it jumps to the bottom that is bad UX. Note: this does NOT happen with default lists, they maintain their position.
