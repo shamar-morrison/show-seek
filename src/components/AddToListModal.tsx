@@ -1,3 +1,4 @@
+import { isDefaultList } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import {
   useAddToList,
@@ -169,15 +170,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     };
 
     const handleDeleteList = (listId: string, listName: string) => {
-      const DEFAULT_LIST_IDS = [
-        'favorites',
-        'watchlist', // should watch
-        'currently-watching',
-        'already-watched',
-        'dropped',
-      ];
-
-      if (DEFAULT_LIST_IDS.includes(listId)) {
+      if (isDefaultList(listId)) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
         return;
