@@ -13,7 +13,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PaperProvider } from 'react-native-paper';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -134,9 +133,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <PaperProvider>
-            <RootLayoutNav />
-          </PaperProvider>
+          <RootLayoutNav />
         </GestureHandlerRootView>
       </AuthProvider>
     </QueryClientProvider>
