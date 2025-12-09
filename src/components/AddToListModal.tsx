@@ -1,14 +1,31 @@
+import { isDefaultList } from '@/src/constants/lists';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  useAddToList,
+  useCreateList,
+  useDeleteList,
+  useLists,
+  useMediaLists,
+  useRemoveFromList,
+} from '@/src/hooks/useLists';
+import { ListMediaItem } from '@/src/services/ListService';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Settings2, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Plus, Settings2 } from 'lucide-react-native';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,21 +34,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '../constants/theme';
-import {
-  useAddToList,
-  useCreateList,
-  useDeleteList,
-  useLists,
-  useMediaLists,
-  useRemoveFromList,
-} from '../hooks/useLists';
-import { ListMediaItem } from '../services/ListService';
-import { ModalBackground } from './ui/ModalBackground';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SHEET_HEIGHT = SCREEN_HEIGHT * 0.8;
+const LIST_HEIGHT = SHEET_HEIGHT * 0.5;
+
+export interface AddToListModalRef {
+  present: () => Promise<void>;
+  dismiss: () => Promise<void>;
+}
 
 interface AddToListModalProps {
-  visible: boolean;
-  onClose: () => void;
   mediaItem: Omit<ListMediaItem, 'addedAt'>;
   onShowToast?: (message: string) => void;
 }
@@ -63,159 +76,152 @@ const AnimatedCheck = ({ visible }: { visible: boolean }) => {
   );
 };
 
-export default function AddToListModal({
-  visible,
-  onClose,
-  mediaItem,
-  onShowToast,
-}: AddToListModalProps) {
-  const router = useRouter();
-  const [isCreating, setIsCreating] = useState(false);
-  const [newListName, setNewListName] = useState('');
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [operationError, setOperationError] = useState<string | null>(null);
+const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
+  ({ mediaItem, onShowToast }, ref) => {
+    const router = useRouter();
+    const sheetRef = useRef<TrueSheet>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [newListName, setNewListName] = useState('');
+    const [createError, setCreateError] = useState<string | null>(null);
+    const [operationError, setOperationError] = useState<string | null>(null);
 
-  const hasChangesRef = useRef(false);
+    const hasChangesRef = useRef(false);
 
-  const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
-  const { membership } = useMediaLists(mediaItem.id);
+    const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
+    const { membership } = useMediaLists(mediaItem.id);
 
-  const addMutation = useAddToList();
-  const removeMutation = useRemoveFromList();
-  const createMutation = useCreateList();
-  const deleteMutation = useDeleteList();
+    const addMutation = useAddToList();
+    const removeMutation = useRemoveFromList();
+    const createMutation = useCreateList();
+    const deleteMutation = useDeleteList();
 
-  // Reset state when modal opens
-  useEffect(() => {
-    if (visible) {
-      hasChangesRef.current = false;
+    useImperativeHandle(ref, () => ({
+      present: async () => {
+        hasChangesRef.current = false;
+        setCreateError(null);
+        setOperationError(null);
+        setIsCreating(false);
+        setNewListName('');
+        await sheetRef.current?.present();
+      },
+      dismiss: async () => {
+        await sheetRef.current?.dismiss();
+      },
+    }));
+
+    const handleDismiss = useCallback(() => {
+      if (hasChangesRef.current && onShowToast) {
+        onShowToast('Lists updated');
+      }
+      setIsCreating(false);
+      setNewListName('');
       setCreateError(null);
       setOperationError(null);
-      setIsCreating(false);
-      setNewListName('');
-    }
-  }, [visible]);
+    }, [onShowToast]);
 
-  const handleClose = useCallback(() => {
-    if (hasChangesRef.current && onShowToast) {
-      onShowToast('Lists updated');
-    }
-    onClose();
-  }, [onClose, onShowToast]);
+    // Error handler for mutations
+    const handleMutationError = useCallback((error: Error) => {
+      console.error('List operation failed:', error);
+      setOperationError(error.message || 'Failed to update list');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }, []);
 
-  // Error handler for mutations
-  const handleMutationError = useCallback((error: Error) => {
-    console.error('List operation failed:', error);
-    setOperationError(error.message || 'Failed to update list');
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  }, []);
-
-  const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setOperationError(null);
-    hasChangesRef.current = true;
-
-    if (isMember) {
-      removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
-    } else {
-      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
-    }
-  };
-
-  const handleCreateList = async () => {
-    if (!newListName.trim()) return;
-
-    setCreateError(null);
-
-    try {
-      // 1. Create list (must await to get the listId)
-      const listId = await createMutation.mutateAsync(newListName.trim());
-
-      // 2. Add item to new list (fire-and-forget with optimistic update)
+    const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setOperationError(null);
       hasChangesRef.current = true;
-      addMutation.mutate(
-        {
-          listId,
-          mediaItem,
-          listName: newListName.trim(),
-        },
-        { onError: handleMutationError }
-      );
 
-      // 3. Success feedback and reset UI immediately
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNewListName('');
-      setIsCreating(false);
-    } catch (error) {
-      console.error('Failed to create list:', error);
-      setCreateError('Failed to create list. Please try again.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-  };
+      if (isMember) {
+        removeMutation.mutate({ listId, mediaId: mediaItem.id }, { onError: handleMutationError });
+      } else {
+        addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
+      }
+    };
 
-  const handleDeleteList = (listId: string, listName: string) => {
-    const DEFAULT_LIST_IDS = [
-      'favorites',
-      'watchlist', // should watch
-      'currently-watching',
-      'already-watched',
-      'dropped',
-    ];
+    const handleCreateList = async () => {
+      if (!newListName.trim()) return;
 
-    if (DEFAULT_LIST_IDS.includes(listId)) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
-      return;
-    }
+      setCreateError(null);
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Delete List',
-      `This will remove "${listName}" and all its items. This cannot be undone.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMutation.mutateAsync(listId);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              if (onShowToast) {
-                onShowToast('List deleted');
-              }
-            } catch (error) {
-              console.error('Failed to delete list:', error);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert(
-                'Delete Failed',
-                error instanceof Error ? error.message : 'Failed to delete list'
-              );
-            }
+      try {
+        // 1. Create list (must await to get the listId)
+        const listId = await createMutation.mutateAsync(newListName.trim());
+
+        // 2. Add item to new list (fire-and-forget with optimistic update)
+        hasChangesRef.current = true;
+        addMutation.mutate(
+          {
+            listId,
+            mediaItem,
+            listName: newListName.trim(),
           },
-        },
-      ]
-    );
-  };
+          { onError: handleMutationError }
+        );
 
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        // 3. Success feedback and reset UI immediately
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setNewListName('');
+        setIsCreating(false);
+      } catch (error) {
+        console.error('Failed to create list:', error);
+        setCreateError('Failed to create list. Please try again.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    };
+
+    const handleDeleteList = (listId: string, listName: string) => {
+      if (isDefaultList(listId)) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(
+        'Delete List',
+        `This will remove "${listName}" and all its items. This cannot be undone.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteMutation.mutateAsync(listId);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                if (onShowToast) {
+                  onShowToast('List deleted');
+                }
+              } catch (error) {
+                console.error('Failed to delete list:', error);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert(
+                  'Delete Failed',
+                  error instanceof Error ? error.message : 'Failed to delete list'
+                );
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    return (
+      <TrueSheet
+        ref={sheetRef}
+        detents={[0.8]}
+        scrollable
+        cornerRadius={BORDER_RADIUS.l}
+        backgroundColor={COLORS.surface}
+        onDidDismiss={handleDismiss}
+        grabber={true}
       >
-        <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
-
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
-            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
           </View>
 
           {(operationError || listsError) && (
@@ -279,7 +285,12 @@ export default function AddToListModal({
               {isLoadingLists ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
               ) : (
-                <ScrollView style={styles.listContainer} showsVerticalScrollIndicator>
+                <ScrollView
+                  style={styles.listContainer}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled={true}
+                  contentContainerStyle={{ flexGrow: 1 }}
+                >
                   {lists?.map((list) => {
                     const isMember = !!membership[list.id];
                     return (
@@ -311,7 +322,7 @@ export default function AddToListModal({
               <TouchableOpacity
                 style={styles.manageListsButton}
                 onPress={() => {
-                  handleClose();
+                  sheetRef.current?.dismiss();
                   router.push('/manage-lists');
                 }}
                 activeOpacity={ACTIVE_OPACITY}
@@ -322,30 +333,19 @@ export default function AddToListModal({
             </>
           )}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
+      </TrueSheet>
+    );
+  }
+);
+
+AddToListModal.displayName = 'AddToListModal';
+
+export default AddToListModal;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
   content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
     padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    paddingBottom: SPACING.xl,
   },
   header: {
     flexDirection: 'row',
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
-    maxHeight: 300,
+    maxHeight: LIST_HEIGHT,
   },
   listItem: {
     flexDirection: 'row',

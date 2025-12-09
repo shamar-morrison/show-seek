@@ -2,9 +2,9 @@
 
 ---
 
-in the edit reminder timing modal (or any modal that allows me to edit/update the reminder timing) i should be notified if my change will affect the reminder of the current episode/season. consider the following:
+I previously had an issue where selecting a list from the add to list modal would make that list jump to the bottom of the modal, it was fixed but I recently changed from a modal to using TrueSheet from a library and now the problem is back. Consider the following:
 
-1. i initially set a reminder for every episode to be notified on the release day, the next episode releases may 10, 2025. it is currently may 9, 2025.
-2. i go to update the timing, if i select “one day before” i should be notified that this change will effectively remove the notification for the current episode because the current date is may. 9, 2025 (which is already one day before). the same thing should happen if i select “one week before” (its in the past). essentially, the timing should update but the updates will only affect the subsequent episodes/seasons (if applicable)
+1. We have the following list of lists: [ “Should Watch”, “Watching”, “Already Watched”, “Favorites”, “Dropped”, “Mike”, “Luna”, “Jessie”, “James” ]
+2. We select “Luna” from the list, so it jumps to the bottom and the list order is now: [ “Should Watch”, “Watching”, “Already Watched”, “Favorites”, “Dropped”, “Mike”, “Jessie”, “James”, “Luna” ]
 
-in the edit reminder modal i am able to change the notification for episodes to be “one week before” which does not make sense considering episodes are already released weekly for most tv shows. if you have any clarifying questions please ask them in your implementation plan.
+The list we selected “Luna” is now at the end of the list, which doesn’t make sense, it should maintain its original position, if every time a user selects a list and it jumps to the bottom that is bad UX. Note: this does NOT happen with default lists, they maintain their position.

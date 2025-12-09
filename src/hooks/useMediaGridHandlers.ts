@@ -1,3 +1,4 @@
+import { AddToListModalRef } from '@/src/components/AddToListModal';
 import { ToastRef } from '@/src/components/ui/Toast';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -15,11 +16,11 @@ import { useCallback, useRef, useState } from 'react';
 export function useMediaGridHandlers(isLoading: boolean) {
   const router = useRouter();
   const currentTab = useCurrentTab();
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
   const toastRef = useRef<ToastRef>(null);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
 
   const handleItemPress = useCallback(
     (item: ListMediaItem) => {
@@ -47,15 +48,10 @@ export function useMediaGridHandlers(isLoading: boolean) {
 
       const { addedAt: _addedAt, ...mediaItem } = item;
       setSelectedMediaItem(mediaItem);
-      setModalVisible(true);
+      addToListModalRef.current?.present();
     },
     [isLoading]
   );
-
-  const handleCloseModal = useCallback(() => {
-    setModalVisible(false);
-    setSelectedMediaItem(null);
-  }, []);
 
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);
@@ -64,9 +60,8 @@ export function useMediaGridHandlers(isLoading: boolean) {
   return {
     handleItemPress,
     handleLongPress,
-    handleCloseModal,
     handleShowToast,
-    modalVisible,
+    addToListModalRef,
     selectedMediaItem,
     toastRef,
   };

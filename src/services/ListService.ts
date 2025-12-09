@@ -160,21 +160,25 @@ class ListService {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
       });
 
-      await Promise.race([
-        setDoc(
-          listRef,
-          {
-            name: listName || listId, // Fallback name if creating new doc
-            items: {
-              [mediaItem.id]: itemToAdd,
-            },
-            createdAt: Date.now(), // Required by security rules when document doesn't exist
-            updatedAt: Date.now(),
-          },
-          { merge: true }
-        ),
-        timeoutPromise,
-      ]);
+      // Check if document exists to avoid overwriting createdAt
+      // (which would cause custom lists to jump to the bottom since they're sorted by createdAt)
+      const docSnap = await getDoc(listRef);
+      const docExists = docSnap.exists();
+
+      const updateData: Record<string, any> = {
+        name: listName || listId, // Fallback name if creating new doc
+        items: {
+          [mediaItem.id]: itemToAdd,
+        },
+        updatedAt: Date.now(),
+      };
+
+      // Only set createdAt when creating a new document
+      if (!docExists) {
+        updateData.createdAt = Date.now();
+      }
+
+      await Promise.race([setDoc(listRef, updateData, { merge: true }), timeoutPromise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] addToList error:', error);

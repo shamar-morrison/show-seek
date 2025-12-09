@@ -10,9 +10,10 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { PaperProvider } from 'react-native-paper';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -133,7 +134,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <RootLayoutNav />
+          <PaperProvider>
+            <RootLayoutNav />
+          </PaperProvider>
         </GestureHandlerRootView>
       </AuthProvider>
     </QueryClientProvider>

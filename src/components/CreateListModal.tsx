@@ -1,14 +1,11 @@
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCreateList } from '@/src/hooks/useLists';
+import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -16,61 +13,73 @@ import {
   View,
 } from 'react-native';
 
+export interface CreateListModalRef {
+  present: () => Promise<void>;
+  dismiss: () => Promise<void>;
+}
+
 interface CreateListModalProps {
-  visible: boolean;
-  onClose: () => void;
   onSuccess?: (listId: string, listName: string) => void;
 }
 
-export default function CreateListModal({ visible, onClose, onSuccess }: CreateListModalProps) {
-  const [listName, setListName] = useState('');
-  const [error, setError] = useState<string | null>(null);
+const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
+  ({ onSuccess }, ref) => {
+    const sheetRef = useRef<TrueSheet>(null);
+    const [listName, setListName] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-  const createMutation = useCreateList();
+    const createMutation = useCreateList();
 
-  // Reset state when modal opens
-  useEffect(() => {
-    if (visible) {
+    useImperativeHandle(ref, () => ({
+      present: async () => {
+        setListName('');
+        setError(null);
+        await sheetRef.current?.present();
+      },
+      dismiss: async () => {
+        await sheetRef.current?.dismiss();
+      },
+    }));
+
+    const handleDismiss = useCallback(() => {
       setListName('');
       setError(null);
-    }
-  }, [visible]);
+    }, []);
 
-  const handleClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    const handleCreate = async () => {
+      const trimmedName = listName.trim();
+      if (!trimmedName) return;
 
-  const handleCreate = async () => {
-    const trimmedName = listName.trim();
-    if (!trimmedName) return;
+      setError(null);
 
-    setError(null);
+      try {
+        const listId = await createMutation.mutateAsync(trimmedName);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onSuccess?.(listId, trimmedName);
+        await sheetRef.current?.dismiss();
+      } catch (err) {
+        console.error('Failed to create list:', err);
+        setError('Failed to create list. Please try again.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    };
 
-    try {
-      const listId = await createMutation.mutateAsync(trimmedName);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onSuccess?.(listId, trimmedName);
-      onClose();
-    } catch (err) {
-      console.error('Failed to create list:', err);
-      setError('Failed to create list. Please try again.');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+    return (
+      <TrueSheet
+        ref={sheetRef}
+        detents={[0.8]}
+        cornerRadius={BORDER_RADIUS.l}
+        backgroundColor={COLORS.surface}
+        onDidDismiss={handleDismiss}
+        grabber={false}
       >
-        <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
-
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Create New List</Text>
-            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
+            <TouchableOpacity
+              onPress={() => sheetRef.current?.dismiss()}
+              activeOpacity={ACTIVE_OPACITY}
+            >
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
@@ -91,7 +100,7 @@ export default function CreateListModal({ visible, onClose, onSuccess }: CreateL
             <View style={styles.createActions}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={handleClose}
+                onPress={() => sheetRef.current?.dismiss()}
                 activeOpacity={ACTIVE_OPACITY}
                 disabled={createMutation.isPending}
               >
@@ -119,30 +128,19 @@ export default function CreateListModal({ visible, onClose, onSuccess }: CreateL
             </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
+      </TrueSheet>
+    );
+  }
+);
+
+CreateListModal.displayName = 'CreateListModal';
+
+export default CreateListModal;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
   content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
     padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    paddingBottom: SPACING.xl,
   },
   header: {
     flexDirection: 'row',
