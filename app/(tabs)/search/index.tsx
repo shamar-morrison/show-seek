@@ -1,11 +1,18 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
-import { Search as SearchIcon, Star } from 'lucide-react-native';
+import { Search as SearchIcon, Star, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -156,6 +163,15 @@ export default function SearchScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={HIT_SLOP.l}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <X size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
