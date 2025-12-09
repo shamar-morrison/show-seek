@@ -1,6 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
@@ -72,6 +72,7 @@ export default function EpisodeRatingsScreen() {
           onPress={toggleViewMode}
           style={{ marginRight: SPACING.s }}
           activeOpacity={ACTIVE_OPACITY}
+          hitSlop={HIT_SLOP.m}
         >
           {viewMode === 'flat' ? (
             <Rows3 size={24} color={COLORS.text} />
