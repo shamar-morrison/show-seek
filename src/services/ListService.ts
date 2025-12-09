@@ -292,6 +292,50 @@ class ListService {
       throw new Error(message);
     }
   }
+
+  /**
+   * Rename a custom list
+   */
+  async renameList(listId: string, newName: string) {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in to continue');
+
+      // Prevent renaming default lists
+      if (DEFAULT_LISTS.some((l) => l.id === listId)) {
+        throw new Error('Cannot rename default lists');
+      }
+
+      const trimmedName = newName.trim();
+      if (!trimmedName) {
+        throw new Error('List name cannot be empty');
+      }
+
+      const listRef = this.getUserListRef(user.uid, listId);
+
+      // Verify the list exists
+      const docSnap = await getDoc(listRef);
+      if (!docSnap.exists()) {
+        throw new Error('List not found');
+      }
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      await Promise.race([
+        updateDoc(listRef, {
+          name: trimmedName,
+          updatedAt: Date.now(),
+        }),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[ListService] renameList error:', error);
+      throw new Error(message);
+    }
+  }
 }
 
 export const listService = new ListService();

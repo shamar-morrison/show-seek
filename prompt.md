@@ -1,5 +1,14 @@
-### Bug Description
+### Feature Request
 
 ---
 
-the reminders are not working in production. as you can see from the screenshot i had a reminder set for today (dec. 9, 2025) at 9AM and its now 10:18AM (as you can see from the screenshot) and i didnt get a notification on my phone. I generated and installed a production .apk with “**npx eas-cli build --platform android --profile preview”** to test it out.
+I want to add a feature that will allow users to rename custom lists from the manage lists screen and the custom lists detail screen
+
+### How it should work
+
+---
+
+- In the manage lists screen, you can put an edit icon next to the trash icon that when clicked will trigger a modal that will allow the user to rename the list.
+- In the custom list detail screen you can put an edit icon in the header top right that when clicked will trigger the same modal so the user can rename the list.
+
+If you have any questions you can ask.

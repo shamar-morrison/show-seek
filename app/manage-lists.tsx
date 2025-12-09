@@ -1,9 +1,11 @@
+import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Trash2 } from 'lucide-react-native';
-import React from 'react';
+import { ChevronLeft, Pencil, Trash2 } from 'lucide-react-native';
+import React, { useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +29,15 @@ export default function ManageListsScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
+  const renameModalRef = useRef<RenameListModalRef>(null);
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  const handleRenameList = (listId: string, currentName: string) => {
+    requireAuth(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      renameModalRef.current?.present({ listId, currentName });
+    }, 'Sign in to rename this list');
+  };
 
   const handleDeleteList = (listId: string, listName: string) => {
     if (DEFAULT_LIST_IDS.includes(listId)) {
@@ -109,7 +120,7 @@ export default function ManageListsScreen() {
               <Text style={styles.sectionTitle}>Custom Lists</Text>
               {customLists.length > 0 ? (
                 <>
-                  <Text style={styles.sectionSubtitle}>Tap the trash icon to delete a list</Text>
+                  <Text style={styles.sectionSubtitle}>Tap icons to edit or delete lists</Text>
                   {customLists.map((list) => (
                     <View key={list.id} style={styles.listItem}>
                       <View style={styles.listInfo}>
@@ -118,13 +129,22 @@ export default function ManageListsScreen() {
                           {Object.keys(list.items || {}).length} items
                         </Text>
                       </View>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteList(list.id, list.name)}
-                        style={styles.deleteButton}
-                        activeOpacity={ACTIVE_OPACITY}
-                      >
-                        <Trash2 size={20} color={COLORS.error} />
-                      </TouchableOpacity>
+                      <View style={styles.listActions}>
+                        <TouchableOpacity
+                          onPress={() => handleRenameList(list.id, list.name)}
+                          style={styles.actionButton}
+                          activeOpacity={ACTIVE_OPACITY}
+                        >
+                          <Pencil size={20} color={COLORS.textSecondary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteList(list.id, list.name)}
+                          style={styles.actionButton}
+                          activeOpacity={ACTIVE_OPACITY}
+                        >
+                          <Trash2 size={20} color={COLORS.error} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ))}
                 </>
@@ -135,6 +155,8 @@ export default function ManageListsScreen() {
           </ScrollView>
         )}
       </SafeAreaView>
+      <RenameListModal ref={renameModalRef} />
+      {AuthGuardModal}
     </>
   );
 }
@@ -219,7 +241,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontWeight: '600',
   },
-  deleteButton: {
+  listActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
+  actionButton: {
     padding: SPACING.s,
   },
   emptyText: {
