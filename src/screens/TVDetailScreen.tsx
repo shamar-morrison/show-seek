@@ -168,13 +168,40 @@ export default function TVDetailScreen() {
   // Compute next episode info for reminders (must be before early returns)
   const nextEpisodeInfo = useMemo((): NextEpisodeInfo | null => {
     const show = tvQuery.data;
-    if (!show?.next_episode_to_air?.air_date) return null;
-    return {
-      seasonNumber: show.next_episode_to_air.season_number,
-      episodeNumber: show.next_episode_to_air.episode_number,
-      episodeName: show.next_episode_to_air.name || 'TBA',
-      airDate: show.next_episode_to_air.air_date,
-    };
+
+    // If we have next_episode_to_air, use it
+    if (show?.next_episode_to_air?.air_date) {
+      return {
+        seasonNumber: show.next_episode_to_air.season_number,
+        episodeNumber: show.next_episode_to_air.episode_number,
+        episodeName: show.next_episode_to_air.name || 'TBA',
+        airDate: show.next_episode_to_air.air_date,
+      };
+    }
+
+    // Fallback: Use first_air_date for series premiere (S1E1)
+    // Only when: show is in pre-air status OR first_air_date is in the future
+    if (show?.first_air_date) {
+      const preAirStatuses = ['Planned', 'Pilot', 'In Production'];
+      const isPreAirStatus = preAirStatuses.includes(show.status || '');
+
+      // Check if first_air_date is today or in the future
+      const firstAirDate = new Date(show.first_air_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isFirstAirDateFuture = firstAirDate >= today;
+
+      if (isPreAirStatus || isFirstAirDateFuture) {
+        return {
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Series Premiere',
+          airDate: show.first_air_date,
+        };
+      }
+    }
+
+    return null;
   }, [tvQuery.data]);
 
   // Compute next season premiere date (must be before early returns)
@@ -572,7 +599,10 @@ export default function TVDetailScreen() {
             </View>
 
             {/* Reminder Button */}
-            {show.status === 'Returning Series' && (
+            {(show.status === 'Returning Series' ||
+              show.status === 'In Production' ||
+              show.status === 'Planned' ||
+              show.status === 'Pilot') && (
               <View style={detailStyles.ratingButtonContainer}>
                 <ReminderButton
                   onPress={() =>

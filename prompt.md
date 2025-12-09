@@ -2,11 +2,9 @@
 
 ---
 
-after i create a list using the “create custom list” button in the add to list modal, scrolling the list items does not work. Consider the following:
+the reminder modal does not take into account tv show series premiere. consider the following:
 
-1. I open the create list modal from the add to list modal
-2. Enter a list name and hit create
-3. List gets created successfully, but I cannot scroll the list items in order to see the list
-4. Close the add to list modal and reopen it to enable scrolling again
+1. the tv detail screen does not show the reminder button for a tv show that has series premiere date (season 1 episode 1 date)
+2. there is no way to set a reminder for the series premiere and/or subsequent episodes.
 
-This happens intermittently, I cannot reproduce the bug all the time but it happens enough that it’s a genuine issue.
+I am using the tdmb api and you can see an example of a tv show that is premiering in jan. 2026 here: https://www.themoviedb.org/tv/224372-a-knight-of-the-seven-kingdoms-the-hedge-knight. given this, the reminder option should be available dont you think?. you can ask any questions you have as well
