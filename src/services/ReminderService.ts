@@ -149,7 +149,7 @@ class ReminderService {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: new Date(notificationTime),
           // Android-specific: use our custom high-importance channel
-          ...(Platform.OS === 'android' && { channelId: 'default' }),
+          ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
         },
       });
 

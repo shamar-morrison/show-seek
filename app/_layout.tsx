@@ -33,8 +33,10 @@ if (Platform.OS === 'android') {
     name: 'Release Reminders',
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#E50914',
+    lightColor: COLORS.primary,
     sound: 'default',
+  }).catch((error) => {
+    console.error('[reminderSync] Failed to initialize', error);
   });
 }
 
