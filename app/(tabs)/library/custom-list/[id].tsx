@@ -38,9 +38,13 @@ export default function CustomListDetailScreen() {
 
   const handleRenameList = useCallback(() => {
     if (!list) return;
+    if (!isAuthenticated) {
+      requireAuth(() => {}, 'Sign in to rename this list');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     renameModalRef.current?.present({ listId: id!, currentName: list.name });
-  }, [list, id]);
+  }, [list, id, isAuthenticated, requireAuth]);
 
   const listItems = useMemo(() => {
     if (!list?.items) return [];
