@@ -1,5 +1,6 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { MediaGrid } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
@@ -8,8 +9,8 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowUpDown, Bookmark, Pencil, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
@@ -20,6 +21,7 @@ export default function CustomListDetailScreen() {
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const renameModalRef = useRef<RenameListModalRef>(null);
 
   const {
     handleItemPress,
@@ -33,6 +35,12 @@ export default function CustomListDetailScreen() {
   const list = useMemo(() => {
     return lists?.find((l) => l.id === id);
   }, [lists, id]);
+
+  const handleRenameList = useCallback(() => {
+    if (!list) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    renameModalRef.current?.present({ listId: id!, currentName: list.name });
+  }, [list, id]);
 
   const listItems = useMemo(() => {
     if (!list?.items) return [];
@@ -154,6 +162,16 @@ export default function CustomListDetailScreen() {
                 {hasActiveSort && <View style={styles.sortBadge} />}
               </TouchableOpacity>
               <TouchableOpacity
+                onPress={handleRenameList}
+                style={styles.headerButton}
+                activeOpacity={ACTIVE_OPACITY}
+                accessibilityLabel="Rename list"
+                accessibilityRole="button"
+                hitSlop={HIT_SLOP.m}
+              >
+                <Pencil size={22} color={COLORS.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={handleDeleteList}
                 style={styles.headerButton}
                 activeOpacity={ACTIVE_OPACITY}
@@ -201,6 +219,7 @@ export default function CustomListDetailScreen() {
 
       <Toast ref={toastRef} />
       {AuthGuardModal}
+      <RenameListModal ref={renameModalRef} />
     </>
   );
 }

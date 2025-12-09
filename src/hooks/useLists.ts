@@ -215,3 +215,10 @@ export const useDeleteList = () => {
     mutationFn: (listId: string) => listService.deleteList(listId),
   });
 };
+
+export const useRenameList = () => {
+  return useMutation({
+    mutationFn: ({ listId, newName }: { listId: string; newName: string }) =>
+      listService.renameList(listId, newName),
+  });
+};
