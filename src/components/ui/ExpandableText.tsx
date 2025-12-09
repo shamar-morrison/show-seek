@@ -1,4 +1,4 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
 import React, { useCallback, useState } from 'react';
 import {
   StyleProp,
@@ -65,6 +65,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
           onPress={toggleExpanded}
           activeOpacity={ACTIVE_OPACITY}
           style={styles.readMoreContainer}
+          hitSlop={HIT_SLOP.m}
         >
           <Text style={[styles.readMore, readMoreStyle]}>
             {expanded ? 'Read less' : 'Read more'}
