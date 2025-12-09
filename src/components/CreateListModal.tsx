@@ -67,7 +67,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     return (
       <TrueSheet
         ref={sheetRef}
-        detents={['auto']}
+        detents={[0.8]}
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         onDidDismiss={handleDismiss}
