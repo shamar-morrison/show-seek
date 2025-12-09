@@ -157,24 +157,48 @@ export default function RatingModal({
           </View>
 
           <View style={styles.starsContainer}>
-            {[...Array(10)].map((_, index) => {
-              const starValue = index + 1;
-              const isFilled = starValue <= rating;
-              return (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handleRatingSelect(starValue)}
-                  activeOpacity={0.7}
-                  style={styles.starButton}
-                >
-                  <Star
-                    size={28}
-                    color={isFilled ? COLORS.primary : COLORS.textSecondary}
-                    fill={isFilled ? COLORS.primary : 'transparent'}
-                  />
-                </TouchableOpacity>
-              );
-            })}
+            {/* First row: stars 1-5 */}
+            <View style={styles.starsRow}>
+              {[...Array(5)].map((_, index) => {
+                const starValue = index + 1;
+                const isFilled = starValue <= rating;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleRatingSelect(starValue)}
+                    activeOpacity={0.7}
+                    style={styles.starButton}
+                  >
+                    <Star
+                      size={28}
+                      color={isFilled ? COLORS.primary : COLORS.textSecondary}
+                      fill={isFilled ? COLORS.primary : 'transparent'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {/* Second row: stars 6-10 */}
+            <View style={styles.starsRow}>
+              {[...Array(5)].map((_, index) => {
+                const starValue = index + 6;
+                const isFilled = starValue <= rating;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handleRatingSelect(starValue)}
+                    activeOpacity={0.7}
+                    style={styles.starButton}
+                  >
+                    <Star
+                      size={28}
+                      color={isFilled ? COLORS.primary : COLORS.textSecondary}
+                      fill={isFilled ? COLORS.primary : 'transparent'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.ratingTextContainer}>
@@ -269,11 +293,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   starsContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: SPACING.s,
+    marginBottom: SPACING.m,
+  },
+  starsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    flexWrap: 'wrap',
     gap: 4,
-    marginBottom: SPACING.m,
   },
   starButton: {
     padding: 2,
