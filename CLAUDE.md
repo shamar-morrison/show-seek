@@ -82,7 +82,7 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 - These hooks subscribe to Firestore collections and update in real-time
 - Automatically clean up subscriptions when user logs out
 
-**Zustand**: Currently included in dependencies for potential client-side state management needs (not heavily utilized yet as most state is handled by TanStack Query and Firebase subscriptions)
+**Client State**: Most state is handled by TanStack Query (server state) and Firebase subscriptions (user data). Local component state uses React's built-in useState/useReducer hooks.
 
 ### Data Layer Structure
 
