@@ -108,7 +108,6 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                   const nextEpisode = showDetails.next_episode_to_air;
 
                   if (nextEpisode && nextEpisode.air_date) {
-                    const nextAirDate = new Date(nextEpisode.air_date);
                     const isEveryEpisode = reminder.tvFrequency === 'every_episode';
                     const isNewSeason =
                       nextEpisode.season_number > (reminder.nextEpisode?.seasonNumber || 0);
