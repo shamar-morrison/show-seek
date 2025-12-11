@@ -225,6 +225,7 @@ export default function RemindersScreen() {
   if (!sortedReminders || sortedReminders.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         <EmptyState
           icon={Bell}
           title="No Active Reminders"
@@ -236,6 +237,7 @@ export default function RemindersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
           data={sortedReminders}
@@ -275,6 +277,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,
