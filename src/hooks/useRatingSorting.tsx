@@ -5,6 +5,61 @@ import { ArrowUpDown } from 'lucide-react-native';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
+interface SortableMedia {
+  vote_average?: number;
+  title?: string;
+  name?: string;
+  release_date?: string;
+  first_air_date?: string;
+}
+
+interface RatingItem {
+  rating: {
+    ratedAt: number;
+    rating: number;
+  };
+}
+
+/**
+ * Creates a comparator function for sorting rating items.
+ * Works with both movies and TV shows by using a getter function to extract media properties.
+ *
+ * @param getMedia - Function to extract the media object from a rating item
+ * @param sortState - Current sort state (option and direction)
+ * @returns A comparator function for use with Array.sort()
+ */
+export function createRatingSorter<T extends RatingItem>(
+  getMedia: (item: T) => SortableMedia | null | undefined,
+  sortState: SortState
+): (a: T, b: T) => number {
+  return (a: T, b: T): number => {
+    const direction = sortState.direction === 'asc' ? 1 : -1;
+    const mediaA = getMedia(a);
+    const mediaB = getMedia(b);
+
+    switch (sortState.option) {
+      case 'recentlyAdded':
+        return (a.rating.ratedAt - b.rating.ratedAt) * direction;
+      case 'releaseDate': {
+        const dateA = mediaA?.release_date || mediaA?.first_air_date || '';
+        const dateB = mediaB?.release_date || mediaB?.first_air_date || '';
+        return dateA.localeCompare(dateB) * direction;
+      }
+      case 'rating':
+        return ((mediaA?.vote_average ?? 0) - (mediaB?.vote_average ?? 0)) * direction;
+      case 'userRating':
+        return (a.rating.rating - b.rating.rating) * direction;
+      case 'alphabetical': {
+        const titleA = (mediaA?.title || mediaA?.name || '').toLowerCase();
+        const titleB = (mediaB?.title || mediaB?.name || '').toLowerCase();
+        return titleA.localeCompare(titleB) * direction;
+      }
+      default:
+        return 0;
+    }
+  };
+}
+
 interface UseRatingSortingOptions {
   initialSortState?: SortState;
 }

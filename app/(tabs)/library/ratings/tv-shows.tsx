@@ -6,7 +6,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
-import { useRatingSorting } from '@/src/hooks/useRatingSorting';
+import { createRatingSorter, useRatingSorting } from '@/src/hooks/useRatingSorting';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -29,31 +29,8 @@ export default function TVShowRatingsScreen() {
   const sortedRatings = useMemo(() => {
     if (!enrichedRatings) return [];
     const filtered = [...enrichedRatings].filter((r) => r.tvShow !== null);
-
-    return filtered.sort((a, b) => {
-      const direction = sortState.direction === 'asc' ? 1 : -1;
-
-      switch (sortState.option) {
-        case 'recentlyAdded':
-          return (a.rating.ratedAt - b.rating.ratedAt) * direction;
-        case 'releaseDate': {
-          const dateA = a.tvShow?.first_air_date || '';
-          const dateB = b.tvShow?.first_air_date || '';
-          return dateA.localeCompare(dateB) * direction;
-        }
-        case 'rating':
-          return ((a.tvShow?.vote_average ?? 0) - (b.tvShow?.vote_average ?? 0)) * direction;
-        case 'userRating':
-          return (a.rating.rating - b.rating.rating) * direction;
-        case 'alphabetical': {
-          const titleA = (a.tvShow?.name || '').toLowerCase();
-          const titleB = (b.tvShow?.name || '').toLowerCase();
-          return titleA.localeCompare(titleB) * direction;
-        }
-        default:
-          return 0;
-      }
-    });
+    const sorter = createRatingSorter<EnrichedTVRating>((item) => item.tvShow, sortState);
+    return filtered.sort(sorter);
   }, [enrichedRatings, sortState]);
 
   const handleItemPress = useCallback(
