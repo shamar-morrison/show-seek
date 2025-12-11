@@ -139,6 +139,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.m,
   },
   mediaCard: {
     width: ITEM_WIDTH,

@@ -234,6 +234,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: SPACING.m,
   },
   divider: {
     height: 1,
