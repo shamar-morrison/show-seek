@@ -78,20 +78,23 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
   const processedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    const currentIds = new Set(reminders.map((r) => r.id));
+    for (const id of processedRef.current) {
+      if (!currentIds.has(id)) {
+        processedRef.current.delete(id);
+      }
+    }
+
     const checkAndAutoUpdate = async () => {
       const now = Date.now();
       const updatePromises: Promise<void>[] = [];
 
       for (const reminder of reminders) {
-        // Skip if already processed in this session
         if (processedRef.current.has(reminder.id)) continue;
 
-        // Only check active reminders where the notification time has passed
         if (reminder.status === 'active' && reminder.notificationScheduledFor < now) {
-          // Mark as processed immediately to avoid double checking
           processedRef.current.add(reminder.id);
 
-          // Only auto-update TV shows (movies don't recur)
           if (reminder.mediaType === 'tv') {
             updatePromises.push(
               (async () => {
@@ -100,22 +103,12 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                   const showDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
                   const nextEpisode = showDetails.next_episode_to_air;
 
-                  // If we found a valid next episode
                   if (nextEpisode && nextEpisode.air_date) {
                     const nextAirDate = new Date(nextEpisode.air_date);
-                    // Ensure the new date is actually in the future (or at least today)
-                    // Note: calculateNotificationTime handles the specifics, but we conceptually want a future scheduled time
-                    // Here we just check if TMDB thinks it's upcoming
-
-                    // Check if frequency is 'every_episode' or if it's a new season (for season_premiere)
                     const isEveryEpisode = reminder.tvFrequency === 'every_episode';
                     const isNewSeason =
                       nextEpisode.season_number > (reminder.nextEpisode?.seasonNumber || 0);
 
-                    // We update if:
-                    // 1. It's 'every_episode' frequency
-                    // 2. OR it's 'season_premiere' AND it's a new season
-                    // 3. AND the new air date is strictly AFTER the current reminder's release date (prevents binge-drop loops)
                     const isFutureDate =
                       Date.parse(nextEpisode.air_date!) > Date.parse(reminder.releaseDate);
 
@@ -128,7 +121,6 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                         `[AutoUpdate] Found new episode for ${reminder.title}: S${nextEpisode.season_number}E${nextEpisode.episode_number}`
                       );
 
-                      // Construct the new NextEpisodeInfo
                       const newNextEpisode = {
                         seasonNumber: nextEpisode.season_number,
                         episodeNumber: nextEpisode.episode_number,
