@@ -9,12 +9,16 @@ interface UseRatingSortingOptions {
   initialSortState?: SortState;
 }
 
+interface ScrollableListRef {
+  scrollToOffset: (params: { offset: number; animated?: boolean }) => void;
+}
+
 interface UseRatingSortingReturn {
   sortState: SortState;
   sortModalVisible: boolean;
-  setSortModalVisible: (visible: boolean) => void;
+  setSortModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
   handleApplySort: (newSortState: SortState) => void;
-  listRef: React.RefObject<any>;
+  listRef: React.RefObject<ScrollableListRef | null>;
   hasActiveSort: boolean;
 }
 
@@ -22,14 +26,12 @@ interface UseRatingSortingReturn {
  * Custom hook for managing rating list sorting logic.
  * Handles sort state, header button setup, and scroll-to-top on sort change.
  */
-export function useRatingSorting(
-  options: UseRatingSortingOptions = {}
-): UseRatingSortingReturn {
+export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRatingSortingReturn {
   const { initialSortState = DEFAULT_SORT_STATE } = options;
   const navigation = useNavigation();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(initialSortState);
-  const listRef = useRef<any>(null);
+  const listRef = useRef<ScrollableListRef | null>(null);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||

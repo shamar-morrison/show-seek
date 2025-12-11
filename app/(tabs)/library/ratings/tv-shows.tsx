@@ -139,7 +139,7 @@ export default function TVShowRatingsScreen() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <FlashList
-          ref={listRef}
+          ref={listRef as any}
           data={sortedRatings}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
