@@ -80,6 +80,8 @@ export default function TVShowRatingsScreen() {
         }
         case 'rating':
           return ((a.tvShow?.vote_average ?? 0) - (b.tvShow?.vote_average ?? 0)) * direction;
+        case 'userRating':
+          return (a.rating.rating - b.rating.rating) * direction;
         case 'alphabetical': {
           const titleA = (a.tvShow?.name || '').toLowerCase();
           const titleB = (b.tvShow?.name || '').toLowerCase();
@@ -192,6 +194,7 @@ export default function TVShowRatingsScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+        showUserRatingOption
       />
     </>
   );

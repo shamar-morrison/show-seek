@@ -80,6 +80,8 @@ export default function MovieRatingsScreen() {
         }
         case 'rating':
           return ((a.movie?.vote_average ?? 0) - (b.movie?.vote_average ?? 0)) * direction;
+        case 'userRating':
+          return (a.rating.rating - b.rating.rating) * direction;
         case 'alphabetical': {
           const titleA = (a.movie?.title || '').toLowerCase();
           const titleB = (b.movie?.title || '').toLowerCase();
@@ -192,6 +194,7 @@ export default function MovieRatingsScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+        showUserRatingOption
       />
     </>
   );

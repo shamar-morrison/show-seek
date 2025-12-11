@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 
-export type SortOption = 'recentlyAdded' | 'releaseDate' | 'rating' | 'alphabetical';
+export type SortOption = 'recentlyAdded' | 'releaseDate' | 'rating' | 'userRating' | 'alphabetical';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {
@@ -30,21 +30,32 @@ interface MediaSortModalProps {
   onClose: () => void;
   sortState: SortState;
   onApplySort: (sortState: SortState) => void;
+  showUserRatingOption?: boolean;
 }
 
-const SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: SortDirection }[] = [
+const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: SortDirection }[] = [
   { label: 'Recently Added', value: 'recentlyAdded', defaultDirection: 'desc' },
   { label: 'Release Date', value: 'releaseDate', defaultDirection: 'desc' },
   { label: 'Rating', value: 'rating', defaultDirection: 'desc' },
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 
+const USER_RATING_OPTION = {
+  label: 'Your Rating',
+  value: 'userRating' as SortOption,
+  defaultDirection: 'desc' as SortDirection,
+};
+
 export default function MediaSortModal({
   visible,
   onClose,
   sortState,
   onApplySort,
+  showUserRatingOption = false,
 }: MediaSortModalProps) {
+  const SORT_OPTIONS = showUserRatingOption
+    ? [...BASE_SORT_OPTIONS.slice(0, 3), USER_RATING_OPTION, BASE_SORT_OPTIONS[3]]
+    : BASE_SORT_OPTIONS;
   const [localSortState, setLocalSortState] = useState<SortState>(sortState);
 
   // Update local state when modal opens
