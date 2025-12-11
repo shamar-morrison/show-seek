@@ -12,6 +12,9 @@ expo-env.d.ts
 # Android
 *.apk
 
+android
+ios
+
 # Native
 *.orig.*
 *.jks

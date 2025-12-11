@@ -1,7 +1,7 @@
 import EditTimingModal from '@/src/components/library/EditTimingModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { ReminderCard } from '@/src/components/library/ReminderCard';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCancelReminder, useReminders, useUpdateReminder } from '@/src/hooks/useReminders';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,6 +79,7 @@ export default function RemindersScreen() {
           onPress={toggleViewMode}
           style={{ marginRight: SPACING.s }}
           activeOpacity={ACTIVE_OPACITY}
+          hitSlop={HIT_SLOP.m}
         >
           {viewMode === 'flat' ? (
             <Rows3 size={24} color={COLORS.text} />
