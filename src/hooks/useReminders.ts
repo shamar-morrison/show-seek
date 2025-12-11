@@ -75,6 +75,7 @@ export const useReminders = () => {
  * This acts as a client-side "cron job" to roll forward reminders to the next episode
  */
 const useAutoUpdateReminders = (reminders: Reminder[]) => {
+  const queryClient = useQueryClient();
   const processedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -100,7 +101,10 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
               (async () => {
                 try {
                   console.log(`[AutoUpdate] Checking stale reminder for: ${reminder.title}`);
-                  const showDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
+                  const showDetails = await queryClient.ensureQueryData({
+                    queryKey: ['tv', reminder.mediaId],
+                    queryFn: () => tmdbApi.getTVShowDetails(reminder.mediaId),
+                  });
                   const nextEpisode = showDetails.next_episode_to_air;
 
                   if (nextEpisode && nextEpisode.air_date) {
