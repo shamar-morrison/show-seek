@@ -99,6 +99,7 @@ export default function CustomListsScreen() {
   return (
     <>
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         {customLists.length === 0 ? (
           <EmptyState
             icon={FolderPlus}
@@ -128,6 +129,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,

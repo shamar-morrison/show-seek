@@ -190,6 +190,8 @@ export default function CustomListDetailScreen() {
         }}
       />
 
+      <View style={styles.divider} />
+
       <View style={styles.container}>
         <MediaGrid
           items={listItems}
@@ -232,6 +234,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,

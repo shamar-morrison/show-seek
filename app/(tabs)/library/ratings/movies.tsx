@@ -97,6 +97,7 @@ export default function MovieRatingsScreen() {
   if (sortedRatings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         <EmptyState
           icon={Star}
           title="No Movie Ratings"
@@ -108,6 +109,7 @@ export default function MovieRatingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.divider} />
       <FlashList
         data={sortedRatings}
         renderItem={renderItem}
@@ -124,6 +126,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,

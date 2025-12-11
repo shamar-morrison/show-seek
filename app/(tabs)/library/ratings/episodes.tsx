@@ -169,6 +169,7 @@ export default function EpisodeRatingsScreen() {
   if (episodeRatings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         <EmptyState
           icon={Star}
           title="No Episode Ratings"
@@ -180,6 +181,7 @@ export default function EpisodeRatingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
           data={episodeRatings}
@@ -210,6 +212,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,

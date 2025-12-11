@@ -71,9 +71,7 @@ export default function TVShowRatingsScreen() {
                     <>
                       <Text style={styles.separator}> • </Text>
                       <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                      <Text style={styles.rating}>
-                        {item.tvShow.vote_average.toFixed(1)}
-                      </Text>
+                      <Text style={styles.rating}>{item.tvShow.vote_average.toFixed(1)}</Text>
                     </>
                   )}
                 </View>
@@ -99,6 +97,7 @@ export default function TVShowRatingsScreen() {
   if (sortedRatings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         <EmptyState
           icon={Star}
           title="No TV Show Ratings"
@@ -110,6 +109,7 @@ export default function TVShowRatingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.divider} />
       <FlashList
         data={sortedRatings}
         renderItem={renderItem}
@@ -126,6 +126,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,
