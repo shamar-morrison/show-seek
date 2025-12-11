@@ -33,6 +33,7 @@ export default function CustomListsScreen() {
   const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
   const createListModalRef = useRef<CreateListModalRef>(null);
+  const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
 
@@ -81,6 +82,10 @@ export default function CustomListsScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
+    // Scroll to top after sort is applied
+    setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 100);
   };
 
   useLayoutEffect(() => {
@@ -156,6 +161,7 @@ export default function CustomListsScreen() {
           />
         ) : (
           <FlashList
+            ref={listRef}
             data={customLists}
             renderItem={renderItem}
             keyExtractor={keyExtractor}

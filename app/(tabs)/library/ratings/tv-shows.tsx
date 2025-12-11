@@ -17,7 +17,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, Star } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -40,6 +40,7 @@ export default function TVShowRatingsScreen() {
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const listRef = useRef<any>(null);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -95,6 +96,10 @@ export default function TVShowRatingsScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
+    // Scroll to top after sort is applied
+    setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 100);
   };
 
   const handleItemPress = useCallback(
@@ -180,6 +185,7 @@ export default function TVShowRatingsScreen() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <FlashList
+          ref={listRef}
           data={sortedRatings}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
