@@ -1,3 +1,4 @@
+import { legal } from '@/app/(auth)/legal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { auth } from '@/src/firebase/config';
@@ -10,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -185,6 +187,17 @@ export default function SignIn() {
                   </TouchableOpacity>
                 </Link>
               </View>
+
+              <Text style={styles.termsText}>
+                By signing in, you agree to our{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                  Privacy Policy
+                </Text>
+              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -278,7 +291,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
+    marginTop: SPACING.m,
   },
   footerText: {
     color: COLORS.textSecondary,
@@ -288,5 +301,16 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
+  },
+  termsText: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    marginTop: SPACING.s,
+    lineHeight: 16,
+  },
+  termsLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

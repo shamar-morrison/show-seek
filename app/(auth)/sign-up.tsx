@@ -1,3 +1,4 @@
+import { legal } from '@/app/(auth)/legal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { auth, db } from '@/src/firebase/config';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -231,6 +233,17 @@ export default function SignUp() {
                   </TouchableOpacity>
                 </Link>
               </View>
+
+              <Text style={styles.termsText}>
+                By creating an account, you agree to our{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                  Privacy Policy
+                </Text>
+              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -242,7 +255,6 @@ export default function SignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: -50,
     backgroundColor: COLORS.background,
   },
   safeArea: {
@@ -270,7 +282,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   form: {
-    gap: SPACING.l,
+    gap: SPACING.m,
   },
   inputContainer: {
     gap: SPACING.s,
@@ -316,7 +328,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.xl,
+    marginTop: SPACING.m,
   },
   footerText: {
     color: COLORS.textSecondary,
@@ -326,5 +338,16 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
+  },
+  termsText: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    marginTop: SPACING.s,
+    lineHeight: 16,
+  },
+  termsLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });
