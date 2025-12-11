@@ -58,9 +58,9 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
     // Scroll to top after sort is applied
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    }, 100);
+    });
   };
 
   return {
