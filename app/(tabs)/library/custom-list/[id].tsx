@@ -1,7 +1,7 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
-import { MediaGrid } from '@/src/components/library/MediaGrid';
+import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -22,6 +22,7 @@ export default function CustomListDetailScreen() {
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const renameModalRef = useRef<RenameListModalRef>(null);
+  const mediaGridRef = useRef<MediaGridRef>(null);
 
   const {
     handleItemPress,
@@ -84,6 +85,10 @@ export default function CustomListDetailScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
+    // Scroll to top after sort is applied
+    setTimeout(() => {
+      mediaGridRef.current?.scrollToTop();
+    }, 100);
   };
 
   const handleDeleteList = useCallback(() => {
@@ -194,6 +199,7 @@ export default function CustomListDetailScreen() {
 
       <View style={styles.container}>
         <MediaGrid
+          ref={mediaGridRef}
           items={listItems}
           isLoading={isLoading}
           emptyState={{

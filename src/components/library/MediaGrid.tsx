@@ -3,7 +3,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react';
 import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
@@ -25,6 +25,10 @@ interface MediaGridProps {
   onItemPress: (item: ListMediaItem) => void;
   onItemLongPress: (item: ListMediaItem) => void;
   showRatings?: boolean;
+}
+
+export interface MediaGridRef {
+  scrollToTop: (animated?: boolean) => void;
 }
 
 const MediaGridItem = memo<{
@@ -70,54 +74,68 @@ const MediaGridItem = memo<{
 
 MediaGridItem.displayName = 'MediaGridItem';
 
-export const MediaGrid = memo<MediaGridProps>(
-  ({ items, isLoading, emptyState, onItemPress, onItemLongPress, showRatings = true }) => {
-    const renderItem = useCallback(
-      ({ item }: { item: ListMediaItem }) => (
-        <MediaGridItem
-          item={item}
-          onPress={onItemPress}
-          onLongPress={onItemLongPress}
-          showRatings={showRatings}
-        />
-      ),
-      [onItemPress, onItemLongPress, showRatings]
-    );
+export const MediaGrid = memo(
+  forwardRef<MediaGridRef, MediaGridProps>(
+    ({ items, isLoading, emptyState, onItemPress, onItemLongPress, showRatings = true }, ref) => {
+      const listRef = useRef<any>(null);
 
-    const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+      useImperativeHandle(ref, () => ({
+        scrollToTop: (animated = true) => {
+          listRef.current?.scrollToOffset({ offset: 0, animated });
+        },
+      }));
 
-    if (isLoading) {
+      const renderItem = useCallback(
+        ({ item }: { item: ListMediaItem }) => (
+          <MediaGridItem
+            item={item}
+            onPress={onItemPress}
+            onLongPress={onItemLongPress}
+            showRatings={showRatings}
+          />
+        ),
+        [onItemPress, onItemLongPress, showRatings]
+      );
+
+      const keyExtractor = useCallback(
+        (item: ListMediaItem) => `${item.id}-${item.media_type}`,
+        []
+      );
+
+      if (isLoading) {
+        return (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        );
+      }
+
+      if (items.length === 0) {
+        return (
+          <EmptyState
+            icon={emptyState.icon}
+            title={emptyState.title}
+            description={emptyState.description}
+            actionLabel={emptyState.actionLabel}
+            onAction={emptyState.onAction}
+          />
+        );
+      }
+
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+        <FlashList
+          ref={listRef}
+          data={items}
+          renderItem={renderItem}
+          numColumns={COLUMN_COUNT}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={keyExtractor}
+          drawDistance={400}
+        />
       );
     }
-
-    if (items.length === 0) {
-      return (
-        <EmptyState
-          icon={emptyState.icon}
-          title={emptyState.title}
-          description={emptyState.description}
-          actionLabel={emptyState.actionLabel}
-          onAction={emptyState.onAction}
-        />
-      );
-    }
-
-    return (
-      <FlashList
-        data={items}
-        renderItem={renderItem}
-        numColumns={COLUMN_COUNT}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        keyExtractor={keyExtractor}
-        drawDistance={400}
-      />
-    );
-  }
+  )
 );
 
 MediaGrid.displayName = 'MediaGrid';
