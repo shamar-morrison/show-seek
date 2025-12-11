@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.m,
   },
   mediaCardPressed: {
-    transform: [{ scale: 0.95 }],
+    opacity: ACTIVE_OPACITY,
   },
   poster: {
     width: ITEM_WIDTH,
