@@ -1,7 +1,7 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { MediaGrid } from '@/src/components/library/MediaGrid';
+import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -16,7 +16,7 @@ import {
 } from '@/src/utils/listFilters';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, Bookmark, SlidersHorizontal } from 'lucide-react-native';
-import React, { useLayoutEffect, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +30,7 @@ export default function WatchStatusScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const mediaGridRef = useRef<MediaGridRef>(null);
 
   const {
     handleItemPress,
@@ -88,6 +89,10 @@ export default function WatchStatusScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
+    // Scroll to top after sort is applied
+    setTimeout(() => {
+      mediaGridRef.current?.scrollToTop();
+    }, 100);
   };
 
   // Add filter and sort buttons to header
@@ -145,6 +150,7 @@ export default function WatchStatusScreen() {
 
         <View style={styles.content}>
           <MediaGrid
+            ref={mediaGridRef}
             items={filteredItems}
             isLoading={isLoading}
             emptyState={{

@@ -1,15 +1,23 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { filterCustomLists } from '@/src/constants/lists';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -25,13 +33,36 @@ export default function CustomListsScreen() {
   const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
   const createListModalRef = useRef<CreateListModalRef>(null);
+  const listRef = useRef<any>(null);
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
 
   const ItemSeparator = () => <View style={styles.separator} />;
 
+  const hasActiveSort =
+    sortState.option !== DEFAULT_SORT_STATE.option ||
+    sortState.direction !== DEFAULT_SORT_STATE.direction;
+
   const customLists = useMemo(() => {
     if (!lists) return [];
-    return filterCustomLists(lists);
-  }, [lists]);
+    const filtered = filterCustomLists(lists);
+
+    return [...filtered].sort((a, b) => {
+      const direction = sortState.direction === 'asc' ? 1 : -1;
+
+      switch (sortState.option) {
+        case 'recentlyAdded':
+          return ((a.createdAt || 0) - (b.createdAt || 0)) * direction;
+        case 'alphabetical': {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+          return nameA.localeCompare(nameB) * direction;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [lists, sortState]);
 
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
@@ -49,20 +80,40 @@ export default function CustomListsScreen() {
     [router]
   );
 
+  const handleApplySort = (newSortState: SortState) => {
+    setSortState(newSortState);
+    // Scroll to top after sort is applied
+    setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 100);
+  };
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={handleCreateList}
-          style={{ marginRight: SPACING.s }}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={SPACING.s}
-        >
-          <Plus size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            onPress={() => setSortModalVisible(true)}
+            activeOpacity={ACTIVE_OPACITY}
+            style={styles.headerButton}
+            accessibilityLabel="Sort lists"
+            accessibilityRole="button"
+            hitSlop={HIT_SLOP.m}
+          >
+            <ArrowUpDown size={22} color={COLORS.text} />
+            {hasActiveSort && <View style={styles.sortBadge} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleCreateList}
+            activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.m}
+          >
+            <Plus size={24} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, handleCreateList]);
+  }, [navigation, handleCreateList, hasActiveSort]);
 
   const handleListPress = useCallback(
     (listId: string) => {
@@ -110,6 +161,7 @@ export default function CustomListsScreen() {
           />
         ) : (
           <FlashList
+            ref={listRef}
             data={customLists}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
@@ -121,6 +173,14 @@ export default function CustomListsScreen() {
       </SafeAreaView>
       <CreateListModal ref={createListModalRef} onSuccess={handleCreateSuccess} />
       {AuthGuardModal}
+
+      <MediaSortModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        sortState={sortState}
+        onApplySort={handleApplySort}
+        allowedOptions={['recentlyAdded', 'alphabetical']}
+      />
     </>
   );
 }
@@ -168,5 +228,23 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: SPACING.m,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    marginRight: SPACING.s,
+  },
+  headerButton: {
+    position: 'relative',
+  },
+  sortBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
+    backgroundColor: COLORS.primary,
   },
 });

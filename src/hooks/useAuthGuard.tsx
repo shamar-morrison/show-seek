@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
-import { useAuth } from '@/src/context/auth';
 import AuthGuardModal from '@/src/components/AuthGuardModal';
+import { useAuth } from '@/src/context/auth';
+import { useCallback, useState } from 'react';
 
 /**
  * Hook that provides authentication guard functionality for protected actions.
@@ -86,11 +86,7 @@ export const useAuthGuard = () => {
 
   // The modal component to render in the parent
   const AuthGuardModalElement = (
-    <AuthGuardModal
-      visible={modalVisible}
-      onClose={handleCloseModal}
-      message={modalMessage}
-    />
+    <AuthGuardModal visible={modalVisible} onClose={handleCloseModal} message={modalMessage} />
   );
 
   return {

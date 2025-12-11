@@ -165,6 +165,7 @@ export default function FavoritePeopleScreen() {
   if (sortedPersons.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
         <EmptyState
           icon={User}
           title="No Favorite People"
@@ -176,6 +177,7 @@ export default function FavoritePeopleScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.divider} />
       {viewMode === 'grid' ? (
         <FlatList
           data={sortedPersons}
@@ -207,6 +209,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
   },
   loadingContainer: {
     flex: 1,

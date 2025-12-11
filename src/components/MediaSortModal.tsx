@@ -31,6 +31,7 @@ interface MediaSortModalProps {
   sortState: SortState;
   onApplySort: (sortState: SortState) => void;
   showUserRatingOption?: boolean;
+  allowedOptions?: SortOption[];
 }
 
 const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: SortDirection }[] = [
@@ -52,10 +53,17 @@ export default function MediaSortModal({
   sortState,
   onApplySort,
   showUserRatingOption = false,
+  allowedOptions,
 }: MediaSortModalProps) {
-  const SORT_OPTIONS = showUserRatingOption
+  // Build the options list based on props
+  let SORT_OPTIONS = showUserRatingOption
     ? [...BASE_SORT_OPTIONS.slice(0, 3), USER_RATING_OPTION, BASE_SORT_OPTIONS[3]]
     : BASE_SORT_OPTIONS;
+
+  // Filter options if allowedOptions is provided
+  if (allowedOptions) {
+    SORT_OPTIONS = SORT_OPTIONS.filter((opt) => allowedOptions.includes(opt.value));
+  }
   const [localSortState, setLocalSortState] = useState<SortState>(sortState);
 
   // Update local state when modal opens
