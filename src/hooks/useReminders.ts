@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { tmdbApi } from '../api/tmdb';
 import { auth } from '../firebase/config';
+import { reminderService } from '../services/ReminderService';
 import {
+  CreateReminderInput,
   Reminder,
   ReminderMediaType,
-  CreateReminderInput,
   ReminderTiming,
 } from '../types/reminder';
-import { reminderService } from '../services/ReminderService';
 
 /**
  * Hook to get all active reminders for current user
@@ -58,10 +59,113 @@ export const useReminders = () => {
     meta: { error },
   });
 
+  /*
+   * Auto-update stale reminders
+   */
+  useAutoUpdateReminders(query.data || []);
+
   return {
     ...query,
     isLoading: isSubscriptionLoading,
   };
+};
+
+/**
+ * Internal hook to automatically update active reminders that have passed their notification time
+ * This acts as a client-side "cron job" to roll forward reminders to the next episode
+ */
+const useAutoUpdateReminders = (reminders: Reminder[]) => {
+  const processedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const checkAndAutoUpdate = async () => {
+      const now = Date.now();
+      const updatePromises: Promise<void>[] = [];
+
+      for (const reminder of reminders) {
+        // Skip if already processed in this session
+        if (processedRef.current.has(reminder.id)) continue;
+
+        // Only check active reminders where the notification time has passed
+        if (reminder.status === 'active' && reminder.notificationScheduledFor < now) {
+          // Mark as processed immediately to avoid double checking
+          processedRef.current.add(reminder.id);
+
+          // Only auto-update TV shows (movies don't recur)
+          if (reminder.mediaType === 'tv') {
+            updatePromises.push(
+              (async () => {
+                try {
+                  console.log(`[AutoUpdate] Checking stale reminder for: ${reminder.title}`);
+                  const showDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
+                  const nextEpisode = showDetails.next_episode_to_air;
+
+                  // If we found a valid next episode
+                  if (nextEpisode && nextEpisode.air_date) {
+                    const nextAirDate = new Date(nextEpisode.air_date);
+                    // Ensure the new date is actually in the future (or at least today)
+                    // Note: calculateNotificationTime handles the specifics, but we conceptually want a future scheduled time
+                    // Here we just check if TMDB thinks it's upcoming
+
+                    // Check if frequency is 'every_episode' or if it's a new season (for season_premiere)
+                    const isEveryEpisode = reminder.tvFrequency === 'every_episode';
+                    const isNewSeason =
+                      nextEpisode.season_number > (reminder.nextEpisode?.seasonNumber || 0);
+
+                    // We update if:
+                    // 1. It's 'every_episode' frequency
+                    // 2. OR it's 'season_premiere' AND it's a new season
+                    // 3. AND the new air date is strictly AFTER the current reminder's release date (prevents binge-drop loops)
+                    const isFutureDate =
+                      Date.parse(nextEpisode.air_date!) > Date.parse(reminder.releaseDate);
+
+                    if (
+                      (isEveryEpisode ||
+                        (reminder.tvFrequency === 'season_premiere' && isNewSeason)) &&
+                      isFutureDate
+                    ) {
+                      console.log(
+                        `[AutoUpdate] Found new episode for ${reminder.title}: S${nextEpisode.season_number}E${nextEpisode.episode_number}`
+                      );
+
+                      // Construct the new NextEpisodeInfo
+                      const newNextEpisode = {
+                        seasonNumber: nextEpisode.season_number,
+                        episodeNumber: nextEpisode.episode_number,
+                        episodeName: nextEpisode.name,
+                        airDate: nextEpisode.air_date!,
+                      };
+
+                      // Call update logic (using partial update to respect Firestore rules)
+                      await reminderService.updateReminderDetails(reminder.id, {
+                        releaseDate: nextEpisode.air_date!,
+                        nextEpisode: newNextEpisode,
+                      });
+                    }
+                  } else {
+                    console.log(
+                      `[AutoUpdate] No future episode found for ${reminder.title}. Leaving as "Released".`
+                    );
+                  }
+                } catch (error) {
+                  console.error(
+                    `[AutoUpdate] Failed to update reminder for ${reminder.title}:`,
+                    error
+                  );
+                }
+              })()
+            );
+          }
+        }
+      }
+
+      if (updatePromises.length > 0) {
+        await Promise.allSettled(updatePromises);
+      }
+    };
+
+    checkAndAutoUpdate();
+  }, [reminders]);
 };
 
 /**

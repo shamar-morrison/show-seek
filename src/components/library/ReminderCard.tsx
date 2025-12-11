@@ -121,9 +121,15 @@ export const ReminderCard = memo<ReminderCardProps>(
               </Text>
             </View>
           </View>
-          <Text style={styles.notificationTime}>
-            Notify: {formatNotificationTime(reminder.notificationScheduledFor)}
-          </Text>
+          {Date.now() > reminder.notificationScheduledFor ? (
+            <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
+              Released
+            </Text>
+          ) : (
+            <Text style={styles.notificationTime}>
+              Notify: {formatNotificationTime(reminder.notificationScheduledFor)}
+            </Text>
+          )}
         </View>
         <View style={styles.actions}>
           <TouchableOpacity
