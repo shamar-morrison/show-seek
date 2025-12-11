@@ -2,7 +2,7 @@ import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown } from 'lucide-react-native';
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface SortableMedia {
@@ -110,13 +110,25 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
     });
   }, [navigation, hasActiveSort]);
 
+  // Track if initial mount to avoid scrolling on first render
+  const isInitialMount = useRef(true);
+
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    // Scroll to top after sort is applied
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
-    });
   };
+
+  // Scroll to top after sort state changes (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Use setTimeout to allow FlashList to finish re-rendering
+    const timeoutId = setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 50);
+    return () => clearTimeout(timeoutId);
+  }, [sortState]);
 
   return {
     sortState,

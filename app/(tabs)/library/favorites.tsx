@@ -8,7 +8,7 @@ import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, Heart } from 'lucide-react-native';
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -85,10 +85,22 @@ export default function FavoritesScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    setTimeout(() => {
-      mediaGridRef.current?.scrollToTop();
-    }, 100);
   };
+
+  // Track if initial mount to avoid scrolling on first render
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Use setTimeout to allow FlashList to finish re-rendering
+    const timeoutId = setTimeout(() => {
+      mediaGridRef.current?.scrollToTop();
+    }, 50);
+    return () => clearTimeout(timeoutId);
+  }, [sortState]);
 
   return (
     <>
