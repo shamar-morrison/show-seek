@@ -437,18 +437,12 @@ class ReminderService {
           allowedUpdates[key] = updates[key];
         }
       });
-
-      // Recalculate notification time if releaseDate or reminderTiming is updated
       if (allowedUpdates.releaseDate || allowedUpdates.reminderTiming) {
-        // We need the current reminder data to get missing fields
-        // But for efficiency, maybe we assume the caller provides enough?
-        // Actually, if we only provide releaseDate, we need the OLD timing.
-        // So we need to fetch the doc first? That adds latency.
-        // BUT, for auto-update, we normally don't change timing, just releaseDate.
-        // So we can assume `updates` has new releaseDate, but we need existing timing.
+        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), 10000);
+        });
 
-        // To stay robust, let's fetch the current data if we are missing one of them.
-        const reminderSnap = await getDoc(reminderRef);
+        const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
         if (reminderSnap.exists()) {
           const current = reminderSnap.data() as Reminder;
           const timing = allowedUpdates.reminderTiming || current.reminderTiming;
@@ -457,7 +451,6 @@ class ReminderService {
           const newTime = this.calculateNotificationTime(rDate, timing);
           allowedUpdates.notificationScheduledFor = newTime;
 
-          // Also reschedule the local notification
           if (current.localNotificationId) {
             await Notifications.cancelScheduledNotificationAsync(current.localNotificationId);
           }
