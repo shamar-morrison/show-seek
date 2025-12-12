@@ -1,10 +1,11 @@
+import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
-import { Film, Heart, LogOut, Star, Trash2, Tv, User } from 'lucide-react-native';
+import { Coffee, Film, Heart, LogOut, Star, Trash2, Tv, User } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -115,11 +116,17 @@ export default function ProfileScreen() {
   const [showReauthModal, setShowReauthModal] = useState(false);
   const [reauthPassword, setReauthPassword] = useState('');
   const [reauthLoading, setReauthLoading] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const isGuest = user?.isAnonymous === true;
   const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
   const email = user?.email || (isGuest ? 'Not signed in' : 'No email');
   const initials = getInitials(user?.displayName || null, user?.email || null);
+
+  const handleSupportDevelopment = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowSupportModal(true);
+  }, []);
 
   const handleRateApp = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -333,7 +340,11 @@ export default function ProfileScreen() {
           <View style={styles.actionsSection}>
             <Text style={styles.sectionTitle}>SETTINGS</Text>
             <View style={styles.actionsList}>
-              {/* <ActionButton icon={Coffee} label="Support Development" onPress={handleDonate} /> */}
+              <ActionButton
+                icon={Coffee}
+                label="Support Development"
+                onPress={handleSupportDevelopment}
+              />
               <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
@@ -391,6 +402,12 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Support Development Modal */}
+      <SupportDevelopmentModal
+        visible={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </SafeAreaView>
   );
 }
