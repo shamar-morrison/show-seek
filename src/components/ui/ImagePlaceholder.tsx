@@ -18,7 +18,7 @@ export const ImagePlaceholder = ({ type = 'movie' }: ImagePlaceholderProps) => {
   const IconComponent = type === 'person' ? User : type === 'tv' ? Tv : Film;
 
   return (
-    <View style={[styles.container, type === 'person' && { borderRadius: 9999 }]}>
+    <View style={styles.container}>
       <IconComponent size={48} color={COLORS.textSecondary} opacity={0.3} strokeWidth={1.5} />
     </View>
   );

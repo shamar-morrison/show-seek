@@ -29,7 +29,7 @@ export const MediaImage = ({
 
   if (shouldShowPlaceholder) {
     return (
-      <View style={[style, placeholderStyle]}>
+      <View style={[style, placeholderStyle, { overflow: 'hidden' }]}>
         <ImagePlaceholder type={placeholderType} />
       </View>
     );
