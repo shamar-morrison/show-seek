@@ -5,7 +5,17 @@ import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences'
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
-import { Coffee, Film, Heart, LogOut, Star, Trash2, Tv, User } from 'lucide-react-native';
+import {
+  Coffee,
+  Film,
+  Heart,
+  LogOut,
+  MessageCircle,
+  Star,
+  Trash2,
+  Tv,
+  User,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -139,6 +149,25 @@ export default function ProfileScreen() {
       } catch {
         Alert.alert('Error', 'Unable to open the Play Store');
       }
+    }
+  }, []);
+
+  const handleSendFeedback = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const email = 'shamar.morrison2000@gmail.com';
+    const subject = encodeURIComponent('ShowSeek App Feedback');
+    const body = encodeURIComponent('Hi ShowSeek Team,\n\n');
+    const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        Alert.alert('No Email App', 'Please set up an email app to send feedback.');
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to open email client.');
     }
   }, []);
 
@@ -346,6 +375,11 @@ export default function ProfileScreen() {
                 onPress={handleSupportDevelopment}
               />
               <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
+              <ActionButton
+                icon={MessageCircle}
+                label="Send Feedback"
+                onPress={handleSendFeedback}
+              />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
