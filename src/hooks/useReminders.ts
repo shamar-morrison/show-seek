@@ -79,6 +79,9 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
   const processedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Prune processedRef to avoid memory leaks: remove IDs that are no longer in the current reminders list
     const currentIds = new Set(reminders.map((r) => r.id));
     for (const id of processedRef.current) {
       if (!currentIds.has(id)) {
@@ -94,17 +97,19 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
         if (processedRef.current.has(reminder.id)) continue;
 
         if (reminder.status === 'active' && reminder.notificationScheduledFor < now) {
-          processedRef.current.add(reminder.id);
-
           if (reminder.mediaType === 'tv') {
             updatePromises.push(
               (async () => {
+                if (!isMounted) return;
                 try {
                   console.log(`[AutoUpdate] Checking stale reminder for: ${reminder.title}`);
                   const showDetails = await queryClient.ensureQueryData({
                     queryKey: ['tv', reminder.mediaId],
                     queryFn: () => tmdbApi.getTVShowDetails(reminder.mediaId),
                   });
+
+                  if (!isMounted) return;
+
                   const nextEpisode = showDetails.next_episode_to_air;
 
                   if (nextEpisode && nextEpisode.air_date) {
@@ -131,6 +136,8 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                         airDate: nextEpisode.air_date!,
                       };
 
+                      if (!isMounted) return;
+
                       // Call update logic (using partial update to respect Firestore rules)
                       await reminderService.updateReminderDetails(reminder.id, {
                         releaseDate: nextEpisode.air_date!,
@@ -142,11 +149,18 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                       `[AutoUpdate] No future episode found for ${reminder.title}. Leaving as "Released".`
                     );
                   }
+
+                  // Only mark as processed if we successfully completed without aborting
+                  if (isMounted) {
+                    processedRef.current.add(reminder.id);
+                  }
                 } catch (error) {
-                  console.error(
-                    `[AutoUpdate] Failed to update reminder for ${reminder.title}:`,
-                    error
-                  );
+                  if (isMounted) {
+                    console.error(
+                      `[AutoUpdate] Failed to update reminder for ${reminder.title}:`,
+                      error
+                    );
+                  }
                 }
               })()
             );
@@ -154,12 +168,16 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
         }
       }
 
-      if (updatePromises.length > 0) {
+      if (updatePromises.length > 0 && isMounted) {
         await Promise.allSettled(updatePromises);
       }
     };
 
     checkAndAutoUpdate();
+
+    return () => {
+      isMounted = false;
+    };
   }, [reminders]);
 };
 
