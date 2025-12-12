@@ -4,51 +4,29 @@ import { MovieRatingListCard } from '@/src/components/library/MovieRatingListCar
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedMovieRating, useEnrichedMovieRatings } from '@/src/hooks/useEnrichedRatings';
-import { createRatingSorter, sortHeaderStyles } from '@/src/hooks/useRatingSorting';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createRatingSorter } from '@/src/hooks/useRatingSorting';
+import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Grid3X3, List, Star } from 'lucide-react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Star } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-type ViewMode = 'grid' | 'list';
 const VIEW_MODE_STORAGE_KEY = 'movieRatingsViewMode';
 
 export default function MovieRatingsScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedMovieRatings();
-
-  // View mode state
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [isLoadingPreference, setIsLoadingPreference] = useState(true);
 
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -56,67 +34,17 @@ export default function MovieRatingsScreen() {
   const listRef = useRef<any>(null);
   const isInitialMount = useRef(true);
 
-  // Load view mode preference
-  useEffect(() => {
-    const loadPreference = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY);
-        if (saved === 'grid' || saved === 'list') {
-          setViewMode(saved);
-        }
-      } catch (error) {
-        console.error('Failed to load view mode preference:', error);
-      } finally {
-        setIsLoadingPreference(false);
-      }
-    };
-    loadPreference();
-  }, []);
-
-  const toggleViewMode = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMode: ViewMode = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(newMode);
-    try {
-      await AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode);
-    } catch (error) {
-      console.error('Failed to save view mode preference:', error);
-    }
-  }, [viewMode]);
-
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
-  // Set up header with view mode toggle and sort button
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            onPress={toggleViewMode}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.m}
-          >
-            {viewMode === 'grid' ? (
-              <List size={24} color={COLORS.text} />
-            ) : (
-              <Grid3X3 size={24} color={COLORS.text} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setSortModalVisible(true)}
-            activeOpacity={ACTIVE_OPACITY}
-            style={sortHeaderStyles.headerButton}
-            hitSlop={HIT_SLOP.m}
-          >
-            <ArrowUpDown size={22} color={COLORS.text} />
-            {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, viewMode, toggleViewMode, hasActiveSort]);
+  // View mode toggle hook
+  const { viewMode, isLoadingPreference } = useViewModeToggle({
+    storageKey: VIEW_MODE_STORAGE_KEY,
+    showSortButton: true,
+    hasActiveSort,
+    onSortPress: () => setSortModalVisible(true),
+  });
 
   // Scroll to top after sort state changes (but not on initial mount)
   useEffect(() => {
@@ -204,7 +132,6 @@ export default function MovieRatingsScreen() {
   );
 
   const keyExtractor = useCallback((item: EnrichedMovieRating) => item.rating.id, []);
-  const ItemSeparator = useCallback(() => <View style={styles.listSeparator} />, []);
 
   if (isLoading || isLoadingPreference) {
     return (
@@ -233,6 +160,7 @@ export default function MovieRatingsScreen() {
         <View style={styles.divider} />
         {viewMode === 'grid' ? (
           <FlashList
+            key="grid"
             ref={listRef}
             data={sortedRatings}
             renderItem={renderGridItem}
@@ -242,14 +170,14 @@ export default function MovieRatingsScreen() {
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <FlatList
+          <FlashList
+            key="list"
             ref={listRef}
             data={sortedRatings}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
           />
         )}
       </SafeAreaView>
@@ -280,11 +208,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-  },
   gridListContent: {
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
@@ -293,9 +216,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
     paddingBottom: SPACING.xl,
-  },
-  listSeparator: {
-    height: SPACING.m,
   },
   mediaCard: {
     width: ITEM_WIDTH,

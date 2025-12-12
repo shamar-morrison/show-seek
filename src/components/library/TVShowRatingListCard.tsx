@@ -1,27 +1,29 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { EnrichedMovieRating } from '@/src/hooks/useEnrichedRatings';
+import { EnrichedTVRating } from '@/src/hooks/useEnrichedRatings';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
 
-interface MovieRatingListCardProps {
-  item: EnrichedMovieRating;
-  onPress: (movieId: number) => void;
+interface TVShowRatingListCardProps {
+  item: EnrichedTVRating;
+  onPress: (tvShowId: number) => void;
 }
 
-export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPress }) => {
+export const TVShowRatingListCard = memo<TVShowRatingListCardProps>(({ item, onPress }) => {
   const handlePress = useCallback(() => {
-    if (item.movie) {
-      onPress(item.movie.id);
+    if (item.tvShow) {
+      onPress(item.tvShow.id);
     }
-  }, [onPress, item.movie]);
+  }, [onPress, item.tvShow]);
 
-  if (!item.movie) return null;
+  if (!item.tvShow) return null;
 
-  const year = item.movie.release_date ? new Date(item.movie.release_date).getFullYear() : null;
+  const year = item.tvShow.first_air_date
+    ? new Date(item.tvShow.first_air_date).getFullYear()
+    : null;
 
   return (
     <Pressable
@@ -29,21 +31,21 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPre
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(item.movie.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(item.tvShow.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
         style={styles.poster}
         contentFit="cover"
       />
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>
-          {item.movie.title}
+          {item.tvShow.name}
         </Text>
         <View style={styles.metaContainer}>
           {year && <Text style={styles.year}>{year}</Text>}
-          {item.movie.vote_average > 0 && year && <Text style={styles.separator}> • </Text>}
-          {item.movie.vote_average > 0 && (
+          {item.tvShow.vote_average > 0 && year && <Text style={styles.separator}> • </Text>}
+          {item.tvShow.vote_average > 0 && (
             <View style={styles.tmdbRating}>
               <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-              <Text style={styles.ratingText}>{item.movie.vote_average.toFixed(1)}</Text>
+              <Text style={styles.ratingText}>{item.tvShow.vote_average.toFixed(1)}</Text>
             </View>
           )}
         </View>
@@ -53,7 +55,7 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPre
   );
 });
 
-MovieRatingListCard.displayName = 'MovieRatingListCard';
+TVShowRatingListCard.displayName = 'TVShowRatingListCard';
 
 const styles = StyleSheet.create({
   container: {
