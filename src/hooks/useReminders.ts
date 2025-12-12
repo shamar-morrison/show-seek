@@ -148,6 +148,11 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                       if (isMounted) {
                         processedRef.current.add(reminder.id);
                       }
+                    } else {
+                      // Mark as processed even if update conditions not met (nextEpisode exists but doesn't qualify)
+                      if (isMounted) {
+                        processedRef.current.add(reminder.id);
+                      }
                     }
                   } else {
                     console.log(
