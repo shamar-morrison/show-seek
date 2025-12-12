@@ -9,7 +9,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { createRatingSorter } from '@/src/hooks/useRatingSorting';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Star } from 'lucide-react-native';
@@ -31,7 +31,7 @@ export default function TVShowRatingsScreen() {
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
-  const listRef = useRef<any>(null);
+  const listRef = useRef<FlashListRef<EnrichedTVRating>>(null);
   const isInitialMount = useRef(true);
 
   const hasActiveSort =
