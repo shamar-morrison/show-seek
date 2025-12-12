@@ -178,7 +178,7 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
     return () => {
       isMounted = false;
     };
-  }, [reminders]);
+  }, [reminders, queryClient]);
 };
 
 /**
