@@ -409,6 +409,77 @@ class ReminderService {
   }
 
   /**
+   * Update arbitrary reminder details (for auto-updates)
+   * carefully restricts to fields allowed by firestore rules
+   */
+  async updateReminderDetails(reminderId: string, updates: Partial<Reminder>): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in to continue');
+
+      const reminderRef = this.getReminderRef(user.uid, reminderId);
+
+      // Ensure we only touch allowed fields
+      const allowedUpdates: Partial<Reminder> = {};
+      const allowedKeys: (keyof Reminder)[] = [
+        'reminderTiming',
+        'localNotificationId',
+        'notificationScheduledFor',
+        'status',
+        'updatedAt',
+        'nextEpisode',
+        'releaseDate',
+      ];
+
+      Object.keys(updates).forEach((key) => {
+        if (allowedKeys.includes(key as keyof Reminder)) {
+          // @ts-ignore
+          allowedUpdates[key] = updates[key];
+        }
+      });
+      if (allowedUpdates.releaseDate || allowedUpdates.reminderTiming) {
+        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), 10000);
+        });
+
+        const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
+        if (reminderSnap.exists()) {
+          const current = reminderSnap.data() as Reminder;
+          const timing = allowedUpdates.reminderTiming || current.reminderTiming;
+          const rDate = allowedUpdates.releaseDate || current.releaseDate;
+
+          const newTime = this.calculateNotificationTime(rDate, timing);
+          allowedUpdates.notificationScheduledFor = newTime;
+
+          if (current.localNotificationId) {
+            await Notifications.cancelScheduledNotificationAsync(current.localNotificationId);
+          }
+          const newLocalId = await this.scheduleNotification({
+            ...current,
+            ...allowedUpdates,
+            reminderTiming: timing,
+            releaseDate: rDate,
+          });
+          allowedUpdates.localNotificationId = newLocalId;
+        }
+      }
+
+      // Always update timestamp
+      allowedUpdates.updatedAt = Date.now();
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      await Promise.race([setDoc(reminderRef, allowedUpdates, { merge: true }), timeoutPromise]);
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[ReminderService] updateReminderDetails error:', error);
+      throw new Error(message);
+    }
+  }
+
+  /**
    * Get reminder for specific media
    */
   async getReminder(mediaType: ReminderMediaType, mediaId: number): Promise<Reminder | null> {
