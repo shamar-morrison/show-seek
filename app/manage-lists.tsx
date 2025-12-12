@@ -190,7 +190,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: SPACING.l,
-    paddingBottom: 100,
   },
   section: {
     marginBottom: SPACING.xl,
