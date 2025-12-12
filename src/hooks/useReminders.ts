@@ -143,16 +143,25 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                         releaseDate: nextEpisode.air_date!,
                         nextEpisode: newNextEpisode,
                       });
+
+                      // Mark as processed after successful update
+                      if (isMounted) {
+                        processedRef.current.add(reminder.id);
+                      }
+                    } else {
+                      // Mark as processed even if update conditions not met (nextEpisode exists but doesn't qualify)
+                      if (isMounted) {
+                        processedRef.current.add(reminder.id);
+                      }
                     }
                   } else {
                     console.log(
                       `[AutoUpdate] No future episode found for ${reminder.title}. Leaving as "Released".`
                     );
-                  }
-
-                  // Only mark as processed if we successfully completed without aborting
-                  if (isMounted) {
-                    processedRef.current.add(reminder.id);
+                    // Mark as processed since we checked and found nothing
+                    if (isMounted) {
+                      processedRef.current.add(reminder.id);
+                    }
                   }
                 } catch (error) {
                   if (isMounted) {
