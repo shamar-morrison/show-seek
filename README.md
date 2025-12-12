@@ -11,9 +11,7 @@
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#screenshots">Screenshots</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="#getting-started">Getting Started</a> •
-  <a href="#project-structure">Project Structure</a> •
+  <a href="#tech-stack">Tech Stack</a>
 </p>
 
 ---
@@ -188,80 +186,6 @@ npm run lint
 
 # Format code
 npm run format
-```
-
-## Project Structure
-
-```
-show-seek/
-├── app/                          # Expo Router pages
-│   ├── (auth)/                   # Authentication screens
-│   │   ├── sign-in.tsx
-│   │   └── sign-up.tsx
-│   ├── (tabs)/                   # Bottom tab navigation
-│   │   ├── home/                 # Home tab with nested stack
-│   │   │   ├── index.tsx         # Home screen
-│   │   │   ├── movie/[id]/       # Movie details
-│   │   │   ├── tv/[id]/          # TV show details
-│   │   │   └── person/[id]/      # Person details
-│   │   ├── search/               # Search tab
-│   │   ├── discover/             # Discover tab
-│   │   ├── library/              # Library tab
-│   │   └── profile.tsx           # Profile screen
-│   ├── _layout.tsx               # Root layout
-│   ├── onboarding.tsx            # Onboarding flow
-│   └── manage-lists.tsx          # List management
-│
-├── src/
-│   ├── api/
-│   │   └── tmdb.ts               # TMDB API client & types
-│   │
-│   ├── components/
-│   │   ├── ui/                   # Reusable UI primitives
-│   │   ├── detail/               # Detail screen components
-│   │   ├── library/              # Library-specific components
-│   │   ├── cards/                # Card components
-│   │   └── reminder/             # Reminder components
-│   │
-│   ├── constants/
-│   │   └── theme.ts              # Design system tokens
-│   │
-│   ├── context/
-│   │   └── auth.ts               # Authentication context
-│   │
-│   ├── firebase/
-│   │   ├── config.ts             # Firebase initialization
-│   │   └── firestore.ts          # Firestore helpers
-│   │
-│   ├── hooks/                    # Custom React hooks
-│   │   ├── useLists.ts           # List management
-│   │   ├── useRatings.ts         # Rating system
-│   │   ├── useEpisodeTracking.ts # Episode tracking
-│   │   ├── useReminders.ts       # Release reminders
-│   │   └── useAuthGuard.tsx      # Protected actions
-│   │
-│   ├── screens/                  # Screen components
-│   │   ├── MovieDetailScreen.tsx
-│   │   ├── TVDetailScreen.tsx
-│   │   ├── PersonDetailScreen.tsx
-│   │   └── ...
-│   │
-│   ├── services/                 # Business logic services
-│   │   ├── ListService.ts        # Custom lists
-│   │   ├── RatingService.ts      # Ratings
-│   │   ├── EpisodeTrackingService.ts
-│   │   ├── ReminderService.ts    # Notifications
-│   │   └── ...
-│   │
-│   └── types/                    # TypeScript type definitions
-│
-├── assets/
-│   └── images/                   # App icons and images
-│
-├── firestore.rules               # Firebase security rules
-├── firebase.json                 # Firebase configuration
-├── app.json                      # Expo configuration
-└── package.json                  # Dependencies
 ```
 
 ## Architecture Highlights
