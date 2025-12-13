@@ -1,7 +1,8 @@
-import { tmdbApi } from '@/src/api/tmdb';
+import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
@@ -10,6 +11,7 @@ export interface FilterState {
   year: number | null;
   rating: number;
   language: string | null;
+  watchProvider: number | null;
 }
 
 interface DiscoverFiltersProps {
@@ -134,26 +136,30 @@ export default function DiscoverFilters({
   onClearFilters,
   genreMap,
 }: DiscoverFiltersProps) {
-  const [languages, setLanguages] = useState<{ iso_639_1: string; english_name: string }[]>([]);
+  // Fetch watch providers with 30-day cache (they rarely change)
+  const watchProvidersQuery = useQuery({
+    queryKey: ['watchProviders', mediaType],
+    queryFn: () => tmdbApi.getWatchProviders(mediaType),
+    staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days
+    gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days
+  });
+
+  // Fetch languages
+  const languagesQuery = useQuery({
+    queryKey: ['languages'],
+    queryFn: () => tmdbApi.getLanguages(),
+    staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days
+    gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days
+  });
+
+  const languages = languagesQuery.data || [];
+  const watchProviders = watchProvidersQuery.data || [];
 
   // Convert genreMap to array
   const genres = Object.entries(genreMap).map(([id, name]) => ({
     id: Number(id),
     name,
   }));
-
-  useEffect(() => {
-    loadLanguages();
-  }, []);
-
-  const loadLanguages = async () => {
-    try {
-      const data = await tmdbApi.getLanguages();
-      setLanguages(data);
-    } catch (error) {
-      console.error('Failed to load languages', error);
-    }
-  };
 
   const updateFilter = (key: keyof FilterState, value: any) => {
     onChange({ ...filters, [key]: value });
@@ -167,6 +173,11 @@ export default function DiscoverFilters({
   const languageOptions = [
     { label: 'All Languages', value: null },
     ...languages.map((l) => ({ label: l.english_name, value: l.iso_639_1 })),
+  ];
+
+  const watchProviderOptions = [
+    { label: 'All Services', value: null },
+    ...watchProviders.map((p: WatchProvider) => ({ label: p.provider_name, value: p.provider_id })),
   ];
 
   // Generate year options from current year down to 1950
@@ -231,7 +242,15 @@ export default function DiscoverFilters({
             placeholder="All Years"
           />
         </View>
-        <View style={styles.col} />
+        <View style={styles.col}>
+          <FilterSelect
+            label="Streaming Service"
+            value={filters.watchProvider}
+            options={watchProviderOptions}
+            onSelect={(val) => updateFilter('watchProvider', val)}
+            placeholder="All Services"
+          />
+        </View>
       </View>
 
       <TouchableOpacity
