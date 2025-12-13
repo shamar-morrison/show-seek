@@ -1,5 +1,12 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
@@ -137,6 +144,7 @@ export const ReminderCard = memo<ReminderCardProps>(
             disabled={isLoading}
             style={styles.actionButton}
             activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.s}
           >
             <Pencil size={20} color={COLORS.text} />
           </TouchableOpacity>
@@ -145,6 +153,7 @@ export const ReminderCard = memo<ReminderCardProps>(
             disabled={isLoading}
             style={styles.actionButton}
             activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.s}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color={COLORS.error} />
