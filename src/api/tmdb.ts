@@ -634,8 +634,6 @@ export const tmdbApi = {
         watch_region: 'US',
       },
     });
-    // Filter to only include streaming/flatrate providers (exclude rent/buy only)
-    // Sort by display_priority for better UX
     return data.results.sort((a, b) => a.display_priority - b.display_priority);
   },
 };
