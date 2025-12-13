@@ -19,6 +19,7 @@ const DEFAULT_FILTERS: FilterState = {
   year: null,
   rating: 0,
   language: null,
+  watchProvider: null,
 };
 
 export default function DiscoverScreen() {
@@ -40,6 +41,7 @@ export default function DiscoverScreen() {
         sortBy: filters.sortBy,
         voteAverageGte: filters.rating,
         withOriginalLanguage: filters.language || undefined,
+        withWatchProviders: filters.watchProvider || undefined,
         page: pageParam,
       };
 
@@ -69,7 +71,8 @@ export default function DiscoverScreen() {
       filters.genre !== DEFAULT_FILTERS.genre ||
       filters.year !== DEFAULT_FILTERS.year ||
       filters.rating !== DEFAULT_FILTERS.rating ||
-      filters.language !== DEFAULT_FILTERS.language
+      filters.language !== DEFAULT_FILTERS.language ||
+      filters.watchProvider !== DEFAULT_FILTERS.watchProvider
     );
   };
 

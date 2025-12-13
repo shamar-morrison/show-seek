@@ -540,6 +540,8 @@ export const tmdbApi = {
     sortBy?: string;
     voteAverageGte?: number;
     withOriginalLanguage?: string;
+    withWatchProviders?: number;
+    watchRegion?: string;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
       params: {
@@ -549,6 +551,8 @@ export const tmdbApi = {
         sort_by: params?.sortBy || 'popularity.desc',
         'vote_average.gte': params?.voteAverageGte,
         with_original_language: params?.withOriginalLanguage,
+        with_watch_providers: params?.withWatchProviders,
+        watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
       },
     });
     return data;
@@ -561,6 +565,8 @@ export const tmdbApi = {
     sortBy?: string;
     voteAverageGte?: number;
     withOriginalLanguage?: string;
+    withWatchProviders?: number;
+    watchRegion?: string;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
       params: {
@@ -570,6 +576,8 @@ export const tmdbApi = {
         sort_by: params?.sortBy || 'popularity.desc',
         'vote_average.gte': params?.voteAverageGte,
         with_original_language: params?.withOriginalLanguage,
+        with_watch_providers: params?.withWatchProviders,
+        watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
       },
     });
     return data;
@@ -615,5 +623,17 @@ export const tmdbApi = {
       params: { page },
     });
     return data;
+  },
+
+  // These are cached for 30 days since they rarely change
+  getWatchProviders: async (type: 'movie' | 'tv') => {
+    const { data } = await tmdbClient.get<{
+      results: WatchProvider[];
+    }>(`/watch/providers/${type}`, {
+      params: {
+        watch_region: 'US',
+      },
+    });
+    return data.results.sort((a, b) => a.display_priority - b.display_priority);
   },
 };
