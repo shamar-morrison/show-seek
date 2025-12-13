@@ -136,7 +136,6 @@ export default function DiscoverFilters({
   onClearFilters,
   genreMap,
 }: DiscoverFiltersProps) {
-  // Fetch watch providers with 30-day cache (they rarely change)
   const watchProvidersQuery = useQuery({
     queryKey: ['watchProviders', mediaType],
     queryFn: () => tmdbApi.getWatchProviders(mediaType),
@@ -144,7 +143,6 @@ export default function DiscoverFilters({
     gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days
   });
 
-  // Fetch languages
   const languagesQuery = useQuery({
     queryKey: ['languages'],
     queryFn: () => tmdbApi.getLanguages(),
