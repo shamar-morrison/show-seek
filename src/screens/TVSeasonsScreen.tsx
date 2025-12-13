@@ -141,37 +141,73 @@ const SeasonItem = memo<{
                 );
                 const hasAiredEpisodes = airedEpisodes.length > 0;
 
+                const allAiredWatched =
+                  hasAiredEpisodes &&
+                  airedEpisodes.every((ep) => {
+                    const episodeKey = `${season.season_number}_${ep.episode_number}`;
+                    return episodeTracking?.episodes?.[episodeKey];
+                  });
+
                 return hasAiredEpisodes ? (
                   <TouchableOpacity
                     style={styles.markAllButton}
                     onPress={() => {
-                      Alert.alert(
-                        'Mark All as Watched',
-                        `Mark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as watched?`,
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Mark All',
-                            onPress: () => {
-                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                      if (allAiredWatched) {
+                        // Unmark all episodes
+                        Alert.alert(
+                          'Unmark All as Watched',
+                          `Unmark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as unwatched?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Unmark All',
+                              onPress: () => {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-                              onMarkAllWatched({
-                                tvShowId: tvId,
-                                seasonNumber: season.season_number,
-                                episodes: airedEpisodes,
-                                showMetadata: {
-                                  tvShowName: showName,
-                                  posterPath: showPosterPath,
-                                },
-                              });
+                                // Unmark each episode
+                                airedEpisodes.forEach((ep) => {
+                                  onMarkUnwatched({
+                                    tvShowId: tvId,
+                                    seasonNumber: season.season_number,
+                                    episodeNumber: ep.episode_number,
+                                  });
+                                });
+                              },
                             },
-                          },
-                        ]
-                      );
+                          ]
+                        );
+                      } else {
+                        // Mark all episodes
+                        Alert.alert(
+                          'Mark All as Watched',
+                          `Mark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as watched?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Mark All',
+                              onPress: () => {
+                                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                                onMarkAllWatched({
+                                  tvShowId: tvId,
+                                  seasonNumber: season.season_number,
+                                  episodes: airedEpisodes,
+                                  showMetadata: {
+                                    tvShowName: showName,
+                                    posterPath: showPosterPath,
+                                  },
+                                });
+                              },
+                            },
+                          ]
+                        );
+                      }
                     }}
                     activeOpacity={ACTIVE_OPACITY}
                   >
-                    <Text style={styles.markAllText}>Mark All</Text>
+                    <Text style={styles.markAllText}>
+                      {allAiredWatched ? 'Unmark All' : 'Mark All'}
+                    </Text>
                   </TouchableOpacity>
                 ) : null;
               })()}
