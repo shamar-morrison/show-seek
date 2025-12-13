@@ -50,12 +50,14 @@ const FilterSelect = ({
   options,
   onSelect,
   placeholder = 'Select...',
+  isActive = false,
 }: {
   label: string;
   value: any;
   options: SelectOption[];
   onSelect: (val: any) => void;
   placeholder?: string;
+  isActive?: boolean;
 }) => {
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
@@ -64,7 +66,7 @@ const FilterSelect = ({
     <View style={styles.selectContainer}>
       <Text style={styles.selectLabel}>{label}</Text>
       <TouchableOpacity
-        style={styles.selectButton}
+        style={[styles.selectButton, isActive && styles.selectButtonActive]}
         onPress={() => setVisible(true)}
         activeOpacity={ACTIVE_OPACITY}
       >
@@ -197,6 +199,7 @@ export default function DiscoverFilters({
             value={filters.sortBy}
             options={SORT_OPTIONS}
             onSelect={(val) => updateFilter('sortBy', val)}
+            isActive={filters.sortBy !== 'popularity.desc'}
           />
         </View>
         <View style={styles.col}>
@@ -206,6 +209,7 @@ export default function DiscoverFilters({
             options={genreOptions}
             onSelect={(val) => updateFilter('genre', val)}
             placeholder="All Genres"
+            isActive={filters.genre !== null}
           />
         </View>
       </View>
@@ -217,6 +221,7 @@ export default function DiscoverFilters({
             value={filters.rating}
             options={RATING_OPTIONS}
             onSelect={(val) => updateFilter('rating', val)}
+            isActive={filters.rating !== 0}
           />
         </View>
         <View style={styles.col}>
@@ -226,6 +231,7 @@ export default function DiscoverFilters({
             options={languageOptions}
             onSelect={(val) => updateFilter('language', val)}
             placeholder="All Languages"
+            isActive={filters.language !== null}
           />
         </View>
       </View>
@@ -238,6 +244,7 @@ export default function DiscoverFilters({
             options={yearOptions}
             onSelect={(val) => updateFilter('year', val)}
             placeholder="All Years"
+            isActive={filters.year !== null}
           />
         </View>
         <View style={styles.col}>
@@ -247,6 +254,7 @@ export default function DiscoverFilters({
             options={watchProviderOptions}
             onSelect={(val) => updateFilter('watchProvider', val)}
             placeholder="All Services"
+            isActive={filters.watchProvider !== null}
           />
         </View>
       </View>
@@ -292,6 +300,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
+  },
+  selectButtonActive: {
+    borderColor: COLORS.error,
   },
   selectButtonText: {
     fontSize: FONT_SIZE.s,
