@@ -625,7 +625,6 @@ export const tmdbApi = {
     return data;
   },
 
-  // Get available streaming providers for movies or TV shows
   // These are cached for 30 days since they rarely change
   getWatchProviders: async (type: 'movie' | 'tv') => {
     const { data } = await tmdbClient.get<{
