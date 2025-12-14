@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
+import { CreatorsSection } from '@/src/components/detail/CreatorsSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -23,7 +24,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -379,9 +380,7 @@ export default function TVDetailScreen() {
 
   const show = tvQuery.data;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
-  const creator = creditsQuery.data?.crew.find(
-    (c) => c.job === 'Executive Producer' || c.job === 'Creator'
-  );
+  const creators = show.created_by || [];
   const videos = videosQuery.data || [];
   const trailer =
     videos.find((v) => v.type === 'Trailer' && v.official) ||
@@ -641,20 +640,13 @@ export default function TVDetailScreen() {
             </>
           )}
 
-          {creator && (
-            <View style={detailStyles.directorContainer}>
-              <Text style={detailStyles.label}>Creator: </Text>
-              <TouchableOpacity
-                onPress={() => navigateTo(`/person/${creator.id}`)}
-                activeOpacity={ACTIVE_OPACITY}
-                hitSlop={HIT_SLOP.m}
-              >
-                <Text style={[detailStyles.value, { color: COLORS.primary }]}>{creator.name}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Creators Section */}
+          <CreatorsSection
+            creators={creators}
+            onCreatorPress={(id) => navigateTo(`/person/${id}`)}
+          />
 
-          {creator && <SectionSeparator />}
+          {creators.length > 0 && <SectionSeparator />}
 
           {/* Watch Providers */}
           <WatchProvidersSection watchProviders={watchProviders} link={watchProvidersLink} />

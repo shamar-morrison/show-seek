@@ -202,6 +202,11 @@ export interface TVShowDetails extends TVShow {
   content_ratings: {
     results: ContentRating[];
   };
+  created_by: {
+    id: number;
+    name: string;
+    profile_path: string | null;
+  }[];
   // Episode tracking for reminders
   next_episode_to_air?: {
     id: number;
