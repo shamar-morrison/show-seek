@@ -338,13 +338,14 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          <FilterSelect
+          <SearchableFilterSelect
             label="Language"
             value={filters.language}
             options={languageOptions}
             onSelect={(val) => updateFilter('language', val)}
             placeholder="All Languages"
             isActive={filters.language !== null}
+            searchPlaceholder="Search languages..."
           />
         </View>
       </View>
