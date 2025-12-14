@@ -75,7 +75,6 @@ export default function EpisodeDetailScreen() {
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
 
-  // Auto-add to Watching list hooks
   const { preferences } = usePreferences();
   const { membership: listMembership } = useMediaLists(tvId);
 
