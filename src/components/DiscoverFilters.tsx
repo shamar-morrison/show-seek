@@ -41,6 +41,18 @@ interface SelectOption {
   label: string;
   value: any;
 }
+interface BaseFilterSelectProps {
+  label: string;
+  value: any;
+  options: SelectOption[];
+  onSelect: (val: any) => void;
+  placeholder?: string;
+  isActive?: boolean;
+}
+
+interface SearchableFilterSelectProps extends BaseFilterSelectProps {
+  searchPlaceholder?: string;
+}
 
 const ITEM_HEIGHT = 56;
 
@@ -51,14 +63,7 @@ const FilterSelect = ({
   onSelect,
   placeholder = 'Select...',
   isActive = false,
-}: {
-  label: string;
-  value: any;
-  options: SelectOption[];
-  onSelect: (val: any) => void;
-  placeholder?: string;
-  isActive?: boolean;
-}) => {
+}: BaseFilterSelectProps) => {
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -139,15 +144,7 @@ const SearchableFilterSelect = ({
   placeholder = 'Select...',
   isActive = false,
   searchPlaceholder = 'Search...',
-}: {
-  label: string;
-  value: any;
-  options: SelectOption[];
-  onSelect: (val: any) => void;
-  placeholder?: string;
-  isActive?: boolean;
-  searchPlaceholder?: string;
-}) => {
+}: SearchableFilterSelectProps) => {
   const [visible, setVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const selectedOption = options.find((opt) => opt.value === value);
