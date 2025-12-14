@@ -3,6 +3,7 @@ import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListMod
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
+import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -23,7 +24,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -191,7 +192,7 @@ export default function MovieDetailScreen() {
 
   const movie = movieQuery.data;
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
-  const director = creditsQuery.data?.crew.find((c) => c.job === 'Director');
+  const directors = creditsQuery.data?.crew.filter((c) => c.job === 'Director') || [];
   const videos = videosQuery.data || [];
   const trailer =
     videos.find((v) => v.type === 'Trailer' && v.official) ||
@@ -467,20 +468,13 @@ export default function MovieDetailScreen() {
 
           <SectionSeparator />
 
-          {director && (
-            <View style={detailStyles.directorContainer}>
-              <Text style={detailStyles.label}>Director: </Text>
-              <TouchableOpacity
-                onPress={() => navigateTo(`/person/${director.id}`)}
-                activeOpacity={ACTIVE_OPACITY}
-                hitSlop={HIT_SLOP.m}
-              >
-                <Text style={[detailStyles.value, { color: COLORS.primary }]}>{director.name}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Directors Section */}
+          <DirectorsSection
+            directors={directors}
+            onDirectorPress={(id) => navigateTo(`/person/${id}`)}
+          />
 
-          {director && <SectionSeparator />}
+          {directors.length > 0 && <SectionSeparator />}
 
           {/* Watch Providers */}
           <WatchProvidersSection watchProviders={watchProviders} link={watchProvidersLink} />
