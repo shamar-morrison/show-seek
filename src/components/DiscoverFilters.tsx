@@ -1,9 +1,9 @@
 import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronDown, X } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Check, ChevronDown, Search, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
   sortBy: string;
@@ -113,6 +113,122 @@ const FilterSelect = ({
                   onPress={() => {
                     onSelect(item.value);
                     setVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[styles.optionText, item.value === value && styles.optionTextSelected]}
+                  >
+                    {item.label}
+                  </Text>
+                  {item.value === value && <Check size={20} color={COLORS.primary} />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
+
+const SearchableFilterSelect = ({
+  label,
+  value,
+  options,
+  onSelect,
+  placeholder = 'Select...',
+  isActive = false,
+  searchPlaceholder = 'Search...',
+}: {
+  label: string;
+  value: any;
+  options: SelectOption[];
+  onSelect: (val: any) => void;
+  placeholder?: string;
+  isActive?: boolean;
+  searchPlaceholder?: string;
+}) => {
+  const [visible, setVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    const query = searchQuery.toLowerCase().trim();
+    return options.filter((opt) => opt.label.toLowerCase().includes(query));
+  }, [options, searchQuery]);
+
+  const handleClose = () => {
+    setVisible(false);
+    setSearchQuery('');
+  };
+
+  return (
+    <View style={styles.selectContainer}>
+      <Text style={styles.selectLabel}>{label}</Text>
+      <TouchableOpacity
+        style={[styles.selectButton, isActive && styles.selectButtonActive]}
+        onPress={() => setVisible(true)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </Text>
+        <ChevronDown size={20} color={COLORS.textSecondary} />
+      </TouchableOpacity>
+
+      <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={handleClose}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
+          <View style={styles.searchableModalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select {label}</Text>
+              <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
+                <X size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.searchContainer}>
+              <Search size={18} color={COLORS.textSecondary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={searchPlaceholder}
+                placeholderTextColor={COLORS.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={ACTIVE_OPACITY}>
+                  <X size={18} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <FlatList
+              style={styles.searchableList}
+              data={filteredOptions}
+              keyExtractor={(item) => String(item.value)}
+              getItemLayout={(_, index) => ({
+                length: ITEM_HEIGHT,
+                offset: ITEM_HEIGHT * index,
+                index,
+              })}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No results found</Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  activeOpacity={ACTIVE_OPACITY}
+                  onPress={() => {
+                    onSelect(item.value);
+                    handleClose();
                   }}
                 >
                   <Text
@@ -248,13 +364,14 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          <FilterSelect
+          <SearchableFilterSelect
             label="Streaming Service"
             value={filters.watchProvider}
             options={watchProviderOptions}
             onSelect={(val) => updateFilter('watchProvider', val)}
             placeholder="All Services"
             isActive={filters.watchProvider !== null}
+            searchPlaceholder="Search services..."
           />
         </View>
       </View>
@@ -334,6 +451,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
+  searchableModalContent: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    height: '60%',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+  },
+  searchableList: {
+    flex: 1,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -363,6 +490,29 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+    gap: SPACING.s,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+    paddingVertical: SPACING.xs,
+  },
+  emptyContainer: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
   },
   clearButton: {
     flexDirection: 'row',
