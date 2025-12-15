@@ -125,8 +125,17 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           productId: purchaseData.productId,
         });
 
+        // Always finish transaction to avoid pending state
+        try {
+          await RNIap.finishTransaction({
+            purchase: purchaseData,
+            isConsumable: false,
+          });
+        } catch (finishErr) {
+          console.error('Error finishing transaction:', finishErr);
+        }
+
         if (validationResult.data?.success) {
-          await RNIap.finishTransaction({ purchase: purchaseData, isConsumable: false });
           setIsPremium(true);
         } else {
           throw new Error('Purchase validation failed on server');
