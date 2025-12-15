@@ -105,12 +105,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     try {
       if (!PRODUCT_IDS || PRODUCT_IDS.length === 0) throw new Error('No products available');
 
-      // Use 'skus' for Android
-      // @ts-ignore - Types mismatch across versions, force skus for Android
       const purchase = await RNIap.requestPurchase({
-        skus: [PREMIUM_PRODUCT_ID],
-        andDangerouslyFinishTransactionAutomaticallyIOS: false,
-      } as any);
+        type: 'in-app',
+        request: {
+          android: {
+            skus: [PREMIUM_PRODUCT_ID],
+          },
+        },
+      });
 
       if (purchase) {
         // Handle both single object and array return types
