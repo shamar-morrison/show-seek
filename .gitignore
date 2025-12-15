@@ -9,6 +9,7 @@ dist/
 web-build/
 expo-env.d.ts
 functions/lib/
+functions/service-account-key.json
 
 # Android
 *.apk
