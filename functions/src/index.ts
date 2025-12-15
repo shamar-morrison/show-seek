@@ -41,6 +41,24 @@ export const validatePurchase = onCall(async (request) => {
     // Check if purchase is valid
     // purchaseState: 0=Purchased, 1=Canceled, 2=Pending
     if (response.data.purchaseState === 0) {
+      // Acknowledge the purchase if it hasn't been acknowledged yet
+      if (response.data.acknowledgementState === 0) {
+        try {
+          await androidPublisher.purchases.products.acknowledge({
+            packageName: 'app.horizon.showseek',
+            productId: productId,
+            token: purchaseToken,
+            requestBody: {
+              developerPayload: userId,
+            },
+          });
+          console.log('Purchase acknowledged successfully');
+        } catch (ackError) {
+          console.error('Failed to acknowledge purchase:', ackError);
+          throw new HttpsError('internal', 'Failed to acknowledge purchase');
+        }
+      }
+
       // Update user's premium status in Firestore
       await admin.firestore().collection('users').doc(userId).update({
         'premium.isPremium': true,
