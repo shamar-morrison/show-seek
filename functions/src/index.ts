@@ -60,13 +60,22 @@ export const validatePurchase = onCall(async (request) => {
       }
 
       // Update user's premium status in Firestore
-      await admin.firestore().collection('users').doc(userId).update({
-        'premium.isPremium': true,
-        'premium.purchaseDate': admin.firestore.FieldValue.serverTimestamp(),
-        'premium.purchaseToken': purchaseToken,
-        'premium.productId': productId,
-        'premium.orderId': response.data.orderId,
-      });
+      await admin
+        .firestore()
+        .collection('users')
+        .doc(userId)
+        .set(
+          {
+            premium: {
+              isPremium: true,
+              purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+              purchaseToken: purchaseToken,
+              productId: productId,
+              orderId: response.data.orderId,
+            },
+          },
+          { merge: true }
+        );
 
       return { success: true, isPremium: true };
     } else {
