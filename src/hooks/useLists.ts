@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
-import { ListMediaItem, listService, UserList } from '../services/ListService';
+import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -77,9 +78,10 @@ export const useMediaLists = (mediaId: number) => {
 export const useAddToList = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
+  const { isPremium } = usePremium();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       listId,
       mediaItem,
       listName,
@@ -87,7 +89,19 @@ export const useAddToList = () => {
       listId: string;
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
-    }) => listService.addToList(listId, mediaItem, listName),
+    }) => {
+      // Check limits
+      if (!isPremium) {
+        const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+        const targetList = lists?.find((l) => l.id === listId);
+        const currentCount = targetList ? Object.keys(targetList.items || {}).length : 0;
+
+        if (currentCount >= 20) {
+          throw new Error('LimitReached: Free users can only add 20 items per list.');
+        }
+      }
+      return listService.addToList(listId, mediaItem, listName);
+    },
 
     // Optimistic update - immediately show the item as added
     onMutate: async ({ listId, mediaItem, listName }) => {
@@ -205,8 +219,24 @@ export const useRemoveFromList = () => {
 };
 
 export const useCreateList = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+  const { isPremium } = usePremium();
+
   return useMutation({
-    mutationFn: (listName: string) => listService.createList(listName),
+    mutationFn: (listName: string) => {
+      // Check limits
+      if (!isPremium) {
+        const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+        // Count only custom lists (not in DEFAULT_LISTS)
+        const customLists = lists?.filter((l) => !DEFAULT_LISTS.some((d) => d.id === l.id)) || [];
+
+        if (customLists.length >= 5) {
+          throw new Error('LimitReached: Free users can only create 5 custom lists.');
+        }
+      }
+      return listService.createList(listName);
+    },
   });
 };
 

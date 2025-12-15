@@ -125,11 +125,36 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }, [onShowToast]);
 
     // Error handler for mutations
-    const handleMutationError = useCallback((error: Error) => {
-      console.error('List operation failed:', error);
-      setOperationError(error.message || 'Failed to update list');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }, []);
+    const handleMutationError = useCallback(
+      (error: Error) => {
+        console.error('List operation failed:', error);
+
+        if (error.message.includes('LimitReached')) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          Alert.alert(
+            'Limit Reached',
+            error.message + '\n\nUpgrade to Premium for unlimited lists and items.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Upgrade',
+                style: 'default',
+                onPress: () => {
+                  sheetRef.current?.dismiss();
+                  router.push('/premium');
+                },
+              },
+            ]
+          );
+          // Don't set operation error text if we show alert, to avoid clutter
+          return;
+        }
+
+        setOperationError(error.message || 'Failed to update list');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      },
+      [router]
+    );
 
     const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

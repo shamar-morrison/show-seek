@@ -10,13 +10,14 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
+import { ArrowUpDown, ChevronRight, FolderPlus, List, Lock, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -31,6 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { isPremium } = usePremium();
   const { data: lists, isLoading } = useLists();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
@@ -66,12 +68,20 @@ export default function CustomListsScreen() {
 
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
+  const isLimitReached = !isPremium && customLists.length >= 5;
+
   const handleCreateList = useCallback(() => {
+    if (isLimitReached) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      router.push('/premium');
+      return;
+    }
+
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       createListModalRef.current?.present();
     });
-  }, [requireAuth]);
+  }, [requireAuth, isLimitReached, router]);
 
   const handleCreateSuccess = useCallback(
     (listId: string) => {
@@ -108,7 +118,11 @@ export default function CustomListsScreen() {
             activeOpacity={ACTIVE_OPACITY}
             hitSlop={HIT_SLOP.m}
           >
-            <Plus size={24} color={COLORS.text} />
+            {isLimitReached ? (
+              <Lock size={22} color={COLORS.textSecondary} />
+            ) : (
+              <Plus size={24} color={COLORS.text} />
+            )}
           </TouchableOpacity>
         </View>
       ),
