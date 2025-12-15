@@ -33,7 +33,7 @@ export const validatePurchase = onCall(async (request) => {
 
     // Validate the purchase with Google
     const response = await androidPublisher.purchases.products.get({
-      packageName: 'app.horizon.showseek', // Replace with actual package name if different
+      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE_NAME, // Replace with actual package name if different
       productId: productId,
       token: purchaseToken,
     });
@@ -45,7 +45,7 @@ export const validatePurchase = onCall(async (request) => {
       if (response.data.acknowledgementState === 0) {
         try {
           await androidPublisher.purchases.products.acknowledge({
-            packageName: 'app.horizon.showseek',
+            packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE_NAME,
             productId: productId,
             token: purchaseToken,
             requestBody: {
@@ -86,6 +86,11 @@ export const validatePurchase = onCall(async (request) => {
     }
   } catch (error) {
     console.error('Purchase validation error:', error);
-    throw new HttpsError('internal', 'Failed to validate purchase');
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    throw new HttpsError('internal', 'Failed to validate purchase', {
+      originalMessage: String(error),
+    });
   }
 });

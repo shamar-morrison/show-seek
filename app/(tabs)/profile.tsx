@@ -36,7 +36,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const PACKAGE_ID = 'app.horizon.showseek';
+const PACKAGE_ID = process.env.ANDROID_PACKAGE_NAME;
 const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 
 /**
