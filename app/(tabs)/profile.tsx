@@ -154,20 +154,15 @@ export default function ProfileScreen() {
 
   const handleSendFeedback = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const email = 'shamar.morrison2000@gmail.com';
+    const feedbackEmail = 'shamar.morrison2000@gmail.com';
     const subject = encodeURIComponent('ShowSeek App Feedback');
     const body = encodeURIComponent('Hi ShowSeek Team,\n\n');
-    const mailtoUrl = `mailto:${email}?subject=${subject}&body=${body}`;
+    const mailtoUrl = `mailto:${feedbackEmail}?subject=${subject}&body=${body}`;
 
     try {
-      const canOpen = await Linking.canOpenURL(mailtoUrl);
-      if (canOpen) {
-        await Linking.openURL(mailtoUrl);
-      } else {
-        Alert.alert('No Email App', 'Please set up an email app to send feedback.');
-      }
+      await Linking.openURL(mailtoUrl);
     } catch {
-      Alert.alert('Error', 'Unable to open email client.');
+      Alert.alert('No Email App', 'Please set up an email app to send feedback.');
     }
   }, []);
 
