@@ -158,6 +158,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         if (validationResult.data?.success) {
           setIsPremium(true);
+          try {
+            await RNIap.finishTransaction({
+              purchase: premiumPurchase,
+              isConsumable: false,
+            });
+          } catch (finishErr) {
+            console.error('Error finishing transaction during restore:', finishErr);
+          }
         }
       }
     } catch (err) {
