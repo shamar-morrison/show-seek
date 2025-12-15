@@ -22,11 +22,18 @@ interface PremiumState {
   price: string | null;
 }
 
+import { onAuthStateChanged, User } from 'firebase/auth';
+
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [price, setPrice] = useState<string | null>(null);
-  const user = auth.currentUser;
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
 
   // Initialize IAP and fetch products
   useEffect(() => {
