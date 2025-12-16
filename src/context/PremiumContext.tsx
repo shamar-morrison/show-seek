@@ -139,9 +139,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           console.error('Error finishing transaction:', finishErr);
         }
 
-        if (validationResult.data?.success) {
+        if (validationResult.data?.success === true) {
           setIsPremium(true);
         } else {
+          setIsPremium(false);
           throw new Error('Purchase validation failed on server');
         }
       } else {
