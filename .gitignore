@@ -13,6 +13,7 @@ functions/service-account-key.json
 
 # Android
 *.apk
+*.aab
 
 android
 ios
