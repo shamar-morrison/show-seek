@@ -40,17 +40,17 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     const initIAP = async () => {
       try {
         await RNIap.initConnection();
-        // flushFailedPurchasesCachedAsPendingAndroid is deprecated/removed in newer versions or named differently
-        // We can skip it or use if available, but for now removing to fix build
-
         if (PRODUCT_IDS && PRODUCT_IDS.length > 0) {
-          // @ts-ignore - getProducts is valid but types might be outdated or mismatched in this version
-          const products = await RNIap.getProducts({ skus: PRODUCT_IDS });
-          const premiumProduct = products.find((p: any) => p.productId === PREMIUM_PRODUCT_ID);
-          if (premiumProduct) {
-            setPrice(
-              premiumProduct.oneTimePurchaseOfferDetails?.formattedPrice || premiumProduct.price
-            );
+          const products = await RNIap.fetchProducts({ skus: PRODUCT_IDS });
+          if (products) {
+            const premiumProduct = products.find((p) => p.id === PREMIUM_PRODUCT_ID);
+            if (premiumProduct && premiumProduct.platform === 'android') {
+              const androidProduct = premiumProduct as RNIap.ProductAndroid;
+              setPrice(
+                androidProduct.oneTimePurchaseOfferDetailsAndroid?.formattedPrice ||
+                  androidProduct.displayPrice
+              );
+            }
           }
         }
       } catch (err) {
