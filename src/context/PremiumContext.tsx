@@ -5,6 +5,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
 
 // Product ID for the one-time premium purchase
@@ -176,7 +177,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     try {
       const purchases = await RNIap.getAvailablePurchases();
       // Ensure we check arrays if purchases contain them
-      const premiumPurchase = purchases.find((p: any) => p.productId === PREMIUM_PRODUCT_ID);
+      const premiumPurchase = purchases.find((p: Purchase) => p.productId === PREMIUM_PRODUCT_ID);
 
       if (premiumPurchase) {
         // Validate with server
