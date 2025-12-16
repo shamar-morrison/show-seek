@@ -84,6 +84,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         const cached = await AsyncStorage.getItem(`isPremium_${user.uid}`);
         if (cached === 'true') {
           setIsPremium(true);
+          setIsLoading(false);
         }
       } catch (err) {
         console.warn('Failed to read premium cache:', err);
