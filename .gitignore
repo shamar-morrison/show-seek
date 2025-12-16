@@ -47,3 +47,5 @@ yarn-error.*
 .vercel
 .env
 prompt.md
+credentials.json
+@shamar2000__showseek.jks
