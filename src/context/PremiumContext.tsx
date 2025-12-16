@@ -118,7 +118,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         // Handle both single object and array return types
         const purchaseData = Array.isArray(purchase) ? purchase[0] : purchase;
 
-        if (!purchaseData) return;
+        if (!purchaseData) {
+          throw new Error('No purchase data returned from store');
+        }
 
         // Validate with server
         const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
@@ -142,6 +144,8 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         } else {
           throw new Error('Purchase validation failed on server');
         }
+      } else {
+        throw new Error('No purchase response from store');
       }
     } catch (err: any) {
       if (err.code === 'E_USER_CANCELLED') {

@@ -2,6 +2,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useCreateList } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -29,6 +30,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const [error, setError] = useState<string | null>(null);
 
     const createMutation = useCreateList();
+    const router = useRouter();
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -57,10 +59,19 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create list:', err);
-        setError('Failed to create list. Please try again.');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        // Check if this is a premium limit error
+        if (err.message?.startsWith('LimitReached:')) {
+          await sheetRef.current?.dismiss();
+          // Navigate to premium screen after a brief delay to let modal dismiss
+          setTimeout(() => {
+            router.push('/premium');
+          }, 100);
+        } else {
+          setError('Failed to create list. Please try again.');
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
       }
     };
 
