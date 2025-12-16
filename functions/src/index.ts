@@ -22,7 +22,7 @@ export const validatePurchase = onCall(async (request) => {
     // Note: This requires a service account key file to be present in the functions directory
     // or configured via Google Application Credentials environment variable.
     const auth = new google.auth.GoogleAuth({
-      keyFile: './service-account-key.json', // Ensure this file is added by the user
+      keyFile: '../service-account-key.json', // Located in functions/ directory
       scopes: ['https://www.googleapis.com/auth/androidpublisher'],
     });
 
