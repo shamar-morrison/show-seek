@@ -74,9 +74,13 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
 
     const checkLocalCache = async () => {
-      const cached = await AsyncStorage.getItem(`isPremium_${user.uid}`);
-      if (cached === 'true') {
-        setIsPremium(true);
+      try {
+        const cached = await AsyncStorage.getItem(`isPremium_${user.uid}`);
+        if (cached === 'true') {
+          setIsPremium(true);
+        }
+      } catch (err) {
+        console.warn('Failed to read premium cache:', err);
       }
     };
     checkLocalCache();
@@ -90,7 +94,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         setIsLoading(false);
 
         // Update local cache
-        await AsyncStorage.setItem(`isPremium_${user.uid}`, String(premiumStatus));
+        try {
+          await AsyncStorage.setItem(`isPremium_${user.uid}`, String(premiumStatus));
+        } catch (err) {
+          console.warn('Failed to write premium cache:', err);
+        }
       },
       (err) => {
         console.error('Error fetching premium status:', err);
