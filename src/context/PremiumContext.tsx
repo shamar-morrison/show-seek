@@ -22,6 +22,11 @@ interface PremiumState {
   price: string | null;
 }
 
+interface ValidationResponse {
+  success: boolean;
+  message?: string;
+}
+
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
@@ -132,10 +137,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         // Validate with server
         const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-        const validationResult: any = await validatePurchaseFn({
+        const validationResult = await validatePurchaseFn({
           purchaseToken: purchaseData.purchaseToken,
           productId: purchaseData.productId,
         });
+        const data = validationResult.data as ValidationResponse;
 
         // Always finish transaction to avoid pending state
         try {
@@ -147,7 +153,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           console.error('Error finishing transaction:', finishErr);
         }
 
-        if (validationResult.data?.success === true) {
+        if (data?.success === true) {
           setIsPremium(true);
         } else {
           setIsPremium(false);
@@ -175,12 +181,13 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       if (premiumPurchase) {
         // Validate with server
         const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-        const validationResult: any = await validatePurchaseFn({
+        const validationResult = await validatePurchaseFn({
           purchaseToken: premiumPurchase.purchaseToken,
           productId: premiumPurchase.productId,
         });
+        const data = validationResult.data as ValidationResponse;
 
-        if (validationResult.data?.success) {
+        if (data?.success === true) {
           setIsPremium(true);
           try {
             await RNIap.finishTransaction({
