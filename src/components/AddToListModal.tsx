@@ -1,5 +1,7 @@
-import { isDefaultList } from '@/src/constants/lists';
+import { MAX_FREE_LISTS } from '@/src/components/CreateListModal';
+import { filterCustomLists, isDefaultList } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import {
   useAddToList,
   useCreateList,
@@ -99,6 +101,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const removeMutation = useRemoveFromList();
     const createMutation = useCreateList();
     const deleteMutation = useDeleteList();
+    const { isPremium } = usePremium();
+
+    // Calculate custom list count for limit checking
+    const customListCount = lists ? filterCustomLists(lists).length : 0;
+    const hasReachedLimit = !isPremium && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -172,6 +179,25 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       if (!newListName.trim()) return;
 
       setCreateError(null);
+
+      // Proactive check: If user has reached the limit, redirect to premium
+      if (hasReachedLimit) {
+        await sheetRef.current?.dismiss();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          'Limit Reached',
+          'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade',
+              style: 'default',
+              onPress: () => router.push('/premium'),
+            },
+          ]
+        );
+        return;
+      }
 
       try {
         // 1. Create list (must await to get the listId)

@@ -96,7 +96,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Create New List</Text>
+            <Text style={styles.title}>Create zdsdadsd New List</Text>
             <TouchableOpacity
               onPress={() => sheetRef.current?.dismiss()}
               activeOpacity={ACTIVE_OPACITY}
