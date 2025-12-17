@@ -95,6 +95,8 @@ export default function PremiumScreen() {
         <View style={styles.features}>
           <FeatureItem icon="list" text="Unlimited Custom Lists" />
           <FeatureItem icon="infinite" text="Unlimited Items per List" />
+          <FeatureItem icon="play-circle" text="Filter by Streaming Service" />
+          <FeatureItem icon="sparkles" text="Access to Future Premium Features" />
           <FeatureItem icon="heart" text="Support Indie Development" />
         </View>
 
