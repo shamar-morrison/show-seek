@@ -1,5 +1,7 @@
+import { filterCustomLists } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useCreateList } from '@/src/hooks/useLists';
+import { usePremium } from '@/src/context/PremiumContext';
+import { useCreateList, useLists } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -23,6 +25,8 @@ interface CreateListModalProps {
   onSuccess?: (listId: string, listName: string) => void;
 }
 
+export const MAX_FREE_LISTS = 5;
+
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
   ({ onSuccess }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
@@ -31,6 +35,12 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
     const createMutation = useCreateList();
     const router = useRouter();
+    const { isPremium } = usePremium();
+    const { data: lists } = useLists();
+
+    // Calculate custom list count
+    const customListCount = lists ? filterCustomLists(lists).length : 0;
+    const hasReachedLimit = !isPremium && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -54,26 +64,24 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
       setError(null);
 
+      // Proactive check: If user has reached the limit, redirect to premium
+      if (hasReachedLimit) {
+        await sheetRef.current?.dismiss();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setTimeout(() => {
+          router.push('/premium');
+        }, 300);
+        return;
+      }
+
       try {
         const listId = await createMutation.mutateAsync(trimmedName);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
       } catch (err: any) {
-        console.error('Failed to create list:', err);
-        const errorMessage = err?.message || String(err);
-
-        // Check if this is a premium limit error (relaxed check)
-        if (errorMessage.includes('LimitReached')) {
-          await sheetRef.current?.dismiss();
-          // Navigate to premium screen after a brief delay to let modal dismiss
-          setTimeout(() => {
-            router.push('/premium');
-          }, 300); // Increased delay slightly to ensure smooth transition
-        } else {
-          setError('Failed to create list. Please try again.');
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
+        setError('Failed to create list. Please try again.');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     };
 

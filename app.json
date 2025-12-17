@@ -67,7 +67,8 @@
           "color": "#E50914"
         }
       ],
-      "react-native-iap"
+      "react-native-iap",
+      "expo-updates"
     ],
     "notification": {
       "icon": "./assets/images/icon.png",

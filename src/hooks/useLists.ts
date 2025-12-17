@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
 import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
+import { MAX_FREE_LISTS } from '@/src/components/CreateListModal';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -218,21 +219,32 @@ export const useRemoveFromList = () => {
   });
 };
 
+// Custom error class for premium limit errors
+export class PremiumLimitError extends Error {
+  code = 'PREMIUM_LIMIT';
+  constructor(message: string) {
+    super(message);
+    this.name = 'PremiumLimitError';
+  }
+}
+
 export const useCreateList = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const { isPremium } = usePremium();
 
   return useMutation({
-    mutationFn: (listName: string) => {
-      // Check limits
+    mutationFn: async (listName: string) => {
+      // Check limits for non-premium users
       if (!isPremium) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
         // Count only custom lists (not in DEFAULT_LISTS)
         const customLists = lists?.filter((l) => !DEFAULT_LISTS.some((d) => d.id === l.id)) || [];
 
-        if (customLists.length >= 5) {
-          throw new Error('LimitReached: Free users can only create 5 custom lists.');
+        if (customLists.length >= MAX_FREE_LISTS) {
+          throw new PremiumLimitError(
+            'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!'
+          );
         }
       }
       return listService.createList(listName);
