@@ -18,11 +18,9 @@ export const validatePurchase = onCall(async (request) => {
   }
 
   try {
-    // Initialize Google Play Developer API
-    // Note: This requires a service account key file to be present in the functions directory
-    // or configured via Google Application Credentials environment variable.
+    // Initialize Google Play Developer API using service account key file
     const auth = new google.auth.GoogleAuth({
-      keyFile: '../service-account-key.json', // Located in functions/ directory
+      keyFile: './service-account-key.json',
       scopes: ['https://www.googleapis.com/auth/androidpublisher'],
     });
 
@@ -31,12 +29,20 @@ export const validatePurchase = onCall(async (request) => {
       auth: auth,
     });
 
-    const packageName = process.env.ANDROID_PACKAGE_NAME || 'app.horizon.showseek';
-    console.log('Validating purchase for user:', userId, 'product:', productId);
+    // Hardcoded package name - must match Google Play Console
+    const PACKAGE_NAME = 'app.horizon.showseek';
+    console.log(
+      'Validating purchase for user:',
+      userId,
+      'product:',
+      productId,
+      'package:',
+      PACKAGE_NAME
+    );
 
     // Validate the purchase with Google
     const response = await androidPublisher.purchases.products.get({
-      packageName: packageName,
+      packageName: PACKAGE_NAME,
       productId: productId,
       token: purchaseToken,
     });
@@ -50,7 +56,7 @@ export const validatePurchase = onCall(async (request) => {
       if (response.data.acknowledgementState === 0) {
         try {
           await androidPublisher.purchases.products.acknowledge({
-            packageName: packageName,
+            packageName: PACKAGE_NAME,
             productId: productId,
             token: purchaseToken,
             requestBody: {

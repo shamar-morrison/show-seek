@@ -72,7 +72,7 @@ export default function PremiumScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Ionicons name="star" size={60} color={COLORS.primary} />
-          <Text style={styles.title}>Unlock Premium starts at $5.00</Text>
+          <Text style={styles.title}>Unlock Premium</Text>
           <Text style={styles.subtitle}>Get the most out of your tracking experience</Text>
         </View>
 

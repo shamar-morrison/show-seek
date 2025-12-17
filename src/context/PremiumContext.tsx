@@ -175,10 +175,16 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       // User already owns item - try to restore and set premium
       if (err.message?.includes('already own') || err.code === 'E_ALREADY_OWNED') {
         try {
+          console.log('User already owns item, attempting restore...');
           await restorePurchases();
+          console.log('Restore successful after already-owned error');
           return true;
-        } catch (restoreErr) {
+        } catch (restoreErr: any) {
           console.error('Failed to restore after already-owned:', restoreErr);
+          // Throw the RESTORE error so we know why it failed, explicitly mentioning it
+          throw new Error(
+            'Restoration failed: ' + (restoreErr.message || JSON.stringify(restoreErr))
+          );
         }
       }
       console.error('Purchase error:', err);
@@ -188,11 +194,18 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   const restorePurchases = async () => {
     try {
+      console.log('Starting restorePurchases...');
       const purchases = await RNIap.getAvailablePurchases();
+      console.log('Available purchases found:', purchases.length);
+
       // Ensure we check arrays if purchases contain them
       const premiumPurchase = purchases.find((p: Purchase) => p.productId === PREMIUM_PRODUCT_ID);
 
-      if (premiumPurchase) {
+      if (premiumPurchase && premiumPurchase.purchaseToken) {
+        console.log(
+          'Found premium purchase token, validating:',
+          premiumPurchase.purchaseToken.substring(0, 10) + '...'
+        );
         // Validate with server
         const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
         const validationResult = await validatePurchaseFn({
@@ -200,6 +213,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           productId: premiumPurchase.productId,
         });
         const data = validationResult.data as ValidationResponse;
+        console.log('Validation response:', data);
 
         if (data?.success === true) {
           setIsPremium(true);
@@ -208,13 +222,27 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
               purchase: premiumPurchase,
               isConsumable: false,
             });
+            console.log('Transaction finished successfully');
           } catch (finishErr) {
             console.error('Error finishing transaction during restore:', finishErr);
           }
+        } else {
+          console.error('Validation failed:', data);
+          throw new Error('Server validation failed: ' + (data?.message || 'Unknown server error'));
         }
+      } else {
+        console.log('No premium purchase found in history or missing token');
       }
-    } catch (err) {
-      console.error('Restore error:', err);
+    } catch (err: any) {
+      console.error('Restore error detail:', err);
+      // Ensure we treat Cloud Function errors clearly
+      if (
+        err.code === 'functions/internal' ||
+        err.code === 'functions/unknown' ||
+        err.code === 'internal'
+      ) {
+        throw new Error('Cloud Function Error: ' + err.message + ' check Firebase console logs');
+      }
       throw err;
     }
   };
