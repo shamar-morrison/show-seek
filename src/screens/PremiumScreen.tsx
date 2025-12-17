@@ -18,6 +18,7 @@ export default function PremiumScreen() {
   const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
     usePremium();
   const router = useRouter();
+  const [isRestoring, setIsRestoring] = React.useState(false);
 
   // Watch for premium status change to show success
   React.useEffect(() => {
@@ -41,6 +42,9 @@ export default function PremiumScreen() {
   };
 
   const handleRestore = async () => {
+    if (isRestoring) return;
+
+    setIsRestoring(true);
     try {
       const restored = await restorePurchases();
       if (restored) {
@@ -50,6 +54,8 @@ export default function PremiumScreen() {
       }
     } catch (error: any) {
       Alert.alert('Restore Failed', error.message);
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -101,8 +107,16 @@ export default function PremiumScreen() {
           <Text style={styles.buttonText}>Unlock Premium</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.restoreButton} onPress={handleRestore}>
-          <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+        <TouchableOpacity
+          style={[styles.restoreButton, isRestoring && { opacity: 0.7 }]}
+          onPress={handleRestore}
+          disabled={isRestoring}
+        >
+          {isRestoring ? (
+            <ActivityIndicator size="small" color={COLORS.text} />
+          ) : (
+            <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+          )}
         </TouchableOpacity>
 
         {/* DEV ONLY: Reset purchase button for testing */}
