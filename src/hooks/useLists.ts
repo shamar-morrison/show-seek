@@ -1,9 +1,9 @@
+import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/components/CreateListModal';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
 import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
-import { MAX_FREE_LISTS } from '@/src/components/CreateListModal';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -79,7 +79,7 @@ export const useMediaLists = (mediaId: number) => {
 export const useAddToList = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
     mutationFn: async ({
@@ -91,19 +91,14 @@ export const useAddToList = () => {
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
     }) => {
-      // Check limits
-      if (!isPremium) {
+      // Check limits only when premium status is confirmed (not loading)
+      if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
         const targetList = lists?.find((l) => l.id === listId);
         const currentCount = targetList ? Object.keys(targetList.items || {}).length : 0;
 
-// At top of file, alongside MAX_FREE_LISTS import
-export const MAX_FREE_ITEMS_PER_LIST = 20;
-
-// ... other code ...
-
         if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
-          throw new PremiumLimitError('Free users can only add 20 items per list. Upgrade to Premium for unlimited items!');
+          throw new Error('LimitReached: Free users can only add 20 items per list.');
         }
       }
       return listService.addToList(listId, mediaItem, listName);
@@ -236,12 +231,12 @@ export class PremiumLimitError extends Error {
 export const useCreateList = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
     mutationFn: async (listName: string) => {
-      // Check limits for non-premium users
-      if (!isPremium) {
+      // Check limits only when premium status is confirmed (not loading)
+      if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
         // Count only custom lists (not in DEFAULT_LISTS)
         const customLists = lists?.filter((l) => !DEFAULT_LISTS.some((d) => d.id === l.id)) || [];

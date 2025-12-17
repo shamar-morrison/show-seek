@@ -26,6 +26,7 @@ interface CreateListModalProps {
 }
 
 export const MAX_FREE_LISTS = 5;
+export const MAX_FREE_ITEMS_PER_LIST = 20;
 
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
   ({ onSuccess }, ref) => {
@@ -96,7 +97,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.title}>Create zdsdadsd New List</Text>
+            <Text style={styles.title}>Create New List</Text>
             <TouchableOpacity
               onPress={() => sheetRef.current?.dismiss()}
               activeOpacity={ACTIVE_OPACITY}

@@ -1,4 +1,7 @@
-import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
+import CreateListModal, {
+  CreateListModalRef,
+  MAX_FREE_LISTS,
+} from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { filterCustomLists } from '@/src/constants/lists';
@@ -17,10 +20,11 @@ import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, ChevronRight, FolderPlus, List, Lock, Plus } from 'lucide-react-native';
+import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -68,12 +72,23 @@ export default function CustomListsScreen() {
 
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
-  const isLimitReached = !isPremium && customLists.length >= 5;
+  const isLimitReached = !isPremium && customLists.length >= MAX_FREE_LISTS;
 
   const handleCreateList = useCallback(() => {
     if (isLimitReached) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      router.push('/premium');
+      Alert.alert(
+        'Limit Reached',
+        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade',
+            style: 'default',
+            onPress: () => router.push('/premium'),
+          },
+        ]
+      );
       return;
     }
 
@@ -118,11 +133,7 @@ export default function CustomListsScreen() {
             activeOpacity={ACTIVE_OPACITY}
             hitSlop={HIT_SLOP.m}
           >
-            {isLimitReached ? (
-              <Lock size={22} color={COLORS.textSecondary} />
-            ) : (
-              <Plus size={24} color={COLORS.text} />
-            )}
+            <Plus size={24} color={COLORS.text} />
           </TouchableOpacity>
         </View>
       ),
