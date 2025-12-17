@@ -61,13 +61,15 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         await sheetRef.current?.dismiss();
       } catch (err: any) {
         console.error('Failed to create list:', err);
-        // Check if this is a premium limit error
-        if (err.message?.startsWith('LimitReached:')) {
+        const errorMessage = err?.message || String(err);
+
+        // Check if this is a premium limit error (relaxed check)
+        if (errorMessage.includes('LimitReached')) {
           await sheetRef.current?.dismiss();
           // Navigate to premium screen after a brief delay to let modal dismiss
           setTimeout(() => {
             router.push('/premium');
-          }, 100);
+          }, 300); // Increased delay slightly to ensure smooth transition
         } else {
           setError('Failed to create list. Please try again.');
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
