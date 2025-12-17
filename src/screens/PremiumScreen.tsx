@@ -1,7 +1,7 @@
 import { COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
@@ -17,13 +17,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function PremiumScreen() {
   const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
     usePremium();
-  const navigation = useNavigation();
+  const router = useRouter();
 
   // Watch for premium status change to show success
   React.useEffect(() => {
     if (isPremium) {
       Alert.alert('Success', 'You are now a Premium member!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => router.back() },
       ]);
     }
   }, [isPremium]);
@@ -66,7 +66,7 @@ export default function PremiumScreen() {
           <Ionicons name="checkmark-circle" size={80} color={COLORS.primary} />
           <Text style={styles.title}>You are Premium!</Text>
           <Text style={styles.description}>Thank you for supporting the app.</Text>
-          <TouchableOpacity style={styles.button} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
             <Text style={styles.buttonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -103,27 +103,29 @@ export default function PremiumScreen() {
         </TouchableOpacity>
 
         {/* DEV ONLY: Reset purchase button for testing */}
-        <TouchableOpacity
-          style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
-          onPress={async () => {
-            Alert.alert(
-              'DEV: Reset Purchase?',
-              'This will consume the purchase so you can buy it again.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Reset',
-                  style: 'destructive',
-                  onPress: async () => {
-                    if (resetTestPurchase) await resetTestPurchase();
+        {__DEV__ && (
+          <TouchableOpacity
+            style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
+            onPress={async () => {
+              Alert.alert(
+                'DEV: Reset Purchase?',
+                'This will consume the purchase so you can buy it again.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (resetTestPurchase) await resetTestPurchase();
+                    },
                   },
-                },
-              ]
-            );
-          }}
-        >
-          <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
-        </TouchableOpacity>
+                ]
+              );
+            }}
+          >
+            <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
