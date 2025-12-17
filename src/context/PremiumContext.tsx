@@ -166,8 +166,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
     } catch (err: any) {
       if (err.code === 'E_USER_CANCELLED') {
-        // User cancelled, do nothing
-        return;
+        // Throw a specific error so the caller knows it was cancelled
+        const cancelError = new Error('Purchase cancelled by user');
+        (cancelError as any).code = 'E_USER_CANCELLED';
+        throw cancelError;
       }
       console.error('Purchase error:', err);
       throw err;

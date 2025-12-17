@@ -6,7 +6,8 @@
   "build": {
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
       },
       "autoIncrement": true
     },

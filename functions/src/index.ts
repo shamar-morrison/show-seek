@@ -31,12 +31,17 @@ export const validatePurchase = onCall(async (request) => {
       auth: auth,
     });
 
+    const packageName = process.env.ANDROID_PACKAGE_NAME || 'app.horizon.showseek';
+    console.log('Validating purchase for user:', userId, 'product:', productId);
+
     // Validate the purchase with Google
     const response = await androidPublisher.purchases.products.get({
-      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE_NAME, // Replace with actual package name if different
+      packageName: packageName,
       productId: productId,
       token: purchaseToken,
     });
+
+    console.log('Google Play API response:', JSON.stringify(response.data));
 
     // Check if purchase is valid
     // purchaseState: 0=Purchased, 1=Canceled, 2=Pending
@@ -45,7 +50,7 @@ export const validatePurchase = onCall(async (request) => {
       if (response.data.acknowledgementState === 0) {
         try {
           await androidPublisher.purchases.products.acknowledge({
-            packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE_NAME,
+            packageName: packageName,
             productId: productId,
             token: purchaseToken,
             requestBody: {
