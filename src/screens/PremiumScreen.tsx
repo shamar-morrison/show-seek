@@ -20,13 +20,16 @@ export default function PremiumScreen() {
 
   const handlePurchase = async () => {
     try {
-      await purchasePremium();
-      Alert.alert('Success', 'You are now a Premium member!');
-      navigation.goBack();
-    } catch (error: any) {
-      if (error?.code !== 'E_USER_CANCELLED') {
-        Alert.alert('Purchase Failed', error.message || 'Something went wrong');
+      const success = await purchasePremium();
+      // Only show success if the purchase actually completed
+      if (success) {
+        Alert.alert('Success', 'You are now a Premium member!');
+        navigation.goBack();
       }
+      // If not successful and no error, user cancelled - do nothing
+    } catch (error: any) {
+      // Only show error for real errors, not cancellations
+      Alert.alert('Purchase Failed', error.message || 'Something went wrong');
     }
   };
 
@@ -69,7 +72,7 @@ export default function PremiumScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Ionicons name="star" size={60} color={COLORS.primary} />
-          <Text style={styles.title}>Unlock Premium</Text>
+          <Text style={styles.title}>Unlock Premium starts at $5.00</Text>
           <Text style={styles.subtitle}>Get the most out of your tracking experience</Text>
         </View>
 

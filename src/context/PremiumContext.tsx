@@ -18,7 +18,7 @@ const PRODUCT_IDS = Platform.select({
 interface PremiumState {
   isPremium: boolean;
   isLoading: boolean;
-  purchasePremium: () => Promise<void>;
+  purchasePremium: () => Promise<boolean>;
   restorePurchases: () => Promise<void>;
   price: string | null;
 }
@@ -129,47 +129,57 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         },
       });
 
-      if (purchase) {
-        // Handle both single object and array return types
-        const purchaseData = Array.isArray(purchase) ? purchase[0] : purchase;
+      // If purchase is null/undefined, user dismissed the sheet - silently return false
+      if (!purchase) {
+        return false;
+      }
 
-        if (!purchaseData) {
-          throw new Error('No purchase data returned from store');
-        }
+      // Handle both single object and array return types
+      const purchaseData = Array.isArray(purchase) ? purchase[0] : purchase;
 
-        // Validate with server
-        const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-        const validationResult = await validatePurchaseFn({
-          purchaseToken: purchaseData.purchaseToken,
-          productId: purchaseData.productId,
+      // If purchaseData is null/undefined after array handling, silently return false
+      if (!purchaseData) {
+        return false;
+      }
+
+      // Validate with server
+      const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
+      const validationResult = await validatePurchaseFn({
+        purchaseToken: purchaseData.purchaseToken,
+        productId: purchaseData.productId,
+      });
+      const data = validationResult.data as ValidationResponse;
+
+      // Always finish transaction to avoid pending state
+      try {
+        await RNIap.finishTransaction({
+          purchase: purchaseData,
+          isConsumable: false,
         });
-        const data = validationResult.data as ValidationResponse;
+      } catch (finishErr) {
+        console.error('Error finishing transaction:', finishErr);
+      }
 
-        // Always finish transaction to avoid pending state
-        try {
-          await RNIap.finishTransaction({
-            purchase: purchaseData,
-            isConsumable: false,
-          });
-        } catch (finishErr) {
-          console.error('Error finishing transaction:', finishErr);
-        }
-
-        if (data?.success === true) {
-          setIsPremium(true);
-        } else {
-          setIsPremium(false);
-          throw new Error('Purchase validation failed on server');
-        }
+      if (data?.success === true) {
+        setIsPremium(true);
+        return true;
       } else {
-        throw new Error('No purchase response from store');
+        setIsPremium(false);
+        throw new Error('Purchase validation failed on server');
       }
     } catch (err: any) {
+      // User cancelled - silently return false without error
       if (err.code === 'E_USER_CANCELLED') {
-        // Throw a specific error so the caller knows it was cancelled
-        const cancelError = new Error('Purchase cancelled by user');
-        (cancelError as any).code = 'E_USER_CANCELLED';
-        throw cancelError;
+        return false;
+      }
+      // User already owns item - try to restore and set premium
+      if (err.message?.includes('already own') || err.code === 'E_ALREADY_OWNED') {
+        try {
+          await restorePurchases();
+          return true;
+        } catch (restoreErr) {
+          console.error('Failed to restore after already-owned:', restoreErr);
+        }
       }
       console.error('Purchase error:', err);
       throw err;

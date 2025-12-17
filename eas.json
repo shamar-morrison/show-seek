@@ -12,6 +12,7 @@
       "autoIncrement": true
     },
     "preview": {
+      "channel": "preview",
       "android": {
         "buildType": "apk",
         "credentialsSource": "local"
