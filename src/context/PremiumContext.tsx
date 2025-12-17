@@ -19,7 +19,7 @@ interface PremiumState {
   isPremium: boolean;
   isLoading: boolean;
   purchasePremium: () => Promise<boolean>;
-  restorePurchases: () => Promise<void>;
+  restorePurchases: () => Promise<boolean>;
   resetTestPurchase: () => Promise<void>;
   price: string | null;
 }
@@ -238,8 +238,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       if (premiumPurchase) {
         // Reuse the same processing logic
         await processPurchase(premiumPurchase);
+        return true;
       } else {
         console.log('No premium purchase found in history or missing token');
+        return false;
       }
     } catch (err: any) {
       console.error('Restore error detail:', err);

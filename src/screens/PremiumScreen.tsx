@@ -42,9 +42,12 @@ export default function PremiumScreen() {
 
   const handleRestore = async () => {
     try {
-      await restorePurchases();
-      // If detailed success message needed, handled in context or here if restorePurchases returned status
-      Alert.alert('Restore Complete', 'Purchases have been restored.');
+      const restored = await restorePurchases();
+      if (restored) {
+        Alert.alert('Restore Complete', 'Purchases have been restored.');
+      } else {
+        Alert.alert('No Purchases', 'No premium purchase history found.');
+      }
     } catch (error: any) {
       Alert.alert('Restore Failed', error.message);
     }
@@ -103,7 +106,7 @@ export default function PremiumScreen() {
         </TouchableOpacity>
 
         {/* DEV ONLY: Reset purchase button for testing */}
-        {__DEV__ && (
+        {
           <TouchableOpacity
             style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
             onPress={async () => {
@@ -125,7 +128,7 @@ export default function PremiumScreen() {
           >
             <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
           </TouchableOpacity>
-        )}
+        }
       </ScrollView>
     </SafeAreaView>
   );
