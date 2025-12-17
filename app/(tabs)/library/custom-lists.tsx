@@ -36,7 +36,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading } = useLists();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
@@ -72,7 +72,8 @@ export default function CustomListsScreen() {
 
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
-  const isLimitReached = !isPremium && customLists.length >= MAX_FREE_LISTS;
+  // Only check limits when premium status is confirmed (not loading)
+  const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
 
   const handleCreateList = useCallback(() => {
     if (isLimitReached) {

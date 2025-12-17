@@ -1,7 +1,7 @@
 import { filterCustomLists } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useCreateList, useLists } from '@/src/hooks/useLists';
+import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -36,12 +36,13 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
     const createMutation = useCreateList();
     const router = useRouter();
-    const { isPremium } = usePremium();
-    const { data: lists } = useLists();
+    const { isPremium, isLoading: isPremiumLoading } = usePremium();
+    const { data: lists, isLoading: isListsLoading } = useLists();
 
-    // Calculate custom list count
+    // Calculate custom list count - only check limits when both premium status and lists are loaded
     const customListCount = lists ? filterCustomLists(lists).length : 0;
-    const hasReachedLimit = !isPremium && customListCount >= MAX_FREE_LISTS;
+    const hasReachedLimit =
+      !isPremium && !isPremiumLoading && !isListsLoading && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -81,6 +82,15 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
       } catch (err: any) {
+        // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
+        if (err instanceof PremiumLimitError) {
+          await sheetRef.current?.dismiss();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          setTimeout(() => {
+            router.push('/premium');
+          }, 300);
+          return;
+        }
         setError('Failed to create list. Please try again.');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
