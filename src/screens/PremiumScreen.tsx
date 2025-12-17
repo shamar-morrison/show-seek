@@ -15,21 +15,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PremiumScreen() {
-  const { isPremium, isLoading, purchasePremium, restorePurchases, price } = usePremium();
+  const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
+    usePremium();
   const navigation = useNavigation();
+
+  // Watch for premium status change to show success
+  React.useEffect(() => {
+    if (isPremium) {
+      Alert.alert('Success', 'You are now a Premium member!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [isPremium]);
 
   const handlePurchase = async () => {
     try {
-      const success = await purchasePremium();
-      // Only show success if the purchase actually completed
-      if (success) {
-        Alert.alert('Success', 'You are now a Premium member!');
-        navigation.goBack();
-      }
-      // If not successful and no error, user cancelled - do nothing
+      await purchasePremium();
+      // Success is handled by the listener updating isPremium state
     } catch (error: any) {
       // Only show error for real errors, not cancellations
-      Alert.alert('Purchase Failed', error.message || 'Something went wrong');
+      if (error.code !== 'E_USER_CANCELLED' && error.message !== 'User canceled') {
+        Alert.alert('Purchase Failed', error.message || 'Something went wrong');
+      }
     }
   };
 
@@ -93,6 +100,29 @@ export default function PremiumScreen() {
 
         <TouchableOpacity style={styles.restoreButton} onPress={handleRestore}>
           <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+        </TouchableOpacity>
+
+        {/* DEV ONLY: Reset purchase button for testing */}
+        <TouchableOpacity
+          style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
+          onPress={async () => {
+            Alert.alert(
+              'DEV: Reset Purchase?',
+              'This will consume the purchase so you can buy it again.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Reset',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (resetTestPurchase) await resetTestPurchase();
+                  },
+                },
+              ]
+            );
+          }}
+        >
+          <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
