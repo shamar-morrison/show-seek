@@ -97,8 +97,13 @@ export const useAddToList = () => {
         const targetList = lists?.find((l) => l.id === listId);
         const currentCount = targetList ? Object.keys(targetList.items || {}).length : 0;
 
-        if (currentCount >= 20) {
-          throw new Error('LimitReached: Free users can only add 20 items per list.');
+// At top of file, alongside MAX_FREE_LISTS import
+export const MAX_FREE_ITEMS_PER_LIST = 20;
+
+// ... other code ...
+
+        if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+          throw new PremiumLimitError('Free users can only add 20 items per list. Upgrade to Premium for unlimited items!');
         }
       }
       return listService.addToList(listId, mediaItem, listName);
