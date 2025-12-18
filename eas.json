@@ -5,14 +5,18 @@
   },
   "build": {
     "production": {
+      "channel": "production",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "credentialsSource": "local"
       },
       "autoIncrement": true
     },
     "preview": {
+      "channel": "preview",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local"
       }
     }
   }

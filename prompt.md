@@ -1,14 +1,4 @@
-### Feature Request
+i notice two issues so far:
 
----
-
-I want to add a feature that will allow users to rename custom lists from the manage lists screen and the custom lists detail screen
-
-### How it should work
-
----
-
-- In the manage lists screen, you can put an edit icon next to the trash icon that when clicked will trigger a modal that will allow the user to rename the list.
-- In the custom list detail screen you can put an edit icon in the header top right that when clicked will trigger the same modal so the user can rename the list.
-
-If you have any questions you can ask.
+1. if I have 5 lists and i try to create more i get a "failed to create list. please try again" error, this error pops up when i have 5 lists and i'm trying to create more as a non-premium member which of course is not a good UX because instead of showing an inline error it should navigate to the premium payment screen. inline errors should only be shown for actual errors (server failure, timeouts, etc)
+2. on the payment screen if i click "unlock premium" i get a bottom sheet pop up showing "Error. The item that you were attempting to purchase could not be found" and when i dismiss the modal sheet i get a "success. you are now a premium member" modal which is of course not correct because i did not complete the purchase.

@@ -1,7 +1,9 @@
 import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronDown, Search, X } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Check, ChevronDown, Lock, Search, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -244,6 +246,45 @@ const SearchableFilterSelect = ({
   );
 };
 
+// Premium-locked filter that redirects to upgrade screen
+const PremiumLockedFilter = ({ label }: { label: string }) => {
+  const router = useRouter();
+
+  const handlePress = () => {
+    router.push('/premium');
+  };
+
+  return (
+    <View style={styles.selectContainer}>
+      <View style={styles.premiumLabelContainer}>
+        <Text style={styles.selectLabel}>{label}</Text>
+        <Lock size={12} color={COLORS.primary} />
+      </View>
+      <TouchableOpacity
+        style={[styles.selectButton, styles.selectButtonLocked]}
+        onPress={handlePress}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>
+          Premium Feature
+        </Text>
+        <Lock size={16} color={COLORS.primary} />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const FilterLoadingSkeleton = ({ label }: { label: string }) => {
+  return (
+    <View style={styles.selectContainer}>
+      <Text style={styles.selectLabel}>{label}</Text>
+      <View style={[styles.selectButton, styles.selectButtonLoading]}>
+        <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>Loading...</Text>
+      </View>
+    </View>
+  );
+};
+
 export default function DiscoverFilters({
   filters,
   onChange,
@@ -251,6 +292,7 @@ export default function DiscoverFilters({
   onClearFilters,
   genreMap,
 }: DiscoverFiltersProps) {
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const watchProvidersQuery = useQuery({
     queryKey: ['watchProviders', mediaType],
     queryFn: () => tmdbApi.getWatchProviders(mediaType),
@@ -362,15 +404,21 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          <SearchableFilterSelect
-            label="Streaming Service"
-            value={filters.watchProvider}
-            options={watchProviderOptions}
-            onSelect={(val) => updateFilter('watchProvider', val)}
-            placeholder="All Services"
-            isActive={filters.watchProvider !== null}
-            searchPlaceholder="Search services..."
-          />
+          {isPremiumLoading ? (
+            <FilterLoadingSkeleton label="Streaming Service" />
+          ) : isPremium ? (
+            <SearchableFilterSelect
+              label="Streaming Service"
+              value={filters.watchProvider}
+              options={watchProviderOptions}
+              onSelect={(val) => updateFilter('watchProvider', val)}
+              placeholder="All Services"
+              isActive={filters.watchProvider !== null}
+              searchPlaceholder="Search services..."
+            />
+          ) : (
+            <PremiumLockedFilter label="Streaming Service" />
+          )}
         </View>
       </View>
 
@@ -418,6 +466,19 @@ const styles = StyleSheet.create({
   },
   selectButtonActive: {
     borderColor: COLORS.error,
+  },
+  selectButtonLocked: {
+    opacity: 0.7,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  selectButtonLoading: {
+    opacity: 0.5,
+  },
+  premiumLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
   selectButtonText: {
     fontSize: FONT_SIZE.s,

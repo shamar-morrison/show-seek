@@ -1,5 +1,6 @@
-import { isDefaultList } from '@/src/constants/lists';
+import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import {
   useAddToList,
   useCreateList,
@@ -99,6 +100,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const removeMutation = useRemoveFromList();
     const createMutation = useCreateList();
     const deleteMutation = useDeleteList();
+    const { isPremium, isLoading: isPremiumLoading } = usePremium();
+
+    // Calculate custom list count for limit checking - only enforce when premium status confirmed
+    const customListCount = lists ? filterCustomLists(lists).length : 0;
+    const hasReachedLimit = !isPremium && !isPremiumLoading && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -125,11 +131,36 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }, [onShowToast]);
 
     // Error handler for mutations
-    const handleMutationError = useCallback((error: Error) => {
-      console.error('List operation failed:', error);
-      setOperationError(error.message || 'Failed to update list');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    }, []);
+    const handleMutationError = useCallback(
+      (error: Error) => {
+        console.error('List operation failed:', error);
+
+        if (error.message.includes('LimitReached')) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          Alert.alert(
+            'Limit Reached',
+            error.message + '\n\nUpgrade to Premium for unlimited lists and items.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Upgrade',
+                style: 'default',
+                onPress: () => {
+                  sheetRef.current?.dismiss();
+                  router.push('/premium');
+                },
+              },
+            ]
+          );
+          // Don't set operation error text if we show alert, to avoid clutter
+          return;
+        }
+
+        setOperationError(error.message || 'Failed to update list');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      },
+      [router]
+    );
 
     const handleToggleList = (listId: string, listName: string, isMember: boolean) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -147,6 +178,25 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       if (!newListName.trim()) return;
 
       setCreateError(null);
+
+      // Proactive check: If user has reached the limit, redirect to premium
+      if (hasReachedLimit) {
+        await sheetRef.current?.dismiss();
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          'Limit Reached',
+          'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade',
+              style: 'default',
+              onPress: () => router.push('/premium'),
+            },
+          ]
+        );
+        return;
+      }
 
       try {
         // 1. Create list (must await to get the listId)

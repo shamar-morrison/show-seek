@@ -1,7 +1,9 @@
+import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
-import { ListMediaItem, listService, UserList } from '../services/ListService';
+import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -77,9 +79,10 @@ export const useMediaLists = (mediaId: number) => {
 export const useAddToList = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       listId,
       mediaItem,
       listName,
@@ -87,7 +90,21 @@ export const useAddToList = () => {
       listId: string;
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
-    }) => listService.addToList(listId, mediaItem, listName),
+    }) => {
+      // Check limits only when premium status is confirmed (not loading)
+      if (!isPremium && !isPremiumLoading) {
+        const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+        const targetList = lists?.find((l) => l.id === listId);
+        const currentCount = targetList ? Object.keys(targetList.items || {}).length : 0;
+
+        if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+          throw new PremiumLimitError(
+            `Free users can only add ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
+          );
+        }
+      }
+      return listService.addToList(listId, mediaItem, listName);
+    },
 
     // Optimistic update - immediately show the item as added
     onMutate: async ({ listId, mediaItem, listName }) => {
@@ -204,9 +221,36 @@ export const useRemoveFromList = () => {
   });
 };
 
+// Custom error class for premium limit errors
+export class PremiumLimitError extends Error {
+  code = 'PREMIUM_LIMIT';
+  constructor(message: string) {
+    super(message);
+    this.name = 'PremiumLimitError';
+  }
+}
+
 export const useCreateList = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
+
   return useMutation({
-    mutationFn: (listName: string) => listService.createList(listName),
+    mutationFn: async (listName: string) => {
+      // Check limits only when premium status is confirmed (not loading)
+      if (!isPremium && !isPremiumLoading) {
+        const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+        // Count only custom lists (not in DEFAULT_LISTS)
+        const customLists = lists?.filter((l) => !DEFAULT_LISTS.some((d) => d.id === l.id)) || [];
+
+        if (customLists.length >= MAX_FREE_LISTS) {
+          throw new PremiumLimitError(
+            'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!'
+          );
+        }
+      }
+      return listService.createList(listName);
+    },
   });
 };
 

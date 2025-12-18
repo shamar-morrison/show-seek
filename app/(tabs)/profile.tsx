@@ -1,12 +1,14 @@
 import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import {
-  Coffee,
+  Crown,
   Film,
   Heart,
   LogOut,
@@ -114,6 +116,8 @@ function ActionButton({
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { isPremium } = usePremium();
+  const router = useRouter();
   const { stats, isLoading: statsLoading } = useProfileStats();
   const {
     preferences,
@@ -250,9 +254,28 @@ export default function ProfileScreen() {
           <View style={styles.userSection}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials}</Text>
+              {isPremium && (
+                <View style={styles.premiumBadge}>
+                  <Crown size={12} color={COLORS.white} />
+                </View>
+              )}
             </View>
             <Text style={styles.displayName}>{displayName}</Text>
             <Text style={styles.email}>{email}</Text>
+            {!isPremium && !isGuest && (
+              <TouchableOpacity
+                style={styles.upgradeButton}
+                onPress={() => router.push('/premium')}
+              >
+                <Crown size={16} color={COLORS.white} style={{ marginRight: 8 }} />
+                <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              </TouchableOpacity>
+            )}
+            {isPremium && (
+              <View style={styles.premiumStatusContainer}>
+                <Text style={styles.premiumStatusText}>Premium Member</Text>
+              </View>
+            )}
           </View>
 
           {/* Stats Section */}
@@ -364,11 +387,11 @@ export default function ProfileScreen() {
           <View style={styles.actionsSection}>
             <Text style={styles.sectionTitle}>SETTINGS</Text>
             <View style={styles.actionsList}>
-              <ActionButton
+              {/* <ActionButton
                 icon={Coffee}
                 label="Support Development"
                 onPress={handleSupportDevelopment}
-              />
+              /> */}
               <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
               <ActionButton
                 icon={MessageCircle}
@@ -476,6 +499,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.m,
+    position: 'relative',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: COLORS.warning,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.background,
   },
   avatarText: {
     fontSize: FONT_SIZE.xxl,
@@ -491,6 +528,34 @@ const styles = StyleSheet.create({
   email: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    marginTop: SPACING.m,
+  },
+  upgradeButtonText: {
+    color: COLORS.white,
+    fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  premiumStatusContainer: {
+    marginTop: SPACING.m,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+    backgroundColor: 'rgba(245, 124, 0, 0.2)',
+    borderRadius: BORDER_RADIUS.s,
+    borderWidth: 1,
+    borderColor: COLORS.warning,
+  },
+  premiumStatusText: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
   },
   statsSection: {
     paddingHorizontal: SPACING.l,

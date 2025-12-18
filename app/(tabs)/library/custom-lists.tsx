@@ -1,7 +1,7 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
-import { filterCustomLists } from '@/src/constants/lists';
+import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -10,6 +10,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
@@ -20,6 +21,7 @@ import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -31,6 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading } = useLists();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
@@ -66,12 +69,32 @@ export default function CustomListsScreen() {
 
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
+  // Only check limits when premium status is confirmed (not loading)
+  const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
+
   const handleCreateList = useCallback(() => {
+    if (isLimitReached) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        'Limit Reached',
+        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade',
+            style: 'default',
+            onPress: () => router.push('/premium'),
+          },
+        ]
+      );
+      return;
+    }
+
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       createListModalRef.current?.present();
     });
-  }, [requireAuth]);
+  }, [requireAuth, isLimitReached, router]);
 
   const handleCreateSuccess = useCallback(
     (listId: string) => {
