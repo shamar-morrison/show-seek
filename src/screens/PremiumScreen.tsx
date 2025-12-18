@@ -120,7 +120,11 @@ export default function PremiumScreen() {
           <Text style={styles.paymentType}>One-time payment</Text>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handlePurchase}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handlePurchase}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.buttonText}>Unlock Premium</Text>
         </TouchableOpacity>
 
@@ -184,7 +188,11 @@ function FeatureCategorySection({
 
   return (
     <View style={styles.categoryContainer}>
-      <TouchableOpacity style={styles.categoryHeader} onPress={toggleExpanded} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.categoryHeader}
+        onPress={toggleExpanded}
+        activeOpacity={ACTIVE_OPACITY}
+      >
         <Text style={styles.categoryTitle}>{category.title}</Text>
         <Ionicons
           name={isExpanded ? 'chevron-up' : 'chevron-down'}
