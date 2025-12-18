@@ -1,4 +1,9 @@
-import { COLORS } from '@/src/constants/theme';
+import {
+  PREMIUM_CATEGORIES,
+  PremiumCategory,
+  PremiumFeature,
+} from '@/src/constants/premiumFeatures';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -6,13 +11,21 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function PremiumScreen() {
   const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
@@ -93,24 +106,30 @@ export default function PremiumScreen() {
         </View>
 
         <View style={styles.features}>
-          <FeatureItem icon="list" text="Unlimited Custom Lists" />
-          <FeatureItem icon="infinite" text="Unlimited Items per List" />
-          <FeatureItem icon="play-circle" text="Filter by Streaming Service" />
-          <FeatureItem icon="sparkles" text="Access to Future Premium Features" />
-          <FeatureItem icon="heart" text="Support Indie Development" />
+          {PREMIUM_CATEGORIES.map((category, index) => (
+            <FeatureCategorySection
+              key={category.id}
+              category={category}
+              defaultExpanded={index === 0}
+            />
+          ))}
         </View>
 
         <View style={styles.pricing}>
-          <Text style={styles.price}>{price || '$5.00'}</Text>
+          <Text style={styles.price}>{price || 'US$5.00'}</Text>
           <Text style={styles.paymentType}>One-time payment</Text>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handlePurchase}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handlePurchase}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.buttonText}>Unlock Premium</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.restoreButton, isRestoring && { opacity: 0.7 }]}
+          style={[styles.restoreButton, isRestoring && { opacity: ACTIVE_OPACITY }]}
           onPress={handleRestore}
           disabled={isRestoring}
         >
@@ -124,7 +143,7 @@ export default function PremiumScreen() {
         {/* DEV ONLY: Reset purchase button for testing */}
         {
           <TouchableOpacity
-            style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
+            style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
             onPress={async () => {
               Alert.alert(
                 'DEV: Reset Purchase?',
@@ -150,11 +169,69 @@ export default function PremiumScreen() {
   );
 }
 
-function FeatureItem({ icon, text }: { icon: any; text: string }) {
+/**
+ * Collapsible category section showing a group of premium features
+ */
+function FeatureCategorySection({
+  category,
+  defaultExpanded = false,
+}: {
+  category: PremiumCategory;
+  defaultExpanded?: boolean;
+}) {
+  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+
+  const toggleExpanded = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(!isExpanded);
+  };
+
+  return (
+    <View style={styles.categoryContainer}>
+      <TouchableOpacity
+        style={styles.categoryHeader}
+        onPress={toggleExpanded}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <Text style={styles.categoryTitle}>{category.title}</Text>
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={COLORS.textSecondary}
+        />
+      </TouchableOpacity>
+
+      {isExpanded && (
+        <View style={styles.categoryFeatures}>
+          {category.features.map((feature) => (
+            <FeatureItem key={feature.id} feature={feature} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Individual premium feature display with icon, title, optional description, and NEW badge
+ */
+function FeatureItem({ feature }: { feature: PremiumFeature }) {
   return (
     <View style={styles.featureItem}>
-      <Ionicons name={icon} size={24} color={COLORS.text} style={{ marginRight: 15 }} />
-      <Text style={styles.featureText}>{text}</Text>
+      <Ionicons name={feature.icon} size={22} color={COLORS.primary} style={styles.featureIcon} />
+      <View style={styles.featureContent}>
+        <View style={styles.featureTitleRow}>
+          <Text style={styles.featureTitle}>{feature.title}</Text>
+          {feature.isNew && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
+        </View>
+        {feature.description && (
+          <Text style={styles.featureDescription}>{feature.description}</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -182,13 +259,13 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: SPACING.xl,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginTop: 16,
+    marginTop: SPACING.m,
     marginBottom: 8,
   },
   subtitle: {
@@ -200,48 +277,104 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: COLORS.text,
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 32,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.xl,
   },
   features: {
     width: '100%',
-    marginBottom: 40,
+    marginBottom: SPACING.xl,
   },
+  // Category styles
+  categoryContainer: {
+    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  categoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: 0.3,
+  },
+  categoryFeatures: {
+    paddingHorizontal: 12,
+    paddingTop: SPACING.s,
+    paddingBottom: 12,
+  },
+  // Feature item styles
   featureItem: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 10,
+  },
+  featureIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
+    flexWrap: 'wrap',
+    gap: SPACING.s,
   },
-  featureText: {
-    fontSize: 16,
+  featureTitle: {
+    fontSize: 15,
     color: COLORS.text,
+    fontWeight: '500',
   },
+  featureDescription: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  newBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.s,
+  },
+  newBadgeText: {
+    color: COLORS.black,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  // Pricing & buttons
   pricing: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   price: {
-    fontSize: 32,
+    fontSize: SPACING.xl,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
   paymentType: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   button: {
     backgroundColor: COLORS.primary,
     width: '100%',
-    paddingVertical: 16,
+    paddingVertical: SPACING.m,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.m,
   },
   buttonText: {
-    color: '#000',
+    color: COLORS.black,
     fontSize: 18,
     fontWeight: 'bold',
   },
