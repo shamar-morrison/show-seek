@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   },
   premiumBadgeText: {
     fontSize: 10,
-    color: '#FFD700',
+    color: COLORS.warning,
     fontWeight: '600',
   },
   reauthSection: {
