@@ -8,7 +8,6 @@ import { createTimeout } from '@/src/utils/timeout';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { collection, getDocs } from 'firebase/firestore';
-import { Alert } from 'react-native';
 
 type ExportFormat = 'csv' | 'markdown';
 
@@ -83,27 +82,33 @@ async function fetchAllUserData(): Promise<{
 }
 
 /**
- * Fetch movie/TV details for ratings to get titles
+ * Fetch movie/TV details for ratings to get titles (with timeout protection)
  */
 async function enrichRatingsWithTitles(ratings: RatingItem[]): Promise<EnrichedRating[]> {
   const movieRatings = ratings.filter((r) => r.mediaType === 'movie');
   const tvRatings = ratings.filter((r) => r.mediaType === 'tv');
   const episodeRatings = ratings.filter((r) => r.mediaType === 'episode');
 
-  // Fetch movie titles
+  // Fetch movie titles with timeout protection
   const moviePromises = movieRatings.map(async (rating) => {
     try {
-      const movie = await tmdbApi.getMovieDetails(parseInt(rating.id, 10));
+      const movie = await Promise.race([
+        tmdbApi.getMovieDetails(parseInt(rating.id, 10)),
+        createTimeout(10000, `Timeout fetching movie ${rating.id}`),
+      ]);
       return { rating, title: movie.title || `Movie ID: ${rating.id}` };
     } catch {
       return { rating, title: `Movie ID: ${rating.id}` };
     }
   });
 
-  // Fetch TV show titles
+  // Fetch TV show titles with timeout protection
   const tvPromises = tvRatings.map(async (rating) => {
     try {
-      const tvShow = await tmdbApi.getTVShowDetails(parseInt(rating.id, 10));
+      const tvShow = await Promise.race([
+        tmdbApi.getTVShowDetails(parseInt(rating.id, 10)),
+        createTimeout(10000, `Timeout fetching TV show ${rating.id}`),
+      ]);
       return { rating, title: tvShow.name || `TV Show ID: ${rating.id}` };
     } catch {
       return { rating, title: `TV Show ID: ${rating.id}` };
