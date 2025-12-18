@@ -8,7 +8,6 @@ import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
-  Coffee,
   Crown,
   Film,
   Heart,
@@ -388,11 +387,11 @@ export default function ProfileScreen() {
           <View style={styles.actionsSection}>
             <Text style={styles.sectionTitle}>SETTINGS</Text>
             <View style={styles.actionsList}>
-              <ActionButton
+              {/* <ActionButton
                 icon={Coffee}
                 label="Support Development"
                 onPress={handleSupportDevelopment}
-              />
+              /> */}
               <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
               <ActionButton
                 icon={MessageCircle}
