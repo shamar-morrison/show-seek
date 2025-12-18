@@ -274,6 +274,17 @@ const PremiumLockedFilter = ({ label }: { label: string }) => {
   );
 };
 
+const FilterLoadingSkeleton = ({ label }: { label: string }) => {
+  return (
+    <View style={styles.selectContainer}>
+      <Text style={styles.selectLabel}>{label}</Text>
+      <View style={[styles.selectButton, styles.selectButtonLoading]}>
+        <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>Loading...</Text>
+      </View>
+    </View>
+  );
+};
+
 export default function DiscoverFilters({
   filters,
   onChange,
@@ -393,7 +404,9 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          {isPremium ? (
+          {isPremiumLoading ? (
+            <FilterLoadingSkeleton label="Streaming Service" />
+          ) : isPremium ? (
             <SearchableFilterSelect
               label="Streaming Service"
               value={filters.watchProvider}
@@ -458,6 +471,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     borderColor: COLORS.primary,
     borderStyle: 'dashed',
+  },
+  selectButtonLoading: {
+    opacity: 0.5,
   },
   premiumLabelContainer: {
     flexDirection: 'row',
