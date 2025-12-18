@@ -86,20 +86,40 @@ interface ActionButtonProps {
   onPress: () => void;
   variant?: 'default' | 'danger';
   loading?: boolean;
+  /** Mark this button as a premium-only feature (shows locked UI when isPremium is false) */
+  isPremiumFeature?: boolean;
+  /**
+   * Whether the user has premium access. Defaults to true for backwards compatibility
+   * so existing buttons without premium props render normally. Only applies when
+   * isPremiumFeature is true - in that case, pass isPremium={false} to show locked state.
+   */
+  isPremium?: boolean;
 }
 
+/**
+ * Action button for profile settings. Supports premium feature gating:
+ * - Set isPremiumFeature={true} and isPremium={false} to show a locked/dimmed appearance with "Premium" badge
+ * - Button remains clickable (for navigating to upgrade screen)
+ */
 function ActionButton({
   icon: Icon,
   label,
   onPress,
   variant = 'default',
   loading,
+  isPremiumFeature = false,
+  isPremium = true,
 }: ActionButtonProps) {
   const isDanger = variant === 'danger';
+  const isLocked = isPremiumFeature && !isPremium;
 
   return (
     <TouchableOpacity
-      style={[styles.actionButton, isDanger && styles.actionButtonDanger]}
+      style={[
+        styles.actionButton,
+        isDanger && styles.actionButtonDanger,
+        isLocked && styles.actionButtonLocked,
+      ]}
       onPress={onPress}
       activeOpacity={ACTIVE_OPACITY}
       disabled={loading}
@@ -107,11 +127,28 @@ function ActionButton({
       {loading ? (
         <ActivityIndicator size="small" color={isDanger ? COLORS.error : COLORS.text} />
       ) : (
-        <Icon size={20} color={isDanger ? COLORS.error : COLORS.text} />
+        <Icon
+          size={20}
+          color={isLocked ? COLORS.textSecondary : isDanger ? COLORS.error : COLORS.text}
+        />
       )}
-      <Text style={[styles.actionButtonText, isDanger && styles.actionButtonTextDanger]}>
-        {label}
-      </Text>
+      <View style={styles.actionButtonLabelContainer}>
+        <Text
+          style={[
+            styles.actionButtonText,
+            isDanger && styles.actionButtonTextDanger,
+            isLocked && styles.actionButtonTextLocked,
+          ]}
+        >
+          {label}
+        </Text>
+        {isPremiumFeature && !isPremium && (
+          <View style={styles.premiumBadge}>
+            <Crown size={10} color={COLORS.warning} />
+            <Text style={styles.premiumBadgeText}>Premium</Text>
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -304,7 +341,7 @@ export default function ProfileScreen() {
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials}</Text>
               {isPremium && (
-                <View style={styles.premiumBadge}>
+                <View style={styles.premiumCrown}>
                   <Crown size={12} color={COLORS.white} />
                 </View>
               )}
@@ -453,6 +490,8 @@ export default function ProfileScreen() {
                   label="Export Data"
                   onPress={handleExportData}
                   loading={isExporting}
+                  isPremiumFeature
+                  isPremium={isPremium}
                 />
               )}
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
@@ -558,7 +597,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
     position: 'relative',
   },
-  premiumBadge: {
+  premiumCrown: {
     position: 'absolute',
     bottom: -4,
     right: -4,
@@ -672,6 +711,15 @@ const styles = StyleSheet.create({
   actionButtonDanger: {
     backgroundColor: 'rgba(229, 9, 20, 0.1)',
   },
+  actionButtonLocked: {
+    opacity: 0.7,
+  },
+  actionButtonLabelContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
   actionButtonText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
@@ -679,6 +727,23 @@ const styles = StyleSheet.create({
   },
   actionButtonTextDanger: {
     color: COLORS.error,
+  },
+  actionButtonTextLocked: {
+    color: COLORS.textSecondary,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(100, 138, 255, 0.15)',
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.s,
+    gap: 4,
+  },
+  premiumBadgeText: {
+    fontSize: 10,
+    color: COLORS.warning,
+    fontWeight: '600',
   },
   reauthSection: {
     marginTop: SPACING.xl,
