@@ -1,9 +1,10 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { auth, db } from '@/src/firebase/config';
-import { FavoriteItem } from '@/src/firebase/firestore';
+import { FavoriteItem, getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { ListMediaItem } from '@/src/services/ListService';
 import { RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
+import { createTimeout } from '@/src/utils/timeout';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { collection, getDocs } from 'firebase/firestore';
@@ -39,13 +40,19 @@ async function fetchAllUserData(): Promise<{
   const userId = user.uid;
 
   try {
+    // 10 second timeout
+    const timeoutPromise = createTimeout(10000);
+
     // Fetch all data in parallel using getDocs (no orderBy to avoid index requirements)
     const [listsSnapshot, ratingsSnapshot, favoritesSnapshot, favoritePersonsSnapshot] =
-      await Promise.all([
-        getDocs(collection(db, `users/${userId}/lists`)),
-        getDocs(collection(db, `users/${userId}/ratings`)),
-        getDocs(collection(db, `users/${userId}/favorites`)),
-        getDocs(collection(db, `users/${userId}/favorite_persons`)),
+      await Promise.race([
+        Promise.all([
+          getDocs(collection(db, `users/${userId}/lists`)),
+          getDocs(collection(db, `users/${userId}/ratings`)),
+          getDocs(collection(db, `users/${userId}/favorites`)),
+          getDocs(collection(db, `users/${userId}/favorite_persons`)),
+        ]),
+        timeoutPromise,
       ]);
 
     const lists: UserList[] = listsSnapshot.docs.map((doc) => ({
@@ -69,8 +76,9 @@ async function fetchAllUserData(): Promise<{
 
     return { lists, ratings, favorites, favoritePersons };
   } catch (error) {
-    console.error('[DataExportService] fetchAllUserData error:', error);
-    throw error;
+    const message = getFirestoreErrorMessage(error);
+    console.error('[DataExportService] fetchAllUserData error:', message);
+    throw new Error(message);
   }
 }
 
@@ -253,7 +261,7 @@ function generateCSV(
 }
 
 /**
- * Export user data - called on-demand (not a hook)
+ * Export user data - called on-demand
  */
 export async function exportUserData(format: ExportFormat): Promise<void> {
   try {
@@ -286,6 +294,7 @@ export async function exportUserData(format: ExportFormat): Promise<void> {
       });
     } else {
       Alert.alert('Error', 'Sharing is not available on this device');
+      throw new Error('Sharing is not available on this device');
     }
   } catch (error) {
     console.error('Export failed:', error);
