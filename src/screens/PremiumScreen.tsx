@@ -116,7 +116,7 @@ export default function PremiumScreen() {
         </View>
 
         <View style={styles.pricing}>
-          <Text style={styles.price}>{price || '$5.00'}</Text>
+          <Text style={styles.price}>{price || 'US$5.00'}</Text>
           <Text style={styles.paymentType}>One-time payment</Text>
         </View>
 
@@ -251,13 +251,13 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginTop: 16,
+    marginTop: SPACING.m,
     marginBottom: 8,
   },
   subtitle: {
@@ -269,12 +269,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: COLORS.text,
     textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 32,
+    marginTop: SPACING.m,
+    marginBottom: SPACING.xl,
   },
   features: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   // Category styles
   categoryContainer: {
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: SPACING.m,
     backgroundColor: COLORS.surfaceLight,
   },
   categoryTitle: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
   },
   categoryFeatures: {
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: SPACING.s,
     paddingBottom: 12,
   },
   // Feature item styles
@@ -345,10 +345,10 @@ const styles = StyleSheet.create({
   // Pricing & buttons
   pricing: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   price: {
-    fontSize: 32,
+    fontSize: SPACING.xl,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
@@ -360,10 +360,10 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: COLORS.primary,
     width: '100%',
-    paddingVertical: 16,
+    paddingVertical: SPACING.m,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.m,
   },
   buttonText: {
     color: COLORS.black,
