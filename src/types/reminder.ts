@@ -48,6 +48,7 @@ export interface Reminder {
 
   // Status tracking
   status: 'active' | 'cancelled';
+  noNextEpisodeFound?: boolean; // True when auto-update checked but found no upcoming episode
   createdAt: number; // UTC timestamp
   updatedAt: number; // UTC timestamp
 

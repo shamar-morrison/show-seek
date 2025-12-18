@@ -1,4 +1,8 @@
-i notice two issues so far:
+### Bug Description
 
-1. if I have 5 lists and i try to create more i get a "failed to create list. please try again" error, this error pops up when i have 5 lists and i'm trying to create more as a non-premium member which of course is not a good UX because instead of showing an inline error it should navigate to the premium payment screen. inline errors should only be shown for actual errors (server failure, timeouts, etc)
-2. on the payment screen if i click "unlock premium" i get a bottom sheet pop up showing "Error. The item that you were attempting to purchase could not be found" and when i dismiss the modal sheet i get a "success. you are now a premium member" modal which is of course not correct because i did not complete the purchase.
+There is bug in the reminders flow. Once the reminder has fired the card says “released” which doesn’t make sense unless the user opted into only getting reminded for a season premiere and it was released and there is no other season premiere date to show. But if the user is suppose to get reminded for every episode then the card should update itself to show the next episode when the current one has aired. the design of the card may need to change which is fine. Do you understand and do you have any questions?
+
+1. scan the codebase and find it
+2. indicate that on the card with like a "no new episode found" status or something similar
+3. users can manually dismiss them
+4. check the code

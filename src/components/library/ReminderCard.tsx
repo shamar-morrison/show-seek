@@ -129,9 +129,16 @@ export const ReminderCard = memo<ReminderCardProps>(
             </View>
           </View>
           {Date.now() > reminder.notificationScheduledFor ? (
-            <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
-              Released
-            </Text>
+            // Show different status based on whether this is an every_episode reminder with no next episode
+            reminder.noNextEpisodeFound && reminder.tvFrequency === 'every_episode' ? (
+              <Text style={[styles.notificationTime, { color: COLORS.warning, fontWeight: '600' }]}>
+                No upcoming episodes
+              </Text>
+            ) : (
+              <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
+                Released
+              </Text>
+            )
           ) : (
             <Text style={styles.notificationTime}>
               Notify: {formatNotificationTime(reminder.notificationScheduledFor)}

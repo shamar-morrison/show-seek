@@ -429,6 +429,7 @@ class ReminderService {
         'updatedAt',
         'nextEpisode',
         'releaseDate',
+        'noNextEpisodeFound',
       ];
 
       Object.keys(updates).forEach((key) => {
