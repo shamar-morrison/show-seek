@@ -293,7 +293,6 @@ export async function exportUserData(format: ExportFormat): Promise<void> {
         dialogTitle: `Export Data as ${format.toUpperCase()}`,
       });
     } else {
-      Alert.alert('Error', 'Sharing is not available on this device');
       throw new Error('Sharing is not available on this device');
     }
   } catch (error) {
