@@ -393,7 +393,7 @@ export default function DiscoverFilters({
           />
         </View>
         <View style={styles.col}>
-          {isPremium || isPremiumLoading ? (
+          {isPremium ? (
             <SearchableFilterSelect
               label="Streaming Service"
               value={filters.watchProvider}
