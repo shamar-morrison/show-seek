@@ -99,7 +99,7 @@ export const useAddToList = () => {
 
         if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
           throw new PremiumLimitError(
-            'Free users can only add 20 items per list. Upgrade to Premium for unlimited items!'
+            `Free users can only add ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
           );
         }
       }
