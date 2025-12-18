@@ -4,11 +4,13 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
+import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
   Crown,
+  Download,
   Film,
   Heart,
   LogOut,
@@ -131,6 +133,7 @@ export default function ProfileScreen() {
   const [reauthPassword, setReauthPassword] = useState('');
   const [reauthLoading, setReauthLoading] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const isGuest = user?.isAnonymous === true;
   const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
@@ -169,6 +172,52 @@ export default function ProfileScreen() {
       Alert.alert('No Email App', 'Please set up an email app to send feedback.');
     }
   }, []);
+
+  const handleExportData = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (!isPremium) {
+      router.push('/premium');
+      return;
+    }
+
+    Alert.alert('Export Data', 'Choose a format to export your lists, ratings, and favorites.', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Export as CSV',
+        onPress: async () => {
+          setIsExporting(true);
+          try {
+            await exportUserData('csv');
+          } catch (error) {
+            console.error('Export failed:', error);
+            const message = error instanceof Error ? error.message : 'Failed to export data';
+            Alert.alert('Export Failed', message);
+          } finally {
+            setIsExporting(false);
+          }
+        },
+      },
+      {
+        text: 'Export as Markdown',
+        onPress: async () => {
+          setIsExporting(true);
+          try {
+            await exportUserData('markdown');
+          } catch (error) {
+            console.error('Export failed:', error);
+            const message = error instanceof Error ? error.message : 'Failed to export data';
+            Alert.alert('Export Failed', message);
+          } finally {
+            setIsExporting(false);
+          }
+        },
+      },
+    ]);
+  }, [isPremium, router]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -398,6 +447,14 @@ export default function ProfileScreen() {
                 label="Send Feedback"
                 onPress={handleSendFeedback}
               />
+              {!isGuest && (
+                <ActionButton
+                  icon={Download}
+                  label="Export Data"
+                  onPress={handleExportData}
+                  loading={isExporting}
+                />
+              )}
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
