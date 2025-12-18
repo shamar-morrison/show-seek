@@ -86,10 +86,21 @@ interface ActionButtonProps {
   onPress: () => void;
   variant?: 'default' | 'danger';
   loading?: boolean;
+  /** Mark this button as a premium-only feature (shows locked UI when isPremium is false) */
   isPremiumFeature?: boolean;
+  /**
+   * Whether the user has premium access. Defaults to true for backwards compatibility
+   * so existing buttons without premium props render normally. Only applies when
+   * isPremiumFeature is true - in that case, pass isPremium={false} to show locked state.
+   */
   isPremium?: boolean;
 }
 
+/**
+ * Action button for profile settings. Supports premium feature gating:
+ * - Set isPremiumFeature={true} and isPremium={false} to show a locked/dimmed appearance with "Premium" badge
+ * - Button remains clickable (for navigating to upgrade screen)
+ */
 function ActionButton({
   icon: Icon,
   label,
