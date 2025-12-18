@@ -1,10 +1,7 @@
-import CreateListModal, {
-  CreateListModalRef,
-  MAX_FREE_LISTS,
-} from '@/src/components/CreateListModal';
+import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
-import { filterCustomLists } from '@/src/constants/lists';
+import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,

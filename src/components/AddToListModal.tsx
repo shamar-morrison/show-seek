@@ -1,5 +1,4 @@
-import { MAX_FREE_LISTS } from '@/src/components/CreateListModal';
-import { filterCustomLists, isDefaultList } from '@/src/constants/lists';
+import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import {

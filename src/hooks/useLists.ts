@@ -1,4 +1,4 @@
-import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/components/CreateListModal';
+import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { usePremium } from '../context/PremiumContext';

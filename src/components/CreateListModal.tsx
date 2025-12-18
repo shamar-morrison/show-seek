@@ -1,4 +1,4 @@
-import { filterCustomLists } from '@/src/constants/lists';
+import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
@@ -24,9 +24,6 @@ export interface CreateListModalRef {
 interface CreateListModalProps {
   onSuccess?: (listId: string, listName: string) => void;
 }
-
-export const MAX_FREE_LISTS = 5;
-export const MAX_FREE_ITEMS_PER_LIST = 20;
 
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
   ({ onSuccess }, ref) => {

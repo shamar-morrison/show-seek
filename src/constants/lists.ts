@@ -1,4 +1,10 @@
-import { UserList } from '../services/ListService';
+import { UserList } from '@/src/services/ListService';
+
+/**
+ * Premium limits for free users
+ */
+export const MAX_FREE_LISTS = 5;
+export const MAX_FREE_ITEMS_PER_LIST = 20;
 
 /**
  * Default list IDs that cannot be deleted
