@@ -100,11 +100,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const removeMutation = useRemoveFromList();
     const createMutation = useCreateList();
     const deleteMutation = useDeleteList();
-    const { isPremium } = usePremium();
+    const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
-    // Calculate custom list count for limit checking
+    // Calculate custom list count for limit checking - only enforce when premium status confirmed
     const customListCount = lists ? filterCustomLists(lists).length : 0;
-    const hasReachedLimit = !isPremium && customListCount >= MAX_FREE_LISTS;
+    const hasReachedLimit = !isPremium && !isPremiumLoading && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
