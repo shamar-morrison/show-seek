@@ -3,7 +3,7 @@ import {
   PremiumCategory,
   PremiumFeature,
 } from '@/src/constants/premiumFeatures';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -125,7 +125,7 @@ export default function PremiumScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.restoreButton, isRestoring && { opacity: 0.7 }]}
+          style={[styles.restoreButton, isRestoring && { opacity: ACTIVE_OPACITY }]}
           onPress={handleRestore}
           disabled={isRestoring}
         >
@@ -139,7 +139,7 @@ export default function PremiumScreen() {
         {/* DEV ONLY: Reset purchase button for testing */}
         {
           <TouchableOpacity
-            style={[styles.restoreButton, { marginTop: 10, opacity: 0.5 }]}
+            style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
             onPress={async () => {
               Alert.alert(
                 'DEV: Reset Purchase?',
