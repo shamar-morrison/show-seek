@@ -3,7 +3,7 @@ import {
   PremiumCategory,
   PremiumFeature,
 } from '@/src/constants/premiumFeatures';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: SPACING.xs,
+    borderRadius: BORDER_RADIUS.s,
   },
   newBadgeText: {
     color: COLORS.black,
