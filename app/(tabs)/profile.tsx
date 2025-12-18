@@ -2,6 +2,7 @@ import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useDataExport } from '@/src/hooks/useDataExport';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { profileService } from '@/src/services/ProfileService';
@@ -9,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
   Crown,
+  Download,
   Film,
   Heart,
   LogOut,
@@ -131,6 +133,7 @@ export default function ProfileScreen() {
   const [reauthPassword, setReauthPassword] = useState('');
   const [reauthLoading, setReauthLoading] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const { handleExport, isExporting } = useDataExport();
 
   const isGuest = user?.isAnonymous === true;
   const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
@@ -169,6 +172,30 @@ export default function ProfileScreen() {
       Alert.alert('No Email App', 'Please set up an email app to send feedback.');
     }
   }, []);
+
+  const handleExportData = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (!isPremium) {
+      router.push('/premium');
+      return;
+    }
+
+    Alert.alert('Export Data', 'Choose a format to export your lists, ratings, and favorites.', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Export as CSV',
+        onPress: () => handleExport('csv'),
+      },
+      {
+        text: 'Export as Markdown',
+        onPress: () => handleExport('markdown'),
+      },
+    ]);
+  }, [isPremium, router, handleExport]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -397,6 +424,12 @@ export default function ProfileScreen() {
                 icon={MessageCircle}
                 label="Send Feedback"
                 onPress={handleSendFeedback}
+              />
+              <ActionButton
+                icon={Download}
+                label="Export Data"
+                onPress={handleExportData}
+                loading={isExporting}
               />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
