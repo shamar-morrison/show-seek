@@ -83,11 +83,19 @@ async function fetchAllUserData(): Promise<{
 
 /**
  * Fetch movie/TV details for ratings to get titles (with timeout protection)
+ * Individual TMDB calls have 10s timeout, entire process has 30s global timeout
  */
 async function enrichRatingsWithTitles(ratings: RatingItem[]): Promise<EnrichedRating[]> {
   const movieRatings = ratings.filter((r) => r.mediaType === 'movie');
   const tvRatings = ratings.filter((r) => r.mediaType === 'tv');
   const episodeRatings = ratings.filter((r) => r.mediaType === 'episode');
+
+  // Episodes already have metadata stored (no API calls needed)
+  const episodeEnriched = episodeRatings.map((rating) => {
+    const showName = rating.tvShowName || 'Unknown Show';
+    const epName = rating.episodeName || `S${rating.seasonNumber}E${rating.episodeNumber}`;
+    return { rating, title: `${showName} - ${epName}` };
+  });
 
   // Fetch movie titles with timeout protection
   const moviePromises = movieRatings.map(async (rating) => {
@@ -115,16 +123,10 @@ async function enrichRatingsWithTitles(ratings: RatingItem[]): Promise<EnrichedR
     }
   });
 
-  // Episodes already have metadata stored
-  const episodeEnriched = episodeRatings.map((rating) => {
-    const showName = rating.tvShowName || 'Unknown Show';
-    const epName = rating.episodeName || `S${rating.seasonNumber}E${rating.episodeNumber}`;
-    return { rating, title: `${showName} - ${epName}` };
-  });
-
-  const [movieResults, tvResults] = await Promise.all([
-    Promise.all(moviePromises),
-    Promise.all(tvPromises),
+  // Global 30-second timeout for entire enrichment process
+  const [movieResults, tvResults] = await Promise.race([
+    Promise.all([Promise.all(moviePromises), Promise.all(tvPromises)]),
+    createTimeout(30000, 'Title enrichment timed out'),
   ]);
 
   return [...movieResults, ...tvResults, ...episodeEnriched];
