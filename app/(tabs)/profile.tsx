@@ -445,12 +445,14 @@ export default function ProfileScreen() {
                 label="Send Feedback"
                 onPress={handleSendFeedback}
               />
-              <ActionButton
-                icon={Download}
-                label="Export Data"
-                onPress={handleExportData}
-                loading={isExporting}
-              />
+              {!isGuest && (
+                <ActionButton
+                  icon={Download}
+                  label="Export Data"
+                  onPress={handleExportData}
+                  loading={isExporting}
+                />
+              )}
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
