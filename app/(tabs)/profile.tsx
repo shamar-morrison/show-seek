@@ -194,7 +194,8 @@ export default function ProfileScreen() {
             await exportUserData('csv');
           } catch (error) {
             console.error('Export failed:', error);
-            Alert.alert('Error', 'Failed to export data');
+            const message = error instanceof Error ? error.message : 'Failed to export data';
+            Alert.alert('Export Failed', message);
           } finally {
             setIsExporting(false);
           }
@@ -208,7 +209,8 @@ export default function ProfileScreen() {
             await exportUserData('markdown');
           } catch (error) {
             console.error('Export failed:', error);
-            Alert.alert('Error', 'Failed to export data');
+            const message = error instanceof Error ? error.message : 'Failed to export data';
+            Alert.alert('Export Failed', message);
           } finally {
             setIsExporting(false);
           }
