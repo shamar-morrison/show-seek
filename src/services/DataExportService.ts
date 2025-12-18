@@ -1,6 +1,6 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { auth, db } from '@/src/firebase/config';
-import { FavoriteItem, getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { ListMediaItem } from '@/src/services/ListService';
 import { RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
@@ -28,7 +28,6 @@ interface EnrichedRating {
 async function fetchAllUserData(): Promise<{
   lists: UserList[];
   ratings: RatingItem[];
-  favorites: FavoriteItem[];
   favoritePersons: FavoritePerson[];
 }> {
   const user = auth.currentUser;
@@ -43,16 +42,14 @@ async function fetchAllUserData(): Promise<{
     const timeoutPromise = createTimeout(10000);
 
     // Fetch all data in parallel using getDocs (no orderBy to avoid index requirements)
-    const [listsSnapshot, ratingsSnapshot, favoritesSnapshot, favoritePersonsSnapshot] =
-      await Promise.race([
-        Promise.all([
-          getDocs(collection(db, `users/${userId}/lists`)),
-          getDocs(collection(db, `users/${userId}/ratings`)),
-          getDocs(collection(db, `users/${userId}/favorites`)),
-          getDocs(collection(db, `users/${userId}/favorite_persons`)),
-        ]),
-        timeoutPromise,
-      ]);
+    const [listsSnapshot, ratingsSnapshot, favoritePersonsSnapshot] = await Promise.race([
+      Promise.all([
+        getDocs(collection(db, `users/${userId}/lists`)),
+        getDocs(collection(db, `users/${userId}/ratings`)),
+        getDocs(collection(db, `users/${userId}/favorite_persons`)),
+      ]),
+      timeoutPromise,
+    ]);
 
     const lists: UserList[] = listsSnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -64,16 +61,12 @@ async function fetchAllUserData(): Promise<{
       ...doc.data(),
     })) as RatingItem[];
 
-    const favorites: FavoriteItem[] = favoritesSnapshot.docs.map(
-      (doc) => doc.data() as FavoriteItem
-    );
-
     const favoritePersons: FavoritePerson[] = favoritePersonsSnapshot.docs.map((doc) => ({
       id: Number(doc.id),
       ...doc.data(),
     })) as FavoritePerson[];
 
-    return { lists, ratings, favorites, favoritePersons };
+    return { lists, ratings, favoritePersons };
   } catch (error) {
     const message = getFirestoreErrorMessage(error);
     console.error('[DataExportService] fetchAllUserData error:', message);
@@ -135,7 +128,6 @@ async function enrichRatingsWithTitles(ratings: RatingItem[]): Promise<EnrichedR
 function generateMarkdown(
   lists: UserList[],
   enrichedRatings: EnrichedRating[],
-  favorites: FavoriteItem[],
   favoritePersons: FavoritePerson[]
 ): string {
   let md = '# ShowSeek Data Export\n\n';
@@ -194,19 +186,7 @@ function generateMarkdown(
     md += '_No ratings found_\n\n';
   }
 
-  // 3. Favorite Content
-  md += '## Favorite Content\n\n';
-  if (favorites.length > 0) {
-    favorites.forEach((item) => {
-      const type = item.mediaType === 'movie' ? 'Movie' : 'TV';
-      md += `- **${item.title}** (${type})\n`;
-    });
-    md += '\n';
-  } else {
-    md += '_No favorite content found_\n\n';
-  }
-
-  // 4. Favorite People
+  // 3. Favorite People
   md += '## Favorite People\n\n';
   if (favoritePersons.length > 0) {
     favoritePersons.forEach((person) => {
@@ -223,7 +203,6 @@ function generateMarkdown(
 function generateCSV(
   lists: UserList[],
   enrichedRatings: EnrichedRating[],
-  favorites: FavoriteItem[],
   favoritePersons: FavoritePerson[]
 ): string {
   let csv = 'Category,Title,Type,Rating\n';
@@ -253,13 +232,7 @@ function generateCSV(
     csv += `Rating,${escapeCsv(title)},${type},${rating.rating}\n`;
   });
 
-  // 3. Favorite Content
-  favorites.forEach((item) => {
-    const type = item.mediaType === 'movie' ? 'Movie' : 'TV';
-    csv += `Favorite Content,${escapeCsv(item.title)},${type},\n`;
-  });
-
-  // 4. Favorite Persons
+  // 3. Favorite Persons
   favoritePersons.forEach((person) => {
     csv += `Favorite Person,${escapeCsv(person.name)},Person,\n`;
   });
@@ -273,7 +246,7 @@ function generateCSV(
 export async function exportUserData(format: ExportFormat): Promise<void> {
   try {
     // Fetch all data using getDocs
-    const { lists, ratings, favorites, favoritePersons } = await fetchAllUserData();
+    const { lists, ratings, favoritePersons } = await fetchAllUserData();
 
     // Enrich ratings with titles
     const enrichedRatings = await enrichRatingsWithTitles(ratings);
@@ -281,8 +254,8 @@ export async function exportUserData(format: ExportFormat): Promise<void> {
     // Generate content
     const content =
       format === 'markdown'
-        ? generateMarkdown(lists, enrichedRatings, favorites, favoritePersons)
-        : generateCSV(lists, enrichedRatings, favorites, favoritePersons);
+        ? generateMarkdown(lists, enrichedRatings, favoritePersons)
+        : generateCSV(lists, enrichedRatings, favoritePersons);
 
     const extension = format === 'markdown' ? 'md' : 'csv';
     const filename = `showseek_export.${extension}`;
