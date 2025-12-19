@@ -2,27 +2,20 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
-import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import ListActionsModal from '@/src/components/ListActionsModal';
+import MediaSortModal from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
-import { useAllGenres } from '@/src/hooks/useGenres';
-import { createRatingSorter } from '@/src/hooks/useRatingSorting';
-import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
-import {
-  DEFAULT_WATCH_STATUS_FILTERS,
-  filterRatingItems,
-  hasActiveFilters,
-  WatchStatusFilterState,
-} from '@/src/utils/listFilters';
-import { FlashList, FlashListRef } from '@shopify/flash-list';
+import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
+import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Settings2, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SlidersHorizontal, Star } from 'lucide-react-native';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -40,6 +33,9 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 
+// Memoized media extractor for performance
+const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
+
 export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
@@ -47,89 +43,30 @@ export default function TVShowRatingsScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Sort state
-  const [sortModalVisible, setSortModalVisible] = useState(false);
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [filterState, setFilterState] = useState<WatchStatusFilterState>(
-    DEFAULT_WATCH_STATUS_FILTERS
-  );
-  const listRef = useRef<FlashListRef<EnrichedTVRating>>(null);
-  const listActionsModalRef = useRef<ListActionsModalRef>(null);
-  const isInitialMount = useRef(true);
-
-  // Fetch genre data for filter modal
-  const { data: genreMap = {} } = useAllGenres();
-
-  const hasActiveSort =
-    sortState.option !== DEFAULT_SORT_STATE.option ||
-    sortState.direction !== DEFAULT_SORT_STATE.direction;
-
-  const hasActiveFilterState = hasActiveFilters(filterState);
-
-  const actionButton = useMemo(
-    () => ({
-      icon: Settings2,
-      onPress: () => listActionsModalRef.current?.present(),
-      showBadge: hasActiveSort || hasActiveFilterState,
-    }),
-    [hasActiveSort, hasActiveFilterState]
-  );
-
-  // View mode toggle hook
-  const { viewMode, isLoadingPreference } = useViewModeToggle({
+  // Use shared rating screen logic
+  const {
+    sortState,
+    filterState,
+    sortModalVisible,
+    filterModalVisible,
+    hasActiveFilterState,
+    viewMode,
+    isLoadingPreference,
+    listRef,
+    listActionsModalRef,
+    setSortModalVisible,
+    setFilterModalVisible,
+    setFilterState,
+    handleApplySort,
+    listActions,
+    sortedData,
+    genreMap,
+  } = useRatingScreenLogic({
     storageKey: VIEW_MODE_STORAGE_KEY,
-    showSortButton: false,
-    actionButton,
+    data: enrichedRatings,
+    isLoading,
+    getMediaFromItem: getTVShowFromItem,
   });
-
-  // Scroll to top after sort/filter state changes (but not on initial mount)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    const timeoutId = setTimeout(() => {
-      listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
-    }, 100);
-    return () => clearTimeout(timeoutId);
-  }, [sortState, filterState]);
-
-  const handleApplySort = useCallback((newSortState: SortState) => {
-    setSortState(newSortState);
-  }, []);
-
-  const listActions = useMemo(
-    () => [
-      {
-        id: 'filter',
-        icon: SlidersHorizontal,
-        label: 'Filter Items',
-        onPress: () => setFilterModalVisible(true),
-        showBadge: hasActiveFilterState,
-      },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
-        onPress: () => setSortModalVisible(true),
-        showBadge: hasActiveSort,
-      },
-    ],
-    [hasActiveFilterState, hasActiveSort]
-  );
-
-  const sortedRatings = useMemo(() => {
-    if (!enrichedRatings) return [];
-
-    // First filter out null tvShows, then apply filters
-    const validRatings = [...enrichedRatings].filter((r) => r.tvShow !== null);
-    const filtered = filterRatingItems(validRatings, filterState, (item) => item.tvShow);
-
-    // Then apply sorting
-    const sorter = createRatingSorter<EnrichedTVRating>((item) => item.tvShow, sortState);
-    return filtered.sort(sorter);
-  }, [enrichedRatings, sortState, filterState]);
 
   const handleItemPress = useCallback(
     (tvShowId: number) => {
@@ -203,7 +140,7 @@ export default function TVShowRatingsScreen() {
     );
   }
 
-  if (sortedRatings.length === 0 && !hasActiveFilterState) {
+  if (sortedData.length === 0 && !hasActiveFilterState) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
@@ -224,7 +161,7 @@ export default function TVShowRatingsScreen() {
           <FlashList
             key="grid"
             ref={listRef}
-            data={sortedRatings}
+            data={sortedData}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
             numColumns={COLUMN_COUNT}
@@ -248,7 +185,7 @@ export default function TVShowRatingsScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={sortedRatings}
+            data={sortedData}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
