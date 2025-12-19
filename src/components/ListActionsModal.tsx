@@ -66,6 +66,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         grabber={false}
+        hitSlop={HIT_SLOP.l}
       >
         <View style={styles.content}>
           {actions.map((action, index) => {
