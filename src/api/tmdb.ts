@@ -363,6 +363,26 @@ export const tmdbApi = {
     return data;
   },
 
+  getUpcomingTVShows: async (page: number = 1) => {
+    // Get today's date and 30 days from now for the upcoming window
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + 30);
+
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
+      params: {
+        page,
+        'first_air_date.gte': formatDate(today),
+        'first_air_date.lte': formatDate(futureDate),
+        sort_by: 'first_air_date.asc',
+        with_original_language: 'en',
+      },
+    });
+    return data;
+  },
+
   getMovieDetails: async (id: number) => {
     const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`, {
       params: {

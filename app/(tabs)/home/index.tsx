@@ -72,6 +72,18 @@ export default function HomeScreen() {
     initialPageParam: 1,
   });
 
+  const upcomingTVShowsQuery = useInfiniteQuery({
+    queryKey: ['upcoming', 'tv'],
+    queryFn: ({ pageParam = 1 }) => tmdbApi.getUpcomingTVShows(pageParam),
+    getNextPageParam: (lastPage: PaginatedResponse<TVShow>) => {
+      if (lastPage.page < lastPage.total_pages) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+  });
+
   const trendingMovies = React.useMemo(() => {
     if (!trendingMoviesQuery.data?.pages) return [];
     return trendingMoviesQuery.data.pages.flatMap((page) => page.results);
@@ -97,6 +109,11 @@ export default function HomeScreen() {
     return upcomingMoviesQuery.data.pages.flatMap((page) => page.results);
   }, [upcomingMoviesQuery.data]);
 
+  const upcomingTVShows = React.useMemo(() => {
+    if (!upcomingTVShowsQuery.data?.pages) return [];
+    return upcomingTVShowsQuery.data.pages.flatMap((page) => page.results);
+  }, [upcomingTVShowsQuery.data]);
+
   const skeletonList = useMemo(
     () => (
       <FlashList
@@ -121,6 +138,7 @@ export default function HomeScreen() {
       popularMoviesQuery.refetch(),
       topRatedMoviesQuery.refetch(),
       upcomingMoviesQuery.refetch(),
+      upcomingTVShowsQuery.refetch(),
     ]);
     setRefreshing(false);
   }, []);
@@ -239,9 +257,9 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Upcoming */}
+        {/* Upcoming Movies */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming</Text>
+          <Text style={styles.sectionTitle}>Upcoming Movies</Text>
           {upcomingMoviesQuery.isLoading ? (
             skeletonList
           ) : (
@@ -253,6 +271,27 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.listContent}
               onEndReached={() => handleMovieLoadMore(upcomingMoviesQuery)}
+              onEndReachedThreshold={0.5}
+              removeClippedSubviews={true}
+              drawDistance={400}
+            />
+          )}
+        </View>
+
+        {/* Upcoming TV Shows */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Upcoming TV Shows</Text>
+          {upcomingTVShowsQuery.isLoading ? (
+            skeletonList
+          ) : (
+            <FlashList
+              horizontal
+              data={upcomingTVShows}
+              renderItem={({ item }) => <TVShowCard show={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              onEndReached={() => handleTVLoadMore(upcomingTVShowsQuery)}
               onEndReachedThreshold={0.5}
               removeClippedSubviews={true}
               drawDistance={400}
