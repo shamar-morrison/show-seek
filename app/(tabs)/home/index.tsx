@@ -3,6 +3,7 @@ import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
 } from '@/src/components/HomeScreenCustomizationModal';
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
   const queryClient = useQueryClient();
   const { homeScreenLists } = usePreferences();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -32,12 +34,18 @@ export default function HomeScreen() {
     setTimeout(() => setToastMessage(null), 2000);
   };
 
+  const handleOpenCustomization = () => {
+    requireAuth(() => {
+      modalRef.current?.present();
+    }, 'Sign in to customize your home screen');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShowSeek</Text>
         <TouchableOpacity
-          onPress={() => modalRef.current?.present()}
+          onPress={handleOpenCustomization}
           activeOpacity={ACTIVE_OPACITY}
           hitSlop={HIT_SLOP.m}
         >
@@ -72,6 +80,7 @@ export default function HomeScreen() {
       )}
 
       <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
+      {AuthGuardModal}
     </SafeAreaView>
   );
 }
