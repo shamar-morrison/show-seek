@@ -112,13 +112,6 @@ export default function FavoritesScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    setTimeout(() => {
-      if (viewMode === 'grid') {
-        mediaGridRef.current?.scrollToTop();
-      } else {
-        listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
-      }
-    }, 100);
   };
 
   const listActions = useMemo(
@@ -156,7 +149,7 @@ export default function FavoritesScreen() {
       } else {
         listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
       }
-    }, 50);
+    }, 100);
     return () => clearTimeout(timeoutId);
   }, [sortState, filterState, viewMode]);
 
@@ -270,14 +263,6 @@ export default function FavoritesScreen() {
         onApplyFilters={(newFilters) => {
           setFilterState(newFilters);
           setFilterModalVisible(false);
-          // Scroll to top after filter is applied
-          setTimeout(() => {
-            if (viewMode === 'grid') {
-              mediaGridRef.current?.scrollToTop();
-            } else {
-              listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
-            }
-          }, 100);
         }}
         genreMap={genreMap}
       />
