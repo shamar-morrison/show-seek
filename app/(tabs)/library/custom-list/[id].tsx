@@ -154,28 +154,31 @@ export default function CustomListDetailScreen() {
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
-  const listActions = [
-    {
-      id: 'sort',
-      icon: ArrowUpDown,
-      label: 'Sort Items',
-      onPress: () => setSortModalVisible(true),
-      showBadge: hasActiveSort,
-    },
-    {
-      id: 'rename',
-      icon: Pencil,
-      label: 'Rename List',
-      onPress: handleRenameList,
-    },
-    {
-      id: 'delete',
-      icon: Trash2,
-      label: 'Delete List',
-      onPress: handleDeleteList,
-      color: COLORS.error,
-    },
-  ];
+  const listActions = useMemo(
+    () => [
+      {
+        id: 'sort',
+        icon: ArrowUpDown,
+        label: 'Sort Items',
+        onPress: () => setSortModalVisible(true),
+        showBadge: hasActiveSort,
+      },
+      {
+        id: 'rename',
+        icon: Pencil,
+        label: 'Rename List',
+        onPress: handleRenameList,
+      },
+      {
+        id: 'delete',
+        icon: Trash2,
+        label: 'Delete List',
+        onPress: handleDeleteList,
+        color: COLORS.error,
+      },
+    ],
+    [hasActiveSort, handleRenameList, handleDeleteList]
+  );
 
   return (
     <>
