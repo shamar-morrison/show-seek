@@ -14,7 +14,7 @@ import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,9 +22,19 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
   const { homeScreenLists } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  // Cleanup toast timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -37,10 +47,13 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [queryClient]);
 
-  const handleShowToast = (message: string) => {
+  const handleShowToast = useCallback((message: string) => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
     setToastMessage(message);
-    setTimeout(() => setToastMessage(null), 2000);
-  };
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2000);
+  }, []);
 
   const handleOpenCustomization = () => {
     requireAuth(() => {
