@@ -355,7 +355,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               )}
 
               <Pressable style={styles.createListButton} onPress={() => setIsCreating(true)}>
-                <Plus size={20} color={COLORS.primary} />
+                <Plus size={20} color={COLORS.white} />
                 <Text style={styles.createListText}>Create Custom List</Text>
               </Pressable>
 
