@@ -2,39 +2,23 @@ import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
 } from '@/src/components/HomeScreenCustomizationModal';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastRef = useRef<ToastRef>(null);
   const queryClient = useQueryClient();
   const { homeScreenLists } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
-
-  // Cleanup toast timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -48,11 +32,7 @@ export default function HomeScreen() {
   }, [queryClient]);
 
   const handleShowToast = useCallback((message: string) => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    setToastMessage(message);
-    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2000);
+    toastRef.current?.show(message);
   }, []);
 
   const handleOpenCustomization = () => {
@@ -93,14 +73,8 @@ export default function HomeScreen() {
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      {/* Toast Message */}
-      {toastMessage && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </View>
-      )}
-
       <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
+      <Toast ref={toastRef} />
       {AuthGuardModal}
     </SafeAreaView>
   );
@@ -127,24 +101,5 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  toast: {
-    position: 'absolute',
-    bottom: SPACING.xl,
-    left: SPACING.l,
-    right: SPACING.l,
-    backgroundColor: COLORS.surface,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  toastText: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.m,
   },
 });

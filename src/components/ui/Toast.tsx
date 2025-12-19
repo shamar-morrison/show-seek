@@ -78,30 +78,26 @@ Toast.displayName = 'Toast';
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
+    bottom: SPACING.xl,
+    left: SPACING.l,
+    right: SPACING.l,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 9999,
   },
   content: {
     backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.round,
-    borderWidth: 1,
-    borderColor: COLORS.textSecondary,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
   text: {
-    color: COLORS.white,
+    color: COLORS.text,
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
   },
 });
 
