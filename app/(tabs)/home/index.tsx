@@ -1,164 +1,48 @@
-import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
-import { MovieCard } from '@/src/components/cards/MovieCard';
-import { TVShowCard } from '@/src/components/cards/TVShowCard';
-import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { FlashList } from '@shopify/flash-list';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import React, { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HomeListSection } from '@/src/components/HomeListSection';
+import HomeScreenCustomizationModal, {
+  HomeScreenCustomizationModalRef,
+} from '@/src/components/HomeScreenCustomizationModal';
+import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { usePreferences } from '@/src/hooks/usePreferences';
+import { useQueryClient } from '@tanstack/react-query';
+import { Settings2 } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const [refreshing, setRefreshing] = React.useState(false);
-
-  const trendingMoviesQuery = useInfiniteQuery({
-    queryKey: ['trending', 'movies', 'week'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getTrendingMovies('week', pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const trendingTVQuery = useInfiniteQuery({
-    queryKey: ['trending', 'tv', 'week'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getTrendingTV('week', pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<TVShow>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const popularMoviesQuery = useInfiniteQuery({
-    queryKey: ['popular', 'movies'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getPopularMovies(pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const topRatedMoviesQuery = useInfiniteQuery({
-    queryKey: ['topRated', 'movies'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getTopRatedMovies(pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const upcomingMoviesQuery = useInfiniteQuery({
-    queryKey: ['upcoming', 'movies'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getUpcomingMovies(pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<Movie>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const upcomingTVShowsQuery = useInfiniteQuery({
-    queryKey: ['upcoming', 'tv'],
-    queryFn: ({ pageParam = 1 }) => tmdbApi.getUpcomingTVShows(pageParam),
-    getNextPageParam: (lastPage: PaginatedResponse<TVShow>) => {
-      if (lastPage.page < lastPage.total_pages) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    initialPageParam: 1,
-  });
-
-  const trendingMovies = React.useMemo(() => {
-    if (!trendingMoviesQuery.data?.pages) return [];
-    return trendingMoviesQuery.data.pages.flatMap((page) => page.results);
-  }, [trendingMoviesQuery.data]);
-
-  const trendingTVShows = React.useMemo(() => {
-    if (!trendingTVQuery.data?.pages) return [];
-    return trendingTVQuery.data.pages.flatMap((page) => page.results);
-  }, [trendingTVQuery.data]);
-
-  const popularMovies = React.useMemo(() => {
-    if (!popularMoviesQuery.data?.pages) return [];
-    return popularMoviesQuery.data.pages.flatMap((page) => page.results);
-  }, [popularMoviesQuery.data]);
-
-  const topRatedMovies = React.useMemo(() => {
-    if (!topRatedMoviesQuery.data?.pages) return [];
-    return topRatedMoviesQuery.data.pages.flatMap((page) => page.results);
-  }, [topRatedMoviesQuery.data]);
-
-  const upcomingMovies = React.useMemo(() => {
-    if (!upcomingMoviesQuery.data?.pages) return [];
-    return upcomingMoviesQuery.data.pages.flatMap((page) => page.results);
-  }, [upcomingMoviesQuery.data]);
-
-  const upcomingTVShows = React.useMemo(() => {
-    if (!upcomingTVShowsQuery.data?.pages) return [];
-    return upcomingTVShowsQuery.data.pages.flatMap((page) => page.results);
-  }, [upcomingTVShowsQuery.data]);
-
-  const skeletonList = useMemo(
-    () => (
-      <FlashList
-        horizontal
-        data={[1, 2, 3, 4]}
-        renderItem={() => <MovieCardSkeleton />}
-        keyExtractor={(item) => item.toString()}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        removeClippedSubviews={true}
-        drawDistance={400}
-      />
-    ),
-    []
-  );
+  const [refreshing, setRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
+  const queryClient = useQueryClient();
+  const { homeScreenLists } = usePreferences();
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([
-      trendingMoviesQuery.refetch(),
-      trendingTVQuery.refetch(),
-      popularMoviesQuery.refetch(),
-      topRatedMoviesQuery.refetch(),
-      upcomingMoviesQuery.refetch(),
-      upcomingTVShowsQuery.refetch(),
-    ]);
+    // Invalidate all TMDB queries to refetch data
+    await queryClient.invalidateQueries({ queryKey: ['trending'] });
+    await queryClient.invalidateQueries({ queryKey: ['popular'] });
+    await queryClient.invalidateQueries({ queryKey: ['topRated'] });
+    await queryClient.invalidateQueries({ queryKey: ['upcoming'] });
     setRefreshing(false);
-  }, []);
+  }, [queryClient]);
 
-  const handleMovieLoadMore = (query: typeof trendingMoviesQuery) => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
-      query.fetchNextPage();
-    }
-  };
-
-  const handleTVLoadMore = (query: typeof trendingTVQuery) => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
-      query.fetchNextPage();
-    }
+  const handleShowToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 2000);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShowSeek</Text>
+        <TouchableOpacity
+          onPress={() => modalRef.current?.present()}
+          activeOpacity={ACTIVE_OPACITY}
+          hitSlop={HIT_SLOP.m}
+        >
+          <Settings2 size={24} color={COLORS.text} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -173,134 +57,21 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Trending Movies */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trending Movies</Text>
-          {trendingMoviesQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={trendingMovies}
-              renderItem={({ item }) => <MovieCard movie={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleMovieLoadMore(trendingMoviesQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
-
-        {/* Trending TV Shows */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trending TV Shows</Text>
-          {trendingTVQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={trendingTVShows}
-              renderItem={({ item }) => <TVShowCard show={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleTVLoadMore(trendingTVQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
-
-        {/* Popular Movies */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Popular Movies</Text>
-          {popularMoviesQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={popularMovies}
-              renderItem={({ item }) => <MovieCard movie={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleMovieLoadMore(popularMoviesQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
-
-        {/* Top Rated */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top Rated</Text>
-          {topRatedMoviesQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={topRatedMovies}
-              renderItem={({ item }) => <MovieCard movie={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleMovieLoadMore(topRatedMoviesQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
-
-        {/* Upcoming Movies */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Movies</Text>
-          {upcomingMoviesQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={upcomingMovies}
-              renderItem={({ item }) => <MovieCard movie={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleMovieLoadMore(upcomingMoviesQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
-
-        {/* Upcoming TV Shows */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming TV Shows</Text>
-          {upcomingTVShowsQuery.isLoading ? (
-            skeletonList
-          ) : (
-            <FlashList
-              horizontal
-              data={upcomingTVShows}
-              renderItem={({ item }) => <TVShowCard show={item} />}
-              keyExtractor={(item) => item.id.toString()}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              onEndReached={() => handleTVLoadMore(upcomingTVShowsQuery)}
-              onEndReachedThreshold={0.5}
-              removeClippedSubviews={true}
-              drawDistance={400}
-            />
-          )}
-        </View>
+        {homeScreenLists.map((config) => (
+          <HomeListSection key={config.id} config={config} />
+        ))}
 
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
+
+      {/* Toast Message */}
+      {toastMessage && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
+      <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
     </SafeAreaView>
   );
 }
@@ -311,6 +82,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
@@ -324,17 +98,23 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  section: {
-    marginTop: SPACING.l,
+  toast: {
+    position: 'absolute',
+    bottom: SPACING.xl,
+    left: SPACING.l,
+    right: SPACING.l,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.m,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  sectionTitle: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
+  toastText: {
     color: COLORS.text,
-    marginBottom: SPACING.m,
-    paddingHorizontal: SPACING.l,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
+    fontSize: FONT_SIZE.m,
   },
 });

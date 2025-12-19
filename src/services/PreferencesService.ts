@@ -32,6 +32,7 @@ class PreferencesService {
           const preferences: UserPreferences = {
             autoAddToWatching:
               data?.preferences?.autoAddToWatching ?? DEFAULT_PREFERENCES.autoAddToWatching,
+            homeScreenLists: data?.preferences?.homeScreenLists,
           };
           callback(preferences);
         } else {
