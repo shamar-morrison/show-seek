@@ -59,14 +59,19 @@ export default function FavoritesScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
-  const { viewMode, isLoadingPreference } = useViewModeToggle({
-    storageKey: VIEW_MODE_STORAGE_KEY,
-    showSortButton: false,
-    actionButton: {
+  const actionButton = useMemo(
+    () => ({
       icon: Settings2,
       onPress: () => listActionsModalRef.current?.present(),
       showBadge: hasActiveSort || hasActiveFilterState,
-    },
+    }),
+    [hasActiveSort, hasActiveFilterState]
+  );
+
+  const { viewMode, isLoadingPreference } = useViewModeToggle({
+    storageKey: VIEW_MODE_STORAGE_KEY,
+    showSortButton: false,
+    actionButton,
   });
 
   const favoritesList = useMemo(() => {
