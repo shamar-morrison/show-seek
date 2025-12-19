@@ -91,7 +91,13 @@ export const useAddToList = () => {
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
     }) => {
-      // Check limits only when premium status is confirmed (not loading)
+      return listService.addToList(listId, mediaItem, listName);
+    },
+
+    // Optimistic update - immediately show the item as added
+    onMutate: async ({ listId, mediaItem, listName }) => {
+      // Check limits FIRST, before the optimistic update
+      // This must happen here because onMutate runs before mutationFn
       if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
         const targetList = lists?.find((l) => l.id === listId);
@@ -99,15 +105,11 @@ export const useAddToList = () => {
 
         if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
           throw new PremiumLimitError(
-            `Free users can only add ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
+            `Free users can only add up to ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
           );
         }
       }
-      return listService.addToList(listId, mediaItem, listName);
-    },
 
-    // Optimistic update - immediately show the item as added
-    onMutate: async ({ listId, mediaItem, listName }) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ['lists', userId] });
 
