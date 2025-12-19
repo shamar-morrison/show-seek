@@ -16,7 +16,14 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Plus, Settings2 } from 'lucide-react-native';
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -53,6 +60,15 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const shouldScrollToBottomRef = useRef(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [operationError, setOperationError] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (operationError) {
+        const timer = setTimeout(() => {
+          setOperationError(null);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }, [operationError]);
 
     const hasChangesRef = useRef(false);
 
