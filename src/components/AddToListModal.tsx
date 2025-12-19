@@ -1,6 +1,7 @@
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import {
   useAddToList,
@@ -19,15 +20,14 @@ import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState }
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface AddToListModalRef {
   present: () => Promise<void>;
@@ -44,6 +44,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const router = useRouter();
     const sheetRef = useRef<TrueSheet>(null);
     const scrollRef = useRef<ScrollView>(null);
+    const { width } = useWindowDimensions();
     const [isCreating, setIsCreating] = useState(false);
     const [newListName, setNewListName] = useState('');
     // Key to force ScrollView remount when switching back from creation mode
@@ -240,7 +241,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={true}
       >
-        <View style={styles.content}>
+        <GestureHandlerRootView style={[styles.content, { width }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
           </View>
@@ -269,10 +270,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               />
               {createError && <Text style={styles.errorText}>{createError}</Text>}
               <View style={styles.createActions}>
-                <TouchableOpacity
+                <Pressable
                   style={styles.cancelButton}
                   onPress={() => setIsCreating(false)}
-                  activeOpacity={ACTIVE_OPACITY}
                   disabled={createMutation.isPending}
                 >
                   <Text
@@ -283,22 +283,21 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                   >
                     Cancel
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </Pressable>
+                <Pressable
                   style={[
                     styles.createButton,
                     (!newListName.trim() || createMutation.isPending) && styles.disabledButton,
                   ]}
                   onPress={handleCreateList}
                   disabled={!newListName.trim() || createMutation.isPending}
-                  activeOpacity={ACTIVE_OPACITY}
                 >
                   {createMutation.isPending ? (
                     <ActivityIndicator size="small" color={COLORS.white} />
                   ) : (
                     <Text style={styles.createButtonText}>Create</Text>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           ) : (
@@ -339,29 +338,24 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 </ScrollView>
               )}
 
-              <TouchableOpacity
-                style={styles.createListButton}
-                onPress={() => setIsCreating(true)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
+              <Pressable style={styles.createListButton} onPress={() => setIsCreating(true)}>
                 <Plus size={20} color={COLORS.primary} />
                 <Text style={styles.createListText}>Create Custom List</Text>
-              </TouchableOpacity>
+              </Pressable>
 
-              <TouchableOpacity
+              <Pressable
                 style={styles.manageListsButton}
                 onPress={() => {
                   sheetRef.current?.dismiss();
                   router.push('/manage-lists');
                 }}
-                activeOpacity={ACTIVE_OPACITY}
               >
                 <Settings2 size={20} color={COLORS.textSecondary} />
                 <Text style={styles.manageListsText}>Manage Lists</Text>
-              </TouchableOpacity>
+              </Pressable>
             </>
           )}
-        </View>
+        </GestureHandlerRootView>
       </TrueSheet>
     );
   }

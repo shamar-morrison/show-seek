@@ -48,7 +48,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           onPress={handleOpenCustomization}
           activeOpacity={ACTIVE_OPACITY}
-          hitSlop={HIT_SLOP.m}
+          hitSlop={HIT_SLOP.l}
         >
           <Settings2 size={24} color={COLORS.text} />
         </TouchableOpacity>
