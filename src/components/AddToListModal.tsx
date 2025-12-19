@@ -51,9 +51,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const listRef = useRef<FlatList<UserList>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
     const { width } = useWindowDimensions();
-    // Flag to scroll to bottom after list creation
-    const shouldScrollToBottomRef = useRef(false);
     const [operationError, setOperationError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
       if (operationError) {
@@ -63,6 +62,16 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         return () => clearTimeout(timer);
       }
     }, [operationError]);
+
+    // Auto-clear success message after 3 seconds
+    useEffect(() => {
+      if (successMessage) {
+        const timer = setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [successMessage]);
 
     const hasChangesRef = useRef(false);
 
@@ -183,8 +192,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const handleListCreated = async (listId: string, listName: string) => {
       hasChangesRef.current = true;
       addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
-      shouldScrollToBottomRef.current = true;
       await sheetRef.current?.present();
+      // Show success message inside the modal
+      setSuccessMessage(`Added to '${listName}'`);
     };
 
     const handleCreateListCancelled = async () => {
@@ -207,6 +217,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               <Text style={styles.title}>Add to List</Text>
             </View>
 
+            {successMessage && (
+              <View style={styles.successBanner}>
+                <Text style={styles.successBannerText}>{successMessage}</Text>
+              </View>
+            )}
+
             {(operationError || listsError) && (
               <View style={styles.errorBanner}>
                 <Text style={styles.errorBannerText}>
@@ -226,12 +242,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 style={styles.listContainer}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled={true}
-                onContentSizeChange={() => {
-                  if (shouldScrollToBottomRef.current) {
-                    shouldScrollToBottomRef.current = false;
-                    listRef.current?.scrollToEnd({ animated: true });
-                  }
-                }}
                 renderItem={({ item: list }) => {
                   const isMember = !!membership[list.id];
                   return (
@@ -369,5 +379,17 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
+  },
+  successBanner: {
+    backgroundColor: '#22c55e',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+  },
+  successBannerText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 });
