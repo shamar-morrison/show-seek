@@ -227,6 +227,17 @@ export default function FavoritesScreen() {
               keyExtractor={keyExtractor}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                hasActiveFilterState ? (
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                ) : null
+              }
             />
           )}
         </View>
