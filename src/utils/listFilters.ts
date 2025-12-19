@@ -44,7 +44,7 @@ export function filterMediaItems(
 
     // Year filter
     if (filters.year !== null) {
-      const releaseDate = item.release_date;
+      const releaseDate = item.release_date || item.first_air_date;
       if (!releaseDate) {
         return false;
       }
