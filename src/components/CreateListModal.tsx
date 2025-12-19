@@ -69,6 +69,26 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       }
     }, [onCancel]);
 
+    const showUpgradeAlert = useCallback(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        'Limit Reached',
+        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade',
+            style: 'default',
+            onPress: async () => {
+              skipOnCancelRef.current = true;
+              await sheetRef.current?.dismiss();
+              router.push('/premium');
+            },
+          },
+        ]
+      );
+    }, [router]);
+
     const handleCreate = async () => {
       const trimmedName = listName.trim();
       if (!trimmedName) return;
@@ -77,23 +97,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
       // Proactive check: If user has reached the limit, show upgrade dialog
       if (hasReachedLimit) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert(
-          'Limit Reached',
-          'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Upgrade',
-              style: 'default',
-              onPress: async () => {
-                skipOnCancelRef.current = true;
-                await sheetRef.current?.dismiss();
-                router.push('/premium');
-              },
-            },
-          ]
-        );
+        showUpgradeAlert();
         return;
       }
 
@@ -106,23 +110,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       } catch (err: any) {
         // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
         if (err instanceof PremiumLimitError) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          Alert.alert(
-            'Limit Reached',
-            'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Upgrade',
-                style: 'default',
-                onPress: async () => {
-                  skipOnCancelRef.current = true;
-                  await sheetRef.current?.dismiss();
-                  router.push('/premium');
-                },
-              },
-            ]
-          );
+          showUpgradeAlert();
           return;
         }
         setError('Failed to create list. Please try again.');
