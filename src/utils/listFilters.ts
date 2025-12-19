@@ -14,6 +14,7 @@ export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
 
 interface FilterableMedia {
   genre_ids?: number[];
+  genres?: { id: number; name?: string }[];
   vote_average?: number;
   release_date?: string;
   first_air_date?: string;
@@ -78,9 +79,11 @@ export function filterRatingItems<T>(
     const media = getMedia(item);
     if (!media) return false;
 
-    // Genre filter
+    // Genre filter - check both genre_ids (list response) and genres (detail response)
     if (filters.genre !== null) {
-      if (!media.genre_ids || !media.genre_ids.includes(filters.genre)) {
+      const hasGenreId = media.genre_ids?.includes(filters.genre);
+      const hasGenre = media.genres?.some((g) => g.id === filters.genre);
+      if (!hasGenreId && !hasGenre) {
         return false;
       }
     }
