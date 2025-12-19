@@ -10,6 +10,7 @@ import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
@@ -225,9 +226,12 @@ export default function CustomListDetailScreen() {
               accessibilityLabel="List options"
               accessibilityRole="button"
               hitSlop={HIT_SLOP.l}
-              style={{ marginRight: SPACING.s }}
+              style={[sortHeaderStyles.headerButton, { marginRight: SPACING.s }]}
             >
               <Settings2 size={22} color={COLORS.text} />
+              {(hasActiveSort || hasActiveFilterState) && (
+                <View style={sortHeaderStyles.sortBadge} />
+              )}
             </Pressable>
           ),
         }}
