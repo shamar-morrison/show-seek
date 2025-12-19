@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useRenameList } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -6,6 +13,7 @@ import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -84,12 +92,9 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Rename List</Text>
-            <TouchableOpacity
-              onPress={() => sheetRef.current?.dismiss()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
+            <Pressable onPress={() => sheetRef.current?.dismiss()} hitSlop={HIT_SLOP.s}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.formContainer}>

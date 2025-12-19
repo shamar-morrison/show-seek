@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.l,
+    paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.m,
     minHeight: 56,
     gap: SPACING.m,
