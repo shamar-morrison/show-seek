@@ -1,3 +1,4 @@
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import {
   AVAILABLE_TMDB_LISTS,
   MAX_HOME_LISTS,
@@ -21,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 
 export interface HomeScreenCustomizationModalRef {
   present: () => Promise<void>;
@@ -127,7 +127,7 @@ const HomeScreenCustomizationModal = forwardRef<
   return (
     <TrueSheet
       ref={sheetRef}
-      detents={[0.85]}
+      detents={[0.8]}
       scrollable
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
