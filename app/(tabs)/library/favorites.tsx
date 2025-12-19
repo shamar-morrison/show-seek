@@ -23,14 +23,16 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { ArrowUpDown, Heart, Settings2, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -227,13 +229,15 @@ export default function FavoritesScreen() {
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 hasActiveFilterState ? (
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title="No items match your filters"
-                    description="Try adjusting your filters to see more results."
-                    actionLabel="Clear Filters"
-                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                  />
+                  <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                    <EmptyState
+                      icon={SlidersHorizontal}
+                      title="No items match your filters"
+                      description="Try adjusting your filters to see more results."
+                      actionLabel="Clear Filters"
+                      onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                    />
+                  </View>
                 ) : null
               }
             />

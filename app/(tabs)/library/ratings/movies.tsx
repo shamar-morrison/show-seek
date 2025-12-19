@@ -23,8 +23,16 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ArrowUpDown, Settings2, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
@@ -36,6 +44,8 @@ export default function MovieRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedMovieRatings();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -220,13 +230,15 @@ export default function MovieRatingsScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               hasActiveFilterState ? (
-                <EmptyState
-                  icon={SlidersHorizontal}
-                  title="No items match your filters"
-                  description="Try adjusting your filters to see more results."
-                  actionLabel="Clear Filters"
-                  onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                />
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                </View>
               ) : null
             }
           />
@@ -241,13 +253,15 @@ export default function MovieRatingsScreen() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               hasActiveFilterState ? (
-                <EmptyState
-                  icon={SlidersHorizontal}
-                  title="No items match your filters"
-                  description="Try adjusting your filters to see more results."
-                  actionLabel="Clear Filters"
-                  onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                />
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                </View>
               ) : null
             }
           />
