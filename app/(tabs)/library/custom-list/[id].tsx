@@ -188,7 +188,7 @@ export default function CustomListDetailScreen() {
               activeOpacity={ACTIVE_OPACITY}
               accessibilityLabel="List options"
               accessibilityRole="button"
-              hitSlop={HIT_SLOP.m}
+              hitSlop={HIT_SLOP.l}
               style={{ marginRight: SPACING.s }}
             >
               <Settings2 size={22} color={COLORS.text} />

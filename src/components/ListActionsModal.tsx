@@ -9,7 +9,7 @@ import {
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { LucideIcon } from 'lucide-react-native';
-import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface ListAction {
@@ -40,6 +40,16 @@ interface ListActionsModalProps {
 const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
   ({ actions }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }, []);
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -54,7 +64,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       sheetRef.current?.dismiss();
       // Small delay to allow modal to dismiss before executing action
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         action.onPress();
       }, 100);
     }, []);
@@ -66,7 +76,6 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
         grabber={false}
-        hitSlop={HIT_SLOP.l}
       >
         <View style={styles.content}>
           {actions.map((action, index) => {
