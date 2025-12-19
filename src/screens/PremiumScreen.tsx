@@ -116,7 +116,7 @@ export default function PremiumScreen() {
         </View>
 
         <View style={styles.pricing}>
-          <Text style={styles.price}>{price || 'US$5.00'}</Text>
+          <Text style={styles.price}>{price || 'US$10.00'}</Text>
           <Text style={styles.paymentType}>One-time payment</Text>
         </View>
 

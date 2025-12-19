@@ -1,4 +1,5 @@
 import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
+import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import {
@@ -13,20 +14,11 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Settings2 } from 'lucide-react-native';
-import React, {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from 'react';
+import { Plus, Settings2 } from 'lucide-react-native';
+import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,10 +27,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.8;
-const LIST_HEIGHT = SHEET_HEIGHT * 0.5;
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 
 export interface AddToListModalRef {
   present: () => Promise<void>;
@@ -49,33 +38,6 @@ interface AddToListModalProps {
   mediaItem: Omit<ListMediaItem, 'addedAt'>;
   onShowToast?: (message: string) => void;
 }
-
-const AnimatedCheck = ({ visible }: { visible: boolean }) => {
-  const scale = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(scale, {
-        toValue: 1,
-        useNativeDriver: true,
-        speed: 20,
-        bounciness: 10,
-      }).start();
-    } else {
-      Animated.timing(scale, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible]);
-
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <Check size={14} color={COLORS.white} strokeWidth={3} />
-    </Animated.View>
-  );
-};
 
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
@@ -429,7 +391,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
-    maxHeight: LIST_HEIGHT,
+    maxHeight: MODAL_LIST_HEIGHT,
   },
   listItem: {
     flexDirection: 'row',
