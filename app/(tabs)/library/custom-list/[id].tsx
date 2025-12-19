@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
@@ -9,7 +10,7 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Pencil, Trash2 } from 'lucide-react-native';
+import { ArrowUpDown, Bookmark, Pencil, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -23,6 +24,7 @@ export default function CustomListDetailScreen() {
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
+  const listActionsModalRef = useRef<ListActionsModalRef>(null);
 
   const {
     handleItemPress,
@@ -152,45 +154,45 @@ export default function CustomListDetailScreen() {
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
+  const listActions = [
+    {
+      id: 'sort',
+      icon: ArrowUpDown,
+      label: 'Sort Items',
+      onPress: () => setSortModalVisible(true),
+      showBadge: hasActiveSort,
+    },
+    {
+      id: 'rename',
+      icon: Pencil,
+      label: 'Rename List',
+      onPress: handleRenameList,
+    },
+    {
+      id: 'delete',
+      icon: Trash2,
+      label: 'Delete List',
+      onPress: handleDeleteList,
+      color: COLORS.error,
+    },
+  ];
+
   return (
     <>
       <Stack.Screen
         options={{
           title: list.name,
           headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                onPress={() => setSortModalVisible(true)}
-                activeOpacity={ACTIVE_OPACITY}
-                style={styles.headerButton}
-                accessibilityLabel="Sort items"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={styles.sortBadge} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleRenameList}
-                style={styles.headerButton}
-                activeOpacity={ACTIVE_OPACITY}
-                accessibilityLabel="Rename list"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <Pencil size={22} color={COLORS.text} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDeleteList}
-                style={styles.headerButton}
-                activeOpacity={ACTIVE_OPACITY}
-                accessibilityLabel="Delete list"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <Trash2 size={22} color={COLORS.error} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => listActionsModalRef.current?.present()}
+              activeOpacity={ACTIVE_OPACITY}
+              accessibilityLabel="List options"
+              accessibilityRole="button"
+              hitSlop={HIT_SLOP.m}
+              style={{ marginRight: SPACING.s }}
+            >
+              <Settings2 size={22} color={COLORS.text} />
+            </TouchableOpacity>
           ),
         }}
       />
@@ -232,6 +234,7 @@ export default function CustomListDetailScreen() {
       <Toast ref={toastRef} />
       {AuthGuardModal}
       <RenameListModal ref={renameModalRef} />
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
     </>
   );
 }
@@ -251,23 +254,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    marginRight: SPACING.s,
-  },
-  headerButton: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });
