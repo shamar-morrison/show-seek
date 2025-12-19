@@ -1,5 +1,5 @@
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -12,9 +12,10 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface CreateListModalRef {
   present: () => Promise<void>;
@@ -28,6 +29,7 @@ interface CreateListModalProps {
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
   ({ onSuccess }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
+    const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
     const [error, setError] = useState<string | null>(null);
 
@@ -102,15 +104,12 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <View style={styles.content}>
+        <GestureHandlerRootView style={[styles.content, { width }]}>
           <View style={styles.header}>
             <Text style={styles.title}>Create New List</Text>
-            <TouchableOpacity
-              onPress={() => sheetRef.current?.dismiss()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
+            <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.createContainer}>
@@ -127,10 +126,9 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.createActions}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.cancelButton}
                 onPress={() => sheetRef.current?.dismiss()}
-                activeOpacity={ACTIVE_OPACITY}
                 disabled={createMutation.isPending}
               >
                 <Text
@@ -138,25 +136,24 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
                 >
                   Cancel
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[
                   styles.createButton,
                   (!listName.trim() || createMutation.isPending) && styles.disabledButton,
                 ]}
                 onPress={handleCreate}
                 disabled={!listName.trim() || createMutation.isPending}
-                activeOpacity={ACTIVE_OPACITY}
               >
                 {createMutation.isPending ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                   <Text style={styles.createButtonText}>Create</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
-        </View>
+        </GestureHandlerRootView>
       </TrueSheet>
     );
   }

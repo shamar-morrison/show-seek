@@ -6,7 +6,7 @@ import {
 } from '@/src/constants/homeScreenLists';
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
@@ -15,13 +15,13 @@ import * as Haptics from 'expo-haptics';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface HomeScreenCustomizationModalRef {
   present: () => Promise<void>;
@@ -56,6 +56,7 @@ const HomeScreenCustomizationModal = forwardRef<
   HomeScreenCustomizationModalProps
 >(({ onShowToast }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
+  const { width } = useWindowDimensions();
   const { homeScreenLists } = usePreferences();
   const { data: userLists } = useLists();
   const updateMutation = useUpdateHomeScreenLists();
@@ -133,7 +134,7 @@ const HomeScreenCustomizationModal = forwardRef<
       backgroundColor={COLORS.surface}
       grabber={true}
     >
-      <View style={styles.content}>
+      <GestureHandlerRootView style={[styles.content, { width }]}>
         <View style={styles.header}>
           <Text style={styles.title}>Customize Home Screen</Text>
           <Text style={styles.subtitle}>
@@ -198,18 +199,16 @@ const HomeScreenCustomizationModal = forwardRef<
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
+          <Pressable
             style={styles.cancelButton}
             onPress={handleCancel}
-            activeOpacity={ACTIVE_OPACITY}
             disabled={updateMutation.isPending}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Pressable>
+          <Pressable
             style={[styles.applyButton, updateMutation.isPending && styles.disabledButton]}
             onPress={handleApply}
-            activeOpacity={ACTIVE_OPACITY}
             disabled={updateMutation.isPending}
           >
             {updateMutation.isPending ? (
@@ -217,9 +216,9 @@ const HomeScreenCustomizationModal = forwardRef<
             ) : (
               <Text style={styles.applyButtonText}>Apply</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
-      </View>
+      </GestureHandlerRootView>
     </TrueSheet>
   );
 });

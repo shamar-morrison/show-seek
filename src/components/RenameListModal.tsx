@@ -1,11 +1,4 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRenameList } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -13,13 +6,13 @@ import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface RenameListModalRef {
   present: (params: { listId: string; currentName: string }) => Promise<void>;
@@ -33,6 +26,7 @@ interface RenameListModalProps {
 const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
   ({ onSuccess }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
+    const { width } = useWindowDimensions();
     const [listId, setListId] = useState('');
     const [listName, setListName] = useState('');
     const [originalName, setOriginalName] = useState('');
@@ -89,10 +83,10 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <View style={styles.content}>
+        <GestureHandlerRootView style={[styles.content, { width }]}>
           <View style={styles.header}>
             <Text style={styles.title}>Rename List</Text>
-            <Pressable onPress={() => sheetRef.current?.dismiss()} hitSlop={HIT_SLOP.s}>
+            <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
             </Pressable>
           </View>
@@ -111,10 +105,9 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.actions}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.cancelButton}
                 onPress={() => sheetRef.current?.dismiss()}
-                activeOpacity={ACTIVE_OPACITY}
                 disabled={renameMutation.isPending}
               >
                 <Text
@@ -122,25 +115,24 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
                 >
                   Cancel
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[
                   styles.saveButton,
                   (!hasChanges || renameMutation.isPending) && styles.disabledButton,
                 ]}
                 onPress={handleRename}
                 disabled={!hasChanges || renameMutation.isPending}
-                activeOpacity={ACTIVE_OPACITY}
               >
                 {renameMutation.isPending ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                   <Text style={styles.saveButtonText}>Save</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
-        </View>
+        </GestureHandlerRootView>
       </TrueSheet>
     );
   }
