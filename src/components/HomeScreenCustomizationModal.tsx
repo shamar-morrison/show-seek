@@ -299,12 +299,16 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: SPACING.m,
-    justifyContent: 'flex-end',
     marginTop: SPACING.m,
   },
   cancelButton: {
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
@@ -312,12 +316,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   applyButton: {
+    flex: 1,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.m,
+    padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 80,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.5,

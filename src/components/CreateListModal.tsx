@@ -9,6 +9,7 @@ import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -24,10 +25,11 @@ export interface CreateListModalRef {
 
 interface CreateListModalProps {
   onSuccess?: (listId: string, listName: string) => void;
+  onCancel?: () => void;
 }
 
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
-  ({ onSuccess }, ref) => {
+  ({ onSuccess, onCancel }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
@@ -43,10 +45,14 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const hasReachedLimit =
       !isPremium && !isPremiumLoading && !isListsLoading && customListCount >= MAX_FREE_LISTS;
 
+    // Track whether we should skip calling onCancel (e.g., created successfully or navigating to upgrade)
+    const skipOnCancelRef = useRef(false);
+
     useImperativeHandle(ref, () => ({
       present: async () => {
         setListName('');
         setError(null);
+        skipOnCancelRef.current = false;
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -57,7 +63,31 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const handleDismiss = useCallback(() => {
       setListName('');
       setError(null);
-    }, []);
+      // Only call onCancel if we didn't create a list or navigate to upgrade
+      if (!skipOnCancelRef.current) {
+        onCancel?.();
+      }
+    }, [onCancel]);
+
+    const showUpgradeAlert = useCallback(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        'Limit Reached',
+        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade',
+            style: 'default',
+            onPress: async () => {
+              skipOnCancelRef.current = true;
+              await sheetRef.current?.dismiss();
+              router.push('/premium');
+            },
+          },
+        ]
+      );
+    }, [router]);
 
     const handleCreate = async () => {
       const trimmedName = listName.trim();
@@ -65,29 +95,22 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
       setError(null);
 
-      // Proactive check: If user has reached the limit, redirect to premium
+      // Proactive check: If user has reached the limit, show upgrade dialog
       if (hasReachedLimit) {
-        await sheetRef.current?.dismiss();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setTimeout(() => {
-          router.push('/premium');
-        }, 300);
+        showUpgradeAlert();
         return;
       }
 
       try {
         const listId = await createMutation.mutateAsync(trimmedName);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        skipOnCancelRef.current = true;
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
       } catch (err: any) {
         // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
         if (err instanceof PremiumLimitError) {
-          await sheetRef.current?.dismiss();
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          setTimeout(() => {
-            router.push('/premium');
-          }, 300);
+          showUpgradeAlert();
           return;
         }
         setError('Failed to create list. Please try again.');
@@ -196,25 +219,31 @@ const styles = StyleSheet.create({
   createActions: {
     flexDirection: 'row',
     gap: SPACING.m,
-    justifyContent: 'flex-end',
   },
   cancelButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
   disabledText: {
     opacity: 0.5,
   },
   createButton: {
+    flex: 1,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 80,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.5,

@@ -1,29 +1,34 @@
+import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
-import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
+import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { usePremium } from '@/src/context/PremiumContext';
 import {
   useAddToList,
-  useCreateList,
   useDeleteList,
   useLists,
   useMediaLists,
   useRemoveFromList,
 } from '@/src/hooks/useLists';
-import { ListMediaItem } from '@/src/services/ListService';
+import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Plus, Settings2 } from 'lucide-react-native';
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -43,16 +48,30 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
     const router = useRouter();
     const sheetRef = useRef<TrueSheet>(null);
-    const scrollRef = useRef<ScrollView>(null);
+    const listRef = useRef<FlatList<UserList>>(null);
+    const createListModalRef = useRef<CreateListModalRef>(null);
     const { width } = useWindowDimensions();
-    const [isCreating, setIsCreating] = useState(false);
-    const [newListName, setNewListName] = useState('');
-    // Key to force ScrollView remount when switching back from creation mode
-    const [scrollKey, setScrollKey] = useState(0);
-    // Flag to scroll to bottom only once after list creation
-    const shouldScrollToBottomRef = useRef(false);
-    const [createError, setCreateError] = useState<string | null>(null);
     const [operationError, setOperationError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (operationError) {
+        const timer = setTimeout(() => {
+          setOperationError(null);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }, [operationError]);
+
+    // Auto-clear success message after 3 seconds
+    useEffect(() => {
+      if (successMessage) {
+        const timer = setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }, [successMessage]);
 
     const hasChangesRef = useRef(false);
 
@@ -61,21 +80,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     const addMutation = useAddToList();
     const removeMutation = useRemoveFromList();
-    const createMutation = useCreateList();
     const deleteMutation = useDeleteList();
-    const { isPremium, isLoading: isPremiumLoading } = usePremium();
-
-    // Calculate custom list count for limit checking - only enforce when premium status confirmed
-    const customListCount = lists ? filterCustomLists(lists).length : 0;
-    const hasReachedLimit = !isPremium && !isPremiumLoading && customListCount >= MAX_FREE_LISTS;
 
     useImperativeHandle(ref, () => ({
       present: async () => {
         hasChangesRef.current = false;
-        setCreateError(null);
         setOperationError(null);
-        setIsCreating(false);
-        setNewListName('');
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -87,9 +97,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       if (hasChangesRef.current && onShowToast) {
         onShowToast('Lists updated');
       }
-      setIsCreating(false);
-      setNewListName('');
-      setCreateError(null);
       setOperationError(null);
     }, [onShowToast]);
 
@@ -137,60 +144,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }
     };
 
-    const handleCreateList = async () => {
-      if (!newListName.trim()) return;
-
-      setCreateError(null);
-
-      // Proactive check: If user has reached the limit, redirect to premium
-      if (hasReachedLimit) {
-        await sheetRef.current?.dismiss();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        Alert.alert(
-          'Limit Reached',
-          'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Upgrade',
-              style: 'default',
-              onPress: () => router.push('/premium'),
-            },
-          ]
-        );
-        return;
-      }
-
-      try {
-        // 1. Create list (must await to get the listId)
-        const listId = await createMutation.mutateAsync(newListName.trim());
-
-        // 2. Add item to new list (fire-and-forget with optimistic update)
-        hasChangesRef.current = true;
-        addMutation.mutate(
-          {
-            listId,
-            mediaItem,
-            listName: newListName.trim(),
-          },
-          { onError: handleMutationError }
-        );
-
-        // 3. Success feedback and reset UI immediately
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setNewListName('');
-        setIsCreating(false);
-        // Increment key to force ScrollView remount, fixing scroll issues
-        setScrollKey((k) => k + 1);
-        // Flag to scroll to bottom on next content size change
-        shouldScrollToBottomRef.current = true;
-      } catch (error) {
-        console.error('Failed to create list:', error);
-        setCreateError('Failed to create list. Please try again.');
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      }
-    };
-
     const handleDeleteList = (listId: string, listName: string) => {
       if (isDefaultList(listId)) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -231,132 +184,106 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       );
     };
 
+    const handleCreateCustomListPress = async () => {
+      await sheetRef.current?.dismiss();
+      await createListModalRef.current?.present();
+    };
+
+    const handleListCreated = async (listId: string, listName: string) => {
+      hasChangesRef.current = true;
+      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
+      await sheetRef.current?.present();
+      // Show success message inside the modal
+      setSuccessMessage(`Added to '${listName}'`);
+    };
+
+    const handleCreateListCancelled = async () => {
+      await sheetRef.current?.present();
+    };
+
     return (
-      <TrueSheet
-        ref={sheetRef}
-        detents={[0.8]}
-        scrollable
-        cornerRadius={BORDER_RADIUS.l}
-        backgroundColor={COLORS.surface}
-        onDidDismiss={handleDismiss}
-        grabber={true}
-      >
-        <GestureHandlerRootView style={[styles.content, { width }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{isCreating ? 'Create New List' : 'Add to List'}</Text>
-          </View>
-
-          {(operationError || listsError) && (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorBannerText}>
-                {operationError ||
-                  (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
-              </Text>
+      <>
+        <TrueSheet
+          ref={sheetRef}
+          detents={[0.8]}
+          scrollable
+          cornerRadius={BORDER_RADIUS.l}
+          backgroundColor={COLORS.surface}
+          onDidDismiss={handleDismiss}
+          grabber={true}
+        >
+          <GestureHandlerRootView style={[styles.content, { width }]}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Add to List</Text>
             </View>
-          )}
 
-          {isCreating ? (
-            <View style={styles.createContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="List Name"
-                placeholderTextColor={COLORS.textSecondary}
-                value={newListName}
-                onChangeText={setNewListName}
-                autoFocus
-                returnKeyType="done"
-                editable={!createMutation.isPending}
-                onSubmitEditing={handleCreateList}
-              />
-              {createError && <Text style={styles.errorText}>{createError}</Text>}
-              <View style={styles.createActions}>
-                <Pressable
-                  style={styles.cancelButton}
-                  onPress={() => setIsCreating(false)}
-                  disabled={createMutation.isPending}
-                >
-                  <Text
-                    style={[
-                      styles.cancelButtonText,
-                      createMutation.isPending && styles.disabledText,
-                    ]}
-                  >
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.createButton,
-                    (!newListName.trim() || createMutation.isPending) && styles.disabledButton,
-                  ]}
-                  onPress={handleCreateList}
-                  disabled={!newListName.trim() || createMutation.isPending}
-                >
-                  {createMutation.isPending ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.createButtonText}>Create</Text>
-                  )}
-                </Pressable>
+            {successMessage && (
+              <View style={styles.successBanner}>
+                <Text style={styles.successBannerText}>{successMessage}</Text>
               </View>
-            </View>
-          ) : (
-            <>
-              {isLoadingLists ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
-              ) : (
-                <ScrollView
-                  key={scrollKey}
-                  ref={scrollRef}
-                  style={styles.listContainer}
-                  showsVerticalScrollIndicator
-                  nestedScrollEnabled={true}
-                  contentContainerStyle={{ flexGrow: 1 }}
-                  onContentSizeChange={() => {
-                    if (shouldScrollToBottomRef.current) {
-                      shouldScrollToBottomRef.current = false;
-                      scrollRef.current?.scrollToEnd({ animated: true });
-                    }
-                  }}
-                >
-                  {lists?.map((list) => {
-                    const isMember = !!membership[list.id];
-                    return (
-                      <Pressable
-                        key={list.id}
-                        style={styles.listItem}
-                        onPress={() => handleToggleList(list.id, list.name, isMember)}
-                        onLongPress={() => handleDeleteList(list.id, list.name)}
-                      >
-                        <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
-                          <AnimatedCheck visible={isMember} />
-                        </View>
-                        <Text style={styles.listName}>{list.name}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              )}
+            )}
 
-              <Pressable style={styles.createListButton} onPress={() => setIsCreating(true)}>
-                <Plus size={20} color={COLORS.primary} />
-                <Text style={styles.createListText}>Create Custom List</Text>
-              </Pressable>
+            {(operationError || listsError) && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorBannerText}>
+                  {operationError ||
+                    (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
+                </Text>
+              </View>
+            )}
 
-              <Pressable
-                style={styles.manageListsButton}
-                onPress={() => {
-                  sheetRef.current?.dismiss();
-                  router.push('/manage-lists');
+            {isLoadingLists ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+            ) : (
+              <FlatList
+                ref={listRef}
+                data={lists}
+                keyExtractor={(item) => item.id}
+                style={styles.listContainer}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled={true}
+                renderItem={({ item: list }) => {
+                  const isMember = !!membership[list.id];
+                  return (
+                    <Pressable
+                      style={styles.listItem}
+                      onPress={() => handleToggleList(list.id, list.name, isMember)}
+                      onLongPress={() => handleDeleteList(list.id, list.name)}
+                    >
+                      <View style={[styles.checkbox, isMember && styles.checkboxChecked]}>
+                        <AnimatedCheck visible={isMember} />
+                      </View>
+                      <Text style={styles.listName}>{list.name}</Text>
+                    </Pressable>
+                  );
                 }}
-              >
-                <Settings2 size={20} color={COLORS.textSecondary} />
-                <Text style={styles.manageListsText}>Manage Lists</Text>
-              </Pressable>
-            </>
-          )}
-        </GestureHandlerRootView>
-      </TrueSheet>
+              />
+            )}
+
+            <Pressable style={styles.createListButton} onPress={handleCreateCustomListPress}>
+              <Plus size={20} color={COLORS.white} />
+              <Text style={styles.createListText}>Create Custom List</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.manageListsButton}
+              onPress={() => {
+                sheetRef.current?.dismiss();
+                router.push('/manage-lists');
+              }}
+            >
+              <Settings2 size={20} color={COLORS.textSecondary} />
+              <Text style={styles.manageListsText}>Manage Lists</Text>
+            </Pressable>
+          </GestureHandlerRootView>
+        </TrueSheet>
+
+        <CreateListModal
+          ref={createListModalRef}
+          onSuccess={handleListCreated}
+          onCancel={handleCreateListCancelled}
+        />
+      </>
     );
   }
 );
@@ -417,58 +344,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: SPACING.m,
-    paddingVertical: SPACING.s,
+    padding: SPACING.m,
     gap: SPACING.s,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.m,
   },
   createListText: {
-    color: COLORS.primary,
+    color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },
-  createContainer: {
-    gap: SPACING.m,
-  },
-  input: {
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    color: COLORS.text,
-    fontSize: FONT_SIZE.m,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: FONT_SIZE.s,
-  },
-  createActions: {
+  manageListsButton: {
     flexDirection: 'row',
-    gap: SPACING.m,
-    justifyContent: 'flex-end',
-  },
-  cancelButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.s,
     padding: SPACING.m,
+    gap: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
-  cancelButtonText: {
+  manageListsText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
-  },
-  disabledText: {
-    opacity: 0.5,
-  },
-  createButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  createButtonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
   errorBanner: {
     backgroundColor: COLORS.error,
@@ -481,17 +380,16 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     textAlign: 'center',
   },
-  manageListsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.s,
-    paddingVertical: SPACING.s,
-    gap: SPACING.s,
+  successBanner: {
+    backgroundColor: '#22c55e',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
   },
-  manageListsText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
+  successBannerText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
     fontWeight: '600',
   },
 });
