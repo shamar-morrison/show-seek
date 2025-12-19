@@ -240,13 +240,23 @@ export default function CustomListDetailScreen() {
           ref={mediaGridRef}
           items={listItems}
           isLoading={isLoading}
-          emptyState={{
-            icon: Bookmark,
-            title: 'No items yet',
-            description: `Add movies and TV shows to this list to see them here.`,
-            actionLabel: 'Browse Content',
-            onAction: () => router.push('/(tabs)/discover' as any),
-          }}
+          emptyState={
+            hasActiveFilterState
+              ? {
+                  icon: SlidersHorizontal,
+                  title: 'No items match your filters',
+                  description: 'Try adjusting your filters to see more results.',
+                  actionLabel: 'Clear Filters',
+                  onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                }
+              : {
+                  icon: Bookmark,
+                  title: 'No items yet',
+                  description: `Add movies and TV shows to this list to see them here.`,
+                  actionLabel: 'Browse Content',
+                  onAction: () => router.push('/(tabs)/discover' as any),
+                }
+          }
           onItemPress={handleItemPress}
           onItemLongPress={handleLongPress}
         />
