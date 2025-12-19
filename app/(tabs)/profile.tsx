@@ -198,15 +198,12 @@ export default function ProfileScreen() {
 
   const handleSendFeedback = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const feedbackEmail = 'shamar.morrison2000@gmail.com';
-    const subject = encodeURIComponent('ShowSeek App Feedback');
-    const body = encodeURIComponent('Hi ShowSeek Team,\n\n');
-    const mailtoUrl = `mailto:${feedbackEmail}?subject=${subject}&body=${body}`;
+    const feedbackUrl = 'https://showseek.canny.io';
 
     try {
-      await Linking.openURL(mailtoUrl);
+      await Linking.openURL(feedbackUrl);
     } catch {
-      Alert.alert('No Email App', 'Please set up an email app to send feedback.');
+      Alert.alert('Error', 'Unable to open the feedback page. Please try again.');
     }
   }, []);
 
