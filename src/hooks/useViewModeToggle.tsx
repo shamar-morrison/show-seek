@@ -9,6 +9,15 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export type ViewMode = 'grid' | 'list';
 
+interface ActionButton {
+  /** Icon component to display */
+  icon: React.ComponentType<{ size: number; color: string }>;
+  /** Callback when button is pressed */
+  onPress: () => void;
+  /** Whether to show an active indicator badge */
+  showBadge?: boolean;
+}
+
 interface UseViewModeToggleOptions {
   /** Unique storage key for persisting the view mode preference */
   storageKey: string;
@@ -18,6 +27,8 @@ interface UseViewModeToggleOptions {
   hasActiveSort?: boolean;
   /** Callback when sort button is pressed */
   onSortPress?: () => void;
+  /** Custom action button to show instead of/alongside sort button */
+  actionButton?: ActionButton;
 }
 
 interface UseViewModeToggleReturn {
@@ -35,6 +46,7 @@ export function useViewModeToggle({
   showSortButton = true,
   hasActiveSort = false,
   onSortPress,
+  actionButton,
 }: UseViewModeToggleOptions): UseViewModeToggleReturn {
   const navigation = useNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -68,7 +80,7 @@ export function useViewModeToggle({
     }
   }, [viewMode, storageKey]);
 
-  // Set up header with view mode toggle and optional sort button
+  // Set up header with view mode toggle and optional sort/action button
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -95,10 +107,29 @@ export function useViewModeToggle({
               {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
             </TouchableOpacity>
           )}
+          {actionButton && (
+            <TouchableOpacity
+              onPress={actionButton.onPress}
+              activeOpacity={ACTIVE_OPACITY}
+              style={sortHeaderStyles.headerButton}
+              hitSlop={HIT_SLOP.m}
+            >
+              <actionButton.icon size={22} color={COLORS.text} />
+              {actionButton.showBadge && <View style={sortHeaderStyles.sortBadge} />}
+            </TouchableOpacity>
+          )}
         </View>
       ),
     });
-  }, [navigation, viewMode, toggleViewMode, showSortButton, hasActiveSort, onSortPress]);
+  }, [
+    navigation,
+    viewMode,
+    toggleViewMode,
+    showSortButton,
+    hasActiveSort,
+    onSortPress,
+    actionButton,
+  ]);
 
   return {
     viewMode,
