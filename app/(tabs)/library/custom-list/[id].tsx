@@ -2,15 +2,30 @@ import AddToListModal from '@/src/components/AddToListModal';
 import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
 import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useAllGenres } from '@/src/hooks/useGenres';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import {
+  DEFAULT_WATCH_STATUS_FILTERS,
+  filterMediaItems,
+  hasActiveFilters,
+  WatchStatusFilterState,
+} from '@/src/utils/listFilters';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Pencil, Settings2, Trash2 } from 'lucide-react-native';
+import {
+  ArrowUpDown,
+  Bookmark,
+  Pencil,
+  Settings2,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -22,9 +37,16 @@ export default function CustomListDetailScreen() {
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterState, setFilterState] = useState<WatchStatusFilterState>(
+    DEFAULT_WATCH_STATUS_FILTERS
+  );
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
+
+  // Fetch genre data for filter modal
+  const { data: genreMap = {} } = useAllGenres();
 
   const {
     handleItemPress,
@@ -53,7 +75,11 @@ export default function CustomListDetailScreen() {
     if (!list?.items) return [];
     const items = Object.values(list.items);
 
-    const sortedItems = [...items].sort((a, b) => {
+    // Apply filters first
+    const filteredItems = filterMediaItems(items, filterState);
+
+    // Then apply sorting
+    const sortedItems = [...filteredItems].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
@@ -83,11 +109,10 @@ export default function CustomListDetailScreen() {
     });
 
     return sortedItems;
-  }, [list, sortState]);
+  }, [list, sortState, filterState]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    // Scroll to top after sort is applied
     setTimeout(() => {
       mediaGridRef.current?.scrollToTop();
     }, 100);
@@ -131,31 +156,21 @@ export default function CustomListDetailScreen() {
     );
   }, [list, id, deleteMutation, router, requireAuth, isAuthenticated]);
 
-  // Navigate back if list is deleted
-  useEffect(() => {
-    if (!isLoading && lists && !list) {
-      router.replace('/(tabs)/library/custom-lists');
-    }
-  }, [isLoading, lists, list, router]);
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (!list) {
-    return null;
-  }
-
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
+  const hasActiveFilterState = hasActiveFilters(filterState);
+
   const listActions = useMemo(
     () => [
+      {
+        id: 'filter',
+        icon: SlidersHorizontal,
+        label: 'Filter Items',
+        onPress: () => setFilterModalVisible(true),
+        showBadge: hasActiveFilterState,
+      },
       {
         id: 'sort',
         icon: ArrowUpDown,
@@ -177,8 +192,27 @@ export default function CustomListDetailScreen() {
         color: COLORS.error,
       },
     ],
-    [hasActiveSort, handleRenameList, handleDeleteList]
+    [hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
   );
+
+  // Navigate back if list is deleted
+  useEffect(() => {
+    if (!isLoading && lists && !list) {
+      router.replace('/(tabs)/library/custom-lists');
+    }
+  }, [isLoading, lists, list, router]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (!list) {
+    return null;
+  }
 
   return (
     <>
@@ -231,6 +265,21 @@ export default function CustomListDetailScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+      />
+
+      <WatchStatusFiltersModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        filters={filterState}
+        onApplyFilters={(newFilters) => {
+          setFilterState(newFilters);
+          setFilterModalVisible(false);
+          // Scroll to top after filter is applied
+          setTimeout(() => {
+            mediaGridRef.current?.scrollToTop();
+          }, 100);
+        }}
+        genreMap={genreMap}
       />
 
       <Toast ref={toastRef} />

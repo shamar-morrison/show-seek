@@ -105,7 +105,6 @@ export default function WatchStatusScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    // Scroll to top after sort is applied
     setTimeout(() => {
       if (viewMode === 'grid') {
         mediaGridRef.current?.scrollToTop();
@@ -142,7 +141,6 @@ export default function WatchStatusScreen() {
     }
   }, [viewMode]);
 
-  // Add view toggle, filter and sort buttons to header
   useLayoutEffect(() => {
     const activeFilters = hasActiveFilters(filters);
     const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
