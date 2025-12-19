@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.m,
+    // paddingHorizontal: SPACING.m,
     minHeight: 56,
     gap: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
