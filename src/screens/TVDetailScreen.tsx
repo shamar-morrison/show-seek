@@ -44,6 +44,8 @@ import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
 import { useQuery } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -497,7 +499,16 @@ export default function TVDetailScreen() {
 
         {/* Content */}
         <View style={detailStyles.content}>
-          <Text style={detailStyles.title}>{show.name}</Text>
+          <TouchableOpacity
+            activeOpacity={1}
+            onLongPress={async () => {
+              await Clipboard.setStringAsync(show.name);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              toastRef.current?.show('Title copied to clipboard');
+            }}
+          >
+            <Text style={detailStyles.title}>{show.name}</Text>
+          </TouchableOpacity>
 
           <View style={detailStyles.metaContainer}>
             <View style={detailStyles.metaItem}>
