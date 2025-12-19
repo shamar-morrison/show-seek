@@ -442,25 +442,31 @@ const styles = StyleSheet.create({
   createActions: {
     flexDirection: 'row',
     gap: SPACING.m,
-    justifyContent: 'flex-end',
   },
   cancelButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
   disabledText: {
     opacity: 0.5,
   },
   createButton: {
+    flex: 1,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 80,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.5,
