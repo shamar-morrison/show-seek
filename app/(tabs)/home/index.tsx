@@ -2,7 +2,14 @@ import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
 } from '@/src/components/HomeScreenCustomizationModal';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
@@ -115,7 +122,7 @@ const styles = StyleSheet.create({
     right: SPACING.l,
     backgroundColor: COLORS.surface,
     padding: SPACING.m,
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
