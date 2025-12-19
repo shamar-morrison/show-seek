@@ -301,6 +301,7 @@ export const detailStyles = StyleSheet.create({
   },
   episodeBreadcrumb: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     marginBottom: SPACING.s,
   },

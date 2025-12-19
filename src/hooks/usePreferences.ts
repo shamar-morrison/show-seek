@@ -1,8 +1,13 @@
+import {
+  DEFAULT_HOME_LISTS,
+  MAX_HOME_LISTS,
+  MIN_HOME_LISTS,
+} from '@/src/constants/homeScreenLists';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../firebase/config';
 import { preferencesService } from '../services/PreferencesService';
-import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
+import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../types/preferences';
 
 /**
  * Hook to subscribe to user preferences with real-time updates
@@ -70,8 +75,12 @@ export const usePreferences = () => {
     }
   }, [subscriptionData, userId, queryClient]);
 
+  // Derive effective home screen lists (with fallback to defaults)
+  const homeScreenLists = preferences?.homeScreenLists ?? DEFAULT_HOME_LISTS;
+
   return {
     preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
+    homeScreenLists,
     isLoading,
     error,
     refetch,
@@ -120,6 +129,63 @@ export const useUpdatePreference = () => {
     // On success, allow subscription to update cache again
     onSettled: (_data, _error, _variables, context) => {
       // Small delay to let Firestore subscription catch up with the correct value
+      if (context?.userId) {
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });
+        }, 500);
+      }
+    },
+  });
+};
+
+/**
+ * Mutation hook for updating home screen list configuration
+ */
+export const useUpdateHomeScreenLists = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['updateHomeScreenLists'],
+    mutationFn: async (lists: HomeScreenListItem[]) => {
+      // Validate constraints
+      if (lists.length < MIN_HOME_LISTS) {
+        throw new Error(`Select at least ${MIN_HOME_LISTS} list`);
+      }
+      if (lists.length > MAX_HOME_LISTS) {
+        throw new Error(`Select at most ${MAX_HOME_LISTS} lists`);
+      }
+      await preferencesService.updatePreference('homeScreenLists', lists);
+    },
+
+    // Optimistic update
+    onMutate: async (lists) => {
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('User must be logged in');
+
+      await queryClient.cancelQueries({ queryKey: ['preferences', currentUserId] });
+
+      const previousPreferences = queryClient.getQueryData<UserPreferences>([
+        'preferences',
+        currentUserId,
+      ]);
+
+      queryClient.setQueryData<UserPreferences>(['preferences', currentUserId], (old) => ({
+        ...(old ?? DEFAULT_PREFERENCES),
+        homeScreenLists: lists,
+      }));
+
+      return { previousPreferences, userId: currentUserId };
+    },
+
+    // Rollback on error
+    onError: (_err, _variables, context) => {
+      if (context?.previousPreferences && context.userId) {
+        queryClient.setQueryData(['preferences', context.userId], context.previousPreferences);
+      }
+    },
+
+    // On success, allow subscription to update cache again
+    onSettled: (_data, _error, _variables, context) => {
       if (context?.userId) {
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });

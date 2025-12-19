@@ -1,17 +1,33 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useAllGenres } from '@/src/hooks/useGenres';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import {
+  DEFAULT_WATCH_STATUS_FILTERS,
+  filterMediaItems,
+  hasActiveFilters,
+  WatchStatusFilterState,
+} from '@/src/utils/listFilters';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Pencil, Trash2 } from 'lucide-react-native';
+import {
+  ArrowUpDown,
+  Bookmark,
+  Pencil,
+  Settings2,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
@@ -21,8 +37,16 @@ export default function CustomListDetailScreen() {
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterState, setFilterState] = useState<WatchStatusFilterState>(
+    DEFAULT_WATCH_STATUS_FILTERS
+  );
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
+  const listActionsModalRef = useRef<ListActionsModalRef>(null);
+
+  // Fetch genre data for filter modal
+  const { data: genreMap = {} } = useAllGenres();
 
   const {
     handleItemPress,
@@ -51,7 +75,11 @@ export default function CustomListDetailScreen() {
     if (!list?.items) return [];
     const items = Object.values(list.items);
 
-    const sortedItems = [...items].sort((a, b) => {
+    // Apply filters first
+    const filteredItems = filterMediaItems(items, filterState);
+
+    // Then apply sorting
+    const sortedItems = [...filteredItems].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
@@ -81,11 +109,10 @@ export default function CustomListDetailScreen() {
     });
 
     return sortedItems;
-  }, [list, sortState]);
+  }, [list, sortState, filterState]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    // Scroll to top after sort is applied
     setTimeout(() => {
       mediaGridRef.current?.scrollToTop();
     }, 100);
@@ -129,6 +156,45 @@ export default function CustomListDetailScreen() {
     );
   }, [list, id, deleteMutation, router, requireAuth, isAuthenticated]);
 
+  const hasActiveSort =
+    sortState.option !== DEFAULT_SORT_STATE.option ||
+    sortState.direction !== DEFAULT_SORT_STATE.direction;
+
+  const hasActiveFilterState = hasActiveFilters(filterState);
+
+  const listActions = useMemo(
+    () => [
+      {
+        id: 'filter',
+        icon: SlidersHorizontal,
+        label: 'Filter Items',
+        onPress: () => setFilterModalVisible(true),
+        showBadge: hasActiveFilterState,
+      },
+      {
+        id: 'sort',
+        icon: ArrowUpDown,
+        label: 'Sort Items',
+        onPress: () => setSortModalVisible(true),
+        showBadge: hasActiveSort,
+      },
+      {
+        id: 'rename',
+        icon: Pencil,
+        label: 'Rename List',
+        onPress: handleRenameList,
+      },
+      {
+        id: 'delete',
+        icon: Trash2,
+        label: 'Delete List',
+        onPress: handleDeleteList,
+        color: COLORS.error,
+      },
+    ],
+    [hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
+  );
+
   // Navigate back if list is deleted
   useEffect(() => {
     if (!isLoading && lists && !list) {
@@ -148,49 +214,21 @@ export default function CustomListDetailScreen() {
     return null;
   }
 
-  const hasActiveSort =
-    sortState.option !== DEFAULT_SORT_STATE.option ||
-    sortState.direction !== DEFAULT_SORT_STATE.direction;
-
   return (
     <>
       <Stack.Screen
         options={{
           title: list.name,
           headerRight: () => (
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                onPress={() => setSortModalVisible(true)}
-                activeOpacity={ACTIVE_OPACITY}
-                style={styles.headerButton}
-                accessibilityLabel="Sort items"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={styles.sortBadge} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleRenameList}
-                style={styles.headerButton}
-                activeOpacity={ACTIVE_OPACITY}
-                accessibilityLabel="Rename list"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <Pencil size={22} color={COLORS.text} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDeleteList}
-                style={styles.headerButton}
-                activeOpacity={ACTIVE_OPACITY}
-                accessibilityLabel="Delete list"
-                accessibilityRole="button"
-                hitSlop={HIT_SLOP.m}
-              >
-                <Trash2 size={22} color={COLORS.error} />
-              </TouchableOpacity>
-            </View>
+            <Pressable
+              onPress={() => listActionsModalRef.current?.present()}
+              accessibilityLabel="List options"
+              accessibilityRole="button"
+              hitSlop={HIT_SLOP.l}
+              style={{ marginRight: SPACING.s }}
+            >
+              <Settings2 size={22} color={COLORS.text} />
+            </Pressable>
           ),
         }}
       />
@@ -202,13 +240,23 @@ export default function CustomListDetailScreen() {
           ref={mediaGridRef}
           items={listItems}
           isLoading={isLoading}
-          emptyState={{
-            icon: Bookmark,
-            title: 'No items yet',
-            description: `Add movies and TV shows to this list to see them here.`,
-            actionLabel: 'Browse Content',
-            onAction: () => router.push('/(tabs)/discover' as any),
-          }}
+          emptyState={
+            hasActiveFilterState
+              ? {
+                  icon: SlidersHorizontal,
+                  title: 'No items match your filters',
+                  description: 'Try adjusting your filters to see more results.',
+                  actionLabel: 'Clear Filters',
+                  onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                }
+              : {
+                  icon: Bookmark,
+                  title: 'No items yet',
+                  description: `Add movies and TV shows to this list to see them here.`,
+                  actionLabel: 'Browse Content',
+                  onAction: () => router.push('/(tabs)/discover' as any),
+                }
+          }
           onItemPress={handleItemPress}
           onItemLongPress={handleLongPress}
         />
@@ -229,9 +277,25 @@ export default function CustomListDetailScreen() {
         onApplySort={handleApplySort}
       />
 
+      <WatchStatusFiltersModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        filters={filterState}
+        onApplyFilters={(newFilters) => {
+          setFilterState(newFilters);
+          setFilterModalVisible(false);
+          // Scroll to top after filter is applied
+          setTimeout(() => {
+            mediaGridRef.current?.scrollToTop();
+          }, 100);
+        }}
+        genreMap={genreMap}
+      />
+
       <Toast ref={toastRef} />
       {AuthGuardModal}
       <RenameListModal ref={renameModalRef} />
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
     </>
   );
 }
@@ -251,23 +315,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    marginRight: SPACING.s,
-  },
-  headerButton: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

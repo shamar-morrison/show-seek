@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
 import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
+import { preferencesService } from '../services/PreferencesService';
+import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -91,7 +93,13 @@ export const useAddToList = () => {
       mediaItem: Omit<ListMediaItem, 'addedAt'>;
       listName?: string;
     }) => {
-      // Check limits only when premium status is confirmed (not loading)
+      return listService.addToList(listId, mediaItem, listName);
+    },
+
+    // Optimistic update - immediately show the item as added
+    onMutate: async ({ listId, mediaItem, listName }) => {
+      // Check limits FIRST, before the optimistic update
+      // This must happen here because onMutate runs before mutationFn
       if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
         const targetList = lists?.find((l) => l.id === listId);
@@ -99,15 +107,11 @@ export const useAddToList = () => {
 
         if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
           throw new PremiumLimitError(
-            `Free users can only add ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
+            `Free users can only add up to ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
           );
         }
       }
-      return listService.addToList(listId, mediaItem, listName);
-    },
 
-    // Optimistic update - immediately show the item as added
-    onMutate: async ({ listId, mediaItem, listName }) => {
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ['lists', userId] });
 
@@ -255,8 +259,39 @@ export const useCreateList = () => {
 };
 
 export const useDeleteList = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (listId: string) => listService.deleteList(listId),
+    onSuccess: async (_data, listId) => {
+      // Clean up home screen preferences to remove the deleted custom list
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const preferences = queryClient.getQueryData<UserPreferences>(['preferences', userId]);
+      const currentHomeScreenLists = preferences?.homeScreenLists;
+
+      if (currentHomeScreenLists) {
+        // Filter out the deleted custom list
+        const updatedLists = currentHomeScreenLists.filter(
+          (item) => !(item.type === 'custom' && item.id === listId)
+        );
+
+        // Only update if the list was actually in home screen preferences
+        if (updatedLists.length !== currentHomeScreenLists.length) {
+          try {
+            await preferencesService.updatePreference('homeScreenLists', updatedLists);
+            // Also update the query cache immediately for optimistic UI update
+            queryClient.setQueryData<UserPreferences>(['preferences', userId], (old) => ({
+              ...(old ?? DEFAULT_PREFERENCES),
+              homeScreenLists: updatedLists,
+            }));
+          } catch (error) {
+            console.error('Failed to remove deleted list from home screen:', error);
+          }
+        }
+      }
+    },
   });
 };
 

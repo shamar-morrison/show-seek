@@ -41,6 +41,8 @@ import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
 import { useQuery } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
@@ -354,7 +356,16 @@ export default function MovieDetailScreen() {
 
         {/* Content */}
         <View style={detailStyles.content}>
-          <Text style={detailStyles.title}>{movie.title}</Text>
+          <TouchableOpacity
+            activeOpacity={1}
+            onLongPress={async () => {
+              await Clipboard.setStringAsync(movie.title);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              toastRef.current?.show('Title copied to clipboard');
+            }}
+          >
+            <Text style={detailStyles.title}>{movie.title}</Text>
+          </TouchableOpacity>
 
           <View style={detailStyles.metaContainer}>
             <View style={detailStyles.metaItem}>

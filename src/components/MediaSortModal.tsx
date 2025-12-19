@@ -1,11 +1,12 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -107,19 +108,18 @@ export default function MediaSortModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Sort By</Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={ACTIVE_OPACITY}>
+            <Pressable onPress={onClose} hitSlop={HIT_SLOP.s}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.optionsContainer}>
             {SORT_OPTIONS.map((option) => {
               const isSelected = localSortState.option === option.value;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={option.value}
                   style={[styles.optionItem, isSelected && styles.optionItemSelected]}
-                  activeOpacity={ACTIVE_OPACITY}
                   onPress={() => handleOptionSelect(option.value)}
                 >
                   <View style={styles.optionContent}>
@@ -137,18 +137,14 @@ export default function MediaSortModal({
                     )}
                   </View>
                   {isSelected && <Check size={20} color={COLORS.primary} />}
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
 
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={handleApply}
-            activeOpacity={ACTIVE_OPACITY}
-          >
+          <Pressable style={styles.applyButton} onPress={handleApply}>
             <Text style={styles.applyButtonText}>Apply</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </Modal>

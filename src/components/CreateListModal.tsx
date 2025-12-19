@@ -1,5 +1,5 @@
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -9,12 +9,14 @@ import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface CreateListModalRef {
   present: () => Promise<void>;
@@ -23,11 +25,13 @@ export interface CreateListModalRef {
 
 interface CreateListModalProps {
   onSuccess?: (listId: string, listName: string) => void;
+  onCancel?: () => void;
 }
 
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
-  ({ onSuccess }, ref) => {
+  ({ onSuccess, onCancel }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
+    const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
     const [error, setError] = useState<string | null>(null);
 
@@ -41,10 +45,14 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const hasReachedLimit =
       !isPremium && !isPremiumLoading && !isListsLoading && customListCount >= MAX_FREE_LISTS;
 
+    // Track whether we should skip calling onCancel (e.g., created successfully or navigating to upgrade)
+    const skipOnCancelRef = useRef(false);
+
     useImperativeHandle(ref, () => ({
       present: async () => {
         setListName('');
         setError(null);
+        skipOnCancelRef.current = false;
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -55,7 +63,31 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const handleDismiss = useCallback(() => {
       setListName('');
       setError(null);
-    }, []);
+      // Only call onCancel if we didn't create a list or navigate to upgrade
+      if (!skipOnCancelRef.current) {
+        onCancel?.();
+      }
+    }, [onCancel]);
+
+    const showUpgradeAlert = useCallback(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        'Limit Reached',
+        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Upgrade',
+            style: 'default',
+            onPress: async () => {
+              skipOnCancelRef.current = true;
+              await sheetRef.current?.dismiss();
+              router.push('/premium');
+            },
+          },
+        ]
+      );
+    }, [router]);
 
     const handleCreate = async () => {
       const trimmedName = listName.trim();
@@ -63,29 +95,22 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
       setError(null);
 
-      // Proactive check: If user has reached the limit, redirect to premium
+      // Proactive check: If user has reached the limit, show upgrade dialog
       if (hasReachedLimit) {
-        await sheetRef.current?.dismiss();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setTimeout(() => {
-          router.push('/premium');
-        }, 300);
+        showUpgradeAlert();
         return;
       }
 
       try {
         const listId = await createMutation.mutateAsync(trimmedName);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        skipOnCancelRef.current = true;
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
       } catch (err: any) {
         // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
         if (err instanceof PremiumLimitError) {
-          await sheetRef.current?.dismiss();
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          setTimeout(() => {
-            router.push('/premium');
-          }, 300);
+          showUpgradeAlert();
           return;
         }
         setError('Failed to create list. Please try again.');
@@ -102,15 +127,12 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <View style={styles.content}>
+        <GestureHandlerRootView style={[styles.content, { width }]}>
           <View style={styles.header}>
             <Text style={styles.title}>Create New List</Text>
-            <TouchableOpacity
-              onPress={() => sheetRef.current?.dismiss()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
+            <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.createContainer}>
@@ -127,10 +149,9 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.createActions}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.cancelButton}
                 onPress={() => sheetRef.current?.dismiss()}
-                activeOpacity={ACTIVE_OPACITY}
                 disabled={createMutation.isPending}
               >
                 <Text
@@ -138,25 +159,24 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
                 >
                   Cancel
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={[
                   styles.createButton,
                   (!listName.trim() || createMutation.isPending) && styles.disabledButton,
                 ]}
                 onPress={handleCreate}
                 disabled={!listName.trim() || createMutation.isPending}
-                activeOpacity={ACTIVE_OPACITY}
               >
                 {createMutation.isPending ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                   <Text style={styles.createButtonText}>Create</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
-        </View>
+        </GestureHandlerRootView>
       </TrueSheet>
     );
   }
@@ -199,25 +219,31 @@ const styles = StyleSheet.create({
   createActions: {
     flexDirection: 'row',
     gap: SPACING.m,
-    justifyContent: 'flex-end',
   },
   cancelButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
   },
   cancelButtonText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
+    fontWeight: '600',
   },
   disabledText: {
     opacity: 0.5,
   },
   createButton: {
+    flex: 1,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
+    padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 80,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.5,

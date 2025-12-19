@@ -2,14 +2,7 @@ import CreateListModal, { CreateListModalRef } from '@/src/components/CreateList
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
@@ -19,15 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CustomListsScreen() {
@@ -115,9 +100,8 @@ export default function CustomListsScreen() {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
-          <TouchableOpacity
+          <Pressable
             onPress={() => setSortModalVisible(true)}
-            activeOpacity={ACTIVE_OPACITY}
             style={styles.headerButton}
             accessibilityLabel="Sort lists"
             accessibilityRole="button"
@@ -125,14 +109,10 @@ export default function CustomListsScreen() {
           >
             <ArrowUpDown size={22} color={COLORS.text} />
             {hasActiveSort && <View style={styles.sortBadge} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleCreateList}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.m}
-          >
+          </Pressable>
+          <Pressable onPress={handleCreateList} hitSlop={HIT_SLOP.m}>
             <Plus size={24} color={COLORS.text} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       ),
     });
