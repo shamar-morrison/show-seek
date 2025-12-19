@@ -98,10 +98,8 @@ const HomeScreenCustomizationModal = forwardRef<
   const [pendingSelections, setPendingSelections] = useState<HomeScreenListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Get custom lists from user data
   const customLists = userLists ? filterCustomLists(userLists) : [];
 
-  // Initialize pending selections when modal opens
   const initializeSelections = useCallback(() => {
     setPendingSelections([...homeScreenLists]);
     setError(null);
@@ -125,7 +123,6 @@ const HomeScreenCustomizationModal = forwardRef<
       const isSelected = current.some((s) => s.id === item.id);
 
       if (isSelected) {
-        // Deselecting - check minimum
         if (current.length <= MIN_HOME_LISTS) {
           setError(`Select at least ${MIN_HOME_LISTS} list`);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -133,7 +130,6 @@ const HomeScreenCustomizationModal = forwardRef<
         }
         return current.filter((s) => s.id !== item.id);
       } else {
-        // Selecting - check maximum
         if (current.length >= MAX_HOME_LISTS) {
           setError(`Select at most ${MAX_HOME_LISTS} lists`);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
