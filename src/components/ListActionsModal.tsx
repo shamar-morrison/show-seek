@@ -3,7 +3,8 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { LucideIcon } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface ListAction {
   /** Unique identifier for the action */
@@ -33,6 +34,7 @@ interface ListActionsModalProps {
 const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
   ({ actions }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
+    const { width } = useWindowDimensions();
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -58,7 +60,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         backgroundColor={COLORS.surface}
         grabber={false}
       >
-        <View style={styles.content}>
+        <GestureHandlerRootView style={[styles.content, { width }]}>
           {actions.map((action, index) => {
             const IconComponent = action.icon;
             const iconColor = action.color ?? COLORS.text;
@@ -80,7 +82,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
               </Pressable>
             );
           })}
-        </View>
+        </GestureHandlerRootView>
       </TrueSheet>
     );
   }
@@ -94,6 +96,7 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.m,
     paddingBottom: SPACING.xl,
+    flexGrow: 1,
   },
   actionRow: {
     flexDirection: 'row',
