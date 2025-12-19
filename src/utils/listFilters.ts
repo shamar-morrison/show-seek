@@ -12,6 +12,13 @@ export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
   rating: 0,
 };
 
+interface FilterableMedia {
+  genre_ids?: number[];
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+}
+
 /**
  * Filter list media items based on filter criteria
  */
@@ -43,6 +50,55 @@ export function filterMediaItems(
       }
 
       // Extract year from date string (format: YYYY-MM-DD or YYYY)
+      const yearMatch = releaseDate.match(/^(\d{4})/);
+      if (!yearMatch) {
+        return false;
+      }
+
+      const itemYear = parseInt(yearMatch[1], 10);
+      if (itemYear !== filters.year) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Generic filter function for rating items.
+ * Works with enriched ratings by using a getter function to extract media properties.
+ */
+export function filterRatingItems<T>(
+  items: T[],
+  filters: WatchStatusFilterState,
+  getMedia: (item: T) => FilterableMedia | null | undefined
+): T[] {
+  return items.filter((item) => {
+    const media = getMedia(item);
+    if (!media) return false;
+
+    // Genre filter
+    if (filters.genre !== null) {
+      if (!media.genre_ids || !media.genre_ids.includes(filters.genre)) {
+        return false;
+      }
+    }
+
+    // Rating filter (TMDB rating, not user rating)
+    if (filters.rating > 0) {
+      if (!media.vote_average || media.vote_average < filters.rating) {
+        return false;
+      }
+    }
+
+    // Year filter
+    if (filters.year !== null) {
+      const releaseDate = media.release_date || media.first_air_date;
+      if (!releaseDate) {
+        return false;
+      }
+
       const yearMatch = releaseDate.match(/^(\d{4})/);
       if (!yearMatch) {
         return false;
