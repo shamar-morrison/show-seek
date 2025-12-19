@@ -9,6 +9,7 @@ import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -24,10 +25,11 @@ export interface CreateListModalRef {
 
 interface CreateListModalProps {
   onSuccess?: (listId: string, listName: string) => void;
+  onCancel?: () => void;
 }
 
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
-  ({ onSuccess }, ref) => {
+  ({ onSuccess, onCancel }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
@@ -43,10 +45,14 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const hasReachedLimit =
       !isPremium && !isPremiumLoading && !isListsLoading && customListCount >= MAX_FREE_LISTS;
 
+    // Track whether we should skip calling onCancel (e.g., created successfully or navigating to upgrade)
+    const skipOnCancelRef = useRef(false);
+
     useImperativeHandle(ref, () => ({
       present: async () => {
         setListName('');
         setError(null);
+        skipOnCancelRef.current = false;
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -57,7 +63,11 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const handleDismiss = useCallback(() => {
       setListName('');
       setError(null);
-    }, []);
+      // Only call onCancel if we didn't create a list or navigate to upgrade
+      if (!skipOnCancelRef.current) {
+        onCancel?.();
+      }
+    }, [onCancel]);
 
     const handleCreate = async () => {
       const trimmedName = listName.trim();
@@ -65,29 +75,54 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
       setError(null);
 
-      // Proactive check: If user has reached the limit, redirect to premium
+      // Proactive check: If user has reached the limit, show upgrade dialog
       if (hasReachedLimit) {
-        await sheetRef.current?.dismiss();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setTimeout(() => {
-          router.push('/premium');
-        }, 300);
+        Alert.alert(
+          'Limit Reached',
+          'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade',
+              style: 'default',
+              onPress: async () => {
+                skipOnCancelRef.current = true;
+                await sheetRef.current?.dismiss();
+                router.push('/premium');
+              },
+            },
+          ]
+        );
         return;
       }
 
       try {
         const listId = await createMutation.mutateAsync(trimmedName);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        skipOnCancelRef.current = true;
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
       } catch (err: any) {
         // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
         if (err instanceof PremiumLimitError) {
-          await sheetRef.current?.dismiss();
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          setTimeout(() => {
-            router.push('/premium');
-          }, 300);
+          Alert.alert(
+            'Limit Reached',
+            'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Upgrade',
+                style: 'default',
+                onPress: async () => {
+                  skipOnCancelRef.current = true;
+                  await sheetRef.current?.dismiss();
+                  router.push('/premium');
+                },
+              },
+            ]
+          );
           return;
         }
         setError('Failed to create list. Please try again.');
