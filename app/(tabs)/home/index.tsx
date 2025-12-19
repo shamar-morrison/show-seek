@@ -21,11 +21,12 @@ export default function HomeScreen() {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    // Invalidate all TMDB queries to refetch data
-    await queryClient.invalidateQueries({ queryKey: ['trending'] });
-    await queryClient.invalidateQueries({ queryKey: ['popular'] });
-    await queryClient.invalidateQueries({ queryKey: ['topRated'] });
-    await queryClient.invalidateQueries({ queryKey: ['upcoming'] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['trending'] }),
+      queryClient.invalidateQueries({ queryKey: ['popular'] }),
+      queryClient.invalidateQueries({ queryKey: ['topRated'] }),
+      queryClient.invalidateQueries({ queryKey: ['upcoming'] }),
+    ]);
     setRefreshing(false);
   }, [queryClient]);
 
