@@ -90,7 +90,7 @@ const HomeScreenCustomizationModal = forwardRef<
 
       if (isSelected) {
         if (current.length <= MIN_HOME_LISTS) {
-          setError(`Select at least ${MIN_HOME_LISTS} list`);
+          setError(`Select at least ${MIN_HOME_LISTS} list${MIN_HOME_LISTS === 1 ? '' : 's'}`);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           return current;
         }
