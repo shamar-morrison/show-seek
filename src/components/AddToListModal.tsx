@@ -419,11 +419,11 @@ const styles = StyleSheet.create({
     marginTop: SPACING.m,
     padding: SPACING.m,
     gap: SPACING.s,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.m,
   },
   createListText: {
-    color: COLORS.primary,
+    color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },
