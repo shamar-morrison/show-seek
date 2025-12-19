@@ -142,6 +142,7 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                       await reminderService.updateReminderDetails(reminder.id, {
                         releaseDate: nextEpisode.air_date!,
                         nextEpisode: newNextEpisode,
+                        noNextEpisodeFound: false,
                       });
 
                       // Mark as processed after successful update
@@ -156,8 +157,12 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
                     }
                   } else {
                     console.log(
-                      `[AutoUpdate] No future episode found for ${reminder.title}. Leaving as "Released".`
+                      `[AutoUpdate] No future episode found for ${reminder.title}. Marking as no upcoming episodes.`
                     );
+                    // Update Firestore to mark that no next episode was found
+                    await reminderService.updateReminderDetails(reminder.id, {
+                      noNextEpisodeFound: true,
+                    });
                     // Mark as processed since we checked and found nothing
                     if (isMounted) {
                       processedRef.current.add(reminder.id);
