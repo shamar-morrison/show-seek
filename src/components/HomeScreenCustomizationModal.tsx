@@ -4,6 +4,7 @@ import {
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
+import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   listContainer: {
-    maxHeight: 400,
+    maxHeight: MODAL_LIST_HEIGHT,
     marginBottom: SPACING.m,
   },
   sectionHeader: {

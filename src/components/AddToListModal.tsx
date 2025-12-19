@@ -1,4 +1,5 @@
 import { filterCustomLists, isDefaultList, MAX_FREE_LISTS } from '@/src/constants/lists';
+import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import {
@@ -26,7 +27,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -35,10 +35,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.8;
-const LIST_HEIGHT = SHEET_HEIGHT * 0.5;
 
 export interface AddToListModalRef {
   present: () => Promise<void>;
@@ -429,7 +425,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   listContainer: {
-    maxHeight: LIST_HEIGHT,
+    maxHeight: MODAL_LIST_HEIGHT,
   },
   listItem: {
     flexDirection: 'row',
