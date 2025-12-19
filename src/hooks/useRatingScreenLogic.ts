@@ -40,8 +40,6 @@ export interface UseRatingScreenLogicOptions<TItem extends BaseEnrichedRating> {
   storageKey: string;
   /** The enriched rating items data */
   data: TItem[] | undefined;
-  /** Whether data is loading */
-  isLoading: boolean;
   /** Function to extract the media object from a rating item */
   getMediaFromItem: (item: TItem) => Movie | TVShow | null;
 }
@@ -95,7 +93,6 @@ export interface UseRatingScreenLogicReturn<TItem extends BaseEnrichedRating> {
 export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   storageKey,
   data,
-  isLoading,
   getMediaFromItem,
 }: UseRatingScreenLogicOptions<TItem>): UseRatingScreenLogicReturn<TItem> {
   // Sort state
