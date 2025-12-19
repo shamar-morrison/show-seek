@@ -1,16 +1,9 @@
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { LucideIcon } from 'lucide-react-native';
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export interface ListAction {
   /** Unique identifier for the action */
@@ -40,16 +33,6 @@ interface ListActionsModalProps {
 const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
   ({ actions }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
-    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Cleanup timeout on unmount
-    useEffect(() => {
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-      };
-    }, []);
 
     useImperativeHandle(ref, () => ({
       present: async () => {
@@ -62,11 +45,9 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
 
     const handleActionPress = useCallback((action: ListAction) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Execute action first, then dismiss modal
+      action.onPress();
       sheetRef.current?.dismiss();
-      // Small delay to allow modal to dismiss before executing action
-      timeoutRef.current = setTimeout(() => {
-        action.onPress();
-      }, 100);
     }, []);
 
     return (
@@ -84,12 +65,10 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
             const isLast = index === actions.length - 1;
 
             return (
-              <TouchableOpacity
-                hitSlop={HIT_SLOP.l}
+              <Pressable
                 key={action.id}
                 style={[styles.actionRow, !isLast && styles.actionRowBorder]}
                 onPress={() => handleActionPress(action)}
-                activeOpacity={ACTIVE_OPACITY}
                 accessibilityLabel={action.label}
                 accessibilityRole="button"
               >
@@ -98,7 +77,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
                   {action.showBadge && <View style={styles.badge} />}
                 </View>
                 <Text style={[styles.label, { color: iconColor }]}>{action.label}</Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -119,10 +98,11 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.l,
+    paddingHorizontal: SPACING.m,
     minHeight: 56,
     gap: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
   },
   actionRowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -147,5 +127,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: FONT_SIZE.m,
     fontWeight: '500',
+    flex: 1,
   },
 });

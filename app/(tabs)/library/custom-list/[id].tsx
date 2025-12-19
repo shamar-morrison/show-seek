@@ -4,7 +4,7 @@ import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowUpDown, Bookmark, Pencil, Settings2, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
@@ -183,16 +183,15 @@ export default function CustomListDetailScreen() {
         options={{
           title: list.name,
           headerRight: () => (
-            <TouchableOpacity
+            <Pressable
               onPress={() => listActionsModalRef.current?.present()}
-              activeOpacity={ACTIVE_OPACITY}
               accessibilityLabel="List options"
               accessibilityRole="button"
               hitSlop={HIT_SLOP.l}
               style={{ marginRight: SPACING.s }}
             >
               <Settings2 size={22} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           ),
         }}
       />
