@@ -141,7 +141,7 @@ export default function PremiumScreen() {
         </TouchableOpacity>
 
         {/* DEV ONLY: Reset purchase button for testing */}
-        {
+        {__DEV__ && (
           <TouchableOpacity
             style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
             onPress={async () => {
@@ -163,7 +163,7 @@ export default function PremiumScreen() {
           >
             <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
           </TouchableOpacity>
-        }
+        )}
       </ScrollView>
     </SafeAreaView>
   );

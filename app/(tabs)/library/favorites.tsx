@@ -2,30 +2,49 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import Toast from '@/src/components/ui/Toast';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
 import { COLORS, SPACING } from '@/src/constants/theme';
+import { useAllGenres } from '@/src/hooks/useGenres';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import {
+  DEFAULT_WATCH_STATUS_FILTERS,
+  filterMediaItems,
+  hasActiveFilters,
+  WatchStatusFilterState,
+} from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Heart } from 'lucide-react-native';
+import { ArrowUpDown, Heart, Settings2, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterState, setFilterState] = useState<WatchStatusFilterState>(
+    DEFAULT_WATCH_STATUS_FILTERS
+  );
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<any>(null);
+  const listActionsModalRef = useRef<ListActionsModalRef>(null);
+
+  // Fetch genre data for filter modal
+  const { data: genreMap = {} } = useAllGenres();
 
   const {
     handleItemPress,
@@ -40,11 +59,21 @@ export default function FavoritesScreen() {
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
+  const hasActiveFilterState = hasActiveFilters(filterState);
+
+  const actionButton = useMemo(
+    () => ({
+      icon: Settings2,
+      onPress: () => listActionsModalRef.current?.present(),
+      showBadge: hasActiveSort || hasActiveFilterState,
+    }),
+    [hasActiveSort, hasActiveFilterState]
+  );
+
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: VIEW_MODE_STORAGE_KEY,
-    showSortButton: true,
-    hasActiveSort,
-    onSortPress: () => setSortModalVisible(true),
+    showSortButton: false,
+    actionButton,
   });
 
   const favoritesList = useMemo(() => {
@@ -55,7 +84,11 @@ export default function FavoritesScreen() {
     if (!favoritesList?.items) return [];
     const items = Object.values(favoritesList.items);
 
-    return [...items].sort((a, b) => {
+    // Apply filters first
+    const filteredItems = filterMediaItems(items, filterState);
+
+    // Then apply sorting
+    return [...filteredItems].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
@@ -77,11 +110,31 @@ export default function FavoritesScreen() {
           return 0;
       }
     });
-  }, [favoritesList, sortState]);
+  }, [favoritesList, sortState, filterState]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
   };
+
+  const listActions = useMemo(
+    () => [
+      {
+        id: 'filter',
+        icon: SlidersHorizontal,
+        label: 'Filter Items',
+        onPress: () => setFilterModalVisible(true),
+        showBadge: hasActiveFilterState,
+      },
+      {
+        id: 'sort',
+        icon: ArrowUpDown,
+        label: 'Sort Items',
+        onPress: () => setSortModalVisible(true),
+        showBadge: hasActiveSort,
+      },
+    ],
+    [hasActiveFilterState, hasActiveSort]
+  );
 
   // Track if initial mount to avoid scrolling on first render
   const isInitialMount = useRef(true);
@@ -98,9 +151,9 @@ export default function FavoritesScreen() {
       } else {
         listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
       }
-    }, 50);
+    }, 100);
     return () => clearTimeout(timeoutId);
-  }, [sortState, viewMode]);
+  }, [sortState, filterState, viewMode]);
 
   const renderListItem = useCallback(
     ({ item }: { item: ListMediaItem }) => (
@@ -119,7 +172,7 @@ export default function FavoritesScreen() {
     );
   }
 
-  if (listItems.length === 0) {
+  if (listItems.length === 0 && !hasActiveFilterState) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
@@ -145,13 +198,23 @@ export default function FavoritesScreen() {
               ref={mediaGridRef}
               items={listItems}
               isLoading={isLoading}
-              emptyState={{
-                icon: Heart,
-                title: 'No Favorites Yet',
-                description: 'Mark movies and TV shows as favorites to see them here.',
-                actionLabel: 'Browse Content',
-                onAction: () => router.push('/(tabs)/discover' as any),
-              }}
+              emptyState={
+                hasActiveFilterState
+                  ? {
+                      icon: SlidersHorizontal,
+                      title: 'No items match your filters',
+                      description: 'Try adjusting your filters to see more results.',
+                      actionLabel: 'Clear Filters',
+                      onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                    }
+                  : {
+                      icon: Heart,
+                      title: 'No Favorites Yet',
+                      description: 'Mark movies and TV shows as favorites to see them here.',
+                      actionLabel: 'Browse Content',
+                      onAction: () => router.push('/(tabs)/discover' as any),
+                    }
+              }
               onItemPress={handleItemPress}
               onItemLongPress={handleLongPress}
             />
@@ -164,6 +227,19 @@ export default function FavoritesScreen() {
               keyExtractor={keyExtractor}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                hasActiveFilterState ? (
+                  <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                    <EmptyState
+                      icon={SlidersHorizontal}
+                      title="No items match your filters"
+                      description="Try adjusting your filters to see more results."
+                      actionLabel="Clear Filters"
+                      onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                    />
+                  </View>
+                ) : null
+              }
             />
           )}
         </View>
@@ -184,7 +260,19 @@ export default function FavoritesScreen() {
         onApplySort={handleApplySort}
       />
 
+      <WatchStatusFiltersModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        filters={filterState}
+        onApplyFilters={(newFilters) => {
+          setFilterState(newFilters);
+          setFilterModalVisible(false);
+        }}
+        genreMap={genreMap}
+      />
+
       <Toast ref={toastRef} />
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
     </>
   );
 }

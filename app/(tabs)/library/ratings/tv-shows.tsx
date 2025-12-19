@@ -2,20 +2,30 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import ListActionsModal from '@/src/components/ListActionsModal';
+import MediaSortModal from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
-import { createRatingSorter } from '@/src/hooks/useRatingSorting';
-import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
-import { FlashList, FlashListRef } from '@shopify/flash-list';
+import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
+import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Star } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SlidersHorizontal, Star } from 'lucide-react-native';
+import React, { useCallback } from 'react';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
@@ -23,51 +33,40 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 
+// Memoized media extractor for performance
+const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
+
 export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  // Sort state
-  const [sortModalVisible, setSortModalVisible] = useState(false);
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
-  const listRef = useRef<FlashListRef<EnrichedTVRating>>(null);
-  const isInitialMount = useRef(true);
-
-  const hasActiveSort =
-    sortState.option !== DEFAULT_SORT_STATE.option ||
-    sortState.direction !== DEFAULT_SORT_STATE.direction;
-
-  // View mode toggle hook
-  const { viewMode, isLoadingPreference } = useViewModeToggle({
+  // Use shared rating screen logic
+  const {
+    sortState,
+    filterState,
+    sortModalVisible,
+    filterModalVisible,
+    hasActiveFilterState,
+    viewMode,
+    isLoadingPreference,
+    listRef,
+    listActionsModalRef,
+    setSortModalVisible,
+    setFilterModalVisible,
+    setFilterState,
+    handleApplySort,
+    listActions,
+    sortedData,
+    genreMap,
+  } = useRatingScreenLogic({
     storageKey: VIEW_MODE_STORAGE_KEY,
-    showSortButton: true,
-    hasActiveSort,
-    onSortPress: () => setSortModalVisible(true),
+    data: enrichedRatings,
+    isLoading,
+    getMediaFromItem: getTVShowFromItem,
   });
-
-  // Scroll to top after sort state changes (but not on initial mount)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    const timeoutId = setTimeout(() => {
-      listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
-    }, 50);
-    return () => clearTimeout(timeoutId);
-  }, [sortState]);
-
-  const handleApplySort = useCallback((newSortState: SortState) => {
-    setSortState(newSortState);
-  }, []);
-
-  const sortedRatings = useMemo(() => {
-    if (!enrichedRatings) return [];
-    const filtered = [...enrichedRatings].filter((r) => r.tvShow !== null);
-    const sorter = createRatingSorter<EnrichedTVRating>((item) => item.tvShow, sortState);
-    return filtered.sort(sorter);
-  }, [enrichedRatings, sortState]);
 
   const handleItemPress = useCallback(
     (tvShowId: number) => {
@@ -141,7 +140,7 @@ export default function TVShowRatingsScreen() {
     );
   }
 
-  if (sortedRatings.length === 0) {
+  if (sortedData.length === 0 && !hasActiveFilterState) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
@@ -162,22 +161,48 @@ export default function TVShowRatingsScreen() {
           <FlashList
             key="grid"
             ref={listRef}
-            data={sortedRatings}
+            data={sortedData}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              hasActiveFilterState ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                </View>
+              ) : null
+            }
           />
         ) : (
           <FlashList
             key="list"
             ref={listRef}
-            data={sortedRatings}
+            data={sortedData}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              hasActiveFilterState ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                </View>
+              ) : null
+            }
           />
         )}
       </SafeAreaView>
@@ -189,6 +214,19 @@ export default function TVShowRatingsScreen() {
         onApplySort={handleApplySort}
         showUserRatingOption
       />
+
+      <WatchStatusFiltersModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        filters={filterState}
+        onApplyFilters={(newFilters) => {
+          setFilterState(newFilters);
+          setFilterModalVisible(false);
+        }}
+        genreMap={genreMap}
+      />
+
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
     </>
   );
 }
