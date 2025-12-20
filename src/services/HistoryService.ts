@@ -70,12 +70,23 @@ class HistoryService {
       const episodes: EnrichedWatchedEpisode[] = [];
       snapshot.docs.forEach((doc) => {
         const data = doc.data() as TVShowEpisodeTracking;
-        if (data.episodes && data.metadata) {
+        if (data.episodes) {
+          // Warn if metadata is missing - this indicates a partial write or data issue
+          if (!data.metadata) {
+            console.warn(
+              `[HistoryService] Missing metadata for episode_tracking doc: ${doc.id}. Using fallback values.`
+            );
+          }
+
+          // Use safe defaults when metadata is missing
+          const tvShowName = data.metadata?.tvShowName ?? 'Unknown Show';
+          const posterPath = data.metadata?.posterPath ?? null;
+
           Object.values(data.episodes).forEach((episode) => {
             episodes.push({
               ...episode,
-              tvShowName: data.metadata.tvShowName,
-              posterPath: data.metadata.posterPath,
+              tvShowName,
+              posterPath,
             });
           });
         }
