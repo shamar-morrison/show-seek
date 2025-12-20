@@ -180,7 +180,12 @@ export default function MonthDetailScreen() {
       items.push({ type: 'episode', data: episode });
     });
 
-    return items;
+    // Sort by timestamp (most recent first) for chronological order
+    return items.sort((a, b) => {
+      const timestampA = a.type === 'media' ? (a.data.addedAt ?? 0) : a.data.timestamp;
+      const timestampB = b.type === 'media' ? (b.data.addedAt ?? 0) : b.data.timestamp;
+      return timestampB - timestampA;
+    });
   }, [monthDetail]);
 
   if (isLoading) {
@@ -304,10 +309,10 @@ export default function MonthDetailScreen() {
             }
             return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
           }}
-          keyExtractor={(item, index) =>
+          keyExtractor={(item) =>
             item.type === 'media'
               ? `${item.data.media_type}-${item.data.id}`
-              : `ep-${item.data.id}-${index}`
+              : `ep-${item.data.tvShowId}-${item.data.seasonNumber}-${item.data.episodeNumber}`
           }
           contentContainerStyle={styles.listContent}
         />
