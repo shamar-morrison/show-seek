@@ -1,22 +1,53 @@
-import { getImageUrl } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
+import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem } from '@/src/types/history';
+import { FlashList } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect } from 'react';
-import {
-  ActivityIndicator,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type TabType = 'watched' | 'rated' | 'added';
+
+/**
+ * Tab button component
+ */
+function TabButton({
+  label,
+  count,
+  isActive,
+  onPress,
+  icon: Icon,
+  iconColor,
+}: {
+  label: string;
+  count: number;
+  isActive: boolean;
+  onPress: () => void;
+  icon: typeof Tv;
+  iconColor: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.tabButton, isActive && styles.tabButtonActive]}
+      onPress={onPress}
+      activeOpacity={ACTIVE_OPACITY}
+    >
+      <Icon size={16} color={isActive ? iconColor : COLORS.textSecondary} />
+      <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
+      <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
+        <Text style={[styles.countText, isActive && styles.countTextActive]}>{count}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 /**
  * Format timestamp to readable date
@@ -29,73 +60,78 @@ function formatDate(timestamp: number): string {
 }
 
 /**
- * Activity item row component
+ * Episode item row for watched episodes
  */
-function ActivityRow({ item, onPress }: { item: ActivityItem; onPress?: () => void }) {
+function EpisodeRow({ item }: { item: ActivityItem }) {
+  return (
+    <View style={styles.episodeRow}>
+      <View style={[styles.episodePoster, styles.posterPlaceholder]}>
+        <Tv size={20} color={COLORS.textSecondary} />
+      </View>
+
+      <View style={styles.episodeInfo}>
+        <Text style={styles.episodeTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        {item.seasonNumber && item.episodeNumber && (
+          <Text style={styles.episodeMeta}>
+            S{item.seasonNumber} E{item.episodeNumber}
+            {item.tvShowName ? ` • ${item.tvShowName}` : ''}
+          </Text>
+        )}
+        <Text style={styles.episodeDate}>{formatDate(item.timestamp)}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Rating item row with user rating badge
+ */
+function RatingRow({ item, onPress }: { item: ActivityItem; onPress?: () => void }) {
   const hasPoster = !!item.posterPath;
 
   return (
     <TouchableOpacity
-      style={styles.activityRow}
+      style={styles.ratingRow}
       onPress={onPress}
       activeOpacity={onPress ? ACTIVE_OPACITY : 1}
       disabled={!onPress}
     >
       {hasPoster ? (
         <Image
-          source={{ uri: getImageUrl(item.posterPath!, 'w92') ?? undefined }}
-          style={styles.poster}
+          source={{
+            uri: getImageUrl(item.posterPath!, TMDB_IMAGE_SIZES.poster.small) ?? undefined,
+          }}
+          style={styles.ratingPoster}
           contentFit="cover"
         />
       ) : (
-        <View style={[styles.poster, styles.posterPlaceholder]}>
+        <View style={[styles.ratingPoster, styles.posterPlaceholder]}>
           <Tv size={20} color={COLORS.textSecondary} />
         </View>
       )}
 
-      <View style={styles.activityInfo}>
-        <Text style={styles.activityTitle} numberOfLines={2}>
+      <View style={styles.ratingInfo}>
+        <Text style={styles.ratingTitle} numberOfLines={2}>
           {item.title}
         </Text>
-
-        {item.type === 'watched' && item.seasonNumber && item.episodeNumber && (
-          <Text style={styles.activityMeta}>
-            S{item.seasonNumber} E{item.episodeNumber}
-            {item.tvShowName ? ` • ${item.tvShowName}` : ''}
-          </Text>
-        )}
-
-        {item.type === 'rated' && item.seasonNumber && item.episodeNumber && (
-          <Text style={styles.activityMeta}>
+        {item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber && (
+          <Text style={styles.ratingMeta}>
             S{item.seasonNumber} E{item.episodeNumber}
           </Text>
         )}
-
-        {item.type === 'added' && item.listName && (
-          <Text style={styles.activityMeta}>Added to {item.listName}</Text>
-        )}
-
-        <Text style={styles.activityDate}>{formatDate(item.timestamp)}</Text>
+        <Text style={styles.ratingDate}>{formatDate(item.timestamp)}</Text>
       </View>
 
-      {item.type === 'rated' && item.rating && (
-        <View style={styles.ratingBadge}>
+      {item.rating && (
+        <View style={styles.userRatingBadge}>
           <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-          <Text style={styles.ratingText}>{item.rating}</Text>
+          <Text style={styles.userRatingText}>{item.rating}</Text>
         </View>
       )}
     </TouchableOpacity>
   );
-}
-
-/**
- * Section data type
- */
-interface SectionData {
-  title: string;
-  icon: typeof Tv;
-  iconColor: string;
-  data: ActivityItem[];
 }
 
 export default function MonthDetailScreen() {
@@ -104,6 +140,8 @@ export default function MonthDetailScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: monthDetail, isLoading } = useMonthDetail(month || null);
+
+  const [activeTab, setActiveTab] = useState<TabType>('watched');
 
   // Set the header title
   useLayoutEffect(() => {
@@ -114,21 +152,65 @@ export default function MonthDetailScreen() {
     }
   }, [navigation, monthDetail?.monthName]);
 
+  // Determine initial active tab based on available data
+  useLayoutEffect(() => {
+    if (!monthDetail) return;
+
+    const { watched, rated, added } = monthDetail.items;
+    if (watched.length > 0) {
+      setActiveTab('watched');
+    } else if (rated.length > 0) {
+      setActiveTab('rated');
+    } else if (added.length > 0) {
+      setActiveTab('added');
+    }
+  }, [monthDetail]);
+
   const handleItemPress = useCallback(
     (item: ActivityItem) => {
       if (!currentTab) return;
 
       // Navigate to detail screen based on media type
       if (item.mediaType === 'movie') {
-        router.push(`/(tabs)/${currentTab}/movie/${item.id}` as any);
-      } else if (item.mediaType === 'tv' && item.tvShowName) {
-        // For TV shows, navigate to the show
-        const tvShowId = typeof item.id === 'string' ? item.id.split('-')[1] : item.id;
-        router.push(`/(tabs)/${currentTab}/tv/${tvShowId}` as any);
+        const mediaId = typeof item.id === 'string' ? item.id.replace('movie-', '') : item.id;
+        router.push(`/(tabs)/${currentTab}/movie/${mediaId}` as any);
+      } else if (item.mediaType === 'tv') {
+        const mediaId = typeof item.id === 'string' ? item.id.replace('tv-', '') : item.id;
+        router.push(`/(tabs)/${currentTab}/tv/${mediaId}` as any);
       }
     },
     [currentTab, router]
   );
+
+  const handleListItemPress = useCallback(
+    (listItem: ListMediaItem) => {
+      if (!currentTab) return;
+
+      if (listItem.media_type === 'movie') {
+        router.push(`/(tabs)/${currentTab}/movie/${listItem.id}` as any);
+      } else {
+        router.push(`/(tabs)/${currentTab}/tv/${listItem.id}` as any);
+      }
+    },
+    [currentTab, router]
+  );
+
+  // Convert ActivityItem to ListMediaItem for MediaListCard
+  const addedItems = useMemo(() => {
+    if (!monthDetail) return [];
+    return monthDetail.items.added.map(
+      (item): ListMediaItem => ({
+        id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+        title: item.title,
+        poster_path: item.posterPath,
+        media_type: item.mediaType as 'movie' | 'tv',
+        vote_average: 0,
+        release_date: '',
+        addedAt: item.timestamp,
+        genre_ids: item.genreIds,
+      })
+    );
+  }, [monthDetail]);
 
   if (isLoading) {
     return (
@@ -151,37 +233,8 @@ export default function MonthDetailScreen() {
     );
   }
 
-  // Build sections
-  const sections: SectionData[] = [];
-
-  if (monthDetail.items.watched.length > 0) {
-    sections.push({
-      title: `Watched (${monthDetail.items.watched.length})`,
-      icon: Tv,
-      iconColor: COLORS.primary,
-      data: monthDetail.items.watched,
-    });
-  }
-
-  if (monthDetail.items.rated.length > 0) {
-    sections.push({
-      title: `Rated (${monthDetail.items.rated.length})`,
-      icon: Star,
-      iconColor: COLORS.warning,
-      data: monthDetail.items.rated,
-    });
-  }
-
-  if (monthDetail.items.added.length > 0) {
-    sections.push({
-      title: `Added to Lists (${monthDetail.items.added.length})`,
-      icon: Plus,
-      iconColor: COLORS.success,
-      data: monthDetail.items.added,
-    });
-  }
-
-  const hasNoActivity = sections.length === 0;
+  const { watched, rated, added } = monthDetail.items;
+  const hasNoActivity = watched.length === 0 && rated.length === 0 && added.length === 0;
 
   if (hasNoActivity) {
     return (
@@ -195,6 +248,9 @@ export default function MonthDetailScreen() {
       </SafeAreaView>
     );
   }
+
+  // Get current items based on active tab
+  const currentItems = activeTab === 'watched' ? watched : activeTab === 'rated' ? rated : added;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -228,27 +284,68 @@ export default function MonthDetailScreen() {
         )}
       </View>
 
-      <SectionList
-        sections={sections}
-        renderItem={({ item }) => (
-          <ActivityRow
-            item={item}
-            onPress={item.mediaType !== 'episode' ? () => handleItemPress(item) : undefined}
-          />
-        )}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <section.icon size={18} color={section.iconColor} />
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-        )}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        stickySectionHeadersEnabled={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
-      />
+      {/* Tab Bar */}
+      <View style={styles.tabBar}>
+        <TabButton
+          label="Watched"
+          count={watched.length}
+          isActive={activeTab === 'watched'}
+          onPress={() => setActiveTab('watched')}
+          icon={Tv}
+          iconColor={COLORS.primary}
+        />
+        <TabButton
+          label="Rated"
+          count={rated.length}
+          isActive={activeTab === 'rated'}
+          onPress={() => setActiveTab('rated')}
+          icon={Star}
+          iconColor={COLORS.warning}
+        />
+        <TabButton
+          label="Added"
+          count={added.length}
+          isActive={activeTab === 'added'}
+          onPress={() => setActiveTab('added')}
+          icon={Plus}
+          iconColor={COLORS.success}
+        />
+      </View>
+
+      {/* Content based on active tab */}
+      {currentItems.length === 0 ? (
+        <View style={styles.emptyTabContent}>
+          <Text style={styles.emptyTabText}>No {activeTab} items this month</Text>
+        </View>
+      ) : activeTab === 'added' ? (
+        <FlashList
+          data={addedItems}
+          renderItem={({ item }) => <MediaListCard item={item} onPress={handleListItemPress} />}
+          keyExtractor={(item) => `${item.id}-${item.addedAt}`}
+          contentContainerStyle={styles.listContent}
+        />
+      ) : activeTab === 'watched' ? (
+        <FlashList
+          data={watched}
+          renderItem={({ item }) => <EpisodeRow item={item} />}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      ) : (
+        <FlashList
+          data={rated}
+          renderItem={({ item }) => (
+            <RatingRow
+              item={item}
+              onPress={item.mediaType !== 'episode' ? () => handleItemPress(item) : undefined}
+            />
+          )}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -270,8 +367,7 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     backgroundColor: COLORS.surface,
-    margin: SPACING.l,
-    marginBottom: 0,
+    margin: SPACING.m,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.l,
   },
@@ -310,23 +406,77 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
   },
-  listContent: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xxl,
+  tabBar: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.m,
+    gap: SPACING.s,
+    marginBottom: SPACING.s,
   },
-  sectionHeader: {
+  tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.s,
+    justifyContent: 'center',
+    gap: SPACING.xs,
     paddingVertical: SPACING.s,
-    backgroundColor: COLORS.background,
+    paddingHorizontal: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
   },
-  sectionTitle: {
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
+  tabButtonActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+  },
+  tabLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  tabLabelActive: {
     color: COLORS.text,
+    fontWeight: '600',
   },
-  activityRow: {
+  countBadge: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.s,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  countBadgeActive: {
+    backgroundColor: COLORS.primary,
+  },
+  countText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  countTextActive: {
+    color: COLORS.white,
+  },
+  listContent: {
+    paddingHorizontal: SPACING.m,
+    paddingBottom: SPACING.xxl,
+  },
+  emptyTabContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  emptyTabText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  separator: {
+    height: SPACING.s,
+  },
+  // Episode row styles
+  episodeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
@@ -334,9 +484,9 @@ const styles = StyleSheet.create({
     padding: SPACING.s,
     gap: SPACING.m,
   },
-  poster: {
-    width: 50,
-    height: 75,
+  episodePoster: {
+    width: 60,
+    height: 90,
     borderRadius: BORDER_RADIUS.s,
   },
   posterPlaceholder: {
@@ -344,24 +494,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  activityInfo: {
+  episodeInfo: {
     flex: 1,
     gap: SPACING.xs,
   },
-  activityTitle: {
+  episodeTitle: {
     fontSize: FONT_SIZE.s,
     fontWeight: '500',
     color: COLORS.text,
   },
-  activityMeta: {
+  episodeMeta: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
-  activityDate: {
+  episodeDate: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
-  ratingBadge: {
+  // Rating row styles
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.s,
+    gap: SPACING.m,
+  },
+  ratingPoster: {
+    width: 60,
+    height: 90,
+    borderRadius: BORDER_RADIUS.s,
+  },
+  ratingInfo: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  ratingTitle: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  ratingMeta: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+  },
+  ratingDate: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+  },
+  userRatingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
@@ -370,15 +551,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
   },
-  ratingText: {
+  userRatingText: {
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
     color: COLORS.text,
-  },
-  separator: {
-    height: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.l,
   },
 });
