@@ -309,11 +309,20 @@ export default function MonthDetailScreen() {
             }
             return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
           }}
-          keyExtractor={(item) =>
-            item.type === 'media'
-              ? `${item.data.media_type}-${item.data.id}`
-              : `ep-${item.data.tvShowId}-${item.data.seasonNumber}-${item.data.episodeNumber}`
-          }
+          keyExtractor={(item, index) => {
+            if (item.type === 'media') {
+              return `${item.data.media_type}-${item.data.id}`;
+            }
+            // Use episode composite key with fallbacks for optional fields
+            const showId = item.data.tvShowId ?? 'unknown';
+            const season = item.data.seasonNumber ?? 0;
+            const episode = item.data.episodeNumber ?? 0;
+            // If all episode identifiers are missing, fall back to id + index for uniqueness
+            if (!item.data.tvShowId && !item.data.seasonNumber && !item.data.episodeNumber) {
+              return `ep-${item.data.id}-${index}`;
+            }
+            return `ep-${showId}-${season}-${episode}`;
+          }}
           contentContainerStyle={styles.listContent}
         />
       ) : (
