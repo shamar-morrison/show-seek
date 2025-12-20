@@ -64,7 +64,6 @@ export default function TVShowRatingsScreen() {
   } = useRatingScreenLogic({
     storageKey: VIEW_MODE_STORAGE_KEY,
     data: enrichedRatings,
-    isLoading,
     getMediaFromItem: getTVShowFromItem,
   });
 
@@ -224,6 +223,7 @@ export default function TVShowRatingsScreen() {
           setFilterModalVisible(false);
         }}
         genreMap={genreMap}
+        showMediaTypeFilter={false}
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />

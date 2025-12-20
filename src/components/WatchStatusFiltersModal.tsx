@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface WatchStatusFiltersModalProps {
   visible: boolean;
@@ -20,6 +21,8 @@ interface WatchStatusFiltersModalProps {
   filters: WatchStatusFilterState;
   onApplyFilters: (filters: WatchStatusFilterState) => void;
   genreMap: Record<number, string>;
+  /** Whether to show the media type filter. Defaults to true. Set to false for single-type screens. */
+  showMediaTypeFilter?: boolean;
 }
 
 const RATING_OPTIONS = [
@@ -29,6 +32,12 @@ const RATING_OPTIONS = [
   { label: '7+ Stars', value: 7 },
   { label: '8+ Stars', value: 8 },
   { label: '9+ Stars', value: 9 },
+];
+
+const MEDIA_TYPE_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'Movies', value: 'movie' },
+  { label: 'TV Shows', value: 'tv' },
 ];
 
 const ITEM_HEIGHT = 56;
@@ -82,9 +91,9 @@ const FilterSelect = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select {label}</Text>
-              <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
+              <Pressable onPress={() => setVisible(false)}>
                 <X size={24} color={COLORS.text} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
             <FlatList
               data={options}
@@ -129,6 +138,7 @@ export default function WatchStatusFiltersModal({
   filters,
   onApplyFilters,
   genreMap,
+  showMediaTypeFilter = true,
 }: WatchStatusFiltersModalProps) {
   const [localFilters, setLocalFilters] = useState<WatchStatusFilterState>(filters);
 
@@ -187,12 +197,21 @@ export default function WatchStatusFiltersModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Filter Lists</Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={ACTIVE_OPACITY}>
+            <Pressable onPress={onClose}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.filtersContainer}>
+            {showMediaTypeFilter && (
+              <FilterSelect
+                label="Media Type"
+                value={localFilters.mediaType}
+                options={MEDIA_TYPE_OPTIONS}
+                onSelect={(val) => updateFilter('mediaType', val)}
+              />
+            )}
+
             <FilterSelect
               label="Genre"
               value={localFilters.genre}

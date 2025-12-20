@@ -1,15 +1,19 @@
 import { ListMediaItem } from '../services/ListService';
 
+export type MediaTypeFilter = 'all' | 'movie' | 'tv';
+
 export interface WatchStatusFilterState {
   genre: number | null;
   year: number | null;
   rating: number;
+  mediaType: MediaTypeFilter;
 }
 
 export const DEFAULT_WATCH_STATUS_FILTERS: WatchStatusFilterState = {
   genre: null,
   year: null,
   rating: 0,
+  mediaType: 'all',
 };
 
 interface FilterableMedia {
@@ -28,6 +32,13 @@ export function filterMediaItems(
   filters: WatchStatusFilterState
 ): ListMediaItem[] {
   return items.filter((item) => {
+    // Media type filter
+    if (filters.mediaType !== 'all') {
+      if (item.media_type !== filters.mediaType) {
+        return false;
+      }
+    }
+
     // Genre filter
     if (filters.genre !== null) {
       // Skip items without genre_ids
@@ -124,6 +135,7 @@ export function hasActiveFilters(filters: WatchStatusFilterState): boolean {
   return (
     filters.genre !== DEFAULT_WATCH_STATUS_FILTERS.genre ||
     filters.year !== DEFAULT_WATCH_STATUS_FILTERS.year ||
-    filters.rating !== DEFAULT_WATCH_STATUS_FILTERS.rating
+    filters.rating !== DEFAULT_WATCH_STATUS_FILTERS.rating ||
+    filters.mediaType !== DEFAULT_WATCH_STATUS_FILTERS.mediaType
   );
 }

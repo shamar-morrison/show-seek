@@ -106,7 +106,6 @@ export default function DiscoverScreen() {
     const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
     const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
-    // Get genre names from genre_ids
     const genres = item.genre_ids
       ? item.genre_ids
           .slice(0, 3)

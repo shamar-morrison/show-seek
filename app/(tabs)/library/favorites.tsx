@@ -145,15 +145,16 @@ export default function FavoritesScreen() {
       return;
     }
     // Use setTimeout to allow FlashList to finish re-rendering
+    // 200ms delay provides more reliable timing across devices with varying performance
     const timeoutId = setTimeout(() => {
       if (viewMode === 'grid') {
         mediaGridRef.current?.scrollToTop();
       } else {
         listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
       }
-    }, 100);
+    }, 200);
     return () => clearTimeout(timeoutId);
-  }, [sortState, filterState, viewMode]);
+  }, [sortState, filterState]);
 
   const renderListItem = useCallback(
     ({ item }: { item: ListMediaItem }) => (
