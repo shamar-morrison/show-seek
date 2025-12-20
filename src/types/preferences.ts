@@ -18,9 +18,11 @@ export interface HomeScreenListItem {
 
 export interface UserPreferences {
   autoAddToWatching: boolean;
+  autoAddToAlreadyWatched: boolean;
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   autoAddToWatching: true,
+  autoAddToAlreadyWatched: true,
 };
