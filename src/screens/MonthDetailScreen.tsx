@@ -1,6 +1,8 @@
+import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
@@ -61,29 +63,58 @@ function formatDate(timestamp: number): string {
 }
 
 /**
- * Episode item row for watched episodes
+ * Watched item row - handles episodes, movies, and TV shows
  */
-function EpisodeRow({ item }: { item: ActivityItem }) {
-  return (
-    <View style={styles.episodeRow}>
-      <View style={[styles.episodePoster, styles.posterPlaceholder]}>
-        <Tv size={20} color={COLORS.textSecondary} />
-      </View>
+function WatchedItemRow({ item, onPress }: { item: ActivityItem; onPress?: () => void }) {
+  const hasPoster = !!item.posterPath;
+  const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
 
-      <View style={styles.episodeInfo}>
-        <Text style={styles.episodeTitle} numberOfLines={2}>
+  // Build subtitle based on media type
+  let subtitle = '';
+  if (item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber) {
+    subtitle = `S${item.seasonNumber} E${item.episodeNumber}`;
+    if (item.tvShowName) {
+      subtitle += ` • ${item.tvShowName}`;
+    }
+  } else if (item.mediaType === 'movie' && year) {
+    subtitle = year.toString();
+  } else if (item.mediaType === 'tv') {
+    subtitle = year ? `TV Show • ${year}` : 'TV Show';
+  }
+
+  const content = (
+    <View style={styles.watchedRow}>
+      {hasPoster ? (
+        <MediaImage
+          source={{ uri: getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+          style={styles.watchedPoster}
+          contentFit="cover"
+        />
+      ) : (
+        <View style={[styles.watchedPoster, styles.posterPlaceholder]}>
+          <Tv size={20} color={COLORS.textSecondary} />
+        </View>
+      )}
+
+      <View style={styles.watchedInfo}>
+        <Text style={styles.watchedTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        {item.seasonNumber && item.episodeNumber && (
-          <Text style={styles.episodeMeta}>
-            S{item.seasonNumber} E{item.episodeNumber}
-            {item.tvShowName ? ` • ${item.tvShowName}` : ''}
-          </Text>
-        )}
-        <Text style={styles.episodeDate}>{formatDate(item.timestamp)}</Text>
+        {subtitle && <Text style={styles.watchedMeta}>{subtitle}</Text>}
+        <Text style={styles.watchedDate}>{formatDate(item.timestamp)}</Text>
       </View>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={ACTIVE_OPACITY}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return content;
 }
 
 export default function MonthDetailScreen() {
@@ -280,7 +311,12 @@ export default function MonthDetailScreen() {
       ) : activeTab === 'watched' ? (
         <FlashList
           data={watched}
-          renderItem={({ item }) => <EpisodeRow item={item} />}
+          renderItem={({ item }) => (
+            <WatchedItemRow
+              item={item}
+              onPress={item.mediaType !== 'episode' ? () => handleItemPress(item) : undefined}
+            />
+          )}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -422,8 +458,8 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.s,
   },
-  // Episode row styles
-  episodeRow: {
+  // Watched row styles
+  watchedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
@@ -431,7 +467,7 @@ const styles = StyleSheet.create({
     padding: SPACING.s,
     gap: SPACING.m,
   },
-  episodePoster: {
+  watchedPoster: {
     width: 60,
     height: 90,
     borderRadius: BORDER_RADIUS.s,
@@ -441,66 +477,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  episodeInfo: {
+  watchedInfo: {
     flex: 1,
     gap: SPACING.xs,
   },
-  episodeTitle: {
+  watchedTitle: {
     fontSize: FONT_SIZE.s,
     fontWeight: '500',
     color: COLORS.text,
   },
-  episodeMeta: {
+  watchedMeta: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
-  episodeDate: {
+  watchedDate: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-  },
-  // Rating row styles
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  ratingPoster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  ratingInfo: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  ratingTitle: {
-    fontSize: FONT_SIZE.s,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  ratingMeta: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  ratingDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  userRatingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.s,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  userRatingText: {
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-    color: COLORS.text,
   },
 });

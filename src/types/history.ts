@@ -87,23 +87,3 @@ export interface HistoryData {
   /** Total items added to lists in the period */
   totalAddedToLists: number;
 }
-
-/**
- * Raw data fetched from Firestore before aggregation
- */
-export interface RawHistoryData {
-  watchedItems: {
-    timestamp: number;
-    genreIds?: number[];
-  }[];
-  ratedItems: {
-    timestamp: number;
-    rating: number;
-    genreIds?: number[];
-  }[];
-  addedItems: {
-    timestamp: number;
-    genreIds?: number[];
-    listName: string;
-  }[];
-}

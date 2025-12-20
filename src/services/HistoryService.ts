@@ -153,33 +153,35 @@ class HistoryService {
       return { current: 0, longest: 0 };
     }
 
-    // Get unique dates (day precision)
-    const uniqueDates = [
-      ...new Set(
-        timestamps.map((ts) => {
-          const date = new Date(ts);
-          return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        })
-      ),
-    ].sort();
+    // Helper to format date as YYYY-MM-DD (consistent, zero-padded format)
+    const formatDateKey = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-    if (uniqueDates.length === 0) {
+    // Get unique dates (day precision) as a Set for O(1) lookup
+    const uniqueDateSet = new Set(timestamps.map((ts) => formatDateKey(new Date(ts))));
+
+    // Sort dates for longest streak calculation
+    const sortedDates = [...uniqueDateSet].sort();
+
+    if (sortedDates.length === 0) {
       return { current: 0, longest: 0 };
     }
 
-    // Calculate streaks
-    let currentStreak = 1;
+    // Calculate longest streak by iterating through sorted dates
     let longestStreak = 1;
     let tempStreak = 1;
 
-    for (let i = 1; i < uniqueDates.length; i++) {
-      const prevDate = new Date(uniqueDates[i - 1]);
-      const currDate = new Date(uniqueDates[i]);
+    for (let i = 1; i < sortedDates.length; i++) {
+      const prevDate = new Date(sortedDates[i - 1]);
+      const currDate = new Date(sortedDates[i]);
 
       // Check if consecutive days
-      const diffDays = Math.floor(
-        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const diffMs = currDate.getTime() - prevDate.getTime();
+      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
       if (diffDays === 1) {
         tempStreak++;
@@ -189,17 +191,31 @@ class HistoryService {
       }
     }
 
-    // Check if current streak is active (includes today or yesterday)
+    // Calculate current streak by working BACKWARDS from today
     const today = new Date();
-    const todayStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+    const todayStr = formatDateKey(today);
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayStr = `${yesterday.getFullYear()}-${yesterday.getMonth()}-${yesterday.getDate()}`;
+    const yesterdayStr = formatDateKey(yesterday);
 
-    const lastDate = uniqueDates[uniqueDates.length - 1];
-    if (lastDate === todayStr || lastDate === yesterdayStr) {
-      currentStreak = tempStreak;
-    } else {
-      currentStreak = 0;
+    let currentStreak = 0;
+
+    // Check if there's activity today or yesterday to start the streak
+    if (uniqueDateSet.has(todayStr)) {
+      currentStreak = 1;
+      // Work backwards from yesterday
+      let checkDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      while (uniqueDateSet.has(formatDateKey(checkDate))) {
+        currentStreak++;
+        checkDate = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
+      }
+    } else if (uniqueDateSet.has(yesterdayStr)) {
+      currentStreak = 1;
+      // Work backwards from day before yesterday
+      let checkDate = new Date(yesterday.getTime() - 24 * 60 * 60 * 1000);
+      while (uniqueDateSet.has(formatDateKey(checkDate))) {
+        currentStreak++;
+        checkDate = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
+      }
     }
 
     return { current: currentStreak, longest: longestStreak };
@@ -293,6 +309,9 @@ class HistoryService {
 
     // Extract list items with addedAt timestamps
     const listItems: { timestamp: number; genreIds?: number[]; listName: string }[] = [];
+    // Also track already-watched items separately for "watched" stats
+    const alreadyWatchedItems: { timestamp: number }[] = [];
+
     lists.forEach((list) => {
       if (list.items) {
         Object.values(list.items).forEach((item) => {
@@ -302,6 +321,10 @@ class HistoryService {
               genreIds: item.genre_ids,
               listName: list.name,
             });
+            // Track already-watched items for watched count
+            if (list.id === 'already-watched') {
+              alreadyWatchedItems.push({ timestamp: item.addedAt });
+            }
           }
         });
       }
@@ -322,6 +345,7 @@ class HistoryService {
       recentRatings.map((r) => ({ ...r, timestamp: r.ratedAt }))
     );
     const listItemsByMonth = this.groupByMonth(listItems);
+    const alreadyWatchedByMonth = this.groupByMonth(alreadyWatchedItems);
 
     // Get all months in the period
     const allMonths = new Set<string>();
@@ -337,6 +361,10 @@ class HistoryService {
       const monthEpisodes = episodesByMonth.get(month) || [];
       const monthRatings = ratingsByMonth.get(month) || [];
       const monthListItems = listItemsByMonth.get(month) || [];
+      const monthAlreadyWatched = alreadyWatchedByMonth.get(month) || [];
+
+      // Watched count = episodes + already-watched movies/TV
+      const totalWatchedForMonth = monthEpisodes.length + monthAlreadyWatched.length;
 
       // Calculate average rating
       let averageRating: number | null = null;
@@ -362,9 +390,11 @@ class HistoryService {
         const prevEpisodes = episodesByMonth.get(prevMonth) || [];
         const prevRatings = ratingsByMonth.get(prevMonth) || [];
         const prevListItems = listItemsByMonth.get(prevMonth) || [];
+        const prevAlreadyWatched = alreadyWatchedByMonth.get(prevMonth) || [];
+        const prevTotalWatched = prevEpisodes.length + prevAlreadyWatched.length;
 
         comparisonToPrevious = {
-          watched: this.calculatePercentageChange(monthEpisodes.length, prevEpisodes.length),
+          watched: this.calculatePercentageChange(totalWatchedForMonth, prevTotalWatched),
           rated: this.calculatePercentageChange(monthRatings.length, prevRatings.length),
           addedToLists: this.calculatePercentageChange(monthListItems.length, prevListItems.length),
         };
@@ -373,7 +403,7 @@ class HistoryService {
       return {
         month,
         monthName: this.formatMonthName(month),
-        watched: monthEpisodes.length,
+        watched: totalWatchedForMonth,
         rated: monthRatings.length,
         addedToLists: monthListItems.length,
         averageRating,
@@ -394,7 +424,7 @@ class HistoryService {
       longestStreak,
       mostActiveDay,
       mostActiveTimeOfDay,
-      totalWatched: recentEpisodes.length,
+      totalWatched: recentEpisodes.length + alreadyWatchedItems.length,
       totalRated: recentRatings.length,
       totalAddedToLists: listItems.length,
     };
@@ -459,7 +489,7 @@ class HistoryService {
       }
     });
 
-    // Convert to ActivityItems
+    // Convert to ActivityItems - start with episodes
     const watchedItems: ActivityItem[] = monthEpisodes.map((e) => ({
       id: e.episodeId,
       type: 'watched' as const,
@@ -470,6 +500,25 @@ class HistoryService {
       seasonNumber: e.seasonNumber,
       episodeNumber: e.episodeNumber,
     }));
+
+    // Also include movies and TV shows from the "already-watched" list
+    const alreadyWatchedList = lists.find((l) => l.id === 'already-watched');
+    if (alreadyWatchedList?.items) {
+      Object.values(alreadyWatchedList.items).forEach((item) => {
+        if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
+          watchedItems.push({
+            id: item.id,
+            type: 'watched' as const,
+            mediaType: item.media_type,
+            title: item.title || item.name || 'Unknown',
+            posterPath: item.poster_path,
+            timestamp: item.addedAt,
+            releaseDate: item.release_date || item.first_air_date || null,
+            voteAverage: item.vote_average,
+          });
+        }
+      });
+    }
 
     const ratedItems: ActivityItem[] = monthRatings.map((r) => {
       // Extract the actual media ID from the rating document ID
