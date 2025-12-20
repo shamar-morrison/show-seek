@@ -5,11 +5,12 @@ import { auth } from '@/src/firebase/config';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -112,6 +113,9 @@ export default function SignIn() {
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+              </View>
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>Sign in to continue</Text>
             </View>
@@ -119,22 +123,26 @@ export default function SignIn() {
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
+                <View style={styles.inputWithIcon}>
+                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder="Enter your email"
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
               </View>
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Password</Text>
-                <View style={styles.passwordInputContainer}>
+                <View style={styles.inputWithIcon}>
+                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
                   <TextInput
-                    style={styles.passwordInput}
+                    style={styles.inputField}
                     placeholder="Enter your password"
                     placeholderTextColor={COLORS.textSecondary}
                     value={password}
@@ -223,17 +231,39 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   header: {
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
+    alignItems: 'center',
   },
-  title: {
-    fontSize: FONT_SIZE.hero,
-    fontWeight: 'bold',
-    color: COLORS.white,
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
     marginBottom: SPACING.s,
   },
+  logo: {
+    width: 130,
+    height: 130,
+    marginLeft: -25,
+    marginTop: -25,
+  },
+  appName: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    marginBottom: SPACING.l,
+  },
+  title: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    marginBottom: SPACING.xs,
+    textAlign: 'center',
+  },
   subtitle: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
+    textAlign: 'center',
   },
   form: {
     gap: SPACING.l,
@@ -245,27 +275,24 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
   },
-  input: {
-    backgroundColor: COLORS.surfaceLight,
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-  },
-  passwordInputContainer: {
+  inputWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
+    paddingHorizontal: SPACING.m,
   },
-  passwordInput: {
+  inputIcon: {
+    marginRight: SPACING.s,
+  },
+  inputField: {
     flex: 1,
-    padding: SPACING.m,
+    paddingVertical: SPACING.m,
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
   },
   eyeIcon: {
-    padding: SPACING.m,
+    padding: SPACING.s,
   },
   button: {
     backgroundColor: COLORS.primary,
@@ -276,7 +303,7 @@ const styles = StyleSheet.create({
   },
   guestButton: {
     backgroundColor: COLORS.surfaceLight,
-    marginTop: SPACING.s,
+    marginTop: SPACING.xs,
   },
   buttonText: {
     color: COLORS.white,
