@@ -1,4 +1,4 @@
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -7,7 +7,6 @@ import { useMonthDetail } from '@/src/hooks/useHistory';
 import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
-import { Image } from 'expo-image';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
@@ -34,6 +33,8 @@ function TabButton({
   icon: typeof Tv;
   iconColor: string;
 }) {
+  const displayCount = count > 99 ? '99+' : count.toString();
+
   return (
     <TouchableOpacity
       style={[styles.tabButton, isActive && styles.tabButtonActive]}
@@ -43,7 +44,7 @@ function TabButton({
       <Icon size={16} color={isActive ? iconColor : COLORS.textSecondary} />
       <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
       <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
-        <Text style={[styles.countText, isActive && styles.countTextActive]}>{count}</Text>
+        <Text style={[styles.countText, isActive && styles.countTextActive]}>{displayCount}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -82,55 +83,6 @@ function EpisodeRow({ item }: { item: ActivityItem }) {
         <Text style={styles.episodeDate}>{formatDate(item.timestamp)}</Text>
       </View>
     </View>
-  );
-}
-
-/**
- * Rating item row with user rating badge
- */
-function RatingRow({ item, onPress }: { item: ActivityItem; onPress?: () => void }) {
-  const hasPoster = !!item.posterPath;
-
-  return (
-    <TouchableOpacity
-      style={styles.ratingRow}
-      onPress={onPress}
-      activeOpacity={onPress ? ACTIVE_OPACITY : 1}
-      disabled={!onPress}
-    >
-      {hasPoster ? (
-        <Image
-          source={{
-            uri: getImageUrl(item.posterPath!, TMDB_IMAGE_SIZES.poster.small) ?? undefined,
-          }}
-          style={styles.ratingPoster}
-          contentFit="cover"
-        />
-      ) : (
-        <View style={[styles.ratingPoster, styles.posterPlaceholder]}>
-          <Tv size={20} color={COLORS.textSecondary} />
-        </View>
-      )}
-
-      <View style={styles.ratingInfo}>
-        <Text style={styles.ratingTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        {item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber && (
-          <Text style={styles.ratingMeta}>
-            S{item.seasonNumber} E{item.episodeNumber}
-          </Text>
-        )}
-        <Text style={styles.ratingDate}>{formatDate(item.timestamp)}</Text>
-      </View>
-
-      {item.rating && (
-        <View style={styles.userRatingBadge}>
-          <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-          <Text style={styles.userRatingText}>{item.rating}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
   );
 }
 
@@ -205,8 +157,8 @@ export default function MonthDetailScreen() {
         title: item.title,
         poster_path: item.posterPath,
         media_type: item.mediaType as 'movie' | 'tv',
-        vote_average: 0,
-        release_date: '',
+        vote_average: item.voteAverage || 0,
+        release_date: item.releaseDate || '',
         addedAt: item.timestamp,
         genre_ids: item.genreIds,
       })
@@ -336,10 +288,9 @@ export default function MonthDetailScreen() {
       ) : (
         <FlashList
           data={rated}
-          renderItem={({ item }) => <RatingRow item={item} onPress={() => handleItemPress(item)} />}
+          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} />}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
     </SafeAreaView>

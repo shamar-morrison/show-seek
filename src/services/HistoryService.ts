@@ -450,6 +450,8 @@ class HistoryService {
                 timestamp: item.addedAt,
                 listName: list.name,
                 genreIds: item.genre_ids,
+                releaseDate: item.release_date || item.first_air_date || null,
+                voteAverage: item.vote_average,
               });
             }
           }
@@ -490,6 +492,7 @@ class HistoryService {
         posterPath: r.posterPath || null,
         timestamp: r.ratedAt,
         rating: r.rating,
+        releaseDate: r.releaseDate || null,
         seasonNumber: r.seasonNumber,
         episodeNumber: r.episodeNumber,
         tvShowName: r.tvShowName,

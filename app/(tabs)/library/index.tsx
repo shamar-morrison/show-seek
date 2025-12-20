@@ -30,7 +30,7 @@ type SectionData = {
 
 const SECTIONS: SectionData[] = [
   {
-    title: 'MY LISTS',
+    title: 'LISTS & STATS',
     data: [
       {
         id: 'stats',

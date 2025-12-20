@@ -17,6 +17,8 @@ export interface ActivityItem {
   rating?: number;
   listName?: string;
   genreIds?: number[];
+  releaseDate?: string | null;
+  voteAverage?: number;
   // Episode-specific fields
   seasonNumber?: number;
   episodeNumber?: number;
