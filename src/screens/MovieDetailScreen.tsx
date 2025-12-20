@@ -30,6 +30,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
   useCancelReminder,
@@ -98,6 +99,7 @@ export default function MovieDetailScreen() {
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
+  const { preferences } = usePreferences();
   const isInAnyList = Object.keys(membership).length > 0;
 
   const {
@@ -632,6 +634,17 @@ export default function MovieDetailScreen() {
             initialRating={userRating}
             onRatingSuccess={() => {}}
             onShowToast={(message) => toastRef.current?.show(message)}
+            autoAddOptions={{
+              shouldAutoAdd: preferences?.autoAddToAlreadyWatched,
+              listMembership: membership,
+              mediaMetadata: {
+                title: movie.title,
+                poster_path: movie.poster_path,
+                vote_average: movie.vote_average,
+                release_date: movie.release_date || '',
+                genre_ids: movie.genres?.map((g) => g.id),
+              },
+            }}
           />
           <ReminderModal
             visible={reminderModalVisible}

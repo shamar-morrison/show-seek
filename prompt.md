@@ -2,18 +2,15 @@
 
 ---
 
-I want to make some UI changes to the sign in and sign up screens.
+I want to add a feature where if the user rates a movie/tv show it is auto added to their “already watched” list.
 
-### Changes needed
+### Implementation details
 
 ---
 
-# Both Screens:
+There are currently a number of default lists and “already watched” is one of them, once the user rates a movie or show I want to auto add this to the list. This implementation should be persisted in firebase as a user preference so the user can toggle it on or off, but by default its on so if the user doesn’t have a preferences field in firebase its on. There is already a similar feature where if a user marks an episode as watched then the tv show gets added to the “watching” list, so you can look at that implementation and follow suite. the toggle should be in the user profile in the settings section. Do you have any questions?
 
-- Add appropriate icons inside the input field, e.g., a mail icon for email and lock icon for password
-- Reduce the size of the title and subtitle (Welcome Back/Sign in to continue and Create Account/Sign up to get started) and center them horizontally.
-- Add the app name and logo at the top, the logo should be clipped inside a circle to make it look fully rounded.
-
-# Sign In Screen:
-
-- Reduce the gap between the sign in and continue as guest button
+1. yes
+2. just movies for now, we can always extend it to include tv shows later
+3. skip adding it
+4. when they rate it for the first time

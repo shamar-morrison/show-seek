@@ -38,6 +38,25 @@ interface RatingModalProps {
   initialRating?: number;
   onRatingSuccess: (rating: number) => void;
   onShowToast?: (message: string) => void;
+
+  /**
+   * Optional auto-add configuration for movies.
+   * When provided and conditions are met, the movie is added to "Already Watched" list.
+   */
+  autoAddOptions?: {
+    /** Whether auto-add is enabled (from user preferences) */
+    shouldAutoAdd?: boolean;
+    /** Cached list membership - map of listId to boolean */
+    listMembership?: Record<string, boolean>;
+    /** Media metadata for adding to list */
+    mediaMetadata?: {
+      title: string;
+      poster_path: string | null;
+      vote_average: number;
+      release_date: string;
+      genre_ids?: number[];
+    };
+  };
 }
 
 export default function RatingModal({
@@ -49,6 +68,7 @@ export default function RatingModal({
   initialRating = 0,
   onRatingSuccess,
   onShowToast,
+  autoAddOptions,
 }: RatingModalProps) {
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +112,46 @@ export default function RatingModal({
       } else if (mediaId !== undefined && mediaType) {
         // Movie/TV rating
         await ratingService.saveRating(mediaId, mediaType, rating);
+
+        // Auto-add to "Already Watched" list for first-time movie ratings
+        // Only applies when: mediaType is 'movie', initialRating is 0 (first-time),
+        // preference is enabled, and movie is not already in the list
+        const isFirstTimeRating = initialRating === 0;
+        const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
+        const isNotInAlreadyWatched = !autoAddOptions?.listMembership?.['already-watched'];
+
+        if (
+          mediaType === 'movie' &&
+          isFirstTimeRating &&
+          shouldAutoAdd &&
+          isNotInAlreadyWatched &&
+          autoAddOptions?.mediaMetadata
+        ) {
+          try {
+            // Dynamically import to avoid circular dependencies
+            const { listService } = await import('../services/ListService');
+            const metadata = autoAddOptions.mediaMetadata;
+
+            await listService.addToList(
+              'already-watched',
+              {
+                id: mediaId,
+                title: metadata.title,
+                poster_path: metadata.poster_path,
+                media_type: 'movie',
+                vote_average: metadata.vote_average,
+                release_date: metadata.release_date,
+                genre_ids: metadata.genre_ids,
+              },
+              'Already Watched'
+            );
+
+            console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
+          } catch (autoAddError) {
+            // Log but don't throw - auto-add is non-critical
+            console.error('[RatingModal] Auto-add to Already Watched list failed:', autoAddError);
+          }
+        }
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

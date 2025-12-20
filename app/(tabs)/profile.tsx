@@ -429,39 +429,73 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View style={styles.preferenceItem}>
-                  <View style={styles.preferenceInfo}>
-                    <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
-                    <Text style={styles.preferenceSubtitle}>
-                      Automatically add series to your Watching list when you mark an episode as
-                      watched
-                    </Text>
+                <>
+                  <View style={styles.preferenceItem}>
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
+                      <Text style={styles.preferenceSubtitle}>
+                        Automatically add series to your Watching list when you mark an episode as
+                        watched
+                      </Text>
+                    </View>
+                    {preferencesLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Switch
+                        value={!!preferences?.autoAddToWatching}
+                        onValueChange={(value) => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          updatePreference.mutate(
+                            { key: 'autoAddToWatching', value },
+                            {
+                              onError: () => {
+                                Alert.alert(
+                                  'Error',
+                                  'Failed to update preference. Please try again.'
+                                );
+                              },
+                            }
+                          );
+                        }}
+                        disabled={preferencesLoading || updatePreference.isPending}
+                        trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                        thumbColor={COLORS.white}
+                      />
+                    )}
                   </View>
-                  {preferencesLoading ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                  ) : (
-                    <Switch
-                      value={!!preferences?.autoAddToWatching}
-                      onValueChange={(value) => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        updatePreference.mutate(
-                          { key: 'autoAddToWatching', value },
-                          {
-                            onError: () => {
-                              Alert.alert(
-                                'Error',
-                                'Failed to update preference. Please try again.'
-                              );
-                            },
-                          }
-                        );
-                      }}
-                      disabled={preferencesLoading || updatePreference.isPending}
-                      trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
-                      thumbColor={COLORS.white}
-                    />
-                  )}
-                </View>
+                  <View style={styles.preferenceItem}>
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceLabel}>Auto-add to Already Watched</Text>
+                      <Text style={styles.preferenceSubtitle}>
+                        Automatically add movies to your Already Watched list when you rate them
+                      </Text>
+                    </View>
+                    {preferencesLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Switch
+                        value={!!preferences?.autoAddToAlreadyWatched}
+                        onValueChange={(value) => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          updatePreference.mutate(
+                            { key: 'autoAddToAlreadyWatched', value },
+                            {
+                              onError: () => {
+                                Alert.alert(
+                                  'Error',
+                                  'Failed to update preference. Please try again.'
+                                );
+                              },
+                            }
+                          );
+                        }}
+                        disabled={preferencesLoading || updatePreference.isPending}
+                        trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                        thumbColor={COLORS.white}
+                      />
+                    )}
+                  </View>
+                </>
               )}
             </View>
           )}
@@ -794,6 +828,7 @@ const styles = StyleSheet.create({
   preferencesSection: {
     paddingHorizontal: SPACING.l,
     marginTop: SPACING.l,
+    gap: SPACING.m,
   },
   preferenceItem: {
     flexDirection: 'row',
