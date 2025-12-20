@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -138,13 +139,8 @@ export default function PersonDetailScreen() {
     : getUniqueCredits(tvCreditsQuery.data?.cast || []);
 
   // Filter out non-scripted shows from TV credits
-  const EXCLUDED_GENRE_IDS = [
-    10767, // Talk shows (The Tonight Show, Jimmy Kimmel, etc.)
-    10763, // News (news programs)
-    10764, // Reality (reality TV shows, awards shows)
-  ];
   const filteredTVCredits = tvCredits.filter(
-    (show) => !show.genre_ids?.some((genreId) => EXCLUDED_GENRE_IDS.includes(genreId))
+    (show) => !show.genre_ids?.some((genreId) => EXCLUDED_TV_GENRE_IDS.includes(genreId))
   );
 
   // Sort by popularity and get top items
@@ -359,9 +355,11 @@ export default function PersonDetailScreen() {
                 <ArrowRight size={24} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
-              <Text style={styles.sectionTitle}>
-                {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+                </Text>
+              </View>
             )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForMovies.map((movie, index) => (
@@ -420,9 +418,11 @@ export default function PersonDetailScreen() {
                 <Text style={styles.viewAll}>View All</Text>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.sectionTitle}>
-                {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+                </Text>
+              </View>
             )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForTV.map((show, index) => (

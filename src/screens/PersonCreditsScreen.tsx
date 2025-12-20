@@ -8,6 +8,7 @@ import {
   TVShow,
 } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -15,7 +16,7 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Film, Star, Tv } from 'lucide-react-native';
+import { Film, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -31,13 +32,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
-
-// Filter out non-scripted shows (same as PersonDetailScreen)
-const EXCLUDED_GENRE_IDS = [
-  10767, // Talk shows
-  10763, // News
-  10764, // Reality
-];
 
 interface CreditItem extends ListMediaItem {
   character?: string;
@@ -63,7 +57,7 @@ export default function PersonCreditsScreen() {
     showSortButton: false,
   });
 
-  // Define a union type for both movie and TV credits
+  // union type for both movie and TV credits
   type CreditsResponse =
     | { cast: Movie[]; crew: MovieCrewCredit[] }
     | { cast: TVShow[]; crew: TVCrewCredit[] };
@@ -101,10 +95,9 @@ export default function PersonCreditsScreen() {
         )
       : rawCredits;
 
-    // For TV, filter out non-scripted shows
     if (isTVCredits) {
       filtered = filtered.filter(
-        (item: any) => !item.genre_ids?.some((id: number) => EXCLUDED_GENRE_IDS.includes(id))
+        (item: any) => !item.genre_ids?.some((id: number) => EXCLUDED_TV_GENRE_IDS.includes(id))
       );
     }
 
@@ -147,7 +140,11 @@ export default function PersonCreditsScreen() {
     [currentTab, router]
   );
 
-  const screenTitle = `${name || 'Credits'} • ${isTVCredits ? 'TV Shows' : 'Movies'}`;
+  const subtitleText = useMemo(() => {
+    const count = credits.length;
+    const mediaLabel = isTVCredits ? 'TV Show' : 'Movie';
+    return `${count} ${mediaLabel} ${count === 1 ? 'Credit' : 'Credits'}`;
+  }, [credits.length, isTVCredits]);
 
   const renderGridItem = useCallback(
     ({ item }: { item: CreditItem }) => (
@@ -244,25 +241,19 @@ export default function PersonCreditsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: name || 'Credits',
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <ArrowLeft size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {screenTitle}
-          </Text>
-          <Text style={styles.headerSubtitle}>
-            {credits.length} {credits.length === 1 ? 'credit' : 'credits'}
-          </Text>
-        </View>
+      {/* Subtitle under header */}
+      <View style={styles.subtitleContainer}>
+        <Text style={styles.subtitle}>{subtitleText}</Text>
       </View>
 
       {credits.length === 0 ? (
@@ -283,6 +274,7 @@ export default function PersonCreditsScreen() {
           renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
           keyExtractor={(item) => `${item.id}-${item.media_type}`}
           numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+          key={viewMode}
           drawDistance={400}
           contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -319,30 +311,15 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: COLORS.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.m,
+  subtitleContainer: {
+    paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },
-  headerButton: {
-    padding: SPACING.s,
-    marginRight: SPACING.s,
-  },
-  headerTitleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  headerSubtitle: {
+  subtitle: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    marginTop: 2,
   },
   emptyContainer: {
     flex: 1,
@@ -362,10 +339,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
   },
-  // Grid styles
+  // Grid styles - aligned with MediaGrid
   gridContent: {
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
+    marginLeft: SPACING.s,
   },
   gridCard: {
     width: ITEM_WIDTH,
@@ -388,7 +366,7 @@ const styles = StyleSheet.create({
   },
   // List styles
   listContent: {
-    paddingHorizontal: SPACING.m,
+    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
   },
   listCard: {
