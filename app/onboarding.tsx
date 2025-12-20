@@ -20,7 +20,7 @@ const ONBOARDING_DATA = [
     title: 'Discover Content',
     description: 'Browse thousands of movies and TV shows. Trending, popular, and top rated.',
     image:
-      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1615986201152-7686a4867f30?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '3',
@@ -28,7 +28,7 @@ const ONBOARDING_DATA = [
     description:
       'Save your favorites and rate what you watch. Keep track of everything in one place.',
     image:
-      'https://images.unsplash.com/photo-1517604931442-71053e3e2c28?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1584905066893-7d5c142ba4e1?q=80&w=1000&auto=format&fit=crop',
   },
 ];
 
