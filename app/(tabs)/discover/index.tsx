@@ -8,7 +8,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
 import { SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'movie' | 'tv';
@@ -106,7 +107,6 @@ export default function DiscoverScreen() {
     const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
     const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
-    // Get genre names from genre_ids
     const genres = item.genre_ids
       ? item.genre_ids
           .slice(0, 3)
@@ -115,10 +115,9 @@ export default function DiscoverScreen() {
       : [];
 
     return (
-      <TouchableOpacity
-        style={styles.resultItem}
+      <Pressable
+        style={({ pressed }) => (pressed ? { opacity: ACTIVE_OPACITY } : styles.resultItem)}
         onPress={() => handleItemPress(item)}
-        activeOpacity={ACTIVE_OPACITY}
       >
         <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
         <View style={styles.resultInfo}>
@@ -148,7 +147,7 @@ export default function DiscoverScreen() {
             </Text>
           )}
         </View>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -156,38 +155,32 @@ export default function DiscoverScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Discover</Text>
-        <TouchableOpacity
-          style={styles.filterToggle}
-          onPress={() => setShowFilters(!showFilters)}
-          activeOpacity={ACTIVE_OPACITY}
-        >
+        <Pressable style={styles.filterToggle} onPress={() => setShowFilters(!showFilters)}>
           <SlidersHorizontal
             size={24}
             color={showFilters ? COLORS.primary : COLORS.textSecondary}
           />
           {hasActiveFilters() && <View style={styles.filterBadge} />}
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <View style={styles.typeToggleContainer}>
-        <TouchableOpacity
+        <Pressable
           style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
           onPress={() => setMediaType('movie')}
-          activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
             Movies
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Pressable>
+        <Pressable
           style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
           onPress={() => setMediaType('tv')}
-          activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
             TV Shows
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {showFilters && (

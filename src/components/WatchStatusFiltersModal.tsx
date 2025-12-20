@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 
 interface WatchStatusFiltersModalProps {
   visible: boolean;
@@ -82,9 +83,9 @@ const FilterSelect = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select {label}</Text>
-              <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
+              <Pressable onPress={() => setVisible(false)}>
                 <X size={24} color={COLORS.text} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
             <FlatList
               data={options}
@@ -187,9 +188,9 @@ export default function WatchStatusFiltersModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Filter Lists</Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={ACTIVE_OPACITY}>
+            <Pressable onPress={onClose}>
               <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.filtersContainer}>
