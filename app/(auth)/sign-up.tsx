@@ -142,86 +142,74 @@ export default function SignUp() {
             </View>
 
             <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Display Name</Text>
-                <View style={styles.inputWithIcon}>
-                  <User size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your display name"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                  />
-                </View>
+              <View style={styles.inputWithIcon}>
+                <User size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your display name"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                />
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWithIcon}>
-                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your email"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
+              <View style={styles.inputWithIcon}>
+                <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your email"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWithIcon}>
-                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Password (min. 6 chars)"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowPassword(!showPassword)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} color={COLORS.textSecondary} />
-                    ) : (
-                      <Eye size={20} color={COLORS.textSecondary} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.inputWithIcon}>
+                <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Password (min. 6 chars)"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color={COLORS.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={COLORS.textSecondary} />
+                  )}
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={styles.inputWithIcon}>
-                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Confirm password"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={20} color={COLORS.textSecondary} />
-                    ) : (
-                      <Eye size={20} color={COLORS.textSecondary} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.inputWithIcon}>
+                <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Confirm password"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color={COLORS.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={COLORS.textSecondary} />
+                  )}
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity

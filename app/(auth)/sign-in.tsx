@@ -121,46 +121,40 @@ export default function SignIn() {
             </View>
 
             <View style={styles.form}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputWithIcon}>
-                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your email"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
+              <View style={styles.inputWithIcon}>
+                <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your email"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
               </View>
 
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWithIcon}>
-                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder="Enter your password"
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowPassword(!showPassword)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} color={COLORS.textSecondary} />
-                    ) : (
-                      <Eye size={20} color={COLORS.textSecondary} />
-                    )}
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.inputWithIcon}>
+                <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.inputField}
+                  placeholder="Enter your password"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color={COLORS.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={COLORS.textSecondary} />
+                  )}
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
@@ -303,7 +297,7 @@ const styles = StyleSheet.create({
   },
   guestButton: {
     backgroundColor: COLORS.surfaceLight,
-    marginTop: SPACING.xs,
+    marginTop: 0,
   },
   buttonText: {
     color: COLORS.white,
