@@ -1,5 +1,12 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { Check, ChevronDown, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -91,7 +98,7 @@ const FilterSelect = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select {label}</Text>
-              <Pressable onPress={() => setVisible(false)}>
+              <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.s}>
                 <X size={24} color={COLORS.text} />
               </Pressable>
             </View>
