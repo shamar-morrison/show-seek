@@ -7,6 +7,12 @@ import { createTimeoutWithCleanup } from '../utils/timeout';
 import type { UserList } from './ListService';
 import type { RatingItem } from './RatingService';
 
+/** Episode with show metadata for history display */
+interface EnrichedWatchedEpisode extends WatchedEpisode {
+  tvShowName: string;
+  posterPath: string | null;
+}
+
 /**
  * Time periods for grouping
  */
@@ -49,9 +55,9 @@ class HistoryService {
   }
 
   /**
-   * Fetch all episode tracking data for the user
+   * Fetch all episode tracking data for the user, enriched with show metadata
    */
-  private async fetchEpisodeTracking(): Promise<WatchedEpisode[]> {
+  private async fetchEpisodeTracking(): Promise<EnrichedWatchedEpisode[]> {
     const user = auth.currentUser;
     if (!user) return [];
 
@@ -61,12 +67,16 @@ class HistoryService {
       const trackingRef = collection(db, 'users', user.uid, 'episode_tracking');
       const snapshot = await Promise.race([getDocs(trackingRef), timeout.promise]);
 
-      const episodes: WatchedEpisode[] = [];
+      const episodes: EnrichedWatchedEpisode[] = [];
       snapshot.docs.forEach((doc) => {
         const data = doc.data() as TVShowEpisodeTracking;
-        if (data.episodes) {
+        if (data.episodes && data.metadata) {
           Object.values(data.episodes).forEach((episode) => {
-            episodes.push(episode);
+            episodes.push({
+              ...episode,
+              tvShowName: data.metadata.tvShowName,
+              posterPath: data.metadata.posterPath,
+            });
           });
         }
       });
@@ -506,16 +516,18 @@ class HistoryService {
       }
     });
 
-    // Convert to ActivityItems - start with episodes
+    // Convert to ActivityItems - start with episodes (now enriched with show metadata)
     const watchedItems: ActivityItem[] = monthEpisodes.map((e) => ({
       id: e.episodeId,
       type: 'watched' as const,
       mediaType: 'episode' as const,
       title: e.episodeName,
-      posterPath: null, // Not stored in episode tracking
+      posterPath: e.posterPath,
       timestamp: e.watchedAt,
       seasonNumber: e.seasonNumber,
       episodeNumber: e.episodeNumber,
+      tvShowId: e.tvShowId,
+      tvShowName: e.tvShowName,
     }));
 
     // Also include movies and TV shows from the "already-watched" list

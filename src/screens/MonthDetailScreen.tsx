@@ -15,6 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabType = 'watched' | 'rated' | 'added';
 
+/** Combined list item type for watched tab with mixed content */
+type WatchedListItem =
+  | { type: 'media'; data: ListMediaItem }
+  | { type: 'episode'; data: ActivityItem };
+
 /**
  * Tab button component
  */
@@ -47,42 +52,6 @@ function TabButton({
         <Text style={[styles.countText, isActive && styles.countTextActive]}>{displayCount}</Text>
       </View>
     </TouchableOpacity>
-  );
-}
-
-/**
- * Format timestamp to readable date
- */
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
- * Episode row - simple display for watched episodes
- */
-function EpisodeRow({ item }: { item: ActivityItem }) {
-  return (
-    <View style={styles.watchedRow}>
-      <View style={[styles.watchedPoster, styles.posterPlaceholder]}>
-        <Tv size={20} color={COLORS.textSecondary} />
-      </View>
-
-      <View style={styles.watchedInfo}>
-        <Text style={styles.watchedTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        {item.seasonNumber && item.episodeNumber && (
-          <Text style={styles.watchedMeta}>
-            S{item.seasonNumber} E{item.episodeNumber}
-            {item.tvShowName ? ` • ${item.tvShowName}` : ''}
-          </Text>
-        )}
-        <Text style={styles.watchedDate}>{formatDate(item.timestamp)}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -171,8 +140,10 @@ export default function MonthDetailScreen() {
     );
   }, [monthDetail]);
 
-  // Convert watched movies/TV shows to ListMediaItem format for MediaListCard
-  const watchedMediaItems = useMemo(() => {
+  // Create combined watched items list for a single FlashList
+  // This includes movies/TV as ListMediaItem, a section header, and episodes as ActivityItem
+
+  const combinedWatchedItems = useMemo((): WatchedListItem[] => {
     if (!monthDetail) return [];
 
     const extractNumericId = (id: string | number): number => {
@@ -181,7 +152,10 @@ export default function MonthDetailScreen() {
       return match ? parseInt(match[1], 10) : 0;
     };
 
-    return monthDetail.items.watched
+    const items: WatchedListItem[] = [];
+
+    // Add movies/TV shows as media items
+    const mediaItems = monthDetail.items.watched
       .filter((item) => item.mediaType === 'movie' || item.mediaType === 'tv')
       .map(
         (item): ListMediaItem => ({
@@ -195,12 +169,18 @@ export default function MonthDetailScreen() {
           genre_ids: item.genreIds,
         })
       );
-  }, [monthDetail]);
 
-  // Get only episodes for the simple row display
-  const watchedEpisodes = useMemo(() => {
-    if (!monthDetail) return [];
-    return monthDetail.items.watched.filter((item) => item.mediaType === 'episode');
+    mediaItems.forEach((media) => {
+      items.push({ type: 'media', data: media });
+    });
+
+    // Add episodes
+    const episodes = monthDetail.items.watched.filter((item) => item.mediaType === 'episode');
+    episodes.forEach((episode) => {
+      items.push({ type: 'episode', data: episode });
+    });
+
+    return items;
   }, [monthDetail]);
 
   if (isLoading) {
@@ -316,41 +296,19 @@ export default function MonthDetailScreen() {
           contentContainerStyle={styles.listContent}
         />
       ) : activeTab === 'watched' ? (
-        <>
-          {/* Movies and TV Shows with MediaListCard */}
-          {watchedMediaItems.length > 0 && (
-            <FlashList
-              data={watchedMediaItems}
-              renderItem={({ item }) => <MediaListCard item={item} onPress={handleListItemPress} />}
-              keyExtractor={(item) => `media-${item.id}-${item.addedAt}`}
-              contentContainerStyle={styles.listContent}
-              ListFooterComponent={
-                watchedEpisodes.length > 0 ? (
-                  <Text style={styles.subSectionTitle}>Episodes</Text>
-                ) : null
-              }
-            />
-          )}
-          {/* Episodes with simple row */}
-          {watchedEpisodes.length > 0 && watchedMediaItems.length === 0 && (
-            <FlashList
-              data={watchedEpisodes}
-              renderItem={({ item }) => <EpisodeRow item={item} />}
-              keyExtractor={(item, index) => `ep-${item.id}-${index}`}
-              contentContainerStyle={styles.listContent}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          )}
-          {watchedEpisodes.length > 0 && watchedMediaItems.length > 0 && (
-            <FlashList
-              data={watchedEpisodes}
-              renderItem={({ item }) => <EpisodeRow item={item} />}
-              keyExtractor={(item, index) => `ep-${item.id}-${index}`}
-              contentContainerStyle={styles.listContent}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          )}
-        </>
+        <FlashList
+          data={combinedWatchedItems}
+          renderItem={({ item }) => {
+            if (item.type === 'media') {
+              return <MediaListCard item={item.data} onPress={handleListItemPress} />;
+            }
+            return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
+          }}
+          keyExtractor={(item, index) =>
+            item.type === 'media' ? `media-${item.data.id}` : `ep-${item.data.id}-${index}`
+          }
+          contentContainerStyle={styles.listContent}
+        />
       ) : (
         <FlashList
           data={rated}
@@ -487,50 +445,5 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: SPACING.s,
-  },
-  // Watched row styles
-  watchedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  watchedPoster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  posterPlaceholder: {
-    backgroundColor: COLORS.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  watchedInfo: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  watchedTitle: {
-    fontSize: FONT_SIZE.s,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  watchedMeta: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  watchedDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  subSectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginTop: SPACING.l,
-    marginBottom: SPACING.m,
   },
 });
