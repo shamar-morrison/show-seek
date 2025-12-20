@@ -3,23 +3,11 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
-import { useProfileStats } from '@/src/hooks/useProfileStats';
 import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import {
-  Crown,
-  Download,
-  Film,
-  Heart,
-  LogOut,
-  MessageCircle,
-  Star,
-  Trash2,
-  Tv,
-  User,
-} from 'lucide-react-native';
+import { Crown, Download, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -57,27 +45,6 @@ function getInitials(displayName: string | null, email: string | null): string {
   }
 
   return 'GU'; // Guest User
-}
-
-interface StatCardProps {
-  icon: typeof Film;
-  label: string;
-  count: number;
-  isLoading: boolean;
-}
-
-function StatCard({ icon: Icon, label, count, isLoading }: StatCardProps) {
-  return (
-    <View style={styles.statCard}>
-      <Icon size={20} color={COLORS.primary} />
-      {isLoading ? (
-        <ActivityIndicator size="small" color={COLORS.textSecondary} style={styles.statLoader} />
-      ) : (
-        <Text style={styles.statCount}>{count}</Text>
-      )}
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
 }
 
 interface ActionButtonProps {
@@ -157,7 +124,6 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
-  const { stats, isLoading: statsLoading } = useProfileStats();
   const {
     preferences,
     isLoading: preferencesLoading,
@@ -360,45 +326,6 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
-
-          {/* Stats Section */}
-          {!isGuest && (
-            <View style={styles.statsSection}>
-              <Text style={styles.sectionTitle}>ACTIVITY</Text>
-              <View style={styles.statsGrid}>
-                <StatCard
-                  icon={Film}
-                  label="Movies Rated"
-                  count={stats.movieRatingsCount}
-                  isLoading={statsLoading}
-                />
-                <StatCard
-                  icon={Tv}
-                  label="TV Shows Rated"
-                  count={stats.tvRatingsCount}
-                  isLoading={statsLoading}
-                />
-                <StatCard
-                  icon={User}
-                  label="Fav People"
-                  count={stats.favoritePersonsCount}
-                  isLoading={statsLoading}
-                />
-                <StatCard
-                  icon={Heart}
-                  label="Movies Liked"
-                  count={stats.favoritesMovieCount}
-                  isLoading={statsLoading}
-                />
-                <StatCard
-                  icon={Heart}
-                  label="TV Shows Liked"
-                  count={stats.favoritesTvCount}
-                  isLoading={statsLoading}
-                />
-              </View>
-            </View>
-          )}
 
           {/* Preferences Section */}
           {!isGuest && (
@@ -684,10 +611,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },
-  statsSection: {
-    paddingHorizontal: SPACING.l,
-    marginBottom: SPACING.l,
-  },
   sectionTitle: {
     fontSize: FONT_SIZE.xs,
     fontWeight: '700',
@@ -695,34 +618,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: SPACING.m,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.m,
-  },
-  statCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.m,
-    alignItems: 'center',
-    minWidth: 100,
-    flex: 1,
-  },
-  statLoader: {
-    marginVertical: SPACING.xs,
-  },
-  statCount: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    marginTop: SPACING.xs,
-  },
-  statLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    textAlign: 'center',
   },
   actionsSection: {
     paddingHorizontal: SPACING.l,

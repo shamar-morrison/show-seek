@@ -33,12 +33,6 @@ const SECTIONS: SectionData[] = [
     title: 'LISTS & STATS',
     data: [
       {
-        id: 'stats',
-        icon: BarChart3,
-        title: 'Stats & History',
-        route: '/(tabs)/library/stats',
-      },
-      {
         id: 'watch-status',
         icon: Tv,
         title: 'Watch Lists',
@@ -49,6 +43,12 @@ const SECTIONS: SectionData[] = [
         icon: ListPlus,
         title: 'Custom Lists',
         route: '/(tabs)/library/custom-lists',
+      },
+      {
+        id: 'stats',
+        icon: BarChart3,
+        title: 'Stats & History',
+        route: '/(tabs)/library/stats',
       },
     ],
   },
