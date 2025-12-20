@@ -430,22 +430,28 @@ class HistoryService {
       (r) => r.ratedAt >= startOfMonth && r.ratedAt <= endOfMonth
     );
 
-    // Get list items for this month
+    // Get list items for this month - deduplicate by media ID + type
+    const seenMedia = new Set<string>();
     const monthListItems: ActivityItem[] = [];
     lists.forEach((list) => {
       if (list.items) {
         Object.values(list.items).forEach((item) => {
           if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
-            monthListItems.push({
-              id: item.id,
-              type: 'added',
-              mediaType: item.media_type,
-              title: item.title || item.name || 'Unknown',
-              posterPath: item.poster_path,
-              timestamp: item.addedAt,
-              listName: list.name,
-              genreIds: item.genre_ids,
-            });
+            // Create a unique key for this media item
+            const mediaKey = `${item.media_type}-${item.id}`;
+            if (!seenMedia.has(mediaKey)) {
+              seenMedia.add(mediaKey);
+              monthListItems.push({
+                id: item.id,
+                type: 'added',
+                mediaType: item.media_type,
+                title: item.title || item.name || 'Unknown',
+                posterPath: item.poster_path,
+                timestamp: item.addedAt,
+                listName: list.name,
+                genreIds: item.genre_ids,
+              });
+            }
           }
         });
       }
@@ -463,18 +469,33 @@ class HistoryService {
       episodeNumber: e.episodeNumber,
     }));
 
-    const ratedItems: ActivityItem[] = monthRatings.map((r) => ({
-      id: r.id,
-      type: 'rated' as const,
-      mediaType: r.mediaType,
-      title: r.episodeName || r.tvShowName || r.id,
-      posterPath: r.posterPath || null,
-      timestamp: r.ratedAt,
-      rating: r.rating,
-      seasonNumber: r.seasonNumber,
-      episodeNumber: r.episodeNumber,
-      tvShowName: r.tvShowName,
-    }));
+    const ratedItems: ActivityItem[] = monthRatings.map((r) => {
+      // Extract the actual media ID from the rating document ID
+      // Format: "movie-123" or "tv-456" or "episode-{tvShowId}-{season}-{episode}"
+      let mediaId: number | string = r.id;
+      if (r.mediaType === 'movie' && typeof r.id === 'string') {
+        mediaId = parseInt(r.id.replace('movie-', ''), 10);
+      } else if (r.mediaType === 'tv' && typeof r.id === 'string') {
+        mediaId = parseInt(r.id.replace('tv-', ''), 10);
+      } else if (r.mediaType === 'episode' && r.tvShowId) {
+        // For episodes, use tvShowId for navigation
+        mediaId = r.tvShowId;
+      }
+
+      return {
+        id: mediaId,
+        type: 'rated' as const,
+        mediaType: r.mediaType,
+        title: r.title || r.episodeName || r.tvShowName || 'Unknown',
+        posterPath: r.posterPath || null,
+        timestamp: r.ratedAt,
+        rating: r.rating,
+        seasonNumber: r.seasonNumber,
+        episodeNumber: r.episodeNumber,
+        tvShowName: r.tvShowName,
+        tvShowId: r.tvShowId,
+      };
+    });
 
     // Sort all items by timestamp (most recent first)
     watchedItems.sort((a, b) => b.timestamp - a.timestamp);

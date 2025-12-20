@@ -21,6 +21,7 @@ export interface ActivityItem {
   seasonNumber?: number;
   episodeNumber?: number;
   tvShowName?: string;
+  tvShowId?: number;
 }
 
 /**

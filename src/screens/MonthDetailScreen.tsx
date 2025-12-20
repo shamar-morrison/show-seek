@@ -171,12 +171,13 @@ export default function MonthDetailScreen() {
       if (!currentTab) return;
 
       // Navigate to detail screen based on media type
-      if (item.mediaType === 'movie') {
-        const mediaId = typeof item.id === 'string' ? item.id.replace('movie-', '') : item.id;
-        router.push(`/(tabs)/${currentTab}/movie/${mediaId}` as any);
+      // For episodes, navigate to the TV show
+      if (item.mediaType === 'episode' && item.tvShowId) {
+        router.push(`/(tabs)/${currentTab}/tv/${item.tvShowId}` as any);
+      } else if (item.mediaType === 'movie') {
+        router.push(`/(tabs)/${currentTab}/movie/${item.id}` as any);
       } else if (item.mediaType === 'tv') {
-        const mediaId = typeof item.id === 'string' ? item.id.replace('tv-', '') : item.id;
-        router.push(`/(tabs)/${currentTab}/tv/${mediaId}` as any);
+        router.push(`/(tabs)/${currentTab}/tv/${item.id}` as any);
       }
     },
     [currentTab, router]
@@ -335,12 +336,7 @@ export default function MonthDetailScreen() {
       ) : (
         <FlashList
           data={rated}
-          renderItem={({ item }) => (
-            <RatingRow
-              item={item}
-              onPress={item.mediaType !== 'episode' ? () => handleItemPress(item) : undefined}
-            />
-          )}
+          renderItem={({ item }) => <RatingRow item={item} onPress={() => handleItemPress(item)} />}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
