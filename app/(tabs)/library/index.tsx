@@ -1,7 +1,17 @@
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRouter } from 'expo-router';
-import { Bell, Film, Heart, ListPlus, Settings2, Tv, TvMinimal, User } from 'lucide-react-native';
+import {
+  BarChart3,
+  Bell,
+  Film,
+  Heart,
+  ListPlus,
+  Settings2,
+  Tv,
+  TvMinimal,
+  User,
+} from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +32,12 @@ const SECTIONS: SectionData[] = [
   {
     title: 'MY LISTS',
     data: [
+      {
+        id: 'stats',
+        icon: BarChart3,
+        title: 'Stats & History',
+        route: '/(tabs)/library/stats',
+      },
       {
         id: 'watch-status',
         icon: Tv,
