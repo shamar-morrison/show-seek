@@ -174,11 +174,15 @@ export default function MonthDetailScreen() {
       items.push({ type: 'episode', data: episode });
     });
 
-    // Sort by timestamp (most recent first) for chronological order
+    // Sort by timestamp (most recent first), with secondary sort by ID for stability
     return items.sort((a, b) => {
       const timestampA = a.type === 'media' ? (a.data.addedAt ?? 0) : a.data.timestamp;
       const timestampB = b.type === 'media' ? (b.data.addedAt ?? 0) : b.data.timestamp;
-      return timestampB - timestampA;
+      if (timestampB !== timestampA) {
+        return timestampB - timestampA;
+      }
+      // Secondary sort by ID for stable ordering when timestamps are equal
+      return String(a.data.id).localeCompare(String(b.data.id));
     });
   }, [monthDetail]);
 
