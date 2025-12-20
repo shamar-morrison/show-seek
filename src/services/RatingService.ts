@@ -17,13 +17,17 @@ export interface RatingItem {
   rating: number;
   ratedAt: number;
 
+  // Common metadata for all media types (movies, TV, episodes)
+  title?: string;
+  posterPath?: string | null;
+  releaseDate?: string | null;
+
   // Episode-specific metadata (only present when mediaType === 'episode')
   tvShowId?: number;
   seasonNumber?: number;
   episodeNumber?: number;
   episodeName?: string;
   tvShowName?: string;
-  posterPath?: string | null;
 }
 
 class RatingService {
@@ -72,7 +76,16 @@ class RatingService {
   /**
    * Save or update a rating for a media item
    */
-  async saveRating(mediaId: number, mediaType: 'movie' | 'tv', rating: number) {
+  async saveRating(
+    mediaId: number,
+    mediaType: 'movie' | 'tv',
+    rating: number,
+    metadata?: {
+      title: string;
+      posterPath: string | null;
+      releaseDate: string | null;
+    }
+  ) {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -84,6 +97,11 @@ class RatingService {
         mediaType,
         rating,
         ratedAt: Date.now(),
+        ...(metadata && {
+          title: metadata.title,
+          posterPath: metadata.posterPath,
+          releaseDate: metadata.releaseDate,
+        }),
       };
 
       const timeoutPromise = new Promise((_, reject) => {

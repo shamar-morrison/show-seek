@@ -76,11 +76,17 @@ export const useRateMedia = () => {
       mediaId,
       mediaType,
       rating,
+      metadata,
     }: {
       mediaId: number;
       mediaType: 'movie' | 'tv';
       rating: number;
-    }) => ratingService.saveRating(mediaId, mediaType, rating),
+      metadata?: {
+        title: string;
+        posterPath: string | null;
+        releaseDate: string | null;
+      };
+    }) => ratingService.saveRating(mediaId, mediaType, rating, metadata),
   });
 };
 

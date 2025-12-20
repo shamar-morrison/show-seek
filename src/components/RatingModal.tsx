@@ -110,8 +110,20 @@ export default function RatingModal({
           },
         });
       } else if (mediaId !== undefined && mediaType) {
-        // Movie/TV rating
-        await ratingService.saveRating(mediaId, mediaType, rating);
+        // Movie/TV rating - pass metadata if available
+        const metadata = autoAddOptions?.mediaMetadata;
+        await ratingService.saveRating(
+          mediaId,
+          mediaType,
+          rating,
+          metadata
+            ? {
+                title: metadata.title,
+                posterPath: metadata.poster_path,
+                releaseDate: metadata.release_date || null,
+              }
+            : undefined
+        );
 
         // Auto-add to "Already Watched" list for first-time movie ratings
         // Only applies when: mediaType is 'movie', initialRating is 0 (first-time),

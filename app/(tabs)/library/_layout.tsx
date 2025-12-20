@@ -22,6 +22,10 @@ export default function LibraryStackLayout() {
         <Stack.Screen name="custom-lists" options={{ title: 'Custom Lists' }} />
         <Stack.Screen name="custom-list/[id]" options={{ title: '' }} />
 
+        {/* Stats & History */}
+        <Stack.Screen name="stats/index" options={{ title: 'Stats & History' }} />
+        <Stack.Screen name="stats/[month]" options={{ title: '' }} />
+
         {/* Ratings */}
         <Stack.Screen name="ratings/episodes" options={{ title: 'Episode Ratings' }} />
         <Stack.Screen name="ratings/movies" options={{ title: 'Movie Ratings' }} />
