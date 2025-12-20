@@ -27,7 +27,7 @@ export async function shareMedia(
   } catch (error) {
     try {
       await Clipboard.setStringAsync(message);
-      onShowToast('Link copied to clipboard!');
+      onShowToast('Link copied to clipboard');
     } catch (clipboardError) {
       onShowToast('Unable to share. Please try again.');
       console.error('Share and clipboard both failed:', error, clipboardError);
