@@ -55,6 +55,12 @@ function TabButton({
   );
 }
 
+function extractNumericId(id: string | number): number {
+  if (typeof id === 'number') return id;
+  const match = id.match(/(\d+)$/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
 export default function MonthDetailScreen() {
   const { month } = useLocalSearchParams<{ month: string }>();
   const navigation = useNavigation();
@@ -120,12 +126,6 @@ export default function MonthDetailScreen() {
   const addedItems = useMemo(() => {
     if (!monthDetail) return [];
 
-    const extractNumericId = (id: string | number): number => {
-      if (typeof id === 'number') return id;
-      const match = id.match(/(\d+)$/);
-      return match ? parseInt(match[1], 10) : 0;
-    };
-
     return monthDetail.items.added.map(
       (item): ListMediaItem => ({
         id: extractNumericId(item.id),
@@ -145,12 +145,6 @@ export default function MonthDetailScreen() {
 
   const combinedWatchedItems = useMemo((): WatchedListItem[] => {
     if (!monthDetail) return [];
-
-    const extractNumericId = (id: string | number): number => {
-      if (typeof id === 'number') return id;
-      const match = id.match(/(\d+)$/);
-      return match ? parseInt(match[1], 10) : 0;
-    };
 
     const items: WatchedListItem[] = [];
 
