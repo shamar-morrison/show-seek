@@ -35,6 +35,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/** Height reserved for header/footer chrome in empty state calculations */
+const HEADER_FOOTER_CHROME_HEIGHT = 150;
+
 export default function CustomListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -49,7 +52,7 @@ export default function CustomListDetailScreen() {
   );
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
-  const listRef = useRef<any>(null);
+  const listRef = useRef<React.ComponentRef<typeof FlashList<ListMediaItem>>>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -159,7 +162,7 @@ export default function CustomListDetailScreen() {
         },
       ]
     );
-  }, [list, id, deleteMutation, router, requireAuth, isAuthenticated]);
+  }, [list, id, deleteMutation, requireAuth, isAuthenticated]);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -213,6 +216,28 @@ export default function CustomListDetailScreen() {
       },
     ],
     [hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
+  );
+
+  const filterEmptyState = useMemo(
+    () => ({
+      icon: SlidersHorizontal,
+      title: 'No items match your filters',
+      description: 'Try adjusting your filters to see more results.',
+      actionLabel: 'Clear Filters',
+      onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+    }),
+    []
+  );
+
+  const defaultEmptyState = useMemo(
+    () => ({
+      icon: Bookmark,
+      title: 'No items yet',
+      description: 'Add movies and TV shows to this list to see them here.',
+      actionLabel: 'Browse Content',
+      onAction: () => router.push('/(tabs)/discover' as any),
+    }),
+    [router]
   );
 
   // Navigate back if list is deleted
@@ -279,23 +304,7 @@ export default function CustomListDetailScreen() {
             ref={mediaGridRef}
             items={listItems}
             isLoading={isLoading}
-            emptyState={
-              hasActiveFilterState
-                ? {
-                    icon: SlidersHorizontal,
-                    title: 'No items match your filters',
-                    description: 'Try adjusting your filters to see more results.',
-                    actionLabel: 'Clear Filters',
-                    onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
-                  }
-                : {
-                    icon: Bookmark,
-                    title: 'No items yet',
-                    description: `Add movies and TV shows to this list to see them here.`,
-                    actionLabel: 'Browse Content',
-                    onAction: () => router.push('/(tabs)/discover' as any),
-                  }
-            }
+            emptyState={hasActiveFilterState ? filterEmptyState : defaultEmptyState}
             onItemPress={handleItemPress}
             onItemLongPress={handleLongPress}
           />
@@ -309,27 +318,13 @@ export default function CustomListDetailScreen() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title="No items match your filters"
-                    description="Try adjusting your filters to see more results."
-                    actionLabel="Clear Filters"
-                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                  />
-                </View>
-              ) : (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={Bookmark}
-                    title="No items yet"
-                    description="Add movies and TV shows to this list to see them here."
-                    actionLabel="Browse Content"
-                    onAction={() => router.push('/(tabs)/discover' as any)}
-                  />
-                </View>
-              )
+              <View
+                style={{
+                  height: windowHeight - insets.top - insets.bottom - HEADER_FOOTER_CHROME_HEIGHT,
+                }}
+              >
+                <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
+              </View>
             }
           />
         )}
