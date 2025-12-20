@@ -223,6 +223,7 @@ export default function TVShowRatingsScreen() {
           setFilterModalVisible(false);
         }}
         genreMap={genreMap}
+        showMediaTypeFilter={false}
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />

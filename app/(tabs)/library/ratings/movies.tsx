@@ -223,6 +223,7 @@ export default function MovieRatingsScreen() {
           setFilterModalVisible(false);
         }}
         genreMap={genreMap}
+        showMediaTypeFilter={false}
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />

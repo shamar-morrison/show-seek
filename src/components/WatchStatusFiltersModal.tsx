@@ -21,6 +21,8 @@ interface WatchStatusFiltersModalProps {
   filters: WatchStatusFilterState;
   onApplyFilters: (filters: WatchStatusFilterState) => void;
   genreMap: Record<number, string>;
+  /** Whether to show the media type filter. Defaults to true. Set to false for single-type screens. */
+  showMediaTypeFilter?: boolean;
 }
 
 const RATING_OPTIONS = [
@@ -30,6 +32,12 @@ const RATING_OPTIONS = [
   { label: '7+ Stars', value: 7 },
   { label: '8+ Stars', value: 8 },
   { label: '9+ Stars', value: 9 },
+];
+
+const MEDIA_TYPE_OPTIONS = [
+  { label: 'All', value: 'all' },
+  { label: 'Movies', value: 'movie' },
+  { label: 'TV Shows', value: 'tv' },
 ];
 
 const ITEM_HEIGHT = 56;
@@ -130,6 +138,7 @@ export default function WatchStatusFiltersModal({
   filters,
   onApplyFilters,
   genreMap,
+  showMediaTypeFilter = true,
 }: WatchStatusFiltersModalProps) {
   const [localFilters, setLocalFilters] = useState<WatchStatusFilterState>(filters);
 
@@ -194,6 +203,15 @@ export default function WatchStatusFiltersModal({
           </View>
 
           <View style={styles.filtersContainer}>
+            {showMediaTypeFilter && (
+              <FilterSelect
+                label="Media Type"
+                value={localFilters.mediaType}
+                options={MEDIA_TYPE_OPTIONS}
+                onSelect={(val) => updateFilter('mediaType', val)}
+              />
+            )}
+
             <FilterSelect
               label="Genre"
               value={localFilters.genre}
