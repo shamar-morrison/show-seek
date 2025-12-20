@@ -153,8 +153,6 @@ export default function MonthDetailScreen() {
     (item: ActivityItem) => {
       if (!currentTab) return;
 
-      // Navigate to detail screen based on media type
-      // For episodes, navigate to the TV show
       if (item.mediaType === 'episode' && item.tvShowId) {
         router.push(`/(tabs)/${currentTab}/tv/${item.tvShowId}` as any);
       } else if (item.mediaType === 'movie') {
@@ -179,12 +177,18 @@ export default function MonthDetailScreen() {
     [currentTab, router]
   );
 
-  // Convert ActivityItem to ListMediaItem for MediaListCard
   const addedItems = useMemo(() => {
     if (!monthDetail) return [];
+
+    const extractNumericId = (id: string | number): number => {
+      if (typeof id === 'number') return id;
+      const match = id.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
     return monthDetail.items.added.map(
       (item): ListMediaItem => ({
-        id: typeof item.id === 'string' ? parseInt(item.id, 10) : item.id,
+        id: extractNumericId(item.id),
         title: item.title,
         poster_path: item.posterPath,
         media_type: item.mediaType as 'movie' | 'tv',
