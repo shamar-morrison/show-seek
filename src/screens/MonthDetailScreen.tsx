@@ -125,6 +125,7 @@ export default function MonthDetailScreen() {
   const { data: monthDetail, isLoading } = useMonthDetail(month || null);
 
   const [activeTab, setActiveTab] = useState<TabType>('watched');
+  const [hasInitializedTab, setHasInitializedTab] = useState(false);
 
   // Set the header title
   useLayoutEffect(() => {
@@ -135,9 +136,9 @@ export default function MonthDetailScreen() {
     }
   }, [navigation, monthDetail?.monthName]);
 
-  // Determine initial active tab based on available data
+  // Determine initial active tab based on available data (only once)
   useLayoutEffect(() => {
-    if (!monthDetail) return;
+    if (!monthDetail || hasInitializedTab) return;
 
     const { watched, rated, added } = monthDetail.items;
     if (watched.length > 0) {
@@ -147,7 +148,8 @@ export default function MonthDetailScreen() {
     } else if (added.length > 0) {
       setActiveTab('added');
     }
-  }, [monthDetail]);
+    setHasInitializedTab(true);
+  }, [monthDetail, hasInitializedTab]);
 
   const handleItemPress = useCallback(
     (item: ActivityItem) => {

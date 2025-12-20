@@ -1,7 +1,9 @@
 import { collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { getFirestoreErrorMessage } from '../firebase/firestore';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
 import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
+import { createTimeoutWithCleanup } from '../utils/timeout';
 import type { UserList } from './ListService';
 import type { RatingItem } from './RatingService';
 
@@ -53,9 +55,12 @@ class HistoryService {
     const user = auth.currentUser;
     if (!user) return [];
 
+    const timeout = createTimeoutWithCleanup(10000, 'Episode tracking request timed out');
+
     try {
       const trackingRef = collection(db, 'users', user.uid, 'episode_tracking');
-      const snapshot = await getDocs(trackingRef);
+      const snapshot = await Promise.race([getDocs(trackingRef), timeout.promise]);
+      timeout.cancel();
 
       const episodes: WatchedEpisode[] = [];
       snapshot.docs.forEach((doc) => {
@@ -69,7 +74,9 @@ class HistoryService {
 
       return episodes;
     } catch (error) {
-      console.error('[HistoryService] Error fetching episode tracking:', error);
+      timeout.cancel();
+      const message = getFirestoreErrorMessage(error);
+      console.error('[HistoryService] Error fetching episode tracking:', message);
       return [];
     }
   }
@@ -81,16 +88,21 @@ class HistoryService {
     const user = auth.currentUser;
     if (!user) return [];
 
+    const timeout = createTimeoutWithCleanup(10000, 'Ratings request timed out');
+
     try {
       const ratingsRef = collection(db, 'users', user.uid, 'ratings');
-      const snapshot = await getDocs(ratingsRef);
+      const snapshot = await Promise.race([getDocs(ratingsRef), timeout.promise]);
+      timeout.cancel();
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as RatingItem[];
     } catch (error) {
-      console.error('[HistoryService] Error fetching ratings:', error);
+      timeout.cancel();
+      const message = getFirestoreErrorMessage(error);
+      console.error('[HistoryService] Error fetching ratings:', message);
       return [];
     }
   }
@@ -102,16 +114,21 @@ class HistoryService {
     const user = auth.currentUser;
     if (!user) return [];
 
+    const timeout = createTimeoutWithCleanup(10000, 'Lists request timed out');
+
     try {
       const listsRef = collection(db, 'users', user.uid, 'lists');
-      const snapshot = await getDocs(listsRef);
+      const snapshot = await Promise.race([getDocs(listsRef), timeout.promise]);
+      timeout.cancel();
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as UserList[];
     } catch (error) {
-      console.error('[HistoryService] Error fetching lists:', error);
+      timeout.cancel();
+      const message = getFirestoreErrorMessage(error);
+      console.error('[HistoryService] Error fetching lists:', message);
       return [];
     }
   }
