@@ -64,7 +64,6 @@ export default function TVShowRatingsScreen() {
   } = useRatingScreenLogic({
     storageKey: VIEW_MODE_STORAGE_KEY,
     data: enrichedRatings,
-    isLoading,
     getMediaFromItem: getTVShowFromItem,
   });
 

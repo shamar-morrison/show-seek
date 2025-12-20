@@ -1,22 +1,26 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { EmptyState } from '@/src/components/library/EmptyState';
+import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
+import { MediaListCard } from '@/src/components/library/MediaListCard';
 import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
-import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import Toast from '@/src/components/ui/Toast';
-import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
-import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
+import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
+import { ListMediaItem } from '@/src/services/ListService';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -28,7 +32,8 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
@@ -44,9 +49,11 @@ export default function CustomListDetailScreen() {
   );
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
+  const listRef = useRef<any>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  // Fetch genre data for filter modal
   const { data: genreMap = {} } = useAllGenres();
 
   const {
@@ -114,9 +121,6 @@ export default function CustomListDetailScreen() {
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
-    setTimeout(() => {
-      mediaGridRef.current?.scrollToTop();
-    }, 100);
   };
 
   const handleDeleteList = useCallback(() => {
@@ -163,6 +167,21 @@ export default function CustomListDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
+  const actionButton = useMemo(
+    () => ({
+      icon: Settings2,
+      onPress: () => listActionsModalRef.current?.present(),
+      showBadge: hasActiveSort || hasActiveFilterState,
+    }),
+    [hasActiveSort, hasActiveFilterState]
+  );
+
+  const { viewMode, isLoadingPreference } = useViewModeToggle({
+    storageKey: `@custom_list_view_mode_${id}`,
+    showSortButton: false,
+    actionButton,
+  });
+
   const listActions = useMemo(
     () => [
       {
@@ -203,7 +222,35 @@ export default function CustomListDetailScreen() {
     }
   }, [isLoading, lists, list, router]);
 
-  if (isLoading) {
+  // Track if initial mount to avoid scrolling on first render
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Use setTimeout to allow FlashList to finish re-rendering
+    const timeoutId = setTimeout(() => {
+      if (viewMode === 'grid') {
+        mediaGridRef.current?.scrollToTop();
+      } else {
+        listRef.current?.scrollToOffset?.({ offset: 0, animated: true });
+      }
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [sortState, filterState, viewMode]);
+
+  const renderListItem = useCallback(
+    ({ item }: { item: ListMediaItem }) => (
+      <MediaListCard item={item} onPress={handleItemPress} onLongPress={handleLongPress} />
+    ),
+    [handleItemPress, handleLongPress]
+  );
+
+  const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
+
+  if (isLoading || isLoadingPreference) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -220,50 +267,72 @@ export default function CustomListDetailScreen() {
       <Stack.Screen
         options={{
           title: list.name,
-          headerRight: () => (
-            <Pressable
-              onPress={() => listActionsModalRef.current?.present()}
-              accessibilityLabel="List options"
-              accessibilityRole="button"
-              hitSlop={HIT_SLOP.l}
-              style={[sortHeaderStyles.headerButton, { marginRight: SPACING.s }]}
-            >
-              <Settings2 size={22} color={COLORS.text} />
-              {(hasActiveSort || hasActiveFilterState) && (
-                <View style={sortHeaderStyles.sortBadge} />
-              )}
-            </Pressable>
-          ),
         }}
       />
 
       <View style={styles.divider} />
 
       <View style={styles.container}>
-        <MediaGrid
-          ref={mediaGridRef}
-          items={listItems}
-          isLoading={isLoading}
-          emptyState={
-            hasActiveFilterState
-              ? {
-                  icon: SlidersHorizontal,
-                  title: 'No items match your filters',
-                  description: 'Try adjusting your filters to see more results.',
-                  actionLabel: 'Clear Filters',
-                  onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
-                }
-              : {
-                  icon: Bookmark,
-                  title: 'No items yet',
-                  description: `Add movies and TV shows to this list to see them here.`,
-                  actionLabel: 'Browse Content',
-                  onAction: () => router.push('/(tabs)/discover' as any),
-                }
-          }
-          onItemPress={handleItemPress}
-          onItemLongPress={handleLongPress}
-        />
+        {viewMode === 'grid' ? (
+          <MediaGrid
+            key="grid"
+            ref={mediaGridRef}
+            items={listItems}
+            isLoading={isLoading}
+            emptyState={
+              hasActiveFilterState
+                ? {
+                    icon: SlidersHorizontal,
+                    title: 'No items match your filters',
+                    description: 'Try adjusting your filters to see more results.',
+                    actionLabel: 'Clear Filters',
+                    onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                  }
+                : {
+                    icon: Bookmark,
+                    title: 'No items yet',
+                    description: `Add movies and TV shows to this list to see them here.`,
+                    actionLabel: 'Browse Content',
+                    onAction: () => router.push('/(tabs)/discover' as any),
+                  }
+            }
+            onItemPress={handleItemPress}
+            onItemLongPress={handleLongPress}
+          />
+        ) : (
+          <FlashList
+            key="list"
+            ref={listRef}
+            data={listItems}
+            renderItem={renderListItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              hasActiveFilterState ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={SlidersHorizontal}
+                    title="No items match your filters"
+                    description="Try adjusting your filters to see more results."
+                    actionLabel="Clear Filters"
+                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                  />
+                </View>
+              ) : (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Bookmark}
+                    title="No items yet"
+                    description="Add movies and TV shows to this list to see them here."
+                    actionLabel="Browse Content"
+                    onAction={() => router.push('/(tabs)/discover' as any)}
+                  />
+                </View>
+              )
+            }
+          />
+        )}
       </View>
 
       {selectedMediaItem && (
@@ -288,10 +357,6 @@ export default function CustomListDetailScreen() {
         onApplyFilters={(newFilters) => {
           setFilterState(newFilters);
           setFilterModalVisible(false);
-          // Scroll to top after filter is applied
-          setTimeout(() => {
-            mediaGridRef.current?.scrollToTop();
-          }, 100);
         }}
         genreMap={genreMap}
       />
@@ -319,5 +384,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
+  },
+  listContent: {
+    paddingHorizontal: SPACING.l,
+    paddingBottom: SPACING.xl,
   },
 });
