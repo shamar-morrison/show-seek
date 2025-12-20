@@ -140,9 +140,6 @@ export default function MonthDetailScreen() {
     );
   }, [monthDetail]);
 
-  // Create combined watched items list for a single FlashList
-  // This includes movies/TV as ListMediaItem, a section header, and episodes as ActivityItem
-
   const combinedWatchedItems = useMemo((): WatchedListItem[] => {
     if (!monthDetail) return [];
 
