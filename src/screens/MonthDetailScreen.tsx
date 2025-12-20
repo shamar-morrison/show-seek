@@ -305,7 +305,9 @@ export default function MonthDetailScreen() {
             return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
           }}
           keyExtractor={(item, index) =>
-            item.type === 'media' ? `media-${item.data.id}` : `ep-${item.data.id}-${index}`
+            item.type === 'media'
+              ? `${item.data.media_type}-${item.data.id}`
+              : `ep-${item.data.id}-${index}`
           }
           contentContainerStyle={styles.listContent}
         />
