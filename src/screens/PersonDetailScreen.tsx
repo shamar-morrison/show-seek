@@ -14,7 +14,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -181,6 +181,18 @@ export default function PersonDetailScreen() {
     navigateTo(`/tv/${id}`);
   };
 
+  const handleViewAllMovies = () => {
+    navigateTo(
+      `/person/${personId}/credits?name=${encodeURIComponent(person.name)}&mediaType=movie&creditType=${isCrewRole ? 'crew' : 'cast'}`
+    );
+  };
+
+  const handleViewAllTV = () => {
+    navigateTo(
+      `/person/${personId}/credits?name=${encodeURIComponent(person.name)}&mediaType=tv&creditType=${isCrewRole ? 'crew' : 'cast'}`
+    );
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -335,9 +347,22 @@ export default function PersonDetailScreen() {
         {/* Known For - Movies */}
         {knownForMovies.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
-            </Text>
+            {movieCredits.length > 10 ? (
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={handleViewAllMovies}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.sectionTitle}>
+                  {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+                </Text>
+                <ArrowRight size={24} color={COLORS.primary} style={styles.viewAll} />
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.sectionTitle}>
+                {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+              </Text>
+            )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForMovies.map((movie, index) => (
                 <TouchableOpacity
@@ -383,9 +408,22 @@ export default function PersonDetailScreen() {
         {/* Known For - TV Shows */}
         {knownForTV.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
-            </Text>
+            {filteredTVCredits.length > 10 ? (
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={handleViewAllTV}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.sectionTitle}>
+                  {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+                </Text>
+                <Text style={styles.viewAll}>View All</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.sectionTitle}>
+                {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+              </Text>
+            )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForTV.map((show, index) => (
                 <TouchableOpacity
@@ -519,7 +557,14 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.l,
     fontWeight: 'bold',
     color: COLORS.white,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: SPACING.m,
+  },
+  viewAll: {
+    marginLeft: SPACING.s,
   },
   biography: {
     color: COLORS.textSecondary,
