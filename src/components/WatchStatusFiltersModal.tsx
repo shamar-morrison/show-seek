@@ -8,12 +8,12 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Pressable } from 'react-native-gesture-handler';
 
 interface WatchStatusFiltersModalProps {
   visible: boolean;
