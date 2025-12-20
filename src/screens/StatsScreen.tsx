@@ -2,6 +2,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useHistory } from '@/src/hooks/useHistory';
 import type { MonthlyStats } from '@/src/types/history';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import {
   ArrowDown,
@@ -10,13 +11,15 @@ import {
   Calendar,
   Clock,
   Flame,
+  Info,
   Minus,
   Plus,
   Star,
   Trophy,
   Tv,
+  X,
 } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -132,9 +135,25 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
   );
 }
 
+// TODO: Remove this banner and related code after 2024-12-27 (legacy data migration complete)
+const LEGACY_BANNER_DISMISSED_KEY = '@stats_legacy_banner_dismissed';
+
 export default function StatsScreen() {
   const router = useRouter();
   const { data: historyData, isLoading, error } = useHistory();
+  const [bannerDismissed, setBannerDismissed] = useState(true); // Start hidden to prevent flash
+
+  // Load banner dismissed state from AsyncStorage
+  useEffect(() => {
+    AsyncStorage.getItem(LEGACY_BANNER_DISMISSED_KEY).then((value) => {
+      setBannerDismissed(value === 'true');
+    });
+  }, []);
+
+  const dismissBanner = useCallback(async () => {
+    setBannerDismissed(true);
+    await AsyncStorage.setItem(LEGACY_BANNER_DISMISSED_KEY, 'true');
+  }, []);
 
   const handleMonthPress = useCallback(
     (month: string) => {
@@ -188,6 +207,22 @@ export default function StatsScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.divider} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Info banner for legacy data - TODO: Remove after 2024-12-27 */}
+        {!bannerDismissed && (
+          <View style={styles.infoBanner}>
+            <Info size={16} color={COLORS.background} />
+            <Text style={styles.infoBannerText}>
+              Stats work best with new activity. Older data may show limited details.
+            </Text>
+            <TouchableOpacity
+              onPress={dismissBanner}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <X size={18} color={COLORS.background} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Overview Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>LAST 6 MONTHS OVERVIEW</Text>
@@ -443,5 +478,20 @@ const styles = StyleSheet.create({
   genreText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    backgroundColor: COLORS.warning,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+    marginBottom: SPACING.l,
+  },
+  infoBannerText: {
+    flex: 1,
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.background,
+    fontWeight: '500',
   },
 });

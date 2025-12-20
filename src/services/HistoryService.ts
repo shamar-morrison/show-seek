@@ -60,7 +60,6 @@ class HistoryService {
     try {
       const trackingRef = collection(db, 'users', user.uid, 'episode_tracking');
       const snapshot = await Promise.race([getDocs(trackingRef), timeout.promise]);
-      timeout.cancel();
 
       const episodes: WatchedEpisode[] = [];
       snapshot.docs.forEach((doc) => {
@@ -74,10 +73,11 @@ class HistoryService {
 
       return episodes;
     } catch (error) {
-      timeout.cancel();
       const message = getFirestoreErrorMessage(error);
       console.error('[HistoryService] Error fetching episode tracking:', message);
       return [];
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -93,17 +93,17 @@ class HistoryService {
     try {
       const ratingsRef = collection(db, 'users', user.uid, 'ratings');
       const snapshot = await Promise.race([getDocs(ratingsRef), timeout.promise]);
-      timeout.cancel();
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as RatingItem[];
     } catch (error) {
-      timeout.cancel();
       const message = getFirestoreErrorMessage(error);
       console.error('[HistoryService] Error fetching ratings:', message);
       return [];
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -119,17 +119,17 @@ class HistoryService {
     try {
       const listsRef = collection(db, 'users', user.uid, 'lists');
       const snapshot = await Promise.race([getDocs(listsRef), timeout.promise]);
-      timeout.cancel();
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as UserList[];
     } catch (error) {
-      timeout.cancel();
       const message = getFirestoreErrorMessage(error);
       console.error('[HistoryService] Error fetching lists:', message);
       return [];
+    } finally {
+      timeout.cancel();
     }
   }
 

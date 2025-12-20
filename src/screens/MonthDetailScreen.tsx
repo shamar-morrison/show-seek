@@ -1,8 +1,6 @@
-import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
-import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
@@ -63,58 +61,29 @@ function formatDate(timestamp: number): string {
 }
 
 /**
- * Watched item row - handles episodes, movies, and TV shows
+ * Episode row - simple display for watched episodes
  */
-function WatchedItemRow({ item, onPress }: { item: ActivityItem; onPress?: () => void }) {
-  const hasPoster = !!item.posterPath;
-  const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
-
-  // Build subtitle based on media type
-  let subtitle = '';
-  if (item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber) {
-    subtitle = `S${item.seasonNumber} E${item.episodeNumber}`;
-    if (item.tvShowName) {
-      subtitle += ` • ${item.tvShowName}`;
-    }
-  } else if (item.mediaType === 'movie' && year) {
-    subtitle = year.toString();
-  } else if (item.mediaType === 'tv') {
-    subtitle = year ? `TV Show • ${year}` : 'TV Show';
-  }
-
-  const content = (
+function EpisodeRow({ item }: { item: ActivityItem }) {
+  return (
     <View style={styles.watchedRow}>
-      {hasPoster ? (
-        <MediaImage
-          source={{ uri: getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-          style={styles.watchedPoster}
-          contentFit="cover"
-        />
-      ) : (
-        <View style={[styles.watchedPoster, styles.posterPlaceholder]}>
-          <Tv size={20} color={COLORS.textSecondary} />
-        </View>
-      )}
+      <View style={[styles.watchedPoster, styles.posterPlaceholder]}>
+        <Tv size={20} color={COLORS.textSecondary} />
+      </View>
 
       <View style={styles.watchedInfo}>
         <Text style={styles.watchedTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        {subtitle && <Text style={styles.watchedMeta}>{subtitle}</Text>}
+        {item.seasonNumber && item.episodeNumber && (
+          <Text style={styles.watchedMeta}>
+            S{item.seasonNumber} E{item.episodeNumber}
+            {item.tvShowName ? ` • ${item.tvShowName}` : ''}
+          </Text>
+        )}
         <Text style={styles.watchedDate}>{formatDate(item.timestamp)}</Text>
       </View>
     </View>
   );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity onPress={onPress} activeOpacity={ACTIVE_OPACITY}>
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return content;
 }
 
 export default function MonthDetailScreen() {
@@ -200,6 +169,38 @@ export default function MonthDetailScreen() {
         genre_ids: item.genreIds,
       })
     );
+  }, [monthDetail]);
+
+  // Convert watched movies/TV shows to ListMediaItem format for MediaListCard
+  const watchedMediaItems = useMemo(() => {
+    if (!monthDetail) return [];
+
+    const extractNumericId = (id: string | number): number => {
+      if (typeof id === 'number') return id;
+      const match = id.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    return monthDetail.items.watched
+      .filter((item) => item.mediaType === 'movie' || item.mediaType === 'tv')
+      .map(
+        (item): ListMediaItem => ({
+          id: extractNumericId(item.id),
+          title: item.title,
+          poster_path: item.posterPath,
+          media_type: item.mediaType as 'movie' | 'tv',
+          vote_average: item.voteAverage || 0,
+          release_date: item.releaseDate || '',
+          addedAt: item.timestamp,
+          genre_ids: item.genreIds,
+        })
+      );
+  }, [monthDetail]);
+
+  // Get only episodes for the simple row display
+  const watchedEpisodes = useMemo(() => {
+    if (!monthDetail) return [];
+    return monthDetail.items.watched.filter((item) => item.mediaType === 'episode');
   }, [monthDetail]);
 
   if (isLoading) {
@@ -315,18 +316,41 @@ export default function MonthDetailScreen() {
           contentContainerStyle={styles.listContent}
         />
       ) : activeTab === 'watched' ? (
-        <FlashList
-          data={watched}
-          renderItem={({ item }) => (
-            <WatchedItemRow
-              item={item}
-              onPress={item.mediaType !== 'episode' ? () => handleItemPress(item) : undefined}
+        <>
+          {/* Movies and TV Shows with MediaListCard */}
+          {watchedMediaItems.length > 0 && (
+            <FlashList
+              data={watchedMediaItems}
+              renderItem={({ item }) => <MediaListCard item={item} onPress={handleListItemPress} />}
+              keyExtractor={(item) => `media-${item.id}-${item.addedAt}`}
+              contentContainerStyle={styles.listContent}
+              ListFooterComponent={
+                watchedEpisodes.length > 0 ? (
+                  <Text style={styles.subSectionTitle}>Episodes</Text>
+                ) : null
+              }
             />
           )}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
+          {/* Episodes with simple row */}
+          {watchedEpisodes.length > 0 && watchedMediaItems.length === 0 && (
+            <FlashList
+              data={watchedEpisodes}
+              renderItem={({ item }) => <EpisodeRow item={item} />}
+              keyExtractor={(item, index) => `ep-${item.id}-${index}`}
+              contentContainerStyle={styles.listContent}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+          {watchedEpisodes.length > 0 && watchedMediaItems.length > 0 && (
+            <FlashList
+              data={watchedEpisodes}
+              renderItem={({ item }) => <EpisodeRow item={item} />}
+              keyExtractor={(item, index) => `ep-${item.id}-${index}`}
+              contentContainerStyle={styles.listContent}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
+          )}
+        </>
       ) : (
         <FlashList
           data={rated}
@@ -499,5 +523,14 @@ const styles = StyleSheet.create({
   watchedDate: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+  },
+  subSectionTitle: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginTop: SPACING.l,
+    marginBottom: SPACING.m,
   },
 });
