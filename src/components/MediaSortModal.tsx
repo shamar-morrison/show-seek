@@ -13,7 +13,13 @@ import {
   View,
 } from 'react-native';
 
-export type SortOption = 'recentlyAdded' | 'releaseDate' | 'rating' | 'userRating' | 'alphabetical';
+export type SortOption =
+  | 'recentlyAdded'
+  | 'releaseDate'
+  | 'rating'
+  | 'userRating'
+  | 'alphabetical'
+  | 'popularity';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {
@@ -25,6 +31,15 @@ export const DEFAULT_SORT_STATE: SortState = {
   option: 'recentlyAdded',
   direction: 'desc',
 };
+
+/** Sort options for rating screens (excludes popularity since it's not stored in Firebase) */
+export const RATING_SCREEN_SORT_OPTIONS: SortOption[] = [
+  'recentlyAdded',
+  'releaseDate',
+  'rating',
+  'userRating',
+  'alphabetical',
+];
 
 interface MediaSortModalProps {
   visible: boolean;
@@ -39,6 +54,7 @@ const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: S
   { label: 'Recently Added', value: 'recentlyAdded', defaultDirection: 'desc' },
   { label: 'Release Date', value: 'releaseDate', defaultDirection: 'desc' },
   { label: 'Rating', value: 'rating', defaultDirection: 'desc' },
+  { label: 'Popularity', value: 'popularity', defaultDirection: 'desc' },
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 
@@ -56,10 +72,13 @@ export default function MediaSortModal({
   showUserRatingOption = false,
   allowedOptions,
 }: MediaSortModalProps) {
-  // Build the options list based on props
   let SORT_OPTIONS = showUserRatingOption
-    ? [...BASE_SORT_OPTIONS.slice(0, 3), USER_RATING_OPTION, BASE_SORT_OPTIONS[3]]
-    : BASE_SORT_OPTIONS;
+    ? [
+        ...BASE_SORT_OPTIONS.slice(0, -1),
+        USER_RATING_OPTION,
+        BASE_SORT_OPTIONS[BASE_SORT_OPTIONS.length - 1],
+      ]
+    : [...BASE_SORT_OPTIONS];
 
   // Filter options if allowedOptions is provided
   if (allowedOptions) {
