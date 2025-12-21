@@ -237,7 +237,8 @@ export function HomeListSection({ config }: HomeListSectionProps) {
   const { user } = useAuth();
   const { isPremium } = usePremium();
 
-  // Latest Trailers is premium-only - show Top Rated for guests and non-premium users
+  // Latest Trailers is premium-only - skip for guests and non-premium users
+  // (Top Rated will be added at the end by the Home screen)
   if (config.id === 'latest-trailers') {
     const isGuest = !user;
     const canAccessTrailers = !isGuest && isPremium;
@@ -245,8 +246,8 @@ export function HomeListSection({ config }: HomeListSectionProps) {
     if (canAccessTrailers) {
       return <LatestTrailersSection label={config.label} />;
     }
-    // Fallback to Top Rated for guests and non-premium users
-    return <TMDBListSection id="top-rated-movies" label="Top Rated" />;
+    // Return null - Home screen will append Top Rated at the end
+    return null;
   }
 
   if (config.type === 'tmdb') {

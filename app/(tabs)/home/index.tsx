@@ -4,11 +4,13 @@ import HomeScreenCustomizationModal, {
 } from '@/src/components/HomeScreenCustomizationModal';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +21,18 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { homeScreenLists } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+  const { user } = useAuth();
+  const { isPremium } = usePremium();
+
+  // Check if user can access Latest Trailers (signed in + premium)
+  const canAccessTrailers = useMemo(() => {
+    return !!user && isPremium;
+  }, [user, isPremium]);
+
+  // Check if we need to show Top Rated at the end (for guests/non-premium with latest-trailers in their list)
+  const showTopRatedAtEnd = useMemo(() => {
+    return !canAccessTrailers && homeScreenLists.some((config) => config.id === 'latest-trailers');
+  }, [canAccessTrailers, homeScreenLists]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -70,6 +84,11 @@ export default function HomeScreen() {
         {homeScreenLists.map((config) => (
           <HomeListSection key={config.id} config={config} />
         ))}
+
+        {/* Show Top Rated at the end for guests and non-premium users */}
+        {showTopRatedAtEnd && (
+          <HomeListSection config={{ id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' }} />
+        )}
 
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
