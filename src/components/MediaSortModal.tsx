@@ -63,10 +63,13 @@ export default function MediaSortModal({
   showUserRatingOption = false,
   allowedOptions,
 }: MediaSortModalProps) {
-  // Build the options list based on props
   let SORT_OPTIONS = showUserRatingOption
-    ? [...BASE_SORT_OPTIONS.slice(0, 3), USER_RATING_OPTION, BASE_SORT_OPTIONS[3]]
-    : BASE_SORT_OPTIONS;
+    ? [
+        ...BASE_SORT_OPTIONS.slice(0, -1),
+        USER_RATING_OPTION,
+        BASE_SORT_OPTIONS[BASE_SORT_OPTIONS.length - 1],
+      ]
+    : [...BASE_SORT_OPTIONS];
 
   // Filter options if allowedOptions is provided
   if (allowedOptions) {

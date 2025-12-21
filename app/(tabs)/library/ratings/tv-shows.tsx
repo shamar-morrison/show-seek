@@ -212,6 +212,7 @@ export default function TVShowRatingsScreen() {
         sortState={sortState}
         onApplySort={handleApplySort}
         showUserRatingOption
+        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'userRating', 'alphabetical']}
       />
 
       <WatchStatusFiltersModal
