@@ -1,8 +1,11 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
+import { LatestTrailersSection } from '@/src/components/LatestTrailersSection';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
 import { HomeScreenListItem } from '@/src/types/preferences';
 import { FlashList } from '@shopify/flash-list';
@@ -231,6 +234,22 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
  * Main HomeListSection component - routes to appropriate section based on type
  */
 export function HomeListSection({ config }: HomeListSectionProps) {
+  const { user } = useAuth();
+  const { isPremium } = usePremium();
+
+  // Latest Trailers is premium-only - skip for guests and non-premium users
+  // (Top Rated will be added at the end by the Home screen)
+  if (config.id === 'latest-trailers') {
+    const isGuest = !user;
+    const canAccessTrailers = !isGuest && isPremium;
+
+    if (canAccessTrailers) {
+      return <LatestTrailersSection label={config.label} />;
+    }
+    // Return null - Home screen will append Top Rated at the end
+    return null;
+  }
+
   if (config.type === 'tmdb') {
     return <TMDBListSection id={config.id} label={config.label} />;
   }

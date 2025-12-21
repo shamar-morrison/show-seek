@@ -115,6 +115,13 @@ export interface Video {
   official?: boolean;
 }
 
+export interface TrailerItem extends Video {
+  mediaId: number;
+  mediaType: 'movie' | 'tv';
+  mediaTitle: string;
+  mediaPosterPath: string | null;
+}
+
 export interface ProductionCountry {
   iso_3166_1: string;
   name: string;
@@ -660,5 +667,84 @@ export const tmdbApi = {
       },
     });
     return data.results.sort((a, b) => a.display_priority - b.display_priority);
+  },
+
+  /**
+   * Get latest trailers from upcoming movies and TV shows
+   * Returns 5 movie trailers + 5 TV show trailers, filtered by official YouTube trailers
+   * Optimized to reduce API calls by processing sequentially with early termination
+   */
+  getLatestTrailers: async (): Promise<TrailerItem[]> => {
+    const [moviesData, tvData] = await Promise.all([
+      tmdbApi.getUpcomingMovies(1),
+      tmdbApi.getUpcomingTVShows(1),
+    ]);
+
+    const getOfficialTrailer = async (
+      id: number,
+      type: 'movie' | 'tv',
+      title: string,
+      posterPath: string | null
+    ): Promise<TrailerItem | null> => {
+      try {
+        const videos =
+          type === 'movie' ? await tmdbApi.getMovieVideos(id) : await tmdbApi.getTVVideos(id);
+
+        const trailer = videos.find(
+          (v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official === true
+        );
+
+        if (trailer) {
+          return {
+            ...trailer,
+            mediaId: id,
+            mediaType: type,
+            mediaTitle: title,
+            mediaPosterPath: posterPath,
+          };
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Process items sequentially with early termination to reduce API calls
+    const collectTrailers = async (
+      items: Array<{ id: number; title: string; poster_path: string | null }>,
+      type: 'movie' | 'tv',
+      targetCount: number
+    ): Promise<TrailerItem[]> => {
+      const trailers: TrailerItem[] = [];
+      for (const item of items) {
+        if (trailers.length >= targetCount) break;
+        const trailer = await getOfficialTrailer(item.id, type, item.title, item.poster_path);
+        if (trailer) {
+          trailers.push(trailer);
+        }
+      }
+      return trailers;
+    };
+
+    // Prepare items with normalized title field
+    const movieItems = moviesData.results.slice(0, 8).map((m) => ({
+      id: m.id,
+      title: m.title,
+      poster_path: m.poster_path,
+    }));
+
+    const tvItems = tvData.results.slice(0, 8).map((s) => ({
+      id: s.id,
+      title: s.name,
+      poster_path: s.poster_path,
+    }));
+
+    // Fetch trailers for movies and TV shows in parallel (but each processes sequentially)
+    const [movieTrailers, tvTrailers] = await Promise.all([
+      collectTrailers(movieItems, 'movie', 5),
+      collectTrailers(tvItems, 'tv', 5),
+    ]);
+
+    return [...movieTrailers, ...tvTrailers];
   },
 };
