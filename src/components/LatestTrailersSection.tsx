@@ -16,7 +16,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
   const { data: trailers, isLoading } = useQuery({
     queryKey: ['latest-trailers'],
     queryFn: () => tmdbApi.getLatestTrailers(),
-    staleTime: 1000 * 60 * 30, // 30 minutes
+    staleTime: 1000 * 60 * 60, // 1 hour
   });
 
   const handleTrailerPress = useCallback((trailer: TrailerItem) => {

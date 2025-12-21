@@ -674,13 +674,11 @@ export const tmdbApi = {
    * Returns 5 movie trailers + 5 TV show trailers, filtered by official YouTube trailers
    */
   getLatestTrailers: async (): Promise<TrailerItem[]> => {
-    // Fetch upcoming movies and TV shows
     const [moviesData, tvData] = await Promise.all([
       tmdbApi.getUpcomingMovies(1),
       tmdbApi.getUpcomingTVShows(1),
     ]);
 
-    // Helper to fetch and filter trailers for a media item
     const getOfficialTrailer = async (
       id: number,
       type: 'movie' | 'tv',
@@ -691,7 +689,6 @@ export const tmdbApi = {
         const videos =
           type === 'movie' ? await tmdbApi.getMovieVideos(id) : await tmdbApi.getTVVideos(id);
 
-        // Find an official YouTube trailer
         const trailer = videos.find(
           (v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official === true
         );
