@@ -415,7 +415,7 @@ export default function PersonDetailScreen() {
                 <Text style={styles.sectionTitle}>
                   {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
                 </Text>
-                <Text style={styles.viewAll}>View All</Text>
+                <ArrowRight size={24} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>

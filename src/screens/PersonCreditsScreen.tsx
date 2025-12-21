@@ -62,6 +62,13 @@ export default function PersonCreditsScreen() {
     | { cast: Movie[]; crew: MovieCrewCredit[] }
     | { cast: TVShow[]; crew: TVCrewCredit[] };
 
+  // Cast credits have character, crew credits have job
+  type MovieCastCredit = Movie & { character?: string };
+  type TVCastCredit = TVShow & { character?: string };
+  type CastCredit = MovieCastCredit | TVCastCredit;
+  type CrewCredit = MovieCrewCredit | TVCrewCredit;
+  type RawCredit = CastCredit | CrewCredit;
+
   const creditsQuery = useQuery<CreditsResponse>({
     queryKey: ['person', personId, `${mediaType}-credits`],
     queryFn: async () => {
@@ -77,7 +84,9 @@ export default function PersonCreditsScreen() {
   const credits: CreditItem[] = useMemo(() => {
     if (!creditsQuery.data) return [];
 
-    const rawCredits = isCrewCredits ? creditsQuery.data.crew : creditsQuery.data.cast;
+    const rawCredits: RawCredit[] = isCrewCredits
+      ? (creditsQuery.data.crew as CrewCredit[])
+      : (creditsQuery.data.cast as CastCredit[]);
 
     // For crew credits, filter to relevant jobs
     const relevantCrewJobs = [
@@ -89,43 +98,43 @@ export default function PersonCreditsScreen() {
       'Executive Producer',
     ];
 
-    let filtered = isCrewCredits
-      ? rawCredits.filter((credit: any) =>
-          relevantCrewJobs.some((job) => credit.job?.includes(job))
+    let filtered: RawCredit[] = isCrewCredits
+      ? rawCredits.filter((credit) =>
+          relevantCrewJobs.some((job) => (credit as CrewCredit).job?.includes(job))
         )
       : rawCredits;
 
     if (isTVCredits) {
       filtered = filtered.filter(
-        (item: any) => !item.genre_ids?.some((id: number) => EXCLUDED_TV_GENRE_IDS.includes(id))
+        (item) => !item.genre_ids?.some((id) => EXCLUDED_TV_GENRE_IDS.includes(id))
       );
     }
 
     // Deduplicate (a person may have multiple roles on same project)
-    const uniqueMap = new Map<number, any>();
-    filtered.forEach((credit: any) => {
+    const uniqueMap = new Map<number, RawCredit>();
+    filtered.forEach((credit) => {
       if (!uniqueMap.has(credit.id)) {
         uniqueMap.set(credit.id, credit);
       }
     });
 
-    // Transform to ListMediaItem format and sort by popularity
+    // Transform to CreditItem format and sort by popularity
     return Array.from(uniqueMap.values())
       .sort((a, b) => b.popularity - a.popularity)
-      .map((credit: Movie | TVShow | any) => ({
-        id: credit.id,
-        title: isTVCredits ? (credit as TVShow).name : (credit as Movie).title,
-        poster_path: credit.poster_path,
-        media_type: mediaType as 'movie' | 'tv',
-        vote_average: credit.vote_average || 0,
-        release_date: isTVCredits
-          ? (credit as TVShow).first_air_date
-          : (credit as Movie).release_date,
-        addedAt: 0,
-        genre_ids: credit.genre_ids,
-        character: (credit as any).character,
-        job: (credit as any).job,
-      }));
+      .map(
+        (credit): CreditItem => ({
+          id: credit.id,
+          title: 'name' in credit ? credit.name : credit.title,
+          poster_path: credit.poster_path,
+          media_type: mediaType as 'movie' | 'tv',
+          vote_average: credit.vote_average || 0,
+          release_date: 'first_air_date' in credit ? credit.first_air_date : credit.release_date,
+          addedAt: 0,
+          genre_ids: credit.genre_ids,
+          character: 'character' in credit ? credit.character : undefined,
+          job: 'job' in credit ? credit.job : undefined,
+        })
+      );
   }, [creditsQuery.data, isCrewCredits, isTVCredits, mediaType]);
 
   const handleItemPress = useCallback(
