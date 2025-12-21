@@ -7,11 +7,15 @@ import {
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { Lock } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -38,15 +42,22 @@ interface ListItemProps {
   type: HomeListType;
   isSelected: boolean;
   onToggle: (item: HomeScreenListItem) => void;
+  isPremiumLocked?: boolean;
 }
 
-const ListItem = ({ id, label, type, isSelected, onToggle }: ListItemProps) => {
+const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: ListItemProps) => {
   return (
     <Pressable style={styles.listItem} onPress={() => onToggle({ id, type, label })}>
       <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
         <AnimatedCheck visible={isSelected} />
       </View>
       <Text style={styles.listName}>{label}</Text>
+      {isPremiumLocked && (
+        <View style={styles.premiumBadge}>
+          <Lock size={10} color={COLORS.primary} />
+          <Text style={styles.premiumBadgeText}>Premium</Text>
+        </View>
+      )}
     </Pressable>
   );
 };
@@ -60,6 +71,13 @@ const HomeScreenCustomizationModal = forwardRef<
   const { homeScreenLists } = usePreferences();
   const { data: userLists } = useLists();
   const updateMutation = useUpdateHomeScreenLists();
+  const { user } = useAuth();
+  const { isPremium } = usePremium();
+  const router = useRouter();
+
+  // Guest and non-premium users can't access Latest Trailers
+  const isGuest = !user;
+  const canAccessTrailers = !isGuest && isPremium;
 
   // Local state for pending selections (only persisted on Apply)
   const [pendingSelections, setPendingSelections] = useState<HomeScreenListItem[]>([]);
@@ -82,30 +100,41 @@ const HomeScreenCustomizationModal = forwardRef<
     },
   }));
 
-  const handleToggle = useCallback((item: HomeScreenListItem) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setError(null);
-
-    setPendingSelections((current) => {
-      const isSelected = current.some((s) => s.id === item.id);
-
-      if (isSelected) {
-        if (current.length <= MIN_HOME_LISTS) {
-          setError(`Select at least ${MIN_HOME_LISTS} list${MIN_HOME_LISTS === 1 ? '' : 's'}`);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          return current;
-        }
-        return current.filter((s) => s.id !== item.id);
-      } else {
-        if (current.length >= MAX_HOME_LISTS) {
-          setError(`Select at most ${MAX_HOME_LISTS} lists`);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          return current;
-        }
-        return [...current, item];
+  const handleToggle = useCallback(
+    (item: HomeScreenListItem) => {
+      // Check if this is a premium-locked item (guests and non-premium users)
+      if (item.id === 'latest-trailers' && !canAccessTrailers) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        sheetRef.current?.dismiss();
+        router.push('/premium');
+        return;
       }
-    });
-  }, []);
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setError(null);
+
+      setPendingSelections((current) => {
+        const isSelected = current.some((s) => s.id === item.id);
+
+        if (isSelected) {
+          if (current.length <= MIN_HOME_LISTS) {
+            setError(`Select at least ${MIN_HOME_LISTS} list${MIN_HOME_LISTS === 1 ? '' : 's'}`);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            return current;
+          }
+          return current.filter((s) => s.id !== item.id);
+        } else {
+          if (current.length >= MAX_HOME_LISTS) {
+            setError(`Select at most ${MAX_HOME_LISTS} lists`);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            return current;
+          }
+          return [...current, item];
+        }
+      });
+    },
+    [canAccessTrailers, router]
+  );
 
   const handleApply = async () => {
     try {
@@ -163,6 +192,7 @@ const HomeScreenCustomizationModal = forwardRef<
               type="tmdb"
               isSelected={isSelected(list.id)}
               onToggle={handleToggle}
+              isPremiumLocked={list.id === 'latest-trailers' && !canAccessTrailers}
             />
           ))}
 
@@ -295,6 +325,22 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
+    flex: 1,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.s,
+    marginLeft: SPACING.s,
+  },
+  premiumBadgeText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',

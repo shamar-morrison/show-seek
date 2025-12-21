@@ -17,6 +17,8 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     queryKey: ['latest-trailers'],
     queryFn: () => tmdbApi.getLatestTrailers(),
     staleTime: 1000 * 60 * 60, // 1 hour
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const handleTrailerPress = (trailer: TrailerItem) => {
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.s,
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
-    gap: 4,
+    gap: SPACING.xs,
   },
   mediaTypeText: {
     color: COLORS.text,
@@ -146,7 +148,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   videoType: {
     color: COLORS.textSecondary,
