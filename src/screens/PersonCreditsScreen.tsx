@@ -140,11 +140,8 @@ export default function PersonCreditsScreen() {
     [currentTab, router]
   );
 
-  const subtitleText = useMemo(() => {
-    const count = credits.length;
-    const mediaLabel = isTVCredits ? 'TV Show' : 'Movie';
-    return `${count} ${mediaLabel} ${count === 1 ? 'Credit' : 'Credits'}`;
-  }, [credits.length, isTVCredits]);
+  // Title format: "Person Name Movies" or "Person Name TV Shows"
+  const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
 
   const renderGridItem = useCallback(
     ({ item }: { item: CreditItem }) => (
@@ -245,16 +242,11 @@ export default function PersonCreditsScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: name || 'Credits',
+          title: screenTitle,
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
         }}
       />
-
-      {/* Subtitle under header */}
-      <View style={styles.subtitleContainer}>
-        <Text style={styles.subtitle}>{subtitleText}</Text>
-      </View>
 
       {credits.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -310,16 +302,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: COLORS.primary,
-  },
-  subtitleContainer: {
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.s,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  subtitle: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   emptyContainer: {
     flex: 1,
