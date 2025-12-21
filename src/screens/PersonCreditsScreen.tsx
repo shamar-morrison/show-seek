@@ -44,7 +44,6 @@ const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-// Default sort for person credits: popularity descending
 const DEFAULT_CREDITS_SORT: SortState = {
   option: 'rating',
   direction: 'desc',
@@ -79,7 +78,6 @@ export default function PersonCreditsScreen() {
   );
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
 
-  // Fetch genre data for filter modal
   const { data: genreMap = {} } = useAllGenres();
 
   const hasActiveSort =
@@ -102,12 +100,10 @@ export default function PersonCreditsScreen() {
     actionButton,
   });
 
-  // union type for both movie and TV credits
   type CreditsResponse =
     | { cast: Movie[]; crew: MovieCrewCredit[] }
     | { cast: TVShow[]; crew: TVCrewCredit[] };
 
-  // Cast credits have character, crew credits have job
   type MovieCastCredit = Movie & { character?: string };
   type TVCastCredit = TVShow & { character?: string };
   type CastCredit = MovieCastCredit | TVCastCredit;
@@ -125,7 +121,6 @@ export default function PersonCreditsScreen() {
     enabled: !!personId,
   });
 
-  // Transform, filter, and sort credits
   const credits: CreditItem[] = useMemo(() => {
     if (!creditsQuery.data) return [];
 
@@ -133,7 +128,6 @@ export default function PersonCreditsScreen() {
       ? (creditsQuery.data.crew as CrewCredit[])
       : (creditsQuery.data.cast as CastCredit[]);
 
-    // For crew credits, filter to relevant jobs
     const relevantCrewJobs = [
       'Director',
       'Writer',
@@ -163,7 +157,6 @@ export default function PersonCreditsScreen() {
       }
     });
 
-    // Transform to CreditItem format
     const items: CreditItem[] = Array.from(uniqueMap.values()).map(
       (credit): CreditItem => ({
         id: credit.id,
@@ -180,10 +173,8 @@ export default function PersonCreditsScreen() {
       })
     );
 
-    // Apply filters
     const filteredItems = filterMediaItems(items, filterState);
 
-    // Apply sorting
     return [...filteredItems].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
@@ -219,7 +210,6 @@ export default function PersonCreditsScreen() {
     [currentTab, router]
   );
 
-  // Title format: "Person Name Movies" or "Person Name TV Shows"
   const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
 
   const listActions = useMemo(
