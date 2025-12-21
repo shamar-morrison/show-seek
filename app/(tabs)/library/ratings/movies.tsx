@@ -3,7 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { MovieRatingListCard } from '@/src/components/library/MovieRatingListCard';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import ListActionsModal from '@/src/components/ListActionsModal';
-import MediaSortModal from '@/src/components/MediaSortModal';
+import MediaSortModal, { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -33,7 +33,6 @@ const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / CO
 
 const VIEW_MODE_STORAGE_KEY = 'movieRatingsViewMode';
 
-// Memoized media extractor for performance
 const getMovieFromItem = (item: EnrichedMovieRating) => item.movie;
 
 export default function MovieRatingsScreen() {
@@ -43,7 +42,6 @@ export default function MovieRatingsScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Use shared rating screen logic
   const {
     sortState,
     filterState,
@@ -212,7 +210,7 @@ export default function MovieRatingsScreen() {
         sortState={sortState}
         onApplySort={handleApplySort}
         showUserRatingOption
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'userRating', 'alphabetical']}
+        allowedOptions={RATING_SCREEN_SORT_OPTIONS}
       />
 
       <WatchStatusFiltersModal

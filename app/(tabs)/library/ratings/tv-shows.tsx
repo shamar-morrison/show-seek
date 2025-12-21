@@ -3,7 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
 import ListActionsModal from '@/src/components/ListActionsModal';
-import MediaSortModal from '@/src/components/MediaSortModal';
+import MediaSortModal, { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -212,7 +212,7 @@ export default function TVShowRatingsScreen() {
         sortState={sortState}
         onApplySort={handleApplySort}
         showUserRatingOption
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'userRating', 'alphabetical']}
+        allowedOptions={RATING_SCREEN_SORT_OPTIONS}
       />
 
       <WatchStatusFiltersModal

@@ -32,6 +32,15 @@ export const DEFAULT_SORT_STATE: SortState = {
   direction: 'desc',
 };
 
+/** Sort options for rating screens (excludes popularity since it's not stored in Firebase) */
+export const RATING_SCREEN_SORT_OPTIONS: SortOption[] = [
+  'recentlyAdded',
+  'releaseDate',
+  'rating',
+  'userRating',
+  'alphabetical',
+];
+
 interface MediaSortModalProps {
   visible: boolean;
   onClose: () => void;
