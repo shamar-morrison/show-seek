@@ -13,7 +13,13 @@ import {
   View,
 } from 'react-native';
 
-export type SortOption = 'recentlyAdded' | 'releaseDate' | 'rating' | 'userRating' | 'alphabetical';
+export type SortOption =
+  | 'recentlyAdded'
+  | 'releaseDate'
+  | 'rating'
+  | 'userRating'
+  | 'alphabetical'
+  | 'popularity';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {
@@ -39,6 +45,7 @@ const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: S
   { label: 'Recently Added', value: 'recentlyAdded', defaultDirection: 'desc' },
   { label: 'Release Date', value: 'releaseDate', defaultDirection: 'desc' },
   { label: 'Rating', value: 'rating', defaultDirection: 'desc' },
+  { label: 'Popularity', value: 'popularity', defaultDirection: 'desc' },
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 

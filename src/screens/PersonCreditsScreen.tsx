@@ -173,7 +173,7 @@ export default function PersonCreditsScreen() {
       })
     );
 
-    const filteredItems = filterMediaItems(items, filterState);
+    const filteredItems = filterMediaItems(items, filterState) as CreditItem[];
 
     return [...filteredItems].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
@@ -191,9 +191,10 @@ export default function PersonCreditsScreen() {
           const titleB = (b.title || '').toLowerCase();
           return titleA.localeCompare(titleB) * direction;
         }
+        case 'popularity':
+          return ((a.popularity ?? 0) - (b.popularity ?? 0)) * direction;
         default:
-          // Default to rating (descending)
-          return ((b.vote_average ?? 0) - (a.vote_average ?? 0)) * direction;
+          return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
       }
     });
   }, [creditsQuery.data, isCrewCredits, isTVCredits, mediaType, filterState, sortState]);
@@ -356,7 +357,7 @@ export default function PersonCreditsScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={setSortState}
-        allowedOptions={['releaseDate', 'rating', 'alphabetical']}
+        allowedOptions={['popularity', 'releaseDate', 'rating', 'alphabetical']}
       />
 
       <WatchStatusFiltersModal
