@@ -115,6 +115,13 @@ export interface Video {
   official?: boolean;
 }
 
+export interface TrailerItem extends Video {
+  mediaId: number;
+  mediaType: 'movie' | 'tv';
+  mediaTitle: string;
+  mediaPosterPath: string | null;
+}
+
 export interface ProductionCountry {
   iso_3166_1: string;
   name: string;
@@ -660,5 +667,72 @@ export const tmdbApi = {
       },
     });
     return data.results.sort((a, b) => a.display_priority - b.display_priority);
+  },
+
+  /**
+   * Get latest trailers from upcoming movies and TV shows
+   * Returns 5 movie trailers + 5 TV show trailers, filtered by official YouTube trailers
+   */
+  getLatestTrailers: async (): Promise<TrailerItem[]> => {
+    // Fetch upcoming movies and TV shows
+    const [moviesData, tvData] = await Promise.all([
+      tmdbApi.getUpcomingMovies(1),
+      tmdbApi.getUpcomingTVShows(1),
+    ]);
+
+    // Helper to fetch and filter trailers for a media item
+    const getOfficialTrailer = async (
+      id: number,
+      type: 'movie' | 'tv',
+      title: string,
+      posterPath: string | null
+    ): Promise<TrailerItem | null> => {
+      try {
+        const videos =
+          type === 'movie' ? await tmdbApi.getMovieVideos(id) : await tmdbApi.getTVVideos(id);
+
+        // Find an official YouTube trailer
+        const trailer = videos.find(
+          (v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official === true
+        );
+
+        if (trailer) {
+          return {
+            ...trailer,
+            mediaId: id,
+            mediaType: type,
+            mediaTitle: title,
+            mediaPosterPath: posterPath,
+          };
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Fetch trailers for movies (limit to first 10 to avoid too many requests)
+    const movieTrailerPromises = moviesData.results
+      .slice(0, 10)
+      .map((movie) => getOfficialTrailer(movie.id, 'movie', movie.title, movie.poster_path));
+
+    // Fetch trailers for TV shows (limit to first 10 to avoid too many requests)
+    const tvTrailerPromises = tvData.results
+      .slice(0, 10)
+      .map((show) => getOfficialTrailer(show.id, 'tv', show.name, show.poster_path));
+
+    const [movieTrailers, tvTrailers] = await Promise.all([
+      Promise.all(movieTrailerPromises),
+      Promise.all(tvTrailerPromises),
+    ]);
+
+    // Filter out nulls and take 5 of each
+    const filteredMovieTrailers = movieTrailers
+      .filter((t): t is TrailerItem => t !== null)
+      .slice(0, 5);
+    const filteredTVTrailers = tvTrailers.filter((t): t is TrailerItem => t !== null).slice(0, 5);
+
+    // Combine movie and TV trailers
+    return [...filteredMovieTrailers, ...filteredTVTrailers];
   },
 };

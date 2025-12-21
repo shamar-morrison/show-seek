@@ -27,6 +27,7 @@ export default function HomeScreen() {
       queryClient.invalidateQueries({ queryKey: ['popular'] }),
       queryClient.invalidateQueries({ queryKey: ['topRated'] }),
       queryClient.invalidateQueries({ queryKey: ['upcoming'] }),
+      queryClient.invalidateQueries({ queryKey: ['latest-trailers'] }),
     ]);
     setRefreshing(false);
   }, [queryClient]);

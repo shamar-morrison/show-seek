@@ -1,6 +1,7 @@
 import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
+import { LatestTrailersSection } from '@/src/components/LatestTrailersSection';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
@@ -231,6 +232,11 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
  * Main HomeListSection component - routes to appropriate section based on type
  */
 export function HomeListSection({ config }: HomeListSectionProps) {
+  // Special handling for latest-trailers
+  if (config.id === 'latest-trailers') {
+    return <LatestTrailersSection label={config.label} />;
+  }
+
   if (config.type === 'tmdb') {
     return <TMDBListSection id={config.id} label={config.label} />;
   }
