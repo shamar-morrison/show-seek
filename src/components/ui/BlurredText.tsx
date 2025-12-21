@@ -1,4 +1,11 @@
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import React, { useCallback, useState } from 'react';
 import {
   StyleProp,
@@ -122,16 +129,16 @@ const styles = StyleSheet.create({
   },
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
   hintContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.round,
     backgroundColor: COLORS.surfaceLight,
   },
   hintText: {
@@ -140,7 +147,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   readMoreContainer: {
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   readMore: {
     color: COLORS.primary,
