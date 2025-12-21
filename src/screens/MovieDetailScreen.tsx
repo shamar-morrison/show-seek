@@ -17,6 +17,7 @@ import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
 import ReminderModal from '@/src/components/ReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
@@ -473,11 +474,20 @@ export default function MovieDetailScreen() {
           {userRating > 0 && <UserRating rating={userRating} />}
 
           <Text style={detailStyles.sectionTitle}>Overview</Text>
-          <ExpandableText
-            text={movie.overview || 'No overview available'}
-            style={detailStyles.overview}
-            readMoreStyle={detailStyles.readMore}
-          />
+          {preferences?.blurPlotSpoilers ? (
+            <BlurredText
+              text={movie.overview || 'No overview available'}
+              style={detailStyles.overview}
+              readMoreStyle={detailStyles.readMore}
+              isBlurred={true}
+            />
+          ) : (
+            <ExpandableText
+              text={movie.overview || 'No overview available'}
+              style={detailStyles.overview}
+              readMoreStyle={detailStyles.readMore}
+            />
+          )}
 
           <SectionSeparator />
 

@@ -17,6 +17,7 @@ import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
 import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
@@ -30,6 +31,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
   useCancelReminder,
@@ -100,6 +102,7 @@ export default function TVDetailScreen() {
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
+  const { preferences } = usePreferences();
   const isInAnyList = Object.keys(membership).length > 0;
 
   // Reminder hooks
@@ -631,11 +634,20 @@ export default function TVDetailScreen() {
           {userRating > 0 && <UserRating rating={userRating} />}
 
           <Text style={detailStyles.sectionTitle}>Overview</Text>
-          <ExpandableText
-            text={show.overview || 'No overview available'}
-            style={detailStyles.overview}
-            readMoreStyle={detailStyles.readMore}
-          />
+          {preferences?.blurPlotSpoilers ? (
+            <BlurredText
+              text={show.overview || 'No overview available'}
+              style={detailStyles.overview}
+              readMoreStyle={detailStyles.readMore}
+              isBlurred={true}
+            />
+          ) : (
+            <ExpandableText
+              text={show.overview || 'No overview available'}
+              style={detailStyles.overview}
+              readMoreStyle={detailStyles.readMore}
+            />
+          )}
 
           <SectionSeparator />
 
