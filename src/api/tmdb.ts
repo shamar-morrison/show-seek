@@ -672,6 +672,7 @@ export const tmdbApi = {
   /**
    * Get latest trailers from upcoming movies and TV shows
    * Returns 5 movie trailers + 5 TV show trailers, filtered by official YouTube trailers
+   * Optimized to reduce API calls by processing sequentially with early termination
    */
   getLatestTrailers: async (): Promise<TrailerItem[]> => {
     const [moviesData, tvData] = await Promise.all([
@@ -708,28 +709,42 @@ export const tmdbApi = {
       }
     };
 
-    // Fetch trailers for movies (limit to first 10 to avoid too many requests)
-    const movieTrailerPromises = moviesData.results
-      .slice(0, 10)
-      .map((movie) => getOfficialTrailer(movie.id, 'movie', movie.title, movie.poster_path));
+    // Process items sequentially with early termination to reduce API calls
+    const collectTrailers = async (
+      items: Array<{ id: number; title: string; poster_path: string | null }>,
+      type: 'movie' | 'tv',
+      targetCount: number
+    ): Promise<TrailerItem[]> => {
+      const trailers: TrailerItem[] = [];
+      for (const item of items) {
+        if (trailers.length >= targetCount) break;
+        const trailer = await getOfficialTrailer(item.id, type, item.title, item.poster_path);
+        if (trailer) {
+          trailers.push(trailer);
+        }
+      }
+      return trailers;
+    };
 
-    // Fetch trailers for TV shows (limit to first 10 to avoid too many requests)
-    const tvTrailerPromises = tvData.results
-      .slice(0, 10)
-      .map((show) => getOfficialTrailer(show.id, 'tv', show.name, show.poster_path));
+    // Prepare items with normalized title field
+    const movieItems = moviesData.results.slice(0, 8).map((m) => ({
+      id: m.id,
+      title: m.title,
+      poster_path: m.poster_path,
+    }));
 
+    const tvItems = tvData.results.slice(0, 8).map((s) => ({
+      id: s.id,
+      title: s.name,
+      poster_path: s.poster_path,
+    }));
+
+    // Fetch trailers for movies and TV shows in parallel (but each processes sequentially)
     const [movieTrailers, tvTrailers] = await Promise.all([
-      Promise.all(movieTrailerPromises),
-      Promise.all(tvTrailerPromises),
+      collectTrailers(movieItems, 'movie', 5),
+      collectTrailers(tvItems, 'tv', 5),
     ]);
 
-    // Filter out nulls and take 5 of each
-    const filteredMovieTrailers = movieTrailers
-      .filter((t): t is TrailerItem => t !== null)
-      .slice(0, 5);
-    const filteredTVTrailers = tvTrailers.filter((t): t is TrailerItem => t !== null).slice(0, 5);
-
-    // Combine movie and TV trailers
-    return [...filteredMovieTrailers, ...filteredTVTrailers];
+    return [...movieTrailers, ...tvTrailers];
   },
 };
