@@ -19,18 +19,16 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     staleTime: 1000 * 60 * 60, // 1 hour
   });
 
-  const handleTrailerPress = useCallback((trailer: TrailerItem) => {
+  const handleTrailerPress = (trailer: TrailerItem) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
-    try {
-      Linking.openURL(youtubeUrl);
-    } catch (error) {
+    Linking.openURL(youtubeUrl).catch((error) => {
       Alert.alert(
         'Error',
         'Unable to open video. Please make sure you have a web browser or YouTube installed.'
       );
       console.error('Error opening trailer:', error);
-    }
-  }, []);
+    });
+  };
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => (
