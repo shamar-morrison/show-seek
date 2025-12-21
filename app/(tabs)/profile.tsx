@@ -1,4 +1,5 @@
 import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -109,12 +110,7 @@ function ActionButton({
         >
           {label}
         </Text>
-        {isPremiumFeature && !isPremium && (
-          <View style={styles.premiumBadge}>
-            <Crown size={10} color={COLORS.warning} />
-            <Text style={styles.premiumBadgeText}>Premium</Text>
-          </View>
-        )}
+        {isPremiumFeature && !isPremium && <PremiumBadge />}
       </View>
     </TouchableOpacity>
   );
@@ -422,6 +418,67 @@ export default function ProfileScreen() {
                       />
                     )}
                   </View>
+                  <TouchableOpacity
+                    style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
+                    activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}
+                    onPress={() => {
+                      if (!isPremium) {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push('/premium');
+                      }
+                    }}
+                    disabled={isPremium}
+                  >
+                    <View style={styles.preferenceInfo}>
+                      <View style={styles.preferenceLabelRow}>
+                        <Text
+                          style={[
+                            styles.preferenceLabel,
+                            !isPremium && styles.preferenceLabelLocked,
+                          ]}
+                        >
+                          Blur movie and TV plot
+                        </Text>
+                        {!isPremium && <PremiumBadge />}
+                      </View>
+                      <Text
+                        style={[
+                          styles.preferenceSubtitle,
+                          !isPremium && styles.preferenceSubtitleLocked,
+                        ]}
+                      >
+                        Hide plot summaries by default to avoid spoilers. Tap to reveal.
+                      </Text>
+                    </View>
+                    {isPremium && (
+                      <>
+                        {preferencesLoading ? (
+                          <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                          <Switch
+                            value={!!preferences?.blurPlotSpoilers}
+                            onValueChange={(value) => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              updatePreference.mutate(
+                                { key: 'blurPlotSpoilers', value },
+                                {
+                                  onError: () => {
+                                    Alert.alert(
+                                      'Error',
+                                      'Failed to update preference. Please try again.'
+                                    );
+                                  },
+                                }
+                              );
+                            }}
+                            disabled={preferencesLoading || updatePreference.isPending}
+                            trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                            thumbColor={COLORS.white}
+                          />
+                        )}
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </>
               )}
             </View>
@@ -657,20 +714,6 @@ const styles = StyleSheet.create({
   actionButtonTextLocked: {
     color: COLORS.textSecondary,
   },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(100, 138, 255, 0.15)',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.s,
-    gap: 4,
-  },
-  premiumBadgeText: {
-    fontSize: 10,
-    color: COLORS.warning,
-    fontWeight: '600',
-  },
   reauthSection: {
     marginTop: SPACING.xl,
     paddingHorizontal: SPACING.l,
@@ -747,6 +790,22 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     lineHeight: 18,
+  },
+  preferenceItemLocked: {
+    opacity: 0.6,
+  },
+  preferenceLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    marginBottom: SPACING.xs,
+  },
+  preferenceLabelLocked: {
+    color: COLORS.textSecondary,
+    marginBottom: 0,
+  },
+  preferenceSubtitleLocked: {
+    color: COLORS.textSecondary,
   },
   retryButton: {
     backgroundColor: COLORS.primary,

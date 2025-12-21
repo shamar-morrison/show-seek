@@ -15,7 +15,6 @@ import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Lock } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
+import { PremiumBadge } from './ui/PremiumBadge';
 
 export interface HomeScreenCustomizationModalRef {
   present: () => Promise<void>;
@@ -52,12 +52,7 @@ const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: Li
         <AnimatedCheck visible={isSelected} />
       </View>
       <Text style={styles.listName}>{label}</Text>
-      {isPremiumLocked && (
-        <View style={styles.premiumBadge}>
-          <Lock size={10} color={COLORS.primary} />
-          <Text style={styles.premiumBadgeText}>Premium</Text>
-        </View>
-      )}
+      {isPremiumLocked && <PremiumBadge />}
     </Pressable>
   );
 };
@@ -326,21 +321,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     flex: 1,
-  },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.s,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.s,
-    marginLeft: SPACING.s,
-  },
-  premiumBadgeText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.primary,
-    fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',

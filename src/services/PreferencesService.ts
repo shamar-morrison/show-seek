@@ -35,6 +35,8 @@ class PreferencesService {
             autoAddToAlreadyWatched:
               data?.preferences?.autoAddToAlreadyWatched ??
               DEFAULT_PREFERENCES.autoAddToAlreadyWatched,
+            blurPlotSpoilers:
+              data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
             homeScreenLists: data?.preferences?.homeScreenLists,
           };
           callback(preferences);
