@@ -6,7 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Tv } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface LatestTrailersSectionProps {
   label: string;
@@ -21,7 +21,15 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
 
   const handleTrailerPress = useCallback((trailer: TrailerItem) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
-    Linking.openURL(youtubeUrl);
+    try {
+      Linking.openURL(youtubeUrl);
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Unable to open video. Please make sure you have a web browser or YouTube installed.'
+      );
+      console.error('Error opening trailer:', error);
+    }
   }, []);
 
   const renderTrailerCard = useCallback(
