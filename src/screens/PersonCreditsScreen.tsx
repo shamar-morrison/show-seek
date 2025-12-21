@@ -8,17 +8,27 @@ import {
   TVShow,
 } from '@/src/api/tmdb';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
+import MediaSortModal, { SortState } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAllGenres } from '@/src/hooks/useGenres';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import {
+  DEFAULT_WATCH_STATUS_FILTERS,
+  filterMediaItems,
+  hasActiveFilters,
+  WatchStatusFilterState,
+} from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Film, Star, Tv } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import { ArrowUpDown, Film, Settings2, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -34,9 +44,16 @@ const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 3;
 const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
+// Default sort for person credits: popularity descending
+const DEFAULT_CREDITS_SORT: SortState = {
+  option: 'rating',
+  direction: 'desc',
+};
+
 interface CreditItem extends ListMediaItem {
   character?: string;
   job?: string;
+  popularity?: number;
 }
 
 export default function PersonCreditsScreen() {
@@ -53,9 +70,36 @@ export default function PersonCreditsScreen() {
   const isTVCredits = mediaType === 'tv';
   const isCrewCredits = creditType === 'crew';
 
+  // Sort and filter state
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_CREDITS_SORT);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterState, setFilterState] = useState<WatchStatusFilterState>(
+    DEFAULT_WATCH_STATUS_FILTERS
+  );
+  const listActionsModalRef = useRef<ListActionsModalRef>(null);
+
+  // Fetch genre data for filter modal
+  const { data: genreMap = {} } = useAllGenres();
+
+  const hasActiveSort =
+    sortState.option !== DEFAULT_CREDITS_SORT.option ||
+    sortState.direction !== DEFAULT_CREDITS_SORT.direction;
+  const hasActiveFilterState = hasActiveFilters(filterState);
+
+  const actionButton = useMemo(
+    () => ({
+      icon: Settings2,
+      onPress: () => listActionsModalRef.current?.present(),
+      showBadge: hasActiveSort || hasActiveFilterState,
+    }),
+    [hasActiveSort, hasActiveFilterState]
+  );
+
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: `person-credits-view-${mediaType}`,
     showSortButton: false,
+    actionButton,
   });
 
   // union type for both movie and TV credits
@@ -81,7 +125,7 @@ export default function PersonCreditsScreen() {
     enabled: !!personId,
   });
 
-  // Transform and filter credits
+  // Transform, filter, and sort credits
   const credits: CreditItem[] = useMemo(() => {
     if (!creditsQuery.data) return [];
 
@@ -119,24 +163,49 @@ export default function PersonCreditsScreen() {
       }
     });
 
-    // Transform to CreditItem format and sort by popularity
-    return Array.from(uniqueMap.values())
-      .sort((a, b) => b.popularity - a.popularity)
-      .map(
-        (credit): CreditItem => ({
-          id: credit.id,
-          title: 'name' in credit ? credit.name : credit.title,
-          poster_path: credit.poster_path,
-          media_type: mediaType as 'movie' | 'tv',
-          vote_average: credit.vote_average || 0,
-          release_date: 'first_air_date' in credit ? credit.first_air_date : credit.release_date,
-          addedAt: 0,
-          genre_ids: credit.genre_ids,
-          character: 'character' in credit ? credit.character : undefined,
-          job: 'job' in credit ? credit.job : undefined,
-        })
-      );
-  }, [creditsQuery.data, isCrewCredits, isTVCredits, mediaType]);
+    // Transform to CreditItem format
+    const items: CreditItem[] = Array.from(uniqueMap.values()).map(
+      (credit): CreditItem => ({
+        id: credit.id,
+        title: 'name' in credit ? credit.name : credit.title,
+        poster_path: credit.poster_path,
+        media_type: mediaType as 'movie' | 'tv',
+        vote_average: credit.vote_average || 0,
+        release_date: 'first_air_date' in credit ? credit.first_air_date : credit.release_date,
+        addedAt: 0,
+        genre_ids: credit.genre_ids,
+        character: 'character' in credit ? credit.character : undefined,
+        job: 'job' in credit ? credit.job : undefined,
+        popularity: credit.popularity,
+      })
+    );
+
+    // Apply filters
+    const filteredItems = filterMediaItems(items, filterState);
+
+    // Apply sorting
+    return [...filteredItems].sort((a, b) => {
+      const direction = sortState.direction === 'asc' ? 1 : -1;
+
+      switch (sortState.option) {
+        case 'releaseDate': {
+          const dateA = a.release_date || '';
+          const dateB = b.release_date || '';
+          return dateA.localeCompare(dateB) * direction;
+        }
+        case 'rating':
+          return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
+        case 'alphabetical': {
+          const titleA = (a.title || '').toLowerCase();
+          const titleB = (b.title || '').toLowerCase();
+          return titleA.localeCompare(titleB) * direction;
+        }
+        default:
+          // Default to rating (descending)
+          return ((b.vote_average ?? 0) - (a.vote_average ?? 0)) * direction;
+      }
+    });
+  }, [creditsQuery.data, isCrewCredits, isTVCredits, mediaType, filterState, sortState]);
 
   const handleItemPress = useCallback(
     (item: CreditItem) => {
@@ -152,6 +221,26 @@ export default function PersonCreditsScreen() {
 
   // Title format: "Person Name Movies" or "Person Name TV Shows"
   const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
+
+  const listActions = useMemo(
+    () => [
+      {
+        id: 'filter',
+        icon: SlidersHorizontal,
+        label: 'Filter Items',
+        onPress: () => setFilterModalVisible(true),
+        showBadge: hasActiveFilterState,
+      },
+      {
+        id: 'sort',
+        icon: ArrowUpDown,
+        label: 'Sort Items',
+        onPress: () => setSortModalVisible(true),
+        showBadge: hasActiveSort,
+      },
+    ],
+    [hasActiveFilterState, hasActiveSort]
+  );
 
   const renderGridItem = useCallback(
     ({ item }: { item: CreditItem }) => (
@@ -222,41 +311,78 @@ export default function PersonCreditsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: screenTitle,
-          headerStyle: { backgroundColor: COLORS.background },
-          headerTintColor: COLORS.text,
-        }}
+    <>
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: screenTitle,
+            headerStyle: { backgroundColor: COLORS.background },
+            headerTintColor: COLORS.text,
+          }}
+        />
+
+        {credits.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            {isTVCredits ? (
+              <Tv size={48} color={COLORS.textSecondary} />
+            ) : (
+              <Film size={48} color={COLORS.textSecondary} />
+            )}
+            <Text style={styles.emptyTitle}>
+              {hasActiveFilterState ? 'No Items Match Filters' : 'No Credits Found'}
+            </Text>
+            <Text style={styles.emptyDescription}>
+              {hasActiveFilterState
+                ? 'Try adjusting your filters to see more results.'
+                : `No ${isTVCredits ? 'TV show' : 'movie'} credits available for this person.`}
+            </Text>
+            {hasActiveFilterState && (
+              <TouchableOpacity
+                style={styles.clearFiltersButton}
+                onPress={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={styles.clearFiltersText}>Clear Filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <FlashList
+            data={credits}
+            renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
+            keyExtractor={(item) => `${item.id}-${item.media_type}`}
+            numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+            key={viewMode}
+            drawDistance={400}
+            contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </SafeAreaView>
+
+      <MediaSortModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        sortState={sortState}
+        onApplySort={setSortState}
+        allowedOptions={['releaseDate', 'rating', 'alphabetical']}
       />
 
-      {credits.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          {isTVCredits ? (
-            <Tv size={48} color={COLORS.textSecondary} />
-          ) : (
-            <Film size={48} color={COLORS.textSecondary} />
-          )}
-          <Text style={styles.emptyTitle}>No Credits Found</Text>
-          <Text style={styles.emptyDescription}>
-            No {isTVCredits ? 'TV show' : 'movie'} credits available for this person.
-          </Text>
-        </View>
-      ) : (
-        <FlashList
-          data={credits}
-          renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
-          keyExtractor={(item) => `${item.id}-${item.media_type}`}
-          numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
-          key={viewMode}
-          drawDistance={400}
-          contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-    </SafeAreaView>
+      <WatchStatusFiltersModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        filters={filterState}
+        onApplyFilters={(newFilters) => {
+          setFilterState(newFilters);
+          setFilterModalVisible(false);
+        }}
+        genreMap={genreMap}
+        showMediaTypeFilter={false}
+      />
+
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+    </>
   );
 }
 
@@ -304,6 +430,18 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  clearFiltersButton: {
+    marginTop: SPACING.l,
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.xl,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.primary,
+  },
+  clearFiltersText: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.white,
   },
   // Grid styles - aligned with MediaGrid
   gridContent: {
