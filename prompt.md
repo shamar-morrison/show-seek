@@ -1,14 +1,3 @@
-### Feature Request
+### Bug Report
 
-I want to build a feature that allows users to blur the overview from the movie and tv detail screens, users are saying sometimes the plot contains spoilers so it would be nice to be able to blur them out.
-
-### How it should work
-
-- There should be a preference setting in the user profile that allows the user to toggle this setting.
-- It should have a title like “blur movie and tv plot” with a relevant subtitle
-- It should be disabled by default, you can check to see how the other preferences are being saved and such and follow that pattern.
-- The image attached shows an example of how the blur should look
-- The preference setting should be persisted in firebase
-- If the user taps on the blurred plot it should unblur
-
-If you have any questions you can ask. This feature is strictly for android not iOS so focus on that.
+When a new user logs in (who is not premium) they have “Latest Trailers” checked in the Home Screen customization sheet and “top rated” is unchecked which is not suppose to be the case. It’s suppose to be the other way around, latest trailers is suppose to be unchecked and top rated is suppose to be checked. Do you understand?

@@ -19,12 +19,12 @@ export type TMDBListId = (typeof AVAILABLE_TMDB_LISTS)[number]['id'];
  * Default home screen configuration - matches current hardcoded layout
  */
 export const DEFAULT_HOME_LISTS: HomeScreenListItem[] = [
-  { id: 'latest-trailers', type: 'tmdb', label: 'Latest Trailers' },
   { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
   { id: 'trending-tv', type: 'tmdb', label: 'Trending TV Shows' },
   { id: 'popular-movies', type: 'tmdb', label: 'Popular Movies' },
   { id: 'upcoming-movies', type: 'tmdb', label: 'Upcoming Movies' },
   { id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' },
+  { id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' },
 ];
 
 /**
