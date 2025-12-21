@@ -7,6 +7,7 @@ import {
   TVCrewCredit,
   TVShow,
 } from '@/src/api/tmdb';
+import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -187,38 +188,12 @@ export default function PersonCreditsScreen() {
 
   const renderListItem = useCallback(
     ({ item }: { item: CreditItem }) => (
-      <Pressable
-        style={({ pressed }) => [styles.listCard, pressed && styles.cardPressed]}
-        onPress={() => handleItemPress(item)}
-      >
-        <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
-          style={styles.listPoster}
-          contentFit="cover"
-        />
-        <View style={styles.listInfo}>
-          <Text style={styles.listTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          {(item.character || item.job) && (
-            <Text style={styles.role} numberOfLines={1}>
-              {item.character || item.job}
-            </Text>
-          )}
-          <View style={styles.listMeta}>
-            {item.release_date && (
-              <Text style={styles.year}>{new Date(item.release_date).getFullYear()}</Text>
-            )}
-            {item.vote_average > 0 && (
-              <>
-                {item.release_date && <Text style={styles.separator}> • </Text>}
-                <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </>
-            )}
-          </View>
-        </View>
-      </Pressable>
+      <MediaListCard
+        item={item}
+        onPress={handleItemPress}
+        subtitle={item.character || item.job}
+        hideMediaType
+      />
     ),
     [handleItemPress]
   );
@@ -359,38 +334,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
-  },
-  listCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    overflow: 'hidden',
-  },
-  listPoster: {
-    width: 80,
-    height: 120,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  listInfo: {
-    flex: 1,
-    padding: SPACING.m,
-    justifyContent: 'center',
-  },
-  listTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
-  },
-  listMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  role: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    marginBottom: SPACING.xs,
   },
   // Shared styles
   cardPressed: {

@@ -10,55 +10,68 @@ interface MediaListCardProps {
   item: ListMediaItem;
   onPress: (item: ListMediaItem) => void;
   onLongPress?: (item: ListMediaItem) => void;
+  /** Optional subtitle to display below the title (e.g., character name or job) */
+  subtitle?: string;
+  /** Hide the media type label (Movie/TV Show) */
+  hideMediaType?: boolean;
 }
 
-export const MediaListCard = memo<MediaListCardProps>(({ item, onPress, onLongPress }) => {
-  const handlePress = useCallback(() => {
-    onPress(item);
-  }, [onPress, item]);
+export const MediaListCard = memo<MediaListCardProps>(
+  ({ item, onPress, onLongPress, subtitle, hideMediaType }) => {
+    const handlePress = useCallback(() => {
+      onPress(item);
+    }, [onPress, item]);
 
-  const handleLongPress = useCallback(() => {
-    onLongPress?.(item);
-  }, [onLongPress, item]);
+    const handleLongPress = useCallback(() => {
+      onLongPress?.(item);
+    }, [onLongPress, item]);
 
-  const year = item.release_date
-    ? new Date(item.release_date).getFullYear()
-    : item.first_air_date
-      ? new Date(item.first_air_date).getFullYear()
-      : null;
+    const year = item.release_date
+      ? new Date(item.release_date).getFullYear()
+      : item.first_air_date
+        ? new Date(item.first_air_date).getFullYear()
+        : null;
 
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-    >
-      <MediaImage
-        source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
-        style={styles.poster}
-        contentFit="cover"
-      />
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
-          {item.title || item.name}
-        </Text>
-        <View style={styles.metaContainer}>
-          {year && <Text style={styles.year}>{year}</Text>}
-          {item.vote_average > 0 && year && <Text style={styles.separator}> • </Text>}
-          {item.vote_average > 0 && (
-            <View style={styles.tmdbRating}>
-              <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-              <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
-            </View>
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      >
+        <MediaImage
+          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+          style={styles.poster}
+          contentFit="cover"
+        />
+        <View style={styles.info}>
+          <Text style={styles.title} numberOfLines={2}>
+            {item.title || item.name}
+          </Text>
+          {subtitle && (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+          <View style={styles.metaContainer}>
+            {year && <Text style={styles.year}>{year}</Text>}
+            {item.vote_average > 0 && year && <Text style={styles.separator}> • </Text>}
+            {item.vote_average > 0 && (
+              <View style={styles.tmdbRating}>
+                <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.ratingText}>{item.vote_average.toFixed(1)}</Text>
+              </View>
+            )}
+          </View>
+          {item.media_type && !hideMediaType && (
+            <Text style={styles.mediaType}>
+              {item.media_type === 'movie' ? 'Movie' : 'TV Show'}
+            </Text>
           )}
         </View>
-        {item.media_type && (
-          <Text style={styles.mediaType}>{item.media_type === 'movie' ? 'Movie' : 'TV Show'}</Text>
-        )}
-      </View>
-    </Pressable>
-  );
-});
+      </Pressable>
+    );
+  }
+);
 
 MediaListCard.displayName = 'MediaListCard';
 
@@ -91,6 +104,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
   metaContainer: {
     flexDirection: 'row',

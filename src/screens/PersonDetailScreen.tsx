@@ -352,7 +352,7 @@ export default function PersonDetailScreen() {
                 <Text style={styles.sectionTitle}>
                   {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
                 </Text>
-                <ArrowRight size={24} color={COLORS.primary} style={styles.viewAll} />
+                <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
@@ -415,7 +415,7 @@ export default function PersonDetailScreen() {
                 <Text style={styles.sectionTitle}>
                   {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
                 </Text>
-                <ArrowRight size={24} color={COLORS.primary} style={styles.viewAll} />
+                <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
