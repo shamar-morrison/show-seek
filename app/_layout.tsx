@@ -4,6 +4,7 @@ enableScreens();
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { PremiumProvider } from '@/src/context/PremiumContext';
+import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -147,9 +148,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PremiumProvider>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
+          <TraktProvider>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </TraktProvider>
         </PremiumProvider>
       </AuthProvider>
     </QueryClientProvider>

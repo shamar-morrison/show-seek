@@ -8,7 +8,7 @@ module.exports = function (api) {
     plugins.push([
       'transform-remove-console',
       {
-        exclude: ['error', 'warn'],
+        // exclude: ['error', 'warn'],
       },
     ]);
   }

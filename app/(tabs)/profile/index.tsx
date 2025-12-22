@@ -3,12 +3,22 @@ import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Crown, Download, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import {
+  Check,
+  Crown,
+  Download,
+  LogOut,
+  MessageCircle,
+  RefreshCw,
+  Star,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -62,6 +72,8 @@ interface ActionButtonProps {
    * isPremiumFeature is true - in that case, pass isPremium={false} to show locked state.
    */
   isPremium?: boolean;
+  /** Optional badge to show (e.g., for Trakt connected indicator) */
+  badge?: React.ReactNode;
 }
 
 /**
@@ -77,6 +89,7 @@ function ActionButton({
   loading,
   isPremiumFeature = false,
   isPremium = true,
+  badge,
 }: ActionButtonProps) {
   const isDanger = variant === 'danger';
   const isLocked = isPremiumFeature && !isPremium;
@@ -111,6 +124,7 @@ function ActionButton({
           {label}
         </Text>
         {isPremiumFeature && !isPremium && <PremiumBadge />}
+        {badge}
       </View>
     </TouchableOpacity>
   );
@@ -119,6 +133,7 @@ function ActionButton({
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
+  const { isConnected: isTraktConnected } = useTrakt();
   const router = useRouter();
   const {
     preferences,
@@ -509,6 +524,29 @@ export default function ProfileScreen() {
                   isPremium={isPremium}
                 />
               )}
+              {!isGuest && (
+                <ActionButton
+                  icon={RefreshCw}
+                  label="Trakt Integration"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (!isPremium) {
+                      router.push('/premium');
+                    } else {
+                      router.push('/(tabs)/profile/trakt-settings' as any);
+                    }
+                  }}
+                  isPremiumFeature
+                  isPremium={isPremium}
+                  badge={
+                    isPremium && isTraktConnected ? (
+                      <View style={styles.traktConnectedBadge}>
+                        <Check size={12} color={COLORS.white} />
+                      </View>
+                    ) : null
+                  }
+                />
+              )}
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
@@ -820,5 +858,14 @@ const styles = StyleSheet.create({
   },
   retryButtonDisabled: {
     opacity: 0.6,
+  },
+  traktConnectedBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: SPACING.xs,
   },
 });

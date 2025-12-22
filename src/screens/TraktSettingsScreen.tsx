@@ -1,0 +1,570 @@
+/**
+ * Trakt Settings Screen
+ *
+ * Dedicated screen for Trakt integration settings with four states:
+ * 1. Not connected - Connect button with sync info
+ * 2. Connected, not synced - Import button
+ * 3. Syncing - Progress spinner
+ * 4. Synced - Stats display with sync/disconnect options
+ */
+
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useTrakt } from '@/src/context/TraktContext';
+import { formatDistanceToNow } from 'date-fns';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { AlertCircle, Check, ExternalLink, Link2, RefreshCw, Unlink } from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Trakt brand color
+const TRAKT_COLOR = '#ED1C24';
+
+export default function TraktSettingsScreen() {
+  const router = useRouter();
+  const {
+    isConnected,
+    isSyncing,
+    lastSyncedAt,
+    syncStatus,
+    isLoading,
+    connectTrakt,
+    disconnectTrakt,
+    syncNow,
+  } = useTrakt();
+
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  const handleConnect = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsConnecting(true);
+    try {
+      await connectTrakt();
+    } catch (error) {
+      console.error('Failed to connect Trakt:', error);
+      Alert.alert('Connection Failed', 'Unable to connect to Trakt. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [connectTrakt]);
+
+  const handleSync = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await syncNow();
+    } catch (error) {
+      console.error('Failed to sync:', error);
+      Alert.alert('Sync Failed', 'Unable to sync with Trakt. Please try again.');
+    }
+  }, [syncNow]);
+
+  const handleDisconnect = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert(
+      'Disconnect Trakt',
+      'Are you sure you want to disconnect your Trakt account? Your synced data will remain in the app.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDisconnecting(true);
+            try {
+              await disconnectTrakt();
+            } catch (error) {
+              console.error('Failed to disconnect:', error);
+              Alert.alert(
+                'Disconnect Failed',
+                'Unable to disconnect from Trakt. Please try again.'
+              );
+            } finally {
+              setIsDisconnecting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [disconnectTrakt]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // State: Syncing
+  if (isSyncing) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+            <Text style={styles.backButton}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Syncing with Trakt...</Text>
+        </View>
+        <View style={styles.syncingContainer}>
+          <View style={styles.syncingIconContainer}>
+            <RefreshCw size={48} color={TRAKT_COLOR} />
+          </View>
+          <Text style={styles.syncingTitle}>Importing your watch history</Text>
+          <Text style={styles.syncingSubtitle}>
+            This may take a few minutes depending on the size of your library...
+          </Text>
+          <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
+
+          <View style={styles.estimateContainer}>
+            <Text style={styles.estimateText}>Usually takes 2-3 minutes</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // State: Not connected
+  if (!isConnected) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+            <Text style={styles.backButton}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Connect with Trakt</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.heroSection}>
+            <View style={[styles.iconCircle, { backgroundColor: TRAKT_COLOR }]}>
+              <ExternalLink size={32} color={COLORS.white} />
+            </View>
+            <Text style={styles.heroTitle}>Sync your movie and TV show history from Trakt</Text>
+            <Text style={styles.heroSubtitle}>
+              Import your watched items, ratings, and lists from your Trakt account.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            onPress={handleConnect}
+            activeOpacity={ACTIVE_OPACITY}
+            disabled={isConnecting}
+          >
+            {isConnecting ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <>
+                <Link2 size={20} color={COLORS.white} />
+                <Text style={styles.primaryButtonText}>Connect to Trakt</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.featureList}>
+            <Text style={styles.featureListTitle}>What will be synced:</Text>
+            <FeatureItem text="Watched movies & shows" />
+            <FeatureItem text="Ratings" />
+            <FeatureItem text="Custom lists" />
+            <FeatureItem text="Watchlist" />
+            <FeatureItem text="Favorites" />
+            <FeatureItem text="Episode progress" />
+          </View>
+
+          <View style={styles.privacyNote}>
+            <AlertCircle size={16} color={COLORS.textSecondary} />
+            <Text style={styles.privacyNoteText}>
+              Data is imported read-only. Your Trakt account will not be modified.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // State: Connected but not synced yet
+  if (!lastSyncedAt) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+            <Text style={styles.backButton}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Connected to Trakt</Text>
+        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.heroSection}>
+            <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
+              <Check size={32} color={COLORS.white} />
+            </View>
+            <Text style={styles.heroTitle}>Your Trakt account is connected!</Text>
+            <Text style={styles.heroSubtitle}>
+              You haven't synced yet. Import your watch history to get started.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            onPress={handleSync}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <RefreshCw size={20} color={COLORS.white} />
+            <Text style={styles.primaryButtonText}>Import from Trakt</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.disconnectButton}
+            onPress={handleDisconnect}
+            activeOpacity={ACTIVE_OPACITY}
+            disabled={isDisconnecting}
+          >
+            {isDisconnecting ? (
+              <ActivityIndicator color={COLORS.error} />
+            ) : (
+              <>
+                <Unlink size={18} color={COLORS.error} />
+                <Text style={styles.disconnectButtonText}>Disconnect</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // State: Connected and synced
+  const itemsSynced = syncStatus?.itemsSynced;
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+          <Text style={styles.backButton}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Trakt Connected</Text>
+      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.statusSection}>
+          <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
+            <Check size={32} color={COLORS.white} />
+          </View>
+          <Text style={styles.lastSyncText}>
+            Last synced: {formatDistanceToNow(lastSyncedAt, { addSuffix: true })}
+          </Text>
+        </View>
+
+        {itemsSynced && (
+          <View style={styles.statsContainer}>
+            <Text style={styles.statsTitle}>Synced Items</Text>
+            <View style={styles.statsGrid}>
+              {itemsSynced.movies > 0 && <StatItem label="Movies" value={itemsSynced.movies} />}
+              {itemsSynced.shows > 0 && <StatItem label="Shows" value={itemsSynced.shows} />}
+              {itemsSynced.episodes > 0 && (
+                <StatItem label="Episodes" value={itemsSynced.episodes} />
+              )}
+              {itemsSynced.ratings > 0 && <StatItem label="Ratings" value={itemsSynced.ratings} />}
+              {itemsSynced.lists > 0 && <StatItem label="Lists" value={itemsSynced.lists} />}
+              {itemsSynced.favorites > 0 && (
+                <StatItem label="Favorites" value={itemsSynced.favorites} />
+              )}
+              {itemsSynced.watchlistItems > 0 && (
+                <StatItem label="Watchlist" value={itemsSynced.watchlistItems} />
+              )}
+            </View>
+          </View>
+        )}
+
+        {syncStatus?.errors && syncStatus.errors.length > 0 && (
+          <View style={styles.errorsContainer}>
+            <Text style={styles.errorsTitle}>Some items could not be synced:</Text>
+            {syncStatus.errors.slice(0, 3).map((error, index) => (
+              <Text key={index} style={styles.errorText}>
+                • {error}
+              </Text>
+            ))}
+            {syncStatus.errors.length > 3 && (
+              <Text style={styles.errorText}>...and {syncStatus.errors.length - 3} more</Text>
+            )}
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+          onPress={handleSync}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <RefreshCw size={20} color={COLORS.white} />
+          <Text style={styles.primaryButtonText}>Sync Now</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.disconnectButton}
+          onPress={handleDisconnect}
+          activeOpacity={ACTIVE_OPACITY}
+          disabled={isDisconnecting}
+        >
+          {isDisconnecting ? (
+            <ActivityIndicator color={COLORS.error} />
+          ) : (
+            <>
+              <Unlink size={18} color={COLORS.error} />
+              <Text style={styles.disconnectButtonText}>Disconnect Trakt</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function FeatureItem({ text }: { text: string }) {
+  return (
+    <View style={styles.featureItem}>
+      <Check size={18} color={COLORS.success} />
+      <Text style={styles.featureItemText}>{text}</Text>
+    </View>
+  );
+}
+
+function StatItem({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.statItem}>
+      <Text style={styles.statValue}>{value.toLocaleString()}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+    gap: SPACING.m,
+  },
+  backButton: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.primary,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    flex: 1,
+  },
+  scrollContent: {
+    padding: SPACING.l,
+    paddingBottom: SPACING.xxl,
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.l,
+  },
+  heroTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    textAlign: 'center',
+    marginBottom: SPACING.s,
+  },
+  heroSubtitle: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.xl,
+    borderRadius: BORDER_RADIUS.l,
+    gap: SPACING.s,
+    marginBottom: SPACING.m,
+  },
+  primaryButtonText: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  featureList: {
+    marginTop: SPACING.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+  },
+  featureListTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.m,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
+    paddingVertical: SPACING.s,
+  },
+  featureItemText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.text,
+  },
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.s,
+    marginTop: SPACING.l,
+    padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  privacyNoteText: {
+    flex: 1,
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  disconnectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.m,
+    gap: SPACING.s,
+    marginTop: SPACING.m,
+  },
+  disconnectButtonText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.error,
+    fontWeight: '500',
+  },
+  syncingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  syncingIconContainer: {
+    marginBottom: SPACING.l,
+  },
+  syncingTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.white,
+    textAlign: 'center',
+    marginBottom: SPACING.s,
+  },
+  syncingSubtitle: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  syncingSpinner: {
+    marginTop: SPACING.xl,
+  },
+  estimateContainer: {
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+  },
+  estimateText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+  },
+  statusSection: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  lastSyncText: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.m,
+  },
+  statsContainer: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    marginBottom: SPACING.l,
+  },
+  statsTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.m,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.s,
+  },
+  statItem: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  statLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  errorsContainer: {
+    backgroundColor: 'rgba(229, 9, 20, 0.1)',
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+    marginBottom: SPACING.l,
+  },
+  errorsTitle: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+    color: COLORS.error,
+    marginBottom: SPACING.s,
+  },
+  errorText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.error,
+    opacity: 0.8,
+    lineHeight: 18,
+  },
+});
