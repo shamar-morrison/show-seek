@@ -132,9 +132,6 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
   );
 }
 
-// TODO: Remove this banner and related code after 2024-12-27 (legacy data migration complete)
-const LEGACY_BANNER_DISMISSED_KEY = '@stats_legacy_banner_dismissed';
-
 export default function StatsScreen() {
   const router = useRouter();
   const { data: historyData, isLoading, error } = useHistory();
