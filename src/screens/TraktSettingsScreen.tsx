@@ -9,6 +9,10 @@
  */
 
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import {
+  CollapsibleCategory,
+  CollapsibleFeatureItem,
+} from '@/src/components/ui/CollapsibleCategory';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -31,13 +35,20 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Trakt brand color
 const TRAKT_COLOR = '#ED1C24';
@@ -242,15 +253,14 @@ export default function TraktSettingsScreen() {
             )}
           </TouchableOpacity>
 
-          <View style={styles.featureList}>
-            <Text style={styles.featureListTitle}>What will be synced:</Text>
-            <FeatureItem text="Watched movies & shows" />
-            <FeatureItem text="Ratings" />
-            <FeatureItem text="Custom lists" />
-            <FeatureItem text="Watchlist" />
-            <FeatureItem text="Favorites" />
-            <FeatureItem text="Episode progress" />
-          </View>
+          <CollapsibleCategory title="What will be synced" defaultExpanded>
+            <CollapsibleFeatureItem text="Watched movies & shows" icon="checkmark-circle" />
+            <CollapsibleFeatureItem text="Ratings" icon="checkmark-circle" />
+            <CollapsibleFeatureItem text="Custom lists" icon="checkmark-circle" />
+            <CollapsibleFeatureItem text="Watchlist" icon="checkmark-circle" />
+            <CollapsibleFeatureItem text="Favorites" icon="checkmark-circle" />
+            <CollapsibleFeatureItem text="Episode progress" icon="checkmark-circle" />
+          </CollapsibleCategory>
 
           <View style={styles.privacyNote}>
             <AlertCircle size={16} color={COLORS.textSecondary} />
@@ -430,15 +440,6 @@ export default function TraktSettingsScreen() {
   );
 }
 
-function FeatureItem({ text }: { text: string }) {
-  return (
-    <View style={styles.featureItem}>
-      <Check size={18} color={COLORS.success} />
-      <Text style={styles.featureItemText}>{text}</Text>
-    </View>
-  );
-}
-
 function StatItem({ label, value }: { label: string; value: number }) {
   return (
     <View style={styles.statItem}>
@@ -552,28 +553,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
-  featureList: {
-    marginTop: SPACING.xl,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-  },
-  featureListTitle: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.m,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-    paddingVertical: SPACING.s,
-  },
-  featureItemText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-  },
+
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',

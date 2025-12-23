@@ -1,9 +1,9 @@
 import {
-  PREMIUM_CATEGORIES,
-  PremiumCategory,
-  PremiumFeature,
-} from '@/src/constants/premiumFeatures';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+  CollapsibleCategory,
+  CollapsibleFeatureItem,
+} from '@/src/components/ui/CollapsibleCategory';
+import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -11,7 +11,6 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
-  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
@@ -179,60 +178,18 @@ function FeatureCategorySection({
   category: PremiumCategory;
   defaultExpanded?: boolean;
 }) {
-  const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
-
-  const toggleExpanded = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsExpanded(!isExpanded);
-  };
-
   return (
-    <View style={styles.categoryContainer}>
-      <TouchableOpacity
-        style={styles.categoryHeader}
-        onPress={toggleExpanded}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <Text style={styles.categoryTitle}>{category.title}</Text>
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={COLORS.textSecondary}
+    <CollapsibleCategory title={category.title} defaultExpanded={defaultExpanded}>
+      {category.features.map((feature) => (
+        <CollapsibleFeatureItem
+          key={feature.id}
+          text={feature.title}
+          icon={feature.icon}
+          description={feature.description}
+          isNew={feature.isNew}
         />
-      </TouchableOpacity>
-
-      {isExpanded && (
-        <View style={styles.categoryFeatures}>
-          {category.features.map((feature) => (
-            <FeatureItem key={feature.id} feature={feature} />
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}
-
-/**
- * Individual premium feature display with icon, title, optional description, and NEW badge
- */
-function FeatureItem({ feature }: { feature: PremiumFeature }) {
-  return (
-    <View style={styles.featureItem}>
-      <Ionicons name={feature.icon} size={22} color={COLORS.primary} style={styles.featureIcon} />
-      <View style={styles.featureContent}>
-        <View style={styles.featureTitleRow}>
-          <Text style={styles.featureTitle}>{feature.title}</Text>
-          {feature.isNew && (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
-            </View>
-          )}
-        </View>
-        {feature.description && (
-          <Text style={styles.featureDescription}>{feature.description}</Text>
-        )}
-      </View>
-    </View>
+      ))}
+    </CollapsibleCategory>
   );
 }
 
@@ -285,71 +242,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   // Category styles
-  categoryContainer: {
-    marginBottom: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.m,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  categoryTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
-    letterSpacing: 0.3,
-  },
-  categoryFeatures: {
-    paddingHorizontal: 12,
-    paddingTop: SPACING.s,
-    paddingBottom: 12,
-  },
-  // Feature item styles
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 10,
-  },
-  featureIcon: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  featureContent: {
-    flex: 1,
-  },
-  featureTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.s,
-  },
-  featureTitle: {
-    fontSize: 15,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  featureDescription: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  newBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  newBadgeText: {
-    color: COLORS.black,
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
   // Pricing & buttons
   pricing: {
     alignItems: 'center',

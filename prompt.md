@@ -1,6 +1,5 @@
-currently if a user is not a premium member and they click the `trakt integration` button they get redirected to the premium upgrade screen, i want to change the flow:
+### Changes Needed
 
-1. remove the premium lock badge from the `trakt integration` button so the button looks normal
-2. add the premium badge to the `connect with trakt` button on the integration screen instead, that way the user can visit this screen and see how integration works and get more info
+On the trakt connection screen there is a “what will be synced” section, I want to turn that section into a collapsible view like what is used to the premium upgrade page that details the features you get with premium.
 
-do you understand and have any questions?
+Do you understand or have any questions?
