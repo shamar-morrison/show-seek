@@ -23,9 +23,9 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   Check,
-  ChevronLeft,
   Link2,
   RefreshCw,
   Sparkles,
@@ -145,7 +145,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ChevronLeft size={24} color={COLORS.primary} />
+            <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Syncing with Trakt...</Text>
         </View>
@@ -173,7 +173,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ChevronLeft size={24} color={COLORS.primary} />
+            <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Enriching Your Library...</Text>
         </View>
@@ -199,7 +199,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ChevronLeft size={24} color={COLORS.primary} />
+            <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Connect with Trakt</Text>
         </View>
@@ -295,7 +295,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ChevronLeft size={24} color={COLORS.primary} />
+            <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Connected to Trakt</Text>
         </View>
@@ -346,7 +346,7 @@ export default function TraktSettingsScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-          <ChevronLeft size={24} color={COLORS.primary} />
+          <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trakt Connected</Text>
       </View>
