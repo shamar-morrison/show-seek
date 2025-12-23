@@ -15,6 +15,12 @@ import * as WebBrowser from 'expo-web-browser';
 
 const { BACKEND_URL, CLIENT_ID, REDIRECT_URI } = TRAKT_CONFIG;
 
+const validateUserId = (userId: string) => {
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    throw new Error('Invalid userId: ID cannot be empty');
+  }
+};
+
 /**
  * Initiate OAuth flow by opening Trakt authorization page in browser
  * The backend handles the token exchange via callback
@@ -22,6 +28,8 @@ const { BACKEND_URL, CLIENT_ID, REDIRECT_URI } = TRAKT_CONFIG;
 export async function initiateOAuthFlow(
   userId: string
 ): Promise<WebBrowser.WebBrowserAuthSessionResult> {
+  validateUserId(userId);
+
   const authUrl =
     `https://trakt.tv/oauth/authorize?` +
     `response_type=code&` +
@@ -39,6 +47,7 @@ export async function initiateOAuthFlow(
  * The backend will import the user's watch history, ratings, lists, etc.
  */
 export async function triggerSync(userId: string): Promise<void> {
+  validateUserId(userId);
   console.log('[Trakt] Triggering sync for user:', userId);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
@@ -71,6 +80,7 @@ export async function triggerSync(userId: string): Promise<void> {
  * Check the current sync status for a user
  */
 export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
+  validateUserId(userId);
   console.log('[Trakt] Checking sync status for user:', userId);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
@@ -100,6 +110,7 @@ export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
  * Removes stored tokens but preserves synced data
  */
 export async function disconnectTrakt(userId: string): Promise<void> {
+  validateUserId(userId);
   console.log('[Trakt] Disconnecting for user:', userId);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
@@ -162,6 +173,7 @@ export async function triggerEnrichment(
   userId: string,
   options?: EnrichmentOptions
 ): Promise<void> {
+  validateUserId(userId);
   console.log('[Trakt] Triggering enrichment for user:', userId);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
@@ -198,6 +210,7 @@ export async function triggerEnrichment(
  * Check the current enrichment status for a user
  */
 export async function checkEnrichmentStatus(userId: string): Promise<EnrichmentStatus> {
+  validateUserId(userId);
   console.log('[Trakt] Checking enrichment status for user:', userId);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
