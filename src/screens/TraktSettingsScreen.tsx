@@ -198,7 +198,7 @@ export default function TraktSettingsScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
             <View style={styles.syncIconsContainer}>
-              <TraktLogo size={50} />
+              <TraktLogo size={65} />
               <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
               <View style={styles.showSeekIconCircle}>
                 <Image
@@ -509,8 +509,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   showSeekIcon: {
-    width: 85,
-    height: 85,
+    width: 93,
+    height: 93,
   },
   heroTitle: {
     fontSize: FONT_SIZE.l,
