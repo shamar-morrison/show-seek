@@ -18,8 +18,16 @@ export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
   const currentTab = useCurrentTab();
 
   const handlePress = () => {
-    // Navigate to show details
-    router.push(`/(tabs)/${currentTab || 'library'}/tv/${show.tvShowId}` as any);
+    const tab = currentTab || 'library';
+    // Navigate to seasons screen, passing the next episode's season to auto-expand
+    if (show.nextEpisode) {
+      router.push(
+        `/(tabs)/${tab}/tv/${show.tvShowId}/seasons?season=${show.nextEpisode.season}` as any
+      );
+    } else {
+      // If caught up, just go to the seasons screen without a specific season
+      router.push(`/(tabs)/${tab}/tv/${show.tvShowId}/seasons` as any);
+    }
   };
 
   const getFormatTimeRemaining = (minutes: number) => {
