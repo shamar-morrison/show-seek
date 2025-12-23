@@ -527,16 +527,10 @@ export default function ProfileScreen() {
                   label="Trakt Integration"
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (!isPremium) {
-                      router.push('/premium');
-                    } else {
-                      router.push('/(tabs)/profile/trakt-settings' as any);
-                    }
+                    router.push('/(tabs)/profile/trakt-settings' as any);
                   }}
-                  isPremiumFeature
-                  isPremium={isPremium}
                   badge={
-                    isPremium && isTraktConnected ? (
+                    isTraktConnected ? (
                       <View style={styles.traktConnectedBadge}>
                         <Check size={12} color={COLORS.white} />
                       </View>
