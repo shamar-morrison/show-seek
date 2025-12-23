@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(229, 9, 20, 0.1)',
   },
   actionButtonLocked: {
-    opacity: 0.7,
+    opacity: 0.6,
   },
   actionButtonLabelContainer: {
     flex: 1,
