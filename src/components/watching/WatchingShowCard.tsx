@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { COLORS } from '@/src/constants/theme';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
 import { Play } from 'lucide-react-native';
@@ -14,10 +15,11 @@ interface WatchingShowCardProps {
 export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
   const router = useRouter();
 
+  const currentTab = useCurrentTab();
+
   const handlePress = () => {
     // Navigate to show details
-    // We cast to any because the router types for dynamic routes might be strict
-    router.push(`/(tabs)/library/tv/${show.tvShowId}` as any);
+    router.push(`/(tabs)/${currentTab || 'library'}/tv/${show.tvShowId}` as any);
   };
 
   const getFormatTimeRemaining = (minutes: number) => {
