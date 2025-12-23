@@ -130,7 +130,7 @@ function ActionButton({
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
-  const { isConnected: isTraktConnected } = useTrakt();
+  const { isConnected: isTraktConnected, isLoading: isTraktLoading } = useTrakt();
   const router = useRouter();
   const {
     preferences,
@@ -527,8 +527,9 @@ export default function ProfileScreen() {
                   label="Trakt Integration"
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push('/(tabs)/profile/trakt-settings' as any);
+                    router.push('/(tabs)/profile/trakt-settings');
                   }}
+                  loading={isTraktLoading}
                   badge={
                     isTraktConnected ? (
                       <View style={styles.traktConnectedBadge}>
