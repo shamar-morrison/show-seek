@@ -5,9 +5,8 @@ import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
-/**
- * Parameters for marking an episode as watched
- */
+const getUserId = () => auth.currentUser?.uid;
+
 export interface MarkEpisodeWatchedParams {
   tvShowId: number;
   seasonNumber: number;
@@ -176,7 +175,6 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
  */
 export const useMarkEpisodeWatched = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationFn: async (params: MarkEpisodeWatchedParams) => {
@@ -229,7 +227,7 @@ export const useMarkEpisodeWatched = () => {
       }
     },
     onSuccess: () => {
-      // Invalidate the allShows query so watch-progress screen gets fresh data
+      const userId = getUserId();
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
       }
@@ -242,7 +240,6 @@ export const useMarkEpisodeWatched = () => {
  */
 export const useMarkEpisodeUnwatched = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationFn: (params: MarkEpisodeUnwatchedParams) =>
@@ -252,7 +249,7 @@ export const useMarkEpisodeUnwatched = () => {
         params.episodeNumber
       ),
     onSuccess: () => {
-      // Invalidate the allShows query so watch-progress screen gets fresh data
+      const userId = getUserId();
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
       }
@@ -265,7 +262,6 @@ export const useMarkEpisodeUnwatched = () => {
  */
 export const useMarkAllEpisodesWatched = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationFn: (params: MarkAllEpisodesWatchedParams) =>
@@ -276,7 +272,7 @@ export const useMarkAllEpisodesWatched = () => {
         params.showMetadata
       ),
     onSuccess: () => {
-      // Invalidate the allShows query so watch-progress screen gets fresh data
+      const userId = getUserId();
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
       }
