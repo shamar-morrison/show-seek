@@ -31,6 +31,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasAttemptedAutoSync = useRef(false);
 
   // Monitor auth state
@@ -98,11 +99,14 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
   }, [user, isConnected, isLoading, lastSyncedAt]);
 
-  // Cleanup polling interval on unmount
+  // Cleanup polling intervals on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
+      }
+      if (enrichmentIntervalRef.current) {
+        clearInterval(enrichmentIntervalRef.current);
       }
     };
   }, []);
@@ -203,6 +207,36 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
   }, [user]);
 
+  const pollEnrichmentStatus = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const status = await TraktService.checkEnrichmentStatus(user.uid);
+      const hasPosters = Object.values(status.lists || {}).some((list) => list.hasPosters);
+
+      if (hasPosters || status.status === 'completed' || status.status === 'failed') {
+        if (enrichmentIntervalRef.current) {
+          clearInterval(enrichmentIntervalRef.current);
+          enrichmentIntervalRef.current = null;
+        }
+
+        setIsEnriching(false);
+
+        if (hasPosters || status.status === 'completed') {
+          const now = new Date();
+          setLastEnrichedAt(now);
+          await AsyncStorage.setItem('@trakt_last_enriched', now.toISOString());
+          console.log('[Trakt] Enrichment completed successfully');
+        } else if (status.status === 'failed') {
+          console.error('[Trakt] Enrichment failed:', status.errors);
+        }
+      }
+    } catch (error) {
+      console.error('[Trakt] Failed to poll enrichment status:', error);
+      // Don't stop polling on error, might be transient
+    }
+  }, [user]);
+
   const syncNow = useCallback(async () => {
     if (!user || user.isAnonymous) {
       throw new Error('Must be logged in with a full account to sync');
@@ -269,39 +303,17 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         includeEpisodes: false,
       });
 
-      // Poll for enrichment status
-      const checkEnrichment = async () => {
-        try {
-          const status = await TraktService.checkEnrichmentStatus(user.uid);
-          const hasPosters = Object.values(status.lists || {}).some((list) => list.hasPosters);
-
-          if (hasPosters || status.status === 'completed') {
-            setIsEnriching(false);
-            const now = new Date();
-            setLastEnrichedAt(now);
-            await AsyncStorage.setItem('@trakt_last_enriched', now.toISOString());
-            console.log('[Trakt] Enrichment completed successfully');
-          } else if (status.status === 'failed') {
-            setIsEnriching(false);
-            console.error('[Trakt] Enrichment failed:', status.errors);
-          } else {
-            // Still in progress, check again in 10 seconds
-            setTimeout(checkEnrichment, 10000);
-          }
-        } catch (error) {
-          console.error('[Trakt] Failed to check enrichment status:', error);
-          setIsEnriching(false);
-        }
-      };
-
-      // Start checking after 5 seconds
-      setTimeout(checkEnrichment, 5000);
+      // Start polling for enrichment status
+      enrichmentIntervalRef.current = setInterval(
+        pollEnrichmentStatus,
+        TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
+      );
     } catch (error) {
       console.error('[Trakt] Failed to trigger enrichment:', error);
       setIsEnriching(false);
       throw error;
     }
-  }, [user, isEnriching]);
+  }, [user, isEnriching, pollEnrichmentStatus]);
 
   return {
     isConnected,
