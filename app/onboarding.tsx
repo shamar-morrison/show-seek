@@ -1,3 +1,4 @@
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
@@ -37,6 +38,7 @@ const ONBOARDING_DATA = [
       'Connect your Trakt account to automatically sync your watch history, lists, and ratings across devices.',
     image:
       'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1000&auto=format&fit=crop',
+    showTraktLogo: true,
   },
 ];
 
@@ -85,7 +87,14 @@ export default function OnboardingScreen() {
             />
             <SafeAreaView style={styles.contentContainer}>
               <View style={styles.textContainer}>
-                <Text style={styles.title}>{item.title}</Text>
+                <View style={styles.titleRow}>
+                  <Text style={styles.title}>{item.title}</Text>
+                  {item.showTraktLogo && (
+                    <View style={styles.logoContainer}>
+                      <TraktLogo size={32} />
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.description}>{item.description}</Text>
               </View>
             </SafeAreaView>
@@ -207,5 +216,16 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.m,
+  },
+  logoContainer: {
+    marginLeft: SPACING.s,
+    position: 'relative',
+    top: -SPACING.xxl,
   },
 });
