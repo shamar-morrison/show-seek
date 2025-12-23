@@ -1,20 +1,7 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import {
-  LayoutAnimation,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  UIManager,
-  View,
-} from 'react-native';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface CollapsibleCategoryProps {
   title: string;
