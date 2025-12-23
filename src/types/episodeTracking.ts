@@ -79,3 +79,27 @@ export interface ShowProgress {
   /** Progress data for each season */
   seasonProgress: SeasonProgress[];
 }
+
+/**
+ * Data structure for the "Currently Watching" dashboard
+ */
+export interface InProgressShow {
+  tvShowId: number;
+  tvShowName: string;
+  posterPath: string | null;
+  backdropPath: string | null;
+  lastUpdated: number;
+  percentage: number;
+  timeRemaining: number; // in minutes
+  lastWatchedEpisode: {
+    season: number;
+    episode: number;
+    title: string;
+  };
+  nextEpisode: {
+    season: number;
+    episode: number;
+    title: string;
+    airDate: string | null;
+  } | null; // null if caught up
+}

@@ -9,6 +9,7 @@ import {
   Film,
   Heart,
   ListPlus,
+  Play,
   Settings2,
   Tv,
   TvMinimal,
@@ -34,6 +35,12 @@ const SECTIONS: SectionData[] = [
   {
     title: 'LISTS & STATS',
     data: [
+      {
+        id: 'watch-progress',
+        icon: Play,
+        title: 'Watch Progress',
+        route: '/watch-progress',
+      },
       {
         id: 'watch-status',
         icon: Tv,
