@@ -404,7 +404,7 @@ export default function TraktSettingsScreen() {
           <View style={styles.enrichmentSection}>
             <View style={styles.enrichmentHeader}>
               <Sparkles size={24} color={COLORS.warning} />
-              <Text style={styles.enrichmentTitle}>✨ Add Posters & Ratings</Text>
+              <Text style={styles.enrichmentTitle}>Add Posters & Ratings</Text>
             </View>
             <Text style={styles.enrichmentDescription}>
               Enhance your library with movie posters and ratings from TMDB.
