@@ -262,6 +262,24 @@ export default function TraktSettingsScreen() {
             <CollapsibleFeatureItem text="Episode progress" icon="checkmark-circle" />
           </CollapsibleCategory>
 
+          <CollapsibleCategory title="How it works">
+            <CollapsibleFeatureItem
+              text="Connect your Trakt account"
+              description="Login with your Trakt account and grant access."
+              icon="log-in-outline"
+            />
+            <CollapsibleFeatureItem
+              text="Import your data"
+              description="This usually takes 2-3 minutes depending on the size of your library."
+              icon="cloud-download-outline"
+            />
+            <CollapsibleFeatureItem
+              text="Enrich your data"
+              description="Data imported from Trakt is enriched with metadata from TMDB."
+              icon="sparkles-outline"
+            />
+          </CollapsibleCategory>
+
           <View style={styles.privacyNote}>
             <AlertCircle size={16} color={COLORS.textSecondary} />
             <Text style={styles.privacyNoteText}>
