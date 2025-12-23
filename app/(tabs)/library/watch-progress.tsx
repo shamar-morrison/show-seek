@@ -117,6 +117,19 @@ export default function WatchProgressScreen() {
     );
   }
 
+  if (sortedData.length === 0) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.divider} />
+        <EmptyState
+          icon={TvIcon}
+          title="No Shows in Progress"
+          description="Start watching a show to see your progress tracked here."
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.divider} />
@@ -124,13 +137,6 @@ export default function WatchProgressScreen() {
         data={sortedData}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <EmptyState
-            icon={TvIcon}
-            title="No Shows in Progress"
-            description="Start watching a show to see your progress tracked here."
-          />
-        }
         keyExtractor={(item) => item.tvShowId.toString()}
       />
 
