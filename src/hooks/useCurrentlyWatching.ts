@@ -38,15 +38,6 @@ export function useCurrentlyWatching() {
       const processedShows = await Promise.all(
         activeShows.map(async (trackingDoc) => {
           try {
-            // We need the ID from the doc.
-            // Ideally getAllWatchedShows should return ID, but the doc data doesn't have it explicitly in the interface
-            // unless we add it.
-            // HOWEVER, the `episode_tracking` service stores keyed by ID.
-            // Let's assume we can extract ID from the tracked episodes if available, or we might need to fix getAllWatchedShows to include ID.
-            // Wait, `getAllWatchedShows` returned `data` only.
-            // *Correction*: I need to update `getAllWatchedShows` to return the ID as well or I can't know which show it is!
-            // Let's look at `WatchedEpisode` interface -> it has `tvShowId`. Perfect.
-
             const episodesList = Object.values(trackingDoc.episodes);
             if (episodesList.length === 0) return null;
 
@@ -57,28 +48,7 @@ export function useCurrentlyWatching() {
             // We need full details to know total episodes/seasons
             const showDetails = await tmdbApi.getTVShowDetails(tvShowId);
 
-            // Calculate stats
             const seasons = showDetails.seasons;
-
-            // Get all episodes for relevant seasons (this is heavy, maybe optimization needed?)
-            // For now, let's fetch season details for at least the active seasons.
-            // Or better, `calculateShowProgress` needs `allEpisodes`.
-            // Fetching ALL episodes for a long show (Grey's Anatomy) is too much.
-
-            // OPTION: simplified calculation.
-            // We need "Next Episode" and "Time Remaining".
-            // "Time remaining" requires knowing runtime of all unwatched episodes.
-            // If we don't fetch them, we can't calculate it accurately.
-            // Estimation: (Total Episodes - Watched Episodes) * Average Runtime.
-
-            // "Next Episode" requires knowing the order.
-            // Strategy: valid seasons -> fetch details.
-
-            // Let's iterate seasons and fetch details. To avoid spamming, strictly limit concurrency or cache?
-            // `tmdbApi` doesn't seem to cache season details in memory, but react-query might if used.
-            // Here we are in a raw hook.
-
-            // Let's Fetch ALL season details. It's the only way to be accurate.
             const seasonPromises = seasons
               .filter(
                 (s) => s.season_number > 0 && s.air_date && new Date(s.air_date) <= new Date()
@@ -139,18 +109,6 @@ export function useCurrentlyWatching() {
                   // Check if this is a candidate for next episode
                   // Must be AFTER last watched
                   if (!nextEpisodeCandidate) {
-                    // Simple logic: first unwatched released episode is the next one?
-                    // Usually yes, unless user skipped.
-                    // More strict: First unwatched episode that follows the *highest* watched episode?
-                    // Or just the first unwatched one (filling gaps)?
-                    // Prompt says: "Next Episode in Sequence... check next episode in same season... if not, check first of next season"
-                    // Implies filling gaps or linear progression.
-                    // Let's go with linear: The first unwatched episode found in the sorted list.
-                    // ACTUALLY: typically "Next Episode" implies sequential progress.
-                    // If I watched S1E1 and S1E3, S1E2 is "Next"? Or S1E4?
-                    // Prompt: "Find last watched episode's season and episode number. Check if next episode in same season exists..."
-                    // So it is relative to LAST WATCHED.
-
                     const isAfterLast =
                       ep.season_number > lastWatched.seasonNumber ||
                       (ep.season_number === lastWatched.seasonNumber &&

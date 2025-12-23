@@ -38,6 +38,7 @@ export default function WatchProgressScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={WatchingEmptyState}
+          keyExtractor={(item) => item.tvShowId.toString()}
         />
       )}
     </View>
