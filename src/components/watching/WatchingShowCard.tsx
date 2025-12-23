@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
@@ -73,21 +73,23 @@ export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: 12,
-    marginBottom: 12,
-    padding: 10,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    marginBottom: SPACING.m,
+    padding: SPACING.s,
     alignItems: 'center',
   },
   poster: {
     width: 60,
     height: 90,
-    borderRadius: 8,
+    borderRadius: BORDER_RADIUS.s,
     backgroundColor: COLORS.surface,
   },
   contentContainer: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: SPACING.m,
     justifyContent: 'space-between',
     height: 80, // matches poster roughly minus padding
   },
@@ -97,14 +99,14 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   title: {
-    fontSize: 16,
+    fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
     color: COLORS.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: SPACING.s,
   },
   timeRemaining: {
-    fontSize: 12,
+    fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
   episodeInfo: {
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
     height: 6,
     backgroundColor: COLORS.secondary,
     borderRadius: 3,
-    marginRight: 8,
+    marginRight: SPACING.s,
   },
   progressBarFill: {
     height: '100%',
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   percentageText: {
-    fontSize: 12,
+    fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     width: 32,
     textAlign: 'right',
