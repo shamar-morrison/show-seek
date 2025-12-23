@@ -9,7 +9,9 @@
  */
 
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
@@ -55,6 +57,8 @@ export default function TraktSettingsScreen() {
     syncNow,
     enrichData,
   } = useTrakt();
+
+  const { isPremium } = usePremium();
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -216,7 +220,14 @@ export default function TraktSettingsScreen() {
 
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
-            onPress={handleConnect}
+            onPress={() => {
+              if (!isPremium) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/premium');
+              } else {
+                handleConnect();
+              }
+            }}
             activeOpacity={ACTIVE_OPACITY}
             disabled={isConnecting}
           >
@@ -226,6 +237,7 @@ export default function TraktSettingsScreen() {
               <>
                 <Link2 size={20} color={COLORS.white} />
                 <Text style={styles.primaryButtonText}>Connect to Trakt</Text>
+                {!isPremium && <PremiumBadge />}
               </>
             )}
           </TouchableOpacity>
