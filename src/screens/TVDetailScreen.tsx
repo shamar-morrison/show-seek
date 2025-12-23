@@ -26,6 +26,7 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -64,6 +65,7 @@ import {
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   RefreshControl,
   Text,
@@ -99,6 +101,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+  const { isPremium } = usePremium();
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
@@ -619,10 +622,26 @@ export default function TVDetailScreen() {
               <View style={detailStyles.ratingButtonContainer}>
                 <ReminderButton
                   onPress={() =>
-                    requireAuth(
-                      () => setReminderModalVisible(true),
-                      'Sign in to set release reminders'
-                    )
+                    requireAuth(() => {
+                      if (!isPremium) {
+                        Alert.alert(
+                          'Premium Feature',
+                          'Reminders are only available to premium members.',
+                          [
+                            {
+                              text: 'Cancel',
+                              style: 'cancel',
+                            },
+                            {
+                              text: 'Upgrade',
+                              onPress: () => router.push('/premium' as any),
+                            },
+                          ]
+                        );
+                        return;
+                      }
+                      setReminderModalVisible(true);
+                    }, 'Sign in to set release reminders')
                   }
                   hasReminder={hasReminder}
                   isLoading={isLoadingReminder}
