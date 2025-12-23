@@ -1,3 +1,4 @@
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -9,16 +10,7 @@ import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import {
-  Check,
-  Crown,
-  Download,
-  LogOut,
-  MessageCircle,
-  RefreshCw,
-  Star,
-  Trash2,
-} from 'lucide-react-native';
+import { Check, Crown, Download, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -59,7 +51,9 @@ function getInitials(displayName: string | null, email: string | null): string {
 }
 
 interface ActionButtonProps {
-  icon: typeof LogOut;
+  icon?: typeof LogOut;
+  /** Custom icon component to render instead of the standard Lucide icon */
+  customIcon?: React.ReactNode;
   label: string;
   onPress: () => void;
   variant?: 'default' | 'danger';
@@ -83,6 +77,7 @@ interface ActionButtonProps {
  */
 function ActionButton({
   icon: Icon,
+  customIcon,
   label,
   onPress,
   variant = 'default',
@@ -107,12 +102,14 @@ function ActionButton({
     >
       {loading ? (
         <ActivityIndicator size="small" color={isDanger ? COLORS.error : COLORS.text} />
-      ) : (
+      ) : customIcon ? (
+        customIcon
+      ) : Icon ? (
         <Icon
           size={20}
           color={isLocked ? COLORS.textSecondary : isDanger ? COLORS.error : COLORS.text}
         />
-      )}
+      ) : null}
       <View style={styles.actionButtonLabelContainer}>
         <Text
           style={[
@@ -526,7 +523,7 @@ export default function ProfileScreen() {
               )}
               {!isGuest && (
                 <ActionButton
-                  icon={RefreshCw}
+                  customIcon={<TraktLogo size={20} />}
                   label="Trakt Integration"
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

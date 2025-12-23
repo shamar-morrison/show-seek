@@ -1,1 +1,7 @@
-i made some changes to the backend api because it wasnt formatting the data imported from trakt correctly and now it is but i realise there is a bug. in the screenshot of the grid view you can see there are items that have no info (no poster, no title/name, no release date, etc) but then if i change it to list view you can now see the name/title and the release year (the other data is still missing but thats fine) so why does the data show in list view and not grid view. this happens in favorites, already watched, should watch and watching and it happens randomly among media items but they are all being saved the same way when being imported from trakt (before being enriched)
+### Changes required
+
+- i want to make changes to the the `tracked integration` button on the profile screen. i want to replace the icon with the trakt logo.
+- on the integration screen i want to replace the icon in the middle with the trakt icon and the showseek icon, the trakt icon should be on the left with an arrow in the middle pointing to the showseek icon on the right (indicating data flows from trakt to showseek), the showseek icon should also be put in a circle so it appear rounded, do not edit the trakt icon. both icons should be of the same size visually
+- replace the `<- Back` button text in the header with the regular arrow
+
+do you have any questions

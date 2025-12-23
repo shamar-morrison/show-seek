@@ -8,6 +8,7 @@
  * 4. Synced - Stats display with sync/disconnect options
  */
 
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useTrakt } from '@/src/context/TraktContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -15,8 +16,9 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
+  ArrowRight,
   Check,
-  ExternalLink,
+  ChevronLeft,
   Link2,
   RefreshCw,
   Sparkles,
@@ -26,6 +28,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -134,7 +137,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <Text style={styles.backButton}>← Back</Text>
+            <ChevronLeft size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Syncing with Trakt...</Text>
         </View>
@@ -162,7 +165,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <Text style={styles.backButton}>← Back</Text>
+            <ChevronLeft size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Enriching Your Library...</Text>
         </View>
@@ -188,14 +191,22 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <Text style={styles.backButton}>← Back</Text>
+            <ChevronLeft size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Connect with Trakt</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
-            <View style={[styles.iconCircle, { backgroundColor: TRAKT_COLOR }]}>
-              <ExternalLink size={32} color={COLORS.white} />
+            <View style={styles.syncIconsContainer}>
+              <TraktLogo size={50} />
+              <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
+              <View style={styles.showSeekIconCircle}>
+                <Image
+                  source={require('@/assets/images/icon.png')}
+                  style={styles.showSeekIcon}
+                  resizeMode="contain"
+                />
+              </View>
             </View>
             <Text style={styles.heroTitle}>Sync your movie and TV show history from Trakt</Text>
             <Text style={styles.heroSubtitle}>
@@ -246,7 +257,7 @@ export default function TraktSettingsScreen() {
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <Text style={styles.backButton}>← Back</Text>
+            <ChevronLeft size={24} color={COLORS.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Connected to Trakt</Text>
         </View>
@@ -297,7 +308,7 @@ export default function TraktSettingsScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-          <Text style={styles.backButton}>← Back</Text>
+          <ChevronLeft size={24} color={COLORS.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trakt Connected</Text>
       </View>
@@ -445,8 +456,7 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   backButton: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.primary,
+    padding: SPACING.xs,
   },
   headerTitle: {
     fontSize: FONT_SIZE.l,
@@ -469,6 +479,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.l,
+  },
+  syncIconsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.l,
+    gap: SPACING.m,
+  },
+  traktIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  arrowIcon: {
+    marginHorizontal: SPACING.s,
+  },
+  showSeekIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  showSeekIcon: {
+    width: 85,
+    height: 85,
   },
   heroTitle: {
     fontSize: FONT_SIZE.l,
