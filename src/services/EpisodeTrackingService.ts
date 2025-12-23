@@ -1,4 +1,5 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteField,
@@ -314,7 +315,14 @@ class EpisodeTrackingService {
   async getAllWatchedShows(userId: string): Promise<TVShowEpisodeTracking[]> {
     try {
       const trackingCollectionRef = collection(db, 'users', userId, 'episode_tracking');
-      const snapshot = await getDocs(trackingCollectionRef);
+
+      const timeout = createTimeoutWithCleanup(10000);
+      const snapshot = await Promise.race([
+        getDocs(trackingCollectionRef),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
 
       return snapshot.docs.map((doc) => {
         const data = doc.data() as TVShowEpisodeTracking;
