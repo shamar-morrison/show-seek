@@ -444,19 +444,4 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    backgroundColor: COLORS.warning,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.m,
-    marginBottom: SPACING.l,
-  },
-  infoBannerText: {
-    flex: 1,
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.background,
-    fontWeight: '500',
-  },
 });
