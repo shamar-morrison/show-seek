@@ -12,7 +12,7 @@ interface WatchingShowCardProps {
   show: InProgressShow;
 }
 
-export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
+export function WatchingShowCard({ show }: WatchingShowCardProps) {
   const router = useRouter();
 
   const currentTab = useCurrentTab();
@@ -76,7 +76,7 @@ export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
       )}
     </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
