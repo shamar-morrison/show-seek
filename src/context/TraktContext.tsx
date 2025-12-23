@@ -23,7 +23,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [lastEnrichedAt, setLastEnrichedAt] = useState<Date | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
@@ -41,10 +43,11 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   useEffect(() => {
     const loadPersistedState = async () => {
       try {
-        const [connectedStr, lastSyncedStr, syncStatusStr] = await Promise.all([
+        const [connectedStr, lastSyncedStr, syncStatusStr, lastEnrichedStr] = await Promise.all([
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.CONNECTED),
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_SYNCED),
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.SYNC_STATUS),
+          AsyncStorage.getItem('@trakt_last_enriched'),
         ]);
 
         if (connectedStr === 'true') {
@@ -57,6 +60,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
         if (syncStatusStr) {
           setSyncStatus(JSON.parse(syncStatusStr));
+        }
+
+        if (lastEnrichedStr) {
+          setLastEnrichedAt(new Date(lastEnrichedStr));
         }
       } catch (error) {
         console.error('[Trakt] Failed to load persisted state:', error);
@@ -245,15 +252,69 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
   }, [user]);
 
+  const enrichData = useCallback(async () => {
+    if (!user) {
+      throw new Error('Must be logged in to enrich data');
+    }
+
+    if (isEnriching) {
+      console.log('[Trakt] Enrichment already in progress');
+      return;
+    }
+
+    try {
+      setIsEnriching(true);
+
+      await TraktService.triggerEnrichment(user.uid, {
+        includeEpisodes: false,
+      });
+
+      // Poll for enrichment status
+      const checkEnrichment = async () => {
+        try {
+          const status = await TraktService.checkEnrichmentStatus(user.uid);
+          const hasPosters = Object.values(status.lists || {}).some((list) => list.hasPosters);
+
+          if (hasPosters || status.status === 'completed') {
+            setIsEnriching(false);
+            const now = new Date();
+            setLastEnrichedAt(now);
+            await AsyncStorage.setItem('@trakt_last_enriched', now.toISOString());
+            console.log('[Trakt] Enrichment completed successfully');
+          } else if (status.status === 'failed') {
+            setIsEnriching(false);
+            console.error('[Trakt] Enrichment failed:', status.errors);
+          } else {
+            // Still in progress, check again in 10 seconds
+            setTimeout(checkEnrichment, 10000);
+          }
+        } catch (error) {
+          console.error('[Trakt] Failed to check enrichment status:', error);
+          setIsEnriching(false);
+        }
+      };
+
+      // Start checking after 5 seconds
+      setTimeout(checkEnrichment, 5000);
+    } catch (error) {
+      console.error('[Trakt] Failed to trigger enrichment:', error);
+      setIsEnriching(false);
+      throw error;
+    }
+  }, [user, isEnriching]);
+
   return {
     isConnected,
     isSyncing,
+    isEnriching,
     lastSyncedAt,
+    lastEnrichedAt,
     syncStatus,
     isLoading,
     connectTrakt,
     disconnectTrakt,
     syncNow,
     checkSyncStatus,
+    enrichData,
   };
 });

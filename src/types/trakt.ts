@@ -24,7 +24,9 @@ export interface SyncStatus {
 export interface TraktState {
   isConnected: boolean;
   isSyncing: boolean;
+  isEnriching: boolean;
   lastSyncedAt: Date | null;
+  lastEnrichedAt: Date | null;
   syncStatus: SyncStatus | null;
 }
 
@@ -34,4 +36,5 @@ export interface TraktContextValue extends TraktState {
   disconnectTrakt: () => Promise<void>;
   syncNow: () => Promise<void>;
   checkSyncStatus: () => Promise<SyncStatus | undefined>;
+  enrichData: () => Promise<void>;
 }

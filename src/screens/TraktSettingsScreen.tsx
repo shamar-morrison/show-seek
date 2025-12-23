@@ -13,7 +13,15 @@ import { useTrakt } from '@/src/context/TraktContext';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Check, ExternalLink, Link2, RefreshCw, Unlink } from 'lucide-react-native';
+import {
+  AlertCircle,
+  Check,
+  ExternalLink,
+  Link2,
+  RefreshCw,
+  Sparkles,
+  Unlink,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,12 +42,15 @@ export default function TraktSettingsScreen() {
   const {
     isConnected,
     isSyncing,
+    isEnriching,
     lastSyncedAt,
+    lastEnrichedAt,
     syncStatus,
     isLoading,
     connectTrakt,
     disconnectTrakt,
     syncNow,
+    enrichData,
   } = useTrakt();
 
   const [isConnecting, setIsConnecting] = useState(false);
@@ -97,6 +108,16 @@ export default function TraktSettingsScreen() {
     );
   }, [disconnectTrakt]);
 
+  const handleEnrich = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await enrichData();
+    } catch (error) {
+      console.error('Failed to enrich:', error);
+      Alert.alert('Enrichment Failed', 'Unable to enrich data. Please try again.');
+    }
+  }, [enrichData]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -129,6 +150,32 @@ export default function TraktSettingsScreen() {
 
           <View style={styles.estimateContainer}>
             <Text style={styles.estimateText}>Usually takes 2-3 minutes</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // State: Enriching
+  if (isEnriching) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+            <Text style={styles.backButton}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Enriching Your Library...</Text>
+        </View>
+        <View style={styles.syncingContainer}>
+          <View style={styles.syncingIconContainer}>
+            <Sparkles size={48} color={COLORS.warning} />
+          </View>
+          <Text style={styles.syncingTitle}>Fetching posters, ratings, and genres</Text>
+          <Text style={styles.syncingSubtitle}>Adding TMDB metadata to your synced items...</Text>
+          <ActivityIndicator size="large" color={COLORS.warning} style={styles.syncingSpinner} />
+
+          <View style={styles.estimateContainer}>
+            <Text style={styles.estimateText}>Takes 1-5 minutes for large libraries</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -307,6 +354,38 @@ export default function TraktSettingsScreen() {
           <RefreshCw size={20} color={COLORS.white} />
           <Text style={styles.primaryButtonText}>Sync Now</Text>
         </TouchableOpacity>
+
+        {/* Enrichment Section - show if synced but not enriched yet */}
+        {lastSyncedAt && !lastEnrichedAt && (
+          <View style={styles.enrichmentSection}>
+            <View style={styles.enrichmentHeader}>
+              <Sparkles size={24} color={COLORS.warning} />
+              <Text style={styles.enrichmentTitle}>✨ Add Posters & Ratings</Text>
+            </View>
+            <Text style={styles.enrichmentDescription}>
+              Enhance your library with movie posters and ratings from TMDB.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: COLORS.warning }]}
+              onPress={handleEnrich}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Sparkles size={20} color={COLORS.white} />
+              <Text style={styles.primaryButtonText}>Enrich My Library</Text>
+            </TouchableOpacity>
+            <Text style={styles.enrichmentNote}>Takes 1-5 minutes for large libraries</Text>
+          </View>
+        )}
+
+        {/* Show enrichment status if already enriched */}
+        {lastEnrichedAt && (
+          <View style={styles.enrichedBadge}>
+            <Check size={16} color={COLORS.success} />
+            <Text style={styles.enrichedText}>
+              Enriched {formatDistanceToNow(lastEnrichedAt, { addSuffix: true })}
+            </Text>
+          </View>
+        )}
 
         <TouchableOpacity
           style={styles.disconnectButton}
@@ -566,5 +645,51 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     opacity: 0.8,
     lineHeight: 18,
+  },
+  enrichmentSection: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    marginBottom: SPACING.l,
+    borderWidth: 1,
+    borderColor: COLORS.warning + '40',
+  },
+  enrichmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    marginBottom: SPACING.s,
+  },
+  enrichmentTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.warning,
+  },
+  enrichmentDescription: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.m,
+    lineHeight: 18,
+  },
+  enrichmentNote: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginTop: SPACING.s,
+  },
+  enrichedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    backgroundColor: 'rgba(70, 211, 105, 0.1)',
+    borderRadius: BORDER_RADIUS.m,
+    marginBottom: SPACING.m,
+  },
+  enrichedText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.success,
   },
 });

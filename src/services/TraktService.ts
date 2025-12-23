@@ -90,3 +90,73 @@ export async function disconnectTrakt(userId: string): Promise<void> {
     throw new Error(`Disconnect failed: ${errorText}`);
   }
 }
+
+/**
+ * Options for TMDB enrichment
+ */
+export interface EnrichmentOptions {
+  lists?: string[];
+  includeEpisodes?: boolean;
+}
+
+/**
+ * Enrichment status for a list
+ */
+export interface ListEnrichmentStatus {
+  hasPosters: boolean;
+  itemCount: number;
+  enrichedCount: number;
+}
+
+/**
+ * Overall enrichment status
+ */
+export interface EnrichmentStatus {
+  status: 'idle' | 'in_progress' | 'completed' | 'failed';
+  lists: Record<string, ListEnrichmentStatus>;
+  errors?: string[];
+}
+
+/**
+ * Trigger TMDB enrichment for synced Trakt data
+ * Fetches posters, ratings, and genres from TMDB
+ */
+export async function triggerEnrichment(
+  userId: string,
+  options?: EnrichmentOptions
+): Promise<void> {
+  console.log('[Trakt] Triggering enrichment for user:', userId);
+
+  const response = await fetch(`${BACKEND_URL}/api/trakt/enrich`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+      lists: options?.lists || ['already-watched', 'watchlist', 'favorites'],
+      includeEpisodes: options?.includeEpisodes || false,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Enrichment failed: ${errorText}`);
+  }
+}
+
+/**
+ * Check the current enrichment status for a user
+ */
+export async function checkEnrichmentStatus(userId: string): Promise<EnrichmentStatus> {
+  console.log('[Trakt] Checking enrichment status for user:', userId);
+
+  const response = await fetch(`${BACKEND_URL}/api/trakt/enrich?userId=${userId}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to check enrichment status: ${errorText}`);
+  }
+
+  return response.json();
+}
