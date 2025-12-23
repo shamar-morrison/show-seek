@@ -271,6 +271,11 @@ export default function TraktSettingsScreen() {
               description="Data imported from Trakt is enriched with metadata from TMDB."
               icon="sparkles-outline"
             />
+            <CollapsibleFeatureItem
+              text="Conflict resolution"
+              description="Trakt is the source of truth. Conflicting local data will be overwritten to match Trakt."
+              icon="information-circle-outline"
+            />
           </CollapsibleCategory>
 
           <View style={styles.privacyNote}>
