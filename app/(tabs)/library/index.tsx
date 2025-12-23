@@ -39,7 +39,7 @@ const SECTIONS: SectionData[] = [
         id: 'watch-progress',
         icon: Play,
         title: 'Watch Progress',
-        route: '/watch-progress',
+        route: '/(tabs)/library/watch-progress',
       },
       {
         id: 'watch-status',
