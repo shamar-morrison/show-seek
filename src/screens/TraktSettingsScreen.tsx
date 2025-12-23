@@ -659,6 +659,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.m,
     minWidth: 80,
     alignItems: 'center',
+    flex: 1,
   },
   statValue: {
     fontSize: FONT_SIZE.l,
