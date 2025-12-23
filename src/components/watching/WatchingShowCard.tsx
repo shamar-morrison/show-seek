@@ -34,7 +34,7 @@ export const WatchingShowCard: React.FC<WatchingShowCardProps> = ({ show }) => {
     if (minutes < 60) return `${minutes}m left`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return `${hours}h ${mins}m left`;
+    return mins === 0 ? `${hours}h left` : `${hours}h ${mins}m left`;
   };
 
   return (
