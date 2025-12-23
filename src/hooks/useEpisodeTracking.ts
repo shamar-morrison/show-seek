@@ -5,9 +5,8 @@ import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
-/**
- * Parameters for marking an episode as watched
- */
+const getUserId = () => auth.currentUser?.uid;
+
 export interface MarkEpisodeWatchedParams {
   tvShowId: number;
   seasonNumber: number;
@@ -175,6 +174,8 @@ export const useShowProgress = (tvShowId: number, seasons: Season[], allEpisodes
  * Includes auto-add to Watching list when preference is enabled
  */
 export const useMarkEpisodeWatched = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (params: MarkEpisodeWatchedParams) => {
       // First, mark the episode as watched (primary action)
@@ -225,6 +226,12 @@ export const useMarkEpisodeWatched = () => {
         }
       }
     },
+    onSuccess: () => {
+      const userId = getUserId();
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+      }
+    },
   });
 };
 
@@ -232,6 +239,8 @@ export const useMarkEpisodeWatched = () => {
  * Mutation hook for marking an episode as unwatched
  */
 export const useMarkEpisodeUnwatched = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (params: MarkEpisodeUnwatchedParams) =>
       episodeTrackingService.markEpisodeUnwatched(
@@ -239,6 +248,12 @@ export const useMarkEpisodeUnwatched = () => {
         params.seasonNumber,
         params.episodeNumber
       ),
+    onSuccess: () => {
+      const userId = getUserId();
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+      }
+    },
   });
 };
 
@@ -246,6 +261,8 @@ export const useMarkEpisodeUnwatched = () => {
  * Mutation hook for marking all episodes in a season as watched
  */
 export const useMarkAllEpisodesWatched = () => {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (params: MarkAllEpisodesWatchedParams) =>
       episodeTrackingService.markAllEpisodesWatched(
@@ -254,5 +271,11 @@ export const useMarkAllEpisodesWatched = () => {
         params.episodes,
         params.showMetadata
       ),
+    onSuccess: () => {
+      const userId = getUserId();
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+      }
+    },
   });
 };

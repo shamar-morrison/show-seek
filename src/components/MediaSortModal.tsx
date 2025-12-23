@@ -19,7 +19,9 @@ export type SortOption =
   | 'rating'
   | 'userRating'
   | 'alphabetical'
-  | 'popularity';
+  | 'popularity'
+  | 'progress'
+  | 'lastWatched';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {
@@ -55,6 +57,8 @@ const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: S
   { label: 'Release Date', value: 'releaseDate', defaultDirection: 'desc' },
   { label: 'Rating', value: 'rating', defaultDirection: 'desc' },
   { label: 'Popularity', value: 'popularity', defaultDirection: 'desc' },
+  { label: 'Progress', value: 'progress', defaultDirection: 'desc' },
+  { label: 'Last Watched', value: 'lastWatched', defaultDirection: 'desc' },
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 
