@@ -9,10 +9,11 @@ interface LibraryNavigationCardProps {
   title: string;
   onPress: () => void;
   testID?: string;
+  badge?: React.ReactNode;
 }
 
 export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
-  ({ icon: Icon, title, onPress, testID }) => {
+  ({ icon: Icon, title, onPress, testID, badge }) => {
     const handlePress = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onPress();
@@ -26,6 +27,7 @@ export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
       >
         <Icon size={24} color={COLORS.primary} />
         <Text style={styles.title}>{title}</Text>
+        {badge}
         <ChevronRight size={20} color={COLORS.textSecondary} />
       </Pressable>
     );
