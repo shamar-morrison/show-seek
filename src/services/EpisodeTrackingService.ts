@@ -1,5 +1,15 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { deleteField, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
+import {
+  collection,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
 import type {
@@ -297,6 +307,32 @@ class EpisodeTrackingService {
       percentage,
       seasonProgress,
     };
+  }
+
+  /**
+   * Get all watched shows for a user
+   */
+  async getAllWatchedShows(userId: string): Promise<TVShowEpisodeTracking[]> {
+    try {
+      const trackingCollectionRef = collection(db, 'users', userId, 'episode_tracking');
+
+      const timeout = createTimeoutWithCleanup(10000);
+      const snapshot = await Promise.race([
+        getDocs(trackingCollectionRef),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data() as TVShowEpisodeTracking;
+        // Ensure the ID is included or available if needed, though usually it's in metadata or derived
+        return data;
+      });
+    } catch (error) {
+      console.error('[EpisodeTrackingService] Error fetching all watched shows:', error);
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**
