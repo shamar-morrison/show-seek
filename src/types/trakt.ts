@@ -38,3 +38,29 @@ export interface TraktContextValue extends TraktState {
   checkSyncStatus: () => Promise<SyncStatus | undefined>;
   enrichData: () => Promise<void>;
 }
+
+/**
+ * Options for TMDB enrichment
+ */
+export interface EnrichmentOptions {
+  lists?: string[];
+  includeEpisodes?: boolean;
+}
+
+/**
+ * Enrichment status for a list
+ */
+export interface ListEnrichmentStatus {
+  hasPosters: boolean;
+  itemCount: number;
+  enrichedCount: number;
+}
+
+/**
+ * Overall enrichment status
+ */
+export interface EnrichmentStatus {
+  status: 'idle' | 'in_progress' | 'completed' | 'failed';
+  lists: Record<string, ListEnrichmentStatus>;
+  errors?: string[];
+}

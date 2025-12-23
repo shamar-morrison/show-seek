@@ -48,7 +48,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.CONNECTED),
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_SYNCED),
           AsyncStorage.getItem(TRAKT_STORAGE_KEYS.SYNC_STATUS),
-          AsyncStorage.getItem('@trakt_last_enriched'),
+          AsyncStorage.getItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED),
         ]);
 
         if (connectedStr === 'true') {
@@ -225,7 +225,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         if (hasPosters || status.status === 'completed') {
           const now = new Date();
           setLastEnrichedAt(now);
-          await AsyncStorage.setItem('@trakt_last_enriched', now.toISOString());
+          await AsyncStorage.setItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED, now.toISOString());
           console.log('[Trakt] Enrichment completed successfully');
         } else if (status.status === 'failed') {
           console.error('[Trakt] Enrichment failed:', status.errors);

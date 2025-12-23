@@ -9,7 +9,7 @@
  */
 
 import { TRAKT_CONFIG } from '@/src/config/trakt';
-import type { SyncStatus } from '@/src/types/trakt';
+import type { EnrichmentOptions, EnrichmentStatus, SyncStatus } from '@/src/types/trakt';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -137,32 +137,6 @@ export async function disconnectTrakt(userId: string): Promise<void> {
     cancelTimeout();
     throw error;
   }
-}
-
-/**
- * Options for TMDB enrichment
- */
-export interface EnrichmentOptions {
-  lists?: string[];
-  includeEpisodes?: boolean;
-}
-
-/**
- * Enrichment status for a list
- */
-export interface ListEnrichmentStatus {
-  hasPosters: boolean;
-  itemCount: number;
-  enrichedCount: number;
-}
-
-/**
- * Overall enrichment status
- */
-export interface EnrichmentStatus {
-  status: 'idle' | 'in_progress' | 'completed' | 'failed';
-  lists: Record<string, ListEnrichmentStatus>;
-  errors?: string[];
 }
 
 /**

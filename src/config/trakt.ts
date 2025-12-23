@@ -39,4 +39,5 @@ export const TRAKT_STORAGE_KEYS = {
   CONNECTED: '@trakt_connected',
   LAST_SYNCED: '@trakt_last_synced',
   SYNC_STATUS: '@trakt_sync_status',
+  LAST_ENRICHED: '@trakt_last_enriched',
 } as const;
