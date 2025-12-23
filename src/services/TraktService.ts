@@ -10,6 +10,7 @@
 
 import { TRAKT_CONFIG } from '@/src/config/trakt';
 import type { SyncStatus } from '@/src/types/trakt';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import * as WebBrowser from 'expo-web-browser';
 
 const { BACKEND_URL, CLIENT_ID, REDIRECT_URI } = TRAKT_CONFIG;
@@ -40,17 +41,29 @@ export async function initiateOAuthFlow(
 export async function triggerSync(userId: string): Promise<void> {
   console.log('[Trakt] Triggering sync for user:', userId);
 
-  const response = await fetch(`${BACKEND_URL}/api/trakt/sync`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId }),
-  });
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Sync failed: ${errorText}`);
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/api/trakt/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      }),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Sync failed: ${errorText}`);
+    }
+  } catch (error) {
+    cancelTimeout();
+    throw error;
   }
 }
 
@@ -60,14 +73,26 @@ export async function triggerSync(userId: string): Promise<void> {
 export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
   console.log('[Trakt] Checking sync status for user:', userId);
 
-  const response = await fetch(`${BACKEND_URL}/api/trakt/sync?userId=${userId}`);
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to check sync status: ${errorText}`);
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/api/trakt/sync?userId=${userId}`),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to check sync status: ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    cancelTimeout();
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
@@ -77,17 +102,29 @@ export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
 export async function disconnectTrakt(userId: string): Promise<void> {
   console.log('[Trakt] Disconnecting for user:', userId);
 
-  const response = await fetch(`${BACKEND_URL}/api/trakt/disconnect`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId }),
-  });
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Disconnect failed: ${errorText}`);
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/api/trakt/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      }),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Disconnect failed: ${errorText}`);
+    }
+  } catch (error) {
+    cancelTimeout();
+    throw error;
   }
 }
 
@@ -127,21 +164,33 @@ export async function triggerEnrichment(
 ): Promise<void> {
   console.log('[Trakt] Triggering enrichment for user:', userId);
 
-  const response = await fetch(`${BACKEND_URL}/api/trakt/enrich`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId,
-      lists: options?.lists || ['already-watched', 'watchlist', 'favorites'],
-      includeEpisodes: options?.includeEpisodes || false,
-    }),
-  });
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Enrichment failed: ${errorText}`);
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/api/trakt/enrich`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          lists: options?.lists || ['already-watched', 'watchlist', 'favorites'],
+          includeEpisodes: options?.includeEpisodes || false,
+        }),
+      }),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Enrichment failed: ${errorText}`);
+    }
+  } catch (error) {
+    cancelTimeout();
+    throw error;
   }
 }
 
@@ -151,12 +200,24 @@ export async function triggerEnrichment(
 export async function checkEnrichmentStatus(userId: string): Promise<EnrichmentStatus> {
   console.log('[Trakt] Checking enrichment status for user:', userId);
 
-  const response = await fetch(`${BACKEND_URL}/api/trakt/enrich?userId=${userId}`);
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to check enrichment status: ${errorText}`);
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/api/trakt/enrich?userId=${userId}`),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to check enrichment status: ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    cancelTimeout();
+    throw error;
   }
-
-  return response.json();
 }
