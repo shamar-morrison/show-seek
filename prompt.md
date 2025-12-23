@@ -1,7 +1,11 @@
-### Changes required
+### Bug Report
 
-- i want to make changes to the the `tracked integration` button on the profile screen. i want to replace the icon with the trakt logo.
-- on the integration screen i want to replace the icon in the middle with the trakt icon and the showseek icon, the trakt icon should be on the left with an arrow in the middle pointing to the showseek icon on the right (indicating data flows from trakt to showseek), the showseek icon should also be put in a circle so it appear rounded, do not edit the trakt icon. both icons should be of the same size visually
-- replace the `<- Back` button text in the header with the regular arrow
+on some screens like watchlists, custom lists and favorites, you can long press on the media card to bring up the add to list modal but it never works on the first long press, i have to do it a second time for the modal to appear. consider the following:
 
-do you have any questions
+1. i visit any of the screens mentioned above
+2. i long press a media card (i get haptic feedback) and nothing happens
+3. i long press again and see the add to list modal
+4. i navigate to a different screen and come back
+5. i have to long press twice again for the modal to work
+
+do you understand or have any questions?
