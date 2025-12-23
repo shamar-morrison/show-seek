@@ -13,6 +13,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useTrakt } from '@/src/context/TraktContext';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
@@ -28,7 +29,6 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -204,7 +204,7 @@ export default function TraktSettingsScreen() {
                 <Image
                   source={require('@/assets/images/icon.png')}
                   style={styles.showSeekIcon}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
               </View>
             </View>
