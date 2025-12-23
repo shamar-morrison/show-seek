@@ -30,6 +30,14 @@ const ONBOARDING_DATA = [
     image:
       'https://images.unsplash.com/photo-1584905066893-7d5c142ba4e1?q=80&w=1000&auto=format&fit=crop',
   },
+  {
+    id: '4',
+    title: 'Sync with Trakt',
+    description:
+      'Connect your Trakt account to automatically sync your watch history, lists, and ratings across devices.',
+    image:
+      'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1000&auto=format&fit=crop',
+  },
 ];
 
 export default function OnboardingScreen() {
