@@ -89,7 +89,6 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         icon: 'download-outline',
         title: 'Export Your Data',
         description: 'Download your lists and watch history',
-        isNew: true,
       },
     ],
   },
