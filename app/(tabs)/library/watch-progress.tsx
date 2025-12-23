@@ -1,5 +1,5 @@
+import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
-import { WatchingEmptyState } from '@/src/components/watching/WatchingEmptyState';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
@@ -7,7 +7,7 @@ import { InProgressShow } from '@/src/types/episodeTracking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown } from 'lucide-react-native';
+import { ArrowUpDown, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -124,7 +124,13 @@ export default function WatchProgressScreen() {
         data={sortedData}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
-        ListEmptyComponent={WatchingEmptyState}
+        ListEmptyComponent={
+          <EmptyState
+            icon={TvIcon}
+            title="No Shows in Progress"
+            description="Start watching a show to see your progress tracked here."
+          />
+        }
         keyExtractor={(item) => item.tvShowId.toString()}
       />
 
