@@ -276,16 +276,19 @@ export function useCurrentlyWatching() {
     seasonQueries,
   ]);
 
-  // Compute loading state
+  // Compute loading state - only loading if we have queries pending
   const isLoading =
     trackingQuery.isLoading ||
-    showDetailsQueries.some((q) => q.isLoading) ||
-    seasonDetailsQueries.some((q) => q.isLoading);
+    (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
+    (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading));
 
-  // Compute error state
+  // Compute error state - only error if base tracking fails or ALL show queries fail
+  const allShowDetailsFailed =
+    showDetailsQueries.length > 0 && showDetailsQueries.every((q) => q.error);
+
   const error = trackingQuery.error
     ? 'Failed to load watching progress.'
-    : showDetailsQueries.some((q) => q.error) || seasonDetailsQueries.some((q) => q.error)
+    : allShowDetailsFailed
       ? 'Failed to load show details.'
       : null;
 
