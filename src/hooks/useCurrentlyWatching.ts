@@ -191,12 +191,14 @@ export function useCurrentlyWatching() {
           airDate: string | null;
         } | null = null;
 
-        // Get last watched episode
+        // Get furthest watched episode (by season/episode order, not by timestamp)
+        // This ensures "next episode" recommendations continue from the user's furthest progress,
+        // even if they've rewatched earlier episodes more recently.
         const sortedWatched = [...episodesList].sort((a, b) => {
           if (a.seasonNumber !== b.seasonNumber) return a.seasonNumber - b.seasonNumber;
           return a.episodeNumber - b.episodeNumber;
         });
-        const lastWatched = sortedWatched[sortedWatched.length - 1];
+        const furthestWatched = sortedWatched[sortedWatched.length - 1];
 
         // Search for next unwatched episode in fetched seasons
         if (seasonsData.length > 0) {
@@ -215,12 +217,12 @@ export function useCurrentlyWatching() {
             const isReleased = ep.air_date && new Date(ep.air_date) <= new Date();
 
             if (isReleased && !isWatched) {
-              const isAfterLast =
-                ep.season_number > lastWatched.seasonNumber ||
-                (ep.season_number === lastWatched.seasonNumber &&
-                  ep.episode_number > lastWatched.episodeNumber);
+              const isAfterFurthest =
+                ep.season_number > furthestWatched.seasonNumber ||
+                (ep.season_number === furthestWatched.seasonNumber &&
+                  ep.episode_number > furthestWatched.episodeNumber);
 
-              if (isAfterLast) {
+              if (isAfterFurthest) {
                 nextEpisodeCandidate = {
                   season: ep.season_number,
                   episode: ep.episode_number,
@@ -251,9 +253,9 @@ export function useCurrentlyWatching() {
           percentage,
           timeRemaining,
           lastWatchedEpisode: {
-            season: lastWatched.seasonNumber,
-            episode: lastWatched.episodeNumber,
-            title: lastWatched.episodeName,
+            season: furthestWatched.seasonNumber,
+            episode: furthestWatched.episodeNumber,
+            title: furthestWatched.episodeName,
           },
           nextEpisode: nextEpisodeCandidate,
         });
