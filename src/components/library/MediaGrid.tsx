@@ -59,12 +59,12 @@ const MediaGridItem = memo<{
         <Text style={styles.title} numberOfLines={1}>
           {displayTitle}
         </Text>
-        {year && (
+        {(year || item.vote_average > 0) && (
           <View style={styles.yearRatingContainer}>
-            <Text style={styles.year}>{year}</Text>
+            {year && <Text style={styles.year}>{year}</Text>}
+            {year && item.vote_average > 0 && <Text style={styles.separator}> • </Text>}
             {item.vote_average > 0 && (
               <>
-                <Text style={styles.separator}> • </Text>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
               </>
