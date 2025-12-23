@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   playIconContainer: {
-    marginLeft: 8,
+    marginLeft: SPACING.s,
     opacity: 0.8,
   },
 });
