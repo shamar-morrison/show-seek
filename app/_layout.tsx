@@ -46,7 +46,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 60 * 3, // 3 hours
       refetchOnWindowFocus: false, // Reduce unnecessary refetches
     },
   },
