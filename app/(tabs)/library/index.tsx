@@ -1,5 +1,7 @@
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
 import {
   BarChart3,
@@ -107,6 +109,7 @@ const SECTIONS: SectionData[] = [
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const { isPremium } = usePremium();
 
   const handleNavigate = useCallback(
     (route: string) => {
@@ -116,15 +119,29 @@ export default function LibraryScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: NavigationItem }) => (
-      <LibraryNavigationCard
-        icon={item.icon}
-        title={item.title}
-        onPress={() => handleNavigate(item.route)}
-        testID={`library-nav-${item.id}`}
-      />
-    ),
-    [handleNavigate]
+    ({ item }: { item: NavigationItem }) => {
+      const isReminders = item.id === 'reminders';
+      const showPremiumBadge = isReminders && !isPremium;
+
+      const handlePress = () => {
+        if (isReminders && !isPremium) {
+          router.push('/premium' as any);
+        } else {
+          handleNavigate(item.route);
+        }
+      };
+
+      return (
+        <LibraryNavigationCard
+          icon={item.icon}
+          title={item.title}
+          onPress={handlePress}
+          testID={`library-nav-${item.id}`}
+          badge={showPremiumBadge ? <PremiumBadge /> : undefined}
+        />
+      );
+    },
+    [handleNavigate, isPremium]
   );
 
   const renderSectionHeader = useCallback(
