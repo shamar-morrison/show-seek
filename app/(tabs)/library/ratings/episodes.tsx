@@ -32,6 +32,9 @@ type EpisodeSection = {
 
 const STORAGE_KEY = 'episodeRatingsViewMode';
 
+/** Combined height of header + navigation chrome to subtract from empty state container */
+const HEADER_CHROME_HEIGHT = 150;
+
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -202,6 +205,20 @@ export default function EpisodeRatingsScreen() {
 
   const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
+  const searchEmptyComponent = useMemo(
+    () =>
+      searchQuery ? (
+        <View style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}>
+          <EmptyState
+            icon={Search}
+            title="No results found"
+            description="Try a different search term."
+          />
+        </View>
+      ) : null,
+    [searchQuery, windowHeight, insets.top, insets.bottom]
+  );
+
   if (isLoading || isLoadingPreference) {
     return (
       <View style={styles.loadingContainer}>
@@ -234,17 +251,7 @@ export default function EpisodeRatingsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={
-            searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
-            ) : null
-          }
+          ListEmptyComponent={searchEmptyComponent}
         />
       ) : (
         <SectionList
@@ -257,17 +264,7 @@ export default function EpisodeRatingsScreen() {
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={
-            searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
-            ) : null
-          }
+          ListEmptyComponent={searchEmptyComponent}
         />
       )}
     </SafeAreaView>
