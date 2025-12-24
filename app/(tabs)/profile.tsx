@@ -13,6 +13,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -298,7 +299,11 @@ export default function ProfileScreen() {
           {/* User Info Section */}
           <View style={styles.userSection}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+              {user?.photoURL ? (
+                <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
               {isPremium && (
                 <View style={styles.premiumCrown}>
                   <Crown size={12} color={COLORS.white} />
@@ -630,11 +635,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.white,
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
   displayName: {
     fontSize: FONT_SIZE.xl,
     fontWeight: '600',
     color: COLORS.white,
     marginBottom: SPACING.xs,
+    textAlign: 'center',
   },
   email: {
     fontSize: FONT_SIZE.m,
