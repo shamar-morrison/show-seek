@@ -188,7 +188,10 @@ export default function CustomListDetailScreen() {
   const actionButton = useMemo(
     () => ({
       icon: Settings2,
-      onPress: () => listActionsModalRef.current?.present(),
+      onPress: () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        listActionsModalRef.current?.present();
+      },
       showBadge: hasActiveSort || hasActiveFilterState,
     }),
     [hasActiveSort, hasActiveFilterState]

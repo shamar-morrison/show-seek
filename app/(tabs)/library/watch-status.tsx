@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
@@ -25,7 +26,14 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
+import {
+  ArrowUpDown,
+  Bookmark,
+  Ellipsis,
+  Grid3X3,
+  List,
+  SlidersHorizontal,
+} from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
@@ -55,6 +63,7 @@ export default function WatchStatusScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<FlatList>(null);
+  const listActionsModalRef = useRef<ListActionsModalRef>(null);
 
   const {
     handleItemPress,
@@ -149,10 +158,40 @@ export default function WatchStatusScreen() {
     }
   }, [viewMode]);
 
-  useLayoutEffect(() => {
+  const hasActiveFiltersOrSort = useMemo(() => {
+    const activeFilters = hasActiveFilters(filters);
+    const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
+    return activeFilters || hasActiveSort;
+  }, [filters, sortState]);
+
+  const listActions = useMemo(() => {
     const activeFilters = hasActiveFilters(filters);
     const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
 
+    return [
+      {
+        id: 'filter',
+        icon: SlidersHorizontal,
+        label: 'Filter Items',
+        onPress: () => setFilterModalVisible(true),
+        showBadge: activeFilters,
+      },
+      {
+        id: 'sort',
+        icon: ArrowUpDown,
+        label: 'Sort Items',
+        onPress: () => setSortModalVisible(true),
+        showBadge: hasActiveSort,
+      },
+    ];
+  }, [filters, sortState]);
+
+  const handleOpenActionsModal = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    listActionsModalRef.current?.present();
+  }, []);
+
+  useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
@@ -164,28 +203,19 @@ export default function WatchStatusScreen() {
               <Grid3X3 size={24} color={COLORS.text} />
             )}
           </Pressable>
-          {/* Sort Modal */}
+          {/* Actions Modal */}
           <Pressable
-            onPress={() => setSortModalVisible(true)}
+            onPress={handleOpenActionsModal}
             hitSlop={HIT_SLOP.m}
             style={styles.headerButton}
           >
-            <ArrowUpDown size={24} color={COLORS.text} />
-            {hasActiveSort && <View style={styles.filterBadge} />}
-          </Pressable>
-          {/* Filter Modal */}
-          <Pressable
-            onPress={() => setFilterModalVisible(true)}
-            hitSlop={HIT_SLOP.m}
-            style={styles.headerButton}
-          >
-            <SlidersHorizontal size={24} color={COLORS.text} />
-            {activeFilters && <View style={styles.filterBadge} />}
+            <Ellipsis size={24} color={COLORS.text} />
+            {hasActiveFiltersOrSort && <View style={styles.filterBadge} />}
           </Pressable>
         </View>
       ),
     });
-  }, [filters, navigation, sortState, viewMode, toggleViewMode]);
+  }, [navigation, viewMode, toggleViewMode, handleOpenActionsModal, hasActiveFiltersOrSort]);
 
   return (
     <>
@@ -313,6 +343,8 @@ export default function WatchStatusScreen() {
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'popularity', 'alphabetical']}
       />
+
+      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
 
       <Toast ref={toastRef} />
     </>
