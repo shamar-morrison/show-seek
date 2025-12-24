@@ -1,24 +1,27 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { List, Rows3, Star } from 'lucide-react-native';
+import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   SectionList,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
 type EpisodeSection = {
@@ -29,14 +32,38 @@ type EpisodeSection = {
 
 const STORAGE_KEY = 'episodeRatingsViewMode';
 
+/** Combined height of header + navigation chrome to subtract from empty state container */
+const HEADER_CHROME_HEIGHT = 150;
+
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+
+  // Filter episode ratings from all ratings
+  const episodeRatings = useMemo(() => {
+    if (!ratings) return [];
+    return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
+  }, [ratings]);
+
+  // Search functionality using shared hook
+  const {
+    searchQuery,
+    isSearchActive,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+    filteredItems,
+  } = useHeaderSearch({
+    items: episodeRatings,
+    getSearchableText: (item) => `${item.tvShowName || ''} ${item.episodeName || ''}`,
+  });
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -66,38 +93,58 @@ export default function EpisodeRatingsScreen() {
   }, [viewMode]);
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={toggleViewMode}
-          style={{ marginRight: SPACING.s }}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={HIT_SLOP.m}
-        >
-          {viewMode === 'flat' ? (
-            <Rows3 size={24} color={COLORS.text} />
-          ) : (
-            <List size={24} color={COLORS.text} />
-          )}
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, viewMode, toggleViewMode]);
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search episodes..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+              <Search size={22} color={COLORS.text} />
+            </Pressable>
+            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+              {viewMode === 'flat' ? (
+                <Rows3 size={24} color={COLORS.text} />
+              ) : (
+                <List size={24} color={COLORS.text} />
+              )}
+            </Pressable>
+          </View>
+        ),
+      });
+    }
+  }, [
+    navigation,
+    viewMode,
+    toggleViewMode,
+    isSearchActive,
+    searchQuery,
+    deactivateSearch,
+    searchButton,
+  ]);
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
-  const episodeRatings = useMemo(() => {
-    if (!ratings) return [];
-    return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
-  }, [ratings]);
-
   const groupedEpisodeRatings = useMemo(() => {
-    if (!episodeRatings || viewMode === 'flat') return null;
+    if (!filteredItems || viewMode === 'flat') return null;
 
     // Group episodes by TV show
     const groupedMap = new Map<number, RatingItem[]>();
 
-    episodeRatings.forEach((rating) => {
+    filteredItems.forEach((rating) => {
       if (rating.mediaType !== 'episode' || !rating.tvShowId) return;
 
       if (!groupedMap.has(rating.tvShowId)) {
@@ -121,7 +168,7 @@ export default function EpisodeRatingsScreen() {
       });
 
     return sections;
-  }, [episodeRatings, viewMode]);
+  }, [filteredItems, viewMode]);
 
   const handleItemPress = useCallback(
     (rating: RatingItem) => {
@@ -158,6 +205,20 @@ export default function EpisodeRatingsScreen() {
 
   const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
+  const searchEmptyComponent = useMemo(
+    () =>
+      searchQuery ? (
+        <View style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}>
+          <EmptyState
+            icon={Search}
+            title="No results found"
+            description="Try a different search term."
+          />
+        </View>
+      ) : null,
+    [searchQuery, windowHeight, insets.top, insets.bottom]
+  );
+
   if (isLoading || isLoadingPreference) {
     return (
       <View style={styles.loadingContainer}>
@@ -184,12 +245,13 @@ export default function EpisodeRatingsScreen() {
       <View style={styles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
-          data={episodeRatings}
+          data={filteredItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={searchEmptyComponent}
         />
       ) : (
         <SectionList
@@ -202,6 +264,7 @@ export default function EpisodeRatingsScreen() {
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={searchEmptyComponent}
         />
       )}
     </SafeAreaView>
@@ -242,5 +305,10 @@ const styles = StyleSheet.create({
   },
   sectionSeparator: {
     height: SPACING.l,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
   },
 });

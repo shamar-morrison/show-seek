@@ -24,7 +24,6 @@ interface MediaGridProps {
   };
   onItemPress: (item: ListMediaItem) => void;
   onItemLongPress: (item: ListMediaItem) => void;
-  showRatings?: boolean;
 }
 
 export interface MediaGridRef {
@@ -35,8 +34,7 @@ const MediaGridItem = memo<{
   item: ListMediaItem;
   onPress: (item: ListMediaItem) => void;
   onLongPress: (item: ListMediaItem) => void;
-  showRatings: boolean;
-}>(({ item, onPress, onLongPress, showRatings }) => {
+}>(({ item, onPress, onLongPress }) => {
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
 
@@ -80,7 +78,7 @@ MediaGridItem.displayName = 'MediaGridItem';
 
 export const MediaGrid = memo(
   forwardRef<MediaGridRef, MediaGridProps>(
-    ({ items, isLoading, emptyState, onItemPress, onItemLongPress, showRatings = true }, ref) => {
+    ({ items, isLoading, emptyState, onItemPress, onItemLongPress }, ref) => {
       const listRef = useRef<any>(null);
 
       useImperativeHandle(ref, () => ({
@@ -91,14 +89,9 @@ export const MediaGrid = memo(
 
       const renderItem = useCallback(
         ({ item }: { item: ListMediaItem }) => (
-          <MediaGridItem
-            item={item}
-            onPress={onItemPress}
-            onLongPress={onItemLongPress}
-            showRatings={showRatings}
-          />
+          <MediaGridItem item={item} onPress={onItemPress} onLongPress={onItemLongPress} />
         ),
-        [onItemPress, onItemLongPress, showRatings]
+        [onItemPress, onItemLongPress]
       );
 
       const keyExtractor = useCallback(

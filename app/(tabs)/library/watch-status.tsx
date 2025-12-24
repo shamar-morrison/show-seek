@@ -27,7 +27,15 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'watch_status_view_mode';
@@ -149,35 +157,31 @@ export default function WatchStatusScreen() {
       headerRight: () => (
         <View style={styles.headerButtons}>
           {/* View Mode Toggle */}
-          <TouchableOpacity
-            onPress={toggleViewMode}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.m}
-          >
+          <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
             {viewMode === 'grid' ? (
               <List size={24} color={COLORS.text} />
             ) : (
               <Grid3X3 size={24} color={COLORS.text} />
             )}
-          </TouchableOpacity>
+          </Pressable>
           {/* Sort Modal */}
-          <TouchableOpacity
+          <Pressable
             onPress={() => setSortModalVisible(true)}
-            activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.m}
             style={styles.headerButton}
           >
             <ArrowUpDown size={24} color={COLORS.text} />
             {hasActiveSort && <View style={styles.filterBadge} />}
-          </TouchableOpacity>
+          </Pressable>
           {/* Filter Modal */}
-          <TouchableOpacity
+          <Pressable
             onPress={() => setFilterModalVisible(true)}
-            activeOpacity={ACTIVE_OPACITY}
+            hitSlop={HIT_SLOP.m}
             style={styles.headerButton}
           >
             <SlidersHorizontal size={24} color={COLORS.text} />
             {activeFilters && <View style={styles.filterBadge} />}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       ),
     });

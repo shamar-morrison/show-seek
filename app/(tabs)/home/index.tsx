@@ -11,7 +11,15 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -60,13 +68,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShowSeek</Text>
-        <TouchableOpacity
-          onPress={handleOpenCustomization}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={HIT_SLOP.l}
-        >
+        <Pressable onPress={handleOpenCustomization} hitSlop={HIT_SLOP.l}>
           <Settings2 size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <ScrollView

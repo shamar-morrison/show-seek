@@ -9,6 +9,7 @@ import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -21,7 +22,7 @@ import {
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Heart, Settings2, SlidersHorizontal } from 'lucide-react-native';
+import { ArrowUpDown, Heart, Search, Settings2, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,12 +71,6 @@ export default function FavoritesScreen() {
     [hasActiveSort, hasActiveFilterState]
   );
 
-  const { viewMode, isLoadingPreference } = useViewModeToggle({
-    storageKey: VIEW_MODE_STORAGE_KEY,
-    showSortButton: false,
-    actionButton,
-  });
-
   const favoritesList = useMemo(() => {
     return lists?.find((l) => l.id === DEFAULT_LIST_IDS[3]);
   }, [lists]);
@@ -111,6 +106,36 @@ export default function FavoritesScreen() {
       }
     });
   }, [favoritesList, sortState, filterState]);
+
+  // Search functionality
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: searchFilteredItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: listItems,
+    getSearchableText: (item) => item.title || item.name || '',
+  });
+
+  // The final items to display (with search applied)
+  const displayItems = searchFilteredItems;
+
+  const { viewMode, isLoadingPreference } = useViewModeToggle({
+    storageKey: VIEW_MODE_STORAGE_KEY,
+    showSortButton: false,
+    actionButton,
+    searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search favorites...',
+    },
+  });
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
@@ -197,24 +222,30 @@ export default function FavoritesScreen() {
             <MediaGrid
               key="grid"
               ref={mediaGridRef}
-              items={listItems}
+              items={displayItems}
               isLoading={isLoading}
               emptyState={
-                hasActiveFilterState
+                searchQuery
                   ? {
-                      icon: SlidersHorizontal,
-                      title: 'No items match your filters',
-                      description: 'Try adjusting your filters to see more results.',
-                      actionLabel: 'Clear Filters',
-                      onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                      icon: Search,
+                      title: 'No results found',
+                      description: 'Try a different search term.',
                     }
-                  : {
-                      icon: Heart,
-                      title: 'No Favorites Yet',
-                      description: 'Mark movies and TV shows as favorites to see them here.',
-                      actionLabel: 'Browse Content',
-                      onAction: () => router.push('/(tabs)/discover' as any),
-                    }
+                  : hasActiveFilterState
+                    ? {
+                        icon: SlidersHorizontal,
+                        title: 'No items match your filters',
+                        description: 'Try adjusting your filters to see more results.',
+                        actionLabel: 'Clear Filters',
+                        onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
+                      }
+                    : {
+                        icon: Heart,
+                        title: 'No Favorites Yet',
+                        description: 'Mark movies and TV shows as favorites to see them here.',
+                        actionLabel: 'Browse Content',
+                        onAction: () => router.push('/(tabs)/discover' as any),
+                      }
               }
               onItemPress={handleItemPress}
               onItemLongPress={handleLongPress}
@@ -223,13 +254,21 @@ export default function FavoritesScreen() {
             <FlashList
               key="list"
               ref={listRef}
-              data={listItems}
+              data={displayItems}
               renderItem={renderListItem}
               keyExtractor={keyExtractor}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
-                hasActiveFilterState ? (
+                searchQuery ? (
+                  <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                    <EmptyState
+                      icon={Search}
+                      title="No results found"
+                      description="Try a different search term."
+                    />
+                  </View>
+                ) : hasActiveFilterState ? (
                   <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                     <EmptyState
                       icon={SlidersHorizontal}

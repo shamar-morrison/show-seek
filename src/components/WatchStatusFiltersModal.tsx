@@ -98,7 +98,7 @@ const FilterSelect = ({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select {label}</Text>
-              <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.s}>
+              <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.m}>
                 <X size={24} color={COLORS.text} />
               </Pressable>
             </View>
@@ -204,7 +204,7 @@ export default function WatchStatusFiltersModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Filter Lists</Text>
-            <Pressable onPress={onClose}>
+            <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
           </View>
