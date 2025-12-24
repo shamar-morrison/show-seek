@@ -1,3 +1,4 @@
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,20 @@ interface ActionButton {
   showBadge?: boolean;
 }
 
+/** Search state to enable header swap for search mode */
+interface SearchState {
+  /** Whether search is currently active */
+  isActive: boolean;
+  /** Current search query */
+  query: string;
+  /** Callback to update search query */
+  onQueryChange: (query: string) => void;
+  /** Callback when search is closed */
+  onClose: () => void;
+  /** Placeholder text for search input */
+  placeholder?: string;
+}
+
 interface UseViewModeToggleOptions {
   /** Unique storage key for persisting the view mode preference */
   storageKey: string;
@@ -31,6 +46,8 @@ interface UseViewModeToggleOptions {
   actionButton?: ActionButton;
   /** Search button to show in header (renders first, before view toggle) */
   searchButton?: ActionButton;
+  /** Search state - when provided, the hook handles search header swap */
+  searchState?: SearchState;
 }
 
 interface UseViewModeToggleReturn {
@@ -42,6 +59,7 @@ interface UseViewModeToggleReturn {
 /**
  * Custom hook for managing view mode (grid/list) toggle with persistence.
  * Also sets up the header with view toggle and optional sort button.
+ * When searchState is provided, handles switching between search header and normal header.
  */
 export function useViewModeToggle({
   storageKey,
@@ -50,6 +68,7 @@ export function useViewModeToggle({
   onSortPress,
   actionButton,
   searchButton,
+  searchState,
 }: UseViewModeToggleOptions): UseViewModeToggleReturn {
   const navigation = useNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -84,55 +103,75 @@ export function useViewModeToggle({
   }, [viewMode, storageKey]);
 
   // Set up header with view mode toggle and optional sort/action button
+  // Also handles search header swap when searchState is provided
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerButtons}>
-          {searchButton && (
-            <TouchableOpacity
-              onPress={searchButton.onPress}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
-              <searchButton.icon size={22} color={COLORS.text} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            onPress={toggleViewMode}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.m}
-          >
-            {viewMode === 'grid' ? (
-              <List size={24} color={COLORS.text} />
-            ) : (
-              <Grid3X3 size={24} color={COLORS.text} />
+    if (searchState?.isActive) {
+      // Show search header
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchState.query}
+            onSearchChange={searchState.onQueryChange}
+            onClose={searchState.onClose}
+            placeholder={searchState.placeholder}
+          />
+        ),
+      });
+    } else {
+      // Show normal header with buttons
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            {searchButton && (
+              <TouchableOpacity
+                onPress={searchButton.onPress}
+                activeOpacity={ACTIVE_OPACITY}
+                hitSlop={HIT_SLOP.m}
+              >
+                <searchButton.icon size={22} color={COLORS.text} />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-          {showSortButton && onSortPress && (
             <TouchableOpacity
-              onPress={onSortPress}
+              onPress={toggleViewMode}
               activeOpacity={ACTIVE_OPACITY}
-              style={sortHeaderStyles.headerButton}
               hitSlop={HIT_SLOP.m}
             >
-              <ArrowUpDown size={22} color={COLORS.text} />
-              {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
+              {viewMode === 'grid' ? (
+                <List size={24} color={COLORS.text} />
+              ) : (
+                <Grid3X3 size={24} color={COLORS.text} />
+              )}
             </TouchableOpacity>
-          )}
-          {actionButton && (
-            <TouchableOpacity
-              onPress={actionButton.onPress}
-              activeOpacity={ACTIVE_OPACITY}
-              style={sortHeaderStyles.headerButton}
-              hitSlop={HIT_SLOP.m}
-            >
-              <actionButton.icon size={22} color={COLORS.text} />
-              {actionButton.showBadge && <View style={sortHeaderStyles.sortBadge} />}
-            </TouchableOpacity>
-          )}
-        </View>
-      ),
-    });
+            {showSortButton && onSortPress && (
+              <TouchableOpacity
+                onPress={onSortPress}
+                activeOpacity={ACTIVE_OPACITY}
+                style={sortHeaderStyles.headerButton}
+                hitSlop={HIT_SLOP.m}
+              >
+                <ArrowUpDown size={22} color={COLORS.text} />
+                {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
+              </TouchableOpacity>
+            )}
+            {actionButton && (
+              <TouchableOpacity
+                onPress={actionButton.onPress}
+                activeOpacity={ACTIVE_OPACITY}
+                style={sortHeaderStyles.headerButton}
+                hitSlop={HIT_SLOP.m}
+              >
+                <actionButton.icon size={22} color={COLORS.text} />
+                {actionButton.showBadge && <View style={sortHeaderStyles.sortBadge} />}
+              </TouchableOpacity>
+            )}
+          </View>
+        ),
+      });
+    }
   }, [
     navigation,
     viewMode,
@@ -142,6 +181,7 @@ export function useViewModeToggle({
     onSortPress,
     actionButton,
     searchButton,
+    searchState,
   ]);
 
   return {

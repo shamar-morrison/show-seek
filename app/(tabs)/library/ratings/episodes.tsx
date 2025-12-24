@@ -1,5 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useRatings } from '@/src/hooks/useRatings';
@@ -8,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { List, Rows3, Star } from 'lucide-react-native';
+import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
 type EpisodeSection = {
@@ -34,9 +35,23 @@ export default function EpisodeRatingsScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  const activateSearch = useCallback(() => {
+    setIsSearchActive(true);
+  }, []);
+
+  const deactivateSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery('');
+  }, []);
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -66,23 +81,55 @@ export default function EpisodeRatingsScreen() {
   }, [viewMode]);
 
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={toggleViewMode}
-          style={{ marginRight: SPACING.s }}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={HIT_SLOP.m}
-        >
-          {viewMode === 'flat' ? (
-            <Rows3 size={24} color={COLORS.text} />
-          ) : (
-            <List size={24} color={COLORS.text} />
-          )}
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, viewMode, toggleViewMode]);
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search episodes..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              onPress={activateSearch}
+              activeOpacity={ACTIVE_OPACITY}
+              hitSlop={HIT_SLOP.m}
+            >
+              <Search size={22} color={COLORS.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={toggleViewMode}
+              activeOpacity={ACTIVE_OPACITY}
+              hitSlop={HIT_SLOP.m}
+            >
+              {viewMode === 'flat' ? (
+                <Rows3 size={24} color={COLORS.text} />
+              ) : (
+                <List size={24} color={COLORS.text} />
+              )}
+            </TouchableOpacity>
+          </View>
+        ),
+      });
+    }
+  }, [
+    navigation,
+    viewMode,
+    toggleViewMode,
+    isSearchActive,
+    searchQuery,
+    deactivateSearch,
+    activateSearch,
+  ]);
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
@@ -91,13 +138,24 @@ export default function EpisodeRatingsScreen() {
     return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
   }, [ratings]);
 
+  // Filter episodes based on search query
+  const displayItems = useMemo(() => {
+    if (!searchQuery.trim()) return episodeRatings;
+    const query = searchQuery.toLowerCase().trim();
+    return episodeRatings.filter((item) => {
+      const showName = item.tvShowName?.toLowerCase() || '';
+      const episodeName = item.episodeName?.toLowerCase() || '';
+      return showName.includes(query) || episodeName.includes(query);
+    });
+  }, [episodeRatings, searchQuery]);
+
   const groupedEpisodeRatings = useMemo(() => {
-    if (!episodeRatings || viewMode === 'flat') return null;
+    if (!displayItems || viewMode === 'flat') return null;
 
     // Group episodes by TV show
     const groupedMap = new Map<number, RatingItem[]>();
 
-    episodeRatings.forEach((rating) => {
+    displayItems.forEach((rating) => {
       if (rating.mediaType !== 'episode' || !rating.tvShowId) return;
 
       if (!groupedMap.has(rating.tvShowId)) {
@@ -121,7 +179,7 @@ export default function EpisodeRatingsScreen() {
       });
 
     return sections;
-  }, [episodeRatings, viewMode]);
+  }, [displayItems, viewMode]);
 
   const handleItemPress = useCallback(
     (rating: RatingItem) => {
@@ -184,12 +242,21 @@ export default function EpisodeRatingsScreen() {
       <View style={styles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
-          data={episodeRatings}
+          data={displayItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <EmptyState
+                icon={Search}
+                title="No results found"
+                description="Try a different search term."
+              />
+            ) : null
+          }
         />
       ) : (
         <SectionList
@@ -202,6 +269,15 @@ export default function EpisodeRatingsScreen() {
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <EmptyState
+                icon={Search}
+                title="No results found"
+                description="Try a different search term."
+              />
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
@@ -242,5 +318,10 @@ const styles = StyleSheet.create({
   },
   sectionSeparator: {
     height: SPACING.l,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
   },
 });

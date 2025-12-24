@@ -48,6 +48,14 @@ export interface UseRatingScreenLogicOptions<TItem extends BaseEnrichedRating> {
     onPress: () => void;
     showBadge?: boolean;
   };
+  /** Optional search state for header swap */
+  searchState?: {
+    isActive: boolean;
+    query: string;
+    onQueryChange: (query: string) => void;
+    onClose: () => void;
+    placeholder?: string;
+  };
 }
 
 /**
@@ -101,6 +109,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   data,
   getMediaFromItem,
   searchButton,
+  searchState,
 }: UseRatingScreenLogicOptions<TItem>): UseRatingScreenLogicReturn<TItem> {
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -141,6 +150,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
     showSortButton: false,
     actionButton,
     searchButton,
+    searchState,
   });
 
   // Scroll to top after sort/filter state changes (but not on initial mount)

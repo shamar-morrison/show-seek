@@ -5,19 +5,17 @@ import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListC
 import ListActionsModal from '@/src/components/ListActionsModal';
 import MediaSortModal, { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
-import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -40,11 +38,32 @@ const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
 
 export default function TVShowRatingsScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
+  // Search functionality - create searchButton first, then pass to useRatingScreenLogic
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  const activateSearch = useCallback(() => {
+    setIsSearchActive(true);
+  }, []);
+
+  const deactivateSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery('');
+  }, []);
+
+  const searchButton = useMemo(
+    () => ({
+      icon: Search,
+      onPress: activateSearch,
+      showBadge: searchQuery.length > 0,
+    }),
+    [activateSearch, searchQuery.length]
+  );
 
   // Use shared rating screen logic
   const {
@@ -68,42 +87,25 @@ export default function TVShowRatingsScreen() {
     storageKey: VIEW_MODE_STORAGE_KEY,
     data: enrichedRatings,
     getMediaFromItem: getTVShowFromItem,
+    searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search TV shows...',
+    },
   });
 
-  // Search functionality
-  const {
-    searchQuery,
-    isSearchActive,
-    filteredItems: displayItems,
-    deactivateSearch,
-    setSearchQuery,
-  } = useHeaderSearch({
-    items: sortedData,
-    getSearchableText: (item) => item.tvShow?.name || '',
-  });
-
-  // Swap header when search is active
-  useLayoutEffect(() => {
-    if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search TV shows..."
-          />
-        ),
-      });
-    } else {
-      navigation.setOptions({
-        header: undefined,
-        headerTitle: undefined,
-      });
-    }
-  }, [isSearchActive, searchQuery, setSearchQuery, deactivateSearch, navigation]);
+  // Filter items based on search query
+  const displayItems = useMemo(() => {
+    if (!searchQuery.trim()) return sortedData;
+    const query = searchQuery.toLowerCase().trim();
+    return sortedData.filter((item) => {
+      const name = item.tvShow?.name || '';
+      return name.toLowerCase().includes(query);
+    });
+  }, [sortedData, searchQuery]);
 
   const handleItemPress = useCallback(
     (tvShowId: number) => {

@@ -4,7 +4,6 @@ import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
@@ -22,9 +21,9 @@ import {
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
-import { useNavigation, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ArrowUpDown, Heart, Search, Settings2, SlidersHorizontal } from 'lucide-react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,7 +31,6 @@ const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -130,30 +128,14 @@ export default function FavoritesScreen() {
     showSortButton: false,
     actionButton,
     searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search favorites...',
+    },
   });
-
-  // Swap header when search is active
-  useLayoutEffect(() => {
-    if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search favorites..."
-          />
-        ),
-      });
-    } else {
-      navigation.setOptions({
-        header: undefined,
-        headerTitle: undefined,
-      });
-    }
-  }, [isSearchActive, searchQuery, setSearchQuery, deactivateSearch, navigation]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
