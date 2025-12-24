@@ -216,7 +216,7 @@ export default function SignIn() {
               <TouchableOpacity
                 style={styles.button}
                 onPress={handleSignIn}
-                disabled={loading}
+                disabled={loading || googleLoading}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 {loading ? (
@@ -230,7 +230,7 @@ export default function SignIn() {
                 <TouchableOpacity
                   style={[styles.button, styles.guestButton]}
                   onPress={handleGuestSignIn}
-                  disabled={loading}
+                  disabled={loading || googleLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   <Text style={styles.guestButtonText}>Continue as Guest</Text>
