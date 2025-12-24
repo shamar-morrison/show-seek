@@ -9,13 +9,14 @@ import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -43,29 +44,20 @@ export default function TVShowRatingsScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Search functionality - create searchButton first, then pass to useRatingScreenLogic
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
+  // Search functionality using shared hook (initialize with empty array first)
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: [] as EnrichedTVRating[],
+    getSearchableText: (item) => item.tvShow?.name || '',
+  });
 
-  const activateSearch = useCallback(() => {
-    setIsSearchActive(true);
-  }, []);
-
-  const deactivateSearch = useCallback(() => {
-    setIsSearchActive(false);
-    setSearchQuery('');
-  }, []);
-
-  const searchButton = useMemo(
-    () => ({
-      icon: Search,
-      onPress: activateSearch,
-      showBadge: searchQuery.length > 0,
-    }),
-    [activateSearch, searchQuery.length]
-  );
-
-  // Use shared rating screen logic
+  // Use shared rating screen logic with search integration
   const {
     sortState,
     filterState,
@@ -97,8 +89,9 @@ export default function TVShowRatingsScreen() {
     },
   });
 
-  // Filter items based on search query
-  const displayItems = useMemo(() => {
+  // Filter sortedData based on search query (useHeaderSearch's filtering won't work
+  // since we had to initialize with empty array due to hook ordering)
+  const displayItems = React.useMemo(() => {
     if (!searchQuery.trim()) return sortedData;
     const query = searchQuery.toLowerCase().trim();
     return sortedData.filter((item) => {
