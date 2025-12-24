@@ -1,7 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { Search, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SearchableHeaderProps {
@@ -18,7 +18,6 @@ interface SearchableHeaderProps {
 /**
  * A header component that displays a full-width search bar.
  * Used to replace the normal header when search mode is active.
- * Includes a fade-in animation and auto-focus.
  */
 export function SearchableHeader({
   searchQuery,
@@ -28,38 +27,27 @@ export function SearchableHeader({
 }: SearchableHeaderProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
 
-  // Fade in on mount and auto-focus
+  // Auto-focus after a brief delay to let layout settle
   useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      // Focus after animation completes
+    const timerId = setTimeout(() => {
       inputRef.current?.focus();
-    });
-  }, [opacity]);
+    }, 100);
+
+    return () => clearTimeout(timerId);
+  }, []);
 
   const handleClear = () => {
-    // Fade out before closing
-    Animated.timing(opacity, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      onClose();
-    });
+    Keyboard.dismiss();
+    onClose();
   };
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.container,
         {
           paddingTop: insets.top + SPACING.s,
-          opacity,
         },
       ]}
     >
@@ -81,7 +69,7 @@ export function SearchableHeader({
           <X size={20} color={COLORS.textSecondary} />
         </Pressable>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
