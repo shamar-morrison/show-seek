@@ -4,6 +4,7 @@ import { useAuth } from '@/src/context/auth';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
@@ -12,10 +13,10 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Image as RNImage,
   ScrollView,
   StyleSheet,
   Text,
@@ -142,7 +143,7 @@ export default function SignIn() {
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+                <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
               </View>
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>Sign in to continue</Text>
@@ -157,11 +158,11 @@ export default function SignIn() {
                 activeOpacity={ACTIVE_OPACITY}
               >
                 {googleLoading ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <ActivityIndicator color={COLORS.white} />
                 ) : (
                   <>
                     <Image
-                      source={{ uri: 'https://www.google.com/favicon.ico' }}
+                      source={require('@/assets/images/google-icon.png')}
                       style={styles.googleIcon}
                     />
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
@@ -364,10 +365,9 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
   },
   googleIcon: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     backgroundColor: COLORS.white,
-    borderRadius: 2,
   },
   googleButtonText: {
     color: COLORS.white,

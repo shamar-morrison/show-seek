@@ -2,16 +2,17 @@ import { legal } from '@/app/(auth)/legal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Image as RNImage,
   ScrollView,
   StyleSheet,
   Text,
@@ -62,7 +63,7 @@ export default function SignUp() {
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+                <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
               </View>
               <Text style={styles.title}>Create Account</Text>
               <Text style={styles.subtitle}>
@@ -78,11 +79,11 @@ export default function SignUp() {
                 activeOpacity={ACTIVE_OPACITY}
               >
                 {loading ? (
-                  <ActivityIndicator color="#ffffff" />
+                  <ActivityIndicator color={COLORS.white} />
                 ) : (
                   <>
                     <Image
-                      source={{ uri: 'https://www.google.com/favicon.ico' }}
+                      source={require('@/assets/images/google-icon.png')}
                       style={styles.googleIcon}
                     />
                     <Text style={styles.googleButtonText}>Sign up with Google</Text>
@@ -179,8 +180,8 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
   },
   googleIcon: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     backgroundColor: '#ffffff',
     borderRadius: 2,
   },
