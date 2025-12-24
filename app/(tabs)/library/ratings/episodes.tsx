@@ -12,8 +12,16 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ActivityIndicator,
+  Pressable,
+  SectionList,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
 type EpisodeSection = {
@@ -29,6 +37,8 @@ export default function EpisodeRatingsScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -230,11 +240,13 @@ export default function EpisodeRatingsScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
             ) : null
           }
         />
@@ -251,11 +263,13 @@ export default function EpisodeRatingsScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
             ) : null
           }
         />

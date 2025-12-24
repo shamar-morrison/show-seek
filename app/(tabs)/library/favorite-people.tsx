@@ -19,9 +19,10 @@ import {
   SectionList,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'grid' | 'list';
 type PersonSection = {
@@ -36,6 +37,8 @@ export default function FavoritePeopleScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: favoritePersons, isLoading } = useFavoritePersons();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -230,11 +233,13 @@ export default function FavoritePeopleScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
             ) : null
           }
         />
@@ -251,11 +256,13 @@ export default function FavoritePeopleScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
             ) : null
           }
         />
