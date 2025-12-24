@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface ActionButton {
   icon: React.ComponentType<{ size: number; color: string }>;
@@ -12,7 +12,7 @@ interface UseHeaderSearchOptions<T> {
   items: T[];
   /** Function to extract searchable text from an item */
   getSearchableText: (item: T) => string;
-  /** Debounce delay in ms (not implemented yet for simplicity) */
+  /** Debounce delay in ms. Defaults to 0 (no debounce). */
   debounceMs?: number;
 }
 
@@ -42,6 +42,7 @@ interface UseHeaderSearchReturn<T> {
  * const { filteredItems, searchButton, isSearchActive, ... } = useHeaderSearch({
  *   items: data,
  *   getSearchableText: (item) => item.title || item.name || '',
+ *   debounceMs: 300, // Optional: debounce filtering by 300ms
  * });
  *
  * // Pass searchButton to useViewModeToggle
@@ -52,9 +53,25 @@ interface UseHeaderSearchReturn<T> {
 export function useHeaderSearch<T>({
   items,
   getSearchableText,
+  debounceMs = 0,
 }: UseHeaderSearchOptions<T>): UseHeaderSearchReturn<T> {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
+
+  // Debounce the search query
+  useEffect(() => {
+    if (debounceMs === 0) {
+      setDebouncedQuery(searchQuery);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, debounceMs);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, debounceMs]);
 
   const activateSearch = useCallback(() => {
     setIsSearchActive(true);
@@ -63,20 +80,21 @@ export function useHeaderSearch<T>({
   const deactivateSearch = useCallback(() => {
     setIsSearchActive(false);
     setSearchQuery('');
+    setDebouncedQuery('');
   }, []);
 
-  // Filter items based on search query
+  // Filter items based on debounced search query
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) {
+    if (!debouncedQuery.trim()) {
       return items;
     }
 
-    const query = searchQuery.toLowerCase().trim();
+    const query = debouncedQuery.toLowerCase().trim();
     return items.filter((item) => {
       const text = getSearchableText(item).toLowerCase();
       return text.includes(query);
     });
-  }, [items, searchQuery, getSearchableText]);
+  }, [items, debouncedQuery, getSearchableText]);
 
   // Search button configuration for header
   const searchButton: ActionButton = useMemo(
