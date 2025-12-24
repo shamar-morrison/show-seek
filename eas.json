@@ -12,6 +12,14 @@
       },
       "autoIncrement": true
     },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local"
+      }
+    },
     "preview": {
       "channel": "preview",
       "android": {
