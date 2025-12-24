@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import * as Haptics from 'expo-haptics';
 import { Search, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -30,6 +31,7 @@ export function SearchableHeader({
 
   // Auto-focus after a brief delay to let layout settle
   useEffect(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const timerId = setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
