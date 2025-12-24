@@ -3,6 +3,7 @@ import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,18 +33,12 @@ export default function EpisodeRatingsScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
-
-  const activateSearch = useCallback(() => {
-    setIsSearchActive(true);
-  }, []);
-
-  const deactivateSearch = useCallback(() => {
-    setIsSearchActive(false);
-    setSearchQuery('');
-  }, []);
+  // Search functionality using shared hook
+  const { searchQuery, isSearchActive, deactivateSearch, setSearchQuery, searchButton } =
+    useHeaderSearch({
+      items: [] as RatingItem[],
+      getSearchableText: (item) => `${item.tvShowName || ''} ${item.episodeName || ''}`,
+    });
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -92,7 +87,7 @@ export default function EpisodeRatingsScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <Pressable onPress={activateSearch} hitSlop={HIT_SLOP.m}>
+            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
             </Pressable>
             <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
@@ -113,7 +108,7 @@ export default function EpisodeRatingsScreen() {
     isSearchActive,
     searchQuery,
     deactivateSearch,
-    activateSearch,
+    searchButton,
   ]);
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
