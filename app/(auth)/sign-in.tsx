@@ -368,6 +368,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     backgroundColor: COLORS.white,
+    borderRadius: 2,
   },
   googleButtonText: {
     color: COLORS.white,
