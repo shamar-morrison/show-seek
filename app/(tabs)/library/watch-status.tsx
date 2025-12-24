@@ -311,6 +311,7 @@ export default function WatchStatusScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'popularity', 'alphabetical']}
       />
 
       <Toast ref={toastRef} />
