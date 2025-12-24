@@ -366,11 +366,11 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 20,
     height: 20,
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.white,
     borderRadius: 2,
   },
   googleButtonText: {
-    color: '#ffffff',
+    color: COLORS.white,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
   },
