@@ -21,7 +21,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ViewMode = 'grid' | 'list';
 type PersonSection = {
@@ -72,8 +72,6 @@ export default function FavoritePeopleScreen() {
     return [...favoritePersons].sort((a, b) => b.addedAt - a.addedAt);
   }, [favoritePersons]);
 
-  // Search functionality
-  const insets = useSafeAreaInsets();
   const {
     searchQuery,
     isSearchActive,

@@ -131,7 +131,7 @@ export default function MediaSortModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Sort By</Text>
-            <Pressable onPress={onClose} hitSlop={HIT_SLOP.s}>
+            <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
           </View>

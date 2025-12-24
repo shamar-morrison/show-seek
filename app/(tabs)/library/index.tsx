@@ -1,6 +1,6 @@
 import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigationCard';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
 import {
@@ -16,7 +16,7 @@ import {
   User,
 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
-import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavigationItem = {
@@ -167,9 +167,9 @@ export default function LibraryScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>Library</Text>
-        <TouchableOpacity onPress={() => router.push('/manage-lists' as any)}>
+        <Pressable onPress={() => router.push('/manage-lists' as any)} hitSlop={HIT_SLOP.m}>
           <Settings2 size={24} color={COLORS.text} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       <SectionList
