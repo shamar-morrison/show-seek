@@ -1,7 +1,7 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
@@ -11,15 +11,8 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  SectionList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
 type EpisodeSection = {
@@ -35,7 +28,6 @@ export default function EpisodeRatingsScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
-  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -97,26 +89,19 @@ export default function EpisodeRatingsScreen() {
     } else {
       navigation.setOptions({
         header: undefined,
+        headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <TouchableOpacity
-              onPress={activateSearch}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
+            <Pressable onPress={activateSearch} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={toggleViewMode}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
+            </Pressable>
+            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
               {viewMode === 'flat' ? (
                 <Rows3 size={24} color={COLORS.text} />
               ) : (
                 <List size={24} color={COLORS.text} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ),
       });

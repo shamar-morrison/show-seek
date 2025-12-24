@@ -1,7 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { Search, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SearchableHeaderProps {
@@ -77,9 +77,9 @@ export function SearchableHeader({
           returnKeyType="search"
           selectionColor={COLORS.primary}
         />
-        <TouchableOpacity onPress={handleClear} hitSlop={HIT_SLOP.m} style={styles.clearButton}>
+        <Pressable onPress={handleClear} hitSlop={HIT_SLOP.l} style={styles.clearButton}>
           <X size={20} color={COLORS.textSecondary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </Animated.View>
   );

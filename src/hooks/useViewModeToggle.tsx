@@ -1,12 +1,12 @@
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Grid3X3, List } from 'lucide-react-native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export type ViewMode = 'grid' | 'list';
 
@@ -127,46 +127,32 @@ export function useViewModeToggle({
         headerRight: () => (
           <View style={styles.headerButtons}>
             {searchButton && (
-              <TouchableOpacity
-                onPress={searchButton.onPress}
-                activeOpacity={ACTIVE_OPACITY}
-                hitSlop={HIT_SLOP.m}
-              >
+              <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
                 <searchButton.icon size={22} color={COLORS.text} />
-              </TouchableOpacity>
+              </Pressable>
             )}
-            <TouchableOpacity
-              onPress={toggleViewMode}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
+            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
               {viewMode === 'grid' ? (
                 <List size={24} color={COLORS.text} />
               ) : (
                 <Grid3X3 size={24} color={COLORS.text} />
               )}
-            </TouchableOpacity>
+            </Pressable>
             {showSortButton && onSortPress && (
-              <TouchableOpacity
-                onPress={onSortPress}
-                activeOpacity={ACTIVE_OPACITY}
-                style={sortHeaderStyles.headerButton}
-                hitSlop={HIT_SLOP.m}
-              >
+              <Pressable onPress={onSortPress} hitSlop={HIT_SLOP.m}>
                 <ArrowUpDown size={22} color={COLORS.text} />
                 {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-              </TouchableOpacity>
+              </Pressable>
             )}
             {actionButton && (
-              <TouchableOpacity
+              <Pressable
                 onPress={actionButton.onPress}
-                activeOpacity={ACTIVE_OPACITY}
-                style={sortHeaderStyles.headerButton}
                 hitSlop={HIT_SLOP.m}
+                style={sortHeaderStyles.headerButton}
               >
                 <actionButton.icon size={22} color={COLORS.text} />
                 {actionButton.showBadge && <View style={sortHeaderStyles.sortBadge} />}
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
         ),

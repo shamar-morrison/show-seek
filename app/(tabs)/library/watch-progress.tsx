@@ -2,7 +2,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { InProgressShow } from '@/src/types/episodeTracking';
@@ -11,7 +11,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -120,20 +120,12 @@ export default function WatchProgressScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <TouchableOpacity
-              onPress={searchButton.onPress}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
+            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSortModalVisible(true)}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={HIT_SLOP.m}
-            >
+            </Pressable>
+            <Pressable onPress={() => setSortModalVisible(true)} hitSlop={HIT_SLOP.m}>
               <ArrowUpDown size={22} color={COLORS.text} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ),
       });
