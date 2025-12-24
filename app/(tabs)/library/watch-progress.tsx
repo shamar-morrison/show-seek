@@ -1,16 +1,18 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
 import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
-import { ArrowUpDown, TvIcon } from 'lucide-react-native';
+import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
 const ALLOWED_SORT_OPTIONS: SortOption[] = ['progress', 'alphabetical', 'lastWatched'];
@@ -49,22 +51,6 @@ export default function WatchProgressScreen() {
     loadPreference();
   }, []);
 
-  // Configure header with sort button
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setSortModalVisible(true)}
-          style={{ marginRight: SPACING.s }}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={HIT_SLOP.m}
-        >
-          <ArrowUpDown size={22} color={COLORS.text} />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
-
   // Handle sort apply and save to AsyncStorage
   const handleApplySort = useCallback(async (newSortState: SortState) => {
     setSortState(newSortState);
@@ -97,6 +83,62 @@ export default function WatchProgressScreen() {
 
     return sorted;
   }, [data, sortState]);
+
+  // Search functionality
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: sortedData,
+    getSearchableText: (item) => item.tvShowName,
+  });
+
+  const insets = useSafeAreaInsets();
+
+  // Configure header with search + sort buttons
+  useLayoutEffect(() => {
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search shows..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              onPress={searchButton.onPress}
+              activeOpacity={ACTIVE_OPACITY}
+              hitSlop={HIT_SLOP.m}
+            >
+              <Search size={22} color={COLORS.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSortModalVisible(true)}
+              activeOpacity={ACTIVE_OPACITY}
+              hitSlop={HIT_SLOP.m}
+            >
+              <ArrowUpDown size={22} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+        ),
+      });
+    }
+  }, [navigation, isSearchActive, searchQuery, setSearchQuery, deactivateSearch, searchButton]);
 
   const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
 
@@ -134,10 +176,21 @@ export default function WatchProgressScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.divider} />
       <FlashList
-        data={sortedData}
+        data={displayItems}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item) => item.tvShowId.toString()}
+        ListEmptyComponent={
+          searchQuery ? (
+            <View style={{ height: 300 }}>
+              <EmptyState
+                icon={Search}
+                title="No results found"
+                description="Try a different search term."
+              />
+            </View>
+          ) : null
+        }
       />
 
       <MediaSortModal
@@ -185,5 +238,10 @@ const styles = StyleSheet.create({
   errorText: {
     color: COLORS.error,
     textAlign: 'center',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
   },
 });

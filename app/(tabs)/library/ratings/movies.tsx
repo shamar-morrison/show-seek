@@ -5,17 +5,19 @@ import { RatingBadge } from '@/src/components/library/RatingBadge';
 import ListActionsModal from '@/src/components/ListActionsModal';
 import MediaSortModal, { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedMovieRating, useEnrichedMovieRatings } from '@/src/hooks/useEnrichedRatings';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
+import React, { useCallback, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -37,6 +39,7 @@ const getMovieFromItem = (item: EnrichedMovieRating) => item.movie;
 
 export default function MovieRatingsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedMovieRatings();
   const { height: windowHeight } = useWindowDimensions();
@@ -64,6 +67,42 @@ export default function MovieRatingsScreen() {
     data: enrichedRatings,
     getMediaFromItem: getMovieFromItem,
   });
+
+  // Search functionality (must come after sortedData is available)
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: sortedData,
+    getSearchableText: (item) => item.movie?.title || '',
+  });
+
+  // Swap header when search is active
+  useLayoutEffect(() => {
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search movies..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+      });
+    }
+  }, [isSearchActive, searchQuery, setSearchQuery, deactivateSearch, navigation]);
 
   const handleItemPress = useCallback(
     (movieId: number) => {
@@ -158,14 +197,22 @@ export default function MovieRatingsScreen() {
           <FlashList
             key="grid"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}
@@ -182,13 +229,21 @@ export default function MovieRatingsScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}

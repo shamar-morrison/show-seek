@@ -29,6 +29,8 @@ interface UseViewModeToggleOptions {
   onSortPress?: () => void;
   /** Custom action button to show instead of/alongside sort button */
   actionButton?: ActionButton;
+  /** Search button to show in header (renders first, before view toggle) */
+  searchButton?: ActionButton;
 }
 
 interface UseViewModeToggleReturn {
@@ -47,6 +49,7 @@ export function useViewModeToggle({
   hasActiveSort = false,
   onSortPress,
   actionButton,
+  searchButton,
 }: UseViewModeToggleOptions): UseViewModeToggleReturn {
   const navigation = useNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -85,6 +88,15 @@ export function useViewModeToggle({
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
+          {searchButton && (
+            <TouchableOpacity
+              onPress={searchButton.onPress}
+              activeOpacity={ACTIVE_OPACITY}
+              hitSlop={HIT_SLOP.m}
+            >
+              <searchButton.icon size={22} color={COLORS.text} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={toggleViewMode}
             activeOpacity={ACTIVE_OPACITY}
@@ -129,6 +141,7 @@ export function useViewModeToggle({
     hasActiveSort,
     onSortPress,
     actionButton,
+    searchButton,
   ]);
 
   return {

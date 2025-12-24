@@ -42,6 +42,12 @@ export interface UseRatingScreenLogicOptions<TItem extends BaseEnrichedRating> {
   data: TItem[] | undefined;
   /** Function to extract the media object from a rating item */
   getMediaFromItem: (item: TItem) => Movie | TVShow | null;
+  /** Optional search button to display in header */
+  searchButton?: {
+    icon: React.ComponentType<{ size: number; color: string }>;
+    onPress: () => void;
+    showBadge?: boolean;
+  };
 }
 
 /**
@@ -94,6 +100,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   storageKey,
   data,
   getMediaFromItem,
+  searchButton,
 }: UseRatingScreenLogicOptions<TItem>): UseRatingScreenLogicReturn<TItem> {
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -133,6 +140,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
     storageKey,
     showSortButton: false,
     actionButton,
+    searchButton,
   });
 
   // Scroll to top after sort/filter state changes (but not on initial mount)

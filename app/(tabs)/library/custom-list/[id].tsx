@@ -5,11 +5,13 @@ import { MediaListCard } from '@/src/components/library/MediaListCard';
 import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -22,16 +24,17 @@ import {
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import {
   ArrowUpDown,
   Bookmark,
   Pencil,
+  Search,
   Settings2,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,6 +43,7 @@ const HEADER_FOOTER_CHROME_HEIGHT = 150;
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
@@ -170,6 +174,19 @@ export default function CustomListDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
+  // Search functionality
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: listItems,
+    getSearchableText: (item) => item.title || item.name || '',
+  });
+
   const actionButton = useMemo(
     () => ({
       icon: Settings2,
@@ -183,7 +200,31 @@ export default function CustomListDetailScreen() {
     storageKey: `@custom_list_view_mode_${id}`,
     showSortButton: false,
     actionButton,
+    searchButton,
   });
+
+  // Swap header when search is active
+  useLayoutEffect(() => {
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search list..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+      });
+    }
+  }, [isSearchActive, searchQuery, setSearchQuery, deactivateSearch, navigation]);
 
   const listActions = useMemo(
     () => [
@@ -303,9 +344,19 @@ export default function CustomListDetailScreen() {
           <MediaGrid
             key="grid"
             ref={mediaGridRef}
-            items={listItems}
+            items={displayItems}
             isLoading={isLoading}
-            emptyState={hasActiveFilterState ? filterEmptyState : defaultEmptyState}
+            emptyState={
+              searchQuery
+                ? {
+                    icon: Search,
+                    title: 'No results found',
+                    description: 'Try a different search term.',
+                  }
+                : hasActiveFilterState
+                  ? filterEmptyState
+                  : defaultEmptyState
+            }
             onItemPress={handleItemPress}
             onItemLongPress={handleLongPress}
           />
@@ -313,7 +364,7 @@ export default function CustomListDetailScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={listItems}
+            data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
@@ -324,7 +375,15 @@ export default function CustomListDetailScreen() {
                   height: windowHeight - insets.top - insets.bottom - HEADER_FOOTER_CHROME_HEIGHT,
                 }}
               >
-                <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
+                {searchQuery ? (
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                ) : (
+                  <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
+                )}
               </View>
             }
           />
