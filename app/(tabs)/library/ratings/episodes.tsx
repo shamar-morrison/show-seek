@@ -43,12 +43,24 @@ export default function EpisodeRatingsScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
 
+  // Filter episode ratings from all ratings
+  const episodeRatings = useMemo(() => {
+    if (!ratings) return [];
+    return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
+  }, [ratings]);
+
   // Search functionality using shared hook
-  const { searchQuery, isSearchActive, deactivateSearch, setSearchQuery, searchButton } =
-    useHeaderSearch({
-      items: [] as RatingItem[],
-      getSearchableText: (item) => `${item.tvShowName || ''} ${item.episodeName || ''}`,
-    });
+  const {
+    searchQuery,
+    isSearchActive,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+    filteredItems,
+  } = useHeaderSearch({
+    items: episodeRatings,
+    getSearchableText: (item) => `${item.tvShowName || ''} ${item.episodeName || ''}`,
+  });
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -123,29 +135,13 @@ export default function EpisodeRatingsScreen() {
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
-  const episodeRatings = useMemo(() => {
-    if (!ratings) return [];
-    return ratings.filter((r) => r.mediaType === 'episode').sort((a, b) => b.ratedAt - a.ratedAt);
-  }, [ratings]);
-
-  // Filter episodes based on search query
-  const displayItems = useMemo(() => {
-    if (!searchQuery.trim()) return episodeRatings;
-    const query = searchQuery.toLowerCase().trim();
-    return episodeRatings.filter((item) => {
-      const showName = item.tvShowName?.toLowerCase() || '';
-      const episodeName = item.episodeName?.toLowerCase() || '';
-      return showName.includes(query) || episodeName.includes(query);
-    });
-  }, [episodeRatings, searchQuery]);
-
   const groupedEpisodeRatings = useMemo(() => {
-    if (!displayItems || viewMode === 'flat') return null;
+    if (!filteredItems || viewMode === 'flat') return null;
 
     // Group episodes by TV show
     const groupedMap = new Map<number, RatingItem[]>();
 
-    displayItems.forEach((rating) => {
+    filteredItems.forEach((rating) => {
       if (rating.mediaType !== 'episode' || !rating.tvShowId) return;
 
       if (!groupedMap.has(rating.tvShowId)) {
@@ -169,7 +165,7 @@ export default function EpisodeRatingsScreen() {
       });
 
     return sections;
-  }, [displayItems, viewMode]);
+  }, [filteredItems, viewMode]);
 
   const handleItemPress = useCallback(
     (rating: RatingItem) => {
@@ -232,7 +228,7 @@ export default function EpisodeRatingsScreen() {
       <View style={styles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
-          data={displayItems}
+          data={filteredItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
