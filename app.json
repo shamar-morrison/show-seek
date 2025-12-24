@@ -26,7 +26,10 @@
         "backgroundColor": "#000000"
       },
       "package": "app.horizon.showseek",
-      "permissions": ["NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
+      "permissions": [
+        "NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -36,7 +39,10 @@
               "scheme": "showseek"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -44,7 +50,9 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      ["expo-router"],
+      [
+        "expo-router"
+      ],
       "expo-font",
       "expo-web-browser",
       [
@@ -68,7 +76,8 @@
         }
       ],
       "react-native-iap",
-      "expo-updates"
+      "expo-updates",
+      "react-native-google-auth"
     ],
     "notification": {
       "icon": "./assets/images/icon.png",

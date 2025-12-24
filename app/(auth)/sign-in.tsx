@@ -1,12 +1,14 @@
 import { legal } from '@/app/(auth)/legal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { auth } from '@/src/firebase/config';
+import { createUserDocument } from '@/src/firebase/user';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +32,32 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Configure Google Auth on mount
+  useEffect(() => {
+    configureGoogleAuth().catch(console.error);
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+
+      if (result.success) {
+        // Create/update user document with Google profile info
+        await createUserDocument(result.user);
+        // Router will automatically redirect based on auth state
+      } else if (!result.cancelled && result.error) {
+        Alert.alert('Google Sign In Failed', result.error);
+      }
+      // If cancelled, do nothing (user closed the picker)
+    } catch (error: any) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -121,6 +149,33 @@ export default function SignIn() {
             </View>
 
             <View style={styles.form}>
+              {/* Google Sign-In Button */}
+              <TouchableOpacity
+                style={styles.googleButton}
+                onPress={handleGoogleSignIn}
+                disabled={googleLoading || loading}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <>
+                    <Image
+                      source={{ uri: 'https://www.google.com/favicon.ico' }}
+                      style={styles.googleIcon}
+                    />
+                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Separator */}
+              <View style={styles.separator}>
+                <View style={styles.separatorLine} />
+                <Text style={styles.separatorText}>or</Text>
+                <View style={styles.separatorLine} />
+              </View>
+
               <View style={styles.inputWithIcon}>
                 <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
                 <TextInput
@@ -298,6 +353,41 @@ const styles = StyleSheet.create({
   guestButton: {
     backgroundColor: COLORS.surfaceLight,
     marginTop: 0,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4285F4',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    gap: SPACING.s,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 2,
+  },
+  googleButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  separator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: SPACING.s,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  separatorText: {
+    color: COLORS.textSecondary,
+    marginHorizontal: SPACING.m,
+    fontSize: FONT_SIZE.s,
   },
   buttonText: {
     color: COLORS.white,
