@@ -24,7 +24,7 @@ const DEFAULT_SORT_STATE: SortState = {
 
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
-  const { data, isLoading, error } = useCurrentlyWatching();
+  const { data, isLoading, isFetching, error } = useCurrentlyWatching();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -120,6 +120,7 @@ export default function WatchProgressScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
+            {isFetching && <ActivityIndicator size="small" color={COLORS.textSecondary} />}
             <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
             </Pressable>
@@ -130,7 +131,15 @@ export default function WatchProgressScreen() {
         ),
       });
     }
-  }, [navigation, isSearchActive, searchQuery, setSearchQuery, deactivateSearch, searchButton]);
+  }, [
+    navigation,
+    isSearchActive,
+    searchQuery,
+    setSearchQuery,
+    deactivateSearch,
+    searchButton,
+    isFetching,
+  ]);
 
   const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
 
