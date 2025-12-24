@@ -2,7 +2,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
@@ -15,10 +15,10 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } fro
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   SectionList,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -107,24 +107,16 @@ export default function FavoritePeopleScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <TouchableOpacity
-              onPress={searchButton.onPress}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={SPACING.s}
-            >
+            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={toggleViewMode}
-              activeOpacity={ACTIVE_OPACITY}
-              hitSlop={SPACING.s}
-            >
+            </Pressable>
+            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
               {viewMode === 'grid' ? (
                 <List size={24} color={COLORS.text} />
               ) : (
                 <Grid3X3 size={24} color={COLORS.text} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
         ),
       });
