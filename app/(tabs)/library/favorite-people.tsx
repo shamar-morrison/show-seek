@@ -1,25 +1,28 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { Grid3X3, List, User } from 'lucide-react-native';
+import { Grid3X3, List, Search, User } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   SectionList,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'grid' | 'list';
 type PersonSection = {
@@ -34,6 +37,8 @@ export default function FavoritePeopleScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: favoritePersons, isLoading } = useFavoritePersons();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -65,37 +70,76 @@ export default function FavoritePeopleScreen() {
     }
   }, [viewMode]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={toggleViewMode}
-          style={{ marginRight: SPACING.s }}
-          activeOpacity={ACTIVE_OPACITY}
-          hitSlop={SPACING.s}
-        >
-          {viewMode === 'grid' ? (
-            <List size={24} color={COLORS.text} />
-          ) : (
-            <Grid3X3 size={24} color={COLORS.text} />
-          )}
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, viewMode, toggleViewMode]);
-
   const sortedPersons = useMemo(() => {
     if (!favoritePersons) return [];
     return [...favoritePersons].sort((a, b) => b.addedAt - a.addedAt);
   }, [favoritePersons]);
 
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: sortedPersons,
+    getSearchableText: (item) => item.name,
+  });
+
+  // Swap header when search is active
+  useLayoutEffect(() => {
+    if (isSearchActive) {
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search people..."
+          />
+        ),
+      });
+    } else {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+              <Search size={22} color={COLORS.text} />
+            </Pressable>
+            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+              {viewMode === 'grid' ? (
+                <List size={24} color={COLORS.text} />
+              ) : (
+                <Grid3X3 size={24} color={COLORS.text} />
+              )}
+            </Pressable>
+          </View>
+        ),
+      });
+    }
+  }, [
+    navigation,
+    viewMode,
+    toggleViewMode,
+    isSearchActive,
+    searchQuery,
+    setSearchQuery,
+    deactivateSearch,
+    searchButton,
+  ]);
+
   const groupedPersons = useMemo(() => {
-    if (!sortedPersons || viewMode === 'grid') return null;
+    if (!displayItems || viewMode === 'grid') return null;
 
     // Group by known_for_department
     const groupedMap = new Map<string, FavoritePerson[]>();
 
-    sortedPersons.forEach((person) => {
+    displayItems.forEach((person) => {
       const department = person.known_for_department || 'Other';
 
       if (!groupedMap.has(department)) {
@@ -113,7 +157,7 @@ export default function FavoritePeopleScreen() {
       .sort((a, b) => a.title.localeCompare(b.title));
 
     return sections;
-  }, [sortedPersons, viewMode]);
+  }, [displayItems, viewMode]);
 
   const handlePersonPress = useCallback(
     (personId: number) => {
@@ -180,13 +224,24 @@ export default function FavoritePeopleScreen() {
       <View style={styles.divider} />
       {viewMode === 'grid' ? (
         <FlatList
-          data={sortedPersons}
+          data={displayItems}
           renderItem={renderGridItem}
           keyExtractor={keyExtractor}
           numColumns={3}
           columnWrapperStyle={styles.columnWrapper}
           contentContainerStyle={styles.gridListContent}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       ) : (
         <SectionList
@@ -199,6 +254,17 @@ export default function FavoritePeopleScreen() {
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
@@ -246,5 +312,10 @@ const styles = StyleSheet.create({
   },
   sectionSeparator: {
     height: SPACING.l,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
   },
 });

@@ -9,12 +9,13 @@ import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { SlidersHorizontal, Star } from 'lucide-react-native';
+import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
@@ -43,7 +44,20 @@ export default function TVShowRatingsScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // Use shared rating screen logic
+  // Search functionality using shared hook (initialize with empty array first)
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: [] as EnrichedTVRating[],
+    getSearchableText: (item) => item.tvShow?.name || '',
+  });
+
+  // Use shared rating screen logic with search integration
   const {
     sortState,
     filterState,
@@ -65,7 +79,26 @@ export default function TVShowRatingsScreen() {
     storageKey: VIEW_MODE_STORAGE_KEY,
     data: enrichedRatings,
     getMediaFromItem: getTVShowFromItem,
+    searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search TV shows...',
+    },
   });
+
+  // Filter sortedData based on search query (useHeaderSearch's filtering won't work
+  // since we had to initialize with empty array due to hook ordering)
+  const displayItems = React.useMemo(() => {
+    if (!searchQuery.trim()) return sortedData;
+    const query = searchQuery.toLowerCase().trim();
+    return sortedData.filter((item) => {
+      const name = item.tvShow?.name || '';
+      return name.toLowerCase().includes(query);
+    });
+  }, [sortedData, searchQuery]);
 
   const handleItemPress = useCallback(
     (tvShowId: number) => {
@@ -160,14 +193,22 @@ export default function TVShowRatingsScreen() {
           <FlashList
             key="grid"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}
@@ -184,13 +225,21 @@ export default function TVShowRatingsScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}

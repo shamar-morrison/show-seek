@@ -10,6 +10,7 @@ import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -27,6 +28,7 @@ import {
   ArrowUpDown,
   Bookmark,
   Pencil,
+  Search,
   Settings2,
   SlidersHorizontal,
   Trash2,
@@ -170,6 +172,19 @@ export default function CustomListDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
+  // Search functionality
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayItems,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: listItems,
+    getSearchableText: (item) => item.title || item.name || '',
+  });
+
   const actionButton = useMemo(
     () => ({
       icon: Settings2,
@@ -183,6 +198,14 @@ export default function CustomListDetailScreen() {
     storageKey: `@custom_list_view_mode_${id}`,
     showSortButton: false,
     actionButton,
+    searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search list...',
+    },
   });
 
   const listActions = useMemo(
@@ -303,9 +326,19 @@ export default function CustomListDetailScreen() {
           <MediaGrid
             key="grid"
             ref={mediaGridRef}
-            items={listItems}
+            items={displayItems}
             isLoading={isLoading}
-            emptyState={hasActiveFilterState ? filterEmptyState : defaultEmptyState}
+            emptyState={
+              searchQuery
+                ? {
+                    icon: Search,
+                    title: 'No results found',
+                    description: 'Try a different search term.',
+                  }
+                : hasActiveFilterState
+                  ? filterEmptyState
+                  : defaultEmptyState
+            }
             onItemPress={handleItemPress}
             onItemLongPress={handleLongPress}
           />
@@ -313,7 +346,7 @@ export default function CustomListDetailScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={listItems}
+            data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
@@ -324,7 +357,15 @@ export default function CustomListDetailScreen() {
                   height: windowHeight - insets.top - insets.bottom - HEADER_FOOTER_CHROME_HEIGHT,
                 }}
               >
-                <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
+                {searchQuery ? (
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                ) : (
+                  <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
+                )}
               </View>
             }
           />

@@ -14,8 +14,8 @@ import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -42,6 +42,28 @@ export default function MovieRatingsScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
+  // Search functionality - create searchButton first, then pass to useRatingScreenLogic
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+
+  const activateSearch = useCallback(() => {
+    setIsSearchActive(true);
+  }, []);
+
+  const deactivateSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setSearchQuery('');
+  }, []);
+
+  const searchButton = useMemo(
+    () => ({
+      icon: Search,
+      onPress: activateSearch,
+      showBadge: searchQuery.length > 0,
+    }),
+    [activateSearch, searchQuery.length]
+  );
+
   const {
     sortState,
     filterState,
@@ -63,7 +85,25 @@ export default function MovieRatingsScreen() {
     storageKey: VIEW_MODE_STORAGE_KEY,
     data: enrichedRatings,
     getMediaFromItem: getMovieFromItem,
+    searchButton,
+    searchState: {
+      isActive: isSearchActive,
+      query: searchQuery,
+      onQueryChange: setSearchQuery,
+      onClose: deactivateSearch,
+      placeholder: 'Search movies...',
+    },
   });
+
+  // Filter items based on search query
+  const displayItems = useMemo(() => {
+    if (!searchQuery.trim()) return sortedData;
+    const query = searchQuery.toLowerCase().trim();
+    return sortedData.filter((item) => {
+      const title = item.movie?.title || '';
+      return title.toLowerCase().includes(query);
+    });
+  }, [sortedData, searchQuery]);
 
   const handleItemPress = useCallback(
     (movieId: number) => {
@@ -158,14 +198,22 @@ export default function MovieRatingsScreen() {
           <FlashList
             key="grid"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}
@@ -182,13 +230,21 @@ export default function MovieRatingsScreen() {
           <FlashList
             key="list"
             ref={listRef}
-            data={sortedData}
+            data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-              hasActiveFilterState ? (
+              searchQuery ? (
+                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                  <EmptyState
+                    icon={Search}
+                    title="No results found"
+                    description="Try a different search term."
+                  />
+                </View>
+              ) : hasActiveFilterState ? (
                 <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                   <EmptyState
                     icon={SlidersHorizontal}

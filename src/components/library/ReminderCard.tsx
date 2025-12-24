@@ -14,14 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
 interface ReminderCardProps {
@@ -146,28 +139,26 @@ export const ReminderCard = memo<ReminderCardProps>(
           )}
         </View>
         <View style={styles.actions}>
-          <TouchableOpacity
+          <Pressable
             onPress={handleEdit}
             disabled={isLoading}
             style={styles.actionButton}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.s}
+            hitSlop={HIT_SLOP.m}
           >
             <Pencil size={20} color={COLORS.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Pressable>
+          <Pressable
             onPress={handleCancel}
             disabled={isLoading}
             style={styles.actionButton}
-            activeOpacity={ACTIVE_OPACITY}
-            hitSlop={HIT_SLOP.s}
+            hitSlop={HIT_SLOP.m}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color={COLORS.error} />
             ) : (
               <Trash2 size={20} color={COLORS.error} />
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </Pressable>
     );
