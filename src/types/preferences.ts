@@ -20,6 +20,7 @@ export interface UserPreferences {
   autoAddToWatching: boolean;
   autoAddToAlreadyWatched: boolean;
   blurPlotSpoilers: boolean; // Android only - blur movie/TV plot summaries
+  showListIndicators: boolean; // Show bookmark badge on cards when item is in a list
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
 }
 
@@ -27,4 +28,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   autoAddToWatching: true,
   autoAddToAlreadyWatched: true,
   blurPlotSpoilers: false,
+  showListIndicators: false, // Off by default for new users
 };
