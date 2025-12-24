@@ -2,7 +2,10 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
-import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
+import ListActionsModal, {
+  ListActionsIcon,
+  ListActionsModalRef,
+} from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
@@ -22,7 +25,7 @@ import {
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Heart, Search, Settings2, SlidersHorizontal } from 'lucide-react-native';
+import { ArrowUpDown, Heart, Search, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,7 +67,7 @@ export default function FavoritesScreen() {
 
   const actionButton = useMemo(
     () => ({
-      icon: Settings2,
+      icon: ListActionsIcon,
       onPress: () => listActionsModalRef.current?.present(),
       showBadge: hasActiveSort || hasActiveFilterState,
     }),

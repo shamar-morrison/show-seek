@@ -1,7 +1,7 @@
-import { ArrowUpDown, Settings2, SlidersHorizontal } from 'lucide-react-native';
+import { ArrowUpDown, SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Movie, TVShow } from '../api/tmdb';
-import { ListActionsModalRef } from '../components/ListActionsModal';
+import { ListActionsIcon, ListActionsModalRef } from '../components/ListActionsModal';
 import { DEFAULT_SORT_STATE, SortState } from '../components/MediaSortModal';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
@@ -137,7 +137,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   // Action button for view mode toggle header
   const actionButton = useMemo(
     () => ({
-      icon: Settings2,
+      icon: ListActionsIcon,
       onPress: () => listActionsModalRef.current?.present(),
       showBadge: hasActiveSort || hasActiveFilterState,
     }),

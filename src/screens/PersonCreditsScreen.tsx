@@ -8,7 +8,10 @@ import {
   TVShow,
 } from '@/src/api/tmdb';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
-import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
+import ListActionsModal, {
+  ListActionsIcon,
+  ListActionsModalRef,
+} from '@/src/components/ListActionsModal';
 import MediaSortModal, { SortState } from '@/src/components/MediaSortModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
@@ -27,7 +30,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Film, Settings2, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
+import { ArrowUpDown, Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -87,7 +90,7 @@ export default function PersonCreditsScreen() {
 
   const actionButton = useMemo(
     () => ({
-      icon: Settings2,
+      icon: ListActionsIcon,
       onPress: () => listActionsModalRef.current?.present(),
       showBadge: hasActiveSort || hasActiveFilterState,
     }),

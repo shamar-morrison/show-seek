@@ -1,5 +1,8 @@
 import AddToListModal from '@/src/components/AddToListModal';
-import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
+import ListActionsModal, {
+  ListActionsIcon,
+  ListActionsModalRef,
+} from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
@@ -26,14 +29,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import {
-  ArrowUpDown,
-  Bookmark,
-  Ellipsis,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-} from 'lucide-react-native';
+import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
@@ -187,7 +183,6 @@ export default function WatchStatusScreen() {
   }, [filters, sortState]);
 
   const handleOpenActionsModal = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     listActionsModalRef.current?.present();
   }, []);
 
@@ -209,7 +204,7 @@ export default function WatchStatusScreen() {
             hitSlop={HIT_SLOP.m}
             style={styles.headerButton}
           >
-            <Ellipsis size={24} color={COLORS.text} />
+            <ListActionsIcon size={24} color={COLORS.text} />
             {hasActiveFiltersOrSort && <View style={styles.filterBadge} />}
           </Pressable>
         </View>
