@@ -36,7 +36,7 @@ const MediaGridItem = memo<{
   onPress: (item: ListMediaItem) => void;
   onLongPress: (item: ListMediaItem) => void;
   showRatings: boolean;
-}>(({ item, onPress, onLongPress, showRatings }) => {
+}>(({ item, onPress, onLongPress }) => {
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
 
