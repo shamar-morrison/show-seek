@@ -4,7 +4,7 @@ import NoteSheet, { NoteSheetRef } from '@/src/components/NoteSheet';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useNotes } from '@/src/hooks/useNotes';
+import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
 import { Note } from '@/src/types/note';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -41,7 +41,8 @@ function truncateText(text: string, maxLength: number): string {
 export default function NotesScreen() {
   const router = useRouter();
   const { isPremium } = usePremium();
-  const { getAllNotes, isLoadingNotes, refetchNotes, deleteNote, isDeleting } = useNotes();
+  const { data: notes, isLoading } = useNotes();
+  const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteSheetRef>(null);
 
   const handleNotePress = useCallback((note: Note) => {
@@ -63,7 +64,10 @@ export default function NotesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteNote({ mediaType: note.mediaType, mediaId: note.mediaId });
+              await deleteNoteMutation.mutateAsync({
+                mediaType: note.mediaType,
+                mediaId: note.mediaId,
+              });
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
               Alert.alert('Error', 'Failed to delete note');
@@ -72,7 +76,7 @@ export default function NotesScreen() {
         },
       ]);
     },
-    [deleteNote]
+    [deleteNoteMutation]
   );
 
   // Premium gate
@@ -100,7 +104,7 @@ export default function NotesScreen() {
   }
 
   // Loading state
-  if (isLoadingNotes) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -109,7 +113,7 @@ export default function NotesScreen() {
   }
 
   // Empty state
-  if (!getAllNotes || getAllNotes.length === 0) {
+  if (!notes || notes.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.divider} />
@@ -160,7 +164,7 @@ export default function NotesScreen() {
                 onPress={() => handleDeleteNote(item)}
                 style={styles.actionButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                disabled={isDeleting}
+                disabled={deleteNoteMutation.isPending}
               >
                 <Trash2 size={16} color={COLORS.error} />
               </TouchableOpacity>
@@ -175,14 +179,14 @@ export default function NotesScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.divider} />
       <FlashList
-        data={getAllNotes}
+        data={notes}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-      <NoteSheet ref={noteSheetRef} onSave={() => refetchNotes()} onDelete={() => refetchNotes()} />
+      <NoteSheet ref={noteSheetRef} />
     </SafeAreaView>
   );
 }

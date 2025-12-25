@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -35,6 +36,46 @@ class NoteService {
    */
   private getNotesCollection(userId: string) {
     return collection(db, 'users', userId, 'notes');
+  }
+
+  /**
+   * Subscribe to all notes for the current user (real-time updates)
+   */
+  subscribeToUserNotes(callback: (notes: Note[]) => void, onError?: (error: Error) => void) {
+    const user = auth.currentUser;
+    if (!user) return () => {};
+
+    const notesRef = this.getNotesCollection(user.uid);
+    const q = query(notesRef, orderBy('createdAt', 'desc'));
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const notes: Note[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId,
+            mediaType: data.mediaType,
+            mediaId: data.mediaId,
+            content: data.content,
+            posterPath: data.posterPath,
+            mediaTitle: data.mediaTitle,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          };
+        });
+        callback(notes);
+      },
+      (error) => {
+        console.error('[NoteService] Subscription error:', error);
+        const message = getFirestoreErrorMessage(error);
+        if (onError) {
+          onError(new Error(message));
+        }
+        callback([]);
+      }
+    );
   }
 
   /**

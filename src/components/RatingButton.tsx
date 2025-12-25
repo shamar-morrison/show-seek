@@ -1,4 +1,4 @@
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { Star } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
@@ -36,7 +36,8 @@ export default function RatingButton({
 
 const styles = StyleSheet.create({
   button: {
-    padding: SPACING.s,
+    flex: 1,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },

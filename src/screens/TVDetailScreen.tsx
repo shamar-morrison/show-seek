@@ -26,7 +26,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -72,6 +72,7 @@ import {
   Alert,
   Animated,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -115,12 +116,7 @@ export default function TVDetailScreen() {
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
-  const {
-    note,
-    hasNote,
-    isLoading: isLoadingNote,
-    refetch: refetchNote,
-  } = useMediaNote('tv', tvId);
+  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('tv', tvId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -573,13 +569,20 @@ export default function TVDetailScreen() {
             )}
           </View>
 
-          <View style={detailStyles.genresContainer}>
-            {show.genres.map((genre) => (
-              <View key={genre.id} style={detailStyles.genreTag}>
-                <Text style={detailStyles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          >
+            <View style={detailStyles.genresContainer}>
+              {show.genres.map((genre) => (
+                <View key={genre.id} style={detailStyles.genreTag}>
+                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Action buttons */}
           <View style={detailStyles.actionButtons}>
@@ -658,7 +661,7 @@ export default function TVDetailScreen() {
               {/* Notes Button */}
               <View style={detailStyles.ratingButtonContainer}>
                 <TouchableOpacity
-                  style={detailStyles.ratingButtonContainer}
+                  style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
                   activeOpacity={ACTIVE_OPACITY}
                   onPress={() =>
                     requireAuth(
@@ -888,11 +891,7 @@ export default function TVDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          <NoteSheet
-            ref={noteSheetRef}
-            onSave={() => refetchNote()}
-            onDelete={() => refetchNote()}
-          />
+          <NoteSheet ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />

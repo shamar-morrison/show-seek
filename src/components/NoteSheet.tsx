@@ -1,6 +1,6 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useNotes } from '@/src/hooks/useNotes';
+import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -40,7 +40,8 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { isPremium } = usePremium();
-  const { saveNote, deleteNote, isSaving, isDeleting } = useNotes();
+  const saveNoteMutation = useSaveNote();
+  const deleteNoteMutation = useDeleteNote();
 
   const [mediaType, setMediaType] = useState<'movie' | 'tv'>('movie');
   const [mediaId, setMediaId] = useState(0);
@@ -107,7 +108,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
     setError(null);
 
     try {
-      await saveNote({
+      await saveNoteMutation.mutateAsync({
         mediaType,
         mediaId,
         content: noteContent.trim(),
@@ -132,7 +133,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteNote({ mediaType, mediaId });
+            await deleteNoteMutation.mutateAsync({ mediaType, mediaId });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onDelete?.();
             await sheetRef.current?.dismiss();
@@ -153,7 +154,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
     }
   };
 
-  const isLoading = isSaving || isDeleting;
+  const isLoading = saveNoteMutation.isPending || deleteNoteMutation.isPending;
 
   return (
     <TrueSheet
@@ -214,7 +215,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
             onPress={handleSave}
             disabled={!canSave || isLoading}
           >
-            {isSaving ? (
+            {saveNoteMutation.isPending ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>

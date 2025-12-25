@@ -26,7 +26,7 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -66,6 +66,7 @@ import {
   ActivityIndicator,
   Animated,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -122,12 +123,7 @@ export default function MovieDetailScreen() {
     hasReminder,
     isLoading: isLoadingReminder,
   } = useMediaReminder(movieId, 'movie');
-  const {
-    note,
-    hasNote,
-    isLoading: isLoadingNote,
-    refetch: refetchNote,
-  } = useMediaNote('movie', movieId);
+  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('movie', movieId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -423,13 +419,20 @@ export default function MovieDetailScreen() {
             )}
           </View>
 
-          <View style={detailStyles.genresContainer}>
-            {movie.genres.map((genre) => (
-              <View key={genre.id} style={detailStyles.genreTag}>
-                <Text style={detailStyles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          >
+            <View style={detailStyles.genresContainer}>
+              {movie.genres.map((genre) => (
+                <View key={genre.id} style={detailStyles.genreTag}>
+                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Action Buttons */}
           <View style={detailStyles.actionButtons}>
@@ -489,7 +492,7 @@ export default function MovieDetailScreen() {
               {/* Notes Button */}
               <View style={detailStyles.ratingButtonContainer}>
                 <TouchableOpacity
-                  style={detailStyles.ratingButtonContainer}
+                  style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
                   activeOpacity={ACTIVE_OPACITY}
                   onPress={() =>
                     requireAuth(
@@ -728,11 +731,7 @@ export default function MovieDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          <NoteSheet
-            ref={noteSheetRef}
-            onSave={() => refetchNote()}
-            onDelete={() => refetchNote()}
-          />
+          <NoteSheet ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />
