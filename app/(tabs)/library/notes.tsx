@@ -43,9 +43,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'list' | 'grouped';
 type NoteSection = {
@@ -106,6 +107,8 @@ export default function NotesScreen() {
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteSheetRef>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -432,12 +435,23 @@ export default function NotesScreen() {
       <View style={styles.divider} />
       {viewMode === 'list' ? (
         <FlashList
-          data={sortedNotes}
+          data={displayNotes}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       ) : (
         <SectionList
@@ -450,6 +464,17 @@ export default function NotesScreen() {
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
           SectionSeparatorComponent={SectionSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       )}
       <NoteModal ref={noteSheetRef} />
