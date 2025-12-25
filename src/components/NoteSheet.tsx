@@ -55,6 +55,10 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
   const hasChanges = noteContent.trim() !== initialContent;
   const canSave = noteContent.trim().length > 0 && hasChanges;
 
+  const handleClose = useCallback(async () => {
+    await sheetRef.current?.dismiss();
+  }, []);
+
   useImperativeHandle(ref, () => ({
     present: async ({
       mediaType: type,
@@ -72,9 +76,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
       setError(null);
       await sheetRef.current?.present();
     },
-    dismiss: async () => {
-      await sheetRef.current?.dismiss();
-    },
+    dismiss: handleClose,
   }));
 
   const handleDismiss = useCallback(() => {
@@ -97,7 +99,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
         {
           text: 'Upgrade',
           onPress: async () => {
-            await sheetRef.current?.dismiss();
+            await handleClose();
             router.push('/premium' as any);
           },
         },
@@ -117,7 +119,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSave?.();
-      await sheetRef.current?.dismiss();
+      await handleClose();
     } catch (err) {
       console.error('Failed to save note:', err);
       setError(err instanceof Error ? err.message : 'Failed to save note. Please try again.');
@@ -136,7 +138,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
             await deleteNoteMutation.mutateAsync({ mediaType, mediaId });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onDelete?.();
-            await sheetRef.current?.dismiss();
+            await handleClose();
           } catch (err) {
             console.error('Failed to delete note:', err);
             setError(err instanceof Error ? err.message : 'Failed to delete note.');
@@ -169,7 +171,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => sheetRef.current?.dismiss()}>
+            <Pressable onPress={handleClose}>
               <X size={24} color={COLORS.text} />
             </Pressable>
             <Text style={styles.title}>Note</Text>
@@ -203,11 +205,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          <Pressable
-            style={styles.cancelButton}
-            onPress={() => sheetRef.current?.dismiss()}
-            disabled={isLoading}
-          >
+          <Pressable style={styles.cancelButton} onPress={handleClose} disabled={isLoading}>
             <Text style={[styles.cancelButtonText, isLoading && styles.disabledText]}>Cancel</Text>
           </Pressable>
           <Pressable

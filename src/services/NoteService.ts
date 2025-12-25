@@ -40,6 +40,24 @@ class NoteService {
   }
 
   /**
+   * Map a Firestore document to a Note object
+   */
+  private mapDocToNote(doc: { id: string; data: () => Record<string, unknown> }): Note {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      userId: data.userId as string,
+      mediaType: data.mediaType as 'movie' | 'tv',
+      mediaId: data.mediaId as number,
+      content: data.content as string,
+      posterPath: (data.posterPath as string | null) ?? null,
+      mediaTitle: data.mediaTitle as string,
+      createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+      updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+    };
+  }
+
+  /**
    * Subscribe to all notes for a user (real-time updates)
    * @param userId - The user's ID to subscribe for
    * @param callback - Called with notes array on each update
@@ -58,20 +76,7 @@ class NoteService {
     return onSnapshot(
       q,
       (snapshot) => {
-        const notes: Note[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            userId: data.userId,
-            mediaType: data.mediaType,
-            mediaId: data.mediaId,
-            content: data.content,
-            posterPath: data.posterPath,
-            mediaTitle: data.mediaTitle,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          };
-        });
+        const notes: Note[] = snapshot.docs.map((doc) => this.mapDocToNote(doc));
         callback(notes);
       },
       (error) => {
@@ -111,11 +116,7 @@ class NoteService {
         updatedAt: now,
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(noteRef, noteDocument), timeoutPromise]);
+      await Promise.race([setDoc(noteRef, noteDocument), createTimeout()]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[NoteService] saveNote error:', error);
@@ -133,25 +134,10 @@ class NoteService {
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId);
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      const docSnap = await Promise.race([getDoc(noteRef), timeoutPromise]);
+      const docSnap = await Promise.race([getDoc(noteRef), createTimeout()]);
 
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          userId: data.userId,
-          mediaType: data.mediaType,
-          mediaId: data.mediaId,
-          content: data.content,
-          posterPath: data.posterPath,
-          mediaTitle: data.mediaTitle,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        };
+        return this.mapDocToNote(docSnap);
       }
 
       return null;
@@ -172,26 +158,9 @@ class NoteService {
       const notesRef = this.getNotesCollection(userId);
       const q = query(notesRef, orderBy('createdAt', 'desc'));
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const snapshot = await Promise.race([getDocs(q), createTimeout()]);
 
-      const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
-
-      return snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          userId: data.userId,
-          mediaType: data.mediaType,
-          mediaId: data.mediaId,
-          content: data.content,
-          posterPath: data.posterPath,
-          mediaTitle: data.mediaTitle,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        };
-      });
+      return snapshot.docs.map((doc) => this.mapDocToNote(doc));
     } catch (error) {
       console.error('[NoteService] getNotes error:', error);
       return [];
@@ -210,11 +179,7 @@ class NoteService {
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(noteRef), timeoutPromise]);
+      await Promise.race([deleteDoc(noteRef), createTimeout()]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[NoteService] deleteNote error:', error);
