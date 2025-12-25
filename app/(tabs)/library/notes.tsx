@@ -5,6 +5,7 @@ import MediaSortModal, {
   SortState,
 } from '@/src/components/MediaSortModal';
 import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import {
@@ -224,26 +225,22 @@ export default function NotesScreen() {
         headerRight: () => (
           <View style={styles.headerButtons}>
             {/* Search button */}
-            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={searchButton.onPress}>
               <Search size={22} color={COLORS.text} />
-            </Pressable>
+            </HeaderIconButton>
             {/* Sort button */}
-            <Pressable
-              onPress={() => setSortModalVisible(true)}
-              hitSlop={HIT_SLOP.m}
-              style={styles.sortButton}
-            >
+            <HeaderIconButton onPress={() => setSortModalVisible(true)} style={styles.sortButton}>
               <ArrowUpDown size={22} color={COLORS.text} />
               {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-            </Pressable>
+            </HeaderIconButton>
             {/* View mode button */}
-            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'list' ? (
                 <Grid3X3 size={22} color={COLORS.text} />
               ) : (
                 <List size={22} color={COLORS.text} />
               )}
-            </Pressable>
+            </HeaderIconButton>
           </View>
         ),
       });
@@ -574,7 +571,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
+    // gap: SPACING.m,
   },
   sortButton: {
     position: 'relative',
