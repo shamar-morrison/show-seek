@@ -1,6 +1,6 @@
 import { Note, NoteInput } from '@/src/types/note';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/auth';
 import { noteService } from '../services/NoteService';
 
@@ -57,12 +57,6 @@ export const useNotes = () => {
     return () => unsubscribe();
   }, [userId, queryClient]);
 
-  const refetch = useCallback(() => {
-    if (userId) {
-      queryClient.invalidateQueries({ queryKey: ['notes', userId] });
-    }
-  }, [userId, queryClient]);
-
   const query = useQuery({
     queryKey: ['notes', userId],
     queryFn: () => queryClient.getQueryData<Note[]>(['notes', userId]) || [],
@@ -74,7 +68,6 @@ export const useNotes = () => {
   return {
     ...query,
     isLoading: isSubscriptionLoading,
-    refetch,
   };
 };
 
@@ -83,7 +76,7 @@ export const useNotes = () => {
  * Filters from the global notes cache.
  */
 export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
-  const { data: notes, isLoading, refetch } = useNotes();
+  const { data: notes, isLoading } = useNotes();
 
   const note = notes?.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
 
@@ -91,7 +84,6 @@ export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
     note: note || null,
     hasNote: !!note,
     isLoading,
-    refetch,
   };
 };
 
