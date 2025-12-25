@@ -4,7 +4,7 @@ import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeft, Pencil, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import {
   ActivityIndicator,
@@ -84,7 +84,7 @@ export default function ManageListsScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
-            <ChevronLeft size={28} color={COLORS.text} />
+            <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.title}>Manage Lists</Text>
           <View style={{ width: 28 }} />

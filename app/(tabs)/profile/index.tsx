@@ -435,6 +435,38 @@ export default function ProfileScreen() {
                       />
                     )}
                   </View>
+                  <View style={styles.preferenceItem}>
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceLabel}>Show list indicators</Text>
+                      <Text style={styles.preferenceSubtitle}>
+                        Display a bookmark badge on cards when an item is in any of your lists
+                      </Text>
+                    </View>
+                    {preferencesLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Switch
+                        value={!!preferences?.showListIndicators}
+                        onValueChange={(value) => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          updatePreference.mutate(
+                            { key: 'showListIndicators', value },
+                            {
+                              onError: () => {
+                                Alert.alert(
+                                  'Error',
+                                  'Failed to update preference. Please try again.'
+                                );
+                              },
+                            }
+                          );
+                        }}
+                        disabled={preferencesLoading || updatePreference.isPending}
+                        trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                        thumbColor={COLORS.white}
+                      />
+                    )}
+                  </View>
                   <TouchableOpacity
                     style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
                     activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}

@@ -1,10 +1,13 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { LucideIcon } from 'lucide-react-native';
+import { Ellipsis, LucideIcon } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
+
+/** Standard icon to use for opening the ListActionsModal */
+export const ListActionsIcon = Ellipsis;
 
 export interface ListAction {
   /** Unique identifier for the action */
@@ -38,6 +41,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
 
     useImperativeHandle(ref, () => ({
       present: async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         await sheetRef.current?.present();
       },
       dismiss: async () => {

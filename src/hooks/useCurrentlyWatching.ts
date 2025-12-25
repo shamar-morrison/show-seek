@@ -127,12 +127,21 @@ export function useCurrentlyWatching() {
   });
 
   // 6. Compute progress data from all resolved queries
-  const data = useMemo<InProgressShow[]>(() => {
-    const allShowDetailsLoaded = showDetailsQueries.every((q) => !q.isLoading);
-    const allSeasonDetailsLoaded = seasonDetailsQueries.every((q) => !q.isLoading);
+  // Key insight: React Query caches data, so query.data is available even during refetch
+  // We should use cached data immediately instead of waiting for isLoading to be false
+  const computedData = useMemo<InProgressShow[] | null>(() => {
+    // Check if we have the base tracking data (from cache or fresh)
+    if (!trackingQuery.data) {
+      return null;
+    }
 
-    if (!trackingQuery.data || !allShowDetailsLoaded || !allSeasonDetailsLoaded) {
-      return [];
+    // Check if we have at least some show details data to work with
+    // During initial load, no data exists. During refetch, cached data exists.
+    const hasAnyShowDetailsData = showDetailsQueries.some((q) => q.data);
+
+    // If we're expecting show details but have none, we're still in initial load
+    if (showDetailsQueries.length > 0 && !hasAnyShowDetailsData) {
+      return null;
     }
 
     // Group season data by tvShowId
@@ -276,11 +285,24 @@ export function useCurrentlyWatching() {
     seasonQueries,
   ]);
 
-  // Compute loading state - only loading if we have queries pending
+  // Use computed data, or empty array if still computing initial load
+  const data = computedData ?? [];
+
+  // Only show loading spinner on true initial load (no data at all from any source)
+  // Once we have computed data, it means React Query had cached data and we're good
   const isLoading =
-    trackingQuery.isLoading ||
-    (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
-    (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading));
+    computedData === null &&
+    (trackingQuery.isLoading ||
+      (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
+      (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading)));
+
+  // Track if background refetch is happening (useful for subtle refresh indicators)
+  // Only show this when we already have data to display
+  const isFetching =
+    computedData !== null &&
+    (trackingQuery.isFetching ||
+      showDetailsQueries.some((q) => q.isFetching) ||
+      seasonDetailsQueries.some((q) => q.isFetching));
 
   // Compute error state - only error if base tracking fails or ALL show queries fail
   const allShowDetailsFailed =
@@ -300,6 +322,7 @@ export function useCurrentlyWatching() {
   return {
     data,
     isLoading,
+    isFetching,
     error,
     refresh,
   };

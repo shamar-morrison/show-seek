@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, TVShow } from '@/src/api/tmdb';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
@@ -10,16 +12,21 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface TVShowCardProps {
   show: TVShow;
   width?: number;
+  /** Show badge if show is in any list (default: true) */
+  showListBadge?: boolean;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
-  ({ show, width = 140 }) => {
+  ({ show, width = 140, showListBadge = true }) => {
     const currentTab = useCurrentTab();
+    const { isInAnyList } = useListMembership();
 
     const posterUrl = useMemo(
       () => getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium),
       [show.poster_path]
     );
+
+    const isInList = showListBadge && isInAnyList(show.id, 'tv');
 
     const handlePress = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
@@ -32,11 +39,14 @@ export const TVShowCard = memo<TVShowCardProps>(
         style={[styles.container, { width }]}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <MediaImage
-          source={{ uri: posterUrl }}
-          style={[styles.poster, { width, height: width * 1.5 }]}
-          contentFit="cover"
-        />
+        <View style={styles.posterContainer}>
+          <MediaImage
+            source={{ uri: posterUrl }}
+            style={[styles.poster, { width, height: width * 1.5 }]}
+            contentFit="cover"
+          />
+          {isInList && <ListMembershipBadge />}
+        </View>
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={2}>
             {show.name}
@@ -58,7 +68,11 @@ export const TVShowCard = memo<TVShowCardProps>(
     );
   },
   (prevProps, nextProps) => {
-    return prevProps.show.id === nextProps.show.id && prevProps.width === nextProps.width;
+    return (
+      prevProps.show.id === nextProps.show.id &&
+      prevProps.width === nextProps.width &&
+      prevProps.showListBadge === nextProps.showListBadge
+    );
   }
 );
 
@@ -67,6 +81,9 @@ TVShowCard.displayName = 'TVShowCard';
 const styles = StyleSheet.create({
   container: {
     marginRight: SPACING.m,
+  },
+  posterContainer: {
+    position: 'relative',
   },
   poster: {
     borderRadius: BORDER_RADIUS.m,

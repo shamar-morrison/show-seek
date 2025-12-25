@@ -2,7 +2,10 @@ import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
-import ListActionsModal, { ListActionsModalRef } from '@/src/components/ListActionsModal';
+import ListActionsModal, {
+  ListActionsIcon,
+  ListActionsModalRef,
+} from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import Toast from '@/src/components/ui/Toast';
@@ -29,7 +32,6 @@ import {
   Bookmark,
   Pencil,
   Search,
-  Settings2,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react-native';
@@ -187,8 +189,10 @@ export default function CustomListDetailScreen() {
 
   const actionButton = useMemo(
     () => ({
-      icon: Settings2,
-      onPress: () => listActionsModalRef.current?.present(),
+      icon: ListActionsIcon,
+      onPress: () => {
+        listActionsModalRef.current?.present();
+      },
       showBadge: hasActiveSort || hasActiveFilterState,
     }),
     [hasActiveSort, hasActiveFilterState]
