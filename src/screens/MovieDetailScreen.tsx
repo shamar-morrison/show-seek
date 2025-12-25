@@ -12,7 +12,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
-import NoteSheet, { NoteSheetRef } from '@/src/components/NoteSheet';
+import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
@@ -731,7 +731,7 @@ export default function MovieDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          <NoteSheet ref={noteSheetRef} />
+          <NoteModal ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />

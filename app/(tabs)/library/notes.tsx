@@ -1,6 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
-import NoteSheet, { NoteSheetRef } from '@/src/components/NoteSheet';
+import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -186,7 +186,7 @@ export default function NotesScreen() {
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
-      <NoteSheet ref={noteSheetRef} />
+      <NoteModal ref={noteSheetRef} />
     </SafeAreaView>
   );
 }

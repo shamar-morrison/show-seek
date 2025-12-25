@@ -1,9 +1,9 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
+import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { Trash2, X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
@@ -35,10 +35,9 @@ interface NoteSheetProps {
   onDelete?: () => void;
 }
 
-const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }, ref) => {
+const NoteModal = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
-  const router = useRouter();
   const { isPremium } = usePremium();
   const saveNoteMutation = useSaveNote();
   const deleteNoteMutation = useDeleteNote();
@@ -93,17 +92,7 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
 
     // Premium check
     if (!isPremium) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert('Premium Feature', 'Notes are a premium feature. Upgrade to unlock!', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Upgrade',
-          onPress: async () => {
-            await handleClose();
-            router.push('/premium' as any);
-          },
-        },
-      ]);
+      showPremiumAlert('Notes');
       return;
     }
 
@@ -225,9 +214,9 @@ const NoteSheet = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
   );
 });
 
-NoteSheet.displayName = 'NoteSheet';
+NoteModal.displayName = 'NoteSheet';
 
-export default NoteSheet;
+export default NoteModal;
 
 const styles = StyleSheet.create({
   content: {

@@ -12,7 +12,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
-import NoteSheet, { NoteSheetRef } from '@/src/components/NoteSheet';
+import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
@@ -45,6 +45,7 @@ import {
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
@@ -69,7 +70,6 @@ import {
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   RefreshControl,
   ScrollView,
@@ -633,20 +633,7 @@ export default function TVDetailScreen() {
                     onPress={() =>
                       requireAuth(() => {
                         if (!isPremium) {
-                          Alert.alert(
-                            'Premium Feature',
-                            'Reminders are only available to premium members.',
-                            [
-                              {
-                                text: 'Cancel',
-                                style: 'cancel',
-                              },
-                              {
-                                text: 'Upgrade',
-                                onPress: () => router.push('/premium' as any),
-                              },
-                            ]
-                          );
+                          showPremiumAlert('Reminders');
                           return;
                         }
                         setReminderModalVisible(true);
@@ -891,7 +878,7 @@ export default function TVDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          <NoteSheet ref={noteSheetRef} />
+          <NoteModal ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />
