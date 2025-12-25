@@ -50,6 +50,7 @@ export const MediaImage = ({
       onLoadStart={() => setIsLoading(true)}
       onLoadEnd={() => setIsLoading(false)}
       transition={{ duration: 200 }}
+      recyclingKey={uri}
     />
   );
 };
