@@ -82,10 +82,11 @@ class NoteService {
       (error) => {
         console.error('[NoteService] Subscription error:', error);
         const message = getFirestoreErrorMessage(error);
+        // Don't call callback([]) here - preserve existing notes on transient errors
+        // Let the consumer decide whether to clear the cache via onError
         if (onError) {
           onError(new Error(message));
         }
-        callback([]);
       }
     );
   }
