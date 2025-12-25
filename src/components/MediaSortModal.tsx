@@ -21,7 +21,9 @@ export type SortOption =
   | 'alphabetical'
   | 'popularity'
   | 'progress'
-  | 'lastWatched';
+  | 'lastWatched'
+  | 'dateAdded'
+  | 'lastUpdated';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {
@@ -59,8 +61,13 @@ const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: S
   { label: 'Popularity', value: 'popularity', defaultDirection: 'desc' },
   { label: 'Progress', value: 'progress', defaultDirection: 'desc' },
   { label: 'Last Watched', value: 'lastWatched', defaultDirection: 'desc' },
+  { label: 'Date Added', value: 'dateAdded', defaultDirection: 'desc' },
+  { label: 'Last Updated', value: 'lastUpdated', defaultDirection: 'desc' },
   { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
 ];
+
+/** Sort options for notes screens */
+export const NOTES_SCREEN_SORT_OPTIONS: SortOption[] = ['dateAdded', 'lastUpdated', 'alphabetical'];
 
 const USER_RATING_OPTION = {
   label: 'Your Rating',

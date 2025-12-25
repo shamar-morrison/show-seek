@@ -1,5 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import MediaSortModal, {
+  NOTES_SCREEN_SORT_OPTIONS,
+  SortState,
+} from '@/src/components/MediaSortModal';
 import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
@@ -14,21 +18,37 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
 import { Note } from '@/src/types/note';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { Pencil, StickyNote, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useRef } from 'react';
+import { useNavigation, useRouter } from 'expo-router';
+import { ArrowUpDown, Grid3X3, List, Pencil, StickyNote, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Pressable,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type ViewMode = 'list' | 'grouped';
+type NoteSection = {
+  title: string;
+  data: Note[];
+};
+
+const VIEW_MODE_STORAGE_KEY = 'notesViewMode';
+const SORT_STATE_STORAGE_KEY = 'notesSortState';
+
+const DEFAULT_SORT_STATE: SortState = {
+  option: 'dateAdded',
+  direction: 'desc',
+};
 
 /**
  * Format relative time (e.g., "2 days ago")
@@ -69,11 +89,127 @@ function truncateText(text: string, maxLength: number): string {
 
 export default function NotesScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteSheetRef>(null);
+
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [sortModalVisible, setSortModalVisible] = useState(false);
+  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+
+  // Load preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const [savedViewMode, savedSortState] = await Promise.all([
+          AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY),
+          AsyncStorage.getItem(SORT_STATE_STORAGE_KEY),
+        ]);
+        if (savedViewMode === 'list' || savedViewMode === 'grouped') {
+          setViewMode(savedViewMode);
+        }
+        if (savedSortState) {
+          const parsed = JSON.parse(savedSortState);
+          setSortState(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
+      } finally {
+        setIsLoadingPreference(false);
+      }
+    };
+    loadPreferences();
+  }, []);
+
+  const toggleViewMode = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const newMode: ViewMode = viewMode === 'list' ? 'grouped' : 'list';
+    setViewMode(newMode);
+    try {
+      await AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode);
+    } catch (error) {
+      console.error('Failed to save view mode preference:', error);
+    }
+  }, [viewMode]);
+
+  const handleApplySort = useCallback(async (newSortState: SortState) => {
+    setSortState(newSortState);
+    try {
+      await AsyncStorage.setItem(SORT_STATE_STORAGE_KEY, JSON.stringify(newSortState));
+    } catch (error) {
+      console.error('Failed to save sort preference:', error);
+    }
+  }, []);
+
+  const hasActiveSort =
+    sortState.option !== DEFAULT_SORT_STATE.option ||
+    sortState.direction !== DEFAULT_SORT_STATE.direction;
+
+  // Set up header buttons
+  useLayoutEffect(() => {
+    if (!isPremium) return;
+
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerButtons}>
+          <Pressable onPress={() => setSortModalVisible(true)} hitSlop={HIT_SLOP.m}>
+            <ArrowUpDown size={22} color={hasActiveSort ? COLORS.primary : COLORS.text} />
+          </Pressable>
+          <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+            {viewMode === 'list' ? (
+              <Grid3X3 size={22} color={COLORS.text} />
+            ) : (
+              <List size={22} color={COLORS.text} />
+            )}
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [navigation, isPremium, viewMode, toggleViewMode, hasActiveSort]);
+
+  // Sort notes
+  const sortedNotes = useMemo(() => {
+    if (!notes) return [];
+    return [...notes].sort((a, b) => {
+      const direction = sortState.direction === 'asc' ? 1 : -1;
+
+      switch (sortState.option) {
+        case 'dateAdded':
+          return (a.createdAt.getTime() - b.createdAt.getTime()) * direction;
+        case 'lastUpdated':
+          return (a.updatedAt.getTime() - b.updatedAt.getTime()) * direction;
+        case 'alphabetical': {
+          const titleA = a.mediaTitle.toLowerCase();
+          const titleB = b.mediaTitle.toLowerCase();
+          return titleA.localeCompare(titleB) * direction;
+        }
+        default:
+          return 0;
+      }
+    });
+  }, [notes, sortState]);
+
+  // Group notes by media type
+  const groupedNotes = useMemo(() => {
+    if (!sortedNotes || viewMode === 'list') return null;
+
+    const movieNotes = sortedNotes.filter((n) => n.mediaType === 'movie');
+    const tvNotes = sortedNotes.filter((n) => n.mediaType === 'tv');
+
+    const sections: NoteSection[] = [];
+    if (movieNotes.length > 0) {
+      sections.push({ title: 'Movies', data: movieNotes });
+    }
+    if (tvNotes.length > 0) {
+      sections.push({ title: 'TV Shows', data: tvNotes });
+    }
+
+    return sections;
+  }, [sortedNotes, viewMode]);
 
   const handleCardPress = useCallback(
     (note: Note) => {
@@ -126,6 +262,62 @@ export default function NotesScreen() {
     [deleteNoteMutation]
   );
 
+  const renderItem = useCallback(
+    ({ item }: { item: Note }) => {
+      const posterUrl = getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small);
+
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.noteCard, pressed && styles.noteCardPressed]}
+          onPress={() => handleCardPress(item)}
+        >
+          <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
+          <View style={styles.noteContent}>
+            <Text style={styles.mediaTitle} numberOfLines={1}>
+              {item.mediaTitle}
+            </Text>
+            <Text style={styles.noteText} numberOfLines={2}>
+              {truncateText(item.content, 80)}
+            </Text>
+            <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt)}</Text>
+          </View>
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => handleEditNote(item)}
+              style={styles.actionButton}
+              hitSlop={HIT_SLOP.m}
+            >
+              <Pencil size={20} color={COLORS.text} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleDeleteNote(item)}
+              style={styles.actionButton}
+              hitSlop={HIT_SLOP.m}
+              disabled={deleteNoteMutation.isPending}
+            >
+              {deleteNoteMutation.isPending ? (
+                <ActivityIndicator size="small" color={COLORS.error} />
+              ) : (
+                <Trash2 size={20} color={COLORS.error} />
+              )}
+            </Pressable>
+          </View>
+        </Pressable>
+      );
+    },
+    [handleCardPress, handleEditNote, handleDeleteNote, deleteNoteMutation.isPending]
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: NoteSection }) => (
+      <Text style={styles.sectionHeader}>{section.title}</Text>
+    ),
+    []
+  );
+
+  const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
+  const SectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
+
   // Premium gate
   if (!isPremium) {
     return (
@@ -151,7 +343,7 @@ export default function NotesScreen() {
   }
 
   // Loading state
-  if (isLoading) {
+  if (isLoading || isLoadingPreference) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -173,61 +365,39 @@ export default function NotesScreen() {
     );
   }
 
-  const renderItem = ({ item }: { item: Note }) => {
-    const posterUrl = getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small);
-
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.noteCard, pressed && styles.noteCardPressed]}
-        onPress={() => handleCardPress(item)}
-      >
-        <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
-        <View style={styles.noteContent}>
-          <Text style={styles.mediaTitle} numberOfLines={1}>
-            {item.mediaTitle}
-          </Text>
-          <Text style={styles.noteText} numberOfLines={2}>
-            {truncateText(item.content, 80)}
-          </Text>
-          <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt)}</Text>
-        </View>
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => handleEditNote(item)}
-            style={styles.actionButton}
-            hitSlop={HIT_SLOP.m}
-          >
-            <Pencil size={20} color={COLORS.text} />
-          </Pressable>
-          <Pressable
-            onPress={() => handleDeleteNote(item)}
-            style={styles.actionButton}
-            hitSlop={HIT_SLOP.m}
-            disabled={deleteNoteMutation.isPending}
-          >
-            {deleteNoteMutation.isPending ? (
-              <ActivityIndicator size="small" color={COLORS.error} />
-            ) : (
-              <Trash2 size={20} color={COLORS.error} />
-            )}
-          </Pressable>
-        </View>
-      </Pressable>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.divider} />
-      <FlashList
-        data={notes}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-      />
+      {viewMode === 'list' ? (
+        <FlashList
+          data={sortedNotes}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={ItemSeparator}
+        />
+      ) : (
+        <SectionList
+          sections={groupedNotes || []}
+          renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={false}
+          ItemSeparatorComponent={ItemSeparator}
+          SectionSeparatorComponent={SectionSeparator}
+        />
+      )}
       <NoteModal ref={noteSheetRef} />
+      <MediaSortModal
+        visible={sortModalVisible}
+        onClose={() => setSortModalVisible(false)}
+        sortState={sortState}
+        onApplySort={handleApplySort}
+        allowedOptions={NOTES_SCREEN_SORT_OPTIONS}
+      />
     </SafeAreaView>
   );
 }
@@ -254,6 +424,18 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: SPACING.m,
+  },
+  sectionHeader: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    backgroundColor: COLORS.background,
+    paddingVertical: SPACING.s,
+  },
+  sectionSeparator: {
+    height: SPACING.l,
   },
   noteCard: {
     flexDirection: 'row',
@@ -298,6 +480,11 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: SPACING.xs,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.m,
   },
   // Premium gate styles
   premiumGate: {
