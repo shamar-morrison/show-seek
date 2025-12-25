@@ -87,16 +87,12 @@ export const useNotes = () => {
 export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
   const { data: notes, isLoading, refetch } = useNotes();
 
-  if (!notes) {
-    return { note: null, hasNote: false, isLoading: true };
-  }
-
-  const note = notes.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
+  const note = notes?.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
 
   return {
     note: note || null,
     hasNote: !!note,
-    isLoading: isLoading || false,
+    isLoading,
     refetch,
   };
 };

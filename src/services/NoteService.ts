@@ -130,7 +130,9 @@ class NoteService {
   async getNote(userId: string, mediaType: 'movie' | 'tv', mediaId: number): Promise<Note | null> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) return null;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId);
 
@@ -142,8 +144,9 @@ class NoteService {
 
       return null;
     } catch (error) {
+      const message = getFirestoreErrorMessage(error);
       console.error('[NoteService] getNote error:', error);
-      return null;
+      throw new Error(message);
     }
   }
 
@@ -153,7 +156,9 @@ class NoteService {
   async getNotes(userId: string): Promise<Note[]> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) return [];
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
 
       const notesRef = this.getNotesCollection(userId);
       const q = query(notesRef, orderBy('createdAt', 'desc'));
@@ -162,8 +167,9 @@ class NoteService {
 
       return snapshot.docs.map((doc) => this.mapDocToNote(doc));
     } catch (error) {
+      const message = getFirestoreErrorMessage(error);
       console.error('[NoteService] getNotes error:', error);
-      return [];
+      throw new Error(message);
     }
   }
 
