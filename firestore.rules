@@ -71,6 +71,22 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Notes collection (personal notes for movies/TV shows)
+      match /notes/{noteId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'createdAt', 'updatedAt'])
+          && request.resource.data.userId == userId
+          && request.resource.data.mediaType in ['movie', 'tv']
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 120;
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 120;
+        allow delete: if isOwner(userId);
+      }
+
       // Episode tracking collection
       match /episode_tracking/{tvShowId} {
         allow read: if isOwner(userId);

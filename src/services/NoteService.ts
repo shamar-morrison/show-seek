@@ -1,0 +1,178 @@
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { Note, NoteInput } from '@/src/types/note';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  Timestamp,
+} from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
+
+class NoteService {
+  /**
+   * Generate note document ID
+   * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396")
+   */
+  private getNoteId(mediaType: 'movie' | 'tv', mediaId: number): string {
+    return `${mediaType}-${mediaId}`;
+  }
+
+  /**
+   * Get reference to a specific note document
+   */
+  private getNoteRef(userId: string, mediaType: 'movie' | 'tv', mediaId: number) {
+    const noteId = this.getNoteId(mediaType, mediaId);
+    return doc(db, 'users', userId, 'notes', noteId);
+  }
+
+  /**
+   * Get reference to user's notes collection
+   */
+  private getNotesCollection(userId: string) {
+    return collection(db, 'users', userId, 'notes');
+  }
+
+  /**
+   * Save or update a note for a media item
+   */
+  async saveNote(userId: string, noteData: NoteInput): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const noteRef = this.getNoteRef(userId, noteData.mediaType, noteData.mediaId);
+      const existingNote = await getDoc(noteRef);
+
+      const now = Timestamp.now();
+      const noteDocument = {
+        id: this.getNoteId(noteData.mediaType, noteData.mediaId),
+        userId,
+        mediaType: noteData.mediaType,
+        mediaId: noteData.mediaId,
+        content: noteData.content,
+        posterPath: noteData.posterPath,
+        mediaTitle: noteData.mediaTitle,
+        createdAt: existingNote.exists() ? existingNote.data().createdAt : now,
+        updatedAt: now,
+      };
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      await Promise.race([setDoc(noteRef, noteDocument), timeoutPromise]);
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[NoteService] saveNote error:', error);
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Get a single note for a media item
+   */
+  async getNote(userId: string, mediaType: 'movie' | 'tv', mediaId: number): Promise<Note | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) return null;
+
+      const noteRef = this.getNoteRef(userId, mediaType, mediaId);
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const docSnap = await Promise.race([getDoc(noteRef), timeoutPromise]);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          userId: data.userId,
+          mediaType: data.mediaType,
+          mediaId: data.mediaId,
+          content: data.content,
+          posterPath: data.posterPath,
+          mediaTitle: data.mediaTitle,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[NoteService] getNote error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all notes for a user, ordered by createdAt descending
+   */
+  async getNotes(userId: string): Promise<Note[]> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) return [];
+
+      const notesRef = this.getNotesCollection(userId);
+      const q = query(notesRef, orderBy('createdAt', 'desc'));
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          mediaType: data.mediaType,
+          mediaId: data.mediaId,
+          content: data.content,
+          posterPath: data.posterPath,
+          mediaTitle: data.mediaTitle,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+        };
+      });
+    } catch (error) {
+      console.error('[NoteService] getNotes error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a note for a media item
+   */
+  async deleteNote(userId: string, mediaType: 'movie' | 'tv', mediaId: number): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const noteRef = this.getNoteRef(userId, mediaType, mediaId);
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      await Promise.race([deleteDoc(noteRef), timeoutPromise]);
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[NoteService] deleteNote error:', error);
+      throw new Error(message);
+    }
+  }
+}
+
+export const noteService = new NoteService();

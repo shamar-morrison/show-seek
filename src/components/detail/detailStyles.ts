@@ -537,9 +537,19 @@ export const detailStyles = StyleSheet.create({
 
   // Action buttons
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.s,
     marginBottom: SPACING.xl,
+  },
+  // Secondary action buttons row (Rating, Add to List, Reminder, Notes)
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING.s,
+  },
+  // Trailer button row
+  trailerButtonRow: {
+    flexDirection: 'row',
   },
   playButton: {
     flex: 1,
