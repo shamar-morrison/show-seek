@@ -300,7 +300,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setIsEnriching(true);
 
       await TraktService.triggerEnrichment(user.uid, {
-        includeEpisodes: false,
+        includeEpisodes: true, // Include episodes in enrichment to test new backend cache
       });
 
       // Start polling for enrichment status
