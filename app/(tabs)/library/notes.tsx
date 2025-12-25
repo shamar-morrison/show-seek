@@ -223,17 +223,20 @@ export default function NotesScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
+            {/* Search button */}
             <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
               <Search size={22} color={COLORS.text} />
             </Pressable>
+            {/* Sort button */}
             <Pressable
               onPress={() => setSortModalVisible(true)}
               hitSlop={HIT_SLOP.m}
-              style={sortHeaderStyles.headerButton}
+              style={styles.sortButton}
             >
               <ArrowUpDown size={22} color={COLORS.text} />
               {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
             </Pressable>
+            {/* View mode button */}
             <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
               {viewMode === 'list' ? (
                 <Grid3X3 size={22} color={COLORS.text} />
@@ -572,6 +575,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
+  },
+  sortButton: {
+    position: 'relative',
   },
   // Premium gate styles
   premiumGate: {
