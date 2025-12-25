@@ -1,21 +1,33 @@
 import { Note, NoteInput } from '@/src/types/note';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { auth } from '../firebase/config';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '../context/auth';
 import { noteService } from '../services/NoteService';
 
 /**
  * Hook to manage all notes for the current user.
- * Uses same pattern as useRatings - synchronous auth.currentUser access.
+ * Uses reactive useAuth hook to properly respond to auth state changes.
  */
 export const useNotes = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid; // Synchronous like useRatings
+  const { user } = useAuth();
+  const userId = user?.uid;
+  const previousUserIdRef = useRef<string | undefined>(userId);
   const [error, setError] = useState<Error | null>(null);
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
-    if (!userId) return true;
+    if (!userId) return false;
     return !queryClient.getQueryData(['notes', userId]);
   });
+
+  useEffect(() => {
+    const previousUserId = previousUserIdRef.current;
+
+    if (previousUserId && !userId) {
+      queryClient.removeQueries({ queryKey: ['notes', previousUserId] });
+    }
+
+    previousUserIdRef.current = userId;
+  }, [userId, queryClient]);
 
   useEffect(() => {
     if (!userId) {
@@ -45,6 +57,12 @@ export const useNotes = () => {
     return () => unsubscribe();
   }, [userId, queryClient]);
 
+  const refetch = useCallback(() => {
+    if (userId) {
+      queryClient.invalidateQueries({ queryKey: ['notes', userId] });
+    }
+  }, [userId, queryClient]);
+
   const query = useQuery({
     queryKey: ['notes', userId],
     queryFn: () => queryClient.getQueryData<Note[]>(['notes', userId]) || [],
@@ -56,26 +74,24 @@ export const useNotes = () => {
   return {
     ...query,
     isLoading: isSubscriptionLoading,
+    refetch,
   };
 };
 
 /**
  * Hook to get a specific note for a media item.
- * Exactly matches useMediaRating pattern - just filters from cached data.
+ * Filters from the global notes cache.
  */
 export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
-  const { data: ratings, isLoading } = useNotes();
+  const { data: notes, isLoading, refetch } = useNotes();
 
-  if (!ratings) {
-    return { note: null, hasNote: false, isLoading: true };
-  }
-
-  const note = ratings.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
+  const note = notes?.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
 
   return {
     note: note || null,
     hasNote: !!note,
-    isLoading: isLoading || false,
+    isLoading,
+    refetch,
   };
 };
 
@@ -83,9 +99,11 @@ export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
  * Mutation hook to save a note (separate export like useRateMedia)
  */
 export const useSaveNote = () => {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   return useMutation({
     mutationFn: (noteData: NoteInput) => {
-      const userId = auth.currentUser?.uid;
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.saveNote(userId, noteData);
     },
@@ -96,9 +114,11 @@ export const useSaveNote = () => {
  * Mutation hook to delete a note (separate export like useDeleteRating)
  */
 export const useDeleteNote = () => {
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   return useMutation({
     mutationFn: ({ mediaType, mediaId }: { mediaType: 'movie' | 'tv'; mediaId: number }) => {
-      const userId = auth.currentUser?.uid;
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.deleteNote(userId, mediaType, mediaId);
     },
