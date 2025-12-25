@@ -2,6 +2,10 @@ import { Pressable, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 
 const HEADER_TOUCH_SIZE = 40;
 
+/**
+ * Used for buttons that are placed in the header.
+ * Provides a consistent touch size.
+ */
 export function HeaderIconButton({
   onPress,
   children,

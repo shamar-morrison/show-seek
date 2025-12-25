@@ -1,8 +1,9 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
@@ -15,7 +16,6 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } fro
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   SectionList,
   StyleSheet,
   Text,
@@ -108,16 +108,16 @@ export default function FavoritePeopleScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={searchButton.onPress}>
               <Search size={22} color={COLORS.text} />
-            </Pressable>
-            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+            </HeaderIconButton>
+            <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'grid' ? (
                 <List size={24} color={COLORS.text} />
               ) : (
                 <Grid3X3 size={24} color={COLORS.text} />
               )}
-            </Pressable>
+            </HeaderIconButton>
           </View>
         ),
       });
@@ -316,6 +316,5 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
   },
 });

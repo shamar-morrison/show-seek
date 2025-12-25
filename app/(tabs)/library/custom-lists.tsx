@@ -1,8 +1,9 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
@@ -100,19 +101,15 @@ export default function CustomListsScreen() {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
-          <Pressable
-            onPress={() => setSortModalVisible(true)}
-            style={styles.headerButton}
-            accessibilityLabel="Sort lists"
-            accessibilityRole="button"
-            hitSlop={HIT_SLOP.m}
-          >
-            <ArrowUpDown size={22} color={COLORS.text} />
-            {hasActiveSort && <View style={styles.sortBadge} />}
-          </Pressable>
-          <Pressable onPress={handleCreateList} hitSlop={HIT_SLOP.m}>
+          <HeaderIconButton onPress={() => setSortModalVisible(true)}>
+            <View style={styles.sortIconWrapper}>
+              <ArrowUpDown size={22} color={COLORS.text} />
+              {hasActiveSort && <View style={styles.sortBadge} />}
+            </View>
+          </HeaderIconButton>
+          <HeaderIconButton onPress={handleCreateList}>
             <Plus size={24} color={COLORS.text} />
-          </Pressable>
+          </HeaderIconButton>
         </View>
       ),
     });
@@ -235,16 +232,14 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
-    marginRight: SPACING.s,
   },
-  headerButton: {
+  sortIconWrapper: {
     position: 'relative',
   },
   sortBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -4,
     width: SPACING.s,
     height: SPACING.s,
     borderRadius: SPACING.xs,

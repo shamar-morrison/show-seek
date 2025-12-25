@@ -1,9 +1,10 @@
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
-import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface SortableMedia {
   vote_average?: number;
@@ -95,17 +96,15 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
+        <HeaderIconButton
           onPress={() => setSortModalVisible(true)}
-          activeOpacity={ACTIVE_OPACITY}
           style={sortHeaderStyles.headerButton}
-          accessibilityLabel="Sort items"
-          accessibilityRole="button"
-          hitSlop={HIT_SLOP.m}
         >
-          <ArrowUpDown size={22} color={COLORS.text} />
-          {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-        </TouchableOpacity>
+          <View style={sortHeaderStyles.iconWrapper}>
+            <ArrowUpDown size={22} color={COLORS.text} />
+            {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
+          </View>
+        </HeaderIconButton>
       ),
     });
   }, [navigation, hasActiveSort]);
@@ -142,13 +141,15 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
 
 export const sortHeaderStyles = StyleSheet.create({
   headerButton: {
-    position: 'relative',
     marginRight: SPACING.s,
+  },
+  iconWrapper: {
+    position: 'relative',
   },
   sortBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -4,
     width: SPACING.s,
     height: SPACING.s,
     borderRadius: SPACING.xs,
