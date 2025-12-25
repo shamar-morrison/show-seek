@@ -105,12 +105,11 @@ class NoteService {
 
       const now = Timestamp.now();
       const noteDocument = {
-        id: this.getNoteId(noteData.mediaType, noteData.mediaId),
         userId,
         mediaType: noteData.mediaType,
         mediaId: noteData.mediaId,
         content: noteData.content,
-        posterPath: noteData.posterPath,
+        posterPath: noteData.posterPath ?? null,
         mediaTitle: noteData.mediaTitle,
         createdAt: existingNote.exists() ? existingNote.data().createdAt : now,
         updatedAt: now,
