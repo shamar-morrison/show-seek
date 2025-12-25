@@ -122,7 +122,7 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           && resource.data.userId == userId
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate']);
+            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate', 'noNextEpisodeFound']);
         allow delete: if isOwner(userId)
           && resource.data.userId == userId;
       }
