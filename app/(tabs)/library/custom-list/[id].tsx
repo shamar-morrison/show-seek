@@ -389,6 +389,7 @@ export default function CustomListDetailScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical', 'popularity']}
       />
 
       <WatchStatusFiltersModal
