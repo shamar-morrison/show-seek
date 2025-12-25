@@ -20,7 +20,6 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
-import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import { Note } from '@/src/types/note';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -229,9 +228,11 @@ export default function NotesScreen() {
               <Search size={22} color={COLORS.text} />
             </HeaderIconButton>
             {/* Sort button */}
-            <HeaderIconButton onPress={() => setSortModalVisible(true)} style={styles.sortButton}>
-              <ArrowUpDown size={22} color={COLORS.text} />
-              {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
+            <HeaderIconButton onPress={() => setSortModalVisible(true)}>
+              <View style={styles.sortIconWrapper}>
+                <ArrowUpDown size={22} color={COLORS.text} />
+                {hasActiveSort && <View style={styles.sortBadge} />}
+              </View>
             </HeaderIconButton>
             {/* View mode button */}
             <HeaderIconButton onPress={toggleViewMode}>
@@ -571,10 +572,18 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    // gap: SPACING.m,
   },
-  sortButton: {
+  sortIconWrapper: {
     position: 'relative',
+  },
+  sortBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
+    backgroundColor: COLORS.primary,
   },
   // Premium gate styles
   premiumGate: {
