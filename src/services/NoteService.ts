@@ -39,13 +39,19 @@ class NoteService {
   }
 
   /**
-   * Subscribe to all notes for the current user (real-time updates)
+   * Subscribe to all notes for a user (real-time updates)
+   * @param userId - The user's ID to subscribe for
+   * @param callback - Called with notes array on each update
+   * @param onError - Optional error handler
    */
-  subscribeToUserNotes(callback: (notes: Note[]) => void, onError?: (error: Error) => void) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
+  subscribeToUserNotes(
+    userId: string,
+    callback: (notes: Note[]) => void,
+    onError?: (error: Error) => void
+  ) {
+    if (!userId) return () => {};
 
-    const notesRef = this.getNotesCollection(user.uid);
+    const notesRef = this.getNotesCollection(userId);
     const q = query(notesRef, orderBy('createdAt', 'desc'));
 
     return onSnapshot(
