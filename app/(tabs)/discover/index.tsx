@@ -1,8 +1,10 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useGenres } from '@/src/hooks/useGenres';
+import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
@@ -31,6 +33,7 @@ export default function DiscoverScreen() {
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
   const genreMap = genresQuery.data || {};
+  const { isInAnyList } = useListMembership();
 
   const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],
@@ -113,13 +116,18 @@ export default function DiscoverScreen() {
           .filter(Boolean)
       : [];
 
+    const isInList = isInAnyList(item.id, mediaType);
+
     return (
       <TouchableOpacity
         style={styles.resultItem}
         onPress={() => handleItemPress(item)}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
+        <View style={styles.posterContainer}>
+          <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
+          {isInList && <ListMembershipBadge size="medium" />}
+        </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
             {title}
@@ -311,6 +319,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
     padding: SPACING.m,
+  },
+  posterContainer: {
+    position: 'relative',
   },
   resultPoster: {
     width: 92,
