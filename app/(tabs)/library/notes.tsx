@@ -2,8 +2,16 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+} from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
 import { Note } from '@/src/types/note';
 import { FlashList } from '@shopify/flash-list';
@@ -11,7 +19,15 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Pencil, StickyNote, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useRef } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -53,12 +69,30 @@ function truncateText(text: string, maxLength: number): string {
 
 export default function NotesScreen() {
   const router = useRouter();
+  const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteSheetRef>(null);
 
-  const handleNotePress = useCallback((note: Note) => {
+  const handleCardPress = useCallback(
+    (note: Note) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (!currentTab) {
+        console.warn('Cannot navigate: currentTab is null');
+        return;
+      }
+
+      const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';
+      const path = `/(tabs)/${currentTab}/${mediaPath}/${note.mediaId}`;
+      router.push(path as any);
+    },
+    [currentTab, router]
+  );
+
+  const handleEditNote = useCallback((note: Note) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     noteSheetRef.current?.present({
       mediaType: note.mediaType,
       mediaId: note.mediaId,
@@ -143,48 +177,42 @@ export default function NotesScreen() {
     const posterUrl = getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small);
 
     return (
-      <TouchableOpacity
-        style={styles.noteCard}
-        onPress={() => handleNotePress(item)}
-        activeOpacity={ACTIVE_OPACITY}
+      <Pressable
+        style={({ pressed }) => [styles.noteCard, pressed && styles.noteCardPressed]}
+        onPress={() => handleCardPress(item)}
       >
         <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
         <View style={styles.noteContent}>
-          <View style={styles.noteHeader}>
-            <Text style={styles.mediaTitle} numberOfLines={1}>
-              {item.mediaTitle}
-            </Text>
-            <View style={styles.mediaTypeBadge}>
-              <Text style={styles.mediaTypeText}>
-                {item.mediaType === 'movie' ? 'Movie' : 'TV'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.noteText} numberOfLines={2}>
-            {truncateText(item.content, 60)}
+          <Text style={styles.mediaTitle} numberOfLines={1}>
+            {item.mediaTitle}
           </Text>
-          <View style={styles.noteFooter}>
-            <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt)}</Text>
-            <View style={styles.actions}>
-              <TouchableOpacity
-                onPress={() => handleNotePress(item)}
-                style={styles.actionButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Pencil size={16} color={COLORS.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDeleteNote(item)}
-                style={styles.actionButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                disabled={deleteNoteMutation.isPending}
-              >
-                <Trash2 size={16} color={COLORS.error} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Text style={styles.noteText} numberOfLines={2}>
+            {truncateText(item.content, 80)}
+          </Text>
+          <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt)}</Text>
         </View>
-      </TouchableOpacity>
+        <View style={styles.actions}>
+          <Pressable
+            onPress={() => handleEditNote(item)}
+            style={styles.actionButton}
+            hitSlop={HIT_SLOP.m}
+          >
+            <Pencil size={20} color={COLORS.text} />
+          </Pressable>
+          <Pressable
+            onPress={() => handleDeleteNote(item)}
+            style={styles.actionButton}
+            hitSlop={HIT_SLOP.m}
+            disabled={deleteNoteMutation.isPending}
+          >
+            {deleteNoteMutation.isPending ? (
+              <ActivityIndicator size="small" color={COLORS.error} />
+            ) : (
+              <Trash2 size={20} color={COLORS.error} />
+            )}
+          </Pressable>
+        </View>
+      </Pressable>
     );
   };
 
@@ -229,58 +257,43 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    padding: SPACING.s,
+    gap: SPACING.m,
+  },
+  noteCardPressed: {
+    opacity: ACTIVE_OPACITY,
   },
   poster: {
-    width: 70,
-    height: 105,
+    width: 60,
+    height: 90,
+    borderRadius: BORDER_RADIUS.s,
+    backgroundColor: COLORS.surfaceLight,
   },
   noteContent: {
     flex: 1,
-    padding: SPACING.m,
-    justifyContent: 'space-between',
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
+    gap: SPACING.xs,
   },
   mediaTitle: {
-    flex: 1,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
-  },
-  mediaTypeBadge: {
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.s,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  mediaTypeText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
   },
   noteText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     lineHeight: 18,
-    marginVertical: SPACING.xs,
-  },
-  noteFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   timestamp: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.m,
   },
   actionButton: {
