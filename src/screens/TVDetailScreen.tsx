@@ -12,6 +12,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
@@ -25,12 +26,13 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -43,6 +45,7 @@ import {
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
@@ -57,17 +60,19 @@ import {
   Check,
   Globe,
   Layers,
+  Pencil,
   Play,
   Plus,
   Star,
+  StickyNote,
   Tv,
 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -93,6 +98,7 @@ export default function TVDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
+  const noteSheetRef = useRef<NoteSheetRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -110,6 +116,7 @@ export default function TVDetailScreen() {
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
+  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('tv', tvId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -562,92 +569,125 @@ export default function TVDetailScreen() {
             )}
           </View>
 
-          <View style={detailStyles.genresContainer}>
-            {show.genres.map((genre) => (
-              <View key={genre.id} style={detailStyles.genreTag}>
-                <Text style={detailStyles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          >
+            <View style={detailStyles.genresContainer}>
+              {show.genres.map((genre) => (
+                <View key={genre.id} style={detailStyles.genreTag}>
+                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Action buttons */}
           <View style={detailStyles.actionButtons}>
-            <TouchableOpacity
-              style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
-              onPress={handleTrailerPress}
-              disabled={!trailer}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Play size={18} color={COLORS.white} fill={COLORS.white} />
-              <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
-            </TouchableOpacity>
-
-            {/* Add to List Button */}
-            <TouchableOpacity
-              style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
-              activeOpacity={ACTIVE_OPACITY}
-              onPress={() =>
-                requireAuth(
-                  () => addToListModalRef.current?.present(),
-                  'Sign in to add items to your lists'
-                )
-              }
-              disabled={isLoadingLists}
-            >
-              {isLoadingLists ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : isInAnyList ? (
-                <Check size={24} color={COLORS.white} />
-              ) : (
-                <Plus size={24} color={COLORS.white} />
-              )}
-            </TouchableOpacity>
-
-            {/* Rating Button */}
-            <View style={detailStyles.ratingButtonContainer}>
-              <RatingButton
+            {/* Secondary Action Buttons Row */}
+            <View style={detailStyles.secondaryActionsRow}>
+              {/* Add to List Button */}
+              <TouchableOpacity
+                style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
+                activeOpacity={ACTIVE_OPACITY}
                 onPress={() =>
-                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+                  requireAuth(
+                    () => addToListModalRef.current?.present(),
+                    'Sign in to add items to your lists'
+                  )
                 }
-                isRated={userRating > 0}
-                isLoading={isLoadingRating}
-              />
-            </View>
+                disabled={isLoadingLists}
+              >
+                {isLoadingLists ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : isInAnyList ? (
+                  <Check size={24} color={COLORS.white} />
+                ) : (
+                  <Plus size={24} color={COLORS.white} />
+                )}
+              </TouchableOpacity>
 
-            {/* Reminder Button */}
-            {(show.status === 'Returning Series' ||
-              show.status === 'In Production' ||
-              show.status === 'Planned' ||
-              show.status === 'Pilot') && (
+              {/* Rating Button */}
               <View style={detailStyles.ratingButtonContainer}>
-                <ReminderButton
+                <RatingButton
                   onPress={() =>
-                    requireAuth(() => {
-                      if (!isPremium) {
-                        Alert.alert(
-                          'Premium Feature',
-                          'Reminders are only available to premium members.',
-                          [
-                            {
-                              text: 'Cancel',
-                              style: 'cancel',
-                            },
-                            {
-                              text: 'Upgrade',
-                              onPress: () => router.push('/premium' as any),
-                            },
-                          ]
-                        );
-                        return;
-                      }
-                      setReminderModalVisible(true);
-                    }, 'Sign in to set release reminders')
+                    requireAuth(
+                      () => setRatingModalVisible(true),
+                      'Sign in to rate movies and shows'
+                    )
                   }
-                  hasReminder={hasReminder}
-                  isLoading={isLoadingReminder}
+                  isRated={userRating > 0}
+                  isLoading={isLoadingRating}
                 />
               </View>
-            )}
+
+              {/* Reminder Button */}
+              {(show.status === 'Returning Series' ||
+                show.status === 'In Production' ||
+                show.status === 'Planned' ||
+                show.status === 'Pilot') && (
+                <View style={detailStyles.ratingButtonContainer}>
+                  <ReminderButton
+                    onPress={() =>
+                      requireAuth(() => {
+                        if (!isPremium) {
+                          showPremiumAlert('Reminders');
+                          return;
+                        }
+                        setReminderModalVisible(true);
+                      }, 'Sign in to set release reminders')
+                    }
+                    hasReminder={hasReminder}
+                    isLoading={isLoadingReminder}
+                  />
+                </View>
+              )}
+
+              {/* Notes Button */}
+              <View style={detailStyles.ratingButtonContainer}>
+                <TouchableOpacity
+                  style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  activeOpacity={ACTIVE_OPACITY}
+                  onPress={() =>
+                    requireAuth(
+                      () =>
+                        noteSheetRef.current?.present({
+                          mediaType: 'tv',
+                          mediaId: tvId,
+                          posterPath: show.poster_path,
+                          mediaTitle: show.name,
+                          initialNote: note?.content,
+                        }),
+                      'Sign in to add notes'
+                    )
+                  }
+                  disabled={isLoadingNote}
+                >
+                  {isLoadingNote ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : hasNote ? (
+                    <Pencil size={24} color={COLORS.white} />
+                  ) : (
+                    <StickyNote size={24} color={COLORS.white} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Watch Trailer Button Row */}
+            <View style={detailStyles.trailerButtonRow}>
+              <TouchableOpacity
+                style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
+                onPress={handleTrailerPress}
+                disabled={!trailer}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Play size={18} color={COLORS.white} fill={COLORS.white} />
+                <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {userRating > 0 && <UserRating rating={userRating} />}
@@ -838,6 +878,7 @@ export default function TVDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
+          <NoteModal ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />

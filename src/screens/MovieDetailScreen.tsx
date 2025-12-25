@@ -12,6 +12,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderButton from '@/src/components/ReminderButton';
@@ -25,11 +26,12 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -47,12 +49,24 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  Clock,
+  Globe,
+  Pencil,
+  Play,
+  Plus,
+  Star,
+  StickyNote,
+} from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -88,6 +102,7 @@ export default function MovieDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
+  const noteSheetRef = useRef<NoteSheetRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -108,6 +123,7 @@ export default function MovieDetailScreen() {
     hasReminder,
     isLoading: isLoadingReminder,
   } = useMediaReminder(movieId, 'movie');
+  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('movie', movieId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -403,71 +419,118 @@ export default function MovieDetailScreen() {
             )}
           </View>
 
-          <View style={detailStyles.genresContainer}>
-            {movie.genres.map((genre) => (
-              <View key={genre.id} style={detailStyles.genreTag}>
-                <Text style={detailStyles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          >
+            <View style={detailStyles.genresContainer}>
+              {movie.genres.map((genre) => (
+                <View key={genre.id} style={detailStyles.genreTag}>
+                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Action Buttons */}
           <View style={detailStyles.actionButtons}>
-            {/* Watch Trailer Button */}
-            <TouchableOpacity
-              style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
-              onPress={handleTrailerPress}
-              disabled={!trailer}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Play size={18} color={COLORS.white} fill={COLORS.white} />
-              <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
-            </TouchableOpacity>
+            {/* Secondary Action Buttons Row */}
+            <View style={detailStyles.secondaryActionsRow}>
+              {/* Add to List Button */}
+              <TouchableOpacity
+                style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
+                activeOpacity={ACTIVE_OPACITY}
+                onPress={() =>
+                  requireAuth(
+                    () => addToListModalRef.current?.present(),
+                    'Sign in to add items to your lists'
+                  )
+                }
+                disabled={isLoadingLists}
+              >
+                {isLoadingLists ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : isInAnyList ? (
+                  <Check size={24} color={COLORS.white} />
+                ) : (
+                  <Plus size={24} color={COLORS.white} />
+                )}
+              </TouchableOpacity>
 
-            {/* Add to List Button */}
-            <TouchableOpacity
-              style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
-              activeOpacity={ACTIVE_OPACITY}
-              onPress={() =>
-                requireAuth(
-                  () => addToListModalRef.current?.present(),
-                  'Sign in to add items to your lists'
-                )
-              }
-              disabled={isLoadingLists}
-            >
-              {isLoadingLists ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : isInAnyList ? (
-                <Check size={24} color={COLORS.white} />
-              ) : (
-                <Plus size={24} color={COLORS.white} />
-              )}
-            </TouchableOpacity>
-
-            {/* Reminder Button */}
-            {canShowReminder(movie.release_date) && (
+              {/* Rating Button */}
               <View style={detailStyles.ratingButtonContainer}>
-                <ReminderButton
+                <RatingButton
                   onPress={() =>
                     requireAuth(
-                      () => setReminderModalVisible(true),
-                      'Sign in to set release reminders'
+                      () => setRatingModalVisible(true),
+                      'Sign in to rate movies and shows'
                     )
                   }
-                  hasReminder={hasReminder}
-                  isLoading={isLoadingReminder}
+                  isRated={userRating > 0}
+                  isLoading={isLoadingRating}
                 />
               </View>
-            )}
-            <View style={detailStyles.ratingButtonContainer}>
-              <RatingButton
-                onPress={() =>
-                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
-                }
-                isRated={userRating > 0}
-                isLoading={isLoadingRating}
-              />
+
+              {/* Reminder Button */}
+              {canShowReminder(movie.release_date) && (
+                <View style={detailStyles.ratingButtonContainer}>
+                  <ReminderButton
+                    onPress={() =>
+                      requireAuth(
+                        () => setReminderModalVisible(true),
+                        'Sign in to set release reminders'
+                      )
+                    }
+                    hasReminder={hasReminder}
+                    isLoading={isLoadingReminder}
+                  />
+                </View>
+              )}
+
+              {/* Notes Button */}
+              <View style={detailStyles.ratingButtonContainer}>
+                <TouchableOpacity
+                  style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
+                  activeOpacity={ACTIVE_OPACITY}
+                  onPress={() =>
+                    requireAuth(
+                      () =>
+                        noteSheetRef.current?.present({
+                          mediaType: 'movie',
+                          mediaId: movieId,
+                          posterPath: movie.poster_path,
+                          mediaTitle: movie.title,
+                          initialNote: note?.content,
+                        }),
+                      'Sign in to add notes'
+                    )
+                  }
+                  disabled={isLoadingNote}
+                >
+                  {isLoadingNote ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : hasNote ? (
+                    <Pencil size={24} color={COLORS.white} />
+                  ) : (
+                    <StickyNote size={24} color={COLORS.white} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Watch Trailer Button Row */}
+            <View style={detailStyles.trailerButtonRow}>
+              <TouchableOpacity
+                style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
+                onPress={handleTrailerPress}
+                disabled={!trailer}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Play size={18} color={COLORS.white} fill={COLORS.white} />
+                <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -668,6 +731,7 @@ export default function MovieDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
+          <NoteModal ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />

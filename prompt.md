@@ -1,223 +1,257 @@
-# Task: Implement Google Sign-In for Show Seek App
+## Overview
 
-## Context
+Implement a notes feature that allows users to write personal notes for movies and TV shows. This is a premium feature that uses Firebase Firestore for storage.
 
-You are working on a React Native/Expo app called "Show Seek" that currently uses Firebase Authentication with email/password and anonymous (guest) sign-in. The existing authentication system is fully documented in the `authentication-overview.md` file uploaded to this conversation.
+## Implementation Requirements
 
-## Objective
+### 1. TypeScript Types
 
-Implement Google Sign-In using the `react-native-google-auth` package (https://github.com/sbaiahmed1/react-native-google-auth) with the following requirements:
-
-### Product Requirements
-
-1. **Sign-In Screen Changes**
-   - Add a "Sign in with Google" button alongside the existing email/password sign-in
-   - Keep email/password sign-in functional for legacy users
-   - Maintain the "Continue as Guest" option
-
-2. **Sign-Up Screen Changes** ⚠️ CRITICAL
-   - **REMOVE** the email/password sign-up form entirely
-   - **ONLY** show "Sign in with Google" button
-   - Add messaging like "Create your account with Google for a seamless experience"
-   - Legacy users can still sign in with email/password on the sign-in screen
-
-3. **Account Linking Logic**
-   - If a user signs in with Google using an email that matches an existing email/password account:
-     - Attempt to automatically link the accounts using Firebase's account linking
-     - If linking succeeds: merge the accounts seamlessly
-     - If linking fails: show a clear error message explaining the issue and suggesting they sign in with email/password instead
-
-4. **User Profile Data**
-   - Automatically use the Google account's display name (from `user.displayName`)
-   - Store/sync the Google profile photo URL in Firestore (`photoURL` field)
-   - Create the same Firestore user document structure as documented
-
-5. **Guest Users**
-   - Guest users (anonymous accounts) will NOT be able to upgrade to Google accounts
-   - This is intentional - keep existing guest/anonymous behavior unchanged
-
-## Technical Requirements
-
-### 1. Firebase Configuration Setup
-
-Before implementation, ensure Google Sign-In is properly configured in Firebase:
-
-**If Firebase MCP is available**, attempt to enable Google Sign-In provider programmatically. Otherwise, provide manual instructions:
-
-#### Manual Setup Instructions (if MCP unavailable):
-
-```
-1. Go to Firebase Console → Authentication → Sign-in method
-2. Enable "Google" provider
-3. Note the Web Client ID (you'll need this for the app)
-
-4. Go to Google Cloud Console → APIs & Services → Credentials
-5. Ensure you have an OAuth 2.0 Client ID for:
-   - Web application (for Firebase)
-   - Android (with your app's SHA-1 fingerprint)
-   - iOS (with your app's bundle ID)
-```
-
-Add the Web Client ID to `.env`:
-
-```
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
-```
-
-### 2. Package Installation
-
-Install the required package:
-
-```bash
-npx expo install react-native-google-auth
-```
-
-Update `app.json` with the necessary configuration (refer to the package documentation for expo plugin setup).
-
-### 3. Implementation Details
-
-#### File Changes Required:
-
-1. **`src/firebase/auth.ts`** (create if doesn't exist)
-   - Add `signInWithGoogle()` function
-   - Add `linkGoogleAccount()` helper function
-   - Handle Google OAuth flow using `react-native-google-auth`
-   - Use Firebase's `signInWithCredential()` with Google credential
-   - Implement account linking logic with proper error handling
-
-2. **`app/(auth)/sign-in.tsx`**
-   - Add "Sign in with Google" button (styled consistently with existing buttons)
-   - Add handler that calls `signInWithGoogle()` from firebase/auth.ts
-   - Handle Google sign-in errors gracefully
-   - Keep existing email/password and guest sign-in functionality
-
-3. **`app/(auth)/sign-up.tsx`**
-   - **REMOVE** all email/password form fields (email, password, confirm password, display name)
-   - **REMOVE** the create account button
-   - Show **ONLY** "Sign in with Google" button
-   - Add helpful text explaining users should create accounts via Google
-   - Add small link/text at bottom: "Already have an account? Sign in" (links to sign-in screen)
-
-4. **`src/firebase/firestore.ts`**
-   - Ensure `createUserDocument()` works with Google user objects
-   - Handle `photoURL` from Google profile
-   - Ensure it's idempotent (safe to call multiple times)
-
-5. **`authentication-overview.md`**
-   - Update documentation to reflect Google Sign-In
-   - Document the account linking flow
-   - Update the mermaid diagram to include Google auth path
-   - Note the deprecation of email/password sign-up
-
-### 4. Error Handling
-
-Implement comprehensive error handling for:
+Create type definitions:
 
 ```typescript
-// Account linking errors
-'auth/credential-already-in-use'          → "This Google account is already linked to another account"
-'auth/email-already-in-use'               → "An account with this email already exists. Try signing in with email/password."
-'auth/provider-already-linked'            → "This Google account is already linked"
-'auth/invalid-credential'                 → "Google sign-in failed. Please try again."
+export interface Note {
+  id: string;
+  userId: string;
+  mediaType: 'movie' | 'tv';
+  mediaId: number;
+  content: string;
+  posterPath: string | null;
+  mediaTitle: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// Google sign-in errors
-'auth/popup-closed-by-user'               → Silent fail (user cancelled)
-'auth/network-request-failed'             → "Network error. Please check your connection."
-'auth/too-many-requests'                  → "Too many attempts. Please try again later."
-
-// General errors
-'auth/operation-not-allowed'              → "Google sign-in is not enabled. Please contact support."
-```
-
-### 5. Account Linking Flow
-
-```typescript
-// Pseudocode for the linking logic
-async function signInWithGoogle() {
-  try {
-    // 1. Get Google credential
-    const googleCredential = await getGoogleCredential();
-
-    // 2. Try to sign in with Google
-    const result = await signInWithCredential(auth, googleCredential);
-
-    // 3. Create/update Firestore user document
-    await createUserDocument(result.user);
-
-    return result.user;
-  } catch (error) {
-    if (error.code === 'auth/account-exists-with-different-credential') {
-      // Email exists with different provider (email/password)
-      try {
-        // Attempt to link accounts
-        const email = error.customData.email;
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-
-        if (methods.includes('password')) {
-          // Show message: "An account exists with this email. We'll link your accounts."
-          // For now, throw error - linking requires user to sign in first
-          throw new Error(
-            'Please sign in with your email and password first, then link your Google account from settings.'
-          );
-        }
-      } catch (linkError) {
-        throw linkError;
-      }
-    }
-    throw error;
-  }
+export interface NoteInput {
+  mediaType: 'movie' | 'tv';
+  mediaId: number;
+  content: string;
+  posterPath: string | null;
+  mediaTitle: string;
 }
 ```
 
-### 6. UI/UX Guidelines
+### 2. Firebase Service
 
-- Use a recognizable Google button (blue with Google logo)
-- Follow Google's branding guidelines for the sign-in button
-- Ensure button styling is consistent with the existing UI
-- Add loading states during Google authentication
-- Show appropriate error messages using existing error handling patterns
+Create Firestore service for notes:
 
-### 7. Testing Checklist
+- Collection path: `/users/{userId}/notes/{noteId}`
+- Document ID format: `{mediaType}-{mediaId}` (e.g., "movie-550", "tv-1396")
+- Functions needed:
+  - `saveNote(userId: string, noteData: NoteInput): Promise<void>`
+  - `getNote(userId: string, mediaType: string, mediaId: number): Promise<Note | null>`
+  - `getNotes(userId: string): Promise<Note[]>` (ordered by createdAt desc)
+  - `deleteNote(userId: string, mediaType: string, mediaId: number): Promise<void>`
+- Use Firebase Timestamp for dates
+- Export all functions
+
+### 3. Custom Hook
+
+Create a hook that:
+
+- Uses `useAuth()` to get current user
+- Provides CRUD operations:
+  - `saveNote(noteData: NoteInput): Promise<void>`
+  - `getNote(mediaType: string, mediaId: number): Promise<Note | null>`
+  - `getAllNotes(): Promise<Note[]>`
+  - `deleteNote(mediaType: string, mediaId: number): Promise<void>`
+- Handles loading states
+- Handles errors with try/catch
+- Returns: `{ saveNote, getNote, getAllNotes, deleteNote, loading, error }`
+
+### 4. Note Sheet Component
+
+Create a TrueSheet modal component with:
+
+**Props:**
+
+```typescript
+interface NoteSheetProps {
+  sheetRef: React.RefObject<TrueSheet>;
+  mediaType: 'movie' | 'tv';
+  mediaId: number;
+  posterPath: string | null;
+  mediaTitle: string;
+  initialNote?: string;
+  onSave: () => void;
+}
+```
+
+**Features:**
+
+- TextInput with multiline, 120 character limit
+- Character counter showing "X/120" below textarea (visible as user types)
+- "Save" and "Cancel" buttons at bottom
+- "Delete" button in top right (only visible if `initialNote` exists)
+- Premium gating check before saving (show premium modal if not premium)
+- Use `useNotes()` hook for save/delete operations
+- Close sheet after successful save/delete
+- Use theme colors from `/src/constants/theme.ts`
+- Style similar to existing modal components in the project
+
+**Layout:**
+
+```
+┌─────────────────────────┐
+│  [Notes]      [Delete]  │ <- Header with delete button (conditional)
+│                         │
+│  ┌───────────────────┐  │
+│  │                   │  │
+│  │   TextArea        │  │
+│  │                   │  │
+│  └───────────────────┘  │
+│        X/120            │ <- Character counter
+│                         │
+│  [Save]      [Cancel]   │ <- Action buttons
+└─────────────────────────┘
+```
+
+### 5. Detail Screen Integration
+
+**Files to modify:**
+
+- `/src/screens/MovieDetailScreen.tsx`
+- `/src/screens/TVDetailScreen.tsx`
+
+**Changes:**
+
+1. Import `NoteSheet` and `useNotes` hook
+2. Create ref: `const noteSheetRef = useRef<TrueSheet>(null)`
+3. Fetch existing note on mount using `getNote()`
+4. Add a "Notes" button in the action row (alongside existing action buttons)
+5. Button shows pencil/edit icon if note exists, or plus/add icon if no note
+6. Tapping button opens `NoteSheet` with appropriate props
+7. After save, refetch the note to update button icon
+
+**Button styling:** Match existing action buttons in the detail screens
+
+### 6. Notes Screen
+
+Create a full screen component that:
+
+**Features:**
+
+- Header with title "Notes" and back button
+- FlatList/ScrollView showing all user notes (use `getAllNotes()`)
+- Empty state when no notes exist
+- Loading state while fetching notes
+
+**Each Note Card should show:**
+
+- Media poster image (use existing `MediaImage` component if available)
+- Media title
+- Note preview (truncated to ~60 chars with "..." if longer)
+- Timestamp (format: "X days ago" or actual date)
+- Delete icon button in top right corner
+- Tapping card opens `NoteSheet` for editing
+- Tapping delete icon shows confirmation alert then deletes
+
+**Premium Check:**
+
+- Check `isPremium` on mount
+- If not premium, show premium gate/paywall
+- Only show notes if user is premium
+
+### 7. Library Screen Integration
+
+**File to modify:** The library screen (likely `/src/screens/LibraryScreen.tsx` or in `app/(tabs)/library.tsx`)
+
+**Changes:**
+
+1. In the "Lists and Stats" section, add a "Notes" button/row
+2. Tapping navigates to Notes screen using Expo Router: `router.push('/notes')`
+3. Style to match existing list items in that section
+
+### 8. Routing Setup
+
+**File to create:** `app/(tabs)/notes.tsx` or `app/notes.tsx` (depending on where library screen is)
+
+```typescript
+import NotesScreen from '@/src/screens/NotesScreen';
+export default NotesScreen;
+```
+
+## Design & Styling Guidelines
+
+- Use `StyleSheet.create()` for all styles
+- Import `COLORS` from `/src/constants/theme.ts`
+- Match existing component styling patterns
+- Use existing `Button` component from `/src/components/ui/Button.tsx` where appropriate
+- Ensure proper spacing, padding, and margins consistent with app design
+- TextInput should have clear borders and proper focus states
+- Character counter should be subtle but visible
+
+## Premium Gating Implementation
+
+```typescript
+import { usePremium } from '@/src/context/PremiumContext';
+
+const { isPremium } = usePremium();
+
+// Before saving note:
+if (!isPremium) {
+  // Show premium modal/alert
+  Alert.alert('Premium Feature', 'Notes are a premium feature. Upgrade to unlock!');
+  return;
+}
+```
+
+## Error Handling
+
+- All Firebase operations should be wrapped in try/catch
+- Show user-friendly error messages using Alert or Toast
+- Handle network errors gracefully
+- Log errors to console for debugging
+
+## Testing Checklist
 
 After implementation, verify:
 
-- [ ] New users can create accounts via Google
-- [ ] Existing email/password users can still sign in
-- [ ] Guest/anonymous sign-in still works
-- [ ] Google users have correct display name and photo
-- [ ] Firestore documents are created correctly
-- [ ] Account linking shows appropriate error messages
-- [ ] Email/password sign-up screen is removed
-- [ ] Sign-in screen shows all three options (Google, email/password, guest)
-- [ ] Session persistence works correctly
-- [ ] Sign out works for Google accounts
+- [ ] Can create a note from movie detail screen
+- [ ] Can create a note from TV detail screen
+- [ ] Character limit enforced at 120 chars
+- [ ] Character counter updates in real-time
+- [ ] Can edit existing notes
+- [ ] Can delete notes from sheet modal
+- [ ] Can delete notes from notes screen
+- [ ] Notes screen shows all user notes correctly
+- [ ] Empty state displays when no notes exist
+- [ ] Premium gating works (non-premium users blocked)
+- [ ] Notes persist after app restart
+- [ ] Proper loading states throughout
+- [ ] Navigation works correctly
 
-## Success Criteria
+## Additional Notes
 
-✅ Users can create new accounts using only Google Sign-In
-✅ Legacy users can sign in with email/password (but cannot create new accounts this way)
-✅ Guest sign-in remains functional
-✅ Account linking attempts automatically when emails match
-✅ Clear error messages when linking fails
-✅ Google profile picture and name are synced
-✅ All existing auth functionality remains working
-✅ Documentation is updated
+- Keep components modular and reusable
+- Follow existing code conventions in the project
+- Ensure TypeScript types are properly defined
+- Add proper comments for complex logic
+- Consider accessibility (proper labels, touch targets)
 
-## Important Notes
+## Firebase Security Rules
 
-- Do NOT break existing authentication functionality
-- Maintain compatibility with the existing `useAuth()` hook
-- Keep the `useAuthGuard` hook working as-is
-- Ensure Firestore document structure remains consistent
-- The app should work seamlessly for users regardless of which auth method they used
-- Test thoroughly with both new Google accounts and existing email/password accounts
+Ensure Firestore rules include:
 
-## Files to Reference
+```
+match /users/{userId}/notes/{noteId} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
 
-- Current auth implementation: `authentication-overview.md` (uploaded)
-- Package docs: https://github.com/sbaiahmed1/react-native-google-auth
-- Firebase Auth linking: https://firebase.google.com/docs/auth/web/account-linking
+---
 
-## Questions?
+**Implementation Priority:**
 
-If you encounter any ambiguities or need clarification, ask before proceeding with implementation.
+1. Types and Firebase service
+2. useNotes hook
+3. NoteSheet component
+4. Detail screen integration
+5. Notes screen
+6. Library screen integration
+7. Testing and polish
+
+8. this component exists
+9. yes this exists, scan the code
+10. whatever you recommend
+11. in the same row as add to list, rating, etc. but i want you to move all the actions buttons except the "watch trailer" button and put them on a separate row above the "watch trailer" button. so you would have all the other action buttons (rating, add to list, reminder, notes) in one line and then the "watch trailer" button below them on the next line. do you understand?
+12. yes explore

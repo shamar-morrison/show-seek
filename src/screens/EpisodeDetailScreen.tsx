@@ -417,7 +417,7 @@ export default function EpisodeDetailScreen() {
             </View>
 
             {/* Rating Button */}
-            <View style={detailStyles.ratingButtonContainer}>
+            <View style={styles.ratingButtonContainer}>
               <RatingButton
                 onPress={() =>
                   requireAuth(() => setRatingModalVisible(true), 'Sign in to rate episodes')
@@ -633,18 +633,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    marginTop: SPACING.s,
-    marginBottom: SPACING.l,
-    alignItems: 'center',
-  },
-  primaryActionsContainer: {
-    flex: 1,
-    flexDirection: 'column',
-    gap: SPACING.s,
-  },
   watchButton: {
     width: '100%',
     flexDirection: 'row',
@@ -668,6 +656,18 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: SPACING.m,
+    marginTop: SPACING.s,
+    marginBottom: SPACING.l,
+    alignItems: 'center',
+  },
+  primaryActionsContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: SPACING.s,
+  },
   trailerButton: {
     width: '100%',
     flexDirection: 'row',
@@ -683,6 +683,15 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontWeight: '600',
+  },
+  ratingButtonContainer: {
+    width: 56,
+    height: 56,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   overviewSection: {},
   sectionTitle: {

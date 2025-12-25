@@ -11,6 +11,7 @@ import {
   ListPlus,
   Play,
   Settings2,
+  StickyNote,
   Tv,
   TvMinimal,
   User,
@@ -58,6 +59,12 @@ const SECTIONS: SectionData[] = [
         icon: BarChart3,
         title: 'Stats & History',
         route: '/(tabs)/library/stats',
+      },
+      {
+        id: 'notes',
+        icon: StickyNote,
+        title: 'Notes',
+        route: '/(tabs)/library/notes',
       },
     ],
   },
@@ -127,11 +134,11 @@ export default function LibraryScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: NavigationItem }) => {
-      const isReminders = item.id === 'reminders';
-      const showPremiumBadge = isReminders && !isPremium;
+      const isPremiumFeature = item.id === 'reminders' || item.id === 'notes';
+      const showPremiumBadge = isPremiumFeature && !isPremium;
 
       const handlePress = () => {
-        if (isReminders && !isPremium) {
+        if (isPremiumFeature && !isPremium) {
           router.push('/premium' as any);
         } else {
           handleNavigate(item.route);

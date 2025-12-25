@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, BUTTON_HEIGHT, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { StyleSheet } from 'react-native';
 
 export const detailStyles = StyleSheet.create({
@@ -407,14 +407,13 @@ export const detailStyles = StyleSheet.create({
     padding: SPACING.xs,
   },
   ratingButtonContainer: {
-    width: 48,
-    height: 56,
+    flex: 1,
+    height: BUTTON_HEIGHT,
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
   },
 
   // Shared screen layout styles
@@ -520,9 +519,9 @@ export const detailStyles = StyleSheet.create({
   },
   genresContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: SPACING.s,
     marginBottom: SPACING.l,
+    paddingRight: SPACING.l,
   },
   genreTag: {
     backgroundColor: COLORS.surfaceLight,
@@ -537,9 +536,18 @@ export const detailStyles = StyleSheet.create({
 
   // Action buttons
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.s,
     marginBottom: SPACING.xl,
+  },
+  // Secondary action buttons row (Rating, Add to List, Reminder, Notes)
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+  },
+  // Trailer button row
+  trailerButtonRow: {
+    flexDirection: 'row',
   },
   playButton: {
     flex: 1,
@@ -560,7 +568,8 @@ export const detailStyles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
   },
   addButton: {
-    width: 48,
+    flex: 1,
+    height: BUTTON_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surfaceLight,
