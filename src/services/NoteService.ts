@@ -1,5 +1,6 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { Note, NoteInput } from '@/src/types/note';
+import { createTimeout } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -95,7 +96,7 @@ class NoteService {
       }
 
       const noteRef = this.getNoteRef(userId, noteData.mediaType, noteData.mediaId);
-      const existingNote = await getDoc(noteRef);
+      const existingNote = await Promise.race([getDoc(noteRef), createTimeout()]);
 
       const now = Timestamp.now();
       const noteDocument = {
