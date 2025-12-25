@@ -404,15 +404,19 @@ export default function TraktSettingsScreen() {
           <Text style={styles.primaryButtonText}>Sync Now</Text>
         </TouchableOpacity>
 
-        {/* Enrichment Section - show if synced but not enriched yet */}
-        {lastSyncedAt && !lastEnrichedAt && (
+        {/* Enrichment Section - show if synced but not enriched yet, or always in dev mode */}
+        {lastSyncedAt && (!lastEnrichedAt || __DEV__) && (
           <View style={styles.enrichmentSection}>
             <View style={styles.enrichmentHeader}>
               <Sparkles size={24} color={COLORS.warning} />
-              <Text style={styles.enrichmentTitle}>Add Posters & Ratings</Text>
+              <Text style={styles.enrichmentTitle}>
+                {__DEV__ && lastEnrichedAt ? 'Re-Enrich Library (Dev)' : 'Add Posters & Ratings'}
+              </Text>
             </View>
             <Text style={styles.enrichmentDescription}>
-              Enhance your library with movie posters and ratings from TMDB.
+              {__DEV__ && lastEnrichedAt
+                ? 'Dev mode: Run enrichment again for testing.'
+                : 'Enhance your library with movie posters and ratings from TMDB.'}
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: COLORS.warning }]}
@@ -420,9 +424,15 @@ export default function TraktSettingsScreen() {
               activeOpacity={ACTIVE_OPACITY}
             >
               <Sparkles size={20} color={COLORS.white} />
-              <Text style={styles.primaryButtonText}>Enrich My Library</Text>
+              <Text style={styles.primaryButtonText}>
+                {__DEV__ && lastEnrichedAt ? 'Re-Enrich (Dev)' : 'Enrich My Library'}
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.enrichmentNote}>Takes 1-5 minutes for large libraries</Text>
+            <Text style={styles.enrichmentNote}>
+              {__DEV__
+                ? 'Dev mode: No timeout restrictions'
+                : 'Takes 1-5 minutes for large libraries'}
+            </Text>
           </View>
         )}
 
