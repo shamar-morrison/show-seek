@@ -17,6 +17,7 @@ import {
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import { Note } from '@/src/types/note';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -156,8 +157,13 @@ export default function NotesScreen() {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
-          <Pressable onPress={() => setSortModalVisible(true)} hitSlop={HIT_SLOP.m}>
-            <ArrowUpDown size={22} color={hasActiveSort ? COLORS.primary : COLORS.text} />
+          <Pressable
+            onPress={() => setSortModalVisible(true)}
+            hitSlop={HIT_SLOP.m}
+            style={sortHeaderStyles.headerButton}
+          >
+            <ArrowUpDown size={22} color={COLORS.text} />
+            {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
           </Pressable>
           <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
             {viewMode === 'list' ? (
