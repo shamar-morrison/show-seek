@@ -7,17 +7,6 @@ import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
-// Track pending mutations to prevent subscription overwrites during optimistic updates
-let pendingMutationCount = 0;
-
-export const incrementPendingMutations = () => {
-  pendingMutationCount++;
-};
-
-export const decrementPendingMutations = () => {
-  pendingMutationCount = Math.max(0, pendingMutationCount - 1);
-};
-
 export const useLists = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
@@ -40,11 +29,6 @@ export const useLists = () => {
 
     const unsubscribe = listService.subscribeToUserLists(
       (lists) => {
-        // Skip subscription updates while mutations are pending
-        // This prevents the race condition where the subscription overwrites optimistic updates
-        if (pendingMutationCount > 0) {
-          return;
-        }
         queryClient.setQueryData(['lists', userId], lists);
         setError(null);
         setIsSubscriptionLoading(false);
@@ -114,9 +98,6 @@ export const useAddToList = () => {
 
     // Optimistic update - immediately show the item as added
     onMutate: async ({ listId, mediaItem, listName }) => {
-      // Prevent subscription from overwriting optimistic updates
-      incrementPendingMutations();
-
       // Check limits FIRST, before the optimistic update
       // This must happen here because onMutate runs before mutationFn
       if (!isPremium && !isPremiumLoading) {
@@ -125,7 +106,6 @@ export const useAddToList = () => {
         const currentCount = targetList ? Object.keys(targetList.items || {}).length : 0;
 
         if (currentCount >= MAX_FREE_ITEMS_PER_LIST) {
-          decrementPendingMutations();
           throw new PremiumLimitError(
             `Free users can only add up to ${MAX_FREE_ITEMS_PER_LIST} items per list. Upgrade to Premium for unlimited items!`
           );
@@ -197,11 +177,6 @@ export const useAddToList = () => {
         queryClient.setQueryData(['lists', userId], context.previousLists);
       }
     },
-
-    // Always decrement pending mutations when settled (success or error)
-    onSettled: () => {
-      decrementPendingMutations();
-    },
   });
 };
 
@@ -215,11 +190,7 @@ export const useRemoveFromList = () => {
 
     // Optimistic update - immediately show the item as removed
     onMutate: async ({ listId, mediaId }) => {
-      // Prevent subscription from overwriting optimistic updates
-      incrementPendingMutations();
-
       if (!userId) {
-        decrementPendingMutations();
         throw new Error('User must be logged in');
       }
 
@@ -250,11 +221,6 @@ export const useRemoveFromList = () => {
       if (context?.previousLists) {
         queryClient.setQueryData(['lists', userId], context.previousLists);
       }
-    },
-
-    // Always decrement pending mutations when settled (success or error)
-    onSettled: () => {
-      decrementPendingMutations();
     },
   });
 };
