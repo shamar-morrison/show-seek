@@ -93,7 +93,7 @@ export function MediaActionButtons({
         {/* Notes Button */}
         <View style={detailStyles.ratingButtonContainer}>
           <TouchableOpacity
-            style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
+            style={detailStyles.actionButtonTouchable}
             activeOpacity={ACTIVE_OPACITY}
             onPress={onNote}
             disabled={isLoadingNote}
