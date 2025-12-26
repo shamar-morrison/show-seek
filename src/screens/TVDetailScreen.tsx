@@ -45,6 +45,7 @@ import {
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
@@ -78,15 +79,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const hasWatchProviders = (providers: any): boolean => {
-  if (!providers) return false;
-  return (
-    (providers.flatrate && providers.flatrate.length > 0) ||
-    (providers.rent && providers.rent.length > 0) ||
-    (providers.buy && providers.buy.length > 0)
-  );
-};
 
 export default function TVDetailScreen() {
   const { id } = useLocalSearchParams();
