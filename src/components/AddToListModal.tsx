@@ -269,7 +269,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       addMutation.mutate(
         { listId, mediaItem, listName },
         {
-          onSuccess: async () => {
+          onSuccess: () => {
             // Mark as already saved in the initial ref so Save Changes won't re-add
             initialMembershipRef.current[listId] = true;
             // Add to pending selections so UI reflects the change
@@ -277,7 +277,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               ...prev,
               [listId]: true,
             }));
-            await sheetRef.current?.present();
             setSuccessMessage(`Added to '${listName}'`);
           },
           onError: handleMutationError,
