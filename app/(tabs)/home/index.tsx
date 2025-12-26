@@ -2,8 +2,9 @@ import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
 } from '@/src/components/HomeScreenCustomizationModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -11,15 +12,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -68,9 +61,9 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShowSeek</Text>
-        <Pressable onPress={handleOpenCustomization} hitSlop={HIT_SLOP.l}>
+        <HeaderIconButton onPress={handleOpenCustomization}>
           <Settings2 size={24} color={COLORS.text} />
-        </Pressable>
+        </HeaderIconButton>
       </View>
 
       <ScrollView

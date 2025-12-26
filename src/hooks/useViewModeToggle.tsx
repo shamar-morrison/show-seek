@@ -1,12 +1,12 @@
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
-import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Grid3X3, List } from 'lucide-react-native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export type ViewMode = 'grid' | 'list';
 
@@ -127,32 +127,32 @@ export function useViewModeToggle({
         headerRight: () => (
           <View style={styles.headerButtons}>
             {searchButton && (
-              <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+              <HeaderIconButton onPress={searchButton.onPress}>
                 <searchButton.icon size={22} color={COLORS.text} />
-              </Pressable>
+              </HeaderIconButton>
             )}
-            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'grid' ? (
                 <List size={24} color={COLORS.text} />
               ) : (
                 <Grid3X3 size={24} color={COLORS.text} />
               )}
-            </Pressable>
+            </HeaderIconButton>
             {showSortButton && onSortPress && (
-              <Pressable onPress={onSortPress} hitSlop={HIT_SLOP.m}>
-                <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-              </Pressable>
+              <HeaderIconButton onPress={onSortPress}>
+                <View style={styles.iconWrapper}>
+                  <ArrowUpDown size={22} color={COLORS.text} />
+                  {hasActiveSort && <View style={styles.badge} />}
+                </View>
+              </HeaderIconButton>
             )}
             {actionButton && (
-              <Pressable
-                onPress={actionButton.onPress}
-                hitSlop={HIT_SLOP.m}
-                style={sortHeaderStyles.headerButton}
-              >
-                <actionButton.icon size={22} color={COLORS.text} />
-                {actionButton.showBadge && <View style={sortHeaderStyles.sortBadge} />}
-              </Pressable>
+              <HeaderIconButton onPress={actionButton.onPress}>
+                <View style={styles.iconWrapper}>
+                  <actionButton.icon size={22} color={COLORS.text} />
+                  {actionButton.showBadge && <View style={styles.badge} />}
+                </View>
+              </HeaderIconButton>
             )}
           </View>
         ),
@@ -181,6 +181,17 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
+  },
+  iconWrapper: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
+    backgroundColor: COLORS.primary,
   },
 });

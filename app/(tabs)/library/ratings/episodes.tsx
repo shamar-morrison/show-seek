@@ -1,7 +1,8 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
@@ -14,7 +15,6 @@ import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   SectionList,
   StyleSheet,
   Text,
@@ -31,9 +31,6 @@ type EpisodeSection = {
 };
 
 const STORAGE_KEY = 'episodeRatingsViewMode';
-
-/** Combined height of header + navigation chrome to subtract from empty state container */
-const HEADER_CHROME_HEIGHT = 150;
 
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
@@ -112,16 +109,16 @@ export default function EpisodeRatingsScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={searchButton.onPress}>
               <Search size={22} color={COLORS.text} />
-            </Pressable>
-            <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+            </HeaderIconButton>
+            <HeaderIconButton onPress={toggleViewMode}>
               {viewMode === 'flat' ? (
                 <Rows3 size={24} color={COLORS.text} />
               ) : (
                 <List size={24} color={COLORS.text} />
               )}
-            </Pressable>
+            </HeaderIconButton>
           </View>
         ),
       });
@@ -309,6 +306,5 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
   },
 });

@@ -5,25 +5,36 @@ import MediaSortModal, {
   SortState,
 } from '@/src/components/MediaSortModal';
 import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
   COLORS,
   FONT_SIZE,
+  HEADER_CHROME_HEIGHT,
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
-import { sortHeaderStyles } from '@/src/hooks/useRatingSorting';
 import { Note } from '@/src/types/note';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Grid3X3, List, Pencil, StickyNote, Trash2 } from 'lucide-react-native';
+import {
+  ArrowUpDown,
+  Grid3X3,
+  List,
+  Pencil,
+  Search,
+  StickyNote,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -33,9 +44,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'list' | 'grouped';
 type NoteSection = {
@@ -96,6 +108,8 @@ export default function NotesScreen() {
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteSheetRef>(null);
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -150,33 +164,6 @@ export default function NotesScreen() {
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
-  // Set up header buttons
-  useLayoutEffect(() => {
-    if (!isPremium) return;
-
-    navigation.setOptions({
-      headerRight: () => (
-        <View style={styles.headerButtons}>
-          <Pressable
-            onPress={() => setSortModalVisible(true)}
-            hitSlop={HIT_SLOP.m}
-            style={sortHeaderStyles.headerButton}
-          >
-            <ArrowUpDown size={22} color={COLORS.text} />
-            {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
-          </Pressable>
-          <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
-            {viewMode === 'list' ? (
-              <Grid3X3 size={22} color={COLORS.text} />
-            ) : (
-              <List size={22} color={COLORS.text} />
-            )}
-          </Pressable>
-        </View>
-      ),
-    });
-  }, [navigation, isPremium, viewMode, toggleViewMode, hasActiveSort]);
-
   // Sort notes
   const sortedNotes = useMemo(() => {
     if (!notes) return [];
@@ -199,12 +186,86 @@ export default function NotesScreen() {
     });
   }, [notes, sortState]);
 
-  // Group notes by media type
-  const groupedNotes = useMemo(() => {
-    if (!sortedNotes || viewMode === 'list') return null;
+  // Search functionality - search by note content and media title
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayNotes,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: sortedNotes,
+    getSearchableText: (note) => `${note.content} ${note.mediaTitle}`,
+  });
 
-    const movieNotes = sortedNotes.filter((n) => n.mediaType === 'movie');
-    const tvNotes = sortedNotes.filter((n) => n.mediaType === 'tv');
+  // Set up header buttons
+  useLayoutEffect(() => {
+    if (!isPremium) return;
+
+    if (isSearchActive) {
+      // Show search header
+      navigation.setOptions({
+        headerTitle: () => null,
+        headerRight: () => null,
+        header: () => (
+          <SearchableHeader
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClose={deactivateSearch}
+            placeholder="Search notes..."
+          />
+        ),
+      });
+    } else {
+      // Show normal header with buttons
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => (
+          <View style={styles.headerButtons}>
+            {/* Search button */}
+            <HeaderIconButton onPress={searchButton.onPress}>
+              <Search size={22} color={COLORS.text} />
+            </HeaderIconButton>
+            {/* Sort button */}
+            <HeaderIconButton onPress={() => setSortModalVisible(true)}>
+              <View style={styles.sortIconWrapper}>
+                <ArrowUpDown size={22} color={COLORS.text} />
+                {hasActiveSort && <View style={styles.sortBadge} />}
+              </View>
+            </HeaderIconButton>
+            {/* View mode button */}
+            <HeaderIconButton onPress={toggleViewMode}>
+              {viewMode === 'list' ? (
+                <Grid3X3 size={22} color={COLORS.text} />
+              ) : (
+                <List size={22} color={COLORS.text} />
+              )}
+            </HeaderIconButton>
+          </View>
+        ),
+      });
+    }
+  }, [
+    navigation,
+    isPremium,
+    viewMode,
+    toggleViewMode,
+    hasActiveSort,
+    isSearchActive,
+    searchQuery,
+    setSearchQuery,
+    deactivateSearch,
+    searchButton,
+  ]);
+
+  // Group notes by media type (uses search-filtered notes)
+  const groupedNotes = useMemo(() => {
+    if (!displayNotes || viewMode === 'list') return null;
+
+    const movieNotes = displayNotes.filter((n) => n.mediaType === 'movie');
+    const tvNotes = displayNotes.filter((n) => n.mediaType === 'tv');
 
     const sections: NoteSection[] = [];
     if (movieNotes.length > 0) {
@@ -215,7 +276,7 @@ export default function NotesScreen() {
     }
 
     return sections;
-  }, [sortedNotes, viewMode]);
+  }, [displayNotes, viewMode]);
 
   const handleCardPress = useCallback(
     (note: Note) => {
@@ -376,12 +437,25 @@ export default function NotesScreen() {
       <View style={styles.divider} />
       {viewMode === 'list' ? (
         <FlashList
-          data={sortedNotes}
+          data={displayNotes}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View
+                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
+              >
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       ) : (
         <SectionList
@@ -394,6 +468,19 @@ export default function NotesScreen() {
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
           SectionSeparatorComponent={SectionSeparator}
+          ListEmptyComponent={
+            searchQuery ? (
+              <View
+                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
+              >
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term."
+                />
+              </View>
+            ) : null
+          }
         />
       )}
       <NoteModal ref={noteSheetRef} />
@@ -490,7 +577,18 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
+  },
+  sortIconWrapper: {
+    position: 'relative',
+  },
+  sortBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
+    backgroundColor: COLORS.primary,
   },
   // Premium gate styles
   premiumGate: {

@@ -51,3 +51,6 @@ export const HIT_SLOP = {
 } as const;
 
 export const BUTTON_HEIGHT = 48;
+
+/** Combined height of header + navigation chrome to subtract from empty state container */
+export const HEADER_CHROME_HEIGHT = 150;
