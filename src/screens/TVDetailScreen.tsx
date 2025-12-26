@@ -854,7 +854,6 @@ export default function TVDetailScreen() {
           <TVReminderModal
             visible={reminderModalVisible}
             onClose={() => setReminderModalVisible(false)}
-            tvId={show.id}
             tvTitle={show.name}
             nextEpisode={effectiveNextEpisode}
             originalNextEpisode={nextEpisodeInfo}
