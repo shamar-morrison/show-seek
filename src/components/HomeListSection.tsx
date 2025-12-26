@@ -77,6 +77,7 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
     },
     initialPageParam: 1,
     enabled: !!config,
+    staleTime: 1000 * 60 * 5, // 5 minutes - fresher content for home screen
   });
 
   const items = useMemo(() => {

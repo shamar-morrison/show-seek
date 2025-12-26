@@ -38,6 +38,10 @@ const MediaGridItem = memo<{
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
 
+  const displayTitle = item.title || item.name;
+  const releaseDate = item.release_date || item.first_air_date;
+  const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+
   return (
     <Pressable
       style={({ pressed }) => [styles.mediaCard, pressed && styles.mediaCardPressed]}
@@ -51,14 +55,14 @@ const MediaGridItem = memo<{
       />
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={1}>
-          {item.title}
+          {displayTitle}
         </Text>
-        {item.release_date && (
+        {(year || item.vote_average > 0) && (
           <View style={styles.yearRatingContainer}>
-            <Text style={styles.year}>{new Date(item.release_date).getFullYear()}</Text>
+            {year && <Text style={styles.year}>{year}</Text>}
+            {year && item.vote_average > 0 && <Text style={styles.separator}> • </Text>}
             {item.vote_average > 0 && (
               <>
-                <Text style={styles.separator}> • </Text>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
               </>

@@ -152,6 +152,7 @@ export default function LibraryScreen() {
           onPress={handlePress}
           testID={`library-nav-${item.id}`}
           badge={showPremiumBadge ? <PremiumBadge /> : undefined}
+          isLocked={showPremiumBadge}
         />
       );
     },

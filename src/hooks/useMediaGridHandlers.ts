@@ -4,7 +4,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Custom hook that provides shared handlers for media grid interactions.
@@ -48,10 +48,18 @@ export function useMediaGridHandlers(isLoading: boolean) {
 
       const { addedAt: _addedAt, ...mediaItem } = item;
       setSelectedMediaItem(mediaItem);
-      addToListModalRef.current?.present();
     },
     [isLoading]
   );
+
+  // Present the modal when an item is selected
+  // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
+  // before we try to present it
+  useEffect(() => {
+    if (selectedMediaItem) {
+      addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
 
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);

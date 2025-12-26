@@ -4,6 +4,7 @@ enableScreens();
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { PremiumProvider } from '@/src/context/PremiumContext';
+import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,8 +13,13 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, UIManager, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -45,7 +51,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 60 * 3, // 3 hours
       refetchOnWindowFocus: false, // Reduce unnecessary refetches
     },
   },
@@ -147,9 +153,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <PremiumProvider>
-          <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
+          <TraktProvider>
+            <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </TraktProvider>
         </PremiumProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -10,10 +10,11 @@ interface LibraryNavigationCardProps {
   onPress: () => void;
   testID?: string;
   badge?: React.ReactNode;
+  isLocked?: boolean;
 }
 
 export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
-  ({ icon: Icon, title, onPress, testID, badge }) => {
+  ({ icon: Icon, title, onPress, testID, badge, isLocked }) => {
     const handlePress = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onPress();
@@ -21,12 +22,16 @@ export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.container,
+          pressed && styles.pressed,
+          isLocked && styles.locked,
+        ]}
         onPress={handlePress}
         testID={testID}
       >
-        <Icon size={24} color={COLORS.primary} />
-        <Text style={styles.title}>{title}</Text>
+        <Icon size={24} color={isLocked ? COLORS.textSecondary : COLORS.primary} />
+        <Text style={[styles.title, isLocked && styles.titleLocked]}>{title}</Text>
         {badge}
         <ChevronRight size={20} color={COLORS.textSecondary} />
       </Pressable>
@@ -56,5 +61,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  titleLocked: {
+    color: COLORS.textSecondary,
+  },
+  locked: {
+    opacity: 0.6,
   },
 });

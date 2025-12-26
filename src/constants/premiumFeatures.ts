@@ -75,14 +75,20 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
   },
   {
     id: 'data',
-    title: 'Data & Export',
+    title: 'Data & Sync',
     features: [
+      {
+        id: 'trakt-integration',
+        icon: 'sync',
+        title: 'Trakt Integration',
+        description: 'Sync your watch history and lists',
+        isNew: true,
+      },
       {
         id: 'export-data',
         icon: 'download-outline',
         title: 'Export Your Data',
         description: 'Download your lists and watch history',
-        isNew: true,
       },
     ],
   },
