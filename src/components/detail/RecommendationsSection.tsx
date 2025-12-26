@@ -56,7 +56,7 @@ const RecommendationCard = memo<{
 RecommendationCard.displayName = 'RecommendationCard';
 
 export const RecommendationsSection = memo<RecommendationsSectionProps>(
-  ({ mediaType, items, isLoading, isError, shouldLoad, onMediaPress, onLayout, style }) => {
+  ({ items, isLoading, isError, shouldLoad, onMediaPress, onLayout, style }) => {
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
