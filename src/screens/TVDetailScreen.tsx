@@ -3,6 +3,7 @@ import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListMod
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CreatorsSection } from '@/src/components/detail/CreatorsSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
+import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -13,9 +14,7 @@ import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
 import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
-import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
-import ReminderButton from '@/src/components/ReminderButton';
 import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
@@ -55,19 +54,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  Calendar,
-  Check,
-  Globe,
-  Layers,
-  Pencil,
-  Play,
-  Plus,
-  Star,
-  StickyNote,
-  Tv,
-} from 'lucide-react-native';
+import { ArrowLeft, Calendar, Globe, Layers, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -577,110 +564,55 @@ export default function TVDetailScreen() {
           </ScrollView>
 
           {/* Action buttons */}
-          <View style={detailStyles.actionButtons}>
-            {/* Secondary Action Buttons Row */}
-            <View style={detailStyles.secondaryActionsRow}>
-              {/* Add to List Button */}
-              <TouchableOpacity
-                style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
-                activeOpacity={ACTIVE_OPACITY}
-                onPress={() =>
-                  requireAuth(
-                    () => addToListModalRef.current?.present(),
-                    'Sign in to add items to your lists'
-                  )
-                }
-                disabled={isLoadingLists}
-              >
-                {isLoadingLists ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : isInAnyList ? (
-                  <Check size={24} color={COLORS.white} />
-                ) : (
-                  <Plus size={24} color={COLORS.white} />
-                )}
-              </TouchableOpacity>
-
-              {/* Rating Button */}
-              <View style={detailStyles.ratingButtonContainer}>
-                <RatingButton
-                  onPress={() =>
-                    requireAuth(
-                      () => setRatingModalVisible(true),
-                      'Sign in to rate movies and shows'
-                    )
-                  }
-                  isRated={userRating > 0}
-                  isLoading={isLoadingRating}
-                />
-              </View>
-
-              {/* Reminder Button */}
-              {(show.status === 'Returning Series' ||
-                show.status === 'In Production' ||
-                show.status === 'Planned' ||
-                show.status === 'Pilot') && (
-                <View style={detailStyles.ratingButtonContainer}>
-                  <ReminderButton
-                    onPress={() =>
-                      requireAuth(() => {
-                        if (!isPremium) {
-                          showPremiumAlert('Reminders');
-                          return;
-                        }
-                        setReminderModalVisible(true);
-                      }, 'Sign in to set release reminders')
-                    }
-                    hasReminder={hasReminder}
-                    isLoading={isLoadingReminder}
-                  />
-                </View>
-              )}
-
-              {/* Notes Button */}
-              <View style={detailStyles.ratingButtonContainer}>
-                <TouchableOpacity
-                  style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}
-                  activeOpacity={ACTIVE_OPACITY}
-                  onPress={() =>
-                    requireAuth(
-                      () =>
-                        noteSheetRef.current?.present({
-                          mediaType: 'tv',
-                          mediaId: tvId,
-                          posterPath: show.poster_path,
-                          mediaTitle: show.name,
-                          initialNote: note?.content,
-                        }),
-                      'Sign in to add notes'
-                    )
-                  }
-                  disabled={isLoadingNote}
-                >
-                  {isLoadingNote ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : hasNote ? (
-                    <Pencil size={24} color={COLORS.white} />
-                  ) : (
-                    <StickyNote size={24} color={COLORS.white} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Watch Trailer Button Row */}
-            <View style={detailStyles.trailerButtonRow}>
-              <TouchableOpacity
-                style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
-                onPress={handleTrailerPress}
-                disabled={!trailer}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Play size={18} color={COLORS.white} fill={COLORS.white} />
-                <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <MediaActionButtons
+            onAddToList={() =>
+              requireAuth(
+                () => addToListModalRef.current?.present(),
+                'Sign in to add items to your lists'
+              )
+            }
+            onRate={() =>
+              requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+            }
+            onReminder={
+              show.status === 'Returning Series' ||
+              show.status === 'In Production' ||
+              show.status === 'Planned' ||
+              show.status === 'Pilot'
+                ? () =>
+                    requireAuth(() => {
+                      if (!isPremium) {
+                        showPremiumAlert('Reminders');
+                        return;
+                      }
+                      setReminderModalVisible(true);
+                    }, 'Sign in to set release reminders')
+                : undefined
+            }
+            onNote={() =>
+              requireAuth(
+                () =>
+                  noteSheetRef.current?.present({
+                    mediaType: 'tv',
+                    mediaId: tvId,
+                    posterPath: show.poster_path,
+                    mediaTitle: show.name,
+                    initialNote: note?.content,
+                  }),
+                'Sign in to add notes'
+              )
+            }
+            onTrailer={handleTrailerPress}
+            isInAnyList={isInAnyList}
+            isLoadingLists={isLoadingLists}
+            userRating={userRating}
+            isLoadingRating={isLoadingRating}
+            hasReminder={hasReminder}
+            isLoadingReminder={isLoadingReminder}
+            hasNote={hasNote}
+            isLoadingNote={isLoadingNote}
+            hasTrailer={!!trailer}
+          />
 
           {userRating > 0 && <UserRating rating={userRating} />}
 
