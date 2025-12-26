@@ -55,7 +55,7 @@ const SimilarMediaCard = memo<{
 SimilarMediaCard.displayName = 'SimilarMediaCard';
 
 export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
-  ({ mediaType, items, onMediaPress, title, style }) => {
+  ({ items, onMediaPress, title, style }) => {
     if (items.length === 0) {
       return null;
     }

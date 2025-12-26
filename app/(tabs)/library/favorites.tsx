@@ -301,6 +301,7 @@ export default function FavoritesScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
+        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
       />
 
       <WatchStatusFiltersModal

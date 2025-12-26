@@ -4,6 +4,7 @@ import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
+import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
@@ -12,9 +13,8 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
-import RatingButton from '@/src/components/RatingButton';
+import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
-import ReminderButton from '@/src/components/ReminderButton';
 import ReminderModal from '@/src/components/ReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
@@ -25,11 +25,12 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useMediaLists } from '@/src/hooks/useLists';
+import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -42,31 +43,24 @@ import {
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Check, Clock, Globe, Play, Plus, Star } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const hasWatchProviders = (providers: any): boolean => {
-  if (!providers) return false;
-  return (
-    (providers.flatrate && providers.flatrate.length > 0) ||
-    (providers.rent && providers.rent.length > 0) ||
-    (providers.buy && providers.buy.length > 0)
-  );
-};
 
 // Check if a movie can have a reminder (has a future release date)
 const canShowReminder = (releaseDate: string | null | undefined): boolean => {
@@ -88,6 +82,7 @@ export default function MovieDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
+  const noteSheetRef = useRef<NoteModalRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -108,6 +103,7 @@ export default function MovieDetailScreen() {
     hasReminder,
     isLoading: isLoadingReminder,
   } = useMediaReminder(movieId, 'movie');
+  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('movie', movieId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -403,73 +399,65 @@ export default function MovieDetailScreen() {
             )}
           </View>
 
-          <View style={detailStyles.genresContainer}>
-            {movie.genres.map((genre) => (
-              <View key={genre.id} style={detailStyles.genreTag}>
-                <Text style={detailStyles.genreText}>{genre.name}</Text>
-              </View>
-            ))}
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginHorizontal: -SPACING.l }}
+            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          >
+            <View style={detailStyles.genresContainer}>
+              {movie.genres.map((genre) => (
+                <View key={genre.id} style={detailStyles.genreTag}>
+                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Action Buttons */}
-          <View style={detailStyles.actionButtons}>
-            {/* Watch Trailer Button */}
-            <TouchableOpacity
-              style={[detailStyles.playButton, !trailer && detailStyles.disabledButton]}
-              onPress={handleTrailerPress}
-              disabled={!trailer}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Play size={18} color={COLORS.white} fill={COLORS.white} />
-              <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
-            </TouchableOpacity>
-
-            {/* Add to List Button */}
-            <TouchableOpacity
-              style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
-              activeOpacity={ACTIVE_OPACITY}
-              onPress={() =>
-                requireAuth(
-                  () => addToListModalRef.current?.present(),
-                  'Sign in to add items to your lists'
-                )
-              }
-              disabled={isLoadingLists}
-            >
-              {isLoadingLists ? (
-                <ActivityIndicator size="small" color={COLORS.white} />
-              ) : isInAnyList ? (
-                <Check size={24} color={COLORS.white} />
-              ) : (
-                <Plus size={24} color={COLORS.white} />
-              )}
-            </TouchableOpacity>
-
-            {/* Reminder Button */}
-            {canShowReminder(movie.release_date) && (
-              <View style={detailStyles.ratingButtonContainer}>
-                <ReminderButton
-                  onPress={() =>
+          <MediaActionButtons
+            onAddToList={() =>
+              requireAuth(
+                () => addToListModalRef.current?.present(),
+                'Sign in to add items to your lists'
+              )
+            }
+            onRate={() =>
+              requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+            }
+            onReminder={
+              canShowReminder(movie.release_date)
+                ? () =>
                     requireAuth(
                       () => setReminderModalVisible(true),
                       'Sign in to set release reminders'
                     )
-                  }
-                  hasReminder={hasReminder}
-                  isLoading={isLoadingReminder}
-                />
-              </View>
-            )}
-            <View style={detailStyles.ratingButtonContainer}>
-              <RatingButton
-                onPress={() =>
-                  requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
-                }
-                isRated={userRating > 0}
-                isLoading={isLoadingRating}
-              />
-            </View>
-          </View>
+                : undefined
+            }
+            onNote={() =>
+              requireAuth(
+                () =>
+                  noteSheetRef.current?.present({
+                    mediaType: 'movie',
+                    mediaId: movieId,
+                    posterPath: movie.poster_path,
+                    mediaTitle: movie.title,
+                    initialNote: note?.content,
+                  }),
+                'Sign in to add notes'
+              )
+            }
+            onTrailer={handleTrailerPress}
+            isInAnyList={isInAnyList}
+            isLoadingLists={isLoadingLists}
+            userRating={userRating}
+            isLoadingRating={isLoadingRating}
+            hasReminder={hasReminder}
+            isLoadingReminder={isLoadingReminder}
+            hasNote={hasNote}
+            isLoadingNote={isLoadingNote}
+            hasTrailer={!!trailer}
+          />
 
           {userRating > 0 && <UserRating rating={userRating} />}
 
@@ -659,7 +647,6 @@ export default function MovieDetailScreen() {
           <ReminderModal
             visible={reminderModalVisible}
             onClose={() => setReminderModalVisible(false)}
-            movieId={movie.id}
             movieTitle={movie.title}
             releaseDate={movie.release_date || null}
             currentTiming={reminder?.reminderTiming}
@@ -668,6 +655,7 @@ export default function MovieDetailScreen() {
             onCancelReminder={handleCancelReminder}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
+          <NoteModal ref={noteSheetRef} />
         </>
       )}
       <Toast ref={toastRef} />

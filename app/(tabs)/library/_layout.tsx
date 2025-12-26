@@ -40,6 +40,7 @@ export default function LibraryStackLayout() {
 
         {/* Notifications */}
         <Stack.Screen name="reminders" options={{ title: 'Reminders' }} />
+        <Stack.Screen name="notes" options={{ title: 'Notes' }} />
 
         {/* Existing detail screens */}
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />

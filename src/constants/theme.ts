@@ -49,3 +49,8 @@ export const HIT_SLOP = {
   m: 16, // for smaller icons (~24px)
   l: 20, // for tiny icons (~16-20px)
 } as const;
+
+export const BUTTON_HEIGHT = 48;
+
+/** Combined height of header + navigation chrome to subtract from empty state container */
+export const HEADER_CHROME_HEIGHT = 150;

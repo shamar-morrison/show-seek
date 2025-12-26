@@ -7,16 +7,10 @@ import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -31,15 +25,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'watch_status_view_mode';
@@ -191,22 +177,20 @@ export default function WatchStatusScreen() {
       headerRight: () => (
         <View style={styles.headerButtons}>
           {/* View Mode Toggle */}
-          <Pressable onPress={toggleViewMode} hitSlop={HIT_SLOP.m}>
+          <HeaderIconButton onPress={toggleViewMode}>
             {viewMode === 'grid' ? (
               <List size={24} color={COLORS.text} />
             ) : (
               <Grid3X3 size={24} color={COLORS.text} />
             )}
-          </Pressable>
+          </HeaderIconButton>
           {/* Actions Modal */}
-          <Pressable
-            onPress={handleOpenActionsModal}
-            hitSlop={HIT_SLOP.m}
-            style={styles.headerButton}
-          >
-            <ListActionsIcon size={24} color={COLORS.text} />
-            {hasActiveFiltersOrSort && <View style={styles.filterBadge} />}
-          </Pressable>
+          <HeaderIconButton onPress={handleOpenActionsModal}>
+            <View style={styles.iconWrapper}>
+              <ListActionsIcon size={24} color={COLORS.text} />
+              {hasActiveFiltersOrSort && <View style={styles.filterBadge} />}
+            </View>
+          </HeaderIconButton>
         </View>
       ),
     });
@@ -336,7 +320,7 @@ export default function WatchStatusScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'popularity', 'alphabetical']}
+        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
@@ -385,16 +369,14 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
-    marginRight: SPACING.m,
   },
-  headerButton: {
+  iconWrapper: {
     position: 'relative',
   },
   filterBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -4,
     width: 8,
     height: 8,
     borderRadius: 4,

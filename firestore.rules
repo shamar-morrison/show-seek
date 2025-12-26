@@ -71,6 +71,36 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Notes collection (personal notes for movies/TV shows)
+      match /notes/{noteId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          // Restrict to exactly these allowed fields
+          && request.resource.data.keys().hasOnly(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'posterPath', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'createdAt', 'updatedAt'])
+          // Validate userId matches authenticated user
+          && request.resource.data.userId == userId
+          // Validate mediaType is movie or tv
+          && request.resource.data.mediaType in ['movie', 'tv']
+          // Validate content is string with max 120 chars
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 120
+          // Validate mediaId is an integer
+          && request.resource.data.mediaId is int
+          // Validate mediaTitle is a string
+          && request.resource.data.mediaTitle is string
+          // Validate timestamps
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.updatedAt is timestamp
+          // Validate posterPath is string or null (optional field)
+          && (!('posterPath' in request.resource.data) || request.resource.data.posterPath == null || request.resource.data.posterPath is string);
+        allow update: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 120;
+        allow delete: if isOwner(userId);
+      }
+
       // Episode tracking collection
       match /episode_tracking/{tvShowId} {
         allow read: if isOwner(userId);
@@ -122,7 +152,7 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           && resource.data.userId == userId
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate']);
+            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate', 'noNextEpisodeFound']);
         allow delete: if isOwner(userId)
           && resource.data.userId == userId;
       }

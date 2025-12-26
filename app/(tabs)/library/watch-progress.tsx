@@ -1,8 +1,9 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
-import { COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { InProgressShow } from '@/src/types/episodeTracking';
@@ -11,7 +12,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -27,6 +28,10 @@ export default function WatchProgressScreen() {
   const { data, isLoading, isFetching, error } = useCurrentlyWatching();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const hasActiveSort =
+    sortState.option !== DEFAULT_SORT_STATE.option ||
+    sortState.direction !== DEFAULT_SORT_STATE.direction;
+
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
 
@@ -121,12 +126,15 @@ export default function WatchProgressScreen() {
         headerRight: () => (
           <View style={styles.headerButtons}>
             {isFetching && <ActivityIndicator size="small" color={COLORS.textSecondary} />}
-            <Pressable onPress={searchButton.onPress} hitSlop={HIT_SLOP.m}>
+            <HeaderIconButton onPress={searchButton.onPress}>
               <Search size={22} color={COLORS.text} />
-            </Pressable>
-            <Pressable onPress={() => setSortModalVisible(true)} hitSlop={HIT_SLOP.m}>
-              <ArrowUpDown size={22} color={COLORS.text} />
-            </Pressable>
+            </HeaderIconButton>
+            <HeaderIconButton onPress={() => setSortModalVisible(true)}>
+              <View style={styles.iconWrapper}>
+                <ArrowUpDown size={22} color={COLORS.text} />
+                {hasActiveSort && <View style={styles.sortBadge} />}
+              </View>
+            </HeaderIconButton>
           </View>
         ),
       });
@@ -138,7 +146,9 @@ export default function WatchProgressScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
+    searchButton,
     isFetching,
+    hasActiveSort,
   ]);
 
   const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
@@ -243,6 +253,17 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.m,
+  },
+  iconWrapper: {
+    position: 'relative',
+  },
+  sortBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: SPACING.s,
+    height: SPACING.s,
+    borderRadius: SPACING.xs,
+    backgroundColor: COLORS.primary,
   },
 });
