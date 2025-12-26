@@ -44,6 +44,7 @@ import {
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -72,15 +73,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const hasWatchProviders = (providers: any): boolean => {
-  if (!providers) return false;
-  return (
-    (providers.flatrate && providers.flatrate.length > 0) ||
-    (providers.rent && providers.rent.length > 0) ||
-    (providers.buy && providers.buy.length > 0)
-  );
-};
 
 // Check if a movie can have a reminder (has a future release date)
 const canShowReminder = (releaseDate: string | null | undefined): boolean => {

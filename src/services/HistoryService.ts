@@ -1,9 +1,7 @@
-import { collection, getDocs } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
-import { getFirestoreErrorMessage } from '../firebase/firestore';
+import { auth } from '../firebase/config';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
 import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
-import { createTimeoutWithCleanup } from '../utils/timeout';
+import { fetchUserCollection } from './firestoreHelpers';
 import type { UserList } from './ListService';
 import type { RatingItem } from './RatingService';
 
@@ -58,100 +56,70 @@ class HistoryService {
    * Fetch all episode tracking data for the user, enriched with show metadata
    */
   private async fetchEpisodeTracking(): Promise<EnrichedWatchedEpisode[]> {
-    const user = auth.currentUser;
-    if (!user) return [];
+    const result = await fetchUserCollection(
+      ['episode_tracking'],
+      (snapshot) => {
+        const episodes: EnrichedWatchedEpisode[] = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data() as TVShowEpisodeTracking;
+          if (data.episodes) {
+            // Warn if metadata is missing - this indicates a partial write or data issue
+            if (!data.metadata) {
+              console.warn(
+                `[HistoryService] Missing metadata for episode_tracking doc: ${doc.id}. Using fallback values.`
+              );
+            }
 
-    const timeout = createTimeoutWithCleanup(10000, 'Episode tracking request timed out');
+            // Use safe defaults when metadata is missing
+            const tvShowName = data.metadata?.tvShowName ?? 'Unknown Show';
+            const posterPath = data.metadata?.posterPath ?? null;
 
-    try {
-      const trackingRef = collection(db, 'users', user.uid, 'episode_tracking');
-      const snapshot = await Promise.race([getDocs(trackingRef), timeout.promise]);
-
-      const episodes: EnrichedWatchedEpisode[] = [];
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data() as TVShowEpisodeTracking;
-        if (data.episodes) {
-          // Warn if metadata is missing - this indicates a partial write or data issue
-          if (!data.metadata) {
-            console.warn(
-              `[HistoryService] Missing metadata for episode_tracking doc: ${doc.id}. Using fallback values.`
-            );
-          }
-
-          // Use safe defaults when metadata is missing
-          const tvShowName = data.metadata?.tvShowName ?? 'Unknown Show';
-          const posterPath = data.metadata?.posterPath ?? null;
-
-          Object.values(data.episodes).forEach((episode) => {
-            episodes.push({
-              ...episode,
-              tvShowName,
-              posterPath,
+            Object.values(data.episodes).forEach((episode) => {
+              episodes.push({
+                ...episode,
+                tvShowName,
+                posterPath,
+              });
             });
-          });
-        }
-      });
-
-      return episodes;
-    } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[HistoryService] Error fetching episode tracking:', message);
-      return [];
-    } finally {
-      timeout.cancel();
-    }
+          }
+        });
+        return episodes;
+      },
+      { errorContext: 'HistoryService.fetchEpisodeTracking' }
+    );
+    return result ?? [];
   }
 
   /**
    * Fetch all ratings for the user
    */
   private async fetchRatings(): Promise<RatingItem[]> {
-    const user = auth.currentUser;
-    if (!user) return [];
-
-    const timeout = createTimeoutWithCleanup(10000, 'Ratings request timed out');
-
-    try {
-      const ratingsRef = collection(db, 'users', user.uid, 'ratings');
-      const snapshot = await Promise.race([getDocs(ratingsRef), timeout.promise]);
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as RatingItem[];
-    } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[HistoryService] Error fetching ratings:', message);
-      return [];
-    } finally {
-      timeout.cancel();
-    }
+    const result = await fetchUserCollection(
+      ['ratings'],
+      (snapshot) =>
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as RatingItem[],
+      { errorContext: 'HistoryService.fetchRatings' }
+    );
+    return result ?? [];
   }
 
   /**
    * Fetch all lists for the user
    */
   private async fetchLists(): Promise<UserList[]> {
-    const user = auth.currentUser;
-    if (!user) return [];
-
-    const timeout = createTimeoutWithCleanup(10000, 'Lists request timed out');
-
-    try {
-      const listsRef = collection(db, 'users', user.uid, 'lists');
-      const snapshot = await Promise.race([getDocs(listsRef), timeout.promise]);
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as UserList[];
-    } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[HistoryService] Error fetching lists:', message);
-      return [];
-    } finally {
-      timeout.cancel();
-    }
+    const result = await fetchUserCollection(
+      ['lists'],
+      (snapshot) =>
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as UserList[],
+      { errorContext: 'HistoryService.fetchLists' }
+    );
+    return result ?? [];
   }
 
   /**
