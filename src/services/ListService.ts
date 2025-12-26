@@ -30,6 +30,7 @@ export interface UserList {
   name: string;
   items: Record<string, ListMediaItem>;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export const DEFAULT_LISTS = [

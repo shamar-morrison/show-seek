@@ -42,6 +42,11 @@ export default function CustomListsScreen() {
       switch (sortState.option) {
         case 'recentlyAdded':
           return ((a.createdAt || 0) - (b.createdAt || 0)) * direction;
+        case 'lastUpdated': {
+          const aTime = a.updatedAt || a.createdAt || 0;
+          const bTime = b.updatedAt || b.createdAt || 0;
+          return (aTime - bTime) * direction;
+        }
         case 'alphabetical': {
           const nameA = a.name.toLowerCase();
           const nameB = b.name.toLowerCase();
@@ -179,7 +184,7 @@ export default function CustomListsScreen() {
         onClose={() => setSortModalVisible(false)}
         sortState={sortState}
         onApplySort={handleApplySort}
-        allowedOptions={['recentlyAdded', 'alphabetical']}
+        allowedOptions={['recentlyAdded', 'lastUpdated', 'alphabetical']}
       />
     </>
   );
