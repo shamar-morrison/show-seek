@@ -225,7 +225,5 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginLeft: SPACING.s,
-    position: 'relative',
-    top: -SPACING.xxl,
   },
 });
