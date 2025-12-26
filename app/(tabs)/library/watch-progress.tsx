@@ -146,6 +146,7 @@ export default function WatchProgressScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
+    searchButton,
     isFetching,
     hasActiveSort,
   ]);
