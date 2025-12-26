@@ -4,7 +4,7 @@ import MediaSortModal, {
   NOTES_SCREEN_SORT_OPTIONS,
   SortState,
 } from '@/src/components/MediaSortModal';
-import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
+import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
@@ -107,7 +107,7 @@ export default function NotesScreen() {
   const { isPremium } = usePremium();
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
-  const noteSheetRef = useRef<NoteSheetRef>(null);
+  const noteSheetRef = useRef<NoteModalRef>(null);
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 

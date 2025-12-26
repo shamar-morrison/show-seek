@@ -13,7 +13,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
-import NoteModal, { NoteSheetRef } from '@/src/components/NoteModal';
+import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
@@ -77,7 +77,7 @@ export default function TVDetailScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
-  const noteSheetRef = useRef<NoteSheetRef>(null);
+  const noteSheetRef = useRef<NoteModalRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);

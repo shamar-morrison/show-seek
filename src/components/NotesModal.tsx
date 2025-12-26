@@ -1,4 +1,4 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
@@ -19,7 +19,7 @@ import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler'
 
 const MAX_NOTE_LENGTH = 120;
 
-export interface NoteSheetRef {
+export interface NoteModalRef {
   present: (params: {
     mediaType: 'movie' | 'tv';
     mediaId: number;
@@ -30,12 +30,12 @@ export interface NoteSheetRef {
   dismiss: () => Promise<void>;
 }
 
-interface NoteSheetProps {
+interface NoteModalProps {
   onSave?: () => void;
   onDelete?: () => void;
 }
 
-const NoteModal = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }, ref) => {
+const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
   const { isPremium } = usePremium();
@@ -160,13 +160,13 @@ const NoteModal = forwardRef<NoteSheetRef, NoteSheetProps>(({ onSave, onDelete }
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={handleClose}>
+            <Pressable onPress={handleClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
             <Text style={styles.title}>Note</Text>
           </View>
           {isEditing && (
-            <Pressable onPress={handleDelete} disabled={isLoading}>
+            <Pressable onPress={handleDelete} disabled={isLoading} hitSlop={HIT_SLOP.m}>
               <Trash2 size={22} color={isLoading ? COLORS.textSecondary : COLORS.error} />
             </Pressable>
           )}
