@@ -13,6 +13,7 @@ import {
   BORDER_RADIUS,
   COLORS,
   FONT_SIZE,
+  HEADER_CHROME_HEIGHT,
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
@@ -444,7 +445,9 @@ export default function NotesScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+              <View
+                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
+              >
                 <EmptyState
                   icon={Search}
                   title="No results found"
@@ -467,7 +470,9 @@ export default function NotesScreen() {
           SectionSeparatorComponent={SectionSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
+              <View
+                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
+              >
                 <EmptyState
                   icon={Search}
                   title="No results found"

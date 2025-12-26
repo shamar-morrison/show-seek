@@ -2,7 +2,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
@@ -31,9 +31,6 @@ type EpisodeSection = {
 };
 
 const STORAGE_KEY = 'episodeRatingsViewMode';
-
-/** Combined height of header + navigation chrome to subtract from empty state container */
-const HEADER_CHROME_HEIGHT = 150;
 
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
