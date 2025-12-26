@@ -6,7 +6,7 @@ import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 
-interface MediaActionButtonsProps {
+export interface MediaActionButtonsProps {
   // Action callbacks
   onAddToList: () => void;
   onRate: () => void;
