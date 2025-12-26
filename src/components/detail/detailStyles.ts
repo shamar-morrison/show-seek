@@ -415,6 +415,12 @@ export const detailStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  actionButtonTouchable: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Shared screen layout styles
   container: {
