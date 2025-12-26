@@ -1,29 +1,21 @@
 import {
+  BaseReminderModal,
   DevModeBanner,
   MOVIE_TIMING_OPTIONS,
+  ReminderActionButtons,
   ReminderErrorBanner,
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
+  reminderModalStyles as sharedStyles,
 } from '@/src/components/reminder';
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
-import { Calendar, X } from 'lucide-react-native';
+import { Calendar } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface ReminderModalProps {
   visible: boolean;
@@ -118,213 +110,73 @@ export default function ReminderModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ModalBackground />
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={ACTIVE_OPACITY}
-          onPress={onClose}
-        />
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Set Reminder</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
+    <BaseReminderModal visible={visible} onClose={onClose}>
+      <DevModeBanner />
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <DevModeBanner />
+      {/* Movie Title */}
+      <Text style={sharedStyles.mediaTitle} numberOfLines={2}>
+        {movieTitle}
+      </Text>
 
-            {/* Movie Title */}
-            <Text style={styles.movieTitle} numberOfLines={2}>
-              {movieTitle}
-            </Text>
-
-            {/* Release Date Display */}
-            {releaseDate && (
-              <View style={styles.releaseDateContainer}>
-                <Calendar size={16} color={COLORS.textSecondary} />
-                <Text style={styles.releaseDate}>Releases {formatReleaseDate(releaseDate)}</Text>
-              </View>
-            )}
-
-            {/* Warning Banner for Past Options */}
-            {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
-
-            {/* Timing Change Info - shows when updating an existing reminder's timing */}
-            {willSkipCurrentNotification && (
-              <ReminderInfoBanner message="Changing the timing will reschedule your notification." />
-            )}
-
-            {/* All Options Disabled Warning */}
-            {allOptionsDisabled && (
-              <ReminderErrorBanner
-                message={
-                  isReleasingToday
-                    ? 'This movie releases today! Notification times have already passed.'
-                    : 'All notification times for this release have passed. You cannot set a reminder for this movie.'
-                }
-              />
-            )}
-
-            {/* Timing Options */}
-            {!allOptionsDisabled && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Notify me:</Text>
-                <ReminderTimingOptions
-                  options={MOVIE_TIMING_OPTIONS}
-                  selectedValue={selectedTiming}
-                  disabledValues={disabledTimings}
-                  onSelect={setSelectedTiming}
-                  disabled={isLoading}
-                />
-              </View>
-            )}
-
-            {/* Action Buttons */}
-            <View style={styles.actions}>
-              {hasReminder ? (
-                <>
-                  <TouchableOpacity
-                    style={[styles.button, styles.updateButton]}
-                    onPress={handleSetReminder}
-                    disabled={isLoading || selectedTiming === currentTiming}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color={COLORS.white} />
-                    ) : (
-                      <Text style={styles.buttonText}>Update Reminder</Text>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.cancelButton]}
-                    onPress={handleCancelReminder}
-                    disabled={isLoading}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                      Cancel Reminder
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.setButton,
-                    allOptionsDisabled && styles.buttonDisabled,
-                  ]}
-                  onPress={handleSetReminder}
-                  disabled={isLoading || allOptionsDisabled}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.buttonText}>Set Reminder</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
-          </ScrollView>
+      {/* Release Date Display */}
+      {releaseDate && (
+        <View style={sharedStyles.dateContainer}>
+          <Calendar size={16} color={COLORS.textSecondary} />
+          <Text style={sharedStyles.dateText}>Releases {formatReleaseDate(releaseDate)}</Text>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      )}
+
+      {/* Warning Banner for Past Options */}
+      {!allOptionsDisabled && disabledTimings.size > 0 && <ReminderWarningBanner />}
+
+      {/* Timing Change Info */}
+      {willSkipCurrentNotification && (
+        <ReminderInfoBanner message="Changing the timing will reschedule your notification." />
+      )}
+
+      {/* All Options Disabled Warning */}
+      {allOptionsDisabled && (
+        <ReminderErrorBanner
+          message={
+            isReleasingToday
+              ? 'This movie releases today! Notification times have already passed.'
+              : 'All notification times for this release have passed. You cannot set a reminder for this movie.'
+          }
+        />
+      )}
+
+      {/* Timing Options */}
+      {!allOptionsDisabled && (
+        <View style={sharedStyles.section}>
+          <Text style={sharedStyles.sectionTitle}>Notify me:</Text>
+          <ReminderTimingOptions
+            options={MOVIE_TIMING_OPTIONS}
+            selectedValue={selectedTiming}
+            disabledValues={disabledTimings}
+            onSelect={setSelectedTiming}
+            disabled={isLoading}
+          />
+        </View>
+      )}
+
+      {/* Action Buttons */}
+      <ReminderActionButtons
+        hasReminder={hasReminder}
+        isLoading={isLoading}
+        canSet={!allOptionsDisabled}
+        isUpdateDisabled={selectedTiming === currentTiming}
+        onSet={handleSetReminder}
+        onCancel={handleCancelReminder}
+      />
+    </BaseReminderModal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  content: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  closeButton: {
-    padding: SPACING.xs,
-  },
-  movieTitle: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    marginBottom: SPACING.m,
-    fontWeight: '600',
-  },
   releaseDateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.s,
     marginBottom: SPACING.l,
-  },
-  releaseDate: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  section: {
-    marginBottom: SPACING.l,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.m,
-  },
-  actions: {
-    gap: SPACING.m,
-  },
-  button: {
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  setButton: {
-    backgroundColor: COLORS.primary,
-  },
-  updateButton: {
-    backgroundColor: COLORS.primary,
-  },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  buttonText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  cancelButtonText: {
-    color: COLORS.error,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
   },
 });

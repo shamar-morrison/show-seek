@@ -1,13 +1,15 @@
 import {
+  BaseReminderModal,
   DevModeBanner,
   EPISODE_TIMING_OPTIONS,
+  ReminderActionButtons,
   ReminderErrorBanner,
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
   SEASON_TIMING_OPTIONS,
+  reminderModalStyles as sharedStyles,
 } from '@/src/components/reminder';
-import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
@@ -16,19 +18,9 @@ import {
   isNotificationTimeInPast,
   isReleaseToday,
 } from '@/src/utils/reminderHelpers';
-import { Calendar, Tv, X } from 'lucide-react-native';
+import { Calendar, Tv } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TVReminderModalProps {
   visible: boolean;
@@ -187,12 +179,11 @@ export default function TVReminderModal({
     return isReleaseToday(releaseDate);
   }, [releaseDate]);
 
-  // Determine if current selection is valid (frequency has a date AND has at least one valid timing option)
+  // Determine if current selection is valid
   const canSetReminder = hasFrequencyDate && !allTimingsDisabled;
 
   // Check if the existing reminder's timing is now disabled/past
   const willSkipCurrentNotification = useMemo(() => {
-    // Show warning when the existing reminder's timing has passed
     return hasReminder && currentTiming && disabledTimings.has(currentTiming);
   }, [hasReminder, currentTiming, disabledTimings]);
 
@@ -208,274 +199,172 @@ export default function TVReminderModal({
   const displayDate =
     selectedFrequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
 
+  // Check if update is disabled (no changes made)
+  const isUpdateDisabled =
+    selectedTiming === currentTiming &&
+    selectedFrequency === currentFrequency &&
+    !hasEpisodeChanged(currentNextEpisode, nextEpisode);
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ModalBackground />
+    <BaseReminderModal visible={visible} onClose={onClose}>
+      <DevModeBanner />
+
+      {/* Show Title */}
+      <View style={styles.titleRow}>
+        <Tv size={18} color={COLORS.primary} />
+        <Text style={styles.showTitle} numberOfLines={2}>
+          {tvTitle}
+        </Text>
+      </View>
+
+      {/* Frequency Selection */}
+      <View style={sharedStyles.section}>
+        <Text style={sharedStyles.sectionTitle}>Remind me for:</Text>
+
+        {/* Every Episode Option */}
         <TouchableOpacity
-          style={StyleSheet.absoluteFill}
+          style={[
+            styles.frequencyOption,
+            selectedFrequency === 'every_episode' && styles.frequencyOptionSelected,
+            !canSetEpisodeReminder && styles.frequencyOptionDisabled,
+          ]}
+          onPress={() => canSetEpisodeReminder && handleFrequencyChange('every_episode')}
+          disabled={!canSetEpisodeReminder || isLoading}
           activeOpacity={ACTIVE_OPACITY}
-          onPress={onClose}
-        />
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Set Reminder</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+        >
+          <View style={styles.radioOuter}>
+            {selectedFrequency === 'every_episode' && <View style={styles.radioInner} />}
           </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <DevModeBanner />
-
-            {/* Show Title */}
-            <View style={styles.titleRow}>
-              <Tv size={18} color={COLORS.primary} />
-              <Text style={styles.showTitle} numberOfLines={2}>
-                {tvTitle}
+          <View style={styles.frequencyTextContainer}>
+            <Text
+              style={[styles.frequencyLabel, !canSetEpisodeReminder && sharedStyles.disabledText]}
+            >
+              Every Episode
+            </Text>
+            {canSetEpisodeReminder && nextEpisode ? (
+              <Text style={styles.frequencyDescription}>
+                Next: S{nextEpisode.seasonNumber}E{nextEpisode.episodeNumber} -{' '}
+                {nextEpisode.episodeName}
               </Text>
-            </View>
-
-            {/* Frequency Selection */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Remind me for:</Text>
-
-              {/* Every Episode Option */}
-              <TouchableOpacity
-                style={[
-                  styles.frequencyOption,
-                  selectedFrequency === 'every_episode' && styles.frequencyOptionSelected,
-                  !canSetEpisodeReminder && styles.frequencyOptionDisabled,
-                ]}
-                onPress={() => canSetEpisodeReminder && handleFrequencyChange('every_episode')}
-                disabled={!canSetEpisodeReminder || isLoading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <View style={styles.radioOuter}>
-                  {selectedFrequency === 'every_episode' && <View style={styles.radioInner} />}
-                </View>
-                <View style={styles.frequencyTextContainer}>
-                  <Text
-                    style={[styles.frequencyLabel, !canSetEpisodeReminder && styles.disabledText]}
-                  >
-                    Every Episode
-                  </Text>
-                  {canSetEpisodeReminder && nextEpisode ? (
-                    <Text style={styles.frequencyDescription}>
-                      Next: S{nextEpisode.seasonNumber}E{nextEpisode.episodeNumber} -{' '}
-                      {nextEpisode.episodeName}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.frequencyDescription, styles.warningText]}>
-                      No upcoming episodes found
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              {/* Season Premiere Option */}
-              <TouchableOpacity
-                style={[
-                  styles.frequencyOption,
-                  selectedFrequency === 'season_premiere' && styles.frequencyOptionSelected,
-                  !canSetSeasonReminder && styles.frequencyOptionDisabled,
-                ]}
-                onPress={() => canSetSeasonReminder && handleFrequencyChange('season_premiere')}
-                disabled={!canSetSeasonReminder || isLoading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <View style={styles.radioOuter}>
-                  {selectedFrequency === 'season_premiere' && <View style={styles.radioInner} />}
-                </View>
-                <View style={styles.frequencyTextContainer}>
-                  <Text
-                    style={[styles.frequencyLabel, !canSetSeasonReminder && styles.disabledText]}
-                  >
-                    Season Premieres
-                  </Text>
-                  {canSetSeasonReminder && nextSeasonNumber ? (
-                    <Text style={styles.frequencyDescription}>
-                      Season {nextSeasonNumber} premieres {formatDate(nextSeasonAirDate!)}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.frequencyDescription, styles.warningText]}>
-                      No upcoming season premiere date announced
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Date Display */}
-            {displayDate && hasFrequencyDate && (
-              <View style={styles.dateContainer}>
-                <Calendar size={16} color={COLORS.textSecondary} />
-                <Text style={styles.dateText}>
-                  {isDateInPast(displayDate) ? 'Aired' : 'Airs'} {formatDate(displayDate)}
-                </Text>
-              </View>
+            ) : (
+              <Text style={[styles.frequencyDescription, sharedStyles.warningText]}>
+                No upcoming episodes found
+              </Text>
             )}
+          </View>
+        </TouchableOpacity>
 
-            {/* Info Banner for Using Subsequent Episode */}
-            {isUsingSubsequentEpisode &&
-              originalNextEpisode &&
-              nextEpisode &&
-              selectedFrequency === 'every_episode' && (
-                <ReminderInfoBanner
-                  message={`📺 S${originalNextEpisode.seasonNumber}E${originalNextEpisode.episodeNumber} airs today! Setting reminder for S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber} instead.`}
-                />
-              )}
-
-            {/* Warning Banner for Past Options */}
-            {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
-              <ReminderWarningBanner />
+        {/* Season Premiere Option */}
+        <TouchableOpacity
+          style={[
+            styles.frequencyOption,
+            selectedFrequency === 'season_premiere' && styles.frequencyOptionSelected,
+            !canSetSeasonReminder && styles.frequencyOptionDisabled,
+          ]}
+          onPress={() => canSetSeasonReminder && handleFrequencyChange('season_premiere')}
+          disabled={!canSetSeasonReminder || isLoading}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <View style={styles.radioOuter}>
+            {selectedFrequency === 'season_premiere' && <View style={styles.radioInner} />}
+          </View>
+          <View style={styles.frequencyTextContainer}>
+            <Text
+              style={[styles.frequencyLabel, !canSetSeasonReminder && sharedStyles.disabledText]}
+            >
+              Season Premieres
+            </Text>
+            {canSetSeasonReminder && nextSeasonNumber ? (
+              <Text style={styles.frequencyDescription}>
+                Season {nextSeasonNumber} premieres {formatDate(nextSeasonAirDate!)}
+              </Text>
+            ) : (
+              <Text style={[styles.frequencyDescription, sharedStyles.warningText]}>
+                No upcoming season premiere date announced
+              </Text>
             )}
+          </View>
+        </TouchableOpacity>
+      </View>
 
-            {/* Timing Skip Warning - shows when updating reminder to a past timing */}
-            {willSkipCurrentNotification && (
-              <ReminderInfoBanner message={getSkipWarningMessage()} />
-            )}
-
-            {/* All Timings Disabled Warning - show when frequency has a date but all timings are past */}
-            {hasFrequencyDate && allTimingsDisabled && !isUsingSubsequentEpisode && (
-              <ReminderErrorBanner
-                message={
-                  isReleasingToday
-                    ? `This ${selectedFrequency === 'every_episode' ? 'episode airs' : 'season premieres'} today! Reminders will begin with the next ${selectedFrequency === 'every_episode' ? 'episode' : 'season'} once available.`
-                    : `All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`
-                }
-              />
-            )}
-
-            {/* Timing Options */}
-            {hasFrequencyDate && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Notify me:</Text>
-                <ReminderTimingOptions
-                  options={timingOptions}
-                  selectedValue={selectedTiming}
-                  disabledValues={disabledTimings}
-                  onSelect={setSelectedTiming}
-                  disabled={isLoading}
-                />
-              </View>
-            )}
-
-            {/* No options available message */}
-            {!canSetEpisodeReminder && !canSetSeasonReminder && (
-              <View style={styles.noOptionsContainer}>
-                <Text style={styles.noOptionsText}>
-                  No upcoming episodes or season premieres with announced dates. Check back later!
-                </Text>
-              </View>
-            )}
-
-            {/* Action Buttons */}
-            {(hasReminder || canSetReminder) && (
-              <View style={styles.actions}>
-                {hasReminder ? (
-                  <>
-                    <TouchableOpacity
-                      style={[
-                        styles.button,
-                        styles.updateButton,
-                        !canSetReminder && styles.buttonDisabled,
-                      ]}
-                      onPress={handleSetReminder}
-                      disabled={
-                        isLoading ||
-                        !canSetReminder ||
-                        (selectedTiming === currentTiming &&
-                          selectedFrequency === currentFrequency &&
-                          !hasEpisodeChanged(currentNextEpisode, nextEpisode))
-                      }
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      {isLoading ? (
-                        <ActivityIndicator size="small" color={COLORS.white} />
-                      ) : (
-                        <Text
-                          style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
-                        >
-                          Update Reminder
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.cancelButton]}
-                      onPress={handleCancelReminder}
-                      disabled={isLoading}
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <Text style={[styles.buttonText, styles.cancelButtonText]}>
-                        Cancel Reminder
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      styles.setButton,
-                      !canSetReminder && styles.buttonDisabled,
-                    ]}
-                    onPress={handleSetReminder}
-                    disabled={isLoading || !canSetReminder}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator size="small" color={COLORS.white} />
-                    ) : (
-                      <Text
-                        style={[styles.buttonText, !canSetReminder && styles.buttonTextDisabled]}
-                      >
-                        Set Reminder
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </ScrollView>
+      {/* Date Display */}
+      {displayDate && hasFrequencyDate && (
+        <View style={sharedStyles.dateContainer}>
+          <Calendar size={16} color={COLORS.textSecondary} />
+          <Text style={sharedStyles.dateText}>
+            {isDateInPast(displayDate) ? 'Aired' : 'Airs'} {formatDate(displayDate)}
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      )}
+
+      {/* Info Banner for Using Subsequent Episode */}
+      {isUsingSubsequentEpisode &&
+        originalNextEpisode &&
+        nextEpisode &&
+        selectedFrequency === 'every_episode' && (
+          <ReminderInfoBanner
+            message={`📺 S${originalNextEpisode.seasonNumber}E${originalNextEpisode.episodeNumber} airs today! Setting reminder for S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber} instead.`}
+          />
+        )}
+
+      {/* Warning Banner for Past Options */}
+      {hasFrequencyDate && !allTimingsDisabled && disabledTimings.size > 0 && (
+        <ReminderWarningBanner />
+      )}
+
+      {/* Timing Skip Warning */}
+      {willSkipCurrentNotification && <ReminderInfoBanner message={getSkipWarningMessage()} />}
+
+      {/* All Timings Disabled Warning */}
+      {hasFrequencyDate && allTimingsDisabled && !isUsingSubsequentEpisode && (
+        <ReminderErrorBanner
+          message={
+            isReleasingToday
+              ? `This ${selectedFrequency === 'every_episode' ? 'episode airs' : 'season premieres'} today! Reminders will begin with the next ${selectedFrequency === 'every_episode' ? 'episode' : 'season'} once available.`
+              : `All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`
+          }
+        />
+      )}
+
+      {/* Timing Options */}
+      {hasFrequencyDate && (
+        <View style={sharedStyles.section}>
+          <Text style={sharedStyles.sectionTitle}>Notify me:</Text>
+          <ReminderTimingOptions
+            options={timingOptions}
+            selectedValue={selectedTiming}
+            disabledValues={disabledTimings}
+            onSelect={setSelectedTiming}
+            disabled={isLoading}
+          />
+        </View>
+      )}
+
+      {/* No options available message */}
+      {!canSetEpisodeReminder && !canSetSeasonReminder && (
+        <View style={styles.noOptionsContainer}>
+          <Text style={styles.noOptionsText}>
+            No upcoming episodes or season premieres with announced dates. Check back later!
+          </Text>
+        </View>
+      )}
+
+      {/* Action Buttons */}
+      {(hasReminder || canSetReminder) && (
+        <ReminderActionButtons
+          hasReminder={hasReminder}
+          isLoading={isLoading}
+          canSet={canSetReminder}
+          isUpdateDisabled={isUpdateDisabled}
+          onSet={handleSetReminder}
+          onCancel={handleCancelReminder}
+        />
+      )}
+    </BaseReminderModal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  content: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '85%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  closeButton: {
-    padding: SPACING.xs,
-  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -487,15 +376,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
     flex: 1,
-  },
-  section: {
-    marginBottom: SPACING.l,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.m,
   },
   frequencyOption: {
     flexDirection: 'row',
@@ -526,16 +406,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
   },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    marginBottom: SPACING.l,
-  },
-  dateText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
   radioOuter: {
     width: 20,
     height: 20,
@@ -551,43 +421,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: COLORS.primary,
   },
-  actions: {
-    gap: SPACING.m,
-    marginTop: SPACING.s,
-  },
-  button: {
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  setButton: {
-    backgroundColor: COLORS.primary,
-  },
-  updateButton: {
-    backgroundColor: COLORS.primary,
-  },
-  cancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.error,
-  },
-  buttonText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.white,
-  },
-  cancelButtonText: {
-    color: COLORS.error,
-  },
-  disabledText: {
-    color: COLORS.textSecondary,
-  },
-  warningText: {
-    color: COLORS.warning,
-  },
   noOptionsContainer: {
     backgroundColor: COLORS.surfaceLight,
     padding: SPACING.l,
@@ -598,11 +431,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
     textAlign: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonTextDisabled: {
-    color: COLORS.textSecondary,
   },
 });
