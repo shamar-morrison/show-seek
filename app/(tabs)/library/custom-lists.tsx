@@ -43,8 +43,8 @@ export default function CustomListsScreen() {
         case 'recentlyAdded':
           return ((a.createdAt || 0) - (b.createdAt || 0)) * direction;
         case 'lastUpdated': {
-          const aTime = (a as any).updatedAt || a.createdAt || 0;
-          const bTime = (b as any).updatedAt || b.createdAt || 0;
+          const aTime = a.updatedAt || a.createdAt || 0;
+          const bTime = b.updatedAt || b.createdAt || 0;
           return (aTime - bTime) * direction;
         }
         case 'alphabetical': {
