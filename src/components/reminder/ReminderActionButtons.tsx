@@ -34,7 +34,11 @@ export function ReminderActionButtons({
     return (
       <View style={styles.actions}>
         <TouchableOpacity
-          style={[styles.button, styles.updateButton, !canSet && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            styles.updateButton,
+            (!canSet || isUpdateDisabled) && styles.buttonDisabled,
+          ]}
           onPress={onSet}
           disabled={isLoading || !canSet || isUpdateDisabled}
           activeOpacity={ACTIVE_OPACITY}
@@ -42,7 +46,12 @@ export function ReminderActionButtons({
           {isLoading ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Text style={[styles.buttonText, !canSet && styles.buttonTextDisabled]}>
+            <Text
+              style={[
+                styles.buttonText,
+                (!canSet || isUpdateDisabled) && styles.buttonTextDisabled,
+              ]}
+            >
               Update Reminder
             </Text>
           )}
