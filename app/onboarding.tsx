@@ -225,5 +225,6 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginLeft: SPACING.s,
+    top: -6,
   },
 });
