@@ -2,7 +2,7 @@ import CreateListModal, { CreateListModalRef } from '@/src/components/CreateList
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import {
   useAddToList,
   useDeleteList,
@@ -14,7 +14,7 @@ import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Plus, Settings2 } from 'lucide-react-native';
+import { Check, Plus, Settings2 } from 'lucide-react-native';
 import React, {
   forwardRef,
   useCallback,
@@ -278,22 +278,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           <GestureHandlerRootView style={[styles.content, { width }]}>
             <View style={styles.header}>
               <Text style={styles.title}>Add to List</Text>
-              <Pressable
-                style={[styles.saveButton, (!hasChanges || isSaving) && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={!hasChanges || isSaving}
-                hitSlop={HIT_SLOP.m}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color={COLORS.white} />
-                ) : (
-                  <Text
-                    style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
-                  >
-                    Save
-                  </Text>
-                )}
-              </Pressable>
             </View>
 
             {successMessage && (
@@ -339,6 +323,25 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 }}
               />
             )}
+
+            <Pressable
+              style={[styles.saveButton, (!hasChanges || isSaving) && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={!hasChanges || isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color={COLORS.white} />
+              ) : (
+                <>
+                  <Check size={20} color={hasChanges ? COLORS.white : COLORS.textSecondary} />
+                  <Text
+                    style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
+                  >
+                    Save Changes
+                  </Text>
+                </>
+              )}
+            </Pressable>
 
             <Pressable
               style={[styles.createListButton, isSaving && styles.buttonDisabled]}
@@ -428,7 +431,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: SPACING.m,
+    marginTop: SPACING.s,
     padding: SPACING.m,
     gap: SPACING.s,
     backgroundColor: COLORS.primary,
@@ -478,13 +481,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    minWidth: 60,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: SPACING.m,
+    padding: SPACING.m,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.m,
   },
   saveButtonDisabled: {
     backgroundColor: COLORS.surfaceLight,
