@@ -28,7 +28,6 @@ export async function createUserDocument(user: User): Promise<void> {
   const userRef = doc(db, 'users', user.uid);
 
   try {
-    // Check if document already exists
     const existingDoc = await getDoc(userRef);
 
     if (existingDoc.exists()) {
