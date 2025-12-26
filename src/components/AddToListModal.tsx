@@ -184,15 +184,30 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         }
       }
 
-      try {
-        await Promise.all(operations);
+      // Use allSettled to handle partial failures gracefully
+      const results = await Promise.allSettled(operations);
+      const failures = results.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+      );
+
+      if (failures.length === 0) {
+        // All operations succeeded
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (onShowToast) {
           onShowToast('Lists updated');
         }
         await sheetRef.current?.dismiss();
-      } catch (error) {
-        handleMutationError(error instanceof Error ? error : new Error('Failed to update lists'));
+      } else if (failures.length < operations.length) {
+        // Some operations succeeded, some failed
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setOperationError(`${failures.length} of ${operations.length} changes failed to save`);
+        setIsSaving(false);
+      } else {
+        // All operations failed
+        const firstError = failures[0].reason;
+        handleMutationError(
+          firstError instanceof Error ? firstError : new Error('Failed to update lists')
+        );
         setIsSaving(false);
       }
     };
@@ -250,14 +265,26 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     const handleListCreated = async (listId: string, listName: string) => {
       // Still save immediately for new list creation
-      addMutation.mutate({ listId, mediaItem, listName }, { onError: handleMutationError });
-      // Add to pending selections so UI reflects the change
-      setPendingSelections((prev) => ({
-        ...prev,
-        [listId]: true,
-      }));
+      // Update initialMembershipRef only on success to prevent duplicate adds
+      addMutation.mutate(
+        { listId, mediaItem, listName },
+        {
+          onSuccess: async () => {
+            // Mark as already saved in the initial ref so Save Changes won't re-add
+            initialMembershipRef.current[listId] = true;
+            // Add to pending selections so UI reflects the change
+            setPendingSelections((prev) => ({
+              ...prev,
+              [listId]: true,
+            }));
+            await sheetRef.current?.present();
+            setSuccessMessage(`Added to '${listName}'`);
+          },
+          onError: handleMutationError,
+        }
+      );
+      // Present the sheet immediately so user sees modal return
       await sheetRef.current?.present();
-      setSuccessMessage(`Added to '${listName}'`);
     };
 
     const handleCreateListCancelled = async () => {
