@@ -9,18 +9,17 @@ import {
   ReminderWarningBanner,
   reminderModalStyles as sharedStyles,
 } from '@/src/components/reminder';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { Calendar } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 interface ReminderModalProps {
   visible: boolean;
   onClose: () => void;
-  movieId: number;
   movieTitle: string;
   releaseDate: string | null;
   currentTiming?: ReminderTiming;
@@ -171,12 +170,3 @@ export default function ReminderModal({
     </BaseReminderModal>
   );
 }
-
-const styles = StyleSheet.create({
-  releaseDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    marginBottom: SPACING.l,
-  },
-});

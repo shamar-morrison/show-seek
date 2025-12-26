@@ -25,7 +25,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface TVReminderModalProps {
   visible: boolean;
   onClose: () => void;
-  tvId: number;
   tvTitle: string;
   /** The next unaired episode to use for reminders (may be subsequent episode if today's is airing) */
   nextEpisode: NextEpisodeInfo | null;
