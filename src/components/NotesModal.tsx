@@ -5,7 +5,7 @@ import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Trash2, X } from 'lucide-react-native';
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
