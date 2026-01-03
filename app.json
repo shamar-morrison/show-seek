@@ -66,6 +66,7 @@
           "color": "#E50914"
         }
       ],
+      "./withWidgetManifestFix.js",
       "react-native-iap",
       "expo-updates",
       "react-native-google-auth",

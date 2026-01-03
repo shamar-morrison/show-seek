@@ -15,8 +15,8 @@ functions/service-account-key.json
 *.apk
 *.aab
 
-android
-ios
+/android
+/ios
 
 # Native
 *.orig.*
