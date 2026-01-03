@@ -1,7 +1,7 @@
 import { COLORS } from '@/src/constants/theme';
 import { Film, List, Tv } from 'lucide-react-native';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const TYPES = [
   { id: 'upcoming-movies', label: 'Movies', icon: Film },
@@ -22,14 +22,14 @@ export function WidgetTypeSelector({ selectedType, onSelect }: WidgetTypeSelecto
         const isSelected = selectedType === type.id;
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={type.id}
             style={[styles.typeButton, isSelected && styles.selectedButton]}
             onPress={() => onSelect(type.id)}
           >
             <Icon size={24} color={isSelected ? COLORS.primary : COLORS.textSecondary} />
             <Text style={[styles.typeLabel, isSelected && styles.selectedLabel]}>{type.label}</Text>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>

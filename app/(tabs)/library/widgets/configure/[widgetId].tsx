@@ -1,21 +1,20 @@
 import { ListSelector } from '@/src/components/widgets/ListSelector';
 import { WidgetTypeSelector } from '@/src/components/widgets/WidgetTypeSelector';
-import { COLORS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets, WidgetConfig } from '@/src/hooks/useWidgets';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Save } from 'lucide-react-native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SIZES = ['small', 'medium', 'large'] as const;
 
@@ -24,6 +23,7 @@ export default function ConfigureWidgetScreen() {
   const { user } = useAuth();
   const { widgets, addWidget, loading: widgetsLoading } = useWidgets(user?.uid);
   const router = useRouter();
+  const navigation = useNavigation();
 
   const [type, setType] = useState<WidgetConfig['type']>('upcoming-movies');
   const [size, setSize] = useState<WidgetConfig['size']>('medium');
@@ -31,6 +31,12 @@ export default function ConfigureWidgetScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const isNew = widgetId === 'new';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isNew ? 'New Widget' : 'Configure Widget',
+    });
+  }, [navigation, isNew]);
 
   useEffect(() => {
     if (!isNew && !widgetsLoading) {
@@ -58,8 +64,6 @@ export default function ConfigureWidgetScreen() {
           listId: type === 'watchlist' ? listId : undefined,
         });
       } else {
-        // Edit logic would go here, for now we just handle new
-        // Library updates for edit are similar to add
         Alert.alert(
           'Info',
           'Editing existing widgets is coming soon. For now, please delete and re-add.'
@@ -74,15 +78,7 @@ export default function ConfigureWidgetScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isNew ? 'New Widget' : 'Configure Widget'}</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Widget Type</Text>
         <WidgetTypeSelector selectedType={type} onSelect={setType} />
@@ -90,7 +86,7 @@ export default function ConfigureWidgetScreen() {
         <Text style={styles.sectionTitle}>Widget Size</Text>
         <View style={styles.sizeContainer}>
           {SIZES.map((s) => (
-            <TouchableOpacity
+            <Pressable
               key={s}
               style={[styles.sizeButton, size === s && styles.selectedSizeButton]}
               onPress={() => setSize(s)}
@@ -98,7 +94,7 @@ export default function ConfigureWidgetScreen() {
               <Text style={[styles.sizeText, size === s && styles.selectedSizeText]}>
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
 
@@ -118,22 +114,22 @@ export default function ConfigureWidgetScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
+        <Pressable
           style={[styles.saveButton, isSaving && styles.disabledButton]}
           onPress={handleSave}
           disabled={isSaving}
         >
           {isSaving ? (
-            <ActivityIndicator color="#000" />
+            <ActivityIndicator color={COLORS.white} />
           ) : (
             <>
-              <Save size={20} color="#000" />
+              <Save size={20} color={COLORS.white} />
               <Text style={styles.saveButtonText}>Save Configuration</Text>
             </>
           )}
-        </TouchableOpacity>
+        </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -142,44 +138,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
   scrollContent: {
-    padding: 20,
+    padding: SPACING.l,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
-    marginBottom: 12,
+    marginBottom: SPACING.m,
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   sizeContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 32,
+    gap: SPACING.m,
+    marginBottom: SPACING.xl,
   },
   sizeButton: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
@@ -190,43 +169,43 @@ const styles = StyleSheet.create({
   },
   sizeText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: FONT_SIZE.s,
   },
   selectedSizeText: {
     color: COLORS.primary,
     fontWeight: 'bold',
   },
   previewContainer: {
-    marginTop: 20,
-    padding: 16,
+    marginTop: SPACING.l,
+    padding: SPACING.m,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.m,
   },
   previewText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontSize: FONT_SIZE.s,
     lineHeight: 20,
   },
   footer: {
-    padding: 20,
+    padding: SPACING.l,
     borderTopWidth: 1,
     borderTopColor: COLORS.surfaceLight,
   },
   saveButton: {
     flexDirection: 'row',
     backgroundColor: COLORS.primary,
-    padding: 16,
-    borderRadius: 12,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.s,
   },
   disabledButton: {
     opacity: 0.5,
   },
   saveButtonText: {
-    color: '#000',
+    color: COLORS.white,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: FONT_SIZE.m,
   },
 });

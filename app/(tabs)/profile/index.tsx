@@ -10,16 +10,7 @@ import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import {
-  Check,
-  Crown,
-  Download,
-  Layout,
-  LogOut,
-  MessageCircle,
-  Star,
-  Trash2,
-} from 'lucide-react-native';
+import { Check, Crown, Download, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -551,16 +542,6 @@ export default function ProfileScreen() {
                 label="Support Development"
                 onPress={handleSupportDevelopment}
               /> */}
-              <ActionButton
-                icon={Layout}
-                label="Home Screen Widgets"
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/(tabs)/settings/widgets');
-                }}
-                isPremiumFeature
-                isPremium={isPremium}
-              />
               <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
               <ActionButton
                 icon={MessageCircle}

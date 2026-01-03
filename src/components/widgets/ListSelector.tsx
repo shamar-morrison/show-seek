@@ -1,16 +1,9 @@
-import { COLORS } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { Check } from 'lucide-react-native';
 import React from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface ListSelectorProps {
   selectedListId?: string;
@@ -39,14 +32,18 @@ export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
         {lists.map((list: UserList) => {
           const isSelected = selectedListId === list.id;
           return (
-            <TouchableOpacity
+            <Pressable
               key={list.id}
-              style={[styles.listButton, isSelected && styles.selectedButton]}
+              style={({ pressed }) => [
+                styles.listButton,
+                isSelected && styles.selectedButton,
+                pressed && { opacity: ACTIVE_OPACITY },
+              ]}
               onPress={() => onSelect(list.id)}
             >
               <Text style={[styles.listName, isSelected && styles.selectedText]}>{list.name}</Text>
               {isSelected && <Check size={16} color={COLORS.primary} />}
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </ScrollView>

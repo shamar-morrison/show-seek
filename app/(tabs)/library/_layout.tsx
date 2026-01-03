@@ -42,6 +42,9 @@ export default function LibraryStackLayout() {
         <Stack.Screen name="reminders" options={{ title: 'Reminders' }} />
         <Stack.Screen name="notes" options={{ title: 'Notes' }} />
 
+        {/* Widgets - has its own layout */}
+        <Stack.Screen name="widgets" options={{ headerShown: false }} />
+
         {/* Existing detail screens */}
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
         <Stack.Screen
