@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from '@/src/context/auth';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
-import { useWidgetUpdates } from '@/src/hooks/useWidgetUpdates';
+
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -65,9 +65,6 @@ function RootLayoutNav() {
 
   // Handle deep links
   useDeepLinking();
-
-  // Periodic widget updates
-  useWidgetUpdates();
 
   // Handle notification taps
   useEffect(() => {

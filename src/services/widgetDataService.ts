@@ -2,6 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
+import { writeToSharedPreferences } from './sharedPreferencesService';
 
 const WIDGET_CACHE_PREFIX = 'widget_data_';
 const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours
@@ -30,6 +31,10 @@ export async function getUpcomingMovies(limitCount: number = 5): Promise<WidgetM
     }));
 
     await cacheData(cacheKey, movies);
+
+    // Write to SharedPreferences for native widgets
+    await writeToSharedPreferences('upcoming_movies', movies);
+
     return movies;
   } catch (error) {
     console.error('Failed to fetch upcoming movies for widget:', error);
@@ -53,6 +58,10 @@ export async function getUpcomingTVShows(limitCount: number = 5): Promise<Widget
     }));
 
     await cacheData(cacheKey, shows);
+
+    // Write to SharedPreferences for native widgets
+    await writeToSharedPreferences('upcoming_tv', shows);
+
     return shows;
   } catch (error) {
     console.error('Failed to fetch upcoming TV shows for widget:', error);
@@ -95,10 +104,39 @@ export async function getUserWatchlist(
 
     const result = { items, listName };
     await cacheData(cacheKey, result);
+
+    // Write to SharedPreferences for native widgets
+    await writeToSharedPreferences('watchlist', items);
+
     return result;
   } catch (error) {
     console.error('Failed to fetch user watchlist for widget:', error);
     return { items: [], listName: 'Error' };
+  }
+}
+
+/**
+ * Sync all widget data to SharedPreferences for native widgets
+ */
+export async function syncAllWidgetData(userId?: string, listId?: string): Promise<void> {
+  try {
+    // Fetch and sync upcoming movies
+    const movies = await getUpcomingMovies(5);
+    await writeToSharedPreferences('upcoming_movies', movies);
+
+    // Fetch and sync upcoming TV shows
+    const tvShows = await getUpcomingTVShows(5);
+    await writeToSharedPreferences('upcoming_tv', tvShows);
+
+    // Sync watchlist if user is logged in
+    if (userId && listId) {
+      const watchlist = await getUserWatchlist(userId, listId, 5);
+      await writeToSharedPreferences('watchlist', watchlist.items);
+    }
+
+    console.log('[Widget] Data synced to SharedPreferences');
+  } catch (error) {
+    console.error('[Widget] Failed to sync data:', error);
   }
 }
 

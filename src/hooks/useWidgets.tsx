@@ -1,6 +1,7 @@
+import { syncAllWidgetData } from '@/src/services/widgetDataService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { requestWidgetUpdate } from 'react-native-android-widget';
+import { useEffect, useState } from 'react';
+import { AppState, NativeModules, Platform } from 'react-native';
 
 export interface WidgetConfig {
   id: string;
@@ -12,6 +13,9 @@ export interface WidgetConfig {
 }
 
 const WIDGETS_KEY = 'user_widgets';
+
+// Native module for triggering widget updates
+const WidgetUpdateModule = NativeModules.WidgetUpdate;
 
 export function useWidgets(userId?: string) {
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
@@ -26,6 +30,24 @@ export function useWidgets(userId?: string) {
     }
   }, [userId]);
 
+  // Sync widget data when app becomes active
+  useEffect(() => {
+    if (!userId) return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        syncWidgetData();
+      }
+    });
+
+    // Initial sync
+    syncWidgetData();
+
+    return () => {
+      subscription.remove();
+    };
+  }, [userId, widgets]);
+
   async function loadWidgets() {
     try {
       const stored = await AsyncStorage.getItem(`${WIDGETS_KEY}_${userId}`);
@@ -38,6 +60,23 @@ export function useWidgets(userId?: string) {
       console.error('Failed to load widgets:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function syncWidgetData() {
+    // Find a watchlist widget to get the listId
+    const watchlistWidget = widgets.find((w) => w.type === 'watchlist');
+    const listId = watchlistWidget?.listId;
+
+    await syncAllWidgetData(userId, listId);
+
+    // Trigger native widget update
+    if (Platform.OS === 'android' && WidgetUpdateModule) {
+      try {
+        await WidgetUpdateModule.updateAllWidgets();
+      } catch (error) {
+        console.log('Widget update module not available:', error);
+      }
     }
   }
 
@@ -55,16 +94,11 @@ export function useWidgets(userId?: string) {
     setWidgets(updatedWidgets);
     await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
 
-    // Store widget configuration for the task handler to access by widgetId
-    // Note: In real Android, widgetId is a number provided by the system.
-    // For our internal management, we use the string 'id'.
-    // The library mapping between system widgetId and our config will be handled in the task handler.
-    // However, when the user adds a widget to the home screen, the system assigns an ID.
-    // We need to map that ID to our configuration.
-    // For now, we'll store specific configs that the task handler can look up.
+    // Store widget configuration
     await AsyncStorage.setItem(`widget_config_${newWidget.id}`, JSON.stringify(newWidget));
 
-    await refreshWidget(newWidget);
+    // Sync data for the new widget
+    await syncWidgetData();
 
     return newWidget;
   }
@@ -78,30 +112,8 @@ export function useWidgets(userId?: string) {
     await AsyncStorage.removeItem(`widget_config_${widgetId}`);
   }
 
-  async function refreshWidget(widget: WidgetConfig) {
-    const widgetName =
-      widget.type === 'upcoming-movies'
-        ? 'UpcomingMoviesWidget'
-        : widget.type === 'upcoming-tv'
-          ? 'UpcomingTVWidget'
-          : 'WatchlistWidget';
-
-    try {
-      await requestWidgetUpdate({
-        widgetName,
-        renderWidget: (props) => {
-          return (<></>) as any;
-        },
-      });
-    } catch (error) {
-      console.error('Failed to update widget:', error);
-    }
-  }
-
   const refreshAllWidgets = async () => {
-    for (const widget of widgets) {
-      await refreshWidget(widget);
-    }
+    await syncWidgetData();
   };
 
   return {
@@ -109,7 +121,6 @@ export function useWidgets(userId?: string) {
     loading,
     addWidget,
     removeWidget,
-    refreshWidget,
     refreshAllWidgets,
   };
 }

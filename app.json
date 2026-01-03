@@ -70,37 +70,25 @@
       "expo-updates",
       "react-native-google-auth",
       [
-        "react-native-android-widget",
+        "@bittingz/expo-widgets",
         {
-          "widgets": [
-            {
-              "name": "UpcomingMoviesWidget",
-              "label": "Upcoming Movies",
-              "minWidth": "110dp",
-              "minHeight": "110dp",
-              "description": "Track upcoming movie releases",
-              "previewImage": "./assets/images/icon.png",
-              "updatePeriodMillis": 7200000
-            },
-            {
-              "name": "UpcomingTVWidget",
-              "label": "Upcoming TV Shows",
-              "minWidth": "110dp",
-              "minHeight": "110dp",
-              "description": "Track upcoming TV show premieres",
-              "previewImage": "./assets/images/icon.png",
-              "updatePeriodMillis": 7200000
-            },
-            {
-              "name": "WatchlistWidget",
-              "label": "My Watchlist",
-              "minWidth": "110dp",
-              "minHeight": "110dp",
-              "description": "Your personal watchlist items",
-              "previewImage": "./assets/images/icon.png",
-              "updatePeriodMillis": 7200000
-            }
-          ]
+          "android": {
+            "src": "./src/native-widgets/android",
+            "widgets": [
+              {
+                "name": "UpcomingMoviesWidgetProvider",
+                "resourceName": "@xml/upcoming_movies_widget_info"
+              },
+              {
+                "name": "UpcomingTVWidgetProvider",
+                "resourceName": "@xml/upcoming_tv_widget_info"
+              },
+              {
+                "name": "WatchlistWidgetProvider",
+                "resourceName": "@xml/watchlist_widget_info"
+              }
+            ]
+          }
         }
       ]
     ],
