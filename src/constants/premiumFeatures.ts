@@ -59,6 +59,13 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         title: 'Unlimited Items per List',
         description: 'No cap on items in each list',
       },
+      {
+        id: 'personal-notes',
+        icon: 'document-text-outline',
+        title: 'Personal Notes',
+        description: 'Add notes to movies and TV shows',
+        isNew: true,
+      },
     ],
   },
   {

@@ -49,20 +49,14 @@ export async function signInWithGoogle(): Promise<
     // Ensure GoogleAuth is configured
     await configureGoogleAuth();
 
-    console.log('[GoogleAuth] Starting sign-in...');
-
     // Perform Google sign-in
     const response = await GoogleAuth.signIn();
 
-    console.log('[GoogleAuth] Response type:', response.type);
-
     if (response.type === 'cancelled') {
-      console.log('[GoogleAuth] User cancelled sign-in');
       return { success: false, cancelled: true };
     }
 
     if (response.type === 'noSavedCredentialFound') {
-      console.log('[GoogleAuth] No saved credential found');
       return { success: false, error: 'No Google account found. Please try again.' };
     }
 
@@ -71,27 +65,15 @@ export async function signInWithGoogle(): Promise<
     const successResponse = response as { type: 'success'; data: { idToken?: string; user?: any } };
 
     // Now we know response.type === 'success' and response.data exists
-    console.log('[GoogleAuth] Response data:', JSON.stringify(successResponse.data, null, 2));
-
     if (!successResponse.data?.idToken) {
-      console.log(
-        '[GoogleAuth] No idToken in response. Available keys:',
-        Object.keys(successResponse.data || {})
-      );
       return { success: false, error: 'No authentication token received. Please try again.' };
     }
-
-    console.log('[GoogleAuth] Got idToken, creating Firebase credential...');
 
     // Create Firebase credential from Google ID token
     const credential = GoogleAuthProvider.credential(successResponse.data.idToken);
 
-    console.log('[GoogleAuth] Signing in to Firebase...');
-
     // Sign in to Firebase with the Google credential
     const userCredential = await signInWithCredential(auth, credential);
-
-    console.log('[GoogleAuth] Firebase sign-in successful! User:', userCredential.user.email);
 
     return { success: true, user: userCredential.user };
   } catch (error: any) {
