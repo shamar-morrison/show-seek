@@ -103,6 +103,9 @@ dependencies:
   react-native:
     specifier: 0.81.5
     version: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
+  react-native-android-widget:
+    specifier: ^0.17.2
+    version: 0.17.2(expo@54.0.25)(react-native@0.81.5)(react@19.1.0)
   react-native-gesture-handler:
     specifier: ~2.28.0
     version: 2.28.0(react-native@0.81.5)(react@19.1.0)
@@ -10641,6 +10644,21 @@ packages:
 
   /react-is@19.2.3:
     resolution: {integrity: sha512-qJNJfu81ByyabuG7hPFEbXqNcWSU3+eVus+KJs+0ncpGfMyYdvSmxiJxbWR65lYi1I+/0HBcliO029gc4F+PnA==}
+    dev: false
+
+  /react-native-android-widget@0.17.2(expo@54.0.25)(react-native@0.81.5)(react@19.1.0):
+    resolution: {integrity: sha512-GsSkpy3oTfekyX2gExxnVPB+qMy2M27vljWJoRkJfVz9XixZ0SDlo+C5mvyeNmtkE3KjMjucqDTbgheVmEmQnw==}
+    peerDependencies:
+      expo: '>=47.0.0'
+      react: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      expo:
+        optional: true
+    dependencies:
+      expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native@0.81.5)(react@19.1.0)
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
     dev: false
 
   /react-native-gesture-handler@2.28.0(react-native@0.81.5)(react@19.1.0):

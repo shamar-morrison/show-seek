@@ -22,6 +22,7 @@ interface PremiumState {
   restorePurchases: () => Promise<boolean>;
   resetTestPurchase: () => Promise<void>;
   price: string | null;
+  checkPremiumFeature: (featureName: string) => boolean;
 }
 
 interface ValidationResponse {
@@ -283,5 +284,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     restorePurchases,
     resetTestPurchase,
     price,
+    checkPremiumFeature: (featureName: string) => {
+      // For now, all premium features require isPremium to be true
+      // We can add more granular logic here later if needed
+      return isPremium;
+    },
   };
 });
