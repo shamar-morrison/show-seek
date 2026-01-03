@@ -60,6 +60,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const [pendingSelections, setPendingSelections] = useState<Record<string, boolean>>({});
     // Stable snapshot of membership at modal open time (not reactive)
     const initialMembershipRef = useRef<Record<string, boolean>>({});
+    // Flag to preserve state when temporarily dismissing for create list flow
+    const isTransitioningToCreateRef = useRef(false);
 
     useEffect(() => {
       if (operationError) {
@@ -96,9 +98,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     useImperativeHandle(ref, () => ({
       present: async () => {
-        // Capture a stable snapshot of membership at open time
         initialMembershipRef.current = { ...membership };
-        // Initialize pendingSelections from current membership
         setPendingSelections({ ...membership });
         setOperationError(null);
         setIsSaving(false);
@@ -110,6 +110,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }));
 
     const handleDismiss = useCallback(() => {
+      // Don't reset state if we're transitioning to the create list modal
+      if (isTransitioningToCreateRef.current) {
+        isTransitioningToCreateRef.current = false;
+        return;
+      }
       // Reset pending selections on dismiss (discard changes silently)
       setPendingSelections({});
       initialMembershipRef.current = {};
@@ -259,6 +264,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     };
 
     const handleCreateCustomListPress = async () => {
+      // Mark that we're transitioning to prevent state reset
+      isTransitioningToCreateRef.current = true;
       await sheetRef.current?.dismiss();
       await createListModalRef.current?.present();
     };
