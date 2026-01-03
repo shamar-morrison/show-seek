@@ -10,7 +10,7 @@ import com.facebook.react.uimanager.ViewManager
 class SharedDataPackage : ReactPackage {
 
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-        return listOf(SharedDataModule(reactContext))
+        return listOf(SharedDataModule(reactContext), WidgetUpdateModule(reactContext))
     }
 
     override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {
