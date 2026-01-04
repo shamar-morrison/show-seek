@@ -1,6 +1,6 @@
 import { syncAllWidgetData } from '@/src/services/widgetDataService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppState, NativeModules, Platform } from 'react-native';
 
 export interface WidgetConfig {
@@ -21,6 +21,21 @@ export function useWidgets(userId?: string) {
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadWidgets = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem(`${WIDGETS_KEY}_${userId}`);
+      if (stored) {
+        setWidgets(JSON.parse(stored));
+      } else {
+        setWidgets([]);
+      }
+    } catch (error) {
+      console.error('Failed to load widgets:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (userId) {
       loadWidgets();
@@ -28,7 +43,7 @@ export function useWidgets(userId?: string) {
       setWidgets([]);
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, loadWidgets]);
 
   // Sync widget data when app becomes active
   useEffect(() => {
@@ -47,21 +62,6 @@ export function useWidgets(userId?: string) {
       subscription.remove();
     };
   }, [userId, widgets]);
-
-  async function loadWidgets() {
-    try {
-      const stored = await AsyncStorage.getItem(`${WIDGETS_KEY}_${userId}`);
-      if (stored) {
-        setWidgets(JSON.parse(stored));
-      } else {
-        setWidgets([]);
-      }
-    } catch (error) {
-      console.error('Failed to load widgets:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function syncWidgetData() {
     // Find a watchlist widget to get the listId
@@ -132,11 +132,11 @@ export function useWidgets(userId?: string) {
     await syncWidgetData();
   }
 
-  const reloadWidgets = async () => {
+  const reloadWidgets = useCallback(async () => {
     // Force reload from storage
     setLoading(true);
     await loadWidgets();
-  };
+  }, [loadWidgets]);
 
   const refreshAllWidgets = async () => {
     await syncWidgetData();
