@@ -19,9 +19,17 @@ export function useWidgets(userId?: string) {
     widgetsRef.current = widgets;
   }, [widgets]);
 
+  const userIdRef = useRef(userId);
+
+  // Keep ref in sync
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
+
   const loadWidgets = useCallback(async () => {
+    const currentUserId = userIdRef.current;
     try {
-      const stored = await AsyncStorage.getItem(`${WIDGETS_KEY}_${userId}`);
+      const stored = await AsyncStorage.getItem(`${WIDGETS_KEY}_${currentUserId}`);
       if (stored) {
         setWidgets(JSON.parse(stored));
       } else {
@@ -32,7 +40,7 @@ export function useWidgets(userId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     if (userId) {
@@ -136,9 +144,9 @@ export function useWidgets(userId?: string) {
     await loadWidgets();
   }, [loadWidgets]);
 
-  const refreshAllWidgets = async () => {
-    await syncWidgetData(widgets);
-  };
+  const refreshAllWidgets = useCallback(async () => {
+    await syncWidgetData(widgetsRef.current);
+  }, []);
 
   return {
     widgets,
