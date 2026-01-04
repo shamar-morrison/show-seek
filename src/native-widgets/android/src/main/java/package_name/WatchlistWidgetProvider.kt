@@ -11,6 +11,7 @@ import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -34,9 +35,50 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
     ) {
         val layoutId = context.resources.getIdentifier("widget_watchlist", "layout", context.packageName)
         val views = RemoteViews(context.packageName, layoutId)
+
+        // Load data from SharedPreferences
+        val prefs = context.getSharedPreferences("showseek_widgets", Context.MODE_PRIVATE)
+        val watchlistJson = prefs.getString("watchlist", null)
         
-        // Set click intent to open app
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("showseek://"))
+        // Read widget config for size
+        val configJson = prefs.getString("widget_config", null)
+        val size = configJson?.let { 
+            try { JSONObject(it).optString("watchlist_size", "large") } catch (e: Exception) { "large" }
+        } ?: "large"
+        val maxItems = when(size) { "small" -> 1; "medium" -> 3; else -> 5 }
+        
+        // Parse watchlist data for listName and listId
+        var listName = "My Watchlist"
+        var listId = ""
+        var items: JSONArray? = null
+        
+        if (watchlistJson != null) {
+            try {
+                val watchlistData = JSONObject(watchlistJson)
+                listName = watchlistData.optString("listName", "My Watchlist")
+                listId = watchlistData.optString("listId", "")
+                items = watchlistData.optJSONArray("items")
+            } catch (e: Exception) {
+                // Fallback: treat as array for backwards compatibility
+                try {
+                    items = JSONArray(watchlistJson)
+                } catch (e2: Exception) {
+                    e2.printStackTrace()
+                }
+            }
+        }
+        
+        // Set dynamic title
+        val titleId = context.resources.getIdentifier("widget_title", "id", context.packageName)
+        views.setTextViewText(titleId, listName)
+        
+        // Set click intent to open list detail screen
+        val deepLink = if (listId.isNotEmpty()) {
+            "showseek://library/custom-list/$listId"
+        } else {
+            "showseek://library"
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink))
         val pendingIntent = PendingIntent.getActivity(
             context, 
             0, 
@@ -46,17 +88,11 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
         val containerId = context.resources.getIdentifier("widget_container", "id", context.packageName)
         views.setOnClickPendingIntent(containerId, pendingIntent)
 
-        // Load data from SharedPreferences
-        val prefs = context.getSharedPreferences("showseek_widgets", Context.MODE_PRIVATE)
-        val watchlistJson = prefs.getString("watchlist", null)
-
         val itemsContainerId = context.resources.getIdentifier("items_container", "id", context.packageName)
         val emptyTextId = context.resources.getIdentifier("empty_text", "id", context.packageName)
 
-        if (watchlistJson != null) {
-            try {
-                val items = JSONArray(watchlistJson)
-                val itemCount = minOf(items.length(), 3)
+        if (items != null && items.length() > 0) {
+            val itemCount = minOf(items.length(), maxItems)
 
                 if (itemCount > 0) {
                     views.setViewVisibility(itemsContainerId, View.VISIBLE)

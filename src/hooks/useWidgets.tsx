@@ -68,7 +68,7 @@ export function useWidgets(userId?: string) {
     const watchlistWidget = widgets.find((w) => w.type === 'watchlist');
     const listId = watchlistWidget?.listId;
 
-    await syncAllWidgetData(userId, listId);
+    await syncAllWidgetData(userId, listId, widgets);
 
     // Trigger native widget update
     if (Platform.OS === 'android' && WidgetUpdateModule) {

@@ -11,6 +11,7 @@ import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -36,7 +37,7 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, layoutId)
         
         // Set click intent to open app
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("showseek://"))
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("showseek://home"))
         val pendingIntent = PendingIntent.getActivity(
             context, 
             0, 
@@ -49,6 +50,13 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
         // Load data from SharedPreferences
         val prefs = context.getSharedPreferences("showseek_widgets", Context.MODE_PRIVATE)
         val moviesJson = prefs.getString("upcoming_movies", null)
+        
+        // Read widget config for size
+        val configJson = prefs.getString("widget_config", null)
+        val size = configJson?.let { 
+            try { JSONObject(it).optString("upcoming_movies_size", "large") } catch (e: Exception) { "large" }
+        } ?: "large"
+        val maxItems = when(size) { "small" -> 1; "medium" -> 3; else -> 5 }
 
         val itemsContainerId = context.resources.getIdentifier("items_container", "id", context.packageName)
         val emptyTextId = context.resources.getIdentifier("empty_text", "id", context.packageName)
@@ -56,7 +64,7 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
         if (moviesJson != null) {
             try {
                 val movies = JSONArray(moviesJson)
-                val itemCount = minOf(movies.length(), 3)
+                val itemCount = minOf(movies.length(), maxItems)
 
                 if (itemCount > 0) {
                     views.setViewVisibility(itemsContainerId, View.VISIBLE)

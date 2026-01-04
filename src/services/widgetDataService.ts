@@ -118,8 +118,28 @@ export async function getUserWatchlist(
 /**
  * Sync all widget data to SharedPreferences for native widgets
  */
-export async function syncAllWidgetData(userId?: string, listId?: string): Promise<void> {
+export async function syncAllWidgetData(
+  userId?: string,
+  listId?: string,
+  widgetConfigs?: Array<{ type: string; size: string; listId?: string }>
+): Promise<void> {
   try {
+    // Build widget config for native side
+    const config: Record<string, string> = {};
+    if (widgetConfigs) {
+      for (const widget of widgetConfigs) {
+        if (widget.type === 'upcoming-movies') {
+          config.upcoming_movies_size = widget.size;
+        } else if (widget.type === 'upcoming-tv') {
+          config.upcoming_tv_size = widget.size;
+        } else if (widget.type === 'watchlist') {
+          config.watchlist_size = widget.size;
+        }
+      }
+    }
+    // Write widget config (sizes) to SharedPreferences
+    await writeToSharedPreferences('widget_config', config);
+
     // Fetch and sync upcoming movies
     const movies = await getUpcomingMovies(5);
     await writeToSharedPreferences('upcoming_movies', movies);
@@ -131,7 +151,12 @@ export async function syncAllWidgetData(userId?: string, listId?: string): Promi
     // Sync watchlist if user is logged in
     if (userId && listId) {
       const watchlist = await getUserWatchlist(userId, listId, 5);
-      await writeToSharedPreferences('watchlist', watchlist.items);
+      // Include listName and listId for dynamic title and deep linking
+      await writeToSharedPreferences('watchlist', {
+        items: watchlist.items,
+        listName: watchlist.listName,
+        listId: listId,
+      });
     }
 
     console.log('[Widget] Data synced to SharedPreferences');
