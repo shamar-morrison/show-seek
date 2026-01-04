@@ -72,6 +72,29 @@
       "expo-updates",
       "react-native-google-auth",
       [
+        "expo-quick-actions",
+        {
+          "androidIcons": {
+            "search_icon": {
+              "foregroundImage": "./assets/images/shortcuts/search_icon.png",
+              "backgroundColor": "#000000"
+            },
+            "discover_icon": {
+              "foregroundImage": "./assets/images/shortcuts/discover_icon.png",
+              "backgroundColor": "#000000"
+            },
+            "library_icon": {
+              "foregroundImage": "./assets/images/shortcuts/library_icon.png",
+              "backgroundColor": "#000000"
+            },
+            "watchlist_icon": {
+              "foregroundImage": "./assets/images/shortcuts/watchlist_icon.png",
+              "backgroundColor": "#000000"
+            }
+          }
+        }
+      ],
+      [
         "@bittingz/expo-widgets",
         {
           "android": {

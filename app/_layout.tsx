@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/src/context/auth';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+import { useQuickActions } from '@/src/hooks/useQuickActions';
 
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -65,6 +66,7 @@ function RootLayoutNav() {
 
   // Handle deep links
   useDeepLinking();
+  useQuickActions();
 
   // Handle notification taps
   useEffect(() => {
