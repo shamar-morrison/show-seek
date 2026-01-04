@@ -111,7 +111,7 @@ export function useWidgets(userId?: string) {
     const updatedWidgets = widgets.filter((w) => w.id !== widgetId);
     setWidgets(updatedWidgets);
     await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
-    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
+
     await AsyncStorage.removeItem(`widget_config_${widgetId}`);
     // Sync data after removal
     await syncWidgetData(updatedWidgets);
