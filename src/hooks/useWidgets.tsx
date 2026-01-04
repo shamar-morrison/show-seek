@@ -58,13 +58,6 @@ export function useWidgets(userId?: string) {
     };
   }, [userId]);
 
-  // Sync on local changes
-  useEffect(() => {
-    if (userId) {
-      syncWidgetData(widgets);
-    }
-  }, [userId, widgets]);
-
   async function syncWidgetData(widgetsToSync: WidgetConfig[] = widgets) {
     // Find a watchlist widget to get the listId
     const watchlistWidget = widgetsToSync.find((w) => w.type === 'watchlist');
