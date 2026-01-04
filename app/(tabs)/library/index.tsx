@@ -8,6 +8,7 @@ import {
   Bell,
   Film,
   Heart,
+  Layout,
   ListPlus,
   Play,
   Settings2,
@@ -119,6 +120,17 @@ const SECTIONS: SectionData[] = [
       },
     ],
   },
+  {
+    title: 'WIDGETS',
+    data: [
+      {
+        id: 'widgets',
+        icon: Layout,
+        title: 'Home Screen Widgets',
+        route: '/(tabs)/library/widgets',
+      },
+    ],
+  },
 ];
 
 export default function LibraryScreen() {
@@ -134,7 +146,8 @@ export default function LibraryScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: NavigationItem }) => {
-      const isPremiumFeature = item.id === 'reminders' || item.id === 'notes';
+      const isPremiumFeature =
+        item.id === 'reminders' || item.id === 'notes' || item.id === 'widgets';
       const showPremiumBadge = isPremiumFeature && !isPremium;
 
       const handlePress = () => {

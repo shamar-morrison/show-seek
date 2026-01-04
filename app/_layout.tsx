@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/src/context/auth';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';

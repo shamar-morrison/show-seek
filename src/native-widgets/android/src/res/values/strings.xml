@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_upcoming_movies_description">Track upcoming movie releases</string>
+    <string name="widget_upcoming_tv_description">Track upcoming TV show premieres</string>
+    <string name="widget_watchlist_description">Your personal watchlist items</string>
+</resources>

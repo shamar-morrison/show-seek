@@ -66,9 +66,33 @@
           "color": "#E50914"
         }
       ],
+      "./withWidgetManifestFix.js",
+      "./withSharedDataPackage.js",
       "react-native-iap",
       "expo-updates",
-      "react-native-google-auth"
+      "react-native-google-auth",
+      [
+        "@bittingz/expo-widgets",
+        {
+          "android": {
+            "src": "./src/native-widgets/android",
+            "widgets": [
+              {
+                "name": "UpcomingMoviesWidgetProvider",
+                "resourceName": "@xml/upcoming_movies_widget_info"
+              },
+              {
+                "name": "UpcomingTVWidgetProvider",
+                "resourceName": "@xml/upcoming_tv_widget_info"
+              },
+              {
+                "name": "WatchlistWidgetProvider",
+                "resourceName": "@xml/watchlist_widget_info"
+              }
+            ]
+          }
+        }
+      ]
     ],
     "notification": {
       "icon": "./assets/images/icon.png",
