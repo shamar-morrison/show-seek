@@ -86,6 +86,8 @@ export function useWidgets(userId?: string) {
   async function addWidget(config: Omit<WidgetConfig, 'id' | 'createdAt' | 'userId'>) {
     if (!userId) return;
 
+    const oldWidgets = widgets;
+
     const newWidget: WidgetConfig = {
       ...config,
       userId,
@@ -95,27 +97,42 @@ export function useWidgets(userId?: string) {
 
     const updatedWidgets = [...widgets, newWidget];
     setWidgets(updatedWidgets);
-    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
 
-    // Store widget configuration
-    await AsyncStorage.setItem(`widget_config_${newWidget.id}`, JSON.stringify(newWidget));
+    try {
+      await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
 
-    // Sync data for the new widget
-    await syncWidgetData(updatedWidgets);
+      // Store widget configuration
+      await AsyncStorage.setItem(`widget_config_${newWidget.id}`, JSON.stringify(newWidget));
 
-    return newWidget;
+      // Sync data for the new widget
+      await syncWidgetData(updatedWidgets);
+
+      return newWidget;
+    } catch (error) {
+      console.error('Failed to add widget:', error);
+      setWidgets(oldWidgets);
+      throw error;
+    }
   }
 
   async function removeWidget(widgetId: string) {
     if (!userId) return;
 
+    const oldWidgets = widgets;
     const updatedWidgets = widgets.filter((w) => w.id !== widgetId);
     setWidgets(updatedWidgets);
-    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
 
-    await AsyncStorage.removeItem(`widget_config_${widgetId}`);
-    // Sync data after removal
-    await syncWidgetData(updatedWidgets);
+    try {
+      await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
+
+      await AsyncStorage.removeItem(`widget_config_${widgetId}`);
+      // Sync data after removal
+      await syncWidgetData(updatedWidgets);
+    } catch (error) {
+      console.error('Failed to remove widget:', error);
+      setWidgets(oldWidgets);
+      throw error;
+    }
   }
 
   async function updateWidget(
@@ -124,18 +141,26 @@ export function useWidgets(userId?: string) {
   ) {
     if (!userId) return;
 
+    const oldWidgets = widgets;
     const updatedWidgets = widgets.map((w) => (w.id === id ? { ...w, ...updates } : w));
     setWidgets(updatedWidgets);
-    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
 
-    // Store widget configuration
-    const updatedWidget = updatedWidgets.find((w) => w.id === id);
-    if (updatedWidget) {
-      await AsyncStorage.setItem(`widget_config_${id}`, JSON.stringify(updatedWidget));
+    try {
+      await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
+
+      // Store widget configuration
+      const updatedWidget = updatedWidgets.find((w) => w.id === id);
+      if (updatedWidget) {
+        await AsyncStorage.setItem(`widget_config_${id}`, JSON.stringify(updatedWidget));
+      }
+
+      // Sync data
+      await syncWidgetData(updatedWidgets);
+    } catch (error) {
+      console.error('Failed to update widget:', error);
+      setWidgets(oldWidgets);
+      throw error;
     }
-
-    // Sync data
-    await syncWidgetData(updatedWidgets);
   }
 
   const reloadWidgets = useCallback(async () => {
