@@ -10,6 +10,14 @@ import { writeToSharedPreferences } from './sharedPreferencesService';
 const WIDGET_CACHE_PREFIX = 'widget_data_';
 const CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours
 
+async function setWidgetLoadingState(key: string, isLoading: boolean) {
+  try {
+    await writeToSharedPreferences(`${key}_loading`, isLoading);
+  } catch (error) {
+    console.warn(`Failed to set widget loading state for ${key}:`, error);
+  }
+}
+
 export interface WidgetMediaItem {
   id: number;
   title: string;
@@ -57,9 +65,13 @@ export async function getUserWatchlist(
   listId: string,
   limitCount: number = 5
 ): Promise<{ items: WidgetMediaItem[]; listName: string }> {
+  await setWidgetLoadingState('watchlist', true);
   const cacheKey = `${WIDGET_CACHE_PREFIX}watchlist_${userId}_${listId}`;
   const cached = await getCachedData<{ items: WidgetMediaItem[]; listName: string }>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    await setWidgetLoadingState('watchlist', false);
+    return cached;
+  }
 
   try {
     const listRef = doc(db, 'users', userId, 'lists', listId);
@@ -74,6 +86,7 @@ export async function getUserWatchlist(
     const docSnap = await Promise.race([getDoc(listRef), timeoutPromise]).finally(() => cancel()); // Ensure we clear the timeout timer
 
     if (!docSnap.exists()) {
+      await setWidgetLoadingState('watchlist', false);
       return { items: [], listName: listId };
     }
 
@@ -103,8 +116,10 @@ export async function getUserWatchlist(
       listId,
     });
 
+    await setWidgetLoadingState('watchlist', false);
     return result;
   } catch (error) {
+    await setWidgetLoadingState('watchlist', false);
     const errorMessage = getFirestoreErrorMessage(error);
     console.error('Failed to fetch user watchlist for widget:', errorMessage, error);
     return { items: [], listName: 'Unavailable' };
@@ -191,8 +206,12 @@ async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
   limitCount: number
 ): Promise<WidgetMediaItem[]> {
   const cacheKey = `${WIDGET_CACHE_PREFIX}${keySuffix}`;
+  await setWidgetLoadingState(prefsKey, true);
   const cached = await getCachedData<WidgetMediaItem[]>(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    await setWidgetLoadingState(prefsKey, false);
+    return cached;
+  }
 
   try {
     // Create a timeout promise to race against the API call
@@ -206,8 +225,10 @@ async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
     // Write to SharedPreferences for native widgets
     await writeToSharedPreferences(prefsKey, items);
 
+    await setWidgetLoadingState(prefsKey, false);
     return items;
   } catch (error) {
+    await setWidgetLoadingState(prefsKey, false);
     console.error(`Failed to fetch ${keySuffix} for widget:`, error);
     return [];
   }
