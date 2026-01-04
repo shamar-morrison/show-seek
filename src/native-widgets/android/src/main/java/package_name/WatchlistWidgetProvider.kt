@@ -93,46 +93,36 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
 
         if (items != null && items.length() > 0) {
             val itemCount = minOf(items.length(), maxItems)
+            
+            views.setViewVisibility(itemsContainerId, View.VISIBLE)
+            views.setViewVisibility(emptyTextId, View.GONE)
 
-                if (itemCount > 0) {
-                    views.setViewVisibility(itemsContainerId, View.VISIBLE)
-                    views.setViewVisibility(emptyTextId, View.GONE)
+            val executor = Executors.newSingleThreadExecutor()
+            executor.execute {
+                for (i in 0 until itemCount) {
+                    val item = items.getJSONObject(i)
+                    val title = item.optString("title", "")
+                    val posterPath = item.optString("posterPath", "")
+                    
+                    val itemViewId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
+                    val itemTitleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
+                    val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
 
-                    val executor = Executors.newSingleThreadExecutor()
-                    executor.execute {
-                        for (i in 0 until itemCount) {
-                            val item = items.getJSONObject(i)
-                            val title = item.optString("title", "")
-                            val posterPath = item.optString("posterPath", "")
-                            
-                            val itemId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
-                            val titleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
-                            val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
+                    views.setViewVisibility(itemViewId, View.VISIBLE)
+                    views.setTextViewText(itemTitleId, title)
 
-                            views.setViewVisibility(itemId, View.VISIBLE)
-                            views.setTextViewText(titleId, title)
-
-                            if (posterPath.isNotEmpty()) {
-                                try {
-                                    val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
-                                    val bitmap = loadBitmap(imageUrl)
-                                    if (bitmap != null) {
-                                        views.setImageViewBitmap(posterId, bitmap)
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
+                    if (posterPath.isNotEmpty()) {
+                        try {
+                            val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
+                            val bitmap = loadBitmap(imageUrl)
+                            if (bitmap != null) {
+                                views.setImageViewBitmap(posterId, bitmap)
                             }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                        appWidgetManager.updateAppWidget(appWidgetId, views)
                     }
-                } else {
-                    showEmptyState(context, views)
-                    appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                showEmptyState(context, views)
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }
         } else {
@@ -146,7 +136,7 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
         val emptyTextId = context.resources.getIdentifier("empty_text", "id", context.packageName)
         views.setViewVisibility(itemsContainerId, View.GONE)
         views.setViewVisibility(emptyTextId, View.VISIBLE)
-        for (i in 1..3) {
+        for (i in 1..5) {
             val itemId = context.resources.getIdentifier("item_$i", "id", context.packageName)
             views.setViewVisibility(itemId, View.GONE)
         }
