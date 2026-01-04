@@ -1,7 +1,7 @@
 import { syncAllWidgetData } from '@/src/services/widgetDataService';
 import { WidgetConfig } from '@/src/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, NativeModules, Platform } from 'react-native';
 
 const WIDGETS_KEY = 'user_widgets';
@@ -12,6 +12,12 @@ const WidgetUpdateModule = NativeModules.WidgetUpdate;
 export function useWidgets(userId?: string) {
   const [widgets, setWidgets] = useState<WidgetConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const widgetsRef = useRef(widgets);
+
+  // Keep ref in sync
+  useEffect(() => {
+    widgetsRef.current = widgets;
+  }, [widgets]);
 
   const loadWidgets = useCallback(async () => {
     try {
@@ -43,24 +49,28 @@ export function useWidgets(userId?: string) {
 
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
-        syncWidgetData();
+        syncWidgetData(widgetsRef.current);
       }
     });
-
-    // Initial sync
-    syncWidgetData();
 
     return () => {
       subscription.remove();
     };
+  }, [userId]);
+
+  // Sync on local changes
+  useEffect(() => {
+    if (userId) {
+      syncWidgetData(widgets);
+    }
   }, [userId, widgets]);
 
-  async function syncWidgetData() {
+  async function syncWidgetData(widgetsToSync: WidgetConfig[] = widgets) {
     // Find a watchlist widget to get the listId
-    const watchlistWidget = widgets.find((w) => w.type === 'watchlist');
+    const watchlistWidget = widgetsToSync.find((w) => w.type === 'watchlist');
     const listId = watchlistWidget?.listId;
 
-    await syncAllWidgetData(userId, listId, widgets);
+    await syncAllWidgetData(userId, listId, widgetsToSync);
 
     // Trigger native widget update
     if (Platform.OS === 'android' && WidgetUpdateModule) {
@@ -90,7 +100,7 @@ export function useWidgets(userId?: string) {
     await AsyncStorage.setItem(`widget_config_${newWidget.id}`, JSON.stringify(newWidget));
 
     // Sync data for the new widget
-    await syncWidgetData();
+    await syncWidgetData(updatedWidgets);
 
     return newWidget;
   }
@@ -101,7 +111,10 @@ export function useWidgets(userId?: string) {
     const updatedWidgets = widgets.filter((w) => w.id !== widgetId);
     setWidgets(updatedWidgets);
     await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
+    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
     await AsyncStorage.removeItem(`widget_config_${widgetId}`);
+    // Sync data after removal
+    await syncWidgetData(updatedWidgets);
   }
 
   async function updateWidget(
@@ -121,7 +134,7 @@ export function useWidgets(userId?: string) {
     }
 
     // Sync data
-    await syncWidgetData();
+    await syncWidgetData(updatedWidgets);
   }
 
   const reloadWidgets = useCallback(async () => {
@@ -131,7 +144,7 @@ export function useWidgets(userId?: string) {
   }, [loadWidgets]);
 
   const refreshAllWidgets = async () => {
-    await syncWidgetData();
+    await syncWidgetData(widgets);
   };
 
   return {
