@@ -1,15 +1,21 @@
 const { withMainApplication } = require('@expo/config-plugins');
 
 const withSharedDataPackage = (config) => {
-  return withMainApplication(config, async (config) => {
+  return withMainApplication(config, (config) => {
     let mainApplication = config.modResults.contents;
 
     // Add import if not present
     if (!mainApplication.includes('import app.horizon.showseek.SharedDataPackage')) {
-      mainApplication = mainApplication.replace(
+      const newContent = mainApplication.replace(
         'import expo.modules.ReactNativeHostWrapper',
         'import expo.modules.ReactNativeHostWrapper\nimport app.horizon.showseek.SharedDataPackage'
       );
+      if (newContent === mainApplication) {
+        throw new Error(
+          'Failed to add SharedDataPackage import: could not find ReactNativeHostWrapper import'
+        );
+      }
+      mainApplication = newContent;
     }
 
     // Add package to getPackages() list
@@ -24,6 +30,10 @@ const withSharedDataPackage = (config) => {
         mainApplication = mainApplication.replace(
           'PackageList(this).packages.apply {',
           'PackageList(this).packages.apply {\n              add(SharedDataPackage())'
+        );
+      } else {
+        throw new Error(
+          'Failed to add SharedDataPackage: could not find package registration location'
         );
       }
     }
