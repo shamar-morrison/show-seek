@@ -157,11 +157,9 @@ export async function syncAllWidgetData(
 
     // Fetch and sync upcoming movies
     const movies = await getUpcomingMovies(5);
-    await writeToSharedPreferences('upcoming_movies', movies);
 
     // Fetch and sync upcoming TV shows
     const tvShows = await getUpcomingTVShows(5);
-    await writeToSharedPreferences('upcoming_tv', tvShows);
 
     // Sync watchlist if user is logged in
     if (userId && listId) {
