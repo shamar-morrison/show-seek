@@ -1,5 +1,6 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
 import { writeToSharedPreferences } from './sharedPreferencesService';
@@ -80,7 +81,15 @@ export async function getUserWatchlist(
 
   try {
     const listRef = doc(db, 'users', userId, 'lists', listId);
-    const docSnap = await getDoc(listRef);
+
+    // Create a timeout promise to race against the Firestore call
+    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
+      10_000,
+      'Firestore getDoc timed out'
+    );
+
+    // Race the getDoc call against the timeout
+    const docSnap = await Promise.race([getDoc(listRef), timeoutPromise]).finally(() => cancel()); // Ensure we clear the timeout timer
 
     if (!docSnap.exists()) {
       return { items: [], listName: listId };

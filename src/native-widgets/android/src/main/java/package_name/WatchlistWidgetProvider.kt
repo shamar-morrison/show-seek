@@ -99,32 +99,37 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
 
             val executor = Executors.newSingleThreadExecutor()
             executor.execute {
-                for (i in 0 until itemCount) {
-                    val item = items.getJSONObject(i)
-                    val title = item.optString("title", "")
-                    val posterPath = item.optString("posterPath", "")
-                    
-                    val itemViewId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
-                    val itemTitleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
-                    val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
+                try {
+                    for (i in 0 until itemCount) {
+                        val item = items.getJSONObject(i)
+                        val title = item.optString("title", "")
+                        val posterPath = item.optString("posterPath", "")
+                        
+                        val itemViewId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
+                        val itemTitleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
+                        val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
 
-                    views.setViewVisibility(itemViewId, View.VISIBLE)
-                    views.setTextViewText(itemTitleId, title)
+                        views.setViewVisibility(itemViewId, View.VISIBLE)
+                        views.setTextViewText(itemTitleId, title)
 
-                    if (posterPath.isNotEmpty()) {
-                        try {
-                            val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
-                            val bitmap = loadBitmap(imageUrl)
-                            if (bitmap != null) {
-                                views.setImageViewBitmap(posterId, bitmap)
+                        if (posterPath.isNotEmpty()) {
+                            try {
+                                val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
+                                val bitmap = loadBitmap(imageUrl)
+                                if (bitmap != null) {
+                                    views.setImageViewBitmap(posterId, bitmap)
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
                     }
+                    appWidgetManager.updateAppWidget(appWidgetId, views)
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                appWidgetManager.updateAppWidget(appWidgetId, views)
             }
+            executor.shutdown()
         } else {
             showEmptyState(context, views)
             appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -143,16 +148,22 @@ class WatchlistWidgetProvider : AppWidgetProvider() {
     }
 
     private fun loadBitmap(urlString: String): Bitmap? {
+        var connection: HttpURLConnection? = null
         return try {
             val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000 // 10 seconds
+            connection.readTimeout = 10000 // 10 seconds
             connection.doInput = true
             connection.connect()
-            val input = connection.inputStream
-            BitmapFactory.decodeStream(input)
+            connection.inputStream.use { input ->
+                BitmapFactory.decodeStream(input)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             null
+        } finally {
+            connection?.disconnect()
         }
     }
 }
