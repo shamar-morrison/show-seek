@@ -1,5 +1,6 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
@@ -123,8 +124,9 @@ export async function getUserWatchlist(
 
     return result;
   } catch (error) {
-    console.error('Failed to fetch user watchlist for widget:', error);
-    return { items: [], listName: 'Error' };
+    const errorMessage = getFirestoreErrorMessage(error);
+    console.error('Failed to fetch user watchlist for widget:', errorMessage, error);
+    return { items: [], listName: errorMessage };
   }
 }
 
