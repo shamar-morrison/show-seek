@@ -64,7 +64,25 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         icon: 'document-text-outline',
         title: 'Personal Notes',
         description: 'Add notes to movies and TV shows',
+      },
+    ],
+  },
+  {
+    id: 'home-screen',
+    title: 'Home Screen',
+    features: [
+      {
+        id: 'widgets',
+        icon: 'apps-outline',
+        title: 'Home Screen Widgets',
+        description: "Add widgets to your phone's home screen",
         isNew: true,
+      },
+      {
+        id: 'latest-trailers',
+        icon: 'videocam-outline',
+        title: 'Latest Trailers',
+        description: 'Add the latest TMDB trailers to your home screen in-app',
       },
     ],
   },
@@ -89,7 +107,6 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         icon: 'sync',
         title: 'Trakt Integration',
         description: 'Sync your watch history and lists',
-        isNew: true,
       },
       {
         id: 'export-data',
