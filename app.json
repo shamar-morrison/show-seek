@@ -115,8 +115,7 @@
             ]
           }
         }
-      ],
-      "expo-quick-actions"
+      ]
     ],
     "notification": {
       "icon": "./assets/images/icon.png",
