@@ -1,4 +1,4 @@
-import { tmdbApi } from '@/src/api/tmdb';
+import { Movie, PaginatedResponse, tmdbApi, TVShow } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
@@ -18,73 +18,37 @@ export interface WidgetMediaItem {
 }
 
 export async function getUpcomingMovies(limitCount: number = 5): Promise<WidgetMediaItem[]> {
-  const cacheKey = `${WIDGET_CACHE_PREFIX}upcoming_movies`;
-  const cached = await getCachedData<WidgetMediaItem[]>(cacheKey);
-  if (cached) return cached;
-
-  try {
-    // Create a timeout promise to race against the API call
-    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
-      10_000,
-      'TMDB getUpcomingMovies timed out'
-    );
-
-    const data = await Promise.race([tmdbApi.getUpcomingMovies(1), timeoutPromise]).finally(() =>
-      cancel()
-    );
-    const movies = data.results.slice(0, limitCount).map((m: any) => ({
+  return fetchAndCacheWidgetData<Movie>(
+    'upcoming_movies',
+    'upcoming_movies',
+    () => tmdbApi.getUpcomingMovies(1),
+    'TMDB getUpcomingMovies timed out',
+    (m) => ({
       id: m.id,
       title: m.title,
-      posterPath: m.poster_path,
+      posterPath: m.poster_path || '',
       releaseDate: m.release_date,
       mediaType: 'movie' as const,
-    }));
-
-    await cacheData(cacheKey, movies);
-
-    // Write to SharedPreferences for native widgets
-    await writeToSharedPreferences('upcoming_movies', movies);
-
-    return movies;
-  } catch (error) {
-    console.error('Failed to fetch upcoming movies for widget:', error);
-    return [];
-  }
+    }),
+    limitCount
+  );
 }
 
 export async function getUpcomingTVShows(limitCount: number = 5): Promise<WidgetMediaItem[]> {
-  const cacheKey = `${WIDGET_CACHE_PREFIX}upcoming_tv`;
-  const cached = await getCachedData<WidgetMediaItem[]>(cacheKey);
-  if (cached) return cached;
-
-  try {
-    // Create a timeout promise to race against the API call
-    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
-      10_000,
-      'TMDB getUpcomingTVShows timed out'
-    );
-
-    const data = await Promise.race([tmdbApi.getUpcomingTVShows(1), timeoutPromise]).finally(() =>
-      cancel()
-    );
-    const shows = data.results.slice(0, limitCount).map((s: any) => ({
+  return fetchAndCacheWidgetData<TVShow>(
+    'upcoming_tv',
+    'upcoming_tv',
+    () => tmdbApi.getUpcomingTVShows(1),
+    'TMDB getUpcomingTVShows timed out',
+    (s) => ({
       id: s.id,
       title: s.name,
-      posterPath: s.poster_path,
+      posterPath: s.poster_path || '',
       releaseDate: s.first_air_date,
       mediaType: 'tv' as const,
-    }));
-
-    await cacheData(cacheKey, shows);
-
-    // Write to SharedPreferences for native widgets
-    await writeToSharedPreferences('upcoming_tv', shows);
-
-    return shows;
-  } catch (error) {
-    console.error('Failed to fetch upcoming TV shows for widget:', error);
-    return [];
-  }
+    }),
+    limitCount
+  );
 }
 
 export async function getUserWatchlist(
@@ -142,7 +106,7 @@ export async function getUserWatchlist(
   } catch (error) {
     const errorMessage = getFirestoreErrorMessage(error);
     console.error('Failed to fetch user watchlist for widget:', errorMessage, error);
-    return { items: [], listName: errorMessage };
+    return { items: [], listName: 'Unavailable' };
   }
 }
 
@@ -172,20 +136,14 @@ export async function syncAllWidgetData(
     await writeToSharedPreferences('widget_config', config);
 
     // Fetch and sync upcoming movies
-    const movies = await getUpcomingMovies(5);
+    await getUpcomingMovies(5);
 
     // Fetch and sync upcoming TV shows
-    const tvShows = await getUpcomingTVShows(5);
+    await getUpcomingTVShows(5);
 
     // Sync watchlist if user is logged in
     if (userId && listId) {
-      const watchlist = await getUserWatchlist(userId, listId, 5);
-      // Include listName and listId for dynamic title and deep linking
-      await writeToSharedPreferences('watchlist', {
-        items: watchlist.items,
-        listName: watchlist.listName,
-        listId: listId,
-      });
+      await getUserWatchlist(userId, listId, 5);
     }
 
     console.log('[Widget] Data synced to SharedPreferences');
@@ -220,5 +178,36 @@ async function cacheData(key: string, data: any) {
     );
   } catch (error) {
     console.warn('Failed to cache widget data:', error);
+  }
+}
+
+async function fetchAndCacheWidgetData<T extends Movie | TVShow>(
+  keySuffix: string,
+  prefsKey: string,
+  apiCall: () => Promise<PaginatedResponse<T>>,
+  timeoutMsg: string,
+  mapper: (item: T) => WidgetMediaItem,
+  limitCount: number
+): Promise<WidgetMediaItem[]> {
+  const cacheKey = `${WIDGET_CACHE_PREFIX}${keySuffix}`;
+  const cached = await getCachedData<WidgetMediaItem[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    // Create a timeout promise to race against the API call
+    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(10_000, timeoutMsg);
+
+    const data = await Promise.race([apiCall(), timeoutPromise]).finally(() => cancel());
+    const items = data.results.slice(0, limitCount).map(mapper);
+
+    await cacheData(cacheKey, items);
+
+    // Write to SharedPreferences for native widgets
+    await writeToSharedPreferences(prefsKey, items);
+
+    return items;
+  } catch (error) {
+    console.error(`Failed to fetch ${keySuffix} for widget:`, error);
+    return [];
   }
 }
