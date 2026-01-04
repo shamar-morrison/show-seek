@@ -23,7 +23,15 @@ export async function getUpcomingMovies(limitCount: number = 5): Promise<WidgetM
   if (cached) return cached;
 
   try {
-    const data = await tmdbApi.getUpcomingMovies(1);
+    // Create a timeout promise to race against the API call
+    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
+      10_000,
+      'TMDB getUpcomingMovies timed out'
+    );
+
+    const data = await Promise.race([tmdbApi.getUpcomingMovies(1), timeoutPromise]).finally(() =>
+      cancel()
+    );
     const movies = data.results.slice(0, limitCount).map((m: any) => ({
       id: m.id,
       title: m.title,
@@ -50,7 +58,15 @@ export async function getUpcomingTVShows(limitCount: number = 5): Promise<Widget
   if (cached) return cached;
 
   try {
-    const data = await tmdbApi.getUpcomingTVShows(1);
+    // Create a timeout promise to race against the API call
+    const { promise: timeoutPromise, cancel } = createTimeoutWithCleanup(
+      10_000,
+      'TMDB getUpcomingTVShows timed out'
+    );
+
+    const data = await Promise.race([tmdbApi.getUpcomingTVShows(1), timeoutPromise]).finally(() =>
+      cancel()
+    );
     const shows = data.results.slice(0, limitCount).map((s: any) => ({
       id: s.id,
       title: s.name,
