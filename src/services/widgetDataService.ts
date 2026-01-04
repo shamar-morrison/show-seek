@@ -115,7 +115,11 @@ export async function getUserWatchlist(
     await cacheData(cacheKey, result);
 
     // Write to SharedPreferences for native widgets
-    await writeToSharedPreferences('watchlist', items);
+    await writeToSharedPreferences('watchlist', {
+      items,
+      listName,
+      listId,
+    });
 
     return result;
   } catch (error) {
