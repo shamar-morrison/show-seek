@@ -120,7 +120,7 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
         val emptyTextId = context.resources.getIdentifier("empty_text", "id", context.packageName)
         views.setViewVisibility(itemsContainerId, View.GONE)
         views.setViewVisibility(emptyTextId, View.VISIBLE)
-        for (i in 1..3) {
+        for (i in 1..5) {
             val itemId = context.resources.getIdentifier("item_$i", "id", context.packageName)
             views.setViewVisibility(itemId, View.GONE)
         }
