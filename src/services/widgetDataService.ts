@@ -4,6 +4,7 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, getDoc } from 'firebase/firestore';
+import { ListMediaItem } from './ListService';
 import { writeToSharedPreferences } from './sharedPreferencesService';
 
 const WIDGET_CACHE_PREFIX = 'widget_data_';
@@ -78,16 +79,16 @@ export async function getUserWatchlist(
 
     const data = docSnap.data();
     const listName = data.name || listId;
-    const itemsMap = data.items || {};
+    const itemsMap = (data.items || {}) as Record<string, ListMediaItem>;
 
     // Sort by addedAt descending and take the first few
     const items = Object.values(itemsMap)
-      .sort((a: any, b: any) => (b.addedAt || 0) - (a.addedAt || 0))
+      .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0))
       .slice(0, limitCount)
-      .map((item: any) => ({
+      .map((item) => ({
         id: item.id,
-        title: item.title || item.name,
-        posterPath: item.poster_path,
+        title: item.title || item.name || '',
+        posterPath: item.poster_path || '',
         releaseDate: item.release_date || item.first_air_date || '',
         mediaType: item.media_type,
       }));
