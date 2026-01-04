@@ -73,33 +73,38 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
                     // Load items in background
                     val executor = Executors.newSingleThreadExecutor()
                     executor.execute {
-                        for (i in 0 until itemCount) {
-                            val movie = movies.getJSONObject(i)
-                            val title = movie.optString("title", "")
-                            val posterPath = movie.optString("posterPath", "")
-                            
-                            val itemId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
-                            val titleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
-                            val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
+                        try {
+                            for (i in 0 until itemCount) {
+                                val movie = movies.getJSONObject(i)
+                                val title = movie.optString("title", "")
+                                val posterPath = movie.optString("posterPath", "")
+                                
+                                val itemId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
+                                val titleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
+                                val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
 
-                            views.setViewVisibility(itemId, View.VISIBLE)
-                            views.setTextViewText(titleId, title)
+                                views.setViewVisibility(itemId, View.VISIBLE)
+                                views.setTextViewText(titleId, title)
 
-                            // Load poster image
-                            if (posterPath.isNotEmpty()) {
-                                try {
-                                    val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
-                                    val bitmap = loadBitmap(imageUrl)
-                                    if (bitmap != null) {
-                                        views.setImageViewBitmap(posterId, bitmap)
+                                // Load poster image
+                                if (posterPath.isNotEmpty()) {
+                                    try {
+                                        val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
+                                        val bitmap = loadBitmap(imageUrl)
+                                        if (bitmap != null) {
+                                            views.setImageViewBitmap(posterId, bitmap)
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
                                     }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
                                 }
                             }
+                            appWidgetManager.updateAppWidget(appWidgetId, views)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                        appWidgetManager.updateAppWidget(appWidgetId, views)
                     }
+                    executor.shutdown()
                 } else {
                     showEmptyState(context, views)
                     appWidgetManager.updateAppWidget(appWidgetId, views)

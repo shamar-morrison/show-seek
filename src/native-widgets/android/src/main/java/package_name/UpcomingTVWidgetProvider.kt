@@ -72,32 +72,37 @@ class UpcomingTVWidgetProvider : AppWidgetProvider() {
 
                     val executor = Executors.newSingleThreadExecutor()
                     executor.execute {
-                        for (i in 0 until itemCount) {
-                            val show = shows.getJSONObject(i)
-                            val title = show.optString("title", "")
-                            val posterPath = show.optString("posterPath", "")
-                            
-                            val itemId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
-                            val titleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
-                            val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
+                        try {
+                            for (i in 0 until itemCount) {
+                                val show = shows.getJSONObject(i)
+                                val title = show.optString("title", "")
+                                val posterPath = show.optString("posterPath", "")
+                                
+                                val itemId = context.resources.getIdentifier("item_${i + 1}", "id", context.packageName)
+                                val titleId = context.resources.getIdentifier("title_${i + 1}", "id", context.packageName)
+                                val posterId = context.resources.getIdentifier("poster_${i + 1}", "id", context.packageName)
 
-                            views.setViewVisibility(itemId, View.VISIBLE)
-                            views.setTextViewText(titleId, title)
+                                views.setViewVisibility(itemId, View.VISIBLE)
+                                views.setTextViewText(titleId, title)
 
-                            if (posterPath.isNotEmpty()) {
-                                try {
-                                    val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
-                                    val bitmap = loadBitmap(imageUrl)
-                                    if (bitmap != null) {
-                                        views.setImageViewBitmap(posterId, bitmap)
+                                if (posterPath.isNotEmpty()) {
+                                    try {
+                                        val imageUrl = "https://image.tmdb.org/t/p/w185$posterPath"
+                                        val bitmap = loadBitmap(imageUrl)
+                                        if (bitmap != null) {
+                                            views.setImageViewBitmap(posterId, bitmap)
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
                                     }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
                                 }
                             }
+                            appWidgetManager.updateAppWidget(appWidgetId, views)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                        appWidgetManager.updateAppWidget(appWidgetId, views)
                     }
+                    executor.shutdown()
                 } else {
                     showEmptyState(context, views)
                     appWidgetManager.updateAppWidget(appWidgetId, views)
