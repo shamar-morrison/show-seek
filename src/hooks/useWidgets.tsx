@@ -1,16 +1,8 @@
 import { syncAllWidgetData } from '@/src/services/widgetDataService';
+import { WidgetConfig } from '@/src/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { AppState, NativeModules, Platform } from 'react-native';
-
-export interface WidgetConfig {
-  id: string;
-  type: 'upcoming-movies' | 'upcoming-tv' | 'watchlist';
-  listId?: string;
-  userId?: string;
-  size: 'small' | 'medium' | 'large';
-  createdAt: number;
-}
 
 const WIDGETS_KEY = 'user_widgets';
 

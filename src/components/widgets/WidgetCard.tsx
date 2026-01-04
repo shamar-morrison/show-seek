@@ -1,5 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
-import { WidgetConfig } from '@/src/hooks/useWidgets';
+import { WidgetConfig } from '@/src/types';
 import { Settings, Smartphone, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
