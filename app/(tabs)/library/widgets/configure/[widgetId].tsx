@@ -21,7 +21,7 @@ const SIZES = ['small', 'medium', 'large'] as const;
 export default function ConfigureWidgetScreen() {
   const { widgetId } = useLocalSearchParams<{ widgetId: string }>();
   const { user } = useAuth();
-  const { widgets, addWidget, loading: widgetsLoading } = useWidgets(user?.uid);
+  const { widgets, addWidget, updateWidget, loading: widgetsLoading } = useWidgets(user?.uid);
   const router = useRouter();
   const navigation = useNavigation();
 
@@ -64,10 +64,11 @@ export default function ConfigureWidgetScreen() {
           listId: type === 'watchlist' ? listId : undefined,
         });
       } else {
-        Alert.alert(
-          'Info',
-          'Editing existing widgets is coming soon. For now, please delete and re-add.'
-        );
+        await updateWidget(widgetId, {
+          type,
+          size,
+          listId: type === 'watchlist' ? listId : undefined,
+        });
       }
       router.back();
     } catch (error) {

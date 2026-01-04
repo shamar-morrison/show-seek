@@ -3,15 +3,21 @@ import { WidgetCard } from '@/src/components/widgets/WidgetCard';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
-import { useRouter } from 'expo-router';
-import { Info, Plus } from 'lucide-react-native';
-import React from 'react';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { Info, Plus, RefreshCw } from 'lucide-react-native';
+import React, { useCallback } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function WidgetsScreen() {
   const { user } = useAuth();
-  const { widgets, removeWidget } = useWidgets(user?.uid);
+  const { widgets, removeWidget, reloadWidgets } = useWidgets(user?.uid);
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadWidgets();
+    }, [reloadWidgets])
+  );
 
   const handleAddWidget = () => {
     router.push('/(tabs)/library/widgets/configure/new');
@@ -57,6 +63,22 @@ export default function WidgetsScreen() {
             <Text style={styles.emptyText}>No widgets configured yet.</Text>
           </View>
         )}
+
+        <Stack.Screen
+          options={{
+            headerRight: () => (
+              <Pressable
+                onPress={async () => {
+                  await reloadWidgets();
+                  Alert.alert('Success', 'Widgets refreshed successfully');
+                }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 8 })}
+              >
+                <RefreshCw size={20} color={COLORS.text} />
+              </Pressable>
+            ),
+          }}
+        />
 
         <Pressable style={styles.addButton} onPress={handleAddWidget}>
           <Plus size={20} color={COLORS.white} />

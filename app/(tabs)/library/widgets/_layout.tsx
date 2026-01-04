@@ -2,9 +2,7 @@ import { COLORS } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
 import { Stack, useRouter } from 'expo-router';
-import { RefreshCw } from 'lucide-react-native';
 import React from 'react';
-import { Pressable } from 'react-native';
 
 export default function WidgetsLayout() {
   const router = useRouter();
@@ -30,11 +28,6 @@ export default function WidgetsLayout() {
         name="index"
         options={{
           title: 'Home Screen Widgets',
-          headerRight: () => (
-            <Pressable onPress={refreshAllWidgets} style={{ padding: 8 }}>
-              <RefreshCw size={20} color={COLORS.text} />
-            </Pressable>
-          ),
         }}
       />
       <Stack.Screen

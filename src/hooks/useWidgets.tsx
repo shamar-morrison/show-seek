@@ -112,6 +112,32 @@ export function useWidgets(userId?: string) {
     await AsyncStorage.removeItem(`widget_config_${widgetId}`);
   }
 
+  async function updateWidget(
+    id: string,
+    updates: Partial<Omit<WidgetConfig, 'id' | 'createdAt' | 'userId'>>
+  ) {
+    if (!userId) return;
+
+    const updatedWidgets = widgets.map((w) => (w.id === id ? { ...w, ...updates } : w));
+    setWidgets(updatedWidgets);
+    await AsyncStorage.setItem(`${WIDGETS_KEY}_${userId}`, JSON.stringify(updatedWidgets));
+
+    // Store widget configuration
+    const updatedWidget = updatedWidgets.find((w) => w.id === id);
+    if (updatedWidget) {
+      await AsyncStorage.setItem(`widget_config_${id}`, JSON.stringify(updatedWidget));
+    }
+
+    // Sync data
+    await syncWidgetData();
+  }
+
+  const reloadWidgets = async () => {
+    // Force reload from storage
+    setLoading(true);
+    await loadWidgets();
+  };
+
   const refreshAllWidgets = async () => {
     await syncWidgetData();
   };
@@ -120,7 +146,9 @@ export function useWidgets(userId?: string) {
     widgets,
     loading,
     addWidget,
+    updateWidget,
     removeWidget,
     refreshAllWidgets,
+    reloadWidgets,
   };
 }
