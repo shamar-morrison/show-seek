@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
@@ -8,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -24,7 +25,6 @@ export default function CollectionScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const collectionId = Number(id);
-  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
 
   const collectionQuery = useQuery({
@@ -115,21 +115,11 @@ export default function CollectionScreen() {
           <Text style={styles.title}>{collection.name}</Text>
 
           {collection.overview && (
-            <>
-              <Text style={styles.overview} numberOfLines={overviewExpanded ? undefined : 4}>
-                {collection.overview}
-              </Text>
-              {collection.overview.length > 200 && (
-                <TouchableOpacity
-                  onPress={() => setOverviewExpanded(!overviewExpanded)}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <Text style={styles.readMore}>
-                    {overviewExpanded ? 'Read less' : 'Read more'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
+            <ExpandableText
+              text={collection.overview}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
+            />
           )}
 
           <Text style={styles.sectionTitle}>
