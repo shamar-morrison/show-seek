@@ -127,16 +127,22 @@ class UpcomingMoviesWidgetProvider : AppWidgetProvider() {
     }
 
     private fun loadBitmap(urlString: String): Bitmap? {
+        var connection: HttpURLConnection? = null
         return try {
             val url = URL(urlString)
-            val connection = url.openConnection() as HttpURLConnection
+            connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000 // 10 seconds
+            connection.readTimeout = 10000 // 10 seconds
             connection.doInput = true
             connection.connect()
-            val input = connection.inputStream
-            BitmapFactory.decodeStream(input)
-        } catch (e: Exception) {
+            connection.inputStream.use { input ->
+                BitmapFactory.decodeStream(input)
+            }
+        } catch (e: java.io.IOException) {
             e.printStackTrace()
             null
+        } finally {
+            connection?.disconnect()
         }
     }
 }
