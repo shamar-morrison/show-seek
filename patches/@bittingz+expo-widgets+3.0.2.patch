@@ -1,0 +1,31 @@
+diff --git a/plugin/build/android/withModule.js b/plugin/build/android/withModule.js
+index ce45081..7c4137c 100644
+--- a/plugin/build/android/withModule.js
++++ b/plugin/build/android/withModule.js
+@@ -25,15 +25,17 @@ const withModule = (config, options) => {
+             const moduleSourcePath = path_1.default.join(widgetFolderPath, 'src/main/java/package_name/Module.kt');
+             logger_1.Logging.logger.debug('moduleSourcePath: ', moduleSourcePath);
+             const moduleDestinationPath = path_1.default.join(projectRoot, 'android/app/src/main/java', packageNameAsPath, 'Module.kt');
+-            if (!fs_extra_1.default.existsSync(moduleSourcePath)) {
+-                logger_1.Logging.logger.debug('No module file found. Adding template...');
+-                const contents = (0, module_template_1.getTemplate)(packageName);
+-                logger_1.Logging.logger.debug('Writing contents');
+-                fs_extra_1.default.writeFileSync(moduleDestinationPath, contents);
+-            }
+-            else {
+-                fs_extra_1.default.copyFileSync(moduleSourcePath, moduleDestinationPath);
+-            }
++            // PATCH: Commented out to fix duplicate ExpoWidgetsModule class error
++            // See: https://github.com/mike-stewart-dev/expo-widgets/issues/60
++            // if (!fs_extra_1.default.existsSync(moduleSourcePath)) {
++            //     logger_1.Logging.logger.debug('No module file found. Adding template...');
++            //     const contents = (0, module_template_1.getTemplate)(packageName);
++            //     logger_1.Logging.logger.debug('Writing contents');
++            //     fs_extra_1.default.writeFileSync(moduleDestinationPath, contents);
++            // }
++            // else {
++            //     fs_extra_1.default.copyFileSync(moduleSourcePath, moduleDestinationPath);
++            // }
+             return newConfig;
+         }
+     ]);
