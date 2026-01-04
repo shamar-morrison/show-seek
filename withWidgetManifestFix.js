@@ -7,13 +7,15 @@ const withWidgetManifestFix = (config) => {
 
     if (mainApplication.receiver) {
       mainApplication.receiver.forEach((receiver) => {
-        if (
-          receiver.$ &&
-          (receiver.$['android:name'].includes('UpcomingMoviesWidgetProvider') ||
-            receiver.$['android:name'].includes('UpcomingTVWidgetProvider') ||
-            receiver.$['android:name'].includes('WatchlistWidgetProvider'))
-        ) {
-          receiver.$['android:exported'] = 'true';
+        if (receiver.$ && receiver.$['android:name']) {
+          const name = receiver.$['android:name'];
+          if (
+            name.endsWith('UpcomingMoviesWidgetProvider') ||
+            name.endsWith('UpcomingTVWidgetProvider') ||
+            name.endsWith('WatchlistWidgetProvider')
+          ) {
+            receiver.$['android:exported'] = 'true';
+          }
         }
       });
     }
