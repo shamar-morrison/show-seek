@@ -9,6 +9,7 @@ import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 
 import { initializeReminderSync } from '@/src/utils/reminderSync';
+import WebPromoModal from '@/src/components/WebPromoModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -134,6 +135,7 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
+      <WebPromoModal />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.background },

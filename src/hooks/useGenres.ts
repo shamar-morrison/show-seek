@@ -23,10 +23,13 @@ export function useAllGenres() {
   const movieGenres = useGenres('movie');
   const tvGenres = useGenres('tv');
 
-  const allGenres = useMemo(() => ({
-    ...(movieGenres.data || {}),
-    ...(tvGenres.data || {}),
-  }), [movieGenres.data, tvGenres.data]);
+  const allGenres = useMemo(
+    () => ({
+      ...(movieGenres.data || {}),
+      ...(tvGenres.data || {}),
+    }),
+    [movieGenres.data, tvGenres.data]
+  );
 
   return {
     data: allGenres,
