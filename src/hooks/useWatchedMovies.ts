@@ -1,7 +1,7 @@
 import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { WatchedMovieData, WatchInstance } from '@/src/types/watchedMovies';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { WatchInstance } from '@/src/types/watchedMovies';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   doc,
@@ -11,26 +11,52 @@ import {
   Timestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { auth } from '../firebase/config';
 
 /**
- * Hook to subscribe to a movie's watch history with real-time updates
+ * Fetch watch instances for a movie (one-time fetch for initial data)
  */
-export const useWatchedMovies = (movieId: number): WatchedMovieData => {
+const fetchWatchInstances = async (userId: string, movieId: number): Promise<WatchInstance[]> => {
+  const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
+  const snapshot = await getDocs(watchesRef);
+
+  const watchInstances: WatchInstance[] = [];
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    watchInstances.push({
+      id: doc.id,
+      watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
+      movieId: Number(data.movieId),
+    });
+  });
+
+  // Sort by most recent first
+  return watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
+};
+
+/**
+ * Hook to get a movie's watch history with React Query caching + real-time updates
+ * - Uses React Query for caching (no loading on repeated visits)
+ * - Sets up Firestore listener for real-time updates when data changes
+ */
+export const useWatchedMovies = (movieId: number) => {
   const userId = auth.currentUser?.uid;
-  const [instances, setInstances] = useState<WatchInstance[]>([]);
-  const [isLoading, setIsLoading] = useState(!!userId);
+  const queryClient = useQueryClient();
+  const queryKey = ['watchedMovies', userId, movieId];
 
+  // Use React Query for caching
+  const query = useQuery({
+    queryKey,
+    queryFn: () => fetchWatchInstances(userId!, movieId),
+    enabled: !!userId && !!movieId,
+    staleTime: Infinity, // Never consider stale - we update via listener
+    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+  });
+
+  // Set up real-time listener for updates (but data loads from cache first)
   useEffect(() => {
-    setInstances([]);
-
-    if (!userId || !movieId) {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
+    if (!userId || !movieId) return;
 
     const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
 
@@ -49,18 +75,19 @@ export const useWatchedMovies = (movieId: number): WatchedMovieData => {
 
         // Sort by most recent first
         watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
-        setInstances(watchInstances);
-        setIsLoading(false);
+
+        // Update cache directly (no refetch needed)
+        queryClient.setQueryData(queryKey, watchInstances);
       },
       (error) => {
         console.error('[useWatchedMovies] Subscription error:', error);
-        setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [userId, movieId]);
+  }, [userId, movieId, queryClient]);
 
+  const instances = query.data ?? [];
   const count = instances.length;
   const lastWatchedAt = count > 0 ? instances[0].watchedAt : null;
 
@@ -68,7 +95,7 @@ export const useWatchedMovies = (movieId: number): WatchedMovieData => {
     instances,
     count,
     lastWatchedAt,
-    isLoading,
+    isLoading: query.isLoading,
   };
 };
 
@@ -77,16 +104,20 @@ export const useWatchedMovies = (movieId: number): WatchedMovieData => {
  */
 export const useAddWatch = (movieId: number) => {
   const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationKey: ['addWatch', movieId],
     mutationFn: async (watchedAt: Date) => {
-      const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error('Please sign in to continue');
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('Please sign in to continue');
 
       // Generate a unique ID using timestamp + random suffix
       const watchId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      const watchRef = doc(db, `users/${userId}/watched_movies/${movieId}/watches/${watchId}`);
+      const watchRef = doc(
+        db,
+        `users/${currentUserId}/watched_movies/${movieId}/watches/${watchId}`
+      );
 
       await setDoc(watchRef, {
         watchedAt: Timestamp.fromDate(watchedAt),
@@ -95,14 +126,35 @@ export const useAddWatch = (movieId: number) => {
 
       return { id: watchId, watchedAt, movieId };
     },
-    onError: (error) => {
+    // Optimistic update for instant UI feedback
+    onMutate: async (watchedAt) => {
+      const queryKey = ['watchedMovies', userId, movieId];
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
+
+      // Optimistically add the new watch
+      const optimisticWatch: WatchInstance = {
+        id: `temp_${Date.now()}`,
+        watchedAt,
+        movieId,
+      };
+
+      queryClient.setQueryData<WatchInstance[]>(queryKey, (old) => {
+        const newData = [optimisticWatch, ...(old ?? [])];
+        return newData.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
+      });
+
+      return { previousData };
+    },
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+      }
       const message = getFirestoreErrorMessage(error);
       console.error('[useAddWatch] Error:', error);
       throw new Error(message);
-    },
-    onSuccess: () => {
-      // Invalidate any related queries if needed
-      queryClient.invalidateQueries({ queryKey: ['watchedMovies', movieId] });
     },
   });
 };
@@ -112,14 +164,15 @@ export const useAddWatch = (movieId: number) => {
  */
 export const useClearWatches = (movieId: number) => {
   const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationKey: ['clearWatches', movieId],
     mutationFn: async () => {
-      const userId = auth.currentUser?.uid;
-      if (!userId) throw new Error('Please sign in to continue');
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('Please sign in to continue');
 
-      const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
+      const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
       const snapshot = await getDocs(watchesRef);
 
       if (snapshot.empty) return;
@@ -139,13 +192,26 @@ export const useClearWatches = (movieId: number) => {
         await batch.commit();
       }
     },
-    onError: (error) => {
+    // Optimistic update
+    onMutate: async () => {
+      const queryKey = ['watchedMovies', userId, movieId];
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
+
+      // Optimistically clear all watches
+      queryClient.setQueryData<WatchInstance[]>(queryKey, []);
+
+      return { previousData };
+    },
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+      }
       const message = getFirestoreErrorMessage(error);
       console.error('[useClearWatches] Error:', error);
       throw new Error(message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['watchedMovies', movieId] });
     },
   });
 };
