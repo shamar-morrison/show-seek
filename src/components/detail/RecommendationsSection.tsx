@@ -137,13 +137,14 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     return null;
   },
   (prevProps, nextProps) => {
-    // Custom comparison: check items array length, loading states, and shouldLoad
+    // Custom comparison: check items array length, loading states, shouldLoad, and mediaType
     return (
       prevProps.isLoading === nextProps.isLoading &&
       prevProps.isError === nextProps.isError &&
       prevProps.shouldLoad === nextProps.shouldLoad &&
       prevProps.items.length === nextProps.items.length &&
-      (prevProps.items.length === 0 || prevProps.items[0]?.id === nextProps.items[0]?.id)
+      (prevProps.items.length === 0 || prevProps.items[0]?.id === nextProps.items[0]?.id) &&
+      prevProps.mediaType === nextProps.mediaType
     );
   }
 );

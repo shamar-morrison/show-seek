@@ -90,11 +90,12 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Custom comparison: check array length and first item ID
+    // Custom comparison: check array length, first item ID, and mediaType
     return (
       prevProps.items.length === nextProps.items.length &&
       (prevProps.items.length === 0 || prevProps.items[0]?.id === nextProps.items[0]?.id) &&
-      prevProps.title === nextProps.title
+      prevProps.title === nextProps.title &&
+      prevProps.mediaType === nextProps.mediaType
     );
   }
 );
