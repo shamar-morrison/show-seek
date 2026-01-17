@@ -407,7 +407,8 @@ export default function ProfileScreen() {
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>Auto-add to Already Watched</Text>
                       <Text style={styles.preferenceSubtitle}>
-                        Automatically add movies to your Already Watched list when you rate them
+                        Automatically add movies to your Already Watched list when you rate or mark
+                        them as watched
                       </Text>
                     </View>
                     {preferencesLoading ? (

@@ -304,7 +304,35 @@ export default function MovieDetailScreen() {
 
   // Handle marking the movie as watched with a specific date
   const handleMarkAsWatched = async (date: Date) => {
+    const isFirstWatch = watchCount === 0;
     await addWatchMutation.mutateAsync(date);
+
+    // Auto-add to "Already Watched" list on first watch
+    if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
+      const isNotInAlreadyWatched = !membership['already-watched'];
+
+      if (isNotInAlreadyWatched) {
+        try {
+          const { listService } = await import('../services/ListService');
+          await listService.addToList(
+            'already-watched',
+            {
+              id: movieId,
+              title: movie.title,
+              poster_path: movie.poster_path,
+              media_type: 'movie',
+              vote_average: movie.vote_average,
+              release_date: movie.release_date,
+              genre_ids: movie.genres?.map((g) => g.id),
+            },
+            'Already Watched'
+          );
+          console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+        } catch (autoAddError) {
+          console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
+        }
+      }
+    }
   };
 
   // Handle clearing all watch history
@@ -314,21 +342,50 @@ export default function MovieDetailScreen() {
 
   // Handle button press - either show modal or quick mark based on preference
   const handleWatchedButtonPress = () => {
-    requireAuth(() => {
+    requireAuth(async () => {
       if (preferences?.quickMarkAsWatched) {
         // Quick mark: save immediately with current time
         setIsSavingWatch(true);
-        addWatchMutation
-          .mutateAsync(new Date())
-          .then(() => {
-            toastRef.current?.show('Marked as watched');
-          })
-          .catch((error) => {
-            toastRef.current?.show(error instanceof Error ? error.message : 'Failed to save');
-          })
-          .finally(() => {
-            setIsSavingWatch(false);
-          });
+        try {
+          const isFirstWatch = watchCount === 0;
+          await addWatchMutation.mutateAsync(new Date());
+
+          // Auto-add to "Already Watched" list on first watch
+          if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
+            const isNotInAlreadyWatched = !membership['already-watched'];
+
+            if (isNotInAlreadyWatched) {
+              try {
+                const { listService } = await import('../services/ListService');
+                await listService.addToList(
+                  'already-watched',
+                  {
+                    id: movieId,
+                    title: movie.title,
+                    poster_path: movie.poster_path,
+                    media_type: 'movie',
+                    vote_average: movie.vote_average,
+                    release_date: movie.release_date,
+                    genre_ids: movie.genres?.map((g) => g.id),
+                  },
+                  'Already Watched'
+                );
+                console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+              } catch (autoAddError) {
+                console.error(
+                  '[MovieDetailScreen] Auto-add to Already Watched failed:',
+                  autoAddError
+                );
+              }
+            }
+          }
+
+          toastRef.current?.show('Marked as watched');
+        } catch (error) {
+          toastRef.current?.show(error instanceof Error ? error.message : 'Failed to save');
+        } finally {
+          setIsSavingWatch(false);
+        }
       } else {
         // Show modal for date selection
         setWatchedModalVisible(true);

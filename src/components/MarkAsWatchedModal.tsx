@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -54,8 +55,19 @@ export default function MarkAsWatchedModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const parsedReleaseDate = releaseDate ? new Date(releaseDate) : null;
-  const hasValidReleaseDate = parsedReleaseDate && !isNaN(parsedReleaseDate.getTime());
+  // Parse release date using timezone-safe utility
+  let parsedReleaseDate: Date | null = null;
+  let hasValidReleaseDate = false;
+
+  if (releaseDate) {
+    try {
+      parsedReleaseDate = parseTmdbDate(releaseDate);
+      hasValidReleaseDate = true;
+    } catch {
+      // Invalid date format
+      hasValidReleaseDate = false;
+    }
+  }
 
   const handleRightNow = async () => {
     try {
@@ -145,8 +157,10 @@ export default function MarkAsWatchedModal({
     );
   };
 
-  const formatReleaseDate = (date: Date): string => {
-    return date.toLocaleDateString(undefined, {
+  // Format release date for display using timezone-safe utility
+  const getFormattedReleaseDate = (): string => {
+    if (!releaseDate) return '';
+    return formatTmdbDate(releaseDate, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -209,9 +223,7 @@ export default function MarkAsWatchedModal({
                   </View>
                   <View style={styles.optionContent}>
                     <Text style={styles.optionTitle}>Release Date</Text>
-                    <Text style={styles.optionDescription}>
-                      {formatReleaseDate(parsedReleaseDate!)}
-                    </Text>
+                    <Text style={styles.optionDescription}>{getFormattedReleaseDate()}</Text>
                   </View>
                 </Pressable>
               )}
