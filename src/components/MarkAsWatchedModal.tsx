@@ -1,7 +1,10 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePremium } from '@/src/context/PremiumContext';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { router } from 'expo-router';
 import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -51,6 +54,7 @@ export default function MarkAsWatchedModal({
   onClearAll,
   onShowToast,
 }: MarkAsWatchedModalProps) {
+  const { isPremium } = usePremium();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -97,6 +101,13 @@ export default function MarkAsWatchedModal({
   const handleReleaseDate = async () => {
     if (!parsedReleaseDate) return;
 
+    // Check premium status for date selection
+    if (!isPremium) {
+      onClose();
+      router.push('/premium');
+      return;
+    }
+
     try {
       setIsLoading(true);
       await onMarkAsWatched(parsedReleaseDate);
@@ -110,6 +121,12 @@ export default function MarkAsWatchedModal({
   };
 
   const handleChooseDate = () => {
+    // Check premium status for date selection
+    if (!isPremium) {
+      onClose();
+      router.push('/premium');
+      return;
+    }
     setSelectedDate(new Date());
     setShowDatePicker(true);
   };
@@ -234,7 +251,10 @@ export default function MarkAsWatchedModal({
                     <Calendar size={20} color={COLORS.primary} />
                   </View>
                   <View style={styles.optionContent}>
-                    <Text style={styles.optionTitle}>Release Date</Text>
+                    <View style={styles.optionTitleRow}>
+                      <Text style={styles.optionTitle}>Release Date</Text>
+                      {!isPremium && <PremiumBadge />}
+                    </View>
                     <Text style={styles.optionDescription}>{getFormattedReleaseDate()}</Text>
                   </View>
                 </Pressable>
@@ -250,7 +270,10 @@ export default function MarkAsWatchedModal({
                   <Calendar size={20} color={COLORS.primary} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>Choose a date</Text>
+                  <View style={styles.optionTitleRow}>
+                    <Text style={styles.optionTitle}>Choose a date</Text>
+                    {!isPremium && <PremiumBadge />}
+                  </View>
                   <Text style={styles.optionDescription}>Select from calendar</Text>
                 </View>
               </Pressable>
@@ -389,6 +412,11 @@ const styles = StyleSheet.create({
   },
   optionContent: {
     flex: 1,
+  },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
   },
   optionTitle: {
     fontSize: FONT_SIZE.m,
