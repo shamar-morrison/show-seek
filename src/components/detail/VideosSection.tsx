@@ -1,12 +1,41 @@
+import { type Video } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
-import React, { memo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import React, { memo, useCallback } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { VideosSectionProps } from './types';
 
 export const VideosSection = memo<VideosSectionProps>(
   ({ videos, onVideoPress, style }) => {
+    // Hook must be called unconditionally (before any early returns)
+    const renderItem = useCallback(
+      ({ item }: { item: Video }) => (
+        <TouchableOpacity
+          style={detailStyles.videoCard}
+          onPress={() => onVideoPress(item)}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <MediaImage
+            source={{
+              uri:
+                item.site === 'YouTube'
+                  ? `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`
+                  : null,
+            }}
+            style={detailStyles.videoThumbnail}
+            contentFit="cover"
+          />
+          <Text style={detailStyles.videoTitle} numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text style={detailStyles.videoType}>{item.type}</Text>
+        </TouchableOpacity>
+      ),
+      [onVideoPress]
+    );
+
     if (videos.length === 0) {
       return null;
     }
@@ -14,35 +43,17 @@ export const VideosSection = memo<VideosSectionProps>(
     return (
       <View style={style}>
         <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Videos</Text>
-        <ScrollView
+        <FlashList
           horizontal
+          data={videos}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
           showsHorizontalScrollIndicator={false}
-          style={detailStyles.videosList}
-        >
-          {videos.map((video) => (
-            <TouchableOpacity
-              key={video.id}
-              style={detailStyles.videoCard}
-              onPress={() => onVideoPress(video)}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <MediaImage
-                source={{
-                  uri:
-                    video.site === 'YouTube'
-                      ? `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`
-                      : null,
-                }}
-                style={detailStyles.videoThumbnail}
-                contentFit="cover"
-              />
-              <Text style={detailStyles.videoTitle} numberOfLines={2}>
-                {video.name}
-              </Text>
-              <Text style={detailStyles.videoType}>{video.type}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          style={{ marginHorizontal: -SPACING.l }}
+          removeClippedSubviews={true}
+          drawDistance={400}
+        />
       </View>
     );
   },

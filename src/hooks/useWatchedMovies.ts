@@ -56,36 +56,47 @@ export const useWatchedMovies = (movieId: number) => {
   });
 
   // Set up real-time listener for updates (but data loads from cache first)
+  // Deferred by one frame to avoid blocking the initial render
   useEffect(() => {
     if (!userId || !movieId) return;
 
-    const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onSnapshot(
-      watchesRef,
-      (snapshot) => {
-        const watchInstances: WatchInstance[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          watchInstances.push({
-            id: doc.id,
-            watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
-            movieId: typeof data.movieId === 'number' ? data.movieId : Number(data.movieId),
+    // Defer listener setup to after the current render frame completes
+    const frameId = requestAnimationFrame(() => {
+      const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
+
+      unsubscribe = onSnapshot(
+        watchesRef,
+        (snapshot) => {
+          const watchInstances: WatchInstance[] = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            watchInstances.push({
+              id: doc.id,
+              watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
+              movieId: typeof data.movieId === 'number' ? data.movieId : Number(data.movieId),
+            });
           });
-        });
 
-        // Sort by most recent first
-        watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
+          // Sort by most recent first
+          watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
 
-        // Update cache directly (no refetch needed)
-        queryClient.setQueryData(queryKey, watchInstances);
-      },
-      (error) => {
-        console.error('[useWatchedMovies] Subscription error:', error);
+          // Update cache directly (no refetch needed)
+          queryClient.setQueryData(queryKey, watchInstances);
+        },
+        (error) => {
+          console.error('[useWatchedMovies] Subscription error:', error);
+        }
+      );
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      if (unsubscribe) {
+        unsubscribe();
       }
-    );
-
-    return () => unsubscribe();
+    };
   }, [userId, movieId, queryClient]);
 
   const instances = query.data ?? [];

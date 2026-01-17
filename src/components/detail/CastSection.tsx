@@ -3,8 +3,9 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
+import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CastSectionProps } from './types';
 
@@ -49,6 +50,12 @@ CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
   ({ cast, onCastPress, onViewAll, title = 'Cast', style }) => {
+    // Hook must be called unconditionally (before any early returns)
+    const renderItem = useCallback(
+      ({ item }: { item: CastMember }) => <CastCard actor={item} onPress={onCastPress} />,
+      [onCastPress]
+    );
+
     if (cast.length === 0) {
       return null;
     }
@@ -70,11 +77,17 @@ export const CastSection = memo<CastSectionProps>(
             <Text style={detailStyles.sectionTitle}>{title}</Text>
           </View>
         )}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
-          {cast.map((actor) => (
-            <CastCard key={actor.id} actor={actor} onPress={onCastPress} />
-          ))}
-        </ScrollView>
+        <FlashList
+          horizontal
+          data={cast}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          style={{ marginHorizontal: -SPACING.l }}
+          removeClippedSubviews={true}
+          drawDistance={400}
+        />
       </View>
     );
   },

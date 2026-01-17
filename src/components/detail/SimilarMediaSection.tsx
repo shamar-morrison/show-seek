@@ -3,9 +3,10 @@ import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
 import type { SimilarMediaSectionProps } from './types';
@@ -65,6 +66,14 @@ SimilarMediaCard.displayName = 'SimilarMediaCard';
 
 export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
   ({ items, onMediaPress, title, style, mediaType }) => {
+    // Hook must be called unconditionally (before any early returns)
+    const renderItem = useCallback(
+      ({ item }: { item: any }) => (
+        <SimilarMediaCard item={item} onPress={onMediaPress} mediaType={mediaType} />
+      ),
+      [onMediaPress, mediaType]
+    );
+
     if (items.length === 0) {
       return null;
     }
@@ -72,20 +81,17 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
     return (
       <View style={style}>
         <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>{title}</Text>
-        <ScrollView
+        <FlashList
           horizontal
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
           showsHorizontalScrollIndicator={false}
-          style={detailStyles.similarList}
-        >
-          {items.map((item) => (
-            <SimilarMediaCard
-              key={item.id}
-              item={item}
-              onPress={onMediaPress}
-              mediaType={mediaType}
-            />
-          ))}
-        </ScrollView>
+          contentContainerStyle={{ paddingHorizontal: SPACING.l }}
+          style={{ marginHorizontal: -SPACING.l }}
+          removeClippedSubviews={true}
+          drawDistance={400}
+        />
       </View>
     );
   },
