@@ -2,6 +2,7 @@ import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
 } from '@/src/components/HomeScreenCustomizationModal';
+import { HomeListSectionSkeleton } from '@/src/components/skeletons/HomeListSectionSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -20,7 +21,7 @@ export default function HomeScreen() {
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
   const toastRef = useRef<ToastRef>(null);
   const queryClient = useQueryClient();
-  const { homeScreenLists } = usePreferences();
+  const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { user } = useAuth();
   const { isPremium } = usePremium();
@@ -78,13 +79,28 @@ export default function HomeScreen() {
           />
         }
       >
-        {homeScreenLists.map((config) => (
-          <HomeListSection key={config.id} config={config} />
-        ))}
+        {/* Show skeleton sections while preferences are loading for signed-in users */}
+        {/* This prevents layout shift when user's customized list loads */}
+        {isLoadingPreferences && user ? (
+          <>
+            <HomeListSectionSkeleton />
+            <HomeListSectionSkeleton />
+            <HomeListSectionSkeleton />
+            <HomeListSectionSkeleton />
+          </>
+        ) : (
+          <>
+            {homeScreenLists.map((config) => (
+              <HomeListSection key={config.id} config={config} />
+            ))}
 
-        {/* Show Top Rated at the end for guests and non-premium users */}
-        {showTopRatedAtEnd && (
-          <HomeListSection config={{ id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' }} />
+            {/* Show Top Rated at the end for guests and non-premium users */}
+            {showTopRatedAtEnd && (
+              <HomeListSection
+                config={{ id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' }}
+              />
+            )}
+          </>
         )}
 
         <View style={{ height: SPACING.xl }} />
