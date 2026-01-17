@@ -1,7 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Check, Eye } from 'lucide-react-native';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 interface MarkAsWatchedButtonProps {
   /** Number of times the movie has been watched */
@@ -49,13 +49,10 @@ export function MarkAsWatchedButton({
             <Eye size={20} color={COLORS.white} />
           )}
           <Text style={[styles.buttonText, hasBeenWatched && styles.watchedButtonText]}>
-            {hasBeenWatched ? 'Marked as Watched' : 'Mark as Watched'}
+            {hasBeenWatched
+              ? `Watched ${watchCount} ${watchCount === 1 ? 'time' : 'times'}`
+              : 'Mark as Watched'}
           </Text>
-          {hasBeenWatched && (
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{watchCount}</Text>
-            </View>
-          )}
         </>
       )}
     </Pressable>
