@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Hook that defers heavy rendering by one animation frame.
- * This allows the navigation transition to complete smoothly before
- * rendering a complex component tree on cached data.
+ * Hook that defers heavy rendering by one event loop tick.
+ * This allows the navigation transition to start before mounting
+ * a heavy component tree on cached data.
  *
  * Usage:
  * ```
@@ -19,15 +19,14 @@ export const useProgressiveRender = (): { isReady: boolean } => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Use requestAnimationFrame to yield control back to the UI thread
-    // This allows the navigation transition to complete before we mount
-    // the heavy component tree
-    const frameId = requestAnimationFrame(() => {
+    // Use setTimeout(0) to defer to the next event loop tick
+    // This allows the navigation to start before mounting heavy content
+    const timeoutId = setTimeout(() => {
       setIsReady(true);
-    });
+    }, 0);
 
     return () => {
-      cancelAnimationFrame(frameId);
+      clearTimeout(timeoutId);
     };
   }, []);
 

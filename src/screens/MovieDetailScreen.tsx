@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tm
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
+import { DetailScreenSkeleton } from '@/src/components/detail/DetailScreenSkeleton';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
@@ -35,6 +36,7 @@ import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
   useCancelReminder,
@@ -54,15 +56,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Check if a movie can have a reminder (has a future release date)
@@ -178,12 +172,11 @@ export default function MovieDetailScreen() {
     [currentTab, router]
   );
 
-  if (movieQuery.isLoading) {
-    return (
-      <View style={detailStyles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+  // Progressive rendering: defer heavy component tree by one tick on cache hit
+  const { isReady } = useProgressiveRender();
+
+  if (!isReady || movieQuery.isLoading) {
+    return <DetailScreenSkeleton />;
   }
 
   if (movieQuery.isError || !movieQuery.data) {

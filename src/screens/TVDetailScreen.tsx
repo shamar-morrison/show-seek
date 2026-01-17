@@ -343,7 +343,7 @@ export default function TVDetailScreen() {
     }
   }, [reminder, cancelReminderMutation]);
 
-  // Progressive rendering: defer heavy component tree by one frame on cache hit
+  // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
 
   if (!isReady || tvQuery.isLoading) {

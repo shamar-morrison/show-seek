@@ -56,14 +56,14 @@ export const useWatchedMovies = (movieId: number) => {
   });
 
   // Set up real-time listener for updates (but data loads from cache first)
-  // Deferred by one frame to avoid blocking the initial render
+  // Deferred by one tick to avoid blocking the initial render
   useEffect(() => {
     if (!userId || !movieId) return;
 
     let unsubscribe: (() => void) | null = null;
 
-    // Defer listener setup to after the current render frame completes
-    const frameId = requestAnimationFrame(() => {
+    // Defer listener setup to after the current render tick completes
+    const timeoutId = setTimeout(() => {
       const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
 
       unsubscribe = onSnapshot(
@@ -89,10 +89,10 @@ export const useWatchedMovies = (movieId: number) => {
           console.error('[useWatchedMovies] Subscription error:', error);
         }
       );
-    });
+    }, 0);
 
     return () => {
-      cancelAnimationFrame(frameId);
+      clearTimeout(timeoutId);
       if (unsubscribe) {
         unsubscribe();
       }

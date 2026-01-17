@@ -399,7 +399,7 @@ export default function ProfileScreen() {
                 <>
                   <View style={styles.preferenceItem}>
                     <View style={styles.preferenceInfo}>
-                      <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
+                      <Text style={styles.preferenceLabel}>Auto-add to Watching 82</Text>
                       <Text style={styles.preferenceSubtitle}>
                         Automatically add series to your Watching list when you mark an episode as
                         watched

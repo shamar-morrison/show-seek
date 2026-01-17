@@ -3,7 +3,6 @@ import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -42,7 +41,7 @@ interface MarkAsWatchedModalProps {
 
 /**
  * Bottom sheet modal for selecting when a movie was watched.
- * Options: Right now, Release Date, Choose a date, Clear all (if applicable)
+ * Options: Right now, Release Date (premium), Clear all (if applicable)
  */
 export default function MarkAsWatchedModal({
   visible,
@@ -56,14 +55,10 @@ export default function MarkAsWatchedModal({
 }: MarkAsWatchedModalProps) {
   const { isPremium } = usePremium();
   const [isLoading, setIsLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Reset modal state when closed to prevent stale UI on reopen
   useEffect(() => {
     if (!visible) {
-      setShowDatePicker(false);
-      setSelectedDate(new Date());
       setIsLoading(false);
     }
   }, [visible]);
@@ -111,46 +106,6 @@ export default function MarkAsWatchedModal({
     try {
       setIsLoading(true);
       await onMarkAsWatched(parsedReleaseDate);
-      onShowToast?.('Marked as watched');
-      onClose();
-    } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleChooseDate = () => {
-    // Check premium status for date selection
-    if (!isPremium) {
-      onClose();
-      router.push('/premium');
-      return;
-    }
-    setSelectedDate(new Date());
-    setShowDatePicker(true);
-  };
-
-  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-      if (event.type === 'set' && date) {
-        saveCustomDate(date);
-      }
-    } else if (date) {
-      setSelectedDate(date);
-    }
-  };
-
-  const handleIOSDateConfirm = async () => {
-    setShowDatePicker(false);
-    await saveCustomDate(selectedDate);
-  };
-
-  const saveCustomDate = async (date: Date) => {
-    try {
-      setIsLoading(true);
-      await onMarkAsWatched(date);
       onShowToast?.('Marked as watched');
       onClose();
     } catch (error) {
@@ -260,24 +215,6 @@ export default function MarkAsWatchedModal({
                 </Pressable>
               )}
 
-              {/* Choose a Date */}
-              <Pressable
-                style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
-                onPress={handleChooseDate}
-                disabled={isLoading}
-              >
-                <View style={styles.optionIcon}>
-                  <Calendar size={20} color={COLORS.primary} />
-                </View>
-                <View style={styles.optionContent}>
-                  <View style={styles.optionTitleRow}>
-                    <Text style={styles.optionTitle}>Choose a date</Text>
-                    {!isPremium && <PremiumBadge />}
-                  </View>
-                  <Text style={styles.optionDescription}>Select from calendar</Text>
-                </View>
-              </Pressable>
-
               {/* Clear All (only if watched at least once) */}
               {watchCount > 0 && (
                 <>
@@ -306,29 +243,6 @@ export default function MarkAsWatchedModal({
                 </>
               )}
             </View>
-
-            {/* iOS Date Picker */}
-            {showDatePicker && Platform.OS === 'ios' && (
-              <View style={styles.datePickerContainer}>
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  maximumDate={new Date()}
-                  textColor={COLORS.text}
-                />
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.confirmButton,
-                    pressed && styles.confirmButtonPressed,
-                  ]}
-                  onPress={handleIOSDateConfirm}
-                >
-                  <Text style={styles.confirmButtonText}>Confirm Date</Text>
-                </Pressable>
-              </View>
-            )}
           </ScrollView>
 
           {/* Loading Overlay */}
@@ -339,17 +253,6 @@ export default function MarkAsWatchedModal({
           )}
         </View>
       </KeyboardAvoidingView>
-
-      {/* Android Date Picker (renders as dialog) */}
-      {showDatePicker && Platform.OS === 'android' && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
     </Modal>
   );
 }
@@ -440,27 +343,6 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     color: COLORS.error,
-  },
-  datePickerContainer: {
-    marginTop: SPACING.l,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.m,
-  },
-  confirmButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    marginTop: SPACING.m,
-  },
-  confirmButtonPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  confirmButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
