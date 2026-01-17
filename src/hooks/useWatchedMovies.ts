@@ -1,6 +1,7 @@
 import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { WatchInstance } from '@/src/types/watchedMovies';
+import { createTimeout } from '@/src/utils/timeout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
@@ -27,7 +28,7 @@ const fetchWatchInstances = async (userId: string, movieId: number): Promise<Wat
     watchInstances.push({
       id: doc.id,
       watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
-      movieId: Number(data.movieId),
+      movieId: typeof data.movieId === 'number' ? data.movieId : Number(data.movieId),
     });
   });
 
@@ -69,7 +70,7 @@ export const useWatchedMovies = (movieId: number) => {
           watchInstances.push({
             id: doc.id,
             watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
-            movieId: Number(data.movieId),
+            movieId: typeof data.movieId === 'number' ? data.movieId : Number(data.movieId),
           });
         });
 
@@ -121,7 +122,7 @@ export const useAddWatch = (movieId: number) => {
 
       await setDoc(watchRef, {
         watchedAt: Timestamp.fromDate(watchedAt),
-        movieId: movieId.toString(),
+        movieId: movieId,
       });
 
       return { id: watchId, watchedAt, movieId };
@@ -173,7 +174,10 @@ export const useClearWatches = (movieId: number) => {
       if (!currentUserId) throw new Error('Please sign in to continue');
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
-      const snapshot = await getDocs(watchesRef);
+
+      const snapshot = (await Promise.race([getDocs(watchesRef), createTimeout(10000)])) as Awaited<
+        ReturnType<typeof getDocs>
+      >;
 
       if (snapshot.empty) return;
 
@@ -189,7 +193,7 @@ export const useClearWatches = (movieId: number) => {
           batch.delete(doc.ref);
         });
 
-        await batch.commit();
+        await Promise.race([batch.commit(), createTimeout(10000)]);
       }
     },
     // Optimistic update
