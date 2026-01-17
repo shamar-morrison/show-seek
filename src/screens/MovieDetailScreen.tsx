@@ -4,6 +4,7 @@ import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
+import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -13,6 +14,7 @@ import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderModal from '@/src/components/ReminderModal';
@@ -40,6 +42,7 @@ import {
   useMediaReminder,
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
+import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -89,6 +92,8 @@ export default function MovieDetailScreen() {
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [watchedModalVisible, setWatchedModalVisible] = useState(false);
+  const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
@@ -108,6 +113,11 @@ export default function MovieDetailScreen() {
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
   const updateReminderMutation = useUpdateReminder();
+
+  // Watched movies feature
+  const { count: watchCount, isLoading: isLoadingWatched } = useWatchedMovies(movieId);
+  const addWatchMutation = useAddWatch(movieId);
+  const clearWatchesMutation = useClearWatches(movieId);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -292,6 +302,97 @@ export default function MovieDetailScreen() {
     await cancelReminderMutation.mutateAsync(reminder.id);
   };
 
+  // Handle marking the movie as watched with a specific date
+  const handleMarkAsWatched = async (date: Date) => {
+    const isFirstWatch = watchCount === 0;
+    await addWatchMutation.mutateAsync(date);
+
+    // Auto-add to "Already Watched" list on first watch
+    if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
+      const isNotInAlreadyWatched = !membership['already-watched'];
+
+      if (isNotInAlreadyWatched) {
+        try {
+          const { listService } = await import('../services/ListService');
+          await listService.addToList(
+            'already-watched',
+            {
+              id: movieId,
+              title: movie.title,
+              poster_path: movie.poster_path,
+              media_type: 'movie',
+              vote_average: movie.vote_average,
+              release_date: movie.release_date,
+              genre_ids: movie.genres?.map((g) => g.id),
+            },
+            'Already Watched'
+          );
+          console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+        } catch (autoAddError) {
+          console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
+        }
+      }
+    }
+  };
+
+  // Handle clearing all watch history
+  const handleClearWatches = async () => {
+    await clearWatchesMutation.mutateAsync();
+  };
+
+  // Handle button press - either show modal or quick mark based on preference
+  const handleWatchedButtonPress = () => {
+    requireAuth(async () => {
+      if (preferences?.quickMarkAsWatched) {
+        // Quick mark: save immediately with current time
+        setIsSavingWatch(true);
+        try {
+          const isFirstWatch = watchCount === 0;
+          await addWatchMutation.mutateAsync(new Date());
+
+          // Auto-add to "Already Watched" list on first watch
+          if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
+            const isNotInAlreadyWatched = !membership['already-watched'];
+
+            if (isNotInAlreadyWatched) {
+              try {
+                const { listService } = await import('../services/ListService');
+                await listService.addToList(
+                  'already-watched',
+                  {
+                    id: movieId,
+                    title: movie.title,
+                    poster_path: movie.poster_path,
+                    media_type: 'movie',
+                    vote_average: movie.vote_average,
+                    release_date: movie.release_date,
+                    genre_ids: movie.genres?.map((g) => g.id),
+                  },
+                  'Already Watched'
+                );
+                console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+              } catch (autoAddError) {
+                console.error(
+                  '[MovieDetailScreen] Auto-add to Already Watched failed:',
+                  autoAddError
+                );
+              }
+            }
+          }
+
+          toastRef.current?.show('Marked as watched');
+        } catch (error) {
+          toastRef.current?.show(error instanceof Error ? error.message : 'Failed to save');
+        } finally {
+          setIsSavingWatch(false);
+        }
+      } else {
+        // Show modal for date selection
+        setWatchedModalVisible(true);
+      }
+    }, 'Sign in to track watched movies');
+  };
+
   return (
     <View style={detailStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -459,9 +560,17 @@ export default function MovieDetailScreen() {
             hasTrailer={!!trailer}
           />
 
+          {/* Mark as Watched Button - Movie only */}
+          <MarkAsWatchedButton
+            watchCount={watchCount}
+            isLoading={isLoadingWatched || isSavingWatch}
+            onPress={handleWatchedButtonPress}
+            disabled={isSavingWatch}
+          />
+
           {userRating > 0 && <UserRating rating={userRating} />}
 
-          <Text style={detailStyles.sectionTitle}>Overview</Text>
+          <Text style={[detailStyles.sectionTitle, { marginTop: SPACING.l }]}>Overview</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
               text={movie.overview || 'No overview available'}
@@ -656,6 +765,16 @@ export default function MovieDetailScreen() {
             onShowToast={(message) => toastRef.current?.show(message)}
           />
           <NoteModal ref={noteSheetRef} />
+          <MarkAsWatchedModal
+            visible={watchedModalVisible}
+            onClose={() => setWatchedModalVisible(false)}
+            movieTitle={movie.title}
+            releaseDate={movie.release_date || null}
+            watchCount={watchCount}
+            onMarkAsWatched={handleMarkAsWatched}
+            onClearAll={handleClearWatches}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
         </>
       )}
       <Toast ref={toastRef} />

@@ -14,7 +14,16 @@ import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Settings2 } from 'lucide-react-native';
+import {
+  Bookmark,
+  Check,
+  CirclePlay,
+  Folder,
+  Heart,
+  Plus,
+  Settings2,
+  X,
+} from 'lucide-react-native';
 import React, {
   forwardRef,
   useCallback,
@@ -87,6 +96,25 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const addMutation = useAddToList();
     const removeMutation = useRemoveFromList();
     const deleteMutation = useDeleteList();
+
+    // Icon mapping for default lists
+    const getListIcon = (listId: string) => {
+      switch (listId) {
+        case 'watchlist':
+          return <Bookmark size={20} color={COLORS.textSecondary} />;
+        case 'currently-watching':
+          return <CirclePlay size={20} color={COLORS.textSecondary} />;
+        case 'already-watched':
+          return <Check size={20} color={COLORS.textSecondary} />;
+        case 'favorites':
+          return <Heart size={20} color={COLORS.textSecondary} />;
+        case 'dropped':
+          return <X size={20} color={COLORS.textSecondary} />;
+        default:
+          // Custom lists use folder icon
+          return <Folder size={20} color={COLORS.textSecondary} />;
+      }
+    };
 
     // Check if there are unsaved changes (compare against initial snapshot, not reactive membership)
     const hasChanges = useMemo(() => {
@@ -340,6 +368,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 nestedScrollEnabled={true}
                 renderItem={({ item: list }) => {
                   const isSelected = !!pendingSelections[list.id];
+                  const itemCount = list.items ? Object.keys(list.items).length : 0;
                   return (
                     <Pressable
                       style={styles.listItem}
@@ -350,7 +379,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                       <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
                         <AnimatedCheck visible={isSelected} />
                       </View>
+                      <View style={styles.listIcon}>{getListIcon(list.id)}</View>
                       <Text style={styles.listName}>{list.name}</Text>
+                      <Text style={styles.itemCount}>
+                        {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                      </Text>
                     </Pressable>
                   );
                 }}
@@ -459,6 +492,15 @@ const styles = StyleSheet.create({
   listName: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
+    flex: 1,
+  },
+  listIcon: {
+    marginRight: SPACING.m,
+  },
+  itemCount: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginLeft: SPACING.s,
   },
   createListButton: {
     flexDirection: 'row',

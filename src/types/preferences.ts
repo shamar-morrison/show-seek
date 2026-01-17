@@ -22,6 +22,7 @@ export interface UserPreferences {
   blurPlotSpoilers: boolean; // Android only - blur movie/TV plot summaries
   showListIndicators: boolean; // Show bookmark badge on cards when item is in a list
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
+  quickMarkAsWatched: boolean; // Skip modal and use current time when marking movies as watched
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -29,4 +30,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   autoAddToAlreadyWatched: true,
   blurPlotSpoilers: false,
   showListIndicators: false, // Off by default for new users
+  quickMarkAsWatched: false, // Off by default - show date selection modal
 };

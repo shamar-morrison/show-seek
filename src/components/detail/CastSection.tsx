@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type CastMember } from '@/src/api/tmdb';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import React, { memo, useCallback } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -10,6 +12,8 @@ const CastCard = memo<{
   actor: CastMember;
   onPress: (id: number) => void;
 }>(({ actor, onPress }) => {
+  const { isFavorited } = useIsPersonFavorited(actor.id);
+
   const handlePress = useCallback(() => {
     onPress(actor.id);
   }, [actor.id, onPress]);
@@ -20,14 +24,17 @@ const CastCard = memo<{
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <MediaImage
-        source={{
-          uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium),
-        }}
-        style={detailStyles.castImage}
-        contentFit="cover"
-        placeholderType="person"
-      />
+      <View style={detailStyles.castImageContainer}>
+        <MediaImage
+          source={{
+            uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium),
+          }}
+          style={detailStyles.castImage}
+          contentFit="cover"
+          placeholderType="person"
+        />
+        {isFavorited && <FavoritePersonBadge />}
+      </View>
       <Text style={detailStyles.castName} numberOfLines={2}>
         {actor.name}
       </Text>

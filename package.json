@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --dev-client",
+    "android": "expo start --dev-client -c",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
@@ -16,6 +16,7 @@
     "@lodev09/react-native-true-sheet": "^3.2.1",
     "@nkzw/create-context-hook": "^1.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "^8.6.0",
     "@shopify/flash-list": "2.2.0",
     "@tanstack/react-query": "^5.90.10",
     "axios": "^1.13.2",

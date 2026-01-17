@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
-import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
+import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
@@ -9,6 +10,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
@@ -36,7 +38,8 @@ export default function SearchScreen() {
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
-  const { isInAnyList } = useListMembership();
+  const { getListsForMedia, showIndicators } = useListMembership();
+  const { data: favoritePersons } = useFavoritePersons();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -96,7 +99,10 @@ export default function SearchScreen() {
 
     // Determine media type for list check (default to filter type if not multi-search)
     const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
-    const isInList = !isPerson && isInAnyList(item.id, itemMediaType);
+    const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
+
+    // Check if person is favorited
+    const isPersonFavorited = isPerson && favoritePersons?.some((p) => p.id === item.id);
 
     return (
       <TouchableOpacity
@@ -106,7 +112,7 @@ export default function SearchScreen() {
       >
         <View style={styles.posterContainer}>
           <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
-          {isInList && <ListMembershipBadge size="medium" />}
+          {isPersonFavorited && <FavoritePersonBadge />}
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
@@ -150,6 +156,7 @@ export default function SearchScreen() {
               {item.overview}
             </Text>
           )}
+          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
         </View>
       </TouchableOpacity>
     );

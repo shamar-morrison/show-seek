@@ -1,6 +1,6 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
-import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
+import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useGenres } from '@/src/hooks/useGenres';
@@ -33,7 +33,7 @@ export default function DiscoverScreen() {
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
   const genreMap = genresQuery.data || {};
-  const { isInAnyList } = useListMembership();
+  const { getListsForMedia, showIndicators } = useListMembership();
 
   const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],
@@ -116,7 +116,7 @@ export default function DiscoverScreen() {
           .filter(Boolean)
       : [];
 
-    const isInList = isInAnyList(item.id, mediaType);
+    const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
 
     return (
       <TouchableOpacity
@@ -126,7 +126,6 @@ export default function DiscoverScreen() {
       >
         <View style={styles.posterContainer}>
           <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
-          {isInList && <ListMembershipBadge size="medium" />}
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
@@ -154,6 +153,7 @@ export default function DiscoverScreen() {
               {item.overview}
             </Text>
           )}
+          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
         </View>
       </TouchableOpacity>
     );

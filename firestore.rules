@@ -39,12 +39,28 @@ service cloud.firestore {
           && (!('autoAddToWatching' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToWatching is bool)
           && (!('autoAddToAlreadyWatched' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToAlreadyWatched is bool)
           && (!('blurPlotSpoilers' in request.resource.data.preferences) || request.resource.data.preferences.blurPlotSpoilers is bool)
+          && (!('showMediaPreviewCards' in request.resource.data.preferences) || request.resource.data.preferences.showMediaPreviewCards is bool)
+          && (!('quickMarkAsWatched' in request.resource.data.preferences) || request.resource.data.preferences.quickMarkAsWatched is bool)
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);
       // Favorites collection
       match /favorites/{favoriteId} {
         allow read, write: if isOwner(userId);
+      }
+
+      // Watched movies collection (tracking movie watch instances)
+      match /watched_movies/{movieId} {
+        allow read: if isOwner(userId);
+        
+        match /watches/{watchId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId)
+            && request.resource.data.keys().hasOnly(['watchedAt', 'movieId'])
+            && request.resource.data.watchedAt is timestamp
+            && request.resource.data.movieId is int;
+          allow delete: if isOwner(userId);
+        }
       }
 
       // Watchlist collection
