@@ -58,7 +58,7 @@ service cloud.firestore {
           allow create: if isOwner(userId)
             && request.resource.data.keys().hasAll(['watchedAt', 'movieId'])
             && request.resource.data.watchedAt is timestamp
-            && request.resource.data.movieId is string;
+            && request.resource.data.movieId is int;
           allow delete: if isOwner(userId);
         }
       }
