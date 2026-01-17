@@ -110,6 +110,9 @@ export const detailStyles = StyleSheet.create({
     width: 120,
     marginRight: SPACING.m,
   },
+  similarPosterContainer: {
+    position: 'relative',
+  },
   similarPoster: {
     width: 120,
     height: 180,

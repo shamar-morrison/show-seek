@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -13,7 +15,11 @@ import type { RecommendationsSectionProps } from './types';
 const RecommendationCard = memo<{
   item: any;
   onPress: (id: number) => void;
-}>(({ item, onPress }) => {
+  mediaType: 'movie' | 'tv';
+}>(({ item, onPress, mediaType }) => {
+  const { getListsForMedia } = useListMembership();
+  const listIds = getListsForMedia(item.id, mediaType);
+
   const year = useMemo(
     () => getMediaYear(item.release_date || item.first_air_date),
     [item.release_date, item.first_air_date]
@@ -29,13 +35,16 @@ const RecommendationCard = memo<{
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <MediaImage
-        source={{
-          uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small),
-        }}
-        style={detailStyles.similarPoster}
-        contentFit="cover"
-      />
+      <View style={detailStyles.similarPosterContainer}>
+        <MediaImage
+          source={{
+            uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small),
+          }}
+          style={detailStyles.similarPoster}
+          contentFit="cover"
+        />
+        {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+      </View>
       <Text style={detailStyles.similarTitle} numberOfLines={2}>
         {getMediaTitle(item)}
       </Text>
@@ -56,7 +65,7 @@ const RecommendationCard = memo<{
 RecommendationCard.displayName = 'RecommendationCard';
 
 export const RecommendationsSection = memo<RecommendationsSectionProps>(
-  ({ items, isLoading, isError, shouldLoad, onMediaPress, onLayout, style }) => {
+  ({ items, isLoading, isError, shouldLoad, onMediaPress, onLayout, style, mediaType }) => {
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
@@ -110,7 +119,9 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
               showsHorizontalScrollIndicator={false}
               removeClippedSubviews={true}
               drawDistance={400}
-              renderItem={({ item }) => <RecommendationCard item={item} onPress={onMediaPress} />}
+              renderItem={({ item }) => (
+                <RecommendationCard item={item} onPress={onMediaPress} mediaType={mediaType} />
+              )}
             />
           </View>
         </View>

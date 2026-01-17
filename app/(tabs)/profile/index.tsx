@@ -440,7 +440,7 @@ export default function ProfileScreen() {
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>Show list indicators</Text>
                       <Text style={styles.preferenceSubtitle}>
-                        Display a bookmark badge on cards when an item is in any of your lists
+                        Display a badge on cards when an item is in any of your lists
                       </Text>
                     </View>
                     {preferencesLoading ? (

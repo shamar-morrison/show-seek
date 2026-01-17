@@ -71,7 +71,10 @@ export default function MarkAsWatchedModal({
   if (releaseDate) {
     try {
       parsedReleaseDate = parseTmdbDate(releaseDate);
-      hasValidReleaseDate = true;
+      // Only allow release dates that are today or in the past
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      hasValidReleaseDate = parsedReleaseDate <= today;
     } catch {
       // Invalid date format
       hasValidReleaseDate = false;
