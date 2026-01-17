@@ -513,7 +513,7 @@ export default function MovieDetailScreen() {
 
           {userRating > 0 && <UserRating rating={userRating} />}
 
-          <Text style={detailStyles.sectionTitle}>Overview</Text>
+          <Text style={[detailStyles.sectionTitle, { marginTop: SPACING.l }]}>Overview</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
               text={movie.overview || 'No overview available'}
