@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import React, {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -54,11 +55,76 @@ interface AddToListModalProps {
   onShowToast?: (message: string) => void;
 }
 
+// Pre-computed list item with cached item count
+interface ListWithCount extends UserList {
+  itemCount: number;
+}
+
+// Icon mapping for default lists
+const getListIcon = (listId: string) => {
+  switch (listId) {
+    case 'watchlist':
+      return <Bookmark size={20} color={COLORS.textSecondary} />;
+    case 'currently-watching':
+      return <CirclePlay size={20} color={COLORS.textSecondary} />;
+    case 'already-watched':
+      return <Check size={20} color={COLORS.textSecondary} />;
+    case 'favorites':
+      return <Heart size={20} color={COLORS.textSecondary} />;
+    case 'dropped':
+      return <X size={20} color={COLORS.textSecondary} />;
+    default:
+      return <Folder size={20} color={COLORS.textSecondary} />;
+  }
+};
+
+// Memoized list item row component to prevent re-renders
+const ListItemRow = memo<{
+  list: ListWithCount;
+  isSelected: boolean;
+  isSaving: boolean;
+  onToggle: (listId: string) => void;
+  onDelete: (listId: string, listName: string) => void;
+}>(
+  ({ list, isSelected, isSaving, onToggle, onDelete }) => {
+    const handlePress = useCallback(() => onToggle(list.id), [list.id, onToggle]);
+    const handleLongPress = useCallback(
+      () => onDelete(list.id, list.name),
+      [list.id, list.name, onDelete]
+    );
+
+    return (
+      <Pressable
+        style={styles.listItem}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        disabled={isSaving}
+      >
+        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+          <AnimatedCheck visible={isSelected} />
+        </View>
+        <View style={styles.listIcon}>{getListIcon(list.id)}</View>
+        <Text style={styles.listName}>{list.name}</Text>
+        <Text style={styles.itemCount}>
+          {list.itemCount} {list.itemCount === 1 ? 'item' : 'items'}
+        </Text>
+      </Pressable>
+    );
+  },
+  (prev, next) =>
+    prev.list.id === next.list.id &&
+    prev.list.itemCount === next.list.itemCount &&
+    prev.isSelected === next.isSelected &&
+    prev.isSaving === next.isSaving
+);
+
+ListItemRow.displayName = 'ListItemRow';
+
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
     const router = useRouter();
     const sheetRef = useRef<TrueSheet>(null);
-    const listRef = useRef<FlatList<UserList>>(null);
+    const listRef = useRef<FlatList<ListWithCount>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
     const { width } = useWindowDimensions();
     const [operationError, setOperationError] = useState<string | null>(null);
@@ -97,24 +163,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const removeMutation = useRemoveFromList();
     const deleteMutation = useDeleteList();
 
-    // Icon mapping for default lists
-    const getListIcon = (listId: string) => {
-      switch (listId) {
-        case 'watchlist':
-          return <Bookmark size={20} color={COLORS.textSecondary} />;
-        case 'currently-watching':
-          return <CirclePlay size={20} color={COLORS.textSecondary} />;
-        case 'already-watched':
-          return <Check size={20} color={COLORS.textSecondary} />;
-        case 'favorites':
-          return <Heart size={20} color={COLORS.textSecondary} />;
-        case 'dropped':
-          return <X size={20} color={COLORS.textSecondary} />;
-        default:
-          // Custom lists use folder icon
-          return <Folder size={20} color={COLORS.textSecondary} />;
-      }
-    };
+    // Pre-compute item counts once when lists change (not on every render)
+    const listsWithCounts = useMemo<ListWithCount[]>(() => {
+      if (!lists) return [];
+      return lists.map((list) => ({
+        ...list,
+        itemCount: list.items ? Object.keys(list.items).length : 0,
+      }));
+    }, [lists]);
 
     // Check if there are unsaved changes (compare against initial snapshot, not reactive membership)
     const hasChanges = useMemo(() => {
@@ -195,22 +251,33 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     // Save all pending changes to Firebase
     const handleSave = async () => {
-      if (!lists) return;
+      if (!listsWithCounts.length) return;
+
+      // Early exit: check if there are actually any changes to save
+      const changedLists = listsWithCounts.filter((list) => {
+        const wasInList = !!initialMembershipRef.current[list.id];
+        const isNowInList = !!pendingSelections[list.id];
+        return wasInList !== isNowInList;
+      });
+
+      if (changedLists.length === 0) {
+        await sheetRef.current?.dismiss();
+        return;
+      }
 
       setIsSaving(true);
       setOperationError(null);
 
       const operations: Promise<unknown>[] = [];
 
-      for (const list of lists) {
+      // Only loop through changed lists, not all lists
+      for (const list of changedLists) {
         const wasInList = !!initialMembershipRef.current[list.id];
         const isNowInList = !!pendingSelections[list.id];
 
         if (wasInList && !isNowInList) {
-          // Remove from list
           operations.push(removeMutation.mutateAsync({ listId: list.id, mediaId: mediaItem.id }));
         } else if (!wasInList && isNowInList) {
-          // Add to list
           operations.push(
             addMutation.mutateAsync({ listId: list.id, mediaItem, listName: list.name })
           );
@@ -224,19 +291,16 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       );
 
       if (failures.length === 0) {
-        // All operations succeeded
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (onShowToast) {
           onShowToast('Lists updated');
         }
         await sheetRef.current?.dismiss();
       } else if (failures.length < operations.length) {
-        // Some operations succeeded, some failed
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setOperationError(`${failures.length} of ${operations.length} changes failed to save`);
         setIsSaving(false);
       } else {
-        // All operations failed
         const firstError = failures[0].reason;
         handleMutationError(
           firstError instanceof Error ? firstError : new Error('Failed to update lists')
@@ -361,32 +425,20 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             ) : (
               <FlatList
                 ref={listRef}
-                data={lists}
+                data={listsWithCounts}
                 keyExtractor={(item) => item.id}
                 style={styles.listContainer}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled={true}
-                renderItem={({ item: list }) => {
-                  const isSelected = !!pendingSelections[list.id];
-                  const itemCount = list.items ? Object.keys(list.items).length : 0;
-                  return (
-                    <Pressable
-                      style={styles.listItem}
-                      onPress={() => handleToggleList(list.id)}
-                      onLongPress={() => handleDeleteList(list.id, list.name)}
-                      disabled={isSaving}
-                    >
-                      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-                        <AnimatedCheck visible={isSelected} />
-                      </View>
-                      <View style={styles.listIcon}>{getListIcon(list.id)}</View>
-                      <Text style={styles.listName}>{list.name}</Text>
-                      <Text style={styles.itemCount}>
-                        {itemCount} {itemCount === 1 ? 'item' : 'items'}
-                      </Text>
-                    </Pressable>
-                  );
-                }}
+                renderItem={({ item: list }) => (
+                  <ListItemRow
+                    list={list}
+                    isSelected={!!pendingSelections[list.id]}
+                    isSaving={isSaving}
+                    onToggle={handleToggleList}
+                    onDelete={handleDeleteList}
+                  />
+                )}
               />
             )}
 
