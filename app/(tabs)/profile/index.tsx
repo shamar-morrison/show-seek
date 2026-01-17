@@ -10,7 +10,16 @@ import { exportUserData } from '@/src/services/DataExportService';
 import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Crown, Download, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import {
+  Check,
+  Crown,
+  Download,
+  Globe,
+  LogOut,
+  MessageCircle,
+  Star,
+  Trash2,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,6 +27,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -28,6 +38,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const SHOWSEEK_WEB_URL = 'https://show-seek-web.vercel.app';
 
 const PACKAGE_ID = 'app.horizon.showseek';
 const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
@@ -146,6 +158,7 @@ export default function ProfileScreen() {
   const [reauthLoading, setReauthLoading] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showWebAppModal, setShowWebAppModal] = useState(false);
 
   const isGuest = user?.isAnonymous === true;
   const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
@@ -179,6 +192,20 @@ export default function ProfileScreen() {
       await Linking.openURL(feedbackUrl);
     } catch {
       Alert.alert('Error', 'Unable to open the feedback page. Please try again.');
+    }
+  }, []);
+
+  const handleOpenWebApp = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowWebAppModal(true);
+  }, []);
+
+  const handleConfirmOpenWebApp = useCallback(async () => {
+    setShowWebAppModal(false);
+    try {
+      await Linking.openURL(SHOWSEEK_WEB_URL);
+    } catch {
+      Alert.alert('Error', 'Unable to open the ShowSeek website. Please try again.');
     }
   }, []);
 
@@ -610,6 +637,7 @@ export default function ProfileScreen() {
                   }
                 />
               )}
+              <ActionButton icon={Globe} label="ShowSeek Web App" onPress={handleOpenWebApp} />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
@@ -664,6 +692,43 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
+
+          {/* Web App Navigation Modal */}
+          <Modal
+            visible={showWebAppModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowWebAppModal(false)}
+          >
+            <View style={styles.webAppModalOverlay}>
+              <View style={styles.webAppModalContent}>
+                <View style={styles.webAppModalHeader}>
+                  <Globe size={24} color={COLORS.primary} />
+                  <Text style={styles.webAppModalTitle}>Leaving App</Text>
+                </View>
+                <Text style={styles.webAppModalDescription}>
+                  You are about to leave the ShowSeek app and open the ShowSeek website in your
+                  browser.
+                </Text>
+                <View style={styles.webAppModalButtons}>
+                  <TouchableOpacity
+                    style={[styles.webAppModalButton, styles.webAppModalCancelButton]}
+                    onPress={() => setShowWebAppModal(false)}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={styles.webAppModalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.webAppModalButton, styles.webAppModalConfirmButton]}
+                    onPress={handleConfirmOpenWebApp}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={styles.webAppModalConfirmText}>Continue</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -936,5 +1001,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: SPACING.xs,
+  },
+  webAppModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.overlay,
+    padding: SPACING.l,
+  },
+  webAppModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    gap: SPACING.m,
+  },
+  webAppModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+  },
+  webAppModalTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  webAppModalDescription: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
+  },
+  webAppModalButtons: {
+    flexDirection: 'row',
+    gap: SPACING.m,
+    marginTop: SPACING.s,
+  },
+  webAppModalButton: {
+    flex: 1,
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webAppModalCancelButton: {
+    backgroundColor: COLORS.surfaceLight,
+  },
+  webAppModalConfirmButton: {
+    backgroundColor: COLORS.primary,
+  },
+  webAppModalCancelText: {
+    color: COLORS.text,
+    fontWeight: '600',
+    fontSize: FONT_SIZE.m,
+  },
+  webAppModalConfirmText: {
+    color: COLORS.white,
+    fontWeight: '600',
+    fontSize: FONT_SIZE.m,
   },
 });
