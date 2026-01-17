@@ -1,28 +1,7 @@
+import { DEFAULT_LIST_IDS, LIST_INDICATOR_CONFIG } from '@/src/constants/listIndicators';
 import { COLORS, SPACING } from '@/src/constants/theme';
-import { Bookmark, Circle, Heart, Play, X } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-
-// Default list icons and colors
-const LIST_ICON_CONFIG: Record<
-  string,
-  { icon: React.ComponentType<{ size: number; color: string; fill?: string }>; color: string }
-> = {
-  watchlist: { icon: Bookmark, color: '#3B82F6' }, // Blue
-  'currently-watching': { icon: Play, color: '#F97316' }, // Orange - Play icon
-  'already-watched': { icon: Circle, color: '#22C55E' }, // Green - Dot/Circle icon
-  favorites: { icon: Heart, color: '#EF4444' }, // Red
-  dropped: { icon: X, color: '#6B7280' }, // Gray
-};
-
-// Default lists to show (in display order)
-const DEFAULT_LIST_IDS = [
-  'watchlist',
-  'currently-watching',
-  'already-watched',
-  'favorites',
-  'dropped',
-];
 
 interface ListMembershipBadgeProps {
   /** List IDs this media item belongs to */
@@ -51,7 +30,7 @@ export const ListMembershipBadge = memo<ListMembershipBadgeProps>(
     return (
       <View style={styles.container}>
         {visibleLists.map((listId) => {
-          const config = LIST_ICON_CONFIG[listId];
+          const config = LIST_INDICATOR_CONFIG[listId];
           if (!config) return null;
 
           const IconComponent = config.icon;
@@ -132,7 +111,7 @@ export const InlineListIndicators = memo<InlineListIndicatorsProps>(
     return (
       <View style={inlineStyles.container}>
         {visibleLists.map((listId) => {
-          const config = LIST_ICON_CONFIG[listId];
+          const config = LIST_INDICATOR_CONFIG[listId];
           if (!config) return null;
 
           const IconComponent = config.icon;

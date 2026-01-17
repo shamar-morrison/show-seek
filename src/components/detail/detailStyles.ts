@@ -77,6 +77,9 @@ export const detailStyles = StyleSheet.create({
     width: 120,
     marginRight: SPACING.m,
   },
+  castImageContainer: {
+    position: 'relative',
+  },
   castImage: {
     width: 120,
     height: 180,

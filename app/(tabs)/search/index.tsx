@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
@@ -9,6 +10,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
@@ -37,6 +39,7 @@ export default function SearchScreen() {
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
   const { getListsForMedia, showIndicators } = useListMembership();
+  const { data: favoritePersons } = useFavoritePersons();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -98,6 +101,9 @@ export default function SearchScreen() {
     const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
     const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
 
+    // Check if person is favorited
+    const isPersonFavorited = isPerson && favoritePersons?.some((p) => p.id === item.id);
+
     return (
       <TouchableOpacity
         style={styles.resultItem}
@@ -106,6 +112,7 @@ export default function SearchScreen() {
       >
         <View style={styles.posterContainer}>
           <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
+          {isPersonFavorited && <FavoritePersonBadge />}
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
