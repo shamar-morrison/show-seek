@@ -50,14 +50,15 @@ CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
   ({ cast, onCastPress, onViewAll, title = 'Cast', style }) => {
-    if (cast.length === 0) {
-      return null;
-    }
-
+    // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: CastMember }) => <CastCard actor={item} onPress={onCastPress} />,
       [onCastPress]
     );
+
+    if (cast.length === 0) {
+      return null;
+    }
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>

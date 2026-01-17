@@ -9,10 +9,7 @@ import type { VideosSectionProps } from './types';
 
 export const VideosSection = memo<VideosSectionProps>(
   ({ videos, onVideoPress, style }) => {
-    if (videos.length === 0) {
-      return null;
-    }
-
+    // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: Video }) => (
         <TouchableOpacity
@@ -38,6 +35,10 @@ export const VideosSection = memo<VideosSectionProps>(
       ),
       [onVideoPress]
     );
+
+    if (videos.length === 0) {
+      return null;
+    }
 
     return (
       <View style={style}>

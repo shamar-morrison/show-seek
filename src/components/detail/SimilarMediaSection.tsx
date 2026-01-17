@@ -66,16 +66,17 @@ SimilarMediaCard.displayName = 'SimilarMediaCard';
 
 export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
   ({ items, onMediaPress, title, style, mediaType }) => {
-    if (items.length === 0) {
-      return null;
-    }
-
+    // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: any }) => (
         <SimilarMediaCard item={item} onPress={onMediaPress} mediaType={mediaType} />
       ),
       [onMediaPress, mediaType]
     );
+
+    if (items.length === 0) {
+      return null;
+    }
 
     return (
       <View style={style}>

@@ -9,13 +9,10 @@ import type { PhotosSectionProps } from './types';
 
 export const PhotosSection = memo<PhotosSectionProps>(
   ({ images, onPhotoPress, style }) => {
-    if (images.length === 0) {
-      return null;
-    }
-
     // Limit to 10 images
     const displayImages = images.slice(0, 10);
 
+    // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item, index }: { item: (typeof images)[0]; index: number }) => (
         <TouchableOpacity onPress={() => onPhotoPress(index)} activeOpacity={ACTIVE_OPACITY}>
@@ -30,6 +27,10 @@ export const PhotosSection = memo<PhotosSectionProps>(
       ),
       [onPhotoPress]
     );
+
+    if (images.length === 0) {
+      return null;
+    }
 
     return (
       <View style={style}>
