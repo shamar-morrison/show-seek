@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
-import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
+import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import {
   ACTIVE_OPACITY,
@@ -36,7 +36,7 @@ export default function SearchScreen() {
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
-  const { isInAnyList } = useListMembership();
+  const { getListsForMedia, showIndicators } = useListMembership();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -96,7 +96,7 @@ export default function SearchScreen() {
 
     // Determine media type for list check (default to filter type if not multi-search)
     const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
-    const isInList = !isPerson && isInAnyList(item.id, itemMediaType);
+    const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
 
     return (
       <TouchableOpacity
@@ -106,7 +106,6 @@ export default function SearchScreen() {
       >
         <View style={styles.posterContainer}>
           <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
-          {isInList && <ListMembershipBadge size="medium" />}
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
@@ -150,6 +149,7 @@ export default function SearchScreen() {
               {item.overview}
             </Text>
           )}
+          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
         </View>
       </TouchableOpacity>
     );

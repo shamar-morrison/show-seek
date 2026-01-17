@@ -19,14 +19,15 @@ interface MovieCardProps {
 export const MovieCard = memo<MovieCardProps>(
   ({ movie, width = 140, showListBadge = true }) => {
     const currentTab = useCurrentTab();
-    const { isInAnyList } = useListMembership();
+    const { getListsForMedia } = useListMembership();
 
     const posterUrl = useMemo(
       () => getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium),
       [movie.poster_path]
     );
 
-    const isInList = showListBadge && isInAnyList(movie.id, 'movie');
+    const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
+    const showBadge = listIds.length > 0;
 
     const handlePress = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
@@ -45,7 +46,7 @@ export const MovieCard = memo<MovieCardProps>(
             style={[styles.poster, { width, height: width * 1.5 }]}
             contentFit="cover"
           />
-          {isInList && <ListMembershipBadge />}
+          {showBadge && <ListMembershipBadge listIds={listIds} />}
         </View>
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={2}>

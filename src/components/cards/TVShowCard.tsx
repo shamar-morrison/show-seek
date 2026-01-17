@@ -19,14 +19,15 @@ interface TVShowCardProps {
 export const TVShowCard = memo<TVShowCardProps>(
   ({ show, width = 140, showListBadge = true }) => {
     const currentTab = useCurrentTab();
-    const { isInAnyList } = useListMembership();
+    const { getListsForMedia } = useListMembership();
 
     const posterUrl = useMemo(
       () => getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium),
       [show.poster_path]
     );
 
-    const isInList = showListBadge && isInAnyList(show.id, 'tv');
+    const listIds = showListBadge ? getListsForMedia(show.id, 'tv') : [];
+    const showBadge = listIds.length > 0;
 
     const handlePress = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
@@ -45,7 +46,7 @@ export const TVShowCard = memo<TVShowCardProps>(
             style={[styles.poster, { width, height: width * 1.5 }]}
             contentFit="cover"
           />
-          {isInList && <ListMembershipBadge />}
+          {showBadge && <ListMembershipBadge listIds={listIds} />}
         </View>
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={2}>
