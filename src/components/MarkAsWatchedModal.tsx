@@ -1,6 +1,5 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { usePremium } from '@/src/context/PremiumContext';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -51,7 +50,6 @@ export default function MarkAsWatchedModal({
   onClearAll,
   onShowToast,
 }: MarkAsWatchedModalProps) {
-  const { isPremium } = usePremium();
   const [isLoading, setIsLoading] = useState(false);
 
   // Reset modal state when closed to prevent stale UI on reopen
@@ -132,7 +130,6 @@ export default function MarkAsWatchedModal({
     );
   };
 
-  // Format release date for display using timezone-safe utility
   const getFormattedReleaseDate = (): string => {
     if (!releaseDate) return '';
     return formatTmdbDate(releaseDate, {
