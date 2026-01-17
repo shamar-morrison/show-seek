@@ -174,14 +174,14 @@ export default function FavoritePeopleScreen() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: FavoritePerson }) => (
-      <PersonCard person={item} onPress={handlePersonPress} />
+      <PersonCard person={item} onPress={handlePersonPress} hideFavoriteBadge />
     ),
     [handlePersonPress]
   );
 
   const renderListItem = useCallback(
     ({ item }: { item: FavoritePerson }) => (
-      <PersonListCard person={item} onPress={handlePersonPress} />
+      <PersonListCard person={item} onPress={handlePersonPress} hideFavoriteBadge />
     ),
     [handlePersonPress]
   );
