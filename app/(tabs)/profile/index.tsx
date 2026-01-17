@@ -467,6 +467,39 @@ export default function ProfileScreen() {
                       />
                     )}
                   </View>
+                  <View style={styles.preferenceItem}>
+                    <View style={styles.preferenceInfo}>
+                      <Text style={styles.preferenceLabel}>Quick Mark as Watched</Text>
+                      <Text style={styles.preferenceSubtitle}>
+                        Skip the date selection modal and use the current time when marking movies
+                        as watched
+                      </Text>
+                    </View>
+                    {preferencesLoading ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Switch
+                        value={!!preferences?.quickMarkAsWatched}
+                        onValueChange={(value) => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          updatePreference.mutate(
+                            { key: 'quickMarkAsWatched', value },
+                            {
+                              onError: () => {
+                                Alert.alert(
+                                  'Error',
+                                  'Failed to update preference. Please try again.'
+                                );
+                              },
+                            }
+                          );
+                        }}
+                        disabled={preferencesLoading || updatePreference.isPending}
+                        trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                        thumbColor={COLORS.white}
+                      />
+                    )}
+                  </View>
                   <TouchableOpacity
                     style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
                     activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}

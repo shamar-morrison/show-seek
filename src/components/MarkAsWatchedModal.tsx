@@ -1,0 +1,420 @@
+import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+interface MarkAsWatchedModalProps {
+  /** Whether the modal is visible */
+  visible: boolean;
+  /** Callback when the modal should close */
+  onClose: () => void;
+  /** Movie title for display */
+  movieTitle: string;
+  /** Movie release date (YYYY-MM-DD format) */
+  releaseDate: string | null;
+  /** Number of times already watched */
+  watchCount: number;
+  /** Callback when user selects a watch date */
+  onMarkAsWatched: (date: Date) => Promise<void>;
+  /** Callback when user wants to clear all watch history */
+  onClearAll: () => Promise<void>;
+  /** Callback to show a toast message */
+  onShowToast?: (message: string) => void;
+}
+
+/**
+ * Bottom sheet modal for selecting when a movie was watched.
+ * Options: Right now, Release Date, Choose a date, Clear all (if applicable)
+ */
+export default function MarkAsWatchedModal({
+  visible,
+  onClose,
+  movieTitle,
+  releaseDate,
+  watchCount,
+  onMarkAsWatched,
+  onClearAll,
+  onShowToast,
+}: MarkAsWatchedModalProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const parsedReleaseDate = releaseDate ? new Date(releaseDate) : null;
+  const hasValidReleaseDate = parsedReleaseDate && !isNaN(parsedReleaseDate.getTime());
+
+  const handleRightNow = async () => {
+    try {
+      setIsLoading(true);
+      await onMarkAsWatched(new Date());
+      onShowToast?.('Marked as watched');
+      onClose();
+    } catch (error) {
+      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReleaseDate = async () => {
+    if (!parsedReleaseDate) return;
+
+    try {
+      setIsLoading(true);
+      await onMarkAsWatched(parsedReleaseDate);
+      onShowToast?.('Marked as watched');
+      onClose();
+    } catch (error) {
+      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChooseDate = () => {
+    setSelectedDate(new Date());
+    setShowDatePicker(true);
+  };
+
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (event.type === 'set' && date) {
+        saveCustomDate(date);
+      }
+    } else if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const handleIOSDateConfirm = async () => {
+    setShowDatePicker(false);
+    await saveCustomDate(selectedDate);
+  };
+
+  const saveCustomDate = async (date: Date) => {
+    try {
+      setIsLoading(true);
+      await onMarkAsWatched(date);
+      onShowToast?.('Marked as watched');
+      onClose();
+    } catch (error) {
+      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearAll = () => {
+    Alert.alert(
+      'Clear Watch History',
+      'Clear all watch history for this movie? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              await onClearAll();
+              onShowToast?.('Watch history cleared');
+              onClose();
+            } catch (error) {
+              onShowToast?.(error instanceof Error ? error.message : 'Failed to clear');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatReleaseDate = (date: Date): string => {
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ModalBackground />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={ACTIVE_OPACITY}
+          onPress={onClose}
+        />
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>When did you watch this?</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Movie Title */}
+          <Text style={styles.movieTitle} numberOfLines={2}>
+            {movieTitle}
+          </Text>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Date Options */}
+            <View style={styles.optionsContainer}>
+              {/* Right Now */}
+              <Pressable
+                style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+                onPress={handleRightNow}
+                disabled={isLoading}
+              >
+                <View style={styles.optionIcon}>
+                  <Clock size={20} color={COLORS.primary} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionTitle}>Right now</Text>
+                  <Text style={styles.optionDescription}>Use current date and time</Text>
+                </View>
+              </Pressable>
+
+              {/* Release Date (if available) */}
+              {hasValidReleaseDate && (
+                <Pressable
+                  style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+                  onPress={handleReleaseDate}
+                  disabled={isLoading}
+                >
+                  <View style={styles.optionIcon}>
+                    <Calendar size={20} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionTitle}>Release Date</Text>
+                    <Text style={styles.optionDescription}>
+                      {formatReleaseDate(parsedReleaseDate!)}
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
+
+              {/* Choose a Date */}
+              <Pressable
+                style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+                onPress={handleChooseDate}
+                disabled={isLoading}
+              >
+                <View style={styles.optionIcon}>
+                  <Calendar size={20} color={COLORS.primary} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionTitle}>Choose a date</Text>
+                  <Text style={styles.optionDescription}>Select from calendar</Text>
+                </View>
+              </Pressable>
+
+              {/* Clear All (only if watched at least once) */}
+              {watchCount > 0 && (
+                <>
+                  <View style={styles.divider} />
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.option,
+                      styles.dangerOption,
+                      pressed && styles.optionPressed,
+                    ]}
+                    onPress={handleClearAll}
+                    disabled={isLoading}
+                  >
+                    <View style={styles.optionIcon}>
+                      <Trash2 size={20} color={COLORS.error} />
+                    </View>
+                    <View style={styles.optionContent}>
+                      <Text style={[styles.optionTitle, styles.dangerText]}>
+                        Clear all watch history
+                      </Text>
+                      <Text style={styles.optionDescription}>
+                        Remove all {watchCount} watch{watchCount !== 1 ? 'es' : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </>
+              )}
+            </View>
+
+            {/* iOS Date Picker */}
+            {showDatePicker && Platform.OS === 'ios' && (
+              <View style={styles.datePickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                  textColor={COLORS.text}
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.confirmButton,
+                    pressed && styles.confirmButtonPressed,
+                  ]}
+                  onPress={handleIOSDateConfirm}
+                >
+                  <Text style={styles.confirmButtonText}>Confirm Date</Text>
+                </Pressable>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Loading Overlay */}
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+
+      {/* Android Date Picker (renders as dialog) */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+        />
+      )}
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.l,
+  },
+  content: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
+    padding: SPACING.l,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '85%',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.m,
+  },
+  title: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  closeButton: {
+    padding: SPACING.xs,
+  },
+  movieTitle: {
+    fontSize: FONT_SIZE.m,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.l,
+  },
+  optionsContainer: {
+    gap: SPACING.s,
+  },
+  option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.m,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    gap: SPACING.m,
+  },
+  optionPressed: {
+    opacity: ACTIVE_OPACITY,
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  optionDescription: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.surfaceLight,
+    marginVertical: SPACING.s,
+  },
+  dangerOption: {
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    backgroundColor: 'transparent',
+  },
+  dangerText: {
+    color: COLORS.error,
+  },
+  datePickerContainer: {
+    marginTop: SPACING.l,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.m,
+  },
+  confirmButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    marginTop: SPACING.m,
+  },
+  confirmButtonPressed: {
+    opacity: ACTIVE_OPACITY,
+  },
+  confirmButtonText: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BORDER_RADIUS.l,
+  },
+});

@@ -40,7 +40,10 @@ class PreferencesService {
             showListIndicators:
               data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
             homeScreenLists: data?.preferences?.homeScreenLists,
+            quickMarkAsWatched:
+              data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
           };
+
           callback(preferences);
         } else {
           // User document doesn't exist yet, use defaults
