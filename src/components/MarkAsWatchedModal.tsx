@@ -3,7 +3,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -54,6 +54,15 @@ export default function MarkAsWatchedModal({
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Reset modal state when closed to prevent stale UI on reopen
+  useEffect(() => {
+    if (!visible) {
+      setShowDatePicker(false);
+      setSelectedDate(new Date());
+      setIsLoading(false);
+    }
+  }, [visible]);
 
   // Parse release date using timezone-safe utility
   let parsedReleaseDate: Date | null = null;
