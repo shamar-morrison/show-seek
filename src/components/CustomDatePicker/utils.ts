@@ -133,7 +133,7 @@ export function generateCalendarGrid(
  */
 export function getMonthName(month: number): string {
   const date = new Date(2024, month, 1);
-  return date.toLocaleDateString(undefined, { month: 'long' });
+  return date.toLocaleDateString(undefined, { month: 'short' });
 }
 
 /**

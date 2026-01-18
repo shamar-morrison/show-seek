@@ -6,7 +6,7 @@
 
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleProp,
@@ -54,6 +54,14 @@ export function CustomDatePicker({
 
   // Month/year picker modal state
   const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
+
+  // Sync internal state when selectedDate prop changes
+  useEffect(() => {
+    setTempSelectedDate(selectedDate);
+    if (selectedDate) {
+      setViewingDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [selectedDate]);
 
   // Memoized weekday headers (locale-based)
   const weekdayHeaders = useMemo(() => getLocalizedWeekdayHeaders(), []);
@@ -104,6 +112,14 @@ export function CustomDatePicker({
   };
 
   const handleCancel = () => {
+    // Reset internal state back to the prop-backed selectedDate
+    setTempSelectedDate(selectedDate);
+    if (selectedDate) {
+      setViewingDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    } else {
+      const today = new Date();
+      setViewingDate(new Date(today.getFullYear(), today.getMonth(), 1));
+    }
     onCancel?.();
   };
 
