@@ -36,6 +36,18 @@ function getDefaultMaxDate(): Date {
   return today;
 }
 
+/**
+ * Clamp a viewing date (month-start) to stay within min/max bounds.
+ */
+function clampToMonthBounds(viewDate: Date, minDate: Date, maxDate: Date): Date {
+  const minMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const maxMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+
+  if (viewDate < minMonth) return minMonth;
+  if (viewDate > maxMonth) return maxMonth;
+  return viewDate;
+}
+
 export function CustomDatePicker({
   selectedDate,
   onDateSelect,
@@ -46,7 +58,10 @@ export function CustomDatePicker({
   // Viewing state: which month/year is currently displayed
   const [viewingDate, setViewingDate] = useState(() => {
     const initial = selectedDate ?? new Date();
-    return new Date(initial.getFullYear(), initial.getMonth(), 1);
+    const monthStart = new Date(initial.getFullYear(), initial.getMonth(), 1);
+    // Note: Can't clamp here since minDate/maxDate are props with defaults
+    // The useEffect below will handle clamping after mount
+    return monthStart;
   });
 
   // Temporary selection before confirmation
@@ -55,13 +70,14 @@ export function CustomDatePicker({
   // Month/year picker modal state
   const [showMonthYearPicker, setShowMonthYearPicker] = useState(false);
 
-  // Sync internal state when selectedDate prop changes
+  // Sync internal state when selectedDate prop or bounds change
   useEffect(() => {
     setTempSelectedDate(selectedDate);
-    if (selectedDate) {
-      setViewingDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-    }
-  }, [selectedDate]);
+    const targetDate = selectedDate ?? new Date();
+    const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+    const clampedMonth = clampToMonthBounds(monthStart, minDate, maxDate);
+    setViewingDate(clampedMonth);
+  }, [selectedDate, minDate, maxDate]);
 
   // Memoized weekday headers (locale-based)
   const weekdayHeaders = useMemo(() => getLocalizedWeekdayHeaders(), []);
@@ -114,12 +130,10 @@ export function CustomDatePicker({
   const handleCancel = () => {
     // Reset internal state back to the prop-backed selectedDate
     setTempSelectedDate(selectedDate);
-    if (selectedDate) {
-      setViewingDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
-    } else {
-      const today = new Date();
-      setViewingDate(new Date(today.getFullYear(), today.getMonth(), 1));
-    }
+    const targetDate = selectedDate ?? new Date();
+    const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+    const clampedMonth = clampToMonthBounds(monthStart, minDate, maxDate);
+    setViewingDate(clampedMonth);
     onCancel?.();
   };
 
