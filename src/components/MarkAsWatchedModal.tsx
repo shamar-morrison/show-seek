@@ -1,7 +1,8 @@
+import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import { Calendar, Clock, Trash2, X } from 'lucide-react-native';
+import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -51,11 +52,13 @@ export default function MarkAsWatchedModal({
   onShowToast,
 }: MarkAsWatchedModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Reset modal state when closed to prevent stale UI on reopen
   useEffect(() => {
     if (!visible) {
       setIsLoading(false);
+      setShowDatePicker(false);
     }
   }, [visible]);
 
@@ -102,6 +105,23 @@ export default function MarkAsWatchedModal({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCustomDate = (date: Date) => {
+    setShowDatePicker(false);
+    // Mark as watched with the selected date
+    (async () => {
+      try {
+        setIsLoading(true);
+        await onMarkAsWatched(date);
+        onShowToast?.('Marked as watched');
+        onClose();
+      } catch (error) {
+        onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   };
 
   const handleClearAll = () => {
@@ -200,6 +220,21 @@ export default function MarkAsWatchedModal({
                 </Pressable>
               )}
 
+              {/* Custom Date */}
+              <Pressable
+                style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+                onPress={() => setShowDatePicker(true)}
+                disabled={isLoading}
+              >
+                <View style={styles.optionIcon}>
+                  <CalendarDays size={20} color={COLORS.primary} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionTitle}>Custom date</Text>
+                  <Text style={styles.optionDescription}>Choose a specific date</Text>
+                </View>
+              </Pressable>
+
               {/* Clear All (only if watched at least once) */}
               {watchCount > 0 && (
                 <>
@@ -238,6 +273,33 @@ export default function MarkAsWatchedModal({
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Custom Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ModalBackground />
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setShowDatePicker(false)}
+          />
+          <View style={styles.datePickerContainer}>
+            <CustomDatePicker
+              selectedDate={new Date()}
+              onDateSelect={handleCustomDate}
+              onCancel={() => setShowDatePicker(false)}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Modal>
   );
 }
@@ -335,5 +397,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: BORDER_RADIUS.l,
+  },
+  datePickerContainer: {
+    width: '100%',
+    maxWidth: 400,
   },
 });
