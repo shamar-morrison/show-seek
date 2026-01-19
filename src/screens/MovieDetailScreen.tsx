@@ -683,6 +683,11 @@ export default function MovieDetailScreen() {
             isError={isTraktReviewsError}
             reviews={traktReviews}
             shouldLoad={shouldLoadTraktReviews}
+            onReviewPress={(review) => {
+              navigateTo(
+                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+              );
+            }}
             onLayout={() => {
               if (!shouldLoadTraktReviews) {
                 setShouldLoadTraktReviews(true);

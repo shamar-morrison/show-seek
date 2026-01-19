@@ -1,91 +1,122 @@
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { TraktReview } from '@/src/types/trakt';
 import { FlashList } from '@shopify/flash-list';
 import { Star, ThumbsUp } from 'lucide-react-native';
 import React, { memo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
-
-// Import the Trakt logo SVG
-const TraktLogo = require('@/assets/images/trakt-logo.svg');
+import type { Review } from './types';
 
 interface TraktReviewsSectionProps {
   isLoading: boolean;
   isError: boolean;
   reviews: TraktReview[];
   shouldLoad: boolean;
+  onReviewPress: (review: Review) => void;
   onLayout?: () => void;
   style?: ViewStyle;
 }
 
 /**
+ * Convert a TraktReview to the Review format expected by the review detail screen
+ */
+function traktToReview(traktReview: TraktReview): Review {
+  return {
+    id: traktReview.id.toString(),
+    author: traktReview.user.name || traktReview.user.username,
+    author_details: {
+      avatar_path: traktReview.user.images?.avatar?.full || null,
+      rating: traktReview.user_rating,
+    },
+    content: traktReview.comment,
+    created_at: traktReview.created_at,
+    updated_at: traktReview.created_at,
+  };
+}
+
+/**
  * A single review card with spoiler handling
  */
-const TraktReviewCard = memo(({ review }: { review: TraktReview }) => {
-  const [revealed, setRevealed] = useState(false);
-  const isSpoiler = review.spoiler && !revealed;
+const TraktReviewCard = memo(
+  ({ review, onPress }: { review: TraktReview; onPress: () => void }) => {
+    const [revealed, setRevealed] = useState(false);
+    const isSpoiler = review.spoiler && !revealed;
 
-  const avatarUrl = review.user.images?.avatar?.full;
+    const avatarUrl = review.user.images?.avatar?.full;
 
-  return (
-    <View style={detailStyles.reviewCard}>
-      <View style={detailStyles.reviewHeader}>
-        <MediaImage
-          source={{ uri: avatarUrl }}
-          style={detailStyles.reviewAvatar}
-          contentFit="cover"
-          placeholderType="person"
-        />
-        <View style={detailStyles.reviewAuthorInfo}>
-          <Text style={detailStyles.reviewAuthor} numberOfLines={1}>
-            {review.user.name || review.user.username}
-          </Text>
-          <View style={styles.reviewMeta}>
-            {review.user_rating && (
-              <View style={detailStyles.reviewRating}>
-                <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                <Text style={detailStyles.reviewRatingText}>{review.user_rating.toFixed(1)}</Text>
-              </View>
-            )}
-            {review.likes > 0 && (
-              <View style={styles.likesContainer}>
-                <ThumbsUp size={12} color={COLORS.textSecondary} />
-                <Text style={styles.likesText}>{review.likes}</Text>
-              </View>
-            )}
+    const handlePress = () => {
+      if (isSpoiler) {
+        setRevealed(true);
+      } else {
+        onPress();
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={detailStyles.reviewCard}
+        onPress={handlePress}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <View style={detailStyles.reviewHeader}>
+          <MediaImage
+            source={{ uri: avatarUrl }}
+            style={detailStyles.reviewAvatar}
+            contentFit="cover"
+            placeholderType="person"
+          />
+          <View style={detailStyles.reviewAuthorInfo}>
+            <Text style={detailStyles.reviewAuthor} numberOfLines={1}>
+              {review.user.name || review.user.username}
+            </Text>
+            <View style={styles.reviewMeta}>
+              {review.user_rating && (
+                <View style={detailStyles.reviewRating}>
+                  <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                  <Text style={detailStyles.reviewRatingText}>{review.user_rating.toFixed(1)}</Text>
+                </View>
+              )}
+              {review.likes > 0 && (
+                <View style={styles.likesContainer}>
+                  <ThumbsUp size={12} color={COLORS.textSecondary} />
+                  <Text style={styles.likesText}>{review.likes}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
-      </View>
 
-      {isSpoiler ? (
-        <Pressable onPress={() => setRevealed(true)} style={styles.spoilerContainer}>
-          <View style={styles.spoilerOverlay}>
-            <Text style={styles.spoilerHint}>Tap to reveal spoiler</Text>
+        {isSpoiler ? (
+          <View style={styles.spoilerContainer}>
+            <View style={styles.spoilerOverlay}>
+              <Text style={styles.spoilerHint}>Tap to reveal spoiler</Text>
+            </View>
+            <Text style={[detailStyles.reviewContent, styles.blurredText]} numberOfLines={4}>
+              {review.comment}
+            </Text>
           </View>
-          <Text style={[detailStyles.reviewContent, styles.blurredText]} numberOfLines={4}>
+        ) : (
+          <Text style={detailStyles.reviewContent} numberOfLines={4}>
             {review.comment}
           </Text>
-        </Pressable>
-      ) : (
-        <Text style={detailStyles.reviewContent} numberOfLines={4}>
-          {review.comment}
-        </Text>
-      )}
-    </View>
-  );
-});
+        )}
+      </TouchableOpacity>
+    );
+  }
+);
 
 TraktReviewCard.displayName = 'TraktReviewCard';
 
 export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
-  ({ isLoading, isError, reviews, shouldLoad, onLayout, style }) => {
+  ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
-            <Image source={TraktLogo} style={styles.traktLogo} />
+            <TraktLogo size={24} />
             <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
           </View>
           <ScrollView
@@ -117,7 +148,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
-            <Image source={TraktLogo} style={styles.traktLogo} />
+            <TraktLogo size={24} />
             <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
           </View>
           <View style={detailStyles.reviewErrorBox}>
@@ -132,7 +163,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
-            <Image source={TraktLogo} style={styles.traktLogo} />
+            <TraktLogo size={24} />
             <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
           </View>
           <View style={detailStyles.similarList}>
@@ -143,7 +174,9 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
               showsHorizontalScrollIndicator={false}
               removeClippedSubviews={true}
               drawDistance={400}
-              renderItem={({ item }) => <TraktReviewCard review={item} />}
+              renderItem={({ item }) => (
+                <TraktReviewCard review={item} onPress={() => onReviewPress(traktToReview(item))} />
+              )}
             />
           </View>
         </View>
@@ -177,11 +210,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.s,
     paddingBottom: SPACING.s,
-  },
-  traktLogo: {
-    width: 24,
-    height: 24,
-    borderRadius: BORDER_RADIUS.s,
   },
   reviewMeta: {
     flexDirection: 'row',
