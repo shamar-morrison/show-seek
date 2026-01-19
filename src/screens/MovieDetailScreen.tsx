@@ -12,6 +12,7 @@ import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
+import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -44,6 +45,7 @@ import {
   useMediaReminder,
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
+import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
@@ -83,6 +85,7 @@ export default function MovieDetailScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
+  const [shouldLoadTraktReviews, setShouldLoadTraktReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,6 +115,13 @@ export default function MovieDetailScreen() {
   const { count: watchCount, isLoading: isLoadingWatched } = useWatchedMovies(movieId);
   const addWatchMutation = useAddWatch(movieId);
   const clearWatchesMutation = useClearWatches(movieId);
+
+  // Trakt reviews
+  const {
+    reviews: traktReviews,
+    isLoading: isLoadingTraktReviews,
+    isError: isTraktReviewsError,
+  } = useTraktReviews(movieId, 'movie', shouldLoadTraktReviews);
 
   const movieQuery = useQuery({
     queryKey: ['movie', movieId],
@@ -667,7 +677,24 @@ export default function MovieDetailScreen() {
             </>
           )}
 
-          {/* Reviews */}
+          {/* Trakt Reviews */}
+          <TraktReviewsSection
+            isLoading={isLoadingTraktReviews}
+            isError={isTraktReviewsError}
+            reviews={traktReviews}
+            shouldLoad={shouldLoadTraktReviews}
+            onLayout={() => {
+              if (!shouldLoadTraktReviews) {
+                setShouldLoadTraktReviews(true);
+              }
+            }}
+          />
+
+          {!isLoadingTraktReviews && !isTraktReviewsError && traktReviews.length > 0 && (
+            <SectionSeparator />
+          )}
+
+          {/* TMDB Reviews */}
           <ReviewsSection
             isLoading={reviewsQuery.isLoading}
             isError={reviewsQuery.isError}

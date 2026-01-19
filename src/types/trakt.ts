@@ -64,3 +64,31 @@ export interface EnrichmentStatus {
   lists: Record<string, ListEnrichmentStatus>;
   errors?: string[];
 }
+
+/**
+ * Trakt Reviews Types
+ */
+
+export interface TraktUser {
+  username: string;
+  name: string;
+  ids: { slug: string };
+  images?: { avatar?: { full?: string } };
+}
+
+export interface TraktReview {
+  id: number;
+  created_at: string;
+  comment: string;
+  spoiler: boolean;
+  user: TraktUser;
+  user_rating: number | null;
+  likes: number;
+}
+
+export interface TraktSearchResult {
+  type: 'movie' | 'show';
+  score: number;
+  movie?: { ids: { trakt: number; slug: string; tmdb: number } };
+  show?: { ids: { trakt: number; slug: string; tmdb: number } };
+}
