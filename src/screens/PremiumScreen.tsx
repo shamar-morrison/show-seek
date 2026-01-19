@@ -1,3 +1,4 @@
+import { legal } from '@/app/(auth)/legal';
 import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
@@ -11,6 +12,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -156,6 +158,16 @@ export default function PremiumScreen() {
             <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
           </TouchableOpacity>
         )}
+
+        <View style={styles.legalLinks}>
+          <TouchableOpacity onPress={() => Linking.openURL(legal.tos)}>
+            <Text style={styles.legalLinkText}>Terms of Service</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>•</Text>
+          <TouchableOpacity onPress={() => Linking.openURL(legal.privacy)}>
+            <Text style={styles.legalLinkText}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -269,5 +281,21 @@ const styles = StyleSheet.create({
   restoreButtonText: {
     color: COLORS.textSecondary,
     fontSize: 16,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    marginTop: SPACING.m,
+  },
+  legalLinkText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    color: COLORS.textSecondary,
+    marginHorizontal: SPACING.s,
+    fontSize: 14,
   },
 });
