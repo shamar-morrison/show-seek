@@ -346,8 +346,6 @@ const styles = StyleSheet.create({
   selectedCell: {
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.round,
-    width: CELL_SIZE,
-    height: CELL_SIZE,
   },
   selectedText: {
     color: COLORS.white,
@@ -357,8 +355,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.round,
-    width: CELL_SIZE,
-    height: CELL_SIZE,
   },
   pressedCell: {
     backgroundColor: COLORS.surfaceLight,
