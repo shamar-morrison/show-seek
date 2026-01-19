@@ -13,7 +13,9 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Reviews</Text>
+          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+            TMDB Reviews
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -42,7 +44,9 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (isError && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Reviews</Text>
+          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+            TMDB Reviews
+          </Text>
           <View style={detailStyles.reviewErrorBox}>
             <Text style={detailStyles.reviewErrorText}>Failed to load reviews</Text>
           </View>
@@ -53,7 +57,9 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
     if (!isLoading && !isError && reviews.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Reviews</Text>
+          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+            TMDB Reviews
+          </Text>
           <View style={detailStyles.similarList}>
             <FlashList
               horizontal

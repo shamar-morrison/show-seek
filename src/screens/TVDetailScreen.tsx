@@ -11,6 +11,7 @@ import { RecommendationsSection } from '@/src/components/detail/RecommendationsS
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
+import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -43,6 +44,7 @@ import {
   useMediaReminder,
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
+import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -75,6 +77,7 @@ export default function TVDetailScreen() {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
+  const [shouldLoadTraktReviews, setShouldLoadTraktReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
@@ -94,6 +97,13 @@ export default function TVDetailScreen() {
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
   const updateReminderMutation = useUpdateReminder();
+
+  // Trakt reviews
+  const {
+    reviews: traktReviews,
+    isLoading: isLoadingTraktReviews,
+    isError: isTraktReviewsError,
+  } = useTraktReviews(tvId, 'tv', shouldLoadTraktReviews);
 
   const tvQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -708,7 +718,29 @@ export default function TVDetailScreen() {
 
           {recommendations.length > 0 && <SectionSeparator />}
 
-          {/* Reviews */}
+          {/* Trakt Reviews */}
+          <TraktReviewsSection
+            isLoading={isLoadingTraktReviews}
+            isError={isTraktReviewsError}
+            reviews={traktReviews}
+            shouldLoad={shouldLoadTraktReviews}
+            onReviewPress={(review) => {
+              navigateTo(
+                `/review/${review.id}?review=${encodeURIComponent(JSON.stringify(review))}`
+              );
+            }}
+            onLayout={() => {
+              if (!shouldLoadTraktReviews) {
+                setShouldLoadTraktReviews(true);
+              }
+            }}
+          />
+
+          {!isLoadingTraktReviews && !isTraktReviewsError && traktReviews.length > 0 && (
+            <SectionSeparator />
+          )}
+
+          {/* TMDB Reviews */}
           <ReviewsSection
             isLoading={reviewsQuery.isLoading}
             isError={reviewsQuery.isError}
