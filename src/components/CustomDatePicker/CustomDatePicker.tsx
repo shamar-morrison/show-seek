@@ -51,10 +51,22 @@ function clampToMonthBounds(viewDate: Date, minDate: Date, maxDate: Date): Date 
 export function CustomDatePicker({
   selectedDate,
   onDateSelect,
-  minDate = DEFAULT_MIN_DATE,
-  maxDate = getDefaultMaxDate(),
+  minDate,
+  maxDate,
   onCancel,
 }: DatePickerProps) {
+  // Stable min/max date references to prevent unnecessary effect runs
+  // Use timestamp comparison for stable memoization
+  const effectiveMinDate = useMemo(() => {
+    return minDate ?? DEFAULT_MIN_DATE;
+  }, [minDate?.getTime()]);
+
+  const effectiveMaxDate = useMemo(() => {
+    if (maxDate) return maxDate;
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return today;
+  }, [maxDate?.getTime()]);
   // Viewing state: which month/year is currently displayed
   const [viewingDate, setViewingDate] = useState(() => {
     const initial = selectedDate ?? new Date();
@@ -75,9 +87,9 @@ export function CustomDatePicker({
     setTempSelectedDate(selectedDate);
     const targetDate = selectedDate ?? new Date();
     const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-    const clampedMonth = clampToMonthBounds(monthStart, minDate, maxDate);
+    const clampedMonth = clampToMonthBounds(monthStart, effectiveMinDate, effectiveMaxDate);
     setViewingDate(clampedMonth);
-  }, [selectedDate, minDate, maxDate]);
+  }, [selectedDate, effectiveMinDate, effectiveMaxDate]);
 
   // Memoized weekday headers (locale-based)
   const weekdayHeaders = useMemo(() => getLocalizedWeekdayHeaders(), []);
@@ -88,14 +100,14 @@ export function CustomDatePicker({
       viewingDate.getFullYear(),
       viewingDate.getMonth(),
       tempSelectedDate,
-      minDate,
-      maxDate
+      effectiveMinDate,
+      effectiveMaxDate
     );
-  }, [viewingDate, tempSelectedDate, minDate, maxDate]);
+  }, [viewingDate, tempSelectedDate, effectiveMinDate, effectiveMaxDate]);
 
   // Navigation constraints
-  const canGoBack = !isSameMonth(viewingDate, minDate);
-  const canGoForward = !isSameMonth(viewingDate, maxDate);
+  const canGoBack = !isSameMonth(viewingDate, effectiveMinDate);
+  const canGoForward = !isSameMonth(viewingDate, effectiveMaxDate);
 
   // Navigation handlers
   const goToPreviousMonth = () => {
@@ -132,7 +144,7 @@ export function CustomDatePicker({
     setTempSelectedDate(selectedDate);
     const targetDate = selectedDate ?? new Date();
     const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-    const clampedMonth = clampToMonthBounds(monthStart, minDate, maxDate);
+    const clampedMonth = clampToMonthBounds(monthStart, effectiveMinDate, effectiveMaxDate);
     setViewingDate(clampedMonth);
     onCancel?.();
   };
@@ -244,8 +256,8 @@ export function CustomDatePicker({
         visible={showMonthYearPicker}
         selectedMonth={viewingDate.getMonth()}
         selectedYear={viewingDate.getFullYear()}
-        minDate={minDate}
-        maxDate={maxDate}
+        minDate={effectiveMinDate}
+        maxDate={effectiveMaxDate}
         onSelect={handleMonthYearSelect}
         onClose={() => setShowMonthYearPicker(false)}
       />
