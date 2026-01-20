@@ -42,6 +42,8 @@ class PreferencesService {
             homeScreenLists: data?.preferences?.homeScreenLists,
             quickMarkAsWatched:
               data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
+            defaultLaunchScreen:
+              data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
           };
 
           callback(preferences);

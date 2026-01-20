@@ -8,6 +8,7 @@ import { PremiumProvider } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 
 import { initializeReminderSync } from '@/src/utils/reminderSync';
@@ -64,6 +65,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding } = useAuth();
+  const { preferences, isLoading: preferencesLoading } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
   const segments = useSegments();
@@ -98,7 +100,9 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (loading || !isLanguageReady || !isRegionReady) return;
+    // For non-anonymous users, wait for preferences to load before routing
+    const waitingForPreferences = user && !user.isAnonymous && preferencesLoading;
+    if (loading || !isLanguageReady || !isRegionReady || waitingForPreferences) return;
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
@@ -115,13 +119,30 @@ function RootLayoutNav() {
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
     } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
-      // If logged in as a real user (not guest) and in auth/onboarding, go to home
+      // If logged in as a real user (not guest) and in auth/onboarding, go to preferred launch screen
       // Guest users (anonymous) are allowed to access auth screens to upgrade their account
-      router.replace('/(tabs)/home');
+      const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
+      router.replace(destination);
     }
-  }, [user, loading, hasCompletedOnboarding, segments, router, isLanguageReady, isRegionReady]);
+  }, [
+    user,
+    loading,
+    hasCompletedOnboarding,
+    segments,
+    router,
+    isLanguageReady,
+    isRegionReady,
+    preferences,
+    preferencesLoading,
+  ]);
 
-  if (loading || !isLanguageReady || !isRegionReady) {
+  // Show loading state while auth, language, region, or preferences are loading
+  const isInitializing =
+    loading ||
+    !isLanguageReady ||
+    !isRegionReady ||
+    (user && !user.isAnonymous && preferencesLoading);
+  if (isInitializing) {
     return (
       <View
         style={{

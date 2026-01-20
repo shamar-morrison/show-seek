@@ -3,6 +3,7 @@ import {
   MAX_HOME_LISTS,
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
+import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../firebase/config';
@@ -11,13 +12,17 @@ import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../typ
 
 /**
  * Hook to subscribe to user preferences with real-time updates
+ * Uses useAuth to get the user reactively instead of reading auth.currentUser directly
  */
 export const usePreferences = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { user, loading: authLoading } = useAuth();
+  // Use user from useAuth context to ensure we have the correct reactive state
+  const userId = user?.uid;
   const [subscriptionData, setSubscriptionData] = useState<UserPreferences | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(!!userId);
+  const [hasLoaded, setHasLoaded] = useState(false); // Track if data was actually fetched
   const [retryTrigger, setRetryTrigger] = useState(0);
 
   // Refetch function to retry loading preferences after an error
@@ -31,6 +36,7 @@ export const usePreferences = () => {
     // Reset subscriptionData unconditionally when userId changes
     // to avoid leaking the previous user's preferences
     setSubscriptionData(null);
+    setHasLoaded(false);
 
     if (!userId) {
       setIsLoading(false);
@@ -45,6 +51,7 @@ export const usePreferences = () => {
         setSubscriptionData(preferences);
         setError(null);
         setIsLoading(false);
+        setHasLoaded(true); // Mark as loaded when we get data
       },
       (err) => {
         setError(err);
@@ -82,6 +89,7 @@ export const usePreferences = () => {
     preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
     homeScreenLists,
     isLoading,
+    hasLoaded, // Export this for consumers that need to know if data was fetched
     error,
     refetch,
   };
@@ -89,13 +97,24 @@ export const usePreferences = () => {
 
 /**
  * Mutation hook for updating a preference with optimistic updates
+ * Supports both boolean and string preference values
  */
+type UpdatePreferenceVariables = {
+  key: keyof UserPreferences;
+  value: UserPreferences[keyof UserPreferences];
+};
+
 export const useUpdatePreference = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    void,
+    Error,
+    UpdatePreferenceVariables,
+    { previousPreferences?: UserPreferences; userId: string }
+  >({
     mutationKey: ['updatePreference'],
-    mutationFn: async ({ key, value }: { key: keyof UserPreferences; value: boolean }) => {
+    mutationFn: async ({ key, value }: UpdatePreferenceVariables) => {
       await preferencesService.updatePreference(key, value);
     },
 
