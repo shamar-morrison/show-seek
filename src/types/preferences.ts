@@ -23,6 +23,7 @@ export interface UserPreferences {
   showListIndicators: boolean; // Show bookmark badge on cards when item is in a list
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
   quickMarkAsWatched: boolean; // Skip modal and use current time when marking movies as watched
+  language: string; // TMDB content language (e.g., 'en-US', 'es-ES')
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -31,4 +32,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   blurPlotSpoilers: false,
   showListIndicators: false, // Off by default for new users
   quickMarkAsWatched: false, // Off by default - show date selection modal
+  language: 'en-US', // Default to English
 };

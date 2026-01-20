@@ -25,12 +25,35 @@ export const TMDB_IMAGE_SIZES = {
   },
 } as const;
 
+// Dynamic language setting for TMDB API requests
+let currentLanguage = 'en-US';
+
+/**
+ * Set the language for all TMDB API requests.
+ * Call this when the user changes their language preference.
+ */
+export const setApiLanguage = (language: string) => {
+  currentLanguage = language;
+};
+
+/**
+ * Get the current API language setting.
+ */
+export const getApiLanguage = () => currentLanguage;
+
 export const tmdbClient = axios.create({
   baseURL: BASE_URL,
   params: {
     api_key: TMDB_API_KEY,
-    language: 'en-US',
+    // Note: language is now injected dynamically via interceptor
   },
+});
+
+// Inject language parameter dynamically on every request
+tmdbClient.interceptors.request.use((config) => {
+  config.params = config.params || {};
+  config.params.language = currentLanguage;
+  return config;
 });
 
 export const getImageUrl = (path: string | null, size: string = TMDB_IMAGE_SIZES.poster.medium) => {

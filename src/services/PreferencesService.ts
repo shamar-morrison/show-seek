@@ -42,6 +42,7 @@ class PreferencesService {
             homeScreenLists: data?.preferences?.homeScreenLists,
             quickMarkAsWatched:
               data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
+            language: data?.preferences?.language ?? DEFAULT_PREFERENCES.language,
           };
 
           callback(preferences);

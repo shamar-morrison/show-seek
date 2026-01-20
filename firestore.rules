@@ -33,7 +33,7 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
-        // Preferences validation - must be a map with boolean autoAddToWatching
+        // Preferences validation - must be a map with valid preference fields
         && (!('preferences' in request.resource.data) || (
           request.resource.data.preferences is map
           && (!('autoAddToWatching' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToWatching is bool)
@@ -41,6 +41,9 @@ service cloud.firestore {
           && (!('blurPlotSpoilers' in request.resource.data.preferences) || request.resource.data.preferences.blurPlotSpoilers is bool)
           && (!('showMediaPreviewCards' in request.resource.data.preferences) || request.resource.data.preferences.showMediaPreviewCards is bool)
           && (!('quickMarkAsWatched' in request.resource.data.preferences) || request.resource.data.preferences.quickMarkAsWatched is bool)
+          && (!('showListIndicators' in request.resource.data.preferences) || request.resource.data.preferences.showListIndicators is bool)
+          && (!('homeScreenLists' in request.resource.data.preferences) || request.resource.data.preferences.homeScreenLists is list)
+          && (!('language' in request.resource.data.preferences) || request.resource.data.preferences.language is string)
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);
