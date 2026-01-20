@@ -13,6 +13,7 @@ export const COLORS = {
   black: '#000000',
   transparent: 'transparent',
   overlay: 'rgba(0,0,0,0.5)',
+  primaryTransparent: 'rgba(229, 9, 20, 0.2)',
 } as const;
 
 export const SPACING = {

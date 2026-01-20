@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(229, 9, 20, 0.2)', // Primary with opacity
+    backgroundColor: COLORS.primaryTransparent,
     justifyContent: 'center',
     alignItems: 'center',
   },
