@@ -3,6 +3,7 @@ import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
@@ -103,6 +104,9 @@ export default function DiscoverScreen() {
   // Flatten paginated data
   const allResults: (Movie | TVShow)[] =
     discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [];
+
+  // Filter out watched content
+  const filteredResults = useContentFilter(allResults);
 
   const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
     const title = 'title' in item ? item.title : item.name;
@@ -218,7 +222,7 @@ export default function DiscoverScreen() {
         </View>
       ) : (
         <FlashList
-          data={allResults}
+          data={filteredResults}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${mediaType}-${item.id}`}
           contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}

@@ -32,6 +32,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -388,7 +389,11 @@ export default function TVDetailScreen() {
   const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
-  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+
+  // Filter out watched content
+  const filteredSimilarShows = useContentFilter(similarShows);
+  const recommendations = useContentFilter(rawRecommendations);
 
   const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -670,12 +675,12 @@ export default function TVDetailScreen() {
           {/* Similar Shows */}
           <SimilarMediaSection
             mediaType="tv"
-            items={similarShows}
+            items={filteredSimilarShows}
             onMediaPress={handleShowPress}
             title="Similar Shows"
           />
 
-          {similarShows.length > 0 && <SectionSeparator />}
+          {filteredSimilarShows.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (

@@ -6,6 +6,7 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useLists } from '@/src/hooks/useLists';
 import { HomeScreenListItem } from '@/src/types/preferences';
 import { FlashList } from '@shopify/flash-list';
@@ -85,6 +86,9 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
     return query.data.pages.flatMap((page) => page.results);
   }, [query.data]);
 
+  // Filter out watched content from TMDB lists
+  const filteredItems = useContentFilter(items);
+
   const handleLoadMore = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
       query.fetchNextPage();
@@ -114,7 +118,7 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
       ) : (
         <FlashList
           horizontal
-          data={items}
+          data={filteredItems}
           renderItem={({ item }) =>
             isTV ? <TVShowCard show={item as TVShow} /> : <MovieCard movie={item as Movie} />
           }

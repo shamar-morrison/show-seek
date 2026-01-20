@@ -596,6 +596,69 @@ export default function ProfileScreen() {
                       </>
                     )}
                   </TouchableOpacity>
+
+                  {/* Hide Watched Content - Premium Only */}
+                  <TouchableOpacity
+                    style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
+                    activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}
+                    onPress={() => {
+                      if (!isPremium) {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push('/premium');
+                      }
+                    }}
+                    disabled={isPremium}
+                  >
+                    <View style={styles.preferenceInfo}>
+                      <View style={styles.preferenceLabelRow}>
+                        <Text
+                          style={[
+                            styles.preferenceLabel,
+                            !isPremium && styles.preferenceLabelLocked,
+                          ]}
+                        >
+                          Hide watched content
+                        </Text>
+                        {!isPremium && <PremiumBadge />}
+                      </View>
+                      <Text
+                        style={[
+                          styles.preferenceSubtitle,
+                          !isPremium && styles.preferenceSubtitleLocked,
+                        ]}
+                      >
+                        Remove watched movies and shows from search and discovery
+                      </Text>
+                    </View>
+                    {isPremium && (
+                      <>
+                        {preferencesLoading ? (
+                          <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                          <Switch
+                            value={!!preferences?.hideWatchedContent}
+                            onValueChange={(value) => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              updatePreference.mutate(
+                                { key: 'hideWatchedContent', value },
+                                {
+                                  onError: () => {
+                                    Alert.alert(
+                                      'Error',
+                                      'Failed to update preference. Please try again.'
+                                    );
+                                  },
+                                }
+                              );
+                            }}
+                            disabled={preferencesLoading || updatePreference.isPending}
+                            trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+                            thumbColor={COLORS.white}
+                          />
+                        )}
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </>
               )}
             </View>

@@ -10,6 +10,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
@@ -65,6 +66,13 @@ export default function SearchScreen() {
     },
     enabled: debouncedQuery.length > 0,
   });
+
+  // Filter out watched content (but keep person results)
+  const allResults = searchResultsQuery.data?.results || [];
+  const mediaResults = allResults.filter((item: any) => item.media_type !== 'person');
+  const personResults = allResults.filter((item: any) => item.media_type === 'person');
+  const filteredMediaResults = useContentFilter(mediaResults);
+  const filteredResults = [...personResults, ...filteredMediaResults];
 
   const handleItemPress = (item: any) => {
     const currentTab = segments[1];
@@ -236,7 +244,7 @@ export default function SearchScreen() {
         </View>
       ) : (
         <FlashList
-          data={searchResultsQuery.data?.results || []}
+          data={filteredResults}
           renderItem={renderMediaItem}
           keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
           contentContainerStyle={[styles.listContainer]}
