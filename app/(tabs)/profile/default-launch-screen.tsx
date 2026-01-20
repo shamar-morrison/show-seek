@@ -1,14 +1,11 @@
 /**
- * Default Launch Screen Selection Screen (Premium Feature)
- * Allows premium users to select which tab the app opens to on launch
+ * Default Launch Screen Selection Screen
+ * Allows users to select which tab the app opens to on launch
  */
-import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { usePremium } from '@/src/context/PremiumContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { LaunchScreenRoute } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { Bookmark, Check, Compass, Home, LucideIcon, Search, User } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -37,17 +34,9 @@ const SCREEN_OPTIONS: ScreenOption[] = [
 ];
 
 export default function DefaultLaunchScreenScreen() {
-  const router = useRouter();
-  const { isPremium } = usePremium();
   const { preferences, isLoading: isLoadingPreferences } = usePreferences();
   const updatePreference = useUpdatePreference();
   const [isUpdating, setIsUpdating] = useState<LaunchScreenRoute | null>(null);
-
-  // Redirect non-premium users to premium screen
-  if (!isPremium) {
-    router.replace('/premium');
-    return null;
-  }
 
   const currentSelection = preferences?.defaultLaunchScreen ?? '/(tabs)/home';
 
@@ -83,12 +72,9 @@ export default function DefaultLaunchScreenScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <Text style={styles.description}>
-            Choose which screen the app opens to when you launch ShowSeek.
-          </Text>
-          <PremiumBadge />
-        </View>
+        <Text style={styles.description}>
+          Choose which screen the app opens to when you launch ShowSeek.
+        </Text>
 
         <View style={styles.optionList}>
           {SCREEN_OPTIONS.map((option, index) => {
@@ -151,18 +137,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.l,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: SPACING.m,
-    marginBottom: SPACING.l,
-  },
   description: {
-    flex: 1,
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     lineHeight: 22,
+    marginBottom: SPACING.l,
   },
   optionList: {
     backgroundColor: COLORS.surface,

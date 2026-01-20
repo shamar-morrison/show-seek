@@ -76,10 +76,15 @@ export const usePreferences = () => {
   }, [subscriptionData, userId, queryClient]);
 
   // Derive effective home screen lists (with fallback to defaults)
-  const homeScreenLists = preferences?.homeScreenLists ?? DEFAULT_HOME_LISTS;
+  // Use subscriptionData directly instead of React Query preferences to avoid timing issues
+  // (the query cache sync happens in a useEffect which runs AFTER render)
+  const effectivePreferences = userId
+    ? (subscriptionData ?? DEFAULT_PREFERENCES)
+    : DEFAULT_PREFERENCES;
+  const homeScreenLists = effectivePreferences?.homeScreenLists ?? DEFAULT_HOME_LISTS;
 
   return {
-    preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
+    preferences: effectivePreferences,
     homeScreenLists,
     isLoading,
     error,

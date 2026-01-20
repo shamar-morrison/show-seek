@@ -29,6 +29,10 @@ class PreferencesService {
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
+          console.log(
+            '[PreferencesService] Raw Firestore data:',
+            JSON.stringify(data?.preferences, null, 2)
+          );
           const preferences: UserPreferences = {
             autoAddToWatching:
               data?.preferences?.autoAddToWatching ?? DEFAULT_PREFERENCES.autoAddToWatching,
@@ -42,6 +46,8 @@ class PreferencesService {
             homeScreenLists: data?.preferences?.homeScreenLists,
             quickMarkAsWatched:
               data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
+            defaultLaunchScreen:
+              data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
           };
 
           callback(preferences);
