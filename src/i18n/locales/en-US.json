@@ -107,6 +107,9 @@
     "airingToday": "Airing Today",
     "onTheAir": "On The Air",
     "latestTrailers": "Latest Trailers",
+    "trendingMovies": "Trending Movies",
+    "trendingTV": "Trending TV Shows",
+    "upcomingTV": "Upcoming TV Shows",
     "customizeSections": "Customize Sections",
     "emptyHome": "Your home screen is empty",
     "emptyHomeHint": "Add some sections to get started"
@@ -131,7 +134,8 @@
     "anyRating": "Any Rating",
     "noFiltersApplied": "No filters applied",
     "resultsCount": "{{count}} results",
-    "noResultsWithFilters": "No results match your filters"
+    "noResultsWithFilters": "No results match your filters",
+    "adjustFilters": "Try adjusting your filters"
   },
   "search": {
     "title": "Search",
@@ -145,7 +149,9 @@
     "noRecentSearches": "No recent searches",
     "searchResults": "Search Results",
     "noResultsFor": "No results for \"{{query}}\"",
-    "tryDifferentKeywords": "Try different keywords"
+    "tryDifferentKeywords": "Try different keywords",
+    "prompt": "Search for movies and TV shows",
+    "adjustSearch": "Try adjusting your search"
   },
   "media": {
     "movie": "Movie",
@@ -313,7 +319,20 @@
     "allItems": "All Items",
     "watchedItems": "Watched",
     "unwatchedItems": "Unwatched",
-    "hideWatched": "Hide Watched"
+    "hideWatched": "Hide Watched",
+    "listsAndStats": "Lists & Stats",
+    "watchProgress": "Watch Progress",
+    "watchLists": "Watch Lists",
+    "customLists": "Custom Lists",
+    "statsAndHistory": "Stats & History",
+    "ratingsSection": "Ratings",
+    "episodeRatings": "Episode Ratings",
+    "movieRatings": "Movie Ratings",
+    "tvShowRatings": "TV Show Ratings",
+    "favoritesSection": "Favorites",
+    "favoriteContent": "Favorite Content",
+    "widgets": "Widgets",
+    "homeScreenWidgets": "Home Screen Widgets"
   },
   "rating": {
     "title": "Rate",

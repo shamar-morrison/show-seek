@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
 import { Search as SearchIcon, Star, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -36,6 +37,7 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
+  const { t } = useTranslation();
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
@@ -173,7 +175,7 @@ export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Search</Text>
+        <Text style={styles.headerTitle}>{t('tabs.search')}</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -181,7 +183,7 @@ export default function SearchScreen() {
           <SearchIcon size={20} color={COLORS.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Movie, TV show, or Person"
+            placeholder={t('search.placeholder')}
             placeholderTextColor={COLORS.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -206,7 +208,9 @@ export default function SearchScreen() {
           onPress={() => setMediaType('all')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>All</Text>
+          <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>
+            {t('search.all')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
@@ -214,7 +218,7 @@ export default function SearchScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            Movies
+            {t('media.movies')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -223,7 +227,7 @@ export default function SearchScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            TV Shows
+            {t('media.tvShows')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -235,12 +239,12 @@ export default function SearchScreen() {
       ) : debouncedQuery.length === 0 ? (
         <View style={styles.centerContainer}>
           <SearchIcon size={64} color={COLORS.textSecondary} />
-          <Text style={styles.emptyText}>Search for movies and TV shows</Text>
+          <Text style={styles.emptyText}>{t('search.prompt')}</Text>
         </View>
       ) : filteredResults.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No results found</Text>
-          <Text style={styles.emptySubtext}>Try adjusting your search</Text>
+          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+          <Text style={styles.emptySubtext}>{t('search.adjustSearch')}</Text>
         </View>
       ) : (
         <FlashList

@@ -12,7 +12,22 @@ import { HomeScreenListItem } from '@/src/types/preferences';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
+
+// Map list IDs to translation keys
+const LIST_LABEL_KEYS: Record<string, string> = {
+  'latest-trailers': 'home.latestTrailers',
+  'trending-movies': 'home.trendingMovies',
+  'trending-tv': 'home.trendingTV',
+  'popular-movies': 'home.popularMovies',
+  'top-rated-movies': 'home.topRated',
+  'upcoming-movies': 'home.upcomingMovies',
+  'upcoming-tv': 'home.upcomingTV',
+  // Default lists
+  watchlist: 'library.watchlist',
+  favorites: 'library.favorites',
+};
 
 interface HomeListSectionProps {
   config: HomeScreenListItem;
@@ -241,6 +256,10 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
 export function HomeListSection({ config }: HomeListSectionProps) {
   const { user } = useAuth();
   const { isPremium } = usePremium();
+  const { t } = useTranslation();
+
+  // Get translated label, fallback to config label for custom lists
+  const translatedLabel = LIST_LABEL_KEYS[config.id] ? t(LIST_LABEL_KEYS[config.id]) : config.label;
 
   // Latest Trailers is premium-only - skip for guests and non-premium users
   // (Top Rated will be added at the end by the Home screen)
@@ -249,18 +268,18 @@ export function HomeListSection({ config }: HomeListSectionProps) {
     const canAccessTrailers = !isGuest && isPremium;
 
     if (canAccessTrailers) {
-      return <LatestTrailersSection label={config.label} />;
+      return <LatestTrailersSection label={translatedLabel} />;
     }
     // Return null - Home screen will append Top Rated at the end
     return null;
   }
 
   if (config.type === 'tmdb') {
-    return <TMDBListSection id={config.id} label={config.label} />;
+    return <TMDBListSection id={config.id} label={translatedLabel} />;
   }
 
   // Both 'default' and 'custom' types use UserListSection
-  return <UserListSection listId={config.id} label={config.label} />;
+  return <UserListSection listId={config.id} label={translatedLabel} />;
 }
 
 const styles = StyleSheet.create({

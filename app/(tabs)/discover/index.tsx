@@ -11,6 +11,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { router, useSegments } from 'expo-router';
 import { SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +31,7 @@ export default function DiscoverScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const { t } = useTranslation();
 
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
@@ -166,7 +168,7 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discover</Text>
+        <Text style={styles.headerTitle}>{t('tabs.discover')}</Text>
         <TouchableOpacity
           style={styles.filterToggle}
           onPress={() => setShowFilters(!showFilters)}
@@ -187,7 +189,7 @@ export default function DiscoverScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            Movies
+            {t('media.movies')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -196,7 +198,7 @@ export default function DiscoverScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            TV Shows
+            {t('media.tvShows')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -217,8 +219,8 @@ export default function DiscoverScreen() {
         </View>
       ) : filteredResults.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No results found</Text>
-          <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+          <Text style={styles.emptySubtext}>{t('discover.adjustFilters')}</Text>
         </View>
       ) : (
         <FlashList
