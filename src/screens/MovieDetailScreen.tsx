@@ -186,6 +186,12 @@ export default function MovieDetailScreen() {
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
 
+  // Filter out watched content - must be called before early returns (Rules of Hooks)
+  const rawSimilarMovies = similarQuery.data?.results.slice(0, 10) || [];
+  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const filteredSimilarMovies = useContentFilter(rawSimilarMovies);
+  const filteredRecommendations = useContentFilter(rawRecommendations);
+
   if (!isReady || movieQuery.isLoading) {
     return <DetailScreenSkeleton />;
   }
@@ -218,11 +224,7 @@ export default function MovieDetailScreen() {
   const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
-  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
-
-  // Filter out watched content from similar movies and recommendations
-  const filteredSimilarMovies = useContentFilter(similarMovies);
-  const recommendations = useContentFilter(rawRecommendations);
+  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(movie.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -651,7 +653,7 @@ export default function MovieDetailScreen() {
           {/* Recommendations */}
           <RecommendationsSection
             mediaType="movie"
-            items={recommendations}
+            items={filteredRecommendations}
             isLoading={recommendationsQuery.isLoading}
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
@@ -663,7 +665,7 @@ export default function MovieDetailScreen() {
             }}
           />
 
-          {recommendations.length > 0 && <SectionSeparator />}
+          {filteredRecommendations.length > 0 && <SectionSeparator />}
 
           {/* Collections */}
           {movie.belongs_to_collection && (

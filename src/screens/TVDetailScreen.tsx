@@ -357,6 +357,12 @@ export default function TVDetailScreen() {
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
 
+  // Filter out watched content - must be called before early returns (Rules of Hooks)
+  const rawSimilarShows = similarQuery.data?.results.slice(0, 10) || [];
+  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const filteredSimilarShows = useContentFilter(rawSimilarShows);
+  const filteredRecommendations = useContentFilter(rawRecommendations);
+
   if (!isReady || tvQuery.isLoading) {
     return <DetailScreenSkeleton />;
   }
@@ -389,11 +395,7 @@ export default function TVDetailScreen() {
   const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
-  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
-
-  // Filter out watched content
-  const filteredSimilarShows = useContentFilter(similarShows);
-  const recommendations = useContentFilter(rawRecommendations);
+  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -709,7 +711,7 @@ export default function TVDetailScreen() {
           {/* Recommendations */}
           <RecommendationsSection
             mediaType="tv"
-            items={recommendations}
+            items={filteredRecommendations}
             isLoading={recommendationsQuery.isLoading}
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
@@ -721,7 +723,7 @@ export default function TVDetailScreen() {
             }}
           />
 
-          {recommendations.length > 0 && <SectionSeparator />}
+          {filteredRecommendations.length > 0 && <SectionSeparator />}
 
           {/* Trakt Reviews */}
           <TraktReviewsSection
