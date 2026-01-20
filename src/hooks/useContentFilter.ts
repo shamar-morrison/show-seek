@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useAuth } from '../context/auth';
 import { useLists } from './useLists';
 import { usePreferences } from './usePreferences';
 
@@ -17,9 +18,13 @@ interface MediaItem {
 export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T[] => {
   const { preferences } = usePreferences();
   const { data: lists } = useLists();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   return useMemo(() => {
     if (!items) return [];
+    // Don't filter if user is not authenticated (prevents crash on sign-out)
+    if (!isAuthenticated) return items;
     if (!preferences?.hideWatchedContent) return items;
 
     // Get the "Already Watched" list
@@ -30,5 +35,5 @@ export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T
     const watchedIds = new Set(Object.keys(alreadyWatchedList.items).map(Number));
 
     return items.filter((item) => !watchedIds.has(item.id));
-  }, [items, preferences?.hideWatchedContent, lists]);
+  }, [items, preferences?.hideWatchedContent, lists, isAuthenticated]);
 };
