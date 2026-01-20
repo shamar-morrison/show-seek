@@ -600,50 +600,10 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* Action Buttons */}
+          {/* Content Settings */}
           <View style={styles.actionsSection}>
-            <Text style={styles.sectionTitle}>SETTINGS</Text>
+            <Text style={styles.sectionTitle}>CONTENT</Text>
             <View style={styles.actionsList}>
-              {/* <ActionButton
-                icon={Coffee}
-                label="Support Development"
-                onPress={handleSupportDevelopment}
-              /> */}
-              <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
-              <ActionButton
-                icon={MessageCircle}
-                label="Send Feedback"
-                onPress={handleSendFeedback}
-              />
-              {!isGuest && (
-                <ActionButton
-                  icon={Download}
-                  label="Export Data"
-                  onPress={handleExportData}
-                  loading={isExporting}
-                  isPremiumFeature
-                  isPremium={isPremium}
-                />
-              )}
-              {!isGuest && (
-                <ActionButton
-                  customIcon={<TraktLogo size={20} />}
-                  label="Trakt Integration"
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push('/(tabs)/profile/trakt-settings');
-                  }}
-                  loading={isTraktLoading}
-                  badge={
-                    isTraktConnected ? (
-                      <View style={styles.traktConnectedBadge}>
-                        <Check size={12} color={COLORS.white} />
-                      </View>
-                    ) : null
-                  }
-                />
-              )}
-              <ActionButton icon={Globe} label="ShowSeek Web App" onPress={handleOpenWebApp} />
               <ActionButton
                 icon={Languages}
                 label="Language"
@@ -676,6 +636,53 @@ export default function ProfileScreen() {
                   </View>
                 }
               />
+              {!isGuest && (
+                <ActionButton
+                  customIcon={<TraktLogo size={20} />}
+                  label="Trakt Integration"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push('/(tabs)/profile/trakt-settings');
+                  }}
+                  loading={isTraktLoading}
+                  badge={
+                    isTraktConnected ? (
+                      <View style={styles.traktConnectedBadge}>
+                        <Check size={12} color={COLORS.white} />
+                      </View>
+                    ) : null
+                  }
+                />
+              )}
+            </View>
+          </View>
+
+          {/* App Settings */}
+          <View style={styles.actionsSection}>
+            <Text style={styles.sectionTitle}>SETTINGS</Text>
+            <View style={styles.actionsList}>
+              {/* <ActionButton
+                icon={Coffee}
+                label="Support Development"
+                onPress={handleSupportDevelopment}
+              /> */}
+              <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
+              <ActionButton
+                icon={MessageCircle}
+                label="Send Feedback"
+                onPress={handleSendFeedback}
+              />
+              {!isGuest && (
+                <ActionButton
+                  icon={Download}
+                  label="Export Data"
+                  onPress={handleExportData}
+                  loading={isExporting}
+                  isPremiumFeature
+                  isPremium={isPremium}
+                />
+              )}
+              <ActionButton icon={Globe} label="ShowSeek Web App" onPress={handleOpenWebApp} />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
