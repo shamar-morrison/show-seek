@@ -17,6 +17,15 @@ export default function ProfileLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="trakt-settings" />
+      <Stack.Screen
+        name="language"
+        options={{
+          headerShown: true,
+          headerTitle: 'Language',
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
     </Stack>
   );
 }

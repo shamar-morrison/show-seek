@@ -3,6 +3,7 @@ import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { SUPPORTED_LANGUAGES, useLanguage } from '@/src/context/LanguageProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
@@ -15,6 +16,7 @@ import {
   Crown,
   Download,
   Globe,
+  Languages,
   LogOut,
   MessageCircle,
   Star,
@@ -144,6 +146,7 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const { isConnected: isTraktConnected, isLoading: isTraktLoading } = useTrakt();
+  const { language } = useLanguage();
   const router = useRouter();
   const {
     preferences,
@@ -638,6 +641,23 @@ export default function ProfileScreen() {
                 />
               )}
               <ActionButton icon={Globe} label="ShowSeek Web App" onPress={handleOpenWebApp} />
+              <ActionButton
+                icon={Languages}
+                label="Language"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(tabs)/profile/language' as any);
+                }}
+                badge={
+                  <View style={styles.languageBadge}>
+                    <Text style={styles.languageBadgeText}>
+                      {SUPPORTED_LANGUAGES.find((l) => l.code === language)?.nativeName.split(
+                        ' '
+                      )[0] || 'EN'}
+                    </Text>
+                  </View>
+                }
+              />
               <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
@@ -1061,5 +1081,17 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: '600',
     fontSize: FONT_SIZE.m,
+  },
+  languageBadge: {
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.s,
+    marginLeft: SPACING.s,
+  },
+  languageBadgeText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
 });

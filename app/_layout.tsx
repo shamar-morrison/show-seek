@@ -3,6 +3,7 @@ enableScreens();
 
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
+import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
@@ -62,6 +63,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding } = useAuth();
+  const { isLanguageReady } = useLanguage();
   const segments = useSegments();
   const router = useRouter();
 
@@ -94,9 +96,9 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !isLanguageReady) return;
 
-    // Hide splash screen once we know the auth state
+    // Hide splash screen once we know the auth state and language is ready
     SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -115,9 +117,9 @@ function RootLayoutNav() {
       // Guest users (anonymous) are allowed to access auth screens to upgrade their account
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, hasCompletedOnboarding, segments, router]);
+  }, [user, loading, hasCompletedOnboarding, segments, router, isLanguageReady]);
 
-  if (loading) {
+  if (loading || !isLanguageReady) {
     return (
       <View
         style={{
@@ -160,9 +162,11 @@ export default function RootLayout() {
       <AuthProvider>
         <PremiumProvider>
           <TraktProvider>
-            <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
+            <LanguageProvider>
+              <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </LanguageProvider>
           </TraktProvider>
         </PremiumProvider>
       </AuthProvider>
