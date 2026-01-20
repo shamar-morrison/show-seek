@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAuth } from '@/src/context/auth';
 import { SUPPORTED_LANGUAGES, useLanguage } from '@/src/context/LanguageProvider';
 import { usePremium } from '@/src/context/PremiumContext';
+import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { exportUserData } from '@/src/services/DataExportService';
@@ -18,6 +19,7 @@ import {
   Globe,
   Languages,
   LogOut,
+  MapPin,
   MessageCircle,
   Star,
   Trash2,
@@ -147,6 +149,7 @@ export default function ProfileScreen() {
   const { isPremium } = usePremium();
   const { isConnected: isTraktConnected, isLoading: isTraktLoading } = useTrakt();
   const { language } = useLanguage();
+  const { region } = useRegion();
   const router = useRouter();
   const {
     preferences,
@@ -654,6 +657,21 @@ export default function ProfileScreen() {
                       {SUPPORTED_LANGUAGES.find((l) => l.code === language)?.nativeName.split(
                         ' '
                       )[0] || 'EN'}
+                    </Text>
+                  </View>
+                }
+              />
+              <ActionButton
+                icon={MapPin}
+                label="Region"
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push('/(tabs)/profile/region' as any);
+                }}
+                badge={
+                  <View style={styles.languageBadge}>
+                    <Text style={styles.languageBadgeText}>
+                      {SUPPORTED_REGIONS.find((r) => r.code === region)?.emoji || '🌍'} {region}
                     </Text>
                   </View>
                 }

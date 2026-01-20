@@ -41,18 +41,42 @@ export const setApiLanguage = (language: string) => {
  */
 export const getApiLanguage = () => currentLanguage;
 
+// Dynamic region setting for TMDB API requests
+let currentRegion = 'US';
+
+/**
+ * Set the region for all TMDB API requests.
+ * Call this when the user changes their region preference.
+ * Affects: watch providers, release dates, certifications
+ */
+export const setApiRegion = (region: string) => {
+  currentRegion = region;
+};
+
+/**
+ * Get the current API region setting.
+ */
+export const getApiRegion = () => currentRegion;
+
 export const tmdbClient = axios.create({
   baseURL: BASE_URL,
   params: {
     api_key: TMDB_API_KEY,
-    // Note: language is injected dynamically via interceptor
+    // Note: language and region are injected dynamically via interceptor
   },
 });
 
-// Inject language parameter dynamically on every request
+// Inject language and region parameters dynamically on every request
 tmdbClient.interceptors.request.use((config) => {
   config.params = config.params || {};
   config.params.language = currentLanguage;
+  // Inject region for watch providers if not already set
+  if (!config.params.region) {
+    config.params.region = currentRegion;
+  }
+  if (!config.params.watch_region) {
+    config.params.watch_region = currentRegion;
+  }
   return config;
 });
 
@@ -653,17 +677,17 @@ export const tmdbApi = {
   },
 
   getMovieWatchProviders: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: { US?: WatchProviderResults } }>(
+    const { data } = await tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
       `/movie/${id}/watch/providers`
     );
-    return data.results.US || null;
+    return data.results[currentRegion] || null;
   },
 
   getTVWatchProviders: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: { US?: WatchProviderResults } }>(
+    const { data } = await tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
       `/tv/${id}/watch/providers`
     );
-    return data.results.US || null;
+    return data.results[currentRegion] || null;
   },
 
   getMovieReviews: async (id: number, page: number = 1) => {
@@ -684,11 +708,8 @@ export const tmdbApi = {
   getWatchProviders: async (type: 'movie' | 'tv') => {
     const { data } = await tmdbClient.get<{
       results: WatchProvider[];
-    }>(`/watch/providers/${type}`, {
-      params: {
-        watch_region: 'US',
-      },
-    });
+    }>(`/watch/providers/${type}`);
+    // watch_region is injected by axios interceptor
     return data.results.sort((a, b) => a.display_priority - b.display_priority);
   },
 

@@ -26,6 +26,15 @@ export default function ProfileLayout() {
           headerTintColor: COLORS.text,
         }}
       />
+      <Stack.Screen
+        name="region"
+        options={{
+          headerShown: true,
+          headerTitle: 'Region',
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
     </Stack>
   );
 }

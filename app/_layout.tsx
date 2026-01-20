@@ -5,6 +5,7 @@ import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
+import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
@@ -64,6 +65,7 @@ const queryClient = new QueryClient({
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding } = useAuth();
   const { isLanguageReady } = useLanguage();
+  const { isRegionReady } = useRegion();
   const segments = useSegments();
   const router = useRouter();
 
@@ -96,9 +98,9 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (loading || !isLanguageReady) return;
+    if (loading || !isLanguageReady || !isRegionReady) return;
 
-    // Hide splash screen once we know the auth state and language is ready
+    // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -117,9 +119,9 @@ function RootLayoutNav() {
       // Guest users (anonymous) are allowed to access auth screens to upgrade their account
       router.replace('/(tabs)/home');
     }
-  }, [user, loading, hasCompletedOnboarding, segments, router, isLanguageReady]);
+  }, [user, loading, hasCompletedOnboarding, segments, router, isLanguageReady, isRegionReady]);
 
-  if (loading || !isLanguageReady) {
+  if (loading || !isLanguageReady || !isRegionReady) {
     return (
       <View
         style={{
@@ -163,9 +165,11 @@ export default function RootLayout() {
         <PremiumProvider>
           <TraktProvider>
             <LanguageProvider>
-              <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
+              <RegionProvider>
+                <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </RegionProvider>
             </LanguageProvider>
           </TraktProvider>
         </PremiumProvider>
