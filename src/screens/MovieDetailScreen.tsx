@@ -33,6 +33,7 @@ import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -184,6 +185,12 @@ export default function MovieDetailScreen() {
 
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
+
+  // Filter out watched content - must be called before early returns (Rules of Hooks)
+  const rawSimilarMovies = similarQuery.data?.results.slice(0, 10) || [];
+  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const filteredSimilarMovies = useContentFilter(rawSimilarMovies);
+  const filteredRecommendations = useContentFilter(rawRecommendations);
 
   if (!isReady || movieQuery.isLoading) {
     return <DetailScreenSkeleton />;
@@ -612,12 +619,12 @@ export default function MovieDetailScreen() {
           {/* Similar Movies */}
           <SimilarMediaSection
             mediaType="movie"
-            items={similarMovies}
+            items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
             title="Similar Movies"
           />
 
-          {similarMovies.length > 0 && <SectionSeparator />}
+          {filteredSimilarMovies.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
@@ -646,7 +653,7 @@ export default function MovieDetailScreen() {
           {/* Recommendations */}
           <RecommendationsSection
             mediaType="movie"
-            items={recommendations}
+            items={filteredRecommendations}
             isLoading={recommendationsQuery.isLoading}
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
@@ -658,7 +665,7 @@ export default function MovieDetailScreen() {
             }}
           />
 
-          {recommendations.length > 0 && <SectionSeparator />}
+          {filteredRecommendations.length > 0 && <SectionSeparator />}
 
           {/* Collections */}
           {movie.belongs_to_collection && (

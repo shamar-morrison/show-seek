@@ -42,6 +42,7 @@ service cloud.firestore {
           && (!('showMediaPreviewCards' in request.resource.data.preferences) || request.resource.data.preferences.showMediaPreviewCards is bool)
           && (!('quickMarkAsWatched' in request.resource.data.preferences) || request.resource.data.preferences.quickMarkAsWatched is bool)
           && (!('defaultLaunchScreen' in request.resource.data.preferences) || request.resource.data.preferences.defaultLaunchScreen in ['/(tabs)/home', '/(tabs)/discover', '/(tabs)/search', '/(tabs)/library', '/(tabs)/profile'])
+          && (!('hideWatchedContent' in request.resource.data.preferences) || request.resource.data.preferences.hideWatchedContent is bool)
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);

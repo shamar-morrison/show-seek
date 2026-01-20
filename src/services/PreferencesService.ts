@@ -44,6 +44,8 @@ class PreferencesService {
               data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
             defaultLaunchScreen:
               data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
+            hideWatchedContent:
+              data?.preferences?.hideWatchedContent ?? DEFAULT_PREFERENCES.hideWatchedContent,
           };
 
           callback(preferences);

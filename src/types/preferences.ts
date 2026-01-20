@@ -34,6 +34,7 @@ export interface UserPreferences {
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
   quickMarkAsWatched: boolean; // Skip modal and use current time when marking movies as watched
   defaultLaunchScreen?: LaunchScreenRoute; // Which tab to open on app launch
+  hideWatchedContent: boolean; // Premium: hide watched content from search/discover
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -43,4 +44,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   showListIndicators: false, // Off by default for new users
   quickMarkAsWatched: false, // Off by default - show date selection modal
   defaultLaunchScreen: '/(tabs)/home',
+  hideWatchedContent: false, // Off by default - show all content
 };

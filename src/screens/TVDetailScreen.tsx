@@ -32,6 +32,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -356,6 +357,12 @@ export default function TVDetailScreen() {
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
 
+  // Filter out watched content - must be called before early returns (Rules of Hooks)
+  const rawSimilarShows = similarQuery.data?.results.slice(0, 10) || [];
+  const rawRecommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
+  const filteredSimilarShows = useContentFilter(rawSimilarShows);
+  const filteredRecommendations = useContentFilter(rawRecommendations);
+
   if (!isReady || tvQuery.isLoading) {
     return <DetailScreenSkeleton />;
   }
@@ -670,12 +677,12 @@ export default function TVDetailScreen() {
           {/* Similar Shows */}
           <SimilarMediaSection
             mediaType="tv"
-            items={similarShows}
+            items={filteredSimilarShows}
             onMediaPress={handleShowPress}
             title="Similar Shows"
           />
 
-          {similarShows.length > 0 && <SectionSeparator />}
+          {filteredSimilarShows.length > 0 && <SectionSeparator />}
 
           {/* Photos */}
           {images && images.backdrops && images.backdrops.length > 0 && (
@@ -704,7 +711,7 @@ export default function TVDetailScreen() {
           {/* Recommendations */}
           <RecommendationsSection
             mediaType="tv"
-            items={recommendations}
+            items={filteredRecommendations}
             isLoading={recommendationsQuery.isLoading}
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
@@ -716,7 +723,7 @@ export default function TVDetailScreen() {
             }}
           />
 
-          {recommendations.length > 0 && <SectionSeparator />}
+          {filteredRecommendations.length > 0 && <SectionSeparator />}
 
           {/* Trakt Reviews */}
           <TraktReviewsSection
