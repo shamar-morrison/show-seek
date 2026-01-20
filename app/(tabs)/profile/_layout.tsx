@@ -35,6 +35,15 @@ export default function ProfileLayout() {
           headerTintColor: COLORS.text,
         }}
       />
+      <Stack.Screen
+        name="default-launch-screen"
+        options={{
+          headerShown: true,
+          headerTitle: 'Default Launch Screen',
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
     </Stack>
   );
 }

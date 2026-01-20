@@ -21,6 +21,7 @@ import {
   LogOut,
   MapPin,
   MessageCircle,
+  Rocket,
   Star,
   Trash2,
 } from 'lucide-react-native';
@@ -636,6 +637,31 @@ export default function ProfileScreen() {
                   </View>
                 }
               />
+              {!isGuest && (
+                <ActionButton
+                  icon={Rocket}
+                  label="Default Launch Screen"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push('/(tabs)/profile/default-launch-screen' as any);
+                  }}
+                  badge={
+                    <View style={styles.languageBadge}>
+                      <Text style={styles.languageBadgeText}>
+                        {preferences?.defaultLaunchScreen === '/(tabs)/discover'
+                          ? 'Discover'
+                          : preferences?.defaultLaunchScreen === '/(tabs)/search'
+                            ? 'Search'
+                            : preferences?.defaultLaunchScreen === '/(tabs)/library'
+                              ? 'Library'
+                              : preferences?.defaultLaunchScreen === '/(tabs)/profile'
+                                ? 'Profile'
+                                : 'Home'}
+                      </Text>
+                    </View>
+                  }
+                />
+              )}
               {!isGuest && (
                 <ActionButton
                   customIcon={<TraktLogo size={20} />}
