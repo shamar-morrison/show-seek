@@ -95,7 +95,13 @@ export const useUpdatePreference = () => {
 
   return useMutation({
     mutationKey: ['updatePreference'],
-    mutationFn: async ({ key, value }: { key: keyof UserPreferences; value: boolean }) => {
+    mutationFn: async ({
+      key,
+      value,
+    }: {
+      key: keyof UserPreferences;
+      value: UserPreferences[keyof UserPreferences];
+    }) => {
       await preferencesService.updatePreference(key, value);
     },
 

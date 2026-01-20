@@ -18,6 +18,7 @@ import {
   Download,
   Globe,
   Languages,
+  Layout,
   LogOut,
   MapPin,
   MessageCircle,
@@ -636,6 +637,37 @@ export default function ProfileScreen() {
                   </View>
                 }
               />
+              {!isGuest && (
+                <ActionButton
+                  icon={Layout}
+                  label="Default Launch Screen"
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (!isPremium) {
+                      router.push('/premium');
+                    } else {
+                      router.push('/(tabs)/profile/default-launch-screen' as any);
+                    }
+                  }}
+                  isPremiumFeature
+                  isPremium={isPremium}
+                  badge={
+                    isPremium ? (
+                      <View style={styles.languageBadge}>
+                        <Text style={styles.languageBadgeText}>
+                          {{
+                            '/(tabs)/home': 'Home',
+                            '/(tabs)/discover': 'Discover',
+                            '/(tabs)/search': 'Search',
+                            '/(tabs)/library': 'Library',
+                            '/(tabs)/profile': 'Profile',
+                          }[preferences?.defaultLaunchScreen ?? '/(tabs)/home'] || 'Home'}
+                        </Text>
+                      </View>
+                    ) : null
+                  }
+                />
+              )}
               {!isGuest && (
                 <ActionButton
                   customIcon={<TraktLogo size={20} />}

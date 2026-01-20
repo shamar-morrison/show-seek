@@ -4,10 +4,11 @@ enableScreens();
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
-import { PremiumProvider } from '@/src/context/PremiumContext';
+import { PremiumProvider, usePremium } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 
 import { initializeReminderSync } from '@/src/utils/reminderSync';
@@ -66,6 +67,8 @@ function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding } = useAuth();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
+  const { isPremium } = usePremium();
+  const { preferences, isLoading: isPreferencesLoading } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
 
@@ -97,8 +100,11 @@ function RootLayoutNav() {
     });
   }, []);
 
+  // Determine if we need to wait for preferences (only for logged-in premium users)
+  const shouldWaitForPreferences = user && !user.isAnonymous && isPremium && isPreferencesLoading;
+
   useEffect(() => {
-    if (loading || !isLanguageReady || !isRegionReady) return;
+    if (loading || !isLanguageReady || !isRegionReady || shouldWaitForPreferences) return;
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
@@ -108,6 +114,11 @@ function RootLayoutNav() {
 
     if (loading) return;
 
+    // Determine the default launch screen (premium feature)
+    const defaultLaunchScreen = isPremium
+      ? (preferences?.defaultLaunchScreen ?? '/(tabs)/home')
+      : '/(tabs)/home';
+
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
       router.replace('/onboarding');
@@ -115,13 +126,24 @@ function RootLayoutNav() {
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
     } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
-      // If logged in as a real user (not guest) and in auth/onboarding, go to home
+      // If logged in as a real user (not guest) and in auth/onboarding, go to preferred screen
       // Guest users (anonymous) are allowed to access auth screens to upgrade their account
-      router.replace('/(tabs)/home');
+      router.replace(defaultLaunchScreen as any);
     }
-  }, [user, loading, hasCompletedOnboarding, segments, router, isLanguageReady, isRegionReady]);
+  }, [
+    user,
+    loading,
+    hasCompletedOnboarding,
+    segments,
+    router,
+    isLanguageReady,
+    isRegionReady,
+    isPremium,
+    preferences,
+    shouldWaitForPreferences,
+  ]);
 
-  if (loading || !isLanguageReady || !isRegionReady) {
+  if (loading || !isLanguageReady || !isRegionReady || shouldWaitForPreferences) {
     return (
       <View
         style={{
