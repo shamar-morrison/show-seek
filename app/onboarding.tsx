@@ -4,38 +4,48 @@ import { useAuth } from '@/src/context/auth';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ONBOARDING_DATA = [
+interface OnboardingSlide {
+  id: string;
+  titleKey: string;
+  descriptionKey: string;
+  image: string;
+  showTraktLogo?: boolean;
+  // Added by translation mapping
+  title?: string;
+  description?: string;
+}
+
+const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: '1',
-    title: 'Welcome to ShowSeek',
-    description: 'Your Personal Movie & TV Show Companion. Discover, track, and enjoy.',
+    titleKey: 'onboarding.welcome',
+    descriptionKey: 'onboarding.discoverDescription',
     image:
       'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '2',
-    title: 'Discover Content',
-    description: 'Browse thousands of movies and TV shows. Trending, popular, and top rated.',
+    titleKey: 'onboarding.discoverTitle',
+    descriptionKey: 'onboarding.discoverDescription',
     image:
       'https://images.unsplash.com/photo-1615986201152-7686a4867f30?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '3',
-    title: 'Track Favorites',
-    description:
-      'Save your favorites and rate what you watch. Keep track of everything in one place.',
+    titleKey: 'onboarding.trackTitle',
+    descriptionKey: 'onboarding.trackDescription',
     image:
       'https://images.unsplash.com/photo-1584905066893-7d5c142ba4e1?q=80&w=1000&auto=format&fit=crop',
   },
   {
     id: '4',
-    title: 'Sync with Trakt',
-    description:
-      'Connect your Trakt account to automatically sync your watch history, lists, and ratings across devices.',
+    titleKey: 'profile.traktIntegration',
+    descriptionKey: 'trakt.connectToSync',
     image:
       'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1000&auto=format&fit=crop',
     showTraktLogo: true,
@@ -44,13 +54,25 @@ const ONBOARDING_DATA = [
 
 export default function OnboardingScreen() {
   const { width, height } = useWindowDimensions();
-  const flatListRef = useRef<FlashListRef<any>>(null);
+  const flatListRef = useRef<FlashListRef<OnboardingSlide> | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const { completeOnboarding } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
+
+  // Memoize translated data to avoid re-rendering on every frame
+  const onboardingData = useMemo(
+    () =>
+      ONBOARDING_SLIDES.map((slide) => ({
+        ...slide,
+        title: t(slide.titleKey),
+        description: t(slide.descriptionKey),
+      })),
+    [t]
+  );
 
   const handleNext = () => {
-    if (currentIndex < ONBOARDING_DATA.length - 1) {
+    if (currentIndex < onboardingData.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
       finishOnboarding();
@@ -66,7 +88,7 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <FlashList
         ref={flatListRef}
-        data={ONBOARDING_DATA}
+        data={onboardingData}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -105,7 +127,7 @@ export default function OnboardingScreen() {
 
       <SafeAreaView style={styles.footer} pointerEvents="box-none">
         <View style={styles.pagination}>
-          {ONBOARDING_DATA.map((_, index) => (
+          {onboardingData.map((_, index) => (
             <View
               key={index}
               style={[
@@ -125,7 +147,7 @@ export default function OnboardingScreen() {
             style={styles.skipButton}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('common.skip')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -134,7 +156,9 @@ export default function OnboardingScreen() {
             activeOpacity={ACTIVE_OPACITY}
           >
             <Text style={styles.nextText}>
-              {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
+              {currentIndex === onboardingData.length - 1
+                ? t('onboarding.getStarted')
+                : t('common.next')}
             </Text>
           </TouchableOpacity>
         </View>

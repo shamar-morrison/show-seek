@@ -10,6 +10,7 @@ import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function SignIn() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -50,11 +52,11 @@ export default function SignIn() {
         await createUserDocument(result.user);
         // Router will automatically redirect based on auth state
       } else if (!result.cancelled && result.error) {
-        Alert.alert('Google Sign In Failed', result.error);
+        Alert.alert(t('auth.signInFailed'), result.error);
       }
       // If cancelled, do nothing (user closed the picker)
     } catch (error: any) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert(t('common.error'), t('errors.generic'));
     } finally {
       setGoogleLoading(false);
     }
@@ -62,7 +64,7 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Alert.alert(t('common.error'), t('auth.emailRequired'));
       return;
     }
 
@@ -71,34 +73,33 @@ export default function SignIn() {
       await signInWithEmailAndPassword(auth, email, password);
       // Router will automatically redirect in _layout.tsx based on auth state
     } catch (error: any) {
-      let errorMessage = 'An error occurred. Please try again.';
+      let errorMessage = t('errors.generic');
 
       if (error.code) {
         switch (error.code) {
           case 'auth/invalid-credential':
           case 'auth/user-not-found':
           case 'auth/wrong-password':
-            errorMessage =
-              'Invalid email or password. Please check your credentials and try again.';
+            errorMessage = t('auth.signInFailed');
             break;
           case 'auth/invalid-email':
-            errorMessage = 'Please enter a valid email address.';
+            errorMessage = t('auth.invalidEmail');
             break;
           case 'auth/user-disabled':
-            errorMessage = 'This account has been disabled. Please contact support.';
+            errorMessage = t('errors.forbidden');
             break;
           case 'auth/too-many-requests':
-            errorMessage = 'Too many failed login attempts. Please try again later.';
+            errorMessage = t('errors.timeout');
             break;
           case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your internet connection.';
+            errorMessage = t('errors.networkError');
             break;
           default:
-            errorMessage = 'Unable to sign in. Please try again later.';
+            errorMessage = t('auth.signInFailed');
         }
       }
 
-      Alert.alert('Sign In Failed', errorMessage);
+      Alert.alert(t('auth.signInFailed'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -110,20 +111,20 @@ export default function SignIn() {
       await signInAnonymously(auth);
       router.replace('/(tabs)/home');
     } catch (error: any) {
-      let errorMessage = 'Unable to sign in as guest. Please try again.';
+      let errorMessage = t('auth.signInFailed');
 
       if (error.code) {
         switch (error.code) {
           case 'auth/operation-not-allowed':
-            errorMessage = 'Guest sign-in is not enabled. Please contact support.';
+            errorMessage = t('errors.forbidden');
             break;
           case 'auth/network-request-failed':
-            errorMessage = 'Network error. Please check your internet connection.';
+            errorMessage = t('errors.networkError');
             break;
         }
       }
 
-      Alert.alert('Guest Sign In Failed', errorMessage);
+      Alert.alert(t('auth.signInFailed'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -145,8 +146,8 @@ export default function SignIn() {
               <View style={styles.logoContainer}>
                 <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
               </View>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+              <Text style={styles.subtitle}>{t('auth.signInToContinue')}</Text>
             </View>
 
             <View style={styles.form}>
@@ -165,7 +166,7 @@ export default function SignIn() {
                       source={require('@/assets/images/google-icon.png')}
                       style={styles.googleIcon}
                     />
-                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                    <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -173,7 +174,7 @@ export default function SignIn() {
               {/* Separator */}
               <View style={styles.separator}>
                 <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>or</Text>
+                <Text style={styles.separatorText}>{t('auth.orContinueWith').toLowerCase()}</Text>
                 <View style={styles.separatorLine} />
               </View>
 
@@ -181,7 +182,7 @@ export default function SignIn() {
                 <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.inputField}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.email')}
                   placeholderTextColor={COLORS.textSecondary}
                   value={email}
                   onChangeText={setEmail}
@@ -194,7 +195,7 @@ export default function SignIn() {
                 <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.inputField}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={COLORS.textSecondary}
                   value={password}
                   onChangeText={setPassword}
@@ -222,7 +223,7 @@ export default function SignIn() {
                 {loading ? (
                   <ActivityIndicator color={COLORS.white} />
                 ) : (
-                  <Text style={styles.buttonText}>Sign In</Text>
+                  <Text style={styles.buttonText}>{t('auth.signIn')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -233,27 +234,27 @@ export default function SignIn() {
                   disabled={loading || googleLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
-                  <Text style={styles.guestButtonText}>Continue as Guest</Text>
+                  <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
                 </TouchableOpacity>
               )}
 
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Don&apos;t have an account? </Text>
+                <Text style={styles.footerText}>{t('auth.dontHaveAccount')} </Text>
                 <Link href="/(auth)/sign-up" asChild>
                   <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                    <Text style={styles.link}>Sign Up</Text>
+                    <Text style={styles.link}>{t('auth.signUp')}</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
 
               <Text style={styles.termsText}>
-                By signing in, you agree to our{' '}
+                {t('settings.terms')}{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
-                  Terms of Service
+                  {t('settings.terms')}
                 </Text>{' '}
-                and{' '}
+                &amp;{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
-                  Privacy Policy
+                  {t('settings.privacy')}
                 </Text>
               </Text>
             </View>

@@ -2,10 +2,12 @@ import { COLORS } from '@/src/constants/theme';
 import { Tabs } from 'expo-router';
 import { Bookmark, Compass, Home, Search, User } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Tabs
@@ -37,35 +39,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          title: t('tabs.search'),
           tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="discover"
         options={{
-          title: 'Discover',
+          title: t('tabs.discover'),
           tabBarIcon: ({ color, size }) => <Compass color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="library"
         options={{
-          title: 'Library',
+          title: t('tabs.library'),
           tabBarIcon: ({ color, size }) => <Bookmark color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
           // @ts-expect-error - unmountOnBlur is supported but not in types
           unmountOnBlur: true,

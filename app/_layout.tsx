@@ -1,6 +1,9 @@
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
+// Initialize i18n early to ensure translations are available throughout the app
+import '@/src/i18n';
+
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
