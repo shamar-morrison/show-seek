@@ -18,10 +18,10 @@ import {
   Download,
   Globe,
   Languages,
+  LayoutIcon,
   LogOut,
   MapPin,
   MessageCircle,
-  Rocket,
   Star,
   Trash2,
 } from 'lucide-react-native';
@@ -639,7 +639,7 @@ export default function ProfileScreen() {
               />
               {!isGuest && (
                 <ActionButton
-                  icon={Rocket}
+                  icon={LayoutIcon}
                   label="Default Launch Screen"
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
