@@ -215,7 +215,7 @@ export default function DiscoverScreen() {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
-      ) : allResults.length === 0 ? (
+      ) : filteredResults.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyText}>No results found</Text>
           <Text style={styles.emptySubtext}>Try adjusting your filters</Text>

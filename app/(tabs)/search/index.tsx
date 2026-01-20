@@ -237,7 +237,7 @@ export default function SearchScreen() {
           <SearchIcon size={64} color={COLORS.textSecondary} />
           <Text style={styles.emptyText}>Search for movies and TV shows</Text>
         </View>
-      ) : searchResultsQuery.data?.results.length === 0 ? (
+      ) : filteredResults.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.emptyText}>No results found</Text>
           <Text style={styles.emptySubtext}>Try adjusting your search</Text>
