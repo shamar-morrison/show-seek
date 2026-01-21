@@ -4,18 +4,93 @@ import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
 import { ratingService } from '@/src/services/RatingService';
 import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
-import { Star, X } from 'lucide-react-native';
+import { Star, StarHalf, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+
+// Sub-component for individual star with half-star support
+interface RatingStarProps {
+  value: number; // The full value this star represents (1-10)
+  currentRating: number;
+  onRate: (rating: number) => void;
+  isFirstStar?: boolean; // For enforcing minimum rating of 1
+}
+
+const RatingStar = ({ value, currentRating, onRate, isFirstStar = false }: RatingStarProps) => {
+  const isFull = currentRating >= value;
+  const isHalf = currentRating === value - 0.5;
+
+  // Determine what icon to render
+  const renderStarIcon = () => {
+    if (isFull) {
+      return <Star size={28} color={COLORS.primary} fill={COLORS.primary} />;
+    }
+    if (isHalf) {
+      return <StarHalf size={28} color={COLORS.primary} fill={COLORS.primary} />;
+    }
+    return <Star size={28} color={COLORS.textSecondary} fill="transparent" />;
+  };
+
+  const handleLeftPress = () => {
+    // For the first star, left tap = 1 (minimum rating), not 0.5
+    const halfValue = isFirstStar ? 1 : value - 0.5;
+    onRate(halfValue);
+  };
+
+  const handleRightPress = () => {
+    onRate(value);
+  };
+
+  return (
+    <View style={starStyles.wrapper}>
+      {/* Visual layer */}
+      <View pointerEvents="none" style={starStyles.iconContainer}>
+        {renderStarIcon()}
+      </View>
+
+      {/* Touch layer - two halves */}
+      <View style={starStyles.touchLayer}>
+        <Pressable style={starStyles.leftHalf} onPress={handleLeftPress} android_ripple={null} />
+        <Pressable style={starStyles.rightHalf} onPress={handleRightPress} android_ripple={null} />
+      </View>
+    </View>
+  );
+};
+
+const starStyles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    position: 'absolute',
+  },
+  touchLayer: {
+    flexDirection: 'row',
+    width: '100%',
+    height: '100%',
+  },
+  leftHalf: {
+    flex: 1,
+    height: '100%',
+  },
+  rightHalf: {
+    flex: 1,
+    height: '100%',
+  },
+});
 
 interface RatingModalProps {
   visible: boolean;
@@ -211,6 +286,12 @@ export default function RatingModal({
     onClose();
   }, [onClose]);
 
+  // Format rating display - show decimal if half-star
+  const formatRating = (r: number) => {
+    if (r === 0) return 'Tap to rate';
+    return Number.isInteger(r) ? `${r}/10` : `${r.toFixed(1)}/10`;
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
@@ -218,103 +299,93 @@ export default function RatingModal({
         style={styles.container}
       >
         <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+        <Pressable style={styles.backdrop} onPress={handleClose} />
 
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.title}>Rate this Title</Text>
-            <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
-              <X size={24} color={COLORS.text} />
-            </TouchableOpacity>
+            <Pressable onPress={handleClose}>
+              {({ pressed }) => (
+                <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
+                  <X size={24} color={COLORS.text} />
+                </View>
+              )}
+            </Pressable>
           </View>
 
           <View style={styles.starsContainer}>
             {/* First row: stars 1-5 */}
             <View style={styles.starsRow}>
-              {[...Array(5)].map((_, index) => {
-                const starValue = index + 1;
-                const isFilled = starValue <= rating;
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleRatingSelect(starValue)}
-                    activeOpacity={0.7}
-                    style={styles.starButton}
-                  >
-                    <Star
-                      size={28}
-                      color={isFilled ? COLORS.primary : COLORS.textSecondary}
-                      fill={isFilled ? COLORS.primary : 'transparent'}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+              {[1, 2, 3, 4, 5].map((starValue) => (
+                <RatingStar
+                  key={starValue}
+                  value={starValue}
+                  currentRating={rating}
+                  onRate={handleRatingSelect}
+                  isFirstStar={starValue === 1}
+                />
+              ))}
             </View>
             {/* Second row: stars 6-10 */}
             <View style={styles.starsRow}>
-              {[...Array(5)].map((_, index) => {
-                const starValue = index + 6;
-                const isFilled = starValue <= rating;
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleRatingSelect(starValue)}
-                    activeOpacity={0.7}
-                    style={styles.starButton}
-                  >
-                    <Star
-                      size={28}
-                      color={isFilled ? COLORS.primary : COLORS.textSecondary}
-                      fill={isFilled ? COLORS.primary : 'transparent'}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+              {[6, 7, 8, 9, 10].map((starValue) => (
+                <RatingStar
+                  key={starValue}
+                  value={starValue}
+                  currentRating={rating}
+                  onRate={handleRatingSelect}
+                />
+              ))}
             </View>
           </View>
 
           <View style={styles.ratingTextContainer}>
-            <Text style={styles.ratingScore}>{rating > 0 ? `${rating}/10` : 'Tap to rate'}</Text>
+            <Text style={styles.ratingScore}>{formatRating(rating)}</Text>
             {rating > 0 && <Text style={styles.ratingDescription}>{getRatingText(rating)}</Text>}
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.submitButton, (rating === 0 || isSubmitting) && styles.disabledButton]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.submitButton,
+                (rating === 0 || isSubmitting) && styles.disabledButton,
+                pressed && { opacity: ACTIVE_OPACITY },
+              ]}
               onPress={handleSubmit}
               disabled={rating === 0 || isSubmitting}
-              activeOpacity={ACTIVE_OPACITY}
             >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <Text style={styles.submitButtonText}>Confirm Rating</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
             {initialRating > 0 && (
-              <TouchableOpacity
-                style={[styles.deleteButton, isSubmitting && styles.disabledButton]}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  isSubmitting && styles.disabledButton,
+                  pressed && { opacity: ACTIVE_OPACITY },
+                ]}
                 onPress={handleDelete}
                 disabled={isSubmitting}
-                activeOpacity={ACTIVE_OPACITY}
               >
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={COLORS.error} />
                 ) : (
                   <Text style={styles.deleteButtonText}>Clear Rating</Text>
                 )}
-              </TouchableOpacity>
+              </Pressable>
             )}
-            <TouchableOpacity
-              style={styles.cancelButton}
+            <Pressable
+              style={({ pressed }) => [styles.cancelButton, pressed && { opacity: ACTIVE_OPACITY }]}
               onPress={handleClose}
-              activeOpacity={ACTIVE_OPACITY}
               disabled={isSubmitting}
             >
               <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
                 Cancel
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
