@@ -1,9 +1,19 @@
-import { tmdbApi } from '@/src/api/tmdb';
+import { getApiLanguage, tmdbApi } from '@/src/api/tmdb';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const MOVIE_GENRE_CACHE_KEY = '@genre_map_movie';
-const TV_GENRE_CACHE_KEY = '@genre_map_tv';
+const MOVIE_GENRE_CACHE_KEY_PREFIX = '@genre_map_movie_';
+const TV_GENRE_CACHE_KEY_PREFIX = '@genre_map_tv_';
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * Get the cache key for genres, including language suffix.
+ * This ensures genres are cached per-language.
+ */
+const getCacheKey = (type: 'movie' | 'tv'): string => {
+  const language = getApiLanguage();
+  const prefix = type === 'movie' ? MOVIE_GENRE_CACHE_KEY_PREFIX : TV_GENRE_CACHE_KEY_PREFIX;
+  return `${prefix}${language}`;
+};
 
 interface Genre {
   id: number;
@@ -16,7 +26,7 @@ interface CachedGenres {
 }
 
 export const getGenres = async (type: 'movie' | 'tv'): Promise<Record<number, string>> => {
-  const cacheKey = type === 'movie' ? MOVIE_GENRE_CACHE_KEY : TV_GENRE_CACHE_KEY;
+  const cacheKey = getCacheKey(type);
 
   try {
     const cached = await AsyncStorage.getItem(cacheKey);
@@ -70,15 +80,16 @@ export const getGenres = async (type: 'movie' | 'tv'): Promise<Record<number, st
 export const clearGenreCache = async (type?: 'movie' | 'tv'): Promise<void> => {
   try {
     if (type) {
-      const cacheKey = type === 'movie' ? MOVIE_GENRE_CACHE_KEY : TV_GENRE_CACHE_KEY;
+      const cacheKey = getCacheKey(type);
       await AsyncStorage.removeItem(cacheKey);
-      console.log(`${type} genre cache cleared`);
+      console.log(`${type} genre cache for current language cleared`);
     } else {
+      // Clear cache for current language only
       await Promise.all([
-        AsyncStorage.removeItem(MOVIE_GENRE_CACHE_KEY),
-        AsyncStorage.removeItem(TV_GENRE_CACHE_KEY),
+        AsyncStorage.removeItem(getCacheKey('movie')),
+        AsyncStorage.removeItem(getCacheKey('tv')),
       ]);
-      console.log('All genre caches cleared');
+      console.log('All genre caches for current language cleared');
     }
   } catch (error) {
     console.error('Error clearing genre cache:', error);
