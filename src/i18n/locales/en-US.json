@@ -448,6 +448,7 @@
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",
+    "welcomeDescription": "Your ultimate companion for movies and TV shows",
     "discoverTitle": "Discover",
     "discoverDescription": "Find your next favorite movie or TV show",
     "trackTitle": "Track",

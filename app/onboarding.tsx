@@ -24,7 +24,7 @@ const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: '1',
     titleKey: 'onboarding.welcome',
-    descriptionKey: 'onboarding.discoverDescription',
+    descriptionKey: 'onboarding.welcomeDescription',
     image:
       'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
   },

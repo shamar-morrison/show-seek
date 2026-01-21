@@ -108,6 +108,9 @@
     "airingToday": "No ar hoje",
     "onTheAir": "No ar",
     "latestTrailers": "Últimos trailers",
+    "trendingMovies": "Filmes em destaque",
+    "trendingTV": "Séries em destaque",
+    "upcomingTV": "Próximas séries",
     "customizeSections": "Personalizar seções",
     "emptyHome": "Sua tela inicial está vazia",
     "emptyHomeHint": "Adicione algumas seções para começar"
@@ -132,7 +135,8 @@
     "anyRating": "Qualquer avaliação",
     "noFiltersApplied": "Sem filtros aplicados",
     "resultsCount": "{{count}} resultados",
-    "noResultsWithFilters": "Nenhum resultado corresponde aos seus filtros"
+    "noResultsWithFilters": "Nenhum resultado corresponde aos seus filtros",
+    "adjustFilters": "Tente ajustar seus filtros"
   },
   "search": {
     "title": "Buscar",
@@ -146,7 +150,9 @@
     "noRecentSearches": "Sem buscas recentes",
     "searchResults": "Resultados da busca",
     "noResultsFor": "Sem resultados para \"{{query}}\"",
-    "tryDifferentKeywords": "Tente palavras-chave diferentes"
+    "tryDifferentKeywords": "Tente palavras-chave diferentes",
+    "prompt": "Busque por filmes e séries",
+    "adjustSearch": "Tente ajustar sua busca"
   },
   "media": {
     "movie": "Filme",
@@ -429,6 +435,7 @@
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",
+    "welcomeDescription": "Seu companheiro definitivo para filmes e séries",
     "discoverTitle": "Descobrir",
     "discoverDescription": "Encontre seu próximo filme ou série favorita",
     "trackTitle": "Acompanhar",

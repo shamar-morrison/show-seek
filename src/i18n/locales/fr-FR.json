@@ -429,6 +429,7 @@
   },
   "onboarding": {
     "welcome": "Bienvenue sur ShowSeek",
+    "welcomeDescription": "Votre compagnon ultime pour les films et les séries",
     "discoverTitle": "Découvrir",
     "discoverDescription": "Trouvez votre prochain film ou série préféré",
     "trackTitle": "Suivre",
