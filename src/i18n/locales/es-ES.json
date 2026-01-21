@@ -80,7 +80,8 @@
     "guestMode": "Modo invitado",
     "guestModeDescription": "Algunas funciones están limitadas en modo invitado",
     "upgradeAccount": "Actualizar a cuenta completa",
-    "featureRequiresAccount": "Esta función requiere una cuenta"
+    "featureRequiresAccount": "Esta función requiere una cuenta",
+    "bySigningIn": "Al iniciar sesión, aceptas nuestros"
   },
   "tabs": {
     "home": "Inicio",

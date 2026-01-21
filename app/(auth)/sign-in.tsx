@@ -248,7 +248,7 @@ export default function SignIn() {
               </View>
 
               <Text style={styles.termsText}>
-                {t('settings.terms')}{' '}
+                {t('auth.bySigningIn')}{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
                   {t('settings.terms')}
                 </Text>{' '}

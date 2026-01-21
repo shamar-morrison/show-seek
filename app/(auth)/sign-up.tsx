@@ -101,7 +101,7 @@ export default function SignUp() {
               </View>
 
               <Text style={styles.termsText}>
-                {t('settings.terms')} &amp; {t('settings.privacy')}{' '}
+                {t('auth.bySigningIn')}{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
                   {t('settings.terms')}
                 </Text>{' '}

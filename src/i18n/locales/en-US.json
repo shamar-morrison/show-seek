@@ -80,7 +80,8 @@
     "guestMode": "Guest Mode",
     "guestModeDescription": "Some features are limited in guest mode",
     "upgradeAccount": "Upgrade to Full Account",
-    "featureRequiresAccount": "This feature requires an account"
+    "featureRequiresAccount": "This feature requires an account",
+    "bySigningIn": "By signing in, you agree to our"
   },
   "tabs": {
     "home": "Home",
