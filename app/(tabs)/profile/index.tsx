@@ -26,6 +26,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -159,6 +160,7 @@ export default function ProfileScreen() {
     refetch: refetchPreferences,
   } = usePreferences();
   const updatePreference = useUpdatePreference();
+  const { t } = useTranslation();
 
   const [showReauthModal, setShowReauthModal] = useState(false);
   const [reauthPassword, setReauthPassword] = useState('');
@@ -364,12 +366,12 @@ export default function ProfileScreen() {
                 onPress={() => router.push('/premium')}
               >
                 <Crown size={16} color={COLORS.white} style={{ marginRight: 8 }} />
-                <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
               </TouchableOpacity>
             )}
             {isPremium && (
               <View style={styles.premiumStatusContainer}>
-                <Text style={styles.premiumStatusText}>Premium Member</Text>
+                <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
               </View>
             )}
           </View>
@@ -377,7 +379,7 @@ export default function ProfileScreen() {
           {/* Preferences Section */}
           {!isGuest && (
             <View style={styles.preferencesSection}>
-              <Text style={styles.sectionTitle}>PREFERENCES</Text>
+              <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
               {preferencesError ? (
                 <View style={styles.preferenceItem}>
                   <View style={styles.preferenceInfo}>
@@ -406,10 +408,9 @@ export default function ProfileScreen() {
                 <>
                   <View style={styles.preferenceItem}>
                     <View style={styles.preferenceInfo}>
-                      <Text style={styles.preferenceLabel}>Auto-add to Watching</Text>
+                      <Text style={styles.preferenceLabel}>{t('profile.autoAddToWatching')}</Text>
                       <Text style={styles.preferenceSubtitle}>
-                        Automatically add series to your Watching list when you mark an episode as
-                        watched
+                        {t('profile.autoAddToWatchingDescription')}
                       </Text>
                     </View>
                     {preferencesLoading ? (
@@ -439,10 +440,11 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.preferenceItem}>
                     <View style={styles.preferenceInfo}>
-                      <Text style={styles.preferenceLabel}>Auto-add to Already Watched</Text>
+                      <Text style={styles.preferenceLabel}>
+                        {t('profile.autoAddToAlreadyWatched')}
+                      </Text>
                       <Text style={styles.preferenceSubtitle}>
-                        Automatically add movies to your Already Watched list when you rate or mark
-                        them as watched
+                        {t('profile.autoAddToAlreadyWatchedDescription')}
                       </Text>
                     </View>
                     {preferencesLoading ? (
@@ -504,10 +506,9 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.preferenceItem}>
                     <View style={styles.preferenceInfo}>
-                      <Text style={styles.preferenceLabel}>Quick Mark as Watched</Text>
+                      <Text style={styles.preferenceLabel}>{t('profile.quickMarkAsWatched')}</Text>
                       <Text style={styles.preferenceSubtitle}>
-                        Skip the date selection modal and use the current time when marking movies
-                        as watched
+                        {t('profile.quickMarkAsWatchedDescription')}
                       </Text>
                     </View>
                     {preferencesLoading ? (
@@ -687,7 +688,7 @@ export default function ProfileScreen() {
               />
               <ActionButton
                 icon={MapPin}
-                label="Region"
+                label={t('settings.region')}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push('/(tabs)/profile/region' as any);
@@ -703,7 +704,7 @@ export default function ProfileScreen() {
               {!isGuest && (
                 <ActionButton
                   icon={LayoutIcon}
-                  label="Default Launch Screen"
+                  label={t('settings.defaultLaunchScreen')}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push('/(tabs)/profile/default-launch-screen' as any);
@@ -728,7 +729,7 @@ export default function ProfileScreen() {
               {!isGuest && (
                 <ActionButton
                   customIcon={<TraktLogo size={20} />}
-                  label="Trakt Integration"
+                  label={t('profile.traktIntegration')}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push('/(tabs)/profile/trakt-settings');
@@ -748,35 +749,35 @@ export default function ProfileScreen() {
 
           {/* App Settings */}
           <View style={styles.actionsSection}>
-            <Text style={styles.sectionTitle}>SETTINGS</Text>
+            <Text style={styles.sectionTitle}>{t('settings.title').toUpperCase()}</Text>
             <View style={styles.actionsList}>
               {/* <ActionButton
                 icon={Coffee}
                 label="Support Development"
                 onPress={handleSupportDevelopment}
               /> */}
-              <ActionButton icon={Star} label="Rate App" onPress={handleRateApp} />
+              <ActionButton icon={Star} label={t('profile.rateApp')} onPress={handleRateApp} />
               <ActionButton
                 icon={MessageCircle}
-                label="Send Feedback"
+                label={t('profile.sendFeedback')}
                 onPress={handleSendFeedback}
               />
               {!isGuest && (
                 <ActionButton
                   icon={Download}
-                  label="Export Data"
+                  label={t('profile.exportData')}
                   onPress={handleExportData}
                   loading={isExporting}
                   isPremiumFeature
                   isPremium={isPremium}
                 />
               )}
-              <ActionButton icon={Globe} label="ShowSeek Web App" onPress={handleOpenWebApp} />
-              <ActionButton icon={LogOut} label="Sign Out" onPress={handleSignOut} />
+              <ActionButton icon={Globe} label={t('profile.webApp')} onPress={handleOpenWebApp} />
+              <ActionButton icon={LogOut} label={t('auth.signOut')} onPress={handleSignOut} />
               {!isGuest && (
                 <ActionButton
                   icon={Trash2}
-                  label="Delete Account"
+                  label={t('settings.deleteAccount')}
                   onPress={handleDeleteAccount}
                   variant="danger"
                 />

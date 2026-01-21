@@ -17,7 +17,8 @@ import {
   TvMinimal,
   User,
 } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -136,6 +137,111 @@ const SECTIONS: SectionData[] = [
 export default function LibraryScreen() {
   const router = useRouter();
   const { isPremium } = usePremium();
+  const { t } = useTranslation();
+
+  // Define sections with translation keys
+  const sections = useMemo(
+    () => [
+      {
+        title: t('library.listsAndStats'),
+        data: [
+          {
+            id: 'watch-progress',
+            icon: Play,
+            title: t('library.watchProgress'),
+            route: '/(tabs)/library/watch-progress',
+          },
+          {
+            id: 'watch-status',
+            icon: Tv,
+            title: t('library.watchLists'),
+            route: '/(tabs)/library/watch-status',
+          },
+          {
+            id: 'custom-lists',
+            icon: ListPlus,
+            title: t('library.customLists'),
+            route: '/(tabs)/library/custom-lists',
+          },
+          {
+            id: 'stats',
+            icon: BarChart3,
+            title: t('library.statsAndHistory'),
+            route: '/(tabs)/library/stats',
+          },
+          {
+            id: 'notes',
+            icon: StickyNote,
+            title: t('library.notes'),
+            route: '/(tabs)/library/notes',
+          },
+        ],
+      },
+      {
+        title: t('library.ratingsSection'),
+        data: [
+          {
+            id: 'episode-ratings',
+            icon: TvMinimal,
+            title: t('library.episodeRatings'),
+            route: '/(tabs)/library/ratings/episodes',
+          },
+          {
+            id: 'movie-ratings',
+            icon: Film,
+            title: t('library.movieRatings'),
+            route: '/(tabs)/library/ratings/movies',
+          },
+          {
+            id: 'tv-ratings',
+            icon: Tv,
+            title: t('library.tvShowRatings'),
+            route: '/(tabs)/library/ratings/tv-shows',
+          },
+        ],
+      },
+      {
+        title: t('library.favoritesSection'),
+        data: [
+          {
+            id: 'favorite-content',
+            icon: Heart,
+            title: t('library.favoriteContent'),
+            route: '/(tabs)/library/favorites',
+          },
+          {
+            id: 'favorite-people',
+            icon: User,
+            title: t('library.favoritePeople'),
+            route: '/(tabs)/library/favorite-people',
+          },
+        ],
+      },
+      {
+        title: t('settings.notifications'),
+        data: [
+          {
+            id: 'reminders',
+            icon: Bell,
+            title: t('library.reminders'),
+            route: '/(tabs)/library/reminders',
+          },
+        ],
+      },
+      {
+        title: t('library.widgets'),
+        data: [
+          {
+            id: 'widgets',
+            icon: Layout,
+            title: t('library.homeScreenWidgets'),
+            route: '/(tabs)/library/widgets',
+          },
+        ],
+      },
+    ],
+    [t]
+  );
 
   const handleNavigate = useCallback(
     (route: string) => {
@@ -187,14 +293,14 @@ export default function LibraryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Library</Text>
+        <Text style={styles.headerTitle}>{t('tabs.library')}</Text>
         <Pressable onPress={() => router.push('/manage-lists' as any)} hitSlop={HIT_SLOP.m}>
           <Settings2 size={24} color={COLORS.text} />
         </Pressable>
       </View>
 
       <SectionList
-        sections={SECTIONS}
+        sections={sections}
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         SectionSeparatorComponent={renderSectionSeparator}

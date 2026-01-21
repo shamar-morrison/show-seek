@@ -4,10 +4,12 @@
  * This provider handles:
  * 1. Loading the user's preferred language on app launch from AsyncStorage
  * 2. Syncing language changes to the TMDB API client
- * 3. Resetting React Query cache when language changes
- * 4. Providing a loading state for splash screen
+ * 3. Syncing language changes to i18next for UI translations
+ * 4. Resetting React Query cache when language changes
+ * 5. Providing a loading state for splash screen
  */
 import { setApiLanguage } from '@/src/api/tmdb';
+import i18n from '@/src/i18n';
 import { getStoredLanguage, setStoredLanguage } from '@/src/utils/languageStorage';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
@@ -74,6 +76,8 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
       const storedLanguage = await getStoredLanguage();
       setLanguageState(storedLanguage);
       setApiLanguage(storedLanguage);
+      // Sync i18next with stored language
+      await i18n.changeLanguage(storedLanguage);
       setIsLanguageReady(true);
     };
 
@@ -108,6 +112,9 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
       // Update state immediately for responsive UI
       setLanguageState(newLanguage);
       setApiLanguage(newLanguage);
+
+      // Sync i18next for UI translations
+      await i18n.changeLanguage(newLanguage);
 
       // Persist to AsyncStorage
       await setStoredLanguage(newLanguage);

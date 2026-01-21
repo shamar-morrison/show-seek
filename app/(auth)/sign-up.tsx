@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignUp() {
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   // Configure Google Auth on mount
   useEffect(() => {
@@ -39,11 +41,11 @@ export default function SignUp() {
         await createUserDocument(result.user);
         // Router will automatically redirect based on auth state
       } else if (!result.cancelled && result.error) {
-        Alert.alert('Google Sign Up Failed', result.error);
+        Alert.alert(t('auth.signUpFailed'), result.error);
       }
       // If cancelled, do nothing (user closed the picker)
     } catch (error: any) {
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      Alert.alert(t('common.error'), t('errors.generic'));
     } finally {
       setLoading(false);
     }
@@ -65,10 +67,8 @@ export default function SignUp() {
               <View style={styles.logoContainer}>
                 <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
-                Create your account with Google for a seamless experience
-              </Text>
+              <Text style={styles.title}>{t('auth.createAccount')}</Text>
+              <Text style={styles.subtitle}>{t('auth.signUpToGetStarted')}</Text>
             </View>
 
             <View style={styles.form}>
@@ -86,32 +86,28 @@ export default function SignUp() {
                       source={require('@/assets/images/google-icon.png')}
                       style={styles.googleIcon}
                     />
-                    <Text style={styles.googleButtonText}>Sign up with Google</Text>
+                    <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
                   </>
                 )}
               </TouchableOpacity>
 
-              <Text style={styles.infoText}>
-                Your Google profile name and photo will be used for your account.
-              </Text>
-
               <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an account? </Text>
+                <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')} </Text>
                 <Link href="/(auth)/sign-in" asChild>
                   <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                    <Text style={styles.link}>Sign In</Text>
+                    <Text style={styles.link}>{t('auth.signIn')}</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
 
               <Text style={styles.termsText}>
-                By creating an account, you agree to our{' '}
+                {t('auth.agreeToTerms')}{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
-                  Terms of Service
+                  {t('settings.terms')}
                 </Text>{' '}
-                and{' '}
+                &amp;{' '}
                 <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
-                  Privacy Policy
+                  {t('settings.privacy')}
                 </Text>
               </Text>
             </View>

@@ -3,6 +3,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useRouter } from 'expo-router';
 import { LogIn, X } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface AuthGuardModalProps {
@@ -22,12 +23,11 @@ interface AuthGuardModalProps {
  *   message="Sign in to add items to your lists"
  * />
  */
-export default function AuthGuardModal({
-  visible,
-  onClose,
-  message = 'Sign in to access this feature',
-}: AuthGuardModalProps) {
+export default function AuthGuardModal({ visible, onClose, message }: AuthGuardModalProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const displayMessage = message ?? t('auth.featureRequiresAccount');
 
   const handleSignIn = () => {
     onClose();
@@ -49,35 +49,35 @@ export default function AuthGuardModal({
               onPress={onClose}
               activeOpacity={ACTIVE_OPACITY}
               style={styles.closeButton}
-              accessibilityLabel="Close"
+              accessibilityLabel={t('common.close')}
               accessibilityRole="button"
             >
               <X size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>Sign In Required</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text style={styles.title}>{t('errors.unauthorized')}</Text>
+          <Text style={styles.message}>{displayMessage}</Text>
 
           <View style={styles.actions}>
             <TouchableOpacity
               style={styles.signInButton}
               onPress={handleSignIn}
               activeOpacity={ACTIVE_OPACITY}
-              accessibilityLabel="Sign In"
+              accessibilityLabel={t('auth.signIn')}
               accessibilityRole="button"
             >
-              <Text style={styles.signInButtonText}>Sign In</Text>
+              <Text style={styles.signInButtonText}>{t('auth.signIn')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.laterButton}
               onPress={onClose}
               activeOpacity={ACTIVE_OPACITY}
-              accessibilityLabel="Maybe Later"
+              accessibilityLabel={t('common.cancel')}
               accessibilityRole="button"
             >
-              <Text style={styles.laterButtonText}>Maybe Later</Text>
+              <Text style={styles.laterButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>
