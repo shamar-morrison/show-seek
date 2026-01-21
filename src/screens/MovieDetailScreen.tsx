@@ -20,6 +20,7 @@ import MarkAsWatchedModal from '@/src/components/MarkAsWatchedModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingModal from '@/src/components/RatingModal';
 import ReminderModal from '@/src/components/ReminderModal';
+import ShareCardModal from '@/src/components/ShareCardModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
@@ -91,6 +92,7 @@ export default function MovieDetailScreen() {
   const [shouldLoadCollections, setShouldLoadCollections] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [watchedModalVisible, setWatchedModalVisible] = useState(false);
+  const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -559,6 +561,7 @@ export default function MovieDetailScreen() {
               )
             }
             onTrailer={handleTrailerPress}
+            onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
             userRating={userRating}
@@ -805,6 +808,21 @@ export default function MovieDetailScreen() {
             watchCount={watchCount}
             onMarkAsWatched={handleMarkAsWatched}
             onClearAll={handleClearWatches}
+            onShowToast={(message) => toastRef.current?.show(message)}
+          />
+          <ShareCardModal
+            visible={shareCardModalVisible}
+            onClose={() => setShareCardModalVisible(false)}
+            mediaData={{
+              id: movie.id,
+              type: 'movie',
+              title: movie.title,
+              posterPath: movie.poster_path,
+              backdropPath: movie.backdrop_path,
+              releaseYear: movie.release_date?.split('-')[0] || '',
+              genres: movie.genres?.map((g) => g.name) || [],
+              userRating,
+            }}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
         </>

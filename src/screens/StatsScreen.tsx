@@ -1,4 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
+import type { StatsMonthlyData, StatsOverviewData } from '@/src/components/shareCard/ShareCard';
+import ShareCardModal from '@/src/components/ShareCardModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useHistory } from '@/src/hooks/useHistory';
 import type { MonthlyStats } from '@/src/types/history';
@@ -10,13 +12,14 @@ import {
   Calendar,
   Clock,
   Flame,
+  ImageIcon,
   Minus,
   Plus,
   Star,
   Trophy,
   Tv,
 } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -135,6 +138,10 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
 export default function StatsScreen() {
   const router = useRouter();
   const { data: historyData, isLoading, error } = useHistory();
+  const [shareCardVisible, setShareCardVisible] = useState(false);
+  const [shareCardData, setShareCardData] = useState<StatsOverviewData | StatsMonthlyData | null>(
+    null
+  );
 
   const handleMonthPress = useCallback(
     (month: string) => {
@@ -142,6 +149,29 @@ export default function StatsScreen() {
     },
     [router]
   );
+
+  const handleShareOverview = useCallback(() => {
+    if (!historyData) return;
+    setShareCardData({
+      variant: 'overview',
+      totalWatched: historyData.totalWatched,
+      totalRated: historyData.totalRated,
+      totalAdded: historyData.totalAddedToLists,
+      currentStreak: historyData.currentStreak,
+    });
+    setShareCardVisible(true);
+  }, [historyData]);
+
+  const handleShareMonth = useCallback((monthStats: MonthlyStats) => {
+    setShareCardData({
+      variant: 'monthly',
+      monthName: monthStats.monthName,
+      watchedCount: monthStats.watched,
+      avgRating: monthStats.averageRating ?? null,
+      topGenres: monthStats.topGenres,
+    });
+    setShareCardVisible(true);
+  }, []);
 
   if (isLoading) {
     return (
@@ -190,7 +220,12 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Overview Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>LAST 6 MONTHS OVERVIEW</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>LAST 6 MONTHS OVERVIEW</Text>
+            <TouchableOpacity onPress={handleShareOverview} activeOpacity={ACTIVE_OPACITY}>
+              <ImageIcon size={20} color={COLORS.textSecondary} />
+            </TouchableOpacity>
+          </View>
           <View style={styles.statsGrid}>
             <StatCard
               icon={Tv}
@@ -269,6 +304,13 @@ export default function StatsScreen() {
           ))}
         </View>
       </ScrollView>
+
+      {/* Share Card Modal */}
+      <ShareCardModal
+        visible={shareCardVisible}
+        onClose={() => setShareCardVisible(false)}
+        statsData={shareCardData ?? undefined}
+      />
     </SafeAreaView>
   );
 }
@@ -306,6 +348,11 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.m,
   },
   statsGrid: {

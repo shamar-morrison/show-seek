@@ -1,7 +1,7 @@
 import RatingButton from '@/src/components/RatingButton';
 import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
-import { Check, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
+import { Check, ImageIcon, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -13,6 +13,7 @@ export interface MediaActionButtonsProps {
   onReminder?: () => void; // Optional - only shown if provided
   onNote: () => void;
   onTrailer: () => void;
+  onShareCard?: () => void; // Optional - share card action
 
   // Add to List state
   isInAnyList: boolean;
@@ -36,7 +37,7 @@ export interface MediaActionButtonsProps {
 
 /**
  * Shared action buttons row for media detail screens.
- * Displays Add to List, Rating, Reminder (optional), Notes, and Watch Trailer buttons.
+ * Displays Add to List, Rating, Reminder (optional), Notes, Share Card (optional), and Watch Trailer buttons.
  */
 export function MediaActionButtons({
   onAddToList,
@@ -44,6 +45,7 @@ export function MediaActionButtons({
   onReminder,
   onNote,
   onTrailer,
+  onShareCard,
   isInAnyList,
   isLoadingLists,
   userRating,
@@ -107,6 +109,19 @@ export function MediaActionButtons({
             )}
           </TouchableOpacity>
         </View>
+
+        {/* Share Card Button (optional) */}
+        {onShareCard && (
+          <View style={detailStyles.ratingButtonContainer}>
+            <TouchableOpacity
+              style={detailStyles.actionButtonTouchable}
+              activeOpacity={ACTIVE_OPACITY}
+              onPress={onShareCard}
+            >
+              <ImageIcon size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Watch Trailer Button Row */}
