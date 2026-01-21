@@ -96,6 +96,15 @@ export function useProfileLogic() {
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    if (isGuest) {
+      Alert.alert(
+        'Guest Account',
+        'Guest accounts have no data to export. Sign in to save and export your data.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (!isPremium) {
       router.push('/premium');
       return;
@@ -115,7 +124,7 @@ export function useProfileLogic() {
         onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isPremium, router, performExport]);
+  }, [isGuest, isPremium, router, performExport]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
