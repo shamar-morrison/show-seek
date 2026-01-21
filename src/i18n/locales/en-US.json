@@ -432,7 +432,18 @@
     "syncFailed": "Sync failed",
     "supportDevelopment": "Support Development",
     "rateApp": "Rate App",
-    "shareApp": "Share App"
+    "shareApp": "Share App",
+    "upgradeToPremium": "Upgrade to Premium",
+    "premiumMember": "Premium Member",
+    "autoAddToWatching": "Auto-add to Watching",
+    "autoAddToWatchingDescription": "Automatically add series to your Watching list when you mark an episode as watched",
+    "autoAddToAlreadyWatched": "Auto-add to Already Watched",
+    "autoAddToAlreadyWatchedDescription": "Automatically add movies to your Already Watched list when you rate or mark them as watched",
+    "quickMarkAsWatched": "Quick Mark as Watched",
+    "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
+    "sendFeedback": "Send Feedback",
+    "exportData": "Export Data",
+    "webApp": "ShowSeek Web App"
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",

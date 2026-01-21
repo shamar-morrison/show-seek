@@ -413,7 +413,18 @@
     "syncFailed": "Falha na sincronização",
     "supportDevelopment": "Apoiar o desenvolvimento",
     "rateApp": "Avaliar o app",
-    "shareApp": "Compartilhar o app"
+    "shareApp": "Compartilhar o app",
+    "upgradeToPremium": "Atualizar para Premium",
+    "premiumMember": "Membro Premium",
+    "autoAddToWatching": "Adicionar auto a Assistindo",
+    "autoAddToWatchingDescription": "Adicionar automaticamente as séries à sua lista Assistindo quando marcar um episódio como visto",
+    "autoAddToAlreadyWatched": "Adicionar auto a Já assistidos",
+    "autoAddToAlreadyWatchedDescription": "Adicionar automaticamente os filmes à sua lista Já assistidos quando avaliá-los ou marcá-los como vistos",
+    "quickMarkAsWatched": "Marcar rápido como visto",
+    "quickMarkAsWatchedDescription": "Pular a seleção de data e usar a hora atual ao marcar filmes como vistos",
+    "sendFeedback": "Enviar feedback",
+    "exportData": "Exportar dados",
+    "webApp": "ShowSeek Web"
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",
