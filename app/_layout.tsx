@@ -74,6 +74,9 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  // Track last navigation to prevent race conditions
+  const lastNavigationRef = React.useRef<string | null>(null);
+
   // Handle deep links
   useDeepLinking();
   useQuickActions();
@@ -115,17 +118,33 @@ function RootLayoutNav() {
 
     if (loading) return;
 
+    // Helper to navigate with deduplication
+    const safeNavigate = (destination: string) => {
+      if (lastNavigationRef.current === destination) return;
+      lastNavigationRef.current = destination;
+      // Use requestAnimationFrame to defer navigation past any pending unmounts
+      requestAnimationFrame(() => {
+        router.replace(destination as any);
+      });
+    };
+
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
-      router.replace('/onboarding');
+      safeNavigate('/onboarding');
     } else if (hasCompletedOnboarding && !user && !inAuthGroup) {
       // If onboarded but not logged in, go to sign-in
-      router.replace('/(auth)/sign-in');
+      safeNavigate('/(auth)/sign-in');
     } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
       // If logged in as a real user (not guest) and in auth/onboarding, go to preferred launch screen
       // Guest users (anonymous) are allowed to access auth screens to upgrade their account
       const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
-      router.replace(destination);
+      safeNavigate(destination);
+    } else if (user && user.isAnonymous && inAuthGroup) {
+      // Guest user signing in — navigate to home
+      // Small delay to let auth state settle before navigation
+      setTimeout(() => {
+        safeNavigate('/(tabs)/home');
+      }, 50);
     }
   }, [
     user,
@@ -140,8 +159,10 @@ function RootLayoutNav() {
   ]);
 
   // Show loading state while auth, language, region, or preferences are loading
+  // Also wait for hasCompletedOnboarding to be resolved to prevent onboarding flash
   const isInitializing =
     loading ||
+    hasCompletedOnboarding === null ||
     !isLanguageReady ||
     !isRegionReady ||
     (user && !user.isAnonymous && preferencesLoading);

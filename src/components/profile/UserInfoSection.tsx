@@ -1,9 +1,10 @@
+import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { User } from 'firebase/auth';
 import { Crown } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface UserInfoSectionProps {
   /** Firebase user object */
@@ -12,8 +13,6 @@ export interface UserInfoSectionProps {
   isPremium: boolean;
   /** Whether the user is a guest (anonymous) */
   isGuest: boolean;
-  /** User initials for avatar fallback */
-  initials: string;
   /** Handler for upgrade button press */
   onUpgradePress: () => void;
 }
@@ -26,7 +25,6 @@ export function UserInfoSection({
   user,
   isPremium,
   isGuest,
-  initials,
   onUpgradePress,
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
@@ -35,17 +33,14 @@ export function UserInfoSection({
 
   return (
     <View style={styles.userSection}>
-      <View style={styles.avatar}>
-        {user?.photoURL ? (
-          <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
-        ) : (
-          <Text style={styles.avatarText}>{initials}</Text>
-        )}
-        {isPremium && (
-          <View style={styles.premiumCrown}>
-            <Crown size={12} color={COLORS.white} />
-          </View>
-        )}
+      <View style={styles.avatarContainer}>
+        <UserAvatar
+          photoURL={user?.photoURL}
+          displayName={user?.displayName}
+          email={user?.email}
+          size={80}
+          showPremiumBadge={isPremium}
+        />
       </View>
       <Text style={styles.displayName}>{displayName}</Text>
       <Text style={styles.email}>{email}</Text>
@@ -70,38 +65,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl,
     paddingHorizontal: SPACING.l,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+  avatarContainer: {
     marginBottom: SPACING.m,
-    position: 'relative',
-  },
-  premiumCrown: {
-    position: 'absolute',
-    bottom: -4,
-    right: -4,
-    backgroundColor: COLORS.warning,
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.background,
-  },
-  avatarText: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
   },
   displayName: {
     fontSize: FONT_SIZE.xl,

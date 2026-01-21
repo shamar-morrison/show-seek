@@ -109,7 +109,8 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      router.replace('/(tabs)/home');
+      // Navigation is handled by _layout.tsx based on auth state change
+      // Do not call router.replace here to avoid race condition
     } catch (error: any) {
       let errorMessage = t('auth.signInFailed');
 
