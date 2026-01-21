@@ -26,7 +26,7 @@ export default function UserRating({ rating }: UserRatingProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: SPACING.m,
+    marginBottom: SPACING.l,
   },
   label: {
     fontSize: FONT_SIZE.s,

@@ -736,21 +736,24 @@ export default function TVDetailScreen() {
             onShowToast={(message) => toastRef.current?.show(message)}
           />
           <NoteModal ref={noteSheetRef} />
-          <ShareCardModal
-            visible={shareCardModalVisible}
-            onClose={() => setShareCardModalVisible(false)}
-            mediaData={{
-              id: show.id,
-              type: 'tv',
-              title: show.name,
-              posterPath: show.poster_path,
-              backdropPath: show.backdrop_path,
-              releaseYear: show.first_air_date?.split('-')[0] || '',
-              genres: show.genres?.map((g) => g.name) || [],
-              userRating,
-            }}
-            onShowToast={(message) => toastRef.current?.show(message)}
-          />
+          {/* Lazy load ShareCardModal - only mount when needed */}
+          {shareCardModalVisible && (
+            <ShareCardModal
+              visible={shareCardModalVisible}
+              onClose={() => setShareCardModalVisible(false)}
+              mediaData={{
+                id: show.id,
+                type: 'tv',
+                title: show.name,
+                posterPath: show.poster_path,
+                backdropPath: show.backdrop_path,
+                releaseYear: show.first_air_date?.split('-')[0] || '',
+                genres: show.genres?.map((g) => g.name) || [],
+                userRating,
+              }}
+              onShowToast={(message) => toastRef.current?.show(message)}
+            />
+          )}
         </>
       )}
       <Toast ref={toastRef} />

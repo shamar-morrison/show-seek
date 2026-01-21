@@ -583,7 +583,7 @@ export default function MovieDetailScreen() {
 
           {userRating > 0 && <UserRating rating={userRating} />}
 
-          <Text style={[detailStyles.sectionTitle, { marginTop: SPACING.l }]}>Overview</Text>
+          <Text style={[detailStyles.sectionTitle]}>Overview</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
               text={movie.overview || 'No overview available'}
@@ -810,21 +810,24 @@ export default function MovieDetailScreen() {
             onClearAll={handleClearWatches}
             onShowToast={(message) => toastRef.current?.show(message)}
           />
-          <ShareCardModal
-            visible={shareCardModalVisible}
-            onClose={() => setShareCardModalVisible(false)}
-            mediaData={{
-              id: movie.id,
-              type: 'movie',
-              title: movie.title,
-              posterPath: movie.poster_path,
-              backdropPath: movie.backdrop_path,
-              releaseYear: movie.release_date?.split('-')[0] || '',
-              genres: movie.genres?.map((g) => g.name) || [],
-              userRating,
-            }}
-            onShowToast={(message) => toastRef.current?.show(message)}
-          />
+          {/* Lazy load ShareCardModal - only mount when needed */}
+          {shareCardModalVisible && (
+            <ShareCardModal
+              visible={shareCardModalVisible}
+              onClose={() => setShareCardModalVisible(false)}
+              mediaData={{
+                id: movie.id,
+                type: 'movie',
+                title: movie.title,
+                posterPath: movie.poster_path,
+                backdropPath: movie.backdrop_path,
+                releaseYear: movie.release_date?.split('-')[0] || '',
+                genres: movie.genres?.map((g) => g.name) || [],
+                userRating,
+              }}
+              onShowToast={(message) => toastRef.current?.show(message)}
+            />
+          )}
         </>
       )}
       <Toast ref={toastRef} />

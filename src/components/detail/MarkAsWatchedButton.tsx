@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.transparent,
     gap: SPACING.s,
     marginTop: -SPACING.l,
+    marginBottom: SPACING.l,
   },
   watchedButton: {
     borderColor: COLORS.success,
