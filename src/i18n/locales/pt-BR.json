@@ -321,7 +321,20 @@
     "allItems": "Todos os itens",
     "watchedItems": "Assistidos",
     "unwatchedItems": "Não assistidos",
-    "hideWatched": "Ocultar assistidos"
+    "hideWatched": "Ocultar assistidos",
+    "listsAndStats": "Listas e Estatísticas",
+    "watchProgress": "Progresso de visualização",
+    "watchLists": "Listas de visualização",
+    "customLists": "Listas personalizadas",
+    "statsAndHistory": "Estatísticas e Histórico",
+    "ratingsSection": "Avaliações",
+    "episodeRatings": "Avaliações de episódios",
+    "movieRatings": "Avaliações de filmes",
+    "tvShowRatings": "Avaliações de séries",
+    "favoritesSection": "Favoritos",
+    "favoriteContent": "Conteúdo favorito",
+    "widgets": "Widgets",
+    "homeScreenWidgets": "Widgets da tela inicial"
   },
   "rating": {
     "title": "Avaliar",
