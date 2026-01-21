@@ -139,13 +139,13 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
         </View>
       </View>
 
-      {/* Logo Watermark - Circular */}
+      {/* Logo Watermark - Rounded Rectangle */}
       <View style={styles.watermark}>
-        <View style={styles.logoCircle}>
+        <View style={styles.logoContainer}>
           <Image
             source={require('@/assets/images/icon.png')}
             style={styles.logoImage}
-            contentFit="cover"
+            contentFit="contain"
           />
         </View>
       </View>
@@ -196,13 +196,13 @@ const StatsOverviewCard = forwardRef<View, StatsOverviewCardProps>(({ data }, re
         </View>
       </View>
 
-      {/* Logo Watermark - Circular */}
+      {/* Logo Watermark - Rounded Rectangle */}
       <View style={styles.watermark}>
-        <View style={styles.logoCircle}>
+        <View style={styles.logoContainer}>
           <Image
             source={require('@/assets/images/icon.png')}
             style={styles.logoImage}
-            contentFit="cover"
+            contentFit="contain"
           />
         </View>
       </View>
@@ -250,13 +250,13 @@ const StatsMonthlyCard = forwardRef<View, StatsMonthlyCardProps>(({ data }, ref)
         )}
       </View>
 
-      {/* Logo Watermark - Circular */}
+      {/* Logo Watermark - Rounded Rectangle */}
       <View style={styles.watermark}>
-        <View style={styles.logoCircle}>
+        <View style={styles.logoContainer}>
           <Image
             source={require('@/assets/images/icon.png')}
             style={styles.logoImage}
-            contentFit="cover"
+            contentFit="contain"
           />
         </View>
       </View>
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.xxl * 2,
-    paddingTop: SHARE_CARD_HEIGHT * 0.1,
+    paddingTop: SHARE_CARD_HEIGHT * 0.05,
   },
   // Larger poster: 550x825 (was 420x630)
   posterContainer: {
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     height: 825,
     borderRadius: BORDER_RADIUS.xl,
     overflow: 'hidden',
-    marginBottom: SPACING.xxl,
+    marginBottom: SPACING.xl,
     // Shadow for poster
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.round,
   },
   ctaText: {
-    fontSize: FONT_SIZE.xl,
+    fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
     color: COLORS.white,
   },
@@ -365,12 +365,12 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
-  logoCircle: {
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+  logoContainer: {
+    width: 260,
+    height: 260,
+    borderRadius: 40,
     overflow: 'hidden',
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   logoImage: {
     width: '100%',
