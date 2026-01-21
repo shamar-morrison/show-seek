@@ -65,6 +65,7 @@ jest.mock('firebase/firestore', () => ({
   setDoc: jest.fn(),
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
+  deleteField: jest.fn(() => '__deleteField__'),
   onSnapshot: jest.fn(() => jest.fn()),
   query: jest.fn(),
   where: jest.fn(),
@@ -110,6 +111,7 @@ global.console = {
     const SUPPRESSED_ERRORS = [
       'Warning: ReactDOM.render is no longer supported',
       'act(...) is not supported in production builds',
+      'react-test-renderer is deprecated',
     ];
     if (!SUPPRESSED_ERRORS.some((e) => message.includes(e))) {
       originalError.apply(console, args);

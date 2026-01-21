@@ -12,6 +12,8 @@ import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
 import { SeasonsSection } from '@/src/components/detail/SeasonsSection';
 import { SimilarMediaSection } from '@/src/components/detail/SimilarMediaSection';
 import { TraktReviewsSection } from '@/src/components/detail/TraktReviewsSection';
+import { TVHeroSection } from '@/src/components/detail/TVHeroSection';
+import { TVMetaSection } from '@/src/components/detail/TVMetaSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import { WatchProvidersSection } from '@/src/components/detail/WatchProvidersSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
@@ -21,13 +23,11 @@ import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
-import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
-import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -47,22 +47,15 @@ import {
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
-import { formatTmdbDate } from '@/src/utils/dateUtils';
-import { getLanguageName } from '@/src/utils/languages';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
 import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
 import { useQuery } from '@tanstack/react-query';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Globe, Layers, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TVDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -462,116 +455,22 @@ export default function TVDetailScreen() {
         }
       >
         {/* Hero Section */}
-        <View style={detailStyles.heroContainer}>
-          <MediaImage
-            source={{ uri: backdropUrl }}
-            style={detailStyles.backdrop}
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={['transparent', COLORS.background]}
-            style={detailStyles.gradient}
-          />
-
-          <SafeAreaView style={detailStyles.headerSafe} edges={['top']}>
-            <TouchableOpacity
-              style={detailStyles.headerButton}
-              onPress={() => router.back()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <ArrowLeft size={24} color={COLORS.white} />
-            </TouchableOpacity>
-          </SafeAreaView>
-
-          <ShareButton
-            id={tvId}
-            title={show.name}
-            mediaType="tv"
-            onShowToast={(msg) => toastRef.current?.show(msg)}
-          />
-
-          <View style={detailStyles.posterContainer}>
-            <MediaImage
-              source={{ uri: posterUrl }}
-              style={detailStyles.poster}
-              contentFit="cover"
-            />
-          </View>
-        </View>
+        <TVHeroSection
+          backdropPath={show.backdrop_path}
+          posterPath={show.poster_path}
+          showName={show.name}
+          showId={tvId}
+          onBackPress={() => router.back()}
+          onShowToast={(msg) => toastRef.current?.show(msg)}
+        />
 
         {/* Content */}
         <View style={detailStyles.content}>
-          <TouchableOpacity
-            activeOpacity={1}
-            onLongPress={async () => {
-              await Clipboard.setStringAsync(show.name);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              toastRef.current?.show('Title copied to clipboard');
-            }}
-          >
-            <Text style={detailStyles.title}>{show.name}</Text>
-          </TouchableOpacity>
-
-          <View style={detailStyles.metaContainer}>
-            <View style={detailStyles.metaItem}>
-              <Calendar size={14} color={COLORS.textSecondary} />
-              <Text style={detailStyles.metaText}>
-                {show.first_air_date
-                  ? formatTmdbDate(show.first_air_date, {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })
-                  : 'Unknown'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={detailStyles.metaItem}
-              onPress={() => handleSeasonsPress()}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <Layers size={14} color={COLORS.primary} />
-              <Text style={[detailStyles.metaText, { color: COLORS.primary }]}>
-                {show.number_of_seasons} Seasons
-              </Text>
-            </TouchableOpacity>
-            <View style={detailStyles.metaItem}>
-              <Tv size={14} color={COLORS.textSecondary} />
-              <Text style={detailStyles.metaText}>{show.number_of_episodes} Episodes</Text>
-            </View>
-            <View style={detailStyles.metaItem}>
-              <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-              <Text style={[detailStyles.metaText, { color: COLORS.warning }]}>
-                {show.vote_average.toFixed(1)}
-              </Text>
-            </View>
-            {show.original_language !== 'en' && (
-              <View style={detailStyles.metaItem}>
-                <Globe size={14} color={COLORS.textSecondary} />
-                <Text style={detailStyles.metaText}>{getLanguageName(show.original_language)}</Text>
-              </View>
-            )}
-            {(show.status === 'Ended' || show.status === 'Canceled') && (
-              <View style={detailStyles.statusBadge}>
-                <Text style={detailStyles.statusBadgeText}>{show.status}</Text>
-              </View>
-            )}
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginHorizontal: -SPACING.l }}
-            contentContainerStyle={{ paddingHorizontal: SPACING.l }}
-          >
-            <View style={detailStyles.genresContainer}>
-              {show.genres.map((genre) => (
-                <View key={genre.id} style={detailStyles.genreTag}>
-                  <Text style={detailStyles.genreText}>{genre.name}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <TVMetaSection
+            show={show}
+            onSeasonsPress={() => handleSeasonsPress()}
+            onShowToast={(msg) => toastRef.current?.show(msg)}
+          />
 
           {/* Action buttons */}
           <MediaActionButtons

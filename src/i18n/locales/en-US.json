@@ -408,7 +408,10 @@
     "selectLanguage": "Select Language",
     "selectRegion": "Select Region",
     "regionDescription": "Affects content availability and recommendations",
-    "languageDescription": "App language and content language"
+    "languageDescription": "App language and content language",
+    "launchScreenDescription": "Choose which screen the app opens to when you launch it.",
+    "launchScreenNote": "This setting will take effect the next time you open the app.",
+    "updateLaunchScreenError": "Failed to update launch screen preference. Please try again."
   },
   "profile": {
     "title": "Profile",
@@ -443,6 +446,14 @@
     "autoAddToAlreadyWatchedDescription": "Automatically add movies to your Already Watched list when you rate or mark them as watched",
     "quickMarkAsWatched": "Quick Mark as Watched",
     "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
+    "showListIndicators": "Show list indicators",
+    "showListIndicatorsDescription": "Display a badge on cards when an item is in any of your lists",
+    "blurPlotSpoilers": "Blur movie and TV plot",
+    "blurPlotSpoilersDescription": "Hide plot summaries by default to avoid spoilers. Tap to reveal.",
+    "hideWatchedContent": "Hide watched content",
+    "hideWatchedContentDescription": "Remove watched movies and shows from search and discovery",
+    "unableToLoadPreferences": "Unable to load preferences",
+    "checkConnection": "Please check your connection and try again",
     "sendFeedback": "Send Feedback",
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App"

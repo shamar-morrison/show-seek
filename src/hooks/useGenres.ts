@@ -1,14 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { getApiLanguage } from '@/src/api/tmdb';
 import { getGenres } from '@/src/utils/genreCache';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 /**
  * Hook to fetch and cache genres for a specific media type (movie or TV).
- * Automatically updates when the media type changes.
+ * Automatically updates when the media type or language changes.
  */
 export function useGenres(type: 'movie' | 'tv') {
+  const language = getApiLanguage();
+
   return useQuery({
-    queryKey: ['genres', type],
+    queryKey: ['genres', type, language],
     queryFn: () => getGenres(type),
     staleTime: 30 * 24 * 60 * 60 * 1000, // 30 days
     gcTime: 30 * 24 * 60 * 60 * 1000, // 30 days

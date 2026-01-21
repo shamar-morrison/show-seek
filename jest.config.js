@@ -14,13 +14,15 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(' +
+    'node_modules/(?!(.pnpm/)?(' +
       '@react-native(-community)?|' +
-      '@react-native/.*|' +
+      '@react-native\\/.*|' +
       'expo(nent)?|' +
-      '@expo(nent)?/.*|' +
-      '@tanstack/.*' +
-      ')/)',
+      '@expo(nent)?\\/.*|' +
+      '@tanstack\\/.*|' +
+      '@nkzw\\+.*|' + // pnpm uses + instead of / for scoped packages
+      '@nkzw\\/.*' +
+      '))',
   ],
   collectCoverageFrom: [
     'src/utils/**/*.{ts,tsx}',

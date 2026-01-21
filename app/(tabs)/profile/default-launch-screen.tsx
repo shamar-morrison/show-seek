@@ -7,7 +7,8 @@ import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences'
 import { LaunchScreenRoute } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import { Bookmark, Check, Compass, Home, Search, User } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -19,22 +20,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const SCREEN_OPTIONS: {
-  label: string;
-  value: LaunchScreenRoute;
-  icon: typeof Home;
-}[] = [
-  { label: 'Home', value: '/(tabs)/home', icon: Home },
-  { label: 'Discover', value: '/(tabs)/discover', icon: Compass },
-  { label: 'Search', value: '/(tabs)/search', icon: Search },
-  { label: 'Library', value: '/(tabs)/library', icon: Bookmark },
-  { label: 'Profile', value: '/(tabs)/profile', icon: User },
-];
-
 export default function DefaultLaunchScreen() {
+  const { t } = useTranslation();
   const { preferences } = usePreferences();
   const updatePreference = useUpdatePreference();
   const [isUpdating, setIsUpdating] = useState<LaunchScreenRoute | null>(null);
+
+  const SCREEN_OPTIONS = useMemo(
+    () => [
+      { label: t('tabs.home'), value: '/(tabs)/home' as const, icon: Home },
+      { label: t('tabs.discover'), value: '/(tabs)/discover' as const, icon: Compass },
+      { label: t('tabs.search'), value: '/(tabs)/search' as const, icon: Search },
+      { label: t('tabs.library'), value: '/(tabs)/library' as const, icon: Bookmark },
+      { label: t('tabs.profile'), value: '/(tabs)/profile' as const, icon: User },
+    ],
+    [t]
+  );
 
   const currentScreen = preferences?.defaultLaunchScreen || '/(tabs)/home';
 
@@ -48,7 +49,7 @@ export default function DefaultLaunchScreen() {
       await updatePreference.mutateAsync({ key: 'defaultLaunchScreen', value: screen });
     } catch (error) {
       console.error('[DefaultLaunchScreen] Error updating preference:', error);
-      Alert.alert('Error', 'Failed to update launch screen preference. Please try again.');
+      Alert.alert(t('common.error'), t('settings.updateLaunchScreenError'));
     } finally {
       setIsUpdating(null);
     }
@@ -57,9 +58,7 @@ export default function DefaultLaunchScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>
-          Choose which screen the app opens to when you launch it.
-        </Text>
+        <Text style={styles.description}>{t('settings.launchScreenDescription')}</Text>
 
         <View style={styles.optionsList}>
           {SCREEN_OPTIONS.map((option) => {
@@ -103,9 +102,7 @@ export default function DefaultLaunchScreen() {
           })}
         </View>
 
-        <Text style={styles.note}>
-          This setting will take effect the next time you open the app.
-        </Text>
+        <Text style={styles.note}>{t('settings.launchScreenNote')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
