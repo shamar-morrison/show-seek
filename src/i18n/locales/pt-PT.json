@@ -81,7 +81,7 @@
     "guestModeDescription": "Algumas funcionalidades estão limitadas no modo convidado",
     "upgradeAccount": "Atualizar para conta completa",
     "featureRequiresAccount": "Este recurso requer uma conta",
-    "bySigningIn": "Ao iniciar sessão, aceita os nossos",
+    "bySigningIn": "Ao iniciar sessão, concorda com os nossos",
     "agreeToTerms": "Ao registar-se, aceita os nossos"
   },
   "tabs": {
@@ -151,7 +151,9 @@
     "noRecentSearches": "Sem pesquisas recentes",
     "searchResults": "Resultados da pesquisa",
     "noResultsFor": "Sem resultados para \"{{query}}\"",
-    "tryDifferentKeywords": "Tente palavras-chave diferentes"
+    "tryDifferentKeywords": "Tente palavras-chave diferentes",
+    "prompt": "Pesquise por filmes e séries",
+    "adjustSearch": "Tente ajustar a sua pesquisa"
   },
   "media": {
     "movie": "Filme",
