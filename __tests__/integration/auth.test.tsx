@@ -2,7 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// Mock the auth context
+// Mock the auth module
 const mockSignInWithEmail = jest.fn();
 const mockSignOut = jest.fn();
 
@@ -16,15 +16,22 @@ jest.mock('@/src/context/auth', () => ({
   }),
 }));
 
-// Create a minimal mock sign-in component for integration testing
+// Import the mocked hook
+import { useAuth } from '@/src/context/auth';
+
+// Mock sign-in form that uses the useAuth hook
+// This makes it a real integration test that validates context integration
 function MockSignInForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Use the mocked hook - this exercises the useAuth mock
+  const { signInWithEmail } = useAuth();
+
   const handleSubmit = async () => {
     try {
-      await mockSignInWithEmail(email, password);
+      await signInWithEmail(email, password);
     } catch (err) {
       setError('Sign in failed');
     }

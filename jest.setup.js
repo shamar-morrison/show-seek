@@ -84,11 +84,37 @@ jest.mock('@/src/firebase/config', () => ({
   db: {},
 }));
 
-// Silence console warnings in tests (optional, remove if you want to see them)
+// Selectively suppress known expected warnings
+// This preserves real errors for debugging while filtering noise
+const originalWarn = console.warn;
+const originalError = console.error;
+
+const SUPPRESSED_WARNINGS = [
+  'ReactNative: Reanimated',
+  'Animated: `useNativeDriver`',
+  'componentWillReceiveProps has been renamed',
+  'componentWillMount has been renamed',
+];
+
 global.console = {
   ...console,
-  warn: jest.fn(),
-  error: jest.fn(),
+  warn: (...args) => {
+    const message = args[0]?.toString() || '';
+    if (!SUPPRESSED_WARNINGS.some((w) => message.includes(w))) {
+      originalWarn.apply(console, args);
+    }
+  },
+  error: (...args) => {
+    const message = args[0]?.toString() || '';
+    // Only suppress specific known test environment errors
+    const SUPPRESSED_ERRORS = [
+      'Warning: ReactDOM.render is no longer supported',
+      'act(...) is not supported in production builds',
+    ];
+    if (!SUPPRESSED_ERRORS.some((e) => message.includes(e))) {
+      originalError.apply(console, args);
+    }
+  },
 };
 
 // Mock __DEV__ for production-like testing

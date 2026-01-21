@@ -16,7 +16,7 @@ const mockItems: ListMediaItem[] = [
     genre_ids: [28, 12], // Action, Adventure
     vote_average: 8.5,
     release_date: '2024-06-15',
-    addedAt: new Date(),
+    addedAt: 1718400000000, // 2024-06-15T00:00:00Z
   } as ListMediaItem,
   {
     id: 2,
@@ -25,7 +25,7 @@ const mockItems: ListMediaItem[] = [
     genre_ids: [18], // Drama
     vote_average: 7.2,
     first_air_date: '2023-03-20',
-    addedAt: new Date(),
+    addedAt: 1679270400000, // 2023-03-20T00:00:00Z
   } as ListMediaItem,
   {
     id: 3,
@@ -34,7 +34,7 @@ const mockItems: ListMediaItem[] = [
     genre_ids: [35], // Comedy
     vote_average: 4.5,
     release_date: '2022-01-10',
-    addedAt: new Date(),
+    addedAt: 1641772800000, // 2022-01-10T00:00:00Z
   } as ListMediaItem,
   {
     id: 4,
@@ -42,7 +42,7 @@ const mockItems: ListMediaItem[] = [
     title: 'No Genre Movie',
     vote_average: 6.0,
     release_date: '2024-01-01',
-    addedAt: new Date(),
+    addedAt: 1704067200000, // 2024-01-01T00:00:00Z
   } as ListMediaItem,
 ];
 

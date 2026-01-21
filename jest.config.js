@@ -25,6 +25,7 @@ module.exports = {
   collectCoverageFrom: [
     'src/utils/**/*.{ts,tsx}',
     'src/hooks/**/*.{ts,tsx}',
+    'src/components/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],

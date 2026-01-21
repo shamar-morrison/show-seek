@@ -19,26 +19,14 @@ const createSeason = (
 
 describe('seasonHelpers', () => {
   describe('getNextUpcomingSeason', () => {
-    // Use a fixed "today" for testing
-    const originalDate = Date;
-
     beforeAll(() => {
-      // Mock Date to return a fixed date: 2024-06-15
-      const mockDate = new Date('2024-06-15T12:00:00Z');
-      global.Date = class extends originalDate {
-        constructor(...args: unknown[]) {
-          if (args.length === 0) {
-            super();
-            return mockDate;
-          }
-          // @ts-expect-error - spread for Date constructor
-          super(...args);
-        }
-      } as DateConstructor;
+      // Use Jest fake timers to freeze time at 2024-06-15
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2024-06-15T12:00:00Z'));
     });
 
     afterAll(() => {
-      global.Date = originalDate;
+      jest.useRealTimers();
     });
 
     it('should return nulls for undefined seasons', () => {
