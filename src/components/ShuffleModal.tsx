@@ -1,3 +1,4 @@
+import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -169,12 +170,6 @@ export default function ShuffleModal({
     opacity: posterOpacity.value,
   }));
 
-  // Get poster URL
-  const getPosterUrl = (posterPath: string | null) => {
-    if (!posterPath) return null;
-    return `https://image.tmdb.org/t/p/w342${posterPath}`;
-  };
-
   // Get display title (movies use 'title', TV shows use 'name')
   const getTitle = (item: ListMediaItem) => {
     return item.title || item.name || 'Unknown';
@@ -208,7 +203,7 @@ export default function ShuffleModal({
               <Animated.View style={[styles.posterWrapper, posterAnimatedStyle]}>
                 {displayedItem.poster_path ? (
                   <Image
-                    source={getPosterUrl(displayedItem.poster_path)}
+                    source={getImageUrl(displayedItem.poster_path, TMDB_IMAGE_SIZES.poster.medium)}
                     style={styles.poster}
                     contentFit="cover"
                     transition={isAnimating ? 0 : 200}
@@ -357,10 +352,10 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: SPACING.xs,
     backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: SPACING.s,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
   },
   ratingText: {
