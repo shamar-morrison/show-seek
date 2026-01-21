@@ -46,6 +46,8 @@ export function ReauthView({
         secureTextEntry
         value={password}
         onChangeText={onPasswordChange}
+        autoCorrect={false}
+        autoCapitalize="none"
         autoFocus
         testID="reauth-password-input"
       />

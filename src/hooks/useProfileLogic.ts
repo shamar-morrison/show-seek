@@ -80,6 +80,19 @@ export function useProfileLogic() {
     setShowWebAppModal(false);
   }, []);
 
+  const performExport = useCallback(async (format: 'csv' | 'markdown') => {
+    setIsExporting(true);
+    try {
+      await exportUserData(format);
+    } catch (error) {
+      console.error('Export failed:', error);
+      const message = error instanceof Error ? error.message : 'Failed to export data';
+      Alert.alert('Export Failed', message);
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -95,36 +108,14 @@ export function useProfileLogic() {
       },
       {
         text: 'Export as CSV',
-        onPress: async () => {
-          setIsExporting(true);
-          try {
-            await exportUserData('csv');
-          } catch (error) {
-            console.error('Export failed:', error);
-            const message = error instanceof Error ? error.message : 'Failed to export data';
-            Alert.alert('Export Failed', message);
-          } finally {
-            setIsExporting(false);
-          }
-        },
+        onPress: () => performExport('csv'),
       },
       {
         text: 'Export as Markdown',
-        onPress: async () => {
-          setIsExporting(true);
-          try {
-            await exportUserData('markdown');
-          } catch (error) {
-            console.error('Export failed:', error);
-            const message = error instanceof Error ? error.message : 'Failed to export data';
-            Alert.alert('Export Failed', message);
-          } finally {
-            setIsExporting(false);
-          }
-        },
+        onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isPremium, router]);
+  }, [isPremium, router, performExport]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
