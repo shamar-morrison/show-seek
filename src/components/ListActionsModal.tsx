@@ -22,6 +22,8 @@ export interface ListAction {
   color?: string;
   /** Whether to show an active indicator badge */
   showBadge?: boolean;
+  /** Whether the action is disabled */
+  disabled?: boolean;
 }
 
 export interface ListActionsModalRef {
@@ -50,6 +52,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
     }));
 
     const handleActionPress = useCallback((action: ListAction) => {
+      if (action.disabled) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // Execute action first, then dismiss modal
       action.onPress();
@@ -67,7 +70,8 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         <GestureHandlerRootView style={[styles.content, { width }]}>
           {actions.map((action, index) => {
             const IconComponent = action.icon;
-            const iconColor = action.color ?? COLORS.text;
+            const isDisabled = action.disabled ?? false;
+            const iconColor = isDisabled ? COLORS.textSecondary : (action.color ?? COLORS.text);
             const isLast = index === actions.length - 1;
 
             return (
@@ -77,6 +81,8 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
                 onPress={() => handleActionPress(action)}
                 accessibilityLabel={action.label}
                 accessibilityRole="button"
+                accessibilityState={{ disabled: isDisabled }}
+                disabled={isDisabled}
               >
                 <View style={styles.iconContainer}>
                   <IconComponent size={24} color={iconColor} />

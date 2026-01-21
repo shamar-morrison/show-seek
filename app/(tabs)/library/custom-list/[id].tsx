@@ -8,6 +8,7 @@ import ListActionsModal, {
 } from '@/src/components/ListActionsModal';
 import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import ShuffleModal from '@/src/components/ShuffleModal';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { COLORS, SPACING } from '@/src/constants/theme';
@@ -32,6 +33,7 @@ import {
   Bookmark,
   Pencil,
   Search,
+  Shuffle,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react-native';
@@ -54,6 +56,7 @@ export default function CustomListDetailScreen() {
   const [filterState, setFilterState] = useState<WatchStatusFilterState>(
     DEFAULT_WATCH_STATUS_FILTERS
   );
+  const [shuffleModalVisible, setShuffleModalVisible] = useState(false);
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<React.ComponentRef<typeof FlashList<ListMediaItem>>>(null);
@@ -212,8 +215,32 @@ export default function CustomListDetailScreen() {
     },
   });
 
+  const canShuffle = displayItems.length >= 2;
+
+  const handleShuffleSelect = useCallback(
+    (item: import('@/src/services/ListService').ListMediaItem) => {
+      setShuffleModalVisible(false);
+      // Small delay to let modal close, then navigate
+      setTimeout(() => {
+        const route =
+          item.media_type === 'movie'
+            ? `/(tabs)/library/movie/${item.id}`
+            : `/(tabs)/library/tv/${item.id}`;
+        router.push(route as any);
+      }, 300);
+    },
+    [router]
+  );
+
   const listActions = useMemo(
     () => [
+      {
+        id: 'shuffle',
+        icon: Shuffle,
+        label: 'Shuffle Pick',
+        onPress: () => setShuffleModalVisible(true),
+        disabled: !canShuffle,
+      },
       {
         id: 'filter',
         icon: SlidersHorizontal,
@@ -242,7 +269,7 @@ export default function CustomListDetailScreen() {
         color: COLORS.error,
       },
     ],
-    [hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
+    [canShuffle, hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
   );
 
   const filterEmptyState = useMemo(
@@ -407,6 +434,13 @@ export default function CustomListDetailScreen() {
       {AuthGuardModal}
       <RenameListModal ref={renameModalRef} />
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      <ShuffleModal
+        visible={shuffleModalVisible}
+        items={displayItems}
+        onClose={() => setShuffleModalVisible(false)}
+        onViewDetails={handleShuffleSelect}
+      />
     </>
   );
 }
