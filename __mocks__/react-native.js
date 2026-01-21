@@ -12,6 +12,19 @@ const createMockComponent = (name) => {
   return Component;
 };
 
+const createTouchable = (name) => {
+  const Component = ({ disabled, onPress, testID, ...props }) => {
+    return React.createElement(name, {
+      ...props,
+      testID,
+      disabled,
+      onPress: disabled ? undefined : onPress,
+    });
+  };
+  Component.displayName = name;
+  return Component;
+};
+
 module.exports = {
   Platform: {
     OS: 'ios',
@@ -29,10 +42,10 @@ module.exports = {
   Text: 'Text',
   TextInput: 'TextInput',
   Image: 'Image',
-  TouchableOpacity: 'TouchableOpacity',
-  TouchableHighlight: 'TouchableHighlight',
-  TouchableWithoutFeedback: 'TouchableWithoutFeedback',
-  Pressable: 'Pressable',
+  TouchableOpacity: createTouchable('TouchableOpacity'),
+  TouchableHighlight: createTouchable('TouchableHighlight'),
+  TouchableWithoutFeedback: createTouchable('TouchableWithoutFeedback'),
+  Pressable: createTouchable('Pressable'),
   ScrollView: 'ScrollView',
   FlatList: 'FlatList',
   SectionList: 'SectionList',

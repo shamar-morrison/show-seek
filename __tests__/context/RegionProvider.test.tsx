@@ -130,8 +130,9 @@ describe('RegionProvider', () => {
         await result.current.setRegion('US');
       });
 
-      // Should not call storage when region is unchanged
+      // Should not call storage or API when region is unchanged
       expect(mockSetStoredRegion).not.toHaveBeenCalled();
+      expect(mockSetApiRegion).not.toHaveBeenCalled();
     });
   });
 

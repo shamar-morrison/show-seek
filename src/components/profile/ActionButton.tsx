@@ -61,13 +61,17 @@ export function ActionButton({
         isDanger && styles.actionButtonDanger,
         isLocked && styles.actionButtonLocked,
       ]}
-      onPress={onPress}
+      onPress={loading ? () => {} : onPress}
       activeOpacity={ACTIVE_OPACITY}
       disabled={loading}
       testID={testID || `action-button-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={isDanger ? COLORS.error : COLORS.text} />
+        <ActivityIndicator
+          size="small"
+          color={isDanger ? COLORS.error : COLORS.text}
+          testID="action-button-spinner"
+        />
       ) : customIcon ? (
         customIcon
       ) : Icon ? (

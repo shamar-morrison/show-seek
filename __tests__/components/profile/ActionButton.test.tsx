@@ -54,20 +54,22 @@ describe('ActionButton', () => {
   });
 
   it('should show ActivityIndicator when loading', () => {
-    const { queryByTestId } = render(
+    const { queryByTestId, getByTestId } = render(
       <ActionButton label="Loading Action" onPress={mockOnPress} loading={true} />
     );
+    // Spinner should be visible when loading
+    expect(getByTestId('action-button-spinner')).toBeTruthy();
     // Icon should not be visible when loading
     expect(queryByTestId('star-icon')).toBeNull();
   });
 
   it('should be disabled when loading', () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId } = render(
       <ActionButton label="Loading Action" onPress={mockOnPress} loading={true} />
     );
-    // When loading, the button should exist but icon should be replaced with spinner
-    expect(getByTestId('action-button-loading-action')).toBeTruthy();
-    expect(queryByTestId('star-icon')).toBeNull();
+    // When loading, the button should be disabled
+    fireEvent.press(getByTestId('action-button-loading-action'));
+    expect(mockOnPress).not.toHaveBeenCalled();
   });
 
   it('should render with badge', () => {

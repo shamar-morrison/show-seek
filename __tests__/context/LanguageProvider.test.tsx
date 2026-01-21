@@ -177,9 +177,11 @@ describe('LanguageProvider', () => {
         await result.current.setLanguage('en-US');
       });
 
-      // Should not call storage or reset queries when language is unchanged
+      // Should not call any side effects when language is unchanged
       expect(mockSetStoredLanguage).not.toHaveBeenCalled();
       expect(mockResetQueries).not.toHaveBeenCalled();
+      expect(mockSetApiLanguage).not.toHaveBeenCalled();
+      expect(mockChangeLanguage).not.toHaveBeenCalled();
     });
   });
 
