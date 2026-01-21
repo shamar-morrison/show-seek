@@ -81,7 +81,8 @@
     "guestModeDescription": "Some features are limited in guest mode",
     "upgradeAccount": "Upgrade to Full Account",
     "featureRequiresAccount": "This feature requires an account",
-    "bySigningIn": "By signing in, you agree to our"
+    "bySigningIn": "By signing in, you agree to our",
+    "agreeToTerms": "By signing up, you agree to our"
   },
   "tabs": {
     "home": "Home",

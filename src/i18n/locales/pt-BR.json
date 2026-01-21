@@ -81,7 +81,8 @@
     "guestModeDescription": "Alguns recursos são limitados no modo convidado",
     "upgradeAccount": "Atualizar para conta completa",
     "featureRequiresAccount": "Este recurso requer uma conta",
-    "bySigningIn": "Ao entrar, você concorda com nossos"
+    "bySigningIn": "Ao entrar, você concorda com nossos",
+    "agreeToTerms": "Ao se cadastrar, você concorda com nossos"
   },
   "tabs": {
     "home": "Início",

@@ -81,7 +81,8 @@
     "guestModeDescription": "Certaines fonctionnalités sont limitées en mode invité",
     "upgradeAccount": "Passer à un compte complet",
     "featureRequiresAccount": "Cette fonctionnalité nécessite un compte",
-    "bySigningIn": "En vous connectant, vous acceptez nos"
+    "bySigningIn": "En vous connectant, vous acceptez nos",
+    "agreeToTerms": "En vous inscrivant, vous acceptez nos"
   },
   "tabs": {
     "home": "Accueil",

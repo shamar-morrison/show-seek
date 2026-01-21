@@ -81,7 +81,8 @@
     "guestModeDescription": "Algunas funciones están limitadas en modo invitado",
     "upgradeAccount": "Actualizar a cuenta completa",
     "featureRequiresAccount": "Esta función requiere una cuenta",
-    "bySigningIn": "Al iniciar sesión, aceptas nuestros"
+    "bySigningIn": "Al iniciar sesión, aceptas nuestros",
+    "agreeToTerms": "Al registrarte, aceptas nuestros"
   },
   "tabs": {
     "home": "Inicio",
@@ -132,7 +133,8 @@
     "anyRating": "Cualquier puntuación",
     "noFiltersApplied": "Sin filtros aplicados",
     "resultsCount": "{{count}} resultados",
-    "noResultsWithFilters": "Ningún resultado coincide con tus filtros"
+    "noResultsWithFilters": "Ningún resultado coincide con tus filtros",
+    "adjustFilters": "Prueba a ajustar tus filtros"
   },
   "search": {
     "title": "Buscar",
