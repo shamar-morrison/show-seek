@@ -9,17 +9,21 @@
  * @returns Two-character initials in uppercase
  */
 export function getInitials(displayName: string | null, email: string | null): string {
+  let initials = '';
+
   if (displayName && displayName.trim()) {
     const parts = displayName.trim().split(/\s+/);
     if (parts.length >= 2 && parts[0] && parts[parts.length - 1]) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      initials = parts[0][0] + parts[parts.length - 1][0];
+    } else {
+      initials = displayName.trim().substring(0, 2);
     }
-    return displayName.trim().substring(0, 2).toUpperCase();
+  } else if (email) {
+    initials = email.substring(0, 2);
+  } else {
+    return 'GU'; // Guest User
   }
 
-  if (email) {
-    return email.substring(0, 2).toUpperCase();
-  }
-
-  return 'GU'; // Guest User
+  const result = initials.toUpperCase();
+  return result.length === 1 ? result.padEnd(2, result[0]) : result;
 }

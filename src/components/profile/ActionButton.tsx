@@ -1,5 +1,12 @@
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
 import { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -23,6 +30,8 @@ export interface ActionButtonProps {
   isPremium?: boolean;
   /** Optional badge to show (e.g., for Trakt connected indicator) */
   badge?: React.ReactNode;
+  /** Optional testID for testing - defaults to 'action-button-{label-slug}' */
+  testID?: string;
 }
 
 /**
@@ -40,6 +49,7 @@ export function ActionButton({
   isPremiumFeature = false,
   isPremium = true,
   badge,
+  testID,
 }: ActionButtonProps) {
   const isDanger = variant === 'danger';
   const isLocked = isPremiumFeature && !isPremium;
@@ -54,7 +64,7 @@ export function ActionButton({
       onPress={onPress}
       activeOpacity={ACTIVE_OPACITY}
       disabled={loading}
-      testID="action-button"
+      testID={testID || `action-button-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
       {loading ? (
         <ActivityIndicator size="small" color={isDanger ? COLORS.error : COLORS.text} />
@@ -93,7 +103,7 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   actionButtonDanger: {
-    backgroundColor: 'rgba(229, 9, 20, 0.1)',
+    backgroundColor: hexToRGBA(COLORS.error, 0.1),
   },
   actionButtonLocked: {
     opacity: 0.6,

@@ -41,9 +41,14 @@ export function PreferenceItem({
 }: PreferenceItemProps) {
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (isLocked && onLockPress) {
-      onLockPress();
-    } else if (!loading && !disabled) {
+    if (isLocked) {
+      // If locked, only call onLockPress if provided, otherwise do nothing
+      if (onLockPress) {
+        onLockPress();
+      }
+      return;
+    }
+    if (!loading && !disabled) {
       onValueChange(!value);
     }
   };

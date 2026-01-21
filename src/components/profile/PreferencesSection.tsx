@@ -45,19 +45,15 @@ export function PreferencesSection({
     onUpdate(key, value);
   };
 
-  const handleUpdateWithError = (key: keyof UserPreferences, value: boolean) => {
-    handleUpdate(key, value);
-  };
-
   if (error) {
     return (
       <View style={styles.preferencesSection}>
         <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
         <View style={styles.errorContainer}>
           <View style={styles.preferenceInfo}>
-            <Text style={styles.preferenceLabel}>Unable to load preferences</Text>
+            <Text style={styles.preferenceLabel}>{t('profile.unableToLoadPreferences')}</Text>
             <Text style={styles.preferenceSubtitle}>
-              Please check your connection and try again
+              {t('profile.checkConnection')}
             </Text>
           </View>
           <TouchableOpacity
@@ -72,7 +68,7 @@ export function PreferencesSection({
             {isLoading ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -88,7 +84,7 @@ export function PreferencesSection({
         label={t('profile.autoAddToWatching')}
         subtitle={t('profile.autoAddToWatchingDescription')}
         value={!!preferences?.autoAddToWatching}
-        onValueChange={(value) => handleUpdateWithError('autoAddToWatching', value)}
+        onValueChange={(value) => handleUpdate('autoAddToWatching', value)}
         loading={isLoading}
         disabled={isUpdating}
       />
@@ -97,16 +93,16 @@ export function PreferencesSection({
         label={t('profile.autoAddToAlreadyWatched')}
         subtitle={t('profile.autoAddToAlreadyWatchedDescription')}
         value={!!preferences?.autoAddToAlreadyWatched}
-        onValueChange={(value) => handleUpdateWithError('autoAddToAlreadyWatched', value)}
+        onValueChange={(value) => handleUpdate('autoAddToAlreadyWatched', value)}
         loading={isLoading}
         disabled={isUpdating}
       />
 
       <PreferenceItem
-        label="Show list indicators"
-        subtitle="Display a badge on cards when an item is in any of your lists"
+        label={t('profile.showListIndicators')}
+        subtitle={t('profile.showListIndicatorsDescription')}
         value={!!preferences?.showListIndicators}
-        onValueChange={(value) => handleUpdateWithError('showListIndicators', value)}
+        onValueChange={(value) => handleUpdate('showListIndicators', value)}
         loading={isLoading}
         disabled={isUpdating}
       />
@@ -115,16 +111,16 @@ export function PreferencesSection({
         label={t('profile.quickMarkAsWatched')}
         subtitle={t('profile.quickMarkAsWatchedDescription')}
         value={!!preferences?.quickMarkAsWatched}
-        onValueChange={(value) => handleUpdateWithError('quickMarkAsWatched', value)}
+        onValueChange={(value) => handleUpdate('quickMarkAsWatched', value)}
         loading={isLoading}
         disabled={isUpdating}
       />
 
       <PreferenceItem
-        label="Blur movie and TV plot"
-        subtitle="Hide plot summaries by default to avoid spoilers. Tap to reveal."
+        label={t('profile.blurPlotSpoilers')}
+        subtitle={t('profile.blurPlotSpoilersDescription')}
         value={!!preferences?.blurPlotSpoilers}
-        onValueChange={(value) => handleUpdateWithError('blurPlotSpoilers', value)}
+        onValueChange={(value) => handleUpdate('blurPlotSpoilers', value)}
         loading={isLoading}
         disabled={isUpdating}
         isLocked={!isPremium}
@@ -132,10 +128,10 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
-        label="Hide watched content"
-        subtitle="Remove watched movies and shows from search and discovery"
+        label={t('profile.hideWatchedContent')}
+        subtitle={t('profile.hideWatchedContentDescription')}
         value={!!preferences?.hideWatchedContent}
-        onValueChange={(value) => handleUpdateWithError('hideWatchedContent', value)}
+        onValueChange={(value) => handleUpdate('hideWatchedContent', value)}
         loading={isLoading}
         disabled={isUpdating}
         isLocked={!isPremium}
