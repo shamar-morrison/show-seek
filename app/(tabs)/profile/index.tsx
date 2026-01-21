@@ -12,7 +12,6 @@ import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { UserPreferences } from '@/src/types/preferences';
-import { getInitials } from '@/src/utils/userUtils';
 import React from 'react';
 import {
   Alert,
@@ -67,8 +66,6 @@ export default function ProfileScreen() {
   } = usePreferences();
   const updatePreference = useUpdatePreference();
 
-  const initials = getInitials(user?.displayName || null, user?.email || null);
-
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
     updatePreference.mutate(
       { key, value },
@@ -102,7 +99,6 @@ export default function ProfileScreen() {
             user={user}
             isPremium={isPremium}
             isGuest={isGuest}
-            initials={initials}
             onUpgradePress={handleUpgradePress}
           />
 

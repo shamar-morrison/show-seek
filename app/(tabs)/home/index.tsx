@@ -1,3 +1,4 @@
+import { HomeDrawer } from '@/src/components/HomeDrawer';
 import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
   HomeScreenCustomizationModalRef,
@@ -11,13 +12,14 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQueryClient } from '@tanstack/react-query';
-import { Settings2 } from 'lucide-react-native';
+import { Menu, Settings2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
   const toastRef = useRef<ToastRef>(null);
   const queryClient = useQueryClient();
@@ -58,10 +60,23 @@ export default function HomeScreen() {
     }, 'Sign in to customize your home screen');
   };
 
+  const handleOpenDrawer = () => {
+    setDrawerVisible(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setDrawerVisible(false);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>ShowSeek</Text>
+        <HeaderIconButton onPress={handleOpenDrawer}>
+          <Menu size={24} color={COLORS.text} />
+        </HeaderIconButton>
+        <View style={styles.headerTitleContainer} pointerEvents="none">
+          <Text style={styles.headerTitle}>ShowSeek</Text>
+        </View>
         <HeaderIconButton onPress={handleOpenCustomization}>
           <Settings2 size={24} color={COLORS.text} />
         </HeaderIconButton>
@@ -107,6 +122,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
+      <HomeDrawer visible={drawerVisible} onClose={handleCloseDrawer} />
       <Toast ref={toastRef} />
       {AuthGuardModal}
     </SafeAreaView>
@@ -126,6 +142,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
+  },
+  headerTitleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
