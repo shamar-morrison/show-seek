@@ -20,27 +20,8 @@ export interface MediaShareCardData {
   userRating: number; // 0 if not rated
 }
 
-export interface StatsOverviewData {
-  variant: 'overview';
-  totalWatched: number;
-  totalRated: number;
-  totalAdded: number;
-  currentStreak: number;
-}
-
-export interface StatsMonthlyData {
-  variant: 'monthly';
-  monthName: string;
-  watchedCount: number;
-  avgRating: number | null;
-  topGenres: string[];
-}
-
-export type StatsShareCardData = StatsOverviewData | StatsMonthlyData;
-
 interface ShareCardProps {
   mediaData?: MediaShareCardData;
-  statsData?: StatsShareCardData;
 }
 
 // Fallback gradient for missing posters
@@ -50,13 +31,9 @@ const FALLBACK_GRADIENT_COLORS = ['#1a1a2e', '#16213e', '#0f3460'] as const;
  * Hidden snapshot view component designed for capture.
  * Renders at 1080x1920 (9:16 Stories format).
  */
-export const ShareCard = forwardRef<View, ShareCardProps>(({ mediaData, statsData }, ref) => {
+export const ShareCard = forwardRef<View, ShareCardProps>(({ mediaData }, ref) => {
   if (mediaData) {
     return <MediaShareCard ref={ref} data={mediaData} />;
-  }
-
-  if (statsData) {
-    return <StatsShareCard ref={ref} data={statsData} />;
   }
 
   return null;
@@ -142,128 +119,6 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
 });
 
 MediaShareCard.displayName = 'MediaShareCard';
-
-// ============ STATS SHARE CARD ============
-
-interface StatsShareCardProps {
-  data: StatsShareCardData;
-}
-
-const StatsShareCard = forwardRef<View, StatsShareCardProps>(({ data }, ref) => {
-  if (data.variant === 'overview') {
-    return <StatsOverviewCard ref={ref} data={data} />;
-  }
-  return <StatsMonthlyCard ref={ref} data={data} />;
-});
-
-StatsShareCard.displayName = 'StatsShareCard';
-
-// ---- Overview Card ----
-
-interface StatsOverviewCardProps {
-  data: StatsOverviewData;
-}
-
-const StatsOverviewCard = forwardRef<View, StatsOverviewCardProps>(({ data }, ref) => {
-  return (
-    <View ref={ref} style={styles.container} collapsable={false}>
-      <LinearGradient colors={['#1a1a2e', '#16213e', '#0f3460']} style={styles.backdrop} />
-
-      <View style={styles.statsContent}>
-        <Text style={styles.statsTitle}>My Last 6 Months</Text>
-
-        <View style={styles.statsGrid}>
-          <StatBox label="Watched" value={data.totalWatched} color={COLORS.primary} />
-          <StatBox label="Rated" value={data.totalRated} color="#FFD700" />
-          <StatBox label="Added" value={data.totalAdded} color={COLORS.success} />
-        </View>
-
-        <View style={styles.streakContainer}>
-          <Text style={styles.streakEmoji}>🔥</Text>
-          <Text style={styles.streakValue}>{data.currentStreak} day streak</Text>
-        </View>
-      </View>
-
-      {/* Logo Watermark - Rounded Rectangle */}
-      <View style={styles.watermark}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/images/icon.png')}
-            style={styles.logoImage}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-    </View>
-  );
-});
-
-StatsOverviewCard.displayName = 'StatsOverviewCard';
-
-// ---- Monthly Card ----
-
-interface StatsMonthlyCardProps {
-  data: StatsMonthlyData;
-}
-
-const StatsMonthlyCard = forwardRef<View, StatsMonthlyCardProps>(({ data }, ref) => {
-  return (
-    <View ref={ref} style={styles.container} collapsable={false}>
-      <LinearGradient colors={['#2d132c', '#801336', '#c72c41']} style={styles.backdrop} />
-
-      <View style={styles.statsContent}>
-        <Text style={styles.statsTitle}>{data.monthName}</Text>
-
-        <View style={styles.monthlyStatsRow}>
-          <View style={styles.monthlyStatItem}>
-            <Text style={styles.monthlyStatValue}>{data.watchedCount}</Text>
-            <Text style={styles.monthlyStatLabel}>Watched</Text>
-          </View>
-          {data.avgRating !== null && (
-            <View style={styles.monthlyStatItem}>
-              <Text style={styles.monthlyStatValue}>{data.avgRating}</Text>
-              <Text style={styles.monthlyStatLabel}>Avg Rating</Text>
-            </View>
-          )}
-        </View>
-
-        {data.topGenres.length > 0 && (
-          <View style={styles.genresRow}>
-            {data.topGenres.slice(0, 3).map((genre, index) => (
-              <View key={index} style={styles.genreTag}>
-                <Text style={styles.genreText}>{genre}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      {/* Logo Watermark - Rounded Rectangle */}
-      <View style={styles.watermark}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/images/icon.png')}
-            style={styles.logoImage}
-            contentFit="contain"
-          />
-        </View>
-      </View>
-    </View>
-  );
-});
-
-StatsMonthlyCard.displayName = 'StatsMonthlyCard';
-
-// ---- Helper Components ----
-
-function StatBox({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <View style={styles.statBox}>
-      <Text style={[styles.statBoxValue, { color }]}>{value}</Text>
-      <Text style={styles.statBoxLabel}>{label}</Text>
-    </View>
-  );
-}
 
 // ============ STYLES ============
 
@@ -365,88 +220,5 @@ const styles = StyleSheet.create({
   logoImage: {
     width: '100%',
     height: '100%',
-  },
-  // Stats card styles
-  statsContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.xxl * 2,
-  },
-  statsTitle: {
-    fontSize: FONT_SIZE.hero * 1.8,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginBottom: SPACING.xxl * 2,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: SPACING.xl,
-    marginBottom: SPACING.xxl * 2,
-  },
-  statBox: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    minWidth: 200,
-  },
-  statBoxValue: {
-    fontSize: FONT_SIZE.hero * 2,
-    fontWeight: 'bold',
-  },
-  statBoxLabel: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.s,
-  },
-  streakContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-  },
-  streakEmoji: {
-    fontSize: 48,
-  },
-  streakValue: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-  },
-  // Monthly stats styles
-  monthlyStatsRow: {
-    flexDirection: 'row',
-    gap: SPACING.xxl * 2,
-    marginBottom: SPACING.xxl,
-  },
-  monthlyStatItem: {
-    alignItems: 'center',
-  },
-  monthlyStatValue: {
-    fontSize: FONT_SIZE.hero * 2.5,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  monthlyStatLabel: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.s,
-  },
-  genresRow: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  genreTag: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  genreText: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.text,
   },
 });

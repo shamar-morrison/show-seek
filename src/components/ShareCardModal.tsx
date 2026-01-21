@@ -23,7 +23,6 @@ import {
   SHARE_CARD_HEIGHT,
   SHARE_CARD_WIDTH,
   ShareCard,
-  StatsShareCardData,
 } from './shareCard/ShareCard';
 
 type ModalState = 'generating' | 'preview' | 'sharing' | 'saving';
@@ -32,7 +31,6 @@ interface ShareCardModalProps {
   visible: boolean;
   onClose: () => void;
   mediaData?: MediaShareCardData;
-  statsData?: StatsShareCardData;
   onShowToast?: (message: string) => void;
 }
 
@@ -40,7 +38,6 @@ export default function ShareCardModal({
   visible,
   onClose,
   mediaData,
-  statsData,
   onShowToast,
 }: ShareCardModalProps) {
   const [state, setState] = useState<ModalState>('generating');
@@ -60,7 +57,7 @@ export default function ShareCardModal({
 
       return () => clearTimeout(timer);
     }
-  }, [visible, mediaData, statsData]);
+  }, [visible, mediaData]);
 
   const captureCard = async () => {
     if (!cardRef.current) {
@@ -76,7 +73,6 @@ export default function ShareCardModal({
         result: 'tmpfile',
         width: SHARE_CARD_WIDTH,
         height: SHARE_CARD_HEIGHT,
-        pixelRatio: 2, // Higher resolution for crisp text
       });
 
       setImageUri(uri);
@@ -251,7 +247,7 @@ export default function ShareCardModal({
 
       {/* Hidden ShareCard for capture - positioned off-screen */}
       <View style={styles.hiddenContainer} pointerEvents="none">
-        <ShareCard ref={cardRef} mediaData={mediaData} statsData={statsData} />
+        <ShareCard ref={cardRef} mediaData={mediaData} />
       </View>
     </Modal>
   );
