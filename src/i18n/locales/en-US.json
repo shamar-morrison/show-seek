@@ -508,5 +508,21 @@
     "disabledSections": "Disabled Sections",
     "dragToReorder": "Drag to reorder",
     "resetToDefault": "Reset to Default"
+  },
+  "shareCard": {
+    "title": "Share Card",
+    "share": "Share to...",
+    "save": "Save to Gallery",
+    "generating": "Generating...",
+    "preview": "Preview",
+    "myRating": "My Rating",
+    "rateIt": "Rate it on ShowSeek!",
+    "last6Months": "My Last 6 Months",
+    "savedToGallery": "Saved to gallery!",
+    "permissionDenied": "Permission to access gallery was denied",
+    "failedToGenerate": "Failed to generate share card",
+    "failedToShare": "Failed to share",
+    "failedToSave": "Failed to save to gallery",
+    "sharingNotAvailable": "Sharing is not available on this device"
   }
 }
