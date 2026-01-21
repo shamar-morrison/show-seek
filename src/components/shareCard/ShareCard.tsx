@@ -2,7 +2,6 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Star } from 'lucide-react-native';
 import React, { forwardRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -44,7 +43,7 @@ interface ShareCardProps {
   statsData?: StatsShareCardData;
 }
 
-// Fallback gradient for missing backdrops
+// Fallback gradient for missing posters
 const FALLBACK_GRADIENT_COLORS = ['#1a1a2e', '#16213e', '#0f3460'] as const;
 
 /**
@@ -72,10 +71,11 @@ interface MediaShareCardProps {
 }
 
 const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => {
-  const backdropUrl = data.backdropPath
-    ? getImageUrl(data.backdropPath, TMDB_IMAGE_SIZES.backdrop.original)
-    : null;
+  // Use poster for background blur (not backdrop)
   const posterUrl = data.posterPath
+    ? getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.original)
+    : null;
+  const posterDisplayUrl = data.posterPath
     ? getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.large)
     : null;
 
@@ -86,13 +86,13 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
 
   return (
     <View ref={ref} style={styles.container} collapsable={false}>
-      {/* Background - Backdrop or Gradient */}
-      {backdropUrl ? (
+      {/* Background - Blurred Poster or Gradient */}
+      {posterUrl ? (
         <Image
-          source={{ uri: backdropUrl }}
+          source={{ uri: posterUrl }}
           style={styles.backdrop}
           contentFit="cover"
-          blurRadius={8}
+          blurRadius={25}
         />
       ) : (
         <LinearGradient colors={[...FALLBACK_GRADIENT_COLORS]} style={styles.backdrop} />
@@ -100,16 +100,16 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
 
       {/* Dark overlay for text readability */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+        colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
         style={styles.overlay}
       />
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Poster */}
-        {posterUrl && (
+        {/* Poster - Larger */}
+        {posterDisplayUrl && (
           <View style={styles.posterContainer}>
-            <Image source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
+            <Image source={{ uri: posterDisplayUrl }} style={styles.poster} contentFit="cover" />
           </View>
         )}
 
@@ -118,7 +118,7 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
           {data.title}
         </Text>
 
-        {/* Metadata: Year & Genres */}
+        {/* Metadata: Year & Genres - Larger */}
         <Text style={styles.metadata}>
           {data.releaseYear}
           {data.genres.length > 0 && ` • ${data.genres.slice(0, 2).join(', ')}`}
@@ -129,10 +129,7 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
           {hasRating ? (
             <>
               <Text style={styles.ratingLabel}>My Rating</Text>
-              <View style={styles.ratingRow}>
-                <Star size={32} color={COLORS.primary} fill={COLORS.primary} />
-                <Text style={styles.ratingValue}>{displayRating}/10</Text>
-              </View>
+              <Text style={styles.ratingValue}>{displayRating}/10</Text>
             </>
           ) : (
             <View style={styles.ctaContainer}>
@@ -142,9 +139,15 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
         </View>
       </View>
 
-      {/* Branding Watermark */}
+      {/* Logo Watermark - Circular */}
       <View style={styles.watermark}>
-        <Text style={styles.watermarkText}>ShowSeek</Text>
+        <View style={styles.logoCircle}>
+          <Image
+            source={require('@/assets/images/icon.png')}
+            style={styles.logoImage}
+            contentFit="cover"
+          />
+        </View>
       </View>
     </View>
   );
@@ -193,9 +196,15 @@ const StatsOverviewCard = forwardRef<View, StatsOverviewCardProps>(({ data }, re
         </View>
       </View>
 
-      {/* Branding Watermark */}
+      {/* Logo Watermark - Circular */}
       <View style={styles.watermark}>
-        <Text style={styles.watermarkText}>ShowSeek</Text>
+        <View style={styles.logoCircle}>
+          <Image
+            source={require('@/assets/images/icon.png')}
+            style={styles.logoImage}
+            contentFit="cover"
+          />
+        </View>
       </View>
     </View>
   );
@@ -241,9 +250,15 @@ const StatsMonthlyCard = forwardRef<View, StatsMonthlyCardProps>(({ data }, ref)
         )}
       </View>
 
-      {/* Branding Watermark */}
+      {/* Logo Watermark - Circular */}
       <View style={styles.watermark}>
-        <Text style={styles.watermarkText}>ShowSeek</Text>
+        <View style={styles.logoCircle}>
+          <Image
+            source={require('@/assets/images/icon.png')}
+            style={styles.logoImage}
+            contentFit="cover"
+          />
+        </View>
       </View>
     </View>
   );
@@ -281,34 +296,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: SPACING.xxl * 2,
-    paddingTop: SHARE_CARD_HEIGHT * 0.15,
+    paddingTop: SHARE_CARD_HEIGHT * 0.1,
   },
+  // Larger poster: 550x825 (was 420x630)
   posterContainer: {
-    width: 320,
-    height: 480,
-    borderRadius: BORDER_RADIUS.l,
+    width: 550,
+    height: 825,
+    borderRadius: BORDER_RADIUS.xl,
     overflow: 'hidden',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.xxl,
     // Shadow for poster
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 20,
   },
   poster: {
     width: '100%',
     height: '100%',
   },
   title: {
-    fontSize: FONT_SIZE.hero * 1.5,
+    fontSize: FONT_SIZE.hero * 1.6,
     fontWeight: 'bold',
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
   },
+  // Larger metadata (year & genres)
   metadata: {
-    fontSize: FONT_SIZE.xl,
+    fontSize: FONT_SIZE.xxl,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
@@ -318,31 +335,29 @@ const styles = StyleSheet.create({
     marginTop: SPACING.l,
   },
   ratingLabel: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.xl,
     color: COLORS.textSecondary,
     marginBottom: SPACING.s,
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.m,
-  },
+  // Rating without star icon
   ratingValue: {
-    fontSize: FONT_SIZE.hero * 1.5,
+    fontSize: FONT_SIZE.hero * 1.8,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
+  // Larger CTA button
   ctaContainer: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.xxl * 1.5,
+    paddingVertical: SPACING.l,
     borderRadius: BORDER_RADIUS.round,
   },
   ctaText: {
-    fontSize: FONT_SIZE.l,
+    fontSize: FONT_SIZE.xl,
     fontWeight: 'bold',
     color: COLORS.white,
   },
+  // Circular logo watermark
   watermark: {
     position: 'absolute',
     bottom: SPACING.xxl * 2,
@@ -350,12 +365,16 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
-  watermarkText: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    opacity: 0.8,
-    letterSpacing: 2,
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    overflow: 'hidden',
+    backgroundColor: COLORS.background,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   // Stats card styles
   statsContent: {

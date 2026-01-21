@@ -1,6 +1,7 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
+import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { Download, Share2, X } from 'lucide-react-native';
@@ -51,10 +52,10 @@ export default function ShareCardModal({
       setState('generating');
       setImageUri(null);
 
-      // Small delay to ensure the card is rendered
+      // Delay to ensure the card and background images are fully rendered
       const timer = setTimeout(() => {
         captureCard();
-      }, 100);
+      }, 1000);
 
       return () => clearTimeout(timer);
     }
@@ -180,10 +181,15 @@ export default function ShareCardModal({
             ) : (
               <View style={styles.previewWrapper}>
                 <Text style={styles.previewLabel}>Preview</Text>
-                {/* Preview is scaled down for display */}
+                {/* Display the captured image */}
                 <View style={styles.previewImageContainer}>
-                  {/* The captured image would be shown here via Image component */}
-                  {/* For now, we show a scaled-down version of the card */}
+                  {imageUri && (
+                    <ExpoImage
+                      source={{ uri: imageUri }}
+                      style={styles.previewImage}
+                      contentFit="contain"
+                    />
+                  )}
                 </View>
               </View>
             )}
@@ -256,7 +262,7 @@ const styles = StyleSheet.create({
   content: {
     width: '100%',
     maxWidth: 400,
-    maxHeight: '80%',
+    maxHeight: '85%',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     borderWidth: 1,
@@ -277,7 +283,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   previewScroll: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   previewContainer: {
     padding: SPACING.l,
@@ -302,11 +309,15 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.m,
   },
   previewImageContainer: {
-    width: 180, // Scaled down from 1080
-    height: 320, // Scaled down from 1920
+    width: 200, // Scaled down from 1080
+    height: 356, // Scaled down from 1920 (maintains 9:16)
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
   },
   actions: {
     padding: SPACING.l,
