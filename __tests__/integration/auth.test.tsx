@@ -1,62 +1,65 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 // Mock the auth module
-const mockSignInWithEmail = jest.fn();
 const mockSignOut = jest.fn();
+const mockCompleteOnboarding = jest.fn();
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
     user: null,
-    isLoading: false,
-    signInWithEmail: mockSignInWithEmail,
+    loading: false,
+    hasCompletedOnboarding: false,
+    completeOnboarding: mockCompleteOnboarding,
     signOut: mockSignOut,
-    isGuest: false,
   }),
 }));
 
 // Import the mocked hook
 import { useAuth } from '@/src/context/auth';
 
-// Mock sign-in form that uses the useAuth hook
-// This makes it a real integration test that validates context integration
-function MockSignInForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  // Use the mocked hook - this exercises the useAuth mock
-  const { signInWithEmail } = useAuth();
-
-  const handleSubmit = async () => {
-    try {
-      await signInWithEmail(email, password);
-    } catch (err) {
-      setError('Sign in failed');
-    }
-  };
+// Mock component that uses the useAuth hook for sign out
+function MockSignOutButton() {
+  const { signOut, user } = useAuth();
 
   return (
     <View>
-      <TextInput
-        testID="email-input"
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
-        autoCapitalize="none"
-      />
-      <TextInput
-        testID="password-input"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        secureTextEntry
-      />
-      <TouchableOpacity testID="sign-in-button" onPress={handleSubmit}>
-        <Text>Sign In</Text>
+      <Text testID="user-status">{user ? 'Logged In' : 'Logged Out'}</Text>
+      <TouchableOpacity testID="sign-out-button" onPress={signOut}>
+        <Text>Sign Out</Text>
       </TouchableOpacity>
-      {error && <Text testID="error-message">{error}</Text>}
+    </View>
+  );
+}
+
+// Mock component that uses the useAuth hook for onboarding
+function MockOnboardingComponent() {
+  const { hasCompletedOnboarding, completeOnboarding } = useAuth();
+
+  return (
+    <View>
+      <Text testID="onboarding-status">
+        {hasCompletedOnboarding ? 'Completed' : 'Not Completed'}
+      </Text>
+      <TouchableOpacity testID="complete-onboarding-button" onPress={completeOnboarding}>
+        <Text>Complete Onboarding</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// Mock component that shows loading state
+function MockLoadingComponent() {
+  const { loading } = useAuth();
+
+  return (
+    <View>
+      {loading ? (
+        <Text testID="loading-indicator">Loading...</Text>
+      ) : (
+        <Text testID="content">Content Loaded</Text>
+      )}
     </View>
   );
 }
@@ -64,64 +67,55 @@ function MockSignInForm() {
 describe('Auth Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSignInWithEmail.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue(undefined);
+    mockCompleteOnboarding.mockResolvedValue(undefined);
   });
 
-  describe('Sign In Flow', () => {
-    it('should call signInWithEmail with email and password', async () => {
-      const { getByTestId } = render(<MockSignInForm />);
+  describe('Sign Out Flow', () => {
+    it('should call signOut when sign out button is pressed', async () => {
+      const { getByTestId } = render(<MockSignOutButton />);
 
-      const emailInput = getByTestId('email-input');
-      const passwordInput = getByTestId('password-input');
-      const signInButton = getByTestId('sign-in-button');
-
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(signInButton);
+      const signOutButton = getByTestId('sign-out-button');
+      fireEvent.press(signOutButton);
 
       await waitFor(() => {
-        expect(mockSignInWithEmail).toHaveBeenCalledWith('test@example.com', 'password123');
+        expect(mockSignOut).toHaveBeenCalledTimes(1);
       });
     });
 
-    it('should call signInWithEmail exactly once per submission', async () => {
-      const { getByTestId } = render(<MockSignInForm />);
+    it('should display correct user status', () => {
+      const { getByTestId } = render(<MockSignOutButton />);
 
-      const emailInput = getByTestId('email-input');
-      const passwordInput = getByTestId('password-input');
-      const signInButton = getByTestId('sign-in-button');
+      const userStatus = getByTestId('user-status');
+      expect(userStatus.props.children).toBe('Logged Out');
+    });
+  });
 
-      fireEvent.changeText(emailInput, 'user@test.com');
-      fireEvent.changeText(passwordInput, 'secret');
-      fireEvent.press(signInButton);
+  describe('Onboarding Flow', () => {
+    it('should call completeOnboarding when button is pressed', async () => {
+      const { getByTestId } = render(<MockOnboardingComponent />);
+
+      const completeButton = getByTestId('complete-onboarding-button');
+      fireEvent.press(completeButton);
 
       await waitFor(() => {
-        expect(mockSignInWithEmail).toHaveBeenCalledTimes(1);
+        expect(mockCompleteOnboarding).toHaveBeenCalledTimes(1);
       });
     });
 
-    it('should handle sign in errors gracefully', async () => {
-      mockSignInWithEmail.mockRejectedValue(new Error('Invalid credentials'));
+    it('should display correct onboarding status', () => {
+      const { getByTestId } = render(<MockOnboardingComponent />);
 
-      const { getByTestId, findByTestId } = render(<MockSignInForm />);
-
-      fireEvent.changeText(getByTestId('email-input'), 'bad@email.com');
-      fireEvent.changeText(getByTestId('password-input'), 'wrong');
-      fireEvent.press(getByTestId('sign-in-button'));
-
-      const errorMessage = await findByTestId('error-message');
-      expect(errorMessage).toBeTruthy();
+      const onboardingStatus = getByTestId('onboarding-status');
+      expect(onboardingStatus.props.children).toBe('Not Completed');
     });
+  });
 
-    it('should handle empty credentials submission', async () => {
-      const { getByTestId } = render(<MockSignInForm />);
+  describe('Loading State', () => {
+    it('should display content when not loading', () => {
+      const { getByTestId } = render(<MockLoadingComponent />);
 
-      const signInButton = getByTestId('sign-in-button');
-      fireEvent.press(signInButton);
-
-      await waitFor(() => {
-        expect(mockSignInWithEmail).toHaveBeenCalledWith('', '');
-      });
+      expect(getByTestId('content')).toBeTruthy();
     });
   });
 });
