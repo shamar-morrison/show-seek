@@ -110,6 +110,7 @@ global.console = {
     const SUPPRESSED_ERRORS = [
       'Warning: ReactDOM.render is no longer supported',
       'act(...) is not supported in production builds',
+      'react-test-renderer is deprecated',
     ];
     if (!SUPPRESSED_ERRORS.some((e) => message.includes(e))) {
       originalError.apply(console, args);
