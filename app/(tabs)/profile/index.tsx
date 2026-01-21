@@ -406,7 +406,22 @@ export default function ProfileScreen() {
                 </View>
               ) : (
                 <>
-                  <View style={styles.preferenceItem}>
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={preferencesLoading || updatePreference.isPending}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updatePreference.mutate(
+                        { key: 'autoAddToWatching', value: !preferences?.autoAddToWatching },
+                        {
+                          onError: () => {
+                            Alert.alert('Error', 'Failed to update preference. Please try again.');
+                          },
+                        }
+                      );
+                    }}
+                  >
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>{t('profile.autoAddToWatching')}</Text>
                       <Text style={styles.preferenceSubtitle}>
@@ -437,8 +452,26 @@ export default function ProfileScreen() {
                         thumbColor={COLORS.white}
                       />
                     )}
-                  </View>
-                  <View style={styles.preferenceItem}>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={preferencesLoading || updatePreference.isPending}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updatePreference.mutate(
+                        {
+                          key: 'autoAddToAlreadyWatched',
+                          value: !preferences?.autoAddToAlreadyWatched,
+                        },
+                        {
+                          onError: () => {
+                            Alert.alert('Error', 'Failed to update preference. Please try again.');
+                          },
+                        }
+                      );
+                    }}
+                  >
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>
                         {t('profile.autoAddToAlreadyWatched')}
@@ -471,8 +504,23 @@ export default function ProfileScreen() {
                         thumbColor={COLORS.white}
                       />
                     )}
-                  </View>
-                  <View style={styles.preferenceItem}>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={preferencesLoading || updatePreference.isPending}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updatePreference.mutate(
+                        { key: 'showListIndicators', value: !preferences?.showListIndicators },
+                        {
+                          onError: () => {
+                            Alert.alert('Error', 'Failed to update preference. Please try again.');
+                          },
+                        }
+                      );
+                    }}
+                  >
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>Show list indicators</Text>
                       <Text style={styles.preferenceSubtitle}>
@@ -503,8 +551,23 @@ export default function ProfileScreen() {
                         thumbColor={COLORS.white}
                       />
                     )}
-                  </View>
-                  <View style={styles.preferenceItem}>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.preferenceItem}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={preferencesLoading || updatePreference.isPending}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      updatePreference.mutate(
+                        { key: 'quickMarkAsWatched', value: !preferences?.quickMarkAsWatched },
+                        {
+                          onError: () => {
+                            Alert.alert('Error', 'Failed to update preference. Please try again.');
+                          },
+                        }
+                      );
+                    }}
+                  >
                     <View style={styles.preferenceInfo}>
                       <Text style={styles.preferenceLabel}>{t('profile.quickMarkAsWatched')}</Text>
                       <Text style={styles.preferenceSubtitle}>
@@ -535,17 +598,29 @@ export default function ProfileScreen() {
                         thumbColor={COLORS.white}
                       />
                     )}
-                  </View>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
-                    activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={isPremium && (preferencesLoading || updatePreference.isPending)}
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       if (!isPremium) {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         router.push('/premium');
+                      } else {
+                        updatePreference.mutate(
+                          { key: 'blurPlotSpoilers', value: !preferences?.blurPlotSpoilers },
+                          {
+                            onError: () => {
+                              Alert.alert(
+                                'Error',
+                                'Failed to update preference. Please try again.'
+                              );
+                            },
+                          }
+                        );
                       }
                     }}
-                    disabled={isPremium}
                   >
                     <View style={styles.preferenceInfo}>
                       <View style={styles.preferenceLabelRow}>
@@ -601,14 +676,26 @@ export default function ProfileScreen() {
                   {/* Hide Watched Content - Premium Only */}
                   <TouchableOpacity
                     style={[styles.preferenceItem, !isPremium && styles.preferenceItemLocked]}
-                    activeOpacity={isPremium ? 1 : ACTIVE_OPACITY}
+                    activeOpacity={ACTIVE_OPACITY}
+                    disabled={isPremium && (preferencesLoading || updatePreference.isPending)}
                     onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       if (!isPremium) {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         router.push('/premium');
+                      } else {
+                        updatePreference.mutate(
+                          { key: 'hideWatchedContent', value: !preferences?.hideWatchedContent },
+                          {
+                            onError: () => {
+                              Alert.alert(
+                                'Error',
+                                'Failed to update preference. Please try again.'
+                              );
+                            },
+                          }
+                        );
                       }
                     }}
-                    disabled={isPremium}
                   >
                     <View style={styles.preferenceInfo}>
                       <View style={styles.preferenceLabelRow}>
