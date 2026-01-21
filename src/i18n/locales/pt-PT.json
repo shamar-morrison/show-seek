@@ -108,6 +108,9 @@
     "airingToday": "No ar hoje",
     "onTheAir": "No ar",
     "latestTrailers": "Últimos trailers",
+    "trendingMovies": "Filmes em destaque",
+    "trendingTV": "Séries em destaque",
+    "upcomingTV": "Próximas séries",
     "customizeSections": "Personalizar secções",
     "emptyHome": "O seu ecrã inicial está vazio",
     "emptyHomeHint": "Adicione algumas secções para começar"
@@ -132,7 +135,8 @@
     "anyRating": "Qualquer avaliação",
     "noFiltersApplied": "Sem filtros aplicados",
     "resultsCount": "{{count}} resultados",
-    "noResultsWithFilters": "Nenhum resultado corresponde aos seus filtros"
+    "noResultsWithFilters": "Nenhum resultado corresponde aos seus filtros",
+    "adjustFilters": "Tente ajustar os seus filtros"
   },
   "search": {
     "title": "Pesquisar",
@@ -314,7 +318,20 @@
     "allItems": "Todos os itens",
     "watchedItems": "Vistos",
     "unwatchedItems": "Não vistos",
-    "hideWatched": "Ocultar vistos"
+    "hideWatched": "Ocultar vistos",
+    "listsAndStats": "Listas e Estatísticas",
+    "watchProgress": "Progresso de visualização",
+    "watchLists": "Listas de visualização",
+    "customLists": "Listas personalizadas",
+    "statsAndHistory": "Estatísticas e Histórico",
+    "ratingsSection": "Avaliações",
+    "episodeRatings": "Avaliações de episódios",
+    "movieRatings": "Avaliações de filmes",
+    "tvShowRatings": "Avaliações de séries",
+    "favoritesSection": "Favoritos",
+    "favoriteContent": "Conteúdo favorito",
+    "widgets": "Widgets",
+    "homeScreenWidgets": "Widgets de ecrã inicial"
   },
   "rating": {
     "title": "Avaliar",
