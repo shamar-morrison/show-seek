@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library';
@@ -75,6 +76,7 @@ export default function ShareCardModal({
         result: 'tmpfile',
         width: SHARE_CARD_WIDTH,
         height: SHARE_CARD_HEIGHT,
+        pixelRatio: 2, // Higher resolution for crisp text
       });
 
       setImageUri(uri);
@@ -99,9 +101,16 @@ export default function ShareCardModal({
         return;
       }
 
+      // Copy promotional message to clipboard for easy pasting
+      const shareMessage =
+        "Check out what I'm watching on ShowSeek! 🎬🍿 Download the app: https://play.google.com/store/apps/details?id=app.horizon.showseek";
+      await Clipboard.setStringAsync(shareMessage);
+      onShowToast?.('Caption copied to clipboard!');
+
       await Sharing.shareAsync(imageUri, {
         mimeType: 'image/png',
         dialogTitle: 'Share your ShowSeek card',
+        UTI: 'public.png', // Helps on iOS
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

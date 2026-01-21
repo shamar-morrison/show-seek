@@ -366,9 +366,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
     overflow: 'hidden',
     backgroundColor: COLORS.background,
   },
