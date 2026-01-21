@@ -33,7 +33,7 @@ describe('ActionButton', () => {
 
   it('should call onPress when pressed', () => {
     const { getByTestId } = render(<ActionButton label="Test Action" onPress={mockOnPress} />);
-    fireEvent.press(getByTestId('action-button'));
+    fireEvent.press(getByTestId('action-button-test-action'));
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
@@ -66,7 +66,7 @@ describe('ActionButton', () => {
       <ActionButton label="Loading Action" onPress={mockOnPress} loading={true} />
     );
     // When loading, the button should exist but icon should be replaced with spinner
-    expect(getByTestId('action-button')).toBeTruthy();
+    expect(getByTestId('action-button-loading-action')).toBeTruthy();
     expect(queryByTestId('star-icon')).toBeNull();
   });
 
@@ -112,7 +112,7 @@ describe('ActionButton', () => {
           isPremium={false}
         />
       );
-      fireEvent.press(getByTestId('action-button'));
+      fireEvent.press(getByTestId('action-button-premium-feature'));
       expect(mockOnPress).toHaveBeenCalled();
     });
   });

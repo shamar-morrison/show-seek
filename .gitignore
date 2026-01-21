@@ -49,3 +49,6 @@ yarn-error.*
 prompt.md
 credentials.json
 @shamar2000__showseek.jks
+
+# Test coverage
+coverage/
