@@ -126,27 +126,15 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
 
         {/* Rating Section */}
         <View style={styles.ratingSection}>
-          {hasRating ? (
+          <View style={styles.ctaContainer}>
+            <Text style={styles.ctaText}>Check it out on ShowSeek!</Text>
+          </View>
+          {hasRating && (
             <>
               <Text style={styles.ratingLabel}>My Rating</Text>
               <Text style={styles.ratingValue}>{displayRating}/10</Text>
             </>
-          ) : (
-            <View style={styles.ctaContainer}>
-              <Text style={styles.ctaText}>Rate it on ShowSeek!</Text>
-            </View>
           )}
-        </View>
-      </View>
-
-      {/* Logo Watermark - Rounded Rectangle */}
-      <View style={styles.watermark}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/images/icon.png')}
-            style={styles.logoImage}
-            contentFit="contain"
-          />
         </View>
       </View>
     </View>
@@ -326,6 +314,7 @@ const styles = StyleSheet.create({
   // Larger metadata (year & genres)
   metadata: {
     fontSize: FONT_SIZE.xxl,
+    fontWeight: '700',
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
@@ -336,8 +325,9 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontSize: FONT_SIZE.xl,
+    fontWeight: '700',
     color: COLORS.textSecondary,
-    marginBottom: SPACING.s,
+    marginTop: SPACING.xxl,
   },
   // Rating without star icon
   ratingValue: {
