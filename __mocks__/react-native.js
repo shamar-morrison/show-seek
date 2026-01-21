@@ -38,6 +38,7 @@ module.exports = {
   SectionList: 'SectionList',
   ActivityIndicator: 'ActivityIndicator',
   Modal: 'Modal',
+  Switch: 'Switch',
   Alert: {
     alert: jest.fn(),
   },
