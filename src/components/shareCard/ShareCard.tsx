@@ -24,8 +24,15 @@ interface ShareCardProps {
   mediaData?: MediaShareCardData;
 }
 
-// Fallback gradient for missing posters
-const FALLBACK_GRADIENT_COLORS = ['#1a1a2e', '#16213e', '#0f3460'] as const;
+// Share card specific colors (distinct from main theme for visual variety)
+const SHARE_CARD_COLORS = {
+  // Fallback gradient when poster is missing
+  fallbackGradient: ['#1a1a2e', '#16213e', '#0f3460'] as const,
+  // Dark overlay for text readability
+  overlayGradient: ['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)'] as const,
+  // Shadow color for poster
+  shadow: '#000',
+} as const;
 
 /**
  * Hidden snapshot view component designed for capture.
@@ -72,14 +79,11 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
           blurRadius={25}
         />
       ) : (
-        <LinearGradient colors={[...FALLBACK_GRADIENT_COLORS]} style={styles.backdrop} />
+        <LinearGradient colors={[...SHARE_CARD_COLORS.fallbackGradient]} style={styles.backdrop} />
       )}
 
       {/* Dark overlay for text readability */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.85)']}
-        style={styles.overlay}
-      />
+      <LinearGradient colors={[...SHARE_CARD_COLORS.overlayGradient]} style={styles.overlay} />
 
       {/* Content */}
       <View style={styles.content}>
@@ -149,7 +153,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: SPACING.xl,
     // Shadow for poster
-    shadowColor: '#000',
+    shadowColor: SHARE_CARD_COLORS.shadow,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.6,
     shadowRadius: 24,
