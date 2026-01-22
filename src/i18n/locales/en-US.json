@@ -548,6 +548,9 @@
     "comingSoon": "Coming Soon",
     "seasonEpisode": "Season {{season}} Episode {{episode}}",
     "signInRequired": "Sign in to see your calendar",
-    "signInDescription": "Track your watchlist releases all in one place"
+    "signInDescription": "Track your watchlist releases all in one place",
+    "premiumTitle": "Track Your Release Schedule",
+    "premiumDescription": "Never miss a season premiere again. Get a personalized timeline of all your upcoming movies and TV shows.",
+    "upgradeToPremium": "Upgrade to Premium"
   }
 }

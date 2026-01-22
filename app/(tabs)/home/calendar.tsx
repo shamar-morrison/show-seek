@@ -1,6 +1,8 @@
+import { CalendarPremiumGate } from '@/src/components/calendar/CalendarPremiumGate';
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -13,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Release Calendar screen displaying upcoming releases from user's tracked content.
  * Shows items from Watchlist, Favorites, and Reminders with future release dates.
+ * Premium-only feature - non-premium users see the CalendarPremiumGate.
  */
 export default function CalendarScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
 
   const { sections, isLoading, isLoadingEnrichment } = useUpcomingReleases();
@@ -52,6 +56,12 @@ export default function CalendarScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // Premium gate - show teaser for non-premium users
+  // Default to locked view while loading (safe default)
+  if (isPremiumLoading || !isPremium) {
+    return <CalendarPremiumGate />;
   }
 
   // Loading state
