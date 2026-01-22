@@ -1,12 +1,13 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import * as Haptics from 'expo-haptics';
 import { Href, useRouter } from 'expo-router';
-import { Sparkles } from 'lucide-react-native';
+import { ChevronRight, Sparkles } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Divider, Drawer } from 'react-native-paper';
+import { Divider } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -72,13 +73,10 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
     onClose();
   };
 
-  // Paper theme override for dark mode
-  const paperTheme = {
-    colors: {
-      onSecondaryContainer: COLORS.text,
-      onSurfaceVariant: COLORS.textSecondary,
-      secondaryContainer: 'transparent',
-    },
+  const handleForYouPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    router.push('/(tabs)/home/for-you' as Href);
   };
 
   return (
@@ -123,19 +121,20 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
 
         <Divider style={styles.divider} />
 
-        {/* Menu Items */}
-        <Drawer.Section style={styles.drawerSection} showDivider={false} theme={paperTheme}>
-          <Drawer.Item
-            label="For You"
-            icon={({ size, color }) => <Sparkles size={size} color={color} />}
-            onPress={() => {
-              onClose();
-              router.push('/(tabs)/home/for-you' as Href);
-            }}
-            theme={paperTheme}
-            style={styles.drawerItem}
-          />
-        </Drawer.Section>
+        {/* Navigation Items */}
+        <View style={styles.navigationSection}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.navigationCard,
+              pressed && styles.navigationCardPressed,
+            ]}
+            onPress={handleForYouPress}
+          >
+            <Sparkles size={24} color={COLORS.primary} />
+            <Text style={styles.navigationTitle}>For You</Text>
+            <ChevronRight size={20} color={COLORS.textSecondary} />
+          </Pressable>
+        </View>
       </Animated.View>
     </Modal>
   );
@@ -178,10 +177,28 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
     marginHorizontal: SPACING.m,
   },
-  drawerSection: {
-    marginTop: SPACING.s,
+  navigationSection: {
+    marginTop: SPACING.m,
+    paddingHorizontal: SPACING.m,
   },
-  drawerItem: {
-    backgroundColor: 'transparent',
+  navigationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    gap: SPACING.m,
+  },
+  navigationCardPressed: {
+    opacity: ACTIVE_OPACITY,
+  },
+  navigationTitle: {
+    flex: 1,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 });

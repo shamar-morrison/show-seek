@@ -526,7 +526,7 @@
     "sharingNotAvailable": "Sharing is not available on this device"
   },
   "forYou": {
-    "title": "For You",
+    "title": "Personalized Recommendations",
     "becauseYouLoved": "Because you loved {{title}}",
     "hiddenGems": "Hidden Gems for You",
     "trendingThisWeek": "Trending This Week",
