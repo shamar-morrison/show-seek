@@ -1,7 +1,5 @@
-Please make the following changes:
+its not working, here what i did:
 
-- The date buttons at the top (today, tomorrow, etc.). Are wrapping so a word such as /"tomorrow" raps onto two lines. I think it's best to just make each button fit-content and for buttons with dates (e.g., Sat, Jan. 24) put it in one line.
-
-- when the "today" button is selected the text remains red so it cant be seen because the background is also red, make the text white when the button is active.
-
-- the "bell" icon which indicates a reminder was set for the media that is on the card needs to be wrapped in a circular background like the other icons (movie/tv show icon)
+1. i added "the rookie" which is an ongoing series whos next episode is 4 days from now to my "watching" default list.
+2. went back to the release calendar, but i dont see the item in my list
+3. i even restarted the app and checked again, still not there

@@ -1,11 +1,15 @@
 import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { tmdbApi } from '../api/tmdb';
 import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
 import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
+
+// Stale time for TV show details prefetch (same as useUpcomingReleases)
+const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
 
 export const useLists = () => {
   const queryClient = useQueryClient();
@@ -175,6 +179,18 @@ export const useAddToList = () => {
     onError: (_err, _variables, context) => {
       if (context?.previousLists) {
         queryClient.setQueryData(['lists', userId], context.previousLists);
+      }
+    },
+
+    // Prefetch TV show details for the Calendar feature
+    onSuccess: (_data, { mediaItem }) => {
+      // Only prefetch for TV shows - movies already have release_date in the list item
+      if (mediaItem.media_type === 'tv') {
+        queryClient.prefetchQuery({
+          queryKey: ['tv', mediaItem.id, 'calendar-enrichment'],
+          queryFn: () => tmdbApi.getTVShowDetails(mediaItem.id),
+          staleTime: TV_DETAILS_STALE_TIME,
+        });
       }
     },
   });

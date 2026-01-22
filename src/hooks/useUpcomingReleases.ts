@@ -87,7 +87,7 @@ function formatMonthYear(date: Date): string {
 
 /**
  * Hook that provides upcoming releases from user's tracked content
- * (Watchlist, Favorites, Reminders) for the Release Calendar.
+ * (Watchlist, Favorites, Watching, and Reminders) for the Release Calendar.
  */
 export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { user } = useAuth();
@@ -96,14 +96,16 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
 
   const isGuest = !user || user.isAnonymous;
 
-  // Extract items from watchlist and favorites
+  // Extract items from watchlist, favorites, and watching lists
   const listItems = useMemo(() => {
     if (!lists || isGuest) return [];
     const items: (ListMediaItem & { sourceList: string })[] = [];
 
+    // Include watchlist, favorites, and watching (for ongoing series)
+    const trackedListIds = ['watchlist', 'favorites', 'watching'];
+
     lists.forEach((list) => {
-      // Only include watchlist and favorites
-      if (list.id === 'watchlist' || list.id === 'favorites') {
+      if (trackedListIds.includes(list.id)) {
         Object.values(list.items || {}).forEach((item) => {
           items.push({ ...item, sourceList: list.id });
         });
