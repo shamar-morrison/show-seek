@@ -193,7 +193,7 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
               style={[
                 styles.dateLabel,
                 isSelected && styles.dateLabelSelected,
-                isToday && styles.dateLabelToday,
+                isToday && !isSelected && styles.dateLabelToday,
               ]}
             >
               {formatDateLabel(date)}
@@ -281,7 +281,9 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
               {release.title}
             </Text>
             {release.isReminder && (
-              <Bell size={14} color={COLORS.warning} style={styles.reminderIcon} />
+              <View style={styles.reminderBadge}>
+                <Bell size={12} color={COLORS.warning} />
+              </View>
             )}
           </View>
           {release.nextEpisode && (
@@ -332,9 +334,9 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
   },
   dateItem: {
-    width: DATE_ITEM_WIDTH,
+    minWidth: 60,
     paddingVertical: SPACING.s,
-    paddingHorizontal: SPACING.xs,
+    paddingHorizontal: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
     backgroundColor: COLORS.surface,
@@ -469,7 +471,13 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     flex: 1,
   },
-  reminderIcon: {
+  reminderBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: SPACING.xs,
   },
   episodeInfo: {
