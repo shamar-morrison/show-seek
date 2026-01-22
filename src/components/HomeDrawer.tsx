@@ -2,6 +2,7 @@ import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { Href, useRouter } from 'expo-router';
 import { Sparkles } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -27,6 +28,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const translateX = useSharedValue(-DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
@@ -127,7 +129,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
             label="For You"
             icon={({ size, color }) => <Sparkles size={size} color={color} />}
             onPress={() => {
-              // Placeholder - no action
+              onClose();
+              router.push('/(tabs)/home/for-you' as Href);
             }}
             theme={paperTheme}
             style={styles.drawerItem}
