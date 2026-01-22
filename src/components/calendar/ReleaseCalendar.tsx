@@ -7,18 +7,13 @@ import { useRouter } from 'expo-router';
 import { Bell, Calendar, Film, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dimensions,
-  Pressable,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DATE_ITEM_WIDTH = 60;
+
+// Type for flattened calendar items (headers + releases)
+type CalendarItem = { type: 'header'; title: string } | { type: 'release'; data: UpcomingRelease };
 
 interface ReleaseCalendarProps {
   sections: ReleaseSection[];
@@ -32,7 +27,6 @@ interface ReleaseCalendarProps {
 export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  // Note: SectionList ref is typed loosely to avoid complex generic issues
 
   // Get all unique dates for the date strip
   const uniqueDates = useMemo(() => {
@@ -66,6 +60,18 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
       .filter((section) => section.data.length > 0);
   }, [sections, selectedDate]);
 
+  // Flatten sections into a linear array of headers + items
+  const flatData = useMemo(() => {
+    const items: CalendarItem[] = [];
+    filteredSections.forEach((section) => {
+      items.push({ type: 'header', title: section.title });
+      section.data.forEach((release) => {
+        items.push({ type: 'release', data: release });
+      });
+    });
+    return items;
+  }, [filteredSections]);
+
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate((prev) => {
       const prevStr = prev?.toISOString().split('T')[0];
@@ -86,13 +92,26 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: UpcomingRelease }) => (
-      <ReleaseCard release={item} onPress={() => handleReleasePress(item)} />
-    ),
+    ({ item, index }: { item: CalendarItem; index: number }) => {
+      if (item.type === 'header') {
+        return (
+          <View style={[styles.sectionHeader, index > 0 && styles.sectionHeaderWithMargin]}>
+            <Calendar size={18} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>{item.title}</Text>
+          </View>
+        );
+      }
+      return <ReleaseCard release={item.data} onPress={() => handleReleasePress(item.data)} />;
+    },
     [handleReleasePress]
   );
 
-  const keyExtractor = useCallback((item: UpcomingRelease) => `${item.mediaType}-${item.id}`, []);
+  const keyExtractor = useCallback((item: CalendarItem, index: number) => {
+    if (item.type === 'header') {
+      return `header-${item.title}`;
+    }
+    return `release-${item.data.mediaType}-${item.data.id}`;
+  }, []);
 
   if (isLoading) {
     return (
@@ -113,22 +132,14 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
         />
       )}
 
-      {/* Section List */}
-      <SectionList<UpcomingRelease, ReleaseSection>
-        sections={filteredSections}
-        renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Calendar size={18} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-          </View>
-        )}
+      {/* Content */}
+      <FlatList
+        style={styles.content}
+        data={flatData}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        stickySectionHeadersEnabled
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-        SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
       />
     </View>
   );
@@ -153,55 +164,51 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
     const dateStr = date.toISOString().split('T')[0];
     if (dateStr === todayStr) return t('calendar.today');
     if (dateStr === tomorrowStr) return t('calendar.tomorrow');
-    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-  };
-
-  const formatDayOfWeek = (date: Date): string => {
-    const dateStr = date.toISOString().split('T')[0];
-    if (dateStr === todayStr || dateStr === tomorrowStr) return '';
-    return date.toLocaleDateString('en-US', { weekday: 'short' });
+    // Format as "Sat, Jan 24" - all on one line
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${weekday}, ${monthDay}`;
   };
 
   const selectedStr = selectedDate?.toISOString().split('T')[0];
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.dateStripContent}
-      style={styles.dateStrip}
-    >
-      {dates.map((date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        const isSelected = dateStr === selectedStr;
-        const isToday = dateStr === todayStr;
+    <View style={styles.dateStripContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.dateStripContent}
+        style={styles.dateStrip}
+      >
+        {dates.map((date) => {
+          const dateStr = date.toISOString().split('T')[0];
+          const isSelected = dateStr === selectedStr;
+          const isToday = dateStr === todayStr;
 
-        return (
-          <Pressable
-            key={dateStr}
-            onPress={() => onSelectDate(date)}
-            style={[
-              styles.dateItem,
-              isSelected && styles.dateItemSelected,
-              isToday && !isSelected && styles.dateItemToday,
-            ]}
-          >
-            <Text style={[styles.dateDayOfWeek, isSelected && styles.dateDayOfWeekSelected]}>
-              {formatDayOfWeek(date)}
-            </Text>
-            <Text
+          return (
+            <Pressable
+              key={dateStr}
+              onPress={() => onSelectDate(date)}
               style={[
-                styles.dateLabel,
-                isSelected && styles.dateLabelSelected,
-                isToday && !isSelected && styles.dateLabelToday,
+                styles.dateItem,
+                isSelected && styles.dateItemSelected,
+                isToday && !isSelected && styles.dateItemToday,
               ]}
             >
-              {formatDateLabel(date)}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+              <Text
+                style={[
+                  styles.dateLabel,
+                  isSelected && styles.dateLabelSelected,
+                  isToday && !isSelected && styles.dateLabelToday,
+                ]}
+              >
+                {formatDateLabel(date)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -323,23 +330,27 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
   },
+  dateStripContainer: {
+    flexShrink: 0,
+  },
   dateStrip: {
-    maxHeight: 80,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },
   dateStripContent: {
     paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
+    paddingVertical: SPACING.m,
     gap: SPACING.s,
   },
   dateItem: {
-    minWidth: 60,
-    paddingVertical: SPACING.s,
+    height: 44,
     paddingHorizontal: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.surface,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   dateItemSelected: {
     backgroundColor: COLORS.primary,
@@ -347,14 +358,6 @@ const styles = StyleSheet.create({
   dateItemToday: {
     borderWidth: 2,
     borderColor: COLORS.primary,
-  },
-  dateDayOfWeek: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  dateDayOfWeekSelected: {
-    color: COLORS.white,
   },
   dateLabel: {
     fontSize: FONT_SIZE.s,
@@ -371,13 +374,20 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: SPACING.xl,
   },
+  content: {
+    flex: 1,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.m,
+    paddingTop: SPACING.m,
+    paddingBottom: SPACING.s,
     backgroundColor: COLORS.background,
     gap: SPACING.s,
+  },
+  sectionHeaderWithMargin: {
+    marginTop: SPACING.m,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.l,
