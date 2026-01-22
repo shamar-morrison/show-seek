@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
+import { toLocalDateKey } from '@/src/utils/dateUtils';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -27,7 +28,7 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
     const dateMap = new Map<string, Date>();
     sections.forEach((section) => {
       section.data.forEach((release) => {
-        const dateKey = release.releaseDate.toISOString().split('T')[0];
+        const dateKey = toLocalDateKey(release.releaseDate);
         if (!dateMap.has(dateKey)) {
           dateMap.set(dateKey, release.releaseDate);
         }
@@ -42,12 +43,12 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   const filteredSections = useMemo(() => {
     if (!selectedDate) return sections;
 
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = toLocalDateKey(selectedDate);
     return sections
       .map((section) => ({
         ...section,
         data: section.data.filter((release) => {
-          const releaseDateStr = release.releaseDate.toISOString().split('T')[0];
+          const releaseDateStr = toLocalDateKey(release.releaseDate);
           return releaseDateStr >= selectedDateStr;
         }),
       }))
@@ -56,8 +57,8 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
 
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate((prev) => {
-      const prevStr = prev?.toISOString().split('T')[0];
-      const newStr = date.toISOString().split('T')[0];
+      const prevStr = prev ? toLocalDateKey(prev) : null;
+      const newStr = toLocalDateKey(date);
       return prevStr === newStr ? null : date;
     });
   }, []);
@@ -140,11 +141,11 @@ interface DateStripProps {
 function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
   const { t, i18n } = useTranslation();
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const todayStr = toLocalDateKey(today);
+  const tomorrowStr = toLocalDateKey(new Date(today.getTime() + 24 * 60 * 60 * 1000));
 
   const formatDateLabel = (date: Date): string => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(date);
     if (dateStr === todayStr) return t('calendar.today');
     if (dateStr === tomorrowStr) return t('calendar.tomorrow');
     // Format as "Sat, Jan 24" - all on one line
@@ -153,7 +154,7 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
     return `${weekday}, ${monthDay}`;
   };
 
-  const selectedStr = selectedDate?.toISOString().split('T')[0];
+  const selectedStr = selectedDate ? toLocalDateKey(selectedDate) : null;
 
   return (
     <View style={styles.dateStripContainer}>
@@ -164,7 +165,7 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
         style={styles.dateStrip}
       >
         {dates.map((date) => {
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = toLocalDateKey(date);
           const isSelected = dateStr === selectedStr;
           const isToday = dateStr === todayStr;
 
@@ -206,8 +207,8 @@ interface ReleaseCardProps {
 function ReleaseCard({ release, onPress }: ReleaseCardProps) {
   const { t, i18n } = useTranslation();
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const releaseDateStr = release.releaseDate.toISOString().split('T')[0];
+  const todayStr = toLocalDateKey(today);
+  const releaseDateStr = toLocalDateKey(release.releaseDate);
 
   // Calculate days until release
   const daysUntil = Math.ceil(
