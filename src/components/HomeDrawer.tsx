@@ -3,7 +3,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
-import { Href, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ChevronRight, Sparkles } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -76,7 +76,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const handleForYouPress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-    router.push('/(tabs)/home/for-you' as Href);
+    router.push({ pathname: '/(tabs)/home/for-you' });
   };
 
   return (

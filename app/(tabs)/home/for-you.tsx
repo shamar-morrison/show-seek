@@ -44,11 +44,11 @@ export default function ForYouScreen() {
   }, []);
 
   const handleGoToDiscover = () => {
-    router.push('/(tabs)/discover');
+    router.push({ pathname: '/(tabs)/discover' });
   };
 
   const handleSignIn = () => {
-    router.push('/(auth)/sign-in');
+    router.push({ pathname: '/(auth)/sign-in' });
   };
 
   // Guest state - show sign in prompt
