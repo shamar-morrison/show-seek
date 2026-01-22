@@ -1,4 +1,5 @@
 import { tmdbApi, TVShowDetails } from '@/src/api/tmdb';
+import { formatMonthYear } from '@/src/components/CustomDatePicker/utils';
 import { useAuth } from '@/src/context/auth';
 import { ListMediaItem } from '@/src/services/ListService';
 import { Reminder } from '@/src/types/reminder';
@@ -76,13 +77,6 @@ function parseDate(dateStr: string | undefined | null): Date | null {
 function getStartOfToday(): Date {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-/**
- * Format a date as month/year section title (e.g., "January 2026")
- */
-function formatMonthYear(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 /**

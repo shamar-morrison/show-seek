@@ -7,15 +7,7 @@ import { useRouter } from 'expo-router';
 import { Bell, Calendar, Film, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dimensions,
-  Pressable,
-  ScrollView,
-  SectionList,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
 
 interface ReleaseCalendarProps {
   sections: ReleaseSection[];
@@ -146,7 +138,7 @@ interface DateStripProps {
  * Horizontal scrollable date selector strip
  */
 function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -156,8 +148,8 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
     if (dateStr === todayStr) return t('calendar.today');
     if (dateStr === tomorrowStr) return t('calendar.tomorrow');
     // Format as "Sat, Jan 24" - all on one line
-    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
-    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const weekday = date.toLocaleDateString(i18n.language, { weekday: 'short' });
+    const monthDay = date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
     return `${weekday}, ${monthDay}`;
   };
 
@@ -212,7 +204,7 @@ interface ReleaseCardProps {
  * Individual release card component with backdrop, countdown, and episode info
  */
 function ReleaseCard({ release, onPress }: ReleaseCardProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const releaseDateStr = release.releaseDate.toISOString().split('T')[0];
@@ -245,7 +237,9 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
           {release.releaseDate.getDate()}
         </Text>
         <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
-          {release.releaseDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+          {release.releaseDate
+            .toLocaleDateString(i18n.language, { month: 'short' })
+            .toLocaleUpperCase(i18n.language)}
         </Text>
         {isToday && (
           <View style={styles.todayBadge}>
@@ -484,7 +478,7 @@ const styles = StyleSheet.create({
   episodeInfo: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginTop: SPACING.xs / 2,
   },
   countdownRow: {
     flexDirection: 'row',
