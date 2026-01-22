@@ -55,8 +55,6 @@ const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
 const SEASON_DETAILS_STALE_TIME = 1000 * 60 * 15;
 // Maximum episodes to show per show
 const MAX_EPISODES_PER_SHOW = 5;
-// Threshold for refreshing season data (when episodes remaining <= this)
-const REFRESH_THRESHOLD = 1;
 
 // Active statuses that indicate a show might have new episodes
 const ACTIVE_STATUSES = ['Returning Series', 'In Production'];
@@ -293,9 +291,6 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
         })
         .slice(0, MAX_EPISODES_PER_SHOW);
 
-      // Track episode count for potential refresh logic
-      const needsRefresh = futureEpisodes.length <= REFRESH_THRESHOLD;
-
       futureEpisodes.forEach((ep) => {
         const uniqueKey = `tv-${request.showId}-s${ep.season_number}-e${ep.episode_number}`;
 
@@ -321,13 +316,6 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
         });
         seenKeys.add(uniqueKey);
       });
-
-      // If we're running low on episodes, invalidate the season query to refetch
-      // This is handled via staleTime - queries with low episode count will be stale sooner
-      if (needsRefresh) {
-        // The query will naturally refetch on next mount/focus due to shorter stale time
-        // Additional logic could be added here if needed
-      }
     });
 
     // Fallback: Process TV shows that don't have season data yet (use next_episode_to_air)
