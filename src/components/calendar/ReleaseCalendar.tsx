@@ -7,13 +7,15 @@ import { useRouter } from 'expo-router';
 import { Bell, Calendar, Film, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DATE_ITEM_WIDTH = 60;
-
-// Type for flattened calendar items (headers + releases)
-type CalendarItem = { type: 'header'; title: string } | { type: 'release'; data: UpcomingRelease };
+import {
+  Dimensions,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 interface ReleaseCalendarProps {
   sections: ReleaseSection[];
@@ -60,18 +62,6 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
       .filter((section) => section.data.length > 0);
   }, [sections, selectedDate]);
 
-  // Flatten sections into a linear array of headers + items
-  const flatData = useMemo(() => {
-    const items: CalendarItem[] = [];
-    filteredSections.forEach((section) => {
-      items.push({ type: 'header', title: section.title });
-      section.data.forEach((release) => {
-        items.push({ type: 'release', data: release });
-      });
-    });
-    return items;
-  }, [filteredSections]);
-
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate((prev) => {
       const prevStr = prev?.toISOString().split('T')[0];
@@ -92,26 +82,23 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   );
 
   const renderItem = useCallback(
-    ({ item, index }: { item: CalendarItem; index: number }) => {
-      if (item.type === 'header') {
-        return (
-          <View style={[styles.sectionHeader, index > 0 && styles.sectionHeaderWithMargin]}>
-            <Calendar size={18} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{item.title}</Text>
-          </View>
-        );
-      }
-      return <ReleaseCard release={item.data} onPress={() => handleReleasePress(item.data)} />;
-    },
+    ({ item }: { item: UpcomingRelease }) => (
+      <ReleaseCard release={item} onPress={() => handleReleasePress(item)} />
+    ),
     [handleReleasePress]
   );
 
-  const keyExtractor = useCallback((item: CalendarItem, index: number) => {
-    if (item.type === 'header') {
-      return `header-${item.title}`;
-    }
-    return `release-${item.data.mediaType}-${item.data.id}`;
-  }, []);
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: ReleaseSection }) => (
+      <View style={styles.sectionHeader}>
+        <Calendar size={18} color={COLORS.primary} />
+        <Text style={styles.sectionTitle}>{section.title}</Text>
+      </View>
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback((item: UpcomingRelease) => `${item.mediaType}-${item.id}`, []);
 
   if (isLoading) {
     return (
@@ -132,14 +119,18 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
         />
       )}
 
-      {/* Content */}
-      <FlatList
+      {/* Section List */}
+      <SectionList<UpcomingRelease, ReleaseSection>
         style={styles.content}
-        data={flatData}
+        sections={filteredSections}
+        renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
+        stickySectionHeadersEnabled
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+        SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
       />
     </View>
   );
