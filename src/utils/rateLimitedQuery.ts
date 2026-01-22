@@ -87,7 +87,14 @@ export function createRateLimitedQueryFn<T>(fn: () => Promise<T>): () => Promise
 
 /**
  * Clear the request queue. Useful for cleanup or cancellation.
+ * Rejects all pending promises with an error to prevent callers from hanging.
  */
 export function clearRequestQueue() {
+  const pendingRequests = queuedRequests;
   queuedRequests = [];
+
+  // Reject all pending promises so callers don't hang
+  pendingRequests.forEach(({ reject }) => {
+    reject(new Error('Request queue cleared'));
+  });
 }
