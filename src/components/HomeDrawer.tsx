@@ -4,7 +4,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, Sparkles } from 'lucide-react-native';
+import { Calendar, ChevronRight, LogOut, Sparkles } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -28,7 +28,7 @@ export interface HomeDrawerProps {
  */
 export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -85,6 +85,16 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
     router.push({ pathname: '/(tabs)/home/calendar' });
+  };
+
+  const handleSignOut = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    // Small delay to allow drawer to start closing before auth state change
+    // potentially triggers navigation
+    setTimeout(() => {
+      signOut();
+    }, 250);
   };
 
   return (
@@ -155,6 +165,21 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
             <ChevronRight size={20} color={COLORS.textSecondary} />
           </Pressable>
         </View>
+
+        {/* Spacer */}
+        <View style={{ flex: 1 }} />
+
+        {/* Footer Section */}
+        <View style={styles.footerSection}>
+          <Divider style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutPressed]}
+            onPress={handleSignOut}
+          >
+            <LogOut size={24} color={COLORS.error} />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </Pressable>
+        </View>
       </Animated.View>
     </Modal>
   );
@@ -221,5 +246,23 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  footerSection: {
+    marginBottom: SPACING.m,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.l,
+    gap: SPACING.m,
+  },
+  signOutText: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.error,
+  },
+  signOutPressed: {
+    opacity: ACTIVE_OPACITY,
   },
 });
