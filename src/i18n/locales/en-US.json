@@ -524,5 +524,17 @@
     "failedToShare": "Failed to share",
     "failedToSave": "Failed to save to gallery",
     "sharingNotAvailable": "Sharing is not available on this device"
+  },
+  "forYou": {
+    "title": "Personalized Recommendations",
+    "becauseYouLoved": "Because you loved {{title}}",
+    "hiddenGems": "Hidden Gems for You",
+    "trendingThisWeek": "Trending This Week",
+    "notEnoughData": "Not enough data yet",
+    "notEnoughDataDescription": "Rate your favorite movies and shows to see personalized recommendations here!",
+    "goToDiscover": "Go to Discover",
+    "signInRequired": "Sign in for personalized recommendations",
+    "signInDescription": "Create an account to get content tailored to your tastes",
+    "signIn": "Sign In"
   }
 }

@@ -497,5 +497,17 @@
     "disabledSections": "Seções desativadas",
     "dragToReorder": "Arraste para reordenar",
     "resetToDefault": "Restaurar padrão"
+  },
+  "forYou": {
+    "title": "Recomendações personalizadas",
+    "becauseYouLoved": "Porque você amou {{title}}",
+    "hiddenGems": "Joias escondidas para você",
+    "trendingThisWeek": "Em alta esta semana",
+    "notEnoughData": "Dados insuficientes ainda",
+    "notEnoughDataDescription": "Avalie seus filmes e séries favoritos para ver recomendações personalizadas aqui!",
+    "goToDiscover": "Ir para Descobrir",
+    "signInRequired": "Entre para recomendações personalizadas",
+    "signInDescription": "Crie uma conta para obter conteúdo adaptado aos seus gostos",
+    "signIn": "Entrar"
   }
 }
