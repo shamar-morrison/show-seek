@@ -266,7 +266,7 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
             )}
           </View>
         )}
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.gradient} />
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,1.0)']} style={styles.gradient} />
         <View style={styles.textOverlay}>
           <View style={styles.titleRow}>
             <Text style={styles.releaseTitle} numberOfLines={1}>
@@ -477,7 +477,8 @@ const styles = StyleSheet.create({
   },
   episodeInfo: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
+    opacity: 0.7,
     marginTop: SPACING.xs / 2,
   },
   countdownRow: {
