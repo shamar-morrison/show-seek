@@ -200,6 +200,7 @@ const styles = StyleSheet.create({
   navigationSection: {
     marginTop: SPACING.m,
     paddingHorizontal: SPACING.m,
+    gap: SPACING.m,
   },
   navigationCard: {
     flexDirection: 'row',
