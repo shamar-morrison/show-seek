@@ -509,5 +509,18 @@
     "signInRequired": "Inicie sessão para recomendações personalizadas",
     "signInDescription": "Crie uma conta para obter conteúdo adaptado aos seus gostos",
     "signIn": "Iniciar sessão"
+  },
+  "calendar": {
+    "title": "Calendário de lançamentos",
+    "empty": "Nenhum lançamento próximo",
+    "emptyHint": "Adicione filmes e séries à sua lista de pendentes para acompanhá-los aqui",
+    "goToWatchlist": "Ir para pendentes",
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "inDays": "em {{count}} dias",
+    "comingSoon": "Brevemente",
+    "seasonEpisode": "Temporada {{season}} Episódio {{episode}}",
+    "signInRequired": "Inicie sessão para ver o seu calendário",
+    "signInDescription": "Acompanhe os lançamentos da sua lista de pendentes num só lugar"
   }
 }

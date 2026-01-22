@@ -536,5 +536,18 @@
     "signInRequired": "Sign in for personalized recommendations",
     "signInDescription": "Create an account to get content tailored to your tastes",
     "signIn": "Sign In"
+  },
+  "calendar": {
+    "title": "Release Calendar",
+    "empty": "No upcoming releases found",
+    "emptyHint": "Add upcoming movies and shows to your Watchlist to track them here",
+    "goToWatchlist": "Go to Watchlist",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "in {{count}} days",
+    "comingSoon": "Coming Soon",
+    "seasonEpisode": "Season {{season}} Episode {{episode}}",
+    "signInRequired": "Sign in to see your calendar",
+    "signInDescription": "Track your watchlist releases all in one place"
   }
 }

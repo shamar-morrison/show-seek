@@ -509,5 +509,18 @@
     "signInRequired": "Connectez-vous pour des recommandations personnalisées",
     "signInDescription": "Créez un compte pour obtenir du contenu adapté à vos goûts",
     "signIn": "Se connecter"
+  },
+  "calendar": {
+    "title": "Calendrier des sorties",
+    "empty": "Aucune sortie à venir",
+    "emptyHint": "Ajoutez des films et séries à votre liste de visionnage pour les suivre ici",
+    "goToWatchlist": "Aller à la liste de visionnage",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "inDays": "dans {{count}} jours",
+    "comingSoon": "Bientôt disponible",
+    "seasonEpisode": "Saison {{season}} Épisode {{episode}}",
+    "signInRequired": "Connectez-vous pour voir votre calendrier",
+    "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit"
   }
 }

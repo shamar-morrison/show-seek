@@ -17,6 +17,7 @@ export default function HomeStackLayout() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="for-you" options={{ title: 'Just for you' }} />
+        <Stack.Screen name="calendar" options={{ title: 'Release Calendar' }} />
         <Stack.Screen name="movie/[id]/index" options={{ title: '', headerTransparent: true }} />
         <Stack.Screen
           name="movie/[id]/cast"
