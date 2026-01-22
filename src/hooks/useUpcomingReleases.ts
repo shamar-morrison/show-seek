@@ -101,8 +101,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     if (!lists || isGuest) return [];
     const items: (ListMediaItem & { sourceList: string })[] = [];
 
-    // Include watchlist, favorites, and watching (for ongoing series)
-    const trackedListIds = ['watchlist', 'favorites', 'watching'];
+    // Include watchlist, favorites, and currently-watching (for ongoing series)
+    const trackedListIds = ['watchlist', 'favorites', 'currently-watching'];
 
     lists.forEach((list) => {
       if (trackedListIds.includes(list.id)) {
