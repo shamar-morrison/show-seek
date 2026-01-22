@@ -91,7 +91,7 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
     []
   );
 
-  const keyExtractor = useCallback((item: UpcomingRelease) => `${item.mediaType}-${item.id}`, []);
+  const keyExtractor = useCallback((item: UpcomingRelease) => item.uniqueKey, []);
 
   if (isLoading) {
     return (
