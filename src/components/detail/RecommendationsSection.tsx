@@ -9,14 +9,15 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
-import type { RecommendationsSectionProps } from './types';
+import type { RecommendationsSectionProps, SimilarMediaItem } from './types';
 
 // Memoized recommendation card component to prevent unnecessary re-renders
 const RecommendationCard = memo<{
   item: any;
   onPress: (id: number) => void;
+  onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
-}>(({ item, onPress, mediaType }) => {
+}>(({ item, onPress, onLongPress, mediaType }) => {
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
 
@@ -29,10 +30,15 @@ const RecommendationCard = memo<{
     onPress(item.id);
   }, [item.id, onPress]);
 
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(item);
+  }, [item, onLongPress]);
+
   return (
     <TouchableOpacity
       style={detailStyles.similarCard}
       onPress={handlePress}
+      onLongPress={handleLongPress}
       activeOpacity={ACTIVE_OPACITY}
     >
       <View style={detailStyles.similarPosterContainer}>
@@ -65,7 +71,17 @@ const RecommendationCard = memo<{
 RecommendationCard.displayName = 'RecommendationCard';
 
 export const RecommendationsSection = memo<RecommendationsSectionProps>(
-  ({ items, isLoading, isError, shouldLoad, onMediaPress, onLayout, style, mediaType }) => {
+  ({
+    items,
+    isLoading,
+    isError,
+    shouldLoad,
+    onMediaPress,
+    onMediaLongPress,
+    onLayout,
+    style,
+    mediaType,
+  }) => {
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
@@ -119,8 +135,13 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
               showsHorizontalScrollIndicator={false}
               removeClippedSubviews={true}
               drawDistance={400}
-              renderItem={({ item }) => (
-                <RecommendationCard item={item} onPress={onMediaPress} mediaType={mediaType} />
+              renderItem={({ item }: { item: SimilarMediaItem }) => (
+                <RecommendationCard
+                  item={item}
+                  onPress={onMediaPress}
+                  onLongPress={onMediaLongPress}
+                  mediaType={mediaType}
+                />
               )}
             />
           </View>

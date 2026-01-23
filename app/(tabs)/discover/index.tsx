@@ -1,16 +1,21 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
 import { SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +42,14 @@ export default function DiscoverScreen() {
   const genresQuery = useGenres(mediaType);
   const genreMap = genresQuery.data || {};
   const { getListsForMedia, showIndicators } = useListMembership();
+
+  // Long-press to add to list
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const toastRef = useRef<ToastRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],
@@ -103,6 +116,38 @@ export default function DiscoverScreen() {
     }
   };
 
+  const handleLongPress = (item: Movie | TVShow) => {
+    requireAuth(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const title = 'title' in item ? item.title : item.name;
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: mediaType,
+        title: title || '',
+        name: 'name' in item ? item.name : undefined,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        release_date: releaseDate || '',
+        first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
+      });
+      // Note: Modal is presented via useEffect below to ensure it's mounted first
+    }, t('discover.signInToAdd'));
+  };
+
+  // Present the modal when an item is selected
+  // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
+  // before we try to present it
+  useEffect(() => {
+    if (selectedMediaItem) {
+      addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
+
+  const handleShowToast = (message: string) => {
+    toastRef.current?.show(message);
+  };
+
   // Flatten paginated data
   const allResults: (Movie | TVShow)[] =
     discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [];
@@ -128,6 +173,7 @@ export default function DiscoverScreen() {
       <TouchableOpacity
         style={styles.resultItem}
         onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
         activeOpacity={ACTIVE_OPACITY}
       >
         <View style={styles.posterContainer}>
@@ -166,81 +212,93 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('tabs.discover')}</Text>
-        <TouchableOpacity
-          style={styles.filterToggle}
-          onPress={() => setShowFilters(!showFilters)}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <SlidersHorizontal
-            size={24}
-            color={showFilters ? COLORS.primary : COLORS.textSecondary}
+    <>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{t('tabs.discover')}</Text>
+          <TouchableOpacity
+            style={styles.filterToggle}
+            onPress={() => setShowFilters(!showFilters)}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <SlidersHorizontal
+              size={24}
+              color={showFilters ? COLORS.primary : COLORS.textSecondary}
+            />
+            {hasActiveFilters() && <View style={styles.filterBadge} />}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.typeToggleContainer}>
+          <TouchableOpacity
+            style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
+            onPress={() => setMediaType('movie')}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
+              {t('media.movies')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
+            onPress={() => setMediaType('tv')}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
+              {t('media.tvShows')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {showFilters && (
+          <DiscoverFilters
+            filters={filters}
+            onChange={setFilters}
+            mediaType={mediaType}
+            onClearFilters={clearFilters}
+            genreMap={genreMap}
           />
-          {hasActiveFilters() && <View style={styles.filterBadge} />}
-        </TouchableOpacity>
-      </View>
+        )}
 
-      <View style={styles.typeToggleContainer}>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
-          onPress={() => setMediaType('movie')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            {t('media.movies')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
-          onPress={() => setMediaType('tv')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            {t('media.tvShows')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {discoverQuery.isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : filteredResults.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+            <Text style={styles.emptySubtext}>{t('discover.adjustFilters')}</Text>
+          </View>
+        ) : (
+          <FlashList
+            data={filteredResults}
+            renderItem={renderMediaItem}
+            keyExtractor={(item: any) => `${mediaType}-${item.id}`}
+            contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              discoverQuery.isFetchingNextPage ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                </View>
+              ) : null
+            }
+          />
+        )}
+      </SafeAreaView>
 
-      {showFilters && (
-        <DiscoverFilters
-          filters={filters}
-          onChange={setFilters}
-          mediaType={mediaType}
-          onClearFilters={clearFilters}
-          genreMap={genreMap}
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onShowToast={handleShowToast}
         />
       )}
-
-      {discoverQuery.isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : filteredResults.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
-          <Text style={styles.emptySubtext}>{t('discover.adjustFilters')}</Text>
-        </View>
-      ) : (
-        <FlashList
-          data={filteredResults}
-          renderItem={renderMediaItem}
-          keyExtractor={(item: any) => `${mediaType}-${item.id}`}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: 100 }]}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            discoverQuery.isFetchingNextPage ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              </View>
-            ) : null
-          }
-        />
-      )}
-    </SafeAreaView>
+      <Toast ref={toastRef} />
+      {AuthGuardModal}
+    </>
   );
 }
 

@@ -9,14 +9,15 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
-import type { SimilarMediaSectionProps } from './types';
+import type { SimilarMediaItem, SimilarMediaSectionProps } from './types';
 
 // Memoized media card component to prevent unnecessary re-renders
 const SimilarMediaCard = memo<{
   item: any;
   onPress: (id: number) => void;
+  onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
-}>(({ item, onPress, mediaType }) => {
+}>(({ item, onPress, onLongPress, mediaType }) => {
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
 
@@ -29,10 +30,15 @@ const SimilarMediaCard = memo<{
     onPress(item.id);
   }, [item.id, onPress]);
 
+  const handleLongPress = useCallback(() => {
+    onLongPress?.(item);
+  }, [item, onLongPress]);
+
   return (
     <TouchableOpacity
       style={detailStyles.similarCard}
       onPress={handlePress}
+      onLongPress={handleLongPress}
       activeOpacity={ACTIVE_OPACITY}
     >
       <View style={detailStyles.similarPosterContainer}>
@@ -65,13 +71,18 @@ const SimilarMediaCard = memo<{
 SimilarMediaCard.displayName = 'SimilarMediaCard';
 
 export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
-  ({ items, onMediaPress, title, style, mediaType }) => {
+  ({ items, onMediaPress, onMediaLongPress, title, style, mediaType }) => {
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
-      ({ item }: { item: any }) => (
-        <SimilarMediaCard item={item} onPress={onMediaPress} mediaType={mediaType} />
+      ({ item }: { item: SimilarMediaItem }) => (
+        <SimilarMediaCard
+          item={item}
+          onPress={onMediaPress}
+          onLongPress={onMediaLongPress}
+          mediaType={mediaType}
+        />
       ),
-      [onMediaPress, mediaType]
+      [onMediaPress, onMediaLongPress, mediaType]
     );
 
     if (items.length === 0) {

@@ -35,6 +35,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -60,6 +61,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -77,6 +79,7 @@ export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { t } = useTranslation();
   const movieId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -97,6 +100,21 @@ export default function MovieDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  // Long-press handler for similar/recommended media
+  const {
+    handleLongPress: handleMediaLongPress,
+    addToListModalRef: similarMediaModalRef,
+    selectedMediaItem: selectedSimilarMediaItem,
+  } = useDetailLongPress('movie');
+
+  // Wrap the long-press handler with auth guard
+  const guardedHandleMediaLongPress = useCallback(
+    (item: any) => {
+      requireAuth(() => handleMediaLongPress(item), t('movieDetail.signInToAddItems'));
+    },
+    [requireAuth, handleMediaLongPress, t]
+  );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
@@ -624,6 +642,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             title="Similar Movies"
           />
 
@@ -661,6 +680,7 @@ export default function MovieDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleMoviePress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
@@ -832,6 +852,15 @@ export default function MovieDetailScreen() {
       )}
       <Toast ref={toastRef} />
       {AuthGuardModal}
+
+      {/* AddToListModal for long-pressed similar/recommended media */}
+      {selectedSimilarMediaItem && (
+        <AddToListModal
+          ref={similarMediaModalRef}
+          mediaItem={selectedSimilarMediaItem}
+          onShowToast={(message) => toastRef.current?.show(message)}
+        />
+      )}
     </View>
   );
 }

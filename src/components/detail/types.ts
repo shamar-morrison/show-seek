@@ -60,6 +60,7 @@ export interface SimilarMediaSectionProps {
   mediaType: 'movie' | 'tv';
   items: SimilarMediaItem[];
   onMediaPress: (id: number) => void;
+  onMediaLongPress?: (item: SimilarMediaItem) => void;
   title: string;
   style?: ViewStyle;
 }
@@ -93,6 +94,7 @@ export interface RecommendationsSectionProps {
   isError: boolean;
   shouldLoad: boolean;
   onMediaPress: (id: number) => void;
+  onMediaLongPress?: (item: SimilarMediaItem) => void;
   onLayout?: () => void;
   style?: ViewStyle;
 }

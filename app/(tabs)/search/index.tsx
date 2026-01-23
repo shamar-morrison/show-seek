@@ -1,7 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -10,15 +12,18 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
 import { Search as SearchIcon, Star, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -43,6 +48,14 @@ export default function SearchScreen() {
   const genreMap = genresQuery.data || {};
   const { getListsForMedia, showIndicators } = useListMembership();
   const { data: favoritePersons } = useFavoritePersons();
+
+  // Long-press to add to list
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const toastRef = useRef<ToastRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -90,6 +103,43 @@ export default function SearchScreen() {
     }
   };
 
+  const handleLongPress = (item: any) => {
+    // Skip for person results
+    if (item.media_type === 'person') return;
+
+    requireAuth(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const itemMediaType =
+        item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
+      const title = item.title || item.name || '';
+      const releaseDate = item.release_date || item.first_air_date || '';
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: itemMediaType,
+        title: title,
+        name: item.name,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average || 0,
+        release_date: releaseDate,
+        first_air_date: item.first_air_date,
+      });
+      // Note: Modal is presented via useEffect below to ensure it's mounted first
+    }, t('discover.signInToAdd'));
+  };
+
+  // Present the modal when an item is selected
+  // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
+  // before we try to present it
+  useEffect(() => {
+    if (selectedMediaItem) {
+      addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
+
+  const handleShowToast = (message: string) => {
+    toastRef.current?.show(message);
+  };
+
   const renderMediaItem = ({ item }: { item: any }) => {
     const isPerson = item.media_type === 'person';
     const title = item.title || item.name;
@@ -118,6 +168,7 @@ export default function SearchScreen() {
       <TouchableOpacity
         style={styles.resultItem}
         onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
         activeOpacity={ACTIVE_OPACITY}
       >
         <View style={styles.posterContainer}>
@@ -173,91 +224,103 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('tabs.search')}</Text>
-      </View>
+    <>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{t('tabs.search')}</Text>
+        </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <SearchIcon size={20} color={COLORS.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('search.placeholder')}
-            placeholderTextColor={COLORS.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            autoCorrect={false}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <SearchIcon size={20} color={COLORS.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('search.placeholder')}
+              placeholderTextColor={COLORS.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={HIT_SLOP.l}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <X size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.typeToggleContainer}>
+          <TouchableOpacity
+            style={[styles.typeButton, mediaType === 'all' && styles.typeButtonActive]}
+            onPress={() => setMediaType('all')}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>
+              {t('search.all')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
+            onPress={() => setMediaType('movie')}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
+              {t('media.movies')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
+            onPress={() => setMediaType('tv')}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
+              {t('media.tvShows')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {searchResultsQuery.isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        ) : debouncedQuery.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <SearchIcon size={64} color={COLORS.textSecondary} />
+            <Text style={styles.emptyText}>{t('search.prompt')}</Text>
+          </View>
+        ) : filteredResults.length === 0 ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.emptyText}>{t('common.noResults')}</Text>
+            <Text style={styles.emptySubtext}>{t('search.adjustSearch')}</Text>
+          </View>
+        ) : (
+          <FlashList
+            data={filteredResults}
+            renderItem={renderMediaItem}
+            keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
+            contentContainerStyle={[styles.listContainer]}
+            showsVerticalScrollIndicator={false}
+            removeClippedSubviews={true}
+            drawDistance={400}
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery('')}
-              hitSlop={HIT_SLOP.l}
-              activeOpacity={ACTIVE_OPACITY}
-            >
-              <X size={20} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+        )}
+      </SafeAreaView>
 
-      <View style={styles.typeToggleContainer}>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'all' && styles.typeButtonActive]}
-          onPress={() => setMediaType('all')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>
-            {t('search.all')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
-          onPress={() => setMediaType('movie')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-            {t('media.movies')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
-          onPress={() => setMediaType('tv')}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-            {t('media.tvShows')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {searchResultsQuery.isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-      ) : debouncedQuery.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <SearchIcon size={64} color={COLORS.textSecondary} />
-          <Text style={styles.emptyText}>{t('search.prompt')}</Text>
-        </View>
-      ) : filteredResults.length === 0 ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>{t('common.noResults')}</Text>
-          <Text style={styles.emptySubtext}>{t('search.adjustSearch')}</Text>
-        </View>
-      ) : (
-        <FlashList
-          data={filteredResults}
-          renderItem={renderMediaItem}
-          keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
-          contentContainerStyle={[styles.listContainer]}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews={true}
-          drawDistance={400}
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onShowToast={handleShowToast}
         />
       )}
-    </SafeAreaView>
+      <Toast ref={toastRef} />
+      {AuthGuardModal}
+    </>
   );
 }
 
