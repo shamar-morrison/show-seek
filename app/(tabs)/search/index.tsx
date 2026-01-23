@@ -119,8 +119,17 @@ export default function SearchScreen() {
       release_date: releaseDate,
       first_air_date: item.first_air_date,
     });
-    addToListModalRef.current?.present();
+    // Note: Modal is presented via useEffect below to ensure it's mounted first
   };
+
+  // Present the modal when an item is selected
+  // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
+  // before we try to present it
+  useEffect(() => {
+    if (selectedMediaItem) {
+      addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
 
   const handleShowToast = (message: string) => {
     toastRef.current?.show(message);
