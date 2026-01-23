@@ -734,6 +734,15 @@ export default function TVDetailScreen() {
             initialRating={userRating}
             onRatingSuccess={() => {}}
             onShowToast={(message) => toastRef.current?.show(message)}
+            autoAddOptions={{
+              mediaMetadata: {
+                title: show.name,
+                poster_path: show.poster_path,
+                vote_average: show.vote_average,
+                release_date: show.first_air_date || '',
+                genre_ids: show.genres?.map((g) => g.id),
+              },
+            }}
           />
           <TVReminderModal
             visible={reminderModalVisible}

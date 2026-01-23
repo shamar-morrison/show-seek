@@ -39,10 +39,13 @@ export interface UseForYouRecommendationsResult {
 }
 
 /**
- * Extracts seed items from user ratings.
+ * Extracts preliminary seed items from user ratings.
  * Filters for items rated >= 8, excludes episodes, sorts by most recent.
+ * Seeds may have missing titles which will be fetched from TMDB.
  */
-function extractSeeds(ratings: RatingItem[] | undefined): SeedItem[] {
+function extractPreliminarySeeds(
+  ratings: RatingItem[] | undefined
+): { id: number; mediaType: 'movie' | 'tv'; title: string | null }[] {
   if (!ratings || ratings.length === 0) return [];
 
   return ratings
@@ -55,7 +58,7 @@ function extractSeeds(ratings: RatingItem[] | undefined): SeedItem[] {
     .map((rating) => ({
       id: parseInt(rating.id, 10),
       mediaType: rating.mediaType,
-      title: rating.title || 'Unknown',
+      title: rating.title || null, // null indicates title needs to be fetched
     }));
 }
 
@@ -69,12 +72,54 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
 
   const isGuest = !user || user.isAnonymous;
 
-  // Extract seeds from ratings
-  const seeds = useMemo(() => {
+  // Extract preliminary seeds (may have null titles for legacy ratings)
+  const preliminarySeeds = useMemo(() => {
     if (isGuest) return [];
-    return extractSeeds(ratings);
+    return extractPreliminarySeeds(ratings);
   }, [ratings, isGuest]);
 
+  // Fetch titles from TMDB for seeds that don't have them stored
+  const titleQueries = useQueries({
+    queries: preliminarySeeds
+      .filter((seed) => seed.title === null)
+      .map((seed) => ({
+        queryKey: ['seed-title', seed.mediaType, seed.id],
+        queryFn: async () => {
+          if (seed.mediaType === 'movie') {
+            const movie = await tmdbApi.getMovieDetails(seed.id);
+            return { id: seed.id, title: movie.title };
+          } else {
+            const show = await tmdbApi.getTVShowDetails(seed.id);
+            return { id: seed.id, title: show.name };
+          }
+        },
+        staleTime: Infinity, // titles don't change
+        enabled: !isGuest && preliminarySeeds.length > 0,
+      })),
+  });
+
+  // Build a map of fetched titles
+  const fetchedTitlesMap = useMemo(() => {
+    const map = new Map<number, string>();
+    titleQueries.forEach((query) => {
+      if (query.data) {
+        map.set(query.data.id, query.data.title);
+      }
+    });
+    return map;
+  }, [titleQueries]);
+
+  // Resolve final seeds with titles (either from rating data or fetched from TMDB)
+  const seeds: SeedItem[] = useMemo(() => {
+    return preliminarySeeds.map((seed) => ({
+      id: seed.id,
+      mediaType: seed.mediaType,
+      // Use stored title, or fetched title, or fallback to a placeholder
+      title: seed.title || fetchedTitlesMap.get(seed.id) || 'Loading...',
+    }));
+  }, [preliminarySeeds, fetchedTitlesMap]);
+
+  const isLoadingTitles = titleQueries.some((q) => q.isLoading);
   const needsFallback = seeds.length < MIN_SEEDS_FOR_FULL_EXPERIENCE;
   const hasEnoughData = seeds.length > 0;
 
@@ -142,9 +187,12 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
 
   return {
     seeds,
-    sections: sections.filter((s) => s.recommendations.length > 0 || s.isLoading),
+    // Filter out sections that are loading or have placeholder titles (still fetching from TMDB)
+    sections: sections.filter(
+      (s) => (s.recommendations.length > 0 || s.isLoading) && s.seed.title !== 'Loading...'
+    ),
     hasEnoughData,
-    isLoading: isLoadingRatings || isLoadingRecommendations,
+    isLoading: isLoadingRatings || isLoadingTitles || isLoadingRecommendations,
     isLoadingRatings,
     hiddenGems: hiddenGemsData || [],
     isLoadingHiddenGems,
