@@ -34,6 +34,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -80,6 +81,14 @@ export default function TVDetailScreen() {
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isPremium } = usePremium();
+
+  // Long-press handler for similar/recommended media
+  const {
+    handleLongPress: handleMediaLongPress,
+    addToListModalRef: similarMediaModalRef,
+    selectedMediaItem: selectedSimilarMediaItem,
+    handleShowToast: handleSimilarMediaToast,
+  } = useDetailLongPress('tv');
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
@@ -581,6 +590,7 @@ export default function TVDetailScreen() {
             mediaType="tv"
             items={filteredSimilarShows}
             onMediaPress={handleShowPress}
+            onMediaLongPress={handleMediaLongPress}
             title="Similar Shows"
           />
 
@@ -618,6 +628,7 @@ export default function TVDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleShowPress}
+            onMediaLongPress={handleMediaLongPress}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
@@ -758,6 +769,15 @@ export default function TVDetailScreen() {
       )}
       <Toast ref={toastRef} />
       {AuthGuardModal}
+
+      {/* AddToListModal for long-pressed similar/recommended media */}
+      {selectedSimilarMediaItem && (
+        <AddToListModal
+          ref={similarMediaModalRef}
+          mediaItem={selectedSimilarMediaItem}
+          onShowToast={handleSimilarMediaToast}
+        />
+      )}
     </View>
   );
 }

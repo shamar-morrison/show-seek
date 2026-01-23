@@ -35,6 +35,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -97,6 +98,14 @@ export default function MovieDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  // Long-press handler for similar/recommended media
+  const {
+    handleLongPress: handleMediaLongPress,
+    addToListModalRef: similarMediaModalRef,
+    selectedMediaItem: selectedSimilarMediaItem,
+    handleShowToast: handleSimilarMediaToast,
+  } = useDetailLongPress('movie');
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
@@ -624,6 +633,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
+            onMediaLongPress={handleMediaLongPress}
             title="Similar Movies"
           />
 
@@ -661,6 +671,7 @@ export default function MovieDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleMoviePress}
+            onMediaLongPress={handleMediaLongPress}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
@@ -832,6 +843,15 @@ export default function MovieDetailScreen() {
       )}
       <Toast ref={toastRef} />
       {AuthGuardModal}
+
+      {/* AddToListModal for long-pressed similar/recommended media */}
+      {selectedSimilarMediaItem && (
+        <AddToListModal
+          ref={similarMediaModalRef}
+          mediaItem={selectedSimilarMediaItem}
+          onShowToast={handleSimilarMediaToast}
+        />
+      )}
     </View>
   );
 }
