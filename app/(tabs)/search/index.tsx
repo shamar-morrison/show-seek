@@ -109,7 +109,8 @@ export default function SearchScreen() {
 
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
+      const itemMediaType =
+        item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
       const title = item.title || item.name || '';
       const releaseDate = item.release_date || item.first_air_date || '';
       setSelectedMediaItem({
@@ -123,7 +124,7 @@ export default function SearchScreen() {
         first_air_date: item.first_air_date,
       });
       // Note: Modal is presented via useEffect below to ensure it's mounted first
-    }, 'Sign in to add items to your lists');
+    }, t('discover.signInToAdd'));
   };
 
   // Present the modal when an item is selected

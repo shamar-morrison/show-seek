@@ -61,6 +61,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -78,6 +79,7 @@ export default function MovieDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { t } = useTranslation();
   const movieId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -104,15 +106,14 @@ export default function MovieDetailScreen() {
     handleLongPress: handleMediaLongPress,
     addToListModalRef: similarMediaModalRef,
     selectedMediaItem: selectedSimilarMediaItem,
-    handleShowToast: handleSimilarMediaToast,
   } = useDetailLongPress('movie');
 
   // Wrap the long-press handler with auth guard
   const guardedHandleMediaLongPress = useCallback(
     (item: any) => {
-      requireAuth(() => handleMediaLongPress(item), 'Sign in to add items to your lists');
+      requireAuth(() => handleMediaLongPress(item), t('movieDetail.signInToAddItems'));
     },
-    [requireAuth, handleMediaLongPress]
+    [requireAuth, handleMediaLongPress, t]
   );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
@@ -857,7 +858,7 @@ export default function MovieDetailScreen() {
         <AddToListModal
           ref={similarMediaModalRef}
           mediaItem={selectedSimilarMediaItem}
-          onShowToast={handleSimilarMediaToast}
+          onShowToast={(message) => toastRef.current?.show(message)}
         />
       )}
     </View>

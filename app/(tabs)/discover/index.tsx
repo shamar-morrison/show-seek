@@ -132,7 +132,7 @@ export default function DiscoverScreen() {
         first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
       });
       // Note: Modal is presented via useEffect below to ensure it's mounted first
-    }, 'Sign in to add items to your lists');
+    }, t('discover.signInToAdd'));
   };
 
   // Present the modal when an item is selected

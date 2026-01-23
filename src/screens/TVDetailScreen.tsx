@@ -87,7 +87,6 @@ export default function TVDetailScreen() {
     handleLongPress: handleMediaLongPress,
     addToListModalRef: similarMediaModalRef,
     selectedMediaItem: selectedSimilarMediaItem,
-    handleShowToast: handleSimilarMediaToast,
   } = useDetailLongPress('tv');
 
   // Wrap the long-press handler with auth guard
@@ -783,7 +782,7 @@ export default function TVDetailScreen() {
         <AddToListModal
           ref={similarMediaModalRef}
           mediaItem={selectedSimilarMediaItem}
-          onShowToast={handleSimilarMediaToast}
+          onShowToast={(message) => toastRef.current?.show(message)}
         />
       )}
     </View>

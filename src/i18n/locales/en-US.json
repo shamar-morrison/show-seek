@@ -137,7 +137,8 @@
     "noFiltersApplied": "No filters applied",
     "resultsCount": "{{count}} results",
     "noResultsWithFilters": "No results match your filters",
-    "adjustFilters": "Try adjusting your filters"
+    "adjustFilters": "Try adjusting your filters",
+    "signInToAdd": "Sign in to add items to your lists"
   },
   "search": {
     "title": "Search",
@@ -552,5 +553,8 @@
     "premiumTitle": "Track Your Release Schedule",
     "premiumDescription": "Never miss a season, episode or movie release again. \n Get a personalized timeline of all your upcoming movies and TV shows.",
     "upgradeToPremium": "Upgrade to Premium"
+  },
+  "movieDetail": {
+    "signInToAddItems": "Sign in to add items to your lists"
   }
 }
