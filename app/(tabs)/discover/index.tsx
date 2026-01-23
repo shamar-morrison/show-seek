@@ -5,6 +5,7 @@ import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
@@ -48,6 +49,7 @@ export default function DiscoverScreen() {
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const discoverQuery = useInfiniteQuery({
     queryKey: ['discover', mediaType, filters],
@@ -115,20 +117,22 @@ export default function DiscoverScreen() {
   };
 
   const handleLongPress = (item: Movie | TVShow) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const title = 'title' in item ? item.title : item.name;
-    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    setSelectedMediaItem({
-      id: item.id,
-      media_type: mediaType,
-      title: title || '',
-      name: 'name' in item ? item.name : undefined,
-      poster_path: item.poster_path,
-      vote_average: item.vote_average,
-      release_date: releaseDate || '',
-      first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
-    });
-    // Note: Modal is presented via useEffect below to ensure it's mounted first
+    requireAuth(() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const title = 'title' in item ? item.title : item.name;
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: mediaType,
+        title: title || '',
+        name: 'name' in item ? item.name : undefined,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        release_date: releaseDate || '',
+        first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
+      });
+      // Note: Modal is presented via useEffect below to ensure it's mounted first
+    }, 'Sign in to add items to your lists');
   };
 
   // Present the modal when an item is selected
@@ -293,6 +297,7 @@ export default function DiscoverScreen() {
         />
       )}
       <Toast ref={toastRef} />
+      {AuthGuardModal}
     </>
   );
 }

@@ -107,6 +107,14 @@ export default function MovieDetailScreen() {
     handleShowToast: handleSimilarMediaToast,
   } = useDetailLongPress('movie');
 
+  // Wrap the long-press handler with auth guard
+  const guardedHandleMediaLongPress = useCallback(
+    (item: any) => {
+      requireAuth(() => handleMediaLongPress(item), 'Sign in to add items to your lists');
+    },
+    [requireAuth, handleMediaLongPress]
+  );
+
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const { preferences } = usePreferences();
@@ -633,7 +641,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
-            onMediaLongPress={handleMediaLongPress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             title="Similar Movies"
           />
 
@@ -671,7 +679,7 @@ export default function MovieDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleMoviePress}
-            onMediaLongPress={handleMediaLongPress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);

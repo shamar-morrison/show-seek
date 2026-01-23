@@ -90,6 +90,14 @@ export default function TVDetailScreen() {
     handleShowToast: handleSimilarMediaToast,
   } = useDetailLongPress('tv');
 
+  // Wrap the long-press handler with auth guard
+  const guardedHandleMediaLongPress = useCallback(
+    (item: any) => {
+      requireAuth(() => handleMediaLongPress(item), 'Sign in to add items to your lists');
+    },
+    [requireAuth, handleMediaLongPress]
+  );
+
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const { preferences } = usePreferences();
@@ -590,7 +598,7 @@ export default function TVDetailScreen() {
             mediaType="tv"
             items={filteredSimilarShows}
             onMediaPress={handleShowPress}
-            onMediaLongPress={handleMediaLongPress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             title="Similar Shows"
           />
 
@@ -628,7 +636,7 @@ export default function TVDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleShowPress}
-            onMediaLongPress={handleMediaLongPress}
+            onMediaLongPress={guardedHandleMediaLongPress}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
