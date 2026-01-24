@@ -37,6 +37,15 @@ export interface MarkEpisodeWatchedParams {
     /** Genre IDs for show metadata */
     genreIds?: number[];
   };
+  /**
+   * Optional configuration for marking previous episodes as watched
+   */
+  previousEpisodesOptions?: {
+    /** All episodes in the current season (from TMDB) */
+    seasonEpisodes: Episode[];
+    /** Whether the preference is enabled */
+    shouldMarkPrevious: boolean;
+  };
 }
 
 /**
@@ -223,6 +232,40 @@ export const useMarkEpisodeWatched = () => {
         } catch (autoAddError) {
           // Log but don't throw - auto-add is non-critical
           console.error('[useMarkEpisodeWatched] Auto-add to Watching list failed:', autoAddError);
+        }
+      }
+
+      // Handle marking previous episodes as watched (non-blocking)
+      const { previousEpisodesOptions } = params;
+      if (
+        previousEpisodesOptions?.shouldMarkPrevious &&
+        previousEpisodesOptions.seasonEpisodes.length > 0 &&
+        params.episodeNumber > 1
+      ) {
+        try {
+          const previousEpisodes = previousEpisodesOptions.seasonEpisodes.filter(
+            (ep) => ep.episode_number < params.episodeNumber
+          );
+
+          if (previousEpisodes.length > 0) {
+            await episodeTrackingService.markAllEpisodesWatched(
+              params.tvShowId,
+              params.seasonNumber,
+              previousEpisodes,
+              params.showMetadata
+            );
+
+            console.log(
+              '[useMarkEpisodeWatched] Auto-marked previous episodes:',
+              previousEpisodes.length
+            );
+          }
+        } catch (prevEpisodesError) {
+          // Log but don't throw - marking previous episodes is non-critical
+          console.error(
+            '[useMarkEpisodeWatched] Mark previous episodes failed:',
+            prevEpisodesError
+          );
         }
       }
     },

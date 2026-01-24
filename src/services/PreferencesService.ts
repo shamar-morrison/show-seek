@@ -46,6 +46,9 @@ class PreferencesService {
               data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
             hideWatchedContent:
               data?.preferences?.hideWatchedContent ?? DEFAULT_PREFERENCES.hideWatchedContent,
+            markPreviousEpisodesWatched:
+              data?.preferences?.markPreviousEpisodesWatched ??
+              DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
           };
 
           callback(preferences);
