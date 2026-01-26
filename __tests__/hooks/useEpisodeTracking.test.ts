@@ -41,14 +41,18 @@ jest.mock('@tanstack/react-query', () => ({
     isLoading: false,
     error: null,
   })),
-  useMutation: jest.fn((config) => ({
-    mutate: (params: MarkEpisodeWatchedParams) => {
-      config.mutationFn(params);
-    },
-    mutateAsync: config.mutationFn,
-    isPending: false,
-    isError: false,
-  })),
+  useMutation: jest.fn((config) => {
+    let mutationPromise: Promise<void> | null = null;
+    return {
+      mutate: (params: MarkEpisodeWatchedParams) => {
+        // Store promise so tests can await it
+        mutationPromise = config.mutationFn(params);
+      },
+      mutateAsync: config.mutationFn,
+      isPending: false,
+      isError: false,
+    };
+  }),
 }));
 
 // Dynamically import after mocks are set up
@@ -256,5 +260,53 @@ describe('useMarkEpisodeWatched', () => {
 
     // Should NOT mark previous episodes
     expect(episodeTrackingService.markAllEpisodesWatched).not.toHaveBeenCalled();
+  });
+
+  it('should still mark current episode if markAllEpisodesWatched fails', async () => {
+    // Make markAllEpisodesWatched throw an error
+    (episodeTrackingService.markAllEpisodesWatched as jest.Mock).mockRejectedValueOnce(
+      new Error('Network error')
+    );
+
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 5,
+        episodeData: {
+          episodeId: 5,
+          episodeName: 'Episode 5',
+          episodeAirDate: '2024-01-29',
+        },
+        showMetadata: mockShowMetadata,
+        previousEpisodesOptions: {
+          seasonEpisodes: mockSeasonEpisodes,
+          shouldMarkPrevious: true,
+        },
+      });
+    });
+
+    // Current episode should still be marked
+    expect(episodeTrackingService.markEpisodeWatched).toHaveBeenCalledWith(
+      123,
+      1,
+      5,
+      expect.any(Object),
+      mockShowMetadata
+    );
+
+    // markAllEpisodesWatched was called (and failed)
+    expect(episodeTrackingService.markAllEpisodesWatched).toHaveBeenCalled();
+
+    // Error was logged but not thrown
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[useMarkEpisodeWatched] Mark previous episodes failed:',
+      expect.any(Error)
+    );
+
+    consoleSpy.mockRestore();
   });
 });

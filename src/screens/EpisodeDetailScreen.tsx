@@ -212,6 +212,7 @@ export default function EpisodeDetailScreen() {
     requireAuth,
     preferences,
     listMembership,
+    season,
   ]);
 
   const handleVideoPress = useCallback((video: Video) => {
