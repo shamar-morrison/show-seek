@@ -443,6 +443,8 @@
     "autoAddToAlreadyWatchedDescription": "Ajouter automatiquement les films à votre liste Déjà vus lorsque vous les notez ou les marquez comme vus",
     "quickMarkAsWatched": "Marquage rapide comme vu",
     "quickMarkAsWatchedDescription": "Ignorer la sélection de date et utiliser l'heure actuelle pour marquer les films comme vus",
+    "markPreviousEpisodes": "Marquer les épisodes précédents",
+    "markPreviousEpisodesDescription": "Marque automatiquement les épisodes précédents d'une saison comme vus lorsque vous marquez un épisode",
     "sendFeedback": "Envoyer des commentaires",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web"

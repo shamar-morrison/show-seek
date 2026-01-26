@@ -46,6 +46,7 @@ export interface SeasonItemProps {
   listMembership: Record<string, boolean>;
   firstAirDate: string | undefined;
   voteAverage: number | undefined;
+  markPreviousEpisodesWatched: boolean;
 }
 
 export const SeasonItem = memo<SeasonItemProps>(
@@ -72,6 +73,7 @@ export const SeasonItem = memo<SeasonItemProps>(
     listMembership,
     firstAirDate,
     voteAverage,
+    markPreviousEpisodesWatched,
   }) => {
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
@@ -295,6 +297,10 @@ export const SeasonItem = memo<SeasonItemProps>(
                           listMembership,
                           firstAirDate,
                           voteAverage,
+                        },
+                        previousEpisodesOptions: {
+                          seasonEpisodes: season.episodes || [],
+                          shouldMarkPrevious: markPreviousEpisodesWatched,
                         },
                       },
                       {

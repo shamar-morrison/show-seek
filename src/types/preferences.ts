@@ -35,6 +35,7 @@ export interface UserPreferences {
   quickMarkAsWatched: boolean; // Skip modal and use current time when marking movies as watched
   defaultLaunchScreen?: LaunchScreenRoute; // Which tab to open on app launch
   hideWatchedContent: boolean; // Premium: hide watched content from search/discover
+  markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -45,4 +46,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   quickMarkAsWatched: false, // Off by default - show date selection modal
   defaultLaunchScreen: '/(tabs)/home',
   hideWatchedContent: false, // Off by default - show all content
+  markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
 };

@@ -193,6 +193,10 @@ export default function EpisodeDetailScreen() {
             voteAverage: tvShow.vote_average,
             genreIds: tvShow.genres?.map((g) => g.id) || [],
           },
+          previousEpisodesOptions: {
+            seasonEpisodes: season?.episodes || [],
+            shouldMarkPrevious: !!preferences.markPreviousEpisodesWatched,
+          },
         });
       }
     }, 'Sign in to track your watched episodes');
@@ -208,6 +212,7 @@ export default function EpisodeDetailScreen() {
     requireAuth,
     preferences,
     listMembership,
+    season,
   ]);
 
   const handleVideoPress = useCallback((video: Video) => {

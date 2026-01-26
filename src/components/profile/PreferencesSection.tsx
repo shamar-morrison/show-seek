@@ -52,9 +52,7 @@ export function PreferencesSection({
         <View style={styles.errorContainer}>
           <View style={styles.preferenceInfo}>
             <Text style={styles.preferenceLabel}>{t('profile.unableToLoadPreferences')}</Text>
-            <Text style={styles.preferenceSubtitle}>
-              {t('profile.checkConnection')}
-            </Text>
+            <Text style={styles.preferenceSubtitle}>{t('profile.checkConnection')}</Text>
           </View>
           <TouchableOpacity
             style={[styles.retryButton, isLoading && styles.retryButtonDisabled]}
@@ -112,6 +110,15 @@ export function PreferencesSection({
         subtitle={t('profile.quickMarkAsWatchedDescription')}
         value={!!preferences?.quickMarkAsWatched}
         onValueChange={(value) => handleUpdate('quickMarkAsWatched', value)}
+        loading={isLoading}
+        disabled={isUpdating}
+      />
+
+      <PreferenceItem
+        label={t('profile.markPreviousEpisodes')}
+        subtitle={t('profile.markPreviousEpisodesDescription')}
+        value={!!preferences?.markPreviousEpisodesWatched}
+        onValueChange={(value) => handleUpdate('markPreviousEpisodesWatched', value)}
         loading={isLoading}
         disabled={isUpdating}
       />

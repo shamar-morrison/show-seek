@@ -139,6 +139,7 @@ const defaultProps: SeasonItemProps = {
   listMembership: {},
   firstAirDate: '2020-01-15',
   voteAverage: 8.5,
+  markPreviousEpisodesWatched: false,
 };
 
 describe('SeasonItem', () => {
