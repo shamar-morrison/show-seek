@@ -54,6 +54,12 @@ import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useW
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
+import {
+  getListColor,
+  getListIconComponent,
+  MULTIPLE_LISTS_COLOR,
+  MultipleListsIcon,
+} from '@/src/utils/listIcons';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -121,7 +127,12 @@ export default function MovieDetailScreen() {
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const { preferences } = usePreferences();
-  const isInAnyList = Object.keys(membership).length > 0;
+  const listIds = Object.keys(membership);
+  const isInAnyList = listIds.length > 0;
+  const listIcon =
+    listIds.length === 1 ? getListIconComponent(listIds[0]) : isInAnyList ? MultipleListsIcon : undefined;
+  const listColor =
+    listIds.length === 1 ? getListColor(listIds[0]) : isInAnyList ? MULTIPLE_LISTS_COLOR : undefined;
 
   const {
     reminder,
@@ -587,6 +598,8 @@ export default function MovieDetailScreen() {
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
+            listIcon={listIcon}
+            listColor={listColor}
             userRating={userRating}
             isLoadingRating={isLoadingRating}
             hasReminder={hasReminder}

@@ -1,7 +1,7 @@
 import RatingButton from '@/src/components/RatingButton';
 import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
-import { Check, ImageIcon, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
+import { Check, ImageIcon, LucideIcon, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
@@ -18,6 +18,8 @@ export interface MediaActionButtonsProps {
   // Add to List state
   isInAnyList: boolean;
   isLoadingLists: boolean;
+  listIcon?: LucideIcon;
+  listColor?: string;
 
   // Rating state
   userRating: number;
@@ -48,6 +50,8 @@ export function MediaActionButtons({
   onShareCard,
   isInAnyList,
   isLoadingLists,
+  listIcon,
+  listColor,
   userRating,
   isLoadingRating,
   hasReminder = false,
@@ -62,7 +66,11 @@ export function MediaActionButtons({
       <View style={detailStyles.secondaryActionsRow}>
         {/* Add to List Button */}
         <TouchableOpacity
-          style={[detailStyles.addButton, isInAnyList && detailStyles.addedButton]}
+          style={[
+            detailStyles.addButton,
+            isInAnyList && detailStyles.addedButton,
+            isInAnyList && listColor ? { backgroundColor: listColor } : undefined,
+          ]}
           activeOpacity={ACTIVE_OPACITY}
           onPress={onAddToList}
           disabled={isLoadingLists}
@@ -70,7 +78,11 @@ export function MediaActionButtons({
           {isLoadingLists ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : isInAnyList ? (
-            <Check size={24} color={COLORS.white} />
+            listIcon ? (
+              React.createElement(listIcon, { size: 24, color: COLORS.white })
+            ) : (
+              <Check size={24} color={COLORS.white} />
+            )
           ) : (
             <Plus size={24} color={COLORS.white} />
           )}

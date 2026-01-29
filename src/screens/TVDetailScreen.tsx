@@ -49,6 +49,12 @@ import {
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
+import {
+  getListColor,
+  getListIconComponent,
+  MULTIPLE_LISTS_COLOR,
+  MultipleListsIcon,
+} from '@/src/utils/listIcons';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
@@ -100,7 +106,12 @@ export default function TVDetailScreen() {
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const { preferences } = usePreferences();
-  const isInAnyList = Object.keys(membership).length > 0;
+  const listIds = Object.keys(membership);
+  const isInAnyList = listIds.length > 0;
+  const listIcon =
+    listIds.length === 1 ? getListIconComponent(listIds[0]) : isInAnyList ? MultipleListsIcon : undefined;
+  const listColor =
+    listIds.length === 1 ? getListColor(listIds[0]) : isInAnyList ? MULTIPLE_LISTS_COLOR : undefined;
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
@@ -533,6 +544,8 @@ export default function TVDetailScreen() {
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
             isLoadingLists={isLoadingLists}
+            listIcon={listIcon}
+            listColor={listColor}
             userRating={userRating}
             isLoadingRating={isLoadingRating}
             hasReminder={hasReminder}

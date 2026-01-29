@@ -11,19 +11,11 @@ import {
   useRemoveFromList,
 } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
+import { getListIconComponent } from '@/src/utils/listIcons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import {
-  Bookmark,
-  Check,
-  CirclePlay,
-  Folder,
-  Heart,
-  Plus,
-  Settings2,
-  X,
-} from 'lucide-react-native';
+import { Check, Plus, Settings2 } from 'lucide-react-native';
 import React, {
   forwardRef,
   memo,
@@ -60,24 +52,6 @@ interface ListWithCount extends UserList {
   itemCount: number;
 }
 
-// Icon mapping for default lists
-const getListIcon = (listId: string) => {
-  switch (listId) {
-    case 'watchlist':
-      return <Bookmark size={20} color={COLORS.textSecondary} />;
-    case 'currently-watching':
-      return <CirclePlay size={20} color={COLORS.textSecondary} />;
-    case 'already-watched':
-      return <Check size={20} color={COLORS.textSecondary} />;
-    case 'favorites':
-      return <Heart size={20} color={COLORS.textSecondary} />;
-    case 'dropped':
-      return <X size={20} color={COLORS.textSecondary} />;
-    default:
-      return <Folder size={20} color={COLORS.textSecondary} />;
-  }
-};
-
 // Memoized list item row component to prevent re-renders
 const ListItemRow = memo<{
   list: ListWithCount;
@@ -93,6 +67,8 @@ const ListItemRow = memo<{
       [list.id, list.name, onDelete]
     );
 
+    const ListIcon = getListIconComponent(list.id);
+
     return (
       <Pressable
         style={styles.listItem}
@@ -103,7 +79,9 @@ const ListItemRow = memo<{
         <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
           <AnimatedCheck visible={isSelected} />
         </View>
-        <View style={styles.listIcon}>{getListIcon(list.id)}</View>
+        <View style={styles.listIcon}>
+          <ListIcon size={20} color={COLORS.textSecondary} />
+        </View>
         <Text style={styles.listName}>{list.name}</Text>
         <Text style={styles.itemCount}>
           {list.itemCount} {list.itemCount === 1 ? 'item' : 'items'}
