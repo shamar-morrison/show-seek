@@ -1,13 +1,14 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
+import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, ChevronRight, LogOut, Sparkles } from 'lucide-react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Divider } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const translateX = useSharedValue(-DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
@@ -90,98 +93,108 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-    // Small delay to allow drawer to start closing before auth state change
-    // potentially triggers navigation
-    setTimeout(() => {
-      signOut();
-    }, 250);
+    
+    // Small delay to allow drawer to start closing before showing loading
+    setTimeout(async () => {
+      setIsSigningOut(true);
+      try {
+        await signOut();
+      } catch {
+        setIsSigningOut(false);
+        Alert.alert('Error', 'Unable to sign out. Please try again.');
+      }
+    }, 300);
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      {/* Backdrop */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={handleBackdropPress}>
-        <Animated.View style={[styles.backdrop, backdropAnimatedStyle]} />
-      </Pressable>
-
-      {/* Drawer Container */}
-      <Animated.View
-        style={[
-          styles.drawerContainer,
-          drawerAnimatedStyle,
-          { paddingTop: insets.top, paddingBottom: insets.bottom },
-        ]}
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={onClose}
       >
-        {/* User Profile Section */}
-        <View style={styles.userSection}>
-          <UserAvatar
-            photoURL={user?.photoURL}
-            displayName={user?.displayName}
-            email={user?.email}
-            size={60}
-            showPremiumBadge={isPremium}
-          />
-          <View style={styles.userInfo}>
-            <Text style={styles.displayName} numberOfLines={1}>
-              {displayName}
-            </Text>
-            <Text style={styles.email} numberOfLines={1}>
-              {email}
-            </Text>
+        {/* Backdrop */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleBackdropPress}>
+          <Animated.View style={[styles.backdrop, backdropAnimatedStyle]} />
+        </Pressable>
+
+        {/* Drawer Container */}
+        <Animated.View
+          style={[
+            styles.drawerContainer,
+            drawerAnimatedStyle,
+            { paddingTop: insets.top, paddingBottom: insets.bottom },
+          ]}
+        >
+          {/* User Profile Section */}
+          <View style={styles.userSection}>
+            <UserAvatar
+              photoURL={user?.photoURL}
+              displayName={user?.displayName}
+              email={user?.email}
+              size={60}
+              showPremiumBadge={isPremium}
+            />
+            <View style={styles.userInfo}>
+              <Text style={styles.displayName} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={styles.email} numberOfLines={1}>
+                {email}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <Divider style={styles.divider} />
-
-        {/* Navigation Items */}
-        <View style={styles.navigationSection}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.navigationCard,
-              pressed && styles.navigationCardPressed,
-            ]}
-            onPress={handleForYouPress}
-          >
-            <Sparkles size={24} color={COLORS.primary} />
-            <Text style={styles.navigationTitle}>{t('forYou.title')}</Text>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.navigationCard,
-              pressed && styles.navigationCardPressed,
-            ]}
-            onPress={handleCalendarPress}
-          >
-            <Calendar size={24} color={COLORS.primary} />
-            <Text style={styles.navigationTitle}>{t('calendar.title')}</Text>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </Pressable>
-        </View>
-
-        {/* Spacer */}
-        <View style={{ flex: 1 }} />
-
-        {/* Footer Section */}
-        <View style={styles.footerSection}>
           <Divider style={styles.divider} />
-          <Pressable
-            style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutPressed]}
-            onPress={handleSignOut}
-          >
-            <LogOut size={24} color={COLORS.error} />
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-    </Modal>
+
+          {/* Navigation Items */}
+          <View style={styles.navigationSection}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.navigationCard,
+                pressed && styles.navigationCardPressed,
+              ]}
+              onPress={handleForYouPress}
+            >
+              <Sparkles size={24} color={COLORS.primary} />
+              <Text style={styles.navigationTitle}>{t('forYou.title')}</Text>
+              <ChevronRight size={20} color={COLORS.textSecondary} />
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.navigationCard,
+                pressed && styles.navigationCardPressed,
+              ]}
+              onPress={handleCalendarPress}
+            >
+              <Calendar size={24} color={COLORS.primary} />
+              <Text style={styles.navigationTitle}>{t('calendar.title')}</Text>
+              <ChevronRight size={20} color={COLORS.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* Spacer */}
+          <View style={{ flex: 1 }} />
+
+          {/* Footer Section */}
+          <View style={styles.footerSection}>
+            <Divider style={styles.divider} />
+            <Pressable
+              style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutPressed]}
+              onPress={handleSignOut}
+            >
+              <LogOut size={24} color={COLORS.error} />
+              <Text style={styles.signOutText}>{t('auth.signOut')}</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      </Modal>
+
+      <LoadingModal visible={isSigningOut} message={t('auth.signingOut')} />
+    </>
   );
 }
 

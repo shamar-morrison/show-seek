@@ -5,6 +5,7 @@ import { PreferencesSection } from '@/src/components/profile/PreferencesSection'
 import { ReauthView } from '@/src/components/profile/ReauthView';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
+import LoadingModal from '@/src/components/ui/LoadingModal';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
@@ -13,6 +14,7 @@ import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences'
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { UserPreferences } from '@/src/types/preferences';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -25,6 +27,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const {
     user,
     isGuest,
@@ -34,6 +37,7 @@ export default function ProfileScreen() {
     reauthLoading,
     showSupportModal,
     isExporting,
+    isSigningOut,
     showWebAppModal,
     setReauthPassword,
     handleCloseSupportModal,
@@ -165,6 +169,9 @@ export default function ProfileScreen() {
 
       {/* Support Development Modal */}
       <SupportDevelopmentModal visible={showSupportModal} onClose={handleCloseSupportModal} />
+
+      {/* Signing Out Modal */}
+      <LoadingModal visible={isSigningOut} message={t('auth.signingOut')} />
     </SafeAreaView>
   );
 }

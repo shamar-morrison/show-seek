@@ -25,6 +25,7 @@ export function useProfileLogic() {
   const [reauthLoading, setReauthLoading] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [showWebAppModal, setShowWebAppModal] = useState(false);
 
   const isGuest = user?.isAnonymous === true;
@@ -128,9 +129,11 @@ export function useProfileLogic() {
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSigningOut(true);
     try {
       await signOut();
-    } catch (_error) {
+    } catch {
+      setIsSigningOut(false);
       Alert.alert('Error', 'Unable to sign out. Please try again.');
     }
   }, [signOut]);
@@ -221,6 +224,7 @@ export function useProfileLogic() {
     reauthLoading,
     showSupportModal,
     isExporting,
+    isSigningOut,
     showWebAppModal,
 
     // State setters
