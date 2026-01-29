@@ -65,6 +65,12 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         title: 'Personal Notes',
         description: 'Add notes to movies and TV shows',
       },
+      {
+        id: 'release-reminders',
+        icon: 'alarm-outline',
+        title: 'Release Reminders',
+        description: 'Get notified when new episodes air',
+      },
     ],
   },
   {
@@ -84,6 +90,12 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         title: 'Latest Trailers',
         description: 'Add the latest TMDB trailers to your home screen in-app',
       },
+      {
+        id: 'release-calendar',
+        icon: 'calendar-outline',
+        title: 'Release Calendar',
+        description: 'Track upcoming episodes and movies',
+      },
     ],
   },
   {
@@ -95,6 +107,18 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         icon: 'play-circle',
         title: 'Filter by Streaming Service',
         description: 'Find content on your favorite platforms',
+      },
+      {
+        id: 'blur-spoilers',
+        icon: 'eye-off-outline',
+        title: 'Blur Plot Spoilers',
+        description: "Avoid spoilers until you're ready",
+      },
+      {
+        id: 'hide-watched',
+        icon: 'checkmark-circle-outline',
+        title: 'Hide Watched Content',
+        description: 'Keep your browsing fresh',
       },
     ],
   },
