@@ -1,7 +1,9 @@
 import { MovieDetails, TVShowDetails } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useRegion } from '@/src/context/RegionProvider';
 import { getCountryFlag } from '@/src/utils/countries';
 import { getLanguageName } from '@/src/utils/languages';
+import { getRegionalCertification } from '@/src/utils/mediaUtils';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -11,27 +13,37 @@ interface MediaDetailsInfoProps {
 }
 
 export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
+  const { region } = useRegion();
   const isMovie = type === 'movie';
   const movie = isMovie ? (media as MovieDetails) : null;
   const show = !isMovie ? (media as TVShowDetails) : null;
 
-  const getCertification = () => {
-    if (isMovie && movie?.release_dates) {
-      const usRelease = movie.release_dates.results.find((r) => r.iso_3166_1 === 'US');
-      if (usRelease) {
-        // Prioritize theatrical release (type 3) or digital (4)
-        const release =
-          usRelease.release_dates.find((d) => d.type === 3) ||
-          usRelease.release_dates.find((d) => d.type === 4) ||
-          usRelease.release_dates[0];
-        return release?.certification || 'N/A';
+  const getCertificationDisplay = () => {
+    // Check regional certification first
+    const regionalCert = getRegionalCertification(media, type, region);
+    if (regionalCert !== 'N/A') {
+      let hasRegionalCert = false;
+      if (isMovie && movie?.release_dates) {
+        const regionData = movie.release_dates.results.find((r) => r.iso_3166_1 === region);
+        if (regionData?.release_dates?.some((d) => d.certification)) {
+          hasRegionalCert = true;
+        }
+      } else if (!isMovie && show?.content_ratings) {
+        const regionData = show.content_ratings.results.find((r) => r.iso_3166_1 === region);
+        if (regionData?.rating) {
+          hasRegionalCert = true;
+        }
       }
-    } else if (!isMovie && show?.content_ratings) {
-      const usRating = show.content_ratings.results.find((r) => r.iso_3166_1 === 'US');
-      return usRating?.rating || 'N/A';
+
+      if (hasRegionalCert) {
+        return { cert: regionalCert, flag: region };
+      }
+      return { cert: regionalCert, flag: 'US' };
     }
-    return 'N/A';
+    return { cert: 'N/A', flag: null };
   };
+
+  const { cert, flag } = getCertificationDisplay();
 
   const formatRuntime = (minutes: number | null) => {
     if (!minutes) return 'N/A';
@@ -87,7 +99,7 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
       {renderRow(
         'Certification',
         <Text>
-          {getCertification()} {getCountryFlag('US')}
+          {cert} {flag ? getCountryFlag(flag) : ''}
         </Text>
       )}
       {renderRow(

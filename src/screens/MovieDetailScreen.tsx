@@ -32,6 +32,7 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useRegion } from '@/src/context/RegionProvider';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -53,7 +54,7 @@ import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useW
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
-import { hasWatchProviders } from '@/src/utils/mediaUtils';
+import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -81,6 +82,7 @@ export default function MovieDetailScreen() {
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
   const movieId = Number(id);
+  const { region } = useRegion();
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -232,6 +234,9 @@ export default function MovieDetailScreen() {
   }
 
   const movie = movieQuery.data;
+  // Get region-specific release date
+  const displayReleaseDate = getRegionalReleaseDate(movie, region);
+  
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const directors = creditsQuery.data?.crew.filter((c) => c.job === 'Director') || [];
   const videos = videosQuery.data || [];
@@ -304,7 +309,7 @@ export default function MovieDetailScreen() {
       throw new Error('Notification permission required');
     }
 
-    if (!movie?.release_date) {
+    if (!displayReleaseDate) {
       throw new Error('This movie does not have a release date');
     }
 
@@ -321,7 +326,7 @@ export default function MovieDetailScreen() {
         mediaType: 'movie',
         title: movie.title,
         posterPath: movie.poster_path,
-        releaseDate: movie.release_date,
+        releaseDate: displayReleaseDate,
         reminderTiming: timing,
       });
     }
@@ -352,7 +357,7 @@ export default function MovieDetailScreen() {
               poster_path: movie.poster_path,
               media_type: 'movie',
               vote_average: movie.vote_average,
-              release_date: movie.release_date,
+              release_date: displayReleaseDate || movie.release_date,
               genre_ids: movie.genres?.map((g) => g.id),
             },
             'Already Watched'
@@ -395,7 +400,7 @@ export default function MovieDetailScreen() {
                     poster_path: movie.poster_path,
                     media_type: 'movie',
                     vote_average: movie.vote_average,
-                    release_date: movie.release_date,
+                    release_date: displayReleaseDate || movie.release_date,
                     genre_ids: movie.genres?.map((g) => g.id),
                   },
                   'Already Watched'
@@ -501,8 +506,8 @@ export default function MovieDetailScreen() {
             <View style={detailStyles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
               <Text style={detailStyles.metaText}>
-                {movie.release_date
-                  ? formatTmdbDate(movie.release_date, {
+                {displayReleaseDate
+                  ? formatTmdbDate(displayReleaseDate, {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric',
@@ -557,7 +562,7 @@ export default function MovieDetailScreen() {
               requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
             }
             onReminder={
-              canShowReminder(movie.release_date)
+              canShowReminder(displayReleaseDate)
                 ? () =>
                     requireAuth(
                       () => setReminderModalVisible(true),
@@ -783,7 +788,7 @@ export default function MovieDetailScreen() {
               poster_path: movie.poster_path,
               media_type: 'movie',
               vote_average: movie.vote_average,
-              release_date: movie.release_date,
+              release_date: displayReleaseDate || movie.release_date,
               genre_ids: movie.genres?.map((g) => g.id) || [],
             }}
             onShowToast={(message) => toastRef.current?.show(message)}
@@ -803,7 +808,7 @@ export default function MovieDetailScreen() {
                 title: movie.title,
                 poster_path: movie.poster_path,
                 vote_average: movie.vote_average,
-                release_date: movie.release_date || '',
+                release_date: displayReleaseDate || movie.release_date || '',
                 genre_ids: movie.genres?.map((g) => g.id),
               },
             }}
@@ -812,7 +817,7 @@ export default function MovieDetailScreen() {
             visible={reminderModalVisible}
             onClose={() => setReminderModalVisible(false)}
             movieTitle={movie.title}
-            releaseDate={movie.release_date || null}
+            releaseDate={displayReleaseDate || movie.release_date || null}
             currentTiming={reminder?.reminderTiming}
             hasReminder={hasReminder}
             onSetReminder={handleSetReminder}
@@ -824,7 +829,7 @@ export default function MovieDetailScreen() {
             visible={watchedModalVisible}
             onClose={() => setWatchedModalVisible(false)}
             movieTitle={movie.title}
-            releaseDate={movie.release_date || null}
+            releaseDate={displayReleaseDate || movie.release_date || null}
             watchCount={watchCount}
             onMarkAsWatched={handleMarkAsWatched}
             onClearAll={handleClearWatches}
@@ -841,7 +846,7 @@ export default function MovieDetailScreen() {
                 title: movie.title,
                 posterPath: movie.poster_path,
                 backdropPath: movie.backdrop_path,
-                releaseYear: movie.release_date?.split('-')[0] || '',
+                releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
                 genres: movie.genres?.map((g) => g.name) || [],
                 userRating,
               }}
