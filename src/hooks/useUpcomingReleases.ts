@@ -1,8 +1,11 @@
-import { Episode, tmdbApi, TVShowDetails } from '@/src/api/tmdb';
+import { Episode, MovieDetails, tmdbApi, TVShowDetails } from '@/src/api/tmdb';
 import { formatMonthYear } from '@/src/components/CustomDatePicker/utils';
 import { useAuth } from '@/src/context/auth';
+import { useRegion } from '@/src/context/RegionProvider';
 import { ListMediaItem } from '@/src/services/ListService';
 import { Reminder } from '@/src/types/reminder';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
+import { getRegionalReleaseDate } from '@/src/utils/mediaUtils';
 import { createRateLimitedQueryFn } from '@/src/utils/rateLimitedQuery';
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -49,8 +52,8 @@ export interface UseUpcomingReleasesResult {
   error: Error | null;
 }
 
-// Stale time for TV show details enrichment (30 minutes)
-const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
+// Stale time for details enrichment (30 minutes)
+const DETAILS_STALE_TIME = 1000 * 60 * 30;
 // Stale time for season details (15 minutes - shorter to catch new episodes)
 const SEASON_DETAILS_STALE_TIME = 1000 * 60 * 15;
 // Maximum episodes to show per show
@@ -73,12 +76,29 @@ function extractTVShowIds(items: ListMediaItem[]): number[] {
 }
 
 /**
- * Parse a date string safely, returning null if invalid
+ * Extract unique Movie IDs from list items that need enrichment
+ */
+function extractMovieIds(items: ListMediaItem[]): number[] {
+  const movieIds = new Set<number>();
+  items.forEach((item) => {
+    if (item.media_type === 'movie') {
+      movieIds.add(item.id);
+    }
+  });
+  return Array.from(movieIds);
+}
+
+/**
+ * Parse a date string safely, returning null if invalid.
+ * Uses parseTmdbDate to ensure consistent local date parsing (avoids timezone shifts).
  */
 function parseDate(dateStr: string | undefined | null): Date | null {
   if (!dateStr) return null;
-  const date = new Date(dateStr);
-  return isNaN(date.getTime()) ? null : date;
+  try {
+    return parseTmdbDate(dateStr);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -128,9 +148,12 @@ interface SeasonFetchRequest {
  *
  * For TV shows, fetches full season details to show all upcoming episodes
  * (up to 5 per show) instead of just the next episode.
+ * 
+ * For Movies, fetches full movie details to get region-specific release dates.
  */
 export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { user } = useAuth();
+  const { region } = useRegion();
   const { data: lists, isLoading: isLoadingLists } = useLists();
   const { data: reminders, isLoading: isLoadingReminders } = useReminders();
 
@@ -155,20 +178,31 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     return items;
   }, [lists, isGuest]);
 
-  // Get TV show IDs that need enrichment
+  // Get IDs that need enrichment
   const tvShowIds = useMemo(() => extractTVShowIds(listItems), [listItems]);
+  const movieIds = useMemo(() => extractMovieIds(listItems), [listItems]);
 
-  // LEVEL 1: Fetch TV show details in parallel to get next_episode_to_air and season info
+  // LEVEL 1a: Fetch TV show details in parallel
   const tvDetailsQueries = useQueries({
     queries: tvShowIds.map((id) => ({
       queryKey: ['tv', id, 'calendar-enrichment'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getTVShowDetails(id)),
-      staleTime: TV_DETAILS_STALE_TIME,
+      staleTime: DETAILS_STALE_TIME,
       enabled: !isGuest && tvShowIds.length > 0,
     })),
   });
 
-  // Create a map of TV show ID -> details for quick lookup
+  // LEVEL 1b: Fetch Movie details in parallel (for region-specific dates)
+  const movieDetailsQueries = useQueries({
+    queries: movieIds.map((id) => ({
+      queryKey: ['movie', id, 'calendar-enrichment'],
+      queryFn: createRateLimitedQueryFn(() => tmdbApi.getMovieDetails(id)),
+      staleTime: DETAILS_STALE_TIME,
+      enabled: !isGuest && movieIds.length > 0,
+    })),
+  });
+
+  // Create lookup maps
   const tvDetailsMap = useMemo(() => {
     const map = new Map<number, TVShowDetails>();
     tvDetailsQueries.forEach((query, index) => {
@@ -178,6 +212,16 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     });
     return map;
   }, [tvDetailsQueries, tvShowIds]);
+
+  const movieDetailsMap = useMemo(() => {
+    const map = new Map<number, MovieDetails>();
+    movieDetailsQueries.forEach((query, index) => {
+      if (query.data) {
+        map.set(movieIds[index], query.data);
+      }
+    });
+    return map;
+  }, [movieDetailsQueries, movieIds]);
 
   // Determine which seasons need to be fetched
   const seasonFetchRequests = useMemo(() => {
@@ -238,7 +282,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     return map;
   }, [seasonQueries, seasonFetchRequests]);
 
-  const isLoadingDetails = tvDetailsQueries.some((q) => q.isLoading);
+  const isLoadingDetails = tvDetailsQueries.some((q) => q.isLoading) || movieDetailsQueries.some((q) => q.isLoading);
   const isLoadingSeasons = seasonQueries.some((q) => q.isLoading);
   const isLoadingEnrichment = isLoadingDetails || isLoadingSeasons;
 
@@ -254,7 +298,13 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     listItems.forEach((item) => {
       if (item.media_type !== 'movie') return;
 
-      const releaseDate = parseDate(item.release_date);
+      // Try to get region-specific date from enrichment details first
+      const movieDetails = movieDetailsMap.get(item.id);
+      const regionalDateStr = movieDetails ? getRegionalReleaseDate(movieDetails, region) : null;
+      
+      // Fallback to item date if regional unavailable
+      const releaseDate = parseDate(regionalDateStr || item.release_date);
+
       if (!releaseDate || releaseDate < today) return;
 
       const uniqueKey = `movie-${item.id}`;
@@ -271,7 +321,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
           mediaType: 'movie',
           title: item.title,
           posterPath: item.poster_path,
-          backdropPath: null,
+          backdropPath: movieDetails?.backdrop_path || null,
           releaseDate,
           isReminder: false,
           sourceLists: [item.sourceList],
@@ -398,7 +448,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     releases.sort((a, b) => a.releaseDate.getTime() - b.releaseDate.getTime());
 
     return releases;
-  }, [listItems, seasonDataMap, tvDetailsMap, reminders, isGuest]);
+  }, [listItems, seasonDataMap, tvDetailsMap, movieDetailsMap, reminders, isGuest, region]);
 
   // Group releases by month
   const sections = useMemo(() => {
@@ -429,8 +479,9 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
 
   const isLoading = isLoadingLists || isLoadingReminders;
   const detailsError = tvDetailsQueries.find((q) => q.error)?.error as Error | null;
+  const movieDetailsError = movieDetailsQueries.find((q) => q.error)?.error as Error | null;
   const seasonError = seasonQueries.find((q) => q.error)?.error as Error | null;
-  const error = detailsError || seasonError;
+  const error = detailsError || movieDetailsError || seasonError;
 
   return {
     sections,
