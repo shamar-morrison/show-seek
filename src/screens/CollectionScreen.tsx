@@ -106,24 +106,26 @@ export default function CollectionScreen() {
   const handleStopTracking = useCallback(() => {
     if (!collectionQuery.data) return;
 
-    stopTrackingMutation.mutate(
-      {
-        collectionId,
-        collectionName: collectionQuery.data.name,
-      },
-      {
-        onSuccess: () => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    requireAuth(() => {
+      stopTrackingMutation.mutate(
+        {
+          collectionId,
+          collectionName: collectionQuery.data.name,
         },
-        onError: (error) => {
-          // Cancelled by user is not an error to log
-          if (error.message !== 'Cancelled') {
-            console.error('[CollectionScreen] Failed to stop tracking:', error);
-          }
-        },
-      }
-    );
-  }, [collectionQuery.data, stopTrackingMutation, collectionId]);
+        {
+          onSuccess: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+          onError: (error) => {
+            // Cancelled by user is not an error to log
+            if (error.message !== 'Cancelled') {
+              console.error('[CollectionScreen] Failed to stop tracking:', error);
+            }
+          },
+        }
+      );
+    }, 'Sign in to manage collection tracking');
+  }, [requireAuth, collectionQuery.data, stopTrackingMutation, collectionId]);
 
   if (collectionQuery.isLoading) {
     return (
@@ -197,6 +199,15 @@ export default function CollectionScreen() {
         <View style={styles.content}>
           <Text style={styles.title}>{collection.name}</Text>
 
+          {/* Overview */}
+          {collection.overview && (
+            <ExpandableText
+              text={collection.overview}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
+            />
+          )}
+
           {/* Tracking Button & Progress */}
           <View style={styles.trackingSection}>
             {isTracked ? (
@@ -262,14 +273,6 @@ export default function CollectionScreen() {
               </Text>
             )}
           </View>
-
-          {collection.overview && (
-            <ExpandableText
-              text={collection.overview}
-              style={styles.overview}
-              readMoreStyle={styles.readMore}
-            />
-          )}
 
           <Text style={styles.sectionTitle}>
             {sortedMovies.length} {sortedMovies.length === 1 ? 'Movie' : 'Movies'}
@@ -410,7 +413,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.hero,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: SPACING.m,
+    marginBottom: SPACING.s,
   },
   // Tracking Section
   trackingSection: {
@@ -486,7 +489,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     lineHeight: FONT_SIZE.m * 1.5,
-    marginBottom: SPACING.s,
+    marginBottom: SPACING.l,
   },
   readMore: {
     color: COLORS.primary,
