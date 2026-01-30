@@ -16,119 +16,108 @@ const COLLECTION_GC_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
  * Hook to subscribe to all tracked collections with real-time updates.
- * Uses deferred listener pattern to avoid blocking navigation.
+ * Pattern matches useShowEpisodeTracking for consistency.
  */
 export const useTrackedCollections = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const queryKey = ['collectionTracking', 'all', userId];
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(!!userId);
+  const [error, setError] = useState<Error | null>(null);
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
 
-  // Use React Query for caching
-  const query = useQuery({
-    queryKey,
-    queryFn: () => collectionTrackingService.getAllTrackedCollections(),
-    enabled: !!userId,
-    staleTime: Infinity, // Never consider stale - we update via listener
-    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
-  });
-
-  // Set up real-time listener with deferred initialization
+  // Set up real-time listener IMMEDIATELY (no deferred timeout)
   useEffect(() => {
     if (!userId) {
       setIsSubscriptionLoading(false);
       return;
     }
 
-    let unsubscribe: (() => void) | null = null;
+    setError(null);
+    setIsSubscriptionLoading(true);
 
-    // Defer listener setup to after the current render tick completes
-    const timeoutId = setTimeout(() => {
-      unsubscribe = collectionTrackingService.subscribeToTrackedCollections(
-        (collections) => {
-          queryClient.setQueryData(queryKey, collections);
-          setIsSubscriptionLoading(false);
-        },
-        (error) => {
-          console.error('[useTrackedCollections] Subscription error:', error);
-          setIsSubscriptionLoading(false);
-        }
-      );
-    }, 0);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (unsubscribe) {
-        unsubscribe();
+    const unsubscribe = collectionTrackingService.subscribeToTrackedCollections(
+      (collections) => {
+        queryClient.setQueryData(queryKey, collections);
+        setError(null);
+        setIsSubscriptionLoading(false);
+      },
+      (err) => {
+        setError(err);
+        setIsSubscriptionLoading(false);
+        console.error('[useTrackedCollections] Subscription error:', err);
       }
-    };
+    );
+
+    return () => unsubscribe();
   }, [userId, queryClient]);
+
+  // Query just reads from cache - data is populated by the listener
+  const query = useQuery({
+    queryKey,
+    queryFn: () => {
+      // Return from cache, initial data comes from subscription
+      return queryClient.getQueryData<TrackedCollection[]>(queryKey) ?? [];
+    },
+    enabled: !!userId,
+    staleTime: Infinity, // Data is updated via subscription
+  });
 
   return {
     collections: query.data ?? [],
-    isLoading: query.isLoading || isSubscriptionLoading,
-    error: query.error,
+    isLoading: isSubscriptionLoading,
+    error,
   };
 };
 
 /**
  * Hook to subscribe to a single collection's tracking data.
  * Returns null if not tracked.
+ * Pattern matches useShowEpisodeTracking for consistency.
  */
 export const useCollectionTracking = (collectionId: number) => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const queryKey = ['collectionTracking', userId, collectionId];
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(!!userId);
+  const [error, setError] = useState<Error | null>(null);
+  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
 
-  const query = useQuery({
-    queryKey,
-    queryFn: async () => {
-      const isTracked = await collectionTrackingService.isCollectionTracked(collectionId);
-      if (!isTracked) return null;
-      // Return from the all collections cache if available
-      const allCollections = queryClient.getQueryData<TrackedCollection[]>([
-        'collectionTracking',
-        'all',
-        userId,
-      ]);
-      return allCollections?.find((c) => c.collectionId === collectionId) ?? null;
-    },
-    enabled: !!userId && !!collectionId,
-    staleTime: Infinity,
-  });
-
-  // Set up real-time listener with deferred initialization
+  // Set up real-time listener IMMEDIATELY (no deferred timeout)
   useEffect(() => {
     if (!userId || !collectionId) {
       setIsSubscriptionLoading(false);
       return;
     }
 
-    let unsubscribe: (() => void) | null = null;
+    setError(null);
+    setIsSubscriptionLoading(true);
 
-    // Defer listener setup to after the current render tick completes
-    const timeoutId = setTimeout(() => {
-      unsubscribe = collectionTrackingService.subscribeToCollection(
-        collectionId,
-        (collection) => {
-          queryClient.setQueryData(queryKey, collection);
-          setIsSubscriptionLoading(false);
-        },
-        (error) => {
-          console.error('[useCollectionTracking] Subscription error:', error);
-          setIsSubscriptionLoading(false);
-        }
-      );
-    }, 0);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (unsubscribe) {
-        unsubscribe();
+    const unsubscribe = collectionTrackingService.subscribeToCollection(
+      collectionId,
+      (collection) => {
+        queryClient.setQueryData(queryKey, collection);
+        setError(null);
+        setIsSubscriptionLoading(false);
+      },
+      (err) => {
+        setError(err);
+        setIsSubscriptionLoading(false);
+        console.error('[useCollectionTracking] Subscription error:', err);
       }
-    };
+    );
+
+    return () => unsubscribe();
   }, [userId, collectionId, queryClient]);
+
+  // Query just reads from cache - data is populated by the listener
+  const query = useQuery({
+    queryKey,
+    queryFn: () => {
+      // Return from cache, initial data comes from subscription
+      return queryClient.getQueryData<TrackedCollection | null>(queryKey) ?? null;
+    },
+    enabled: !!userId && !!collectionId,
+    staleTime: Infinity, // Data is updated via subscription
+  });
 
   const tracking = query.data ?? null;
   const isTracked = tracking !== null;
@@ -142,7 +131,8 @@ export const useCollectionTracking = (collectionId: number) => {
     watchedCount,
     totalMovies,
     percentage,
-    isLoading: query.isLoading || isSubscriptionLoading,
+    isLoading: isSubscriptionLoading,
+    error,
   };
 };
 

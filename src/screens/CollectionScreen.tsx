@@ -82,6 +82,9 @@ export default function CollectionScreen() {
     requireAuth(async () => {
       if (!collectionQuery.data) return;
 
+      // Guard: don't start tracking if already tracked
+      if (isTracked) return;
+
       if (!canTrackMore) {
         showPremiumAlert('Unlimited Collection Tracking');
         return;
