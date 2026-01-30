@@ -132,6 +132,24 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
+      // Collection tracking (movie collections like Lord of the Rings, Marvel, etc.)
+      match /collection_tracking/{collectionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll(['collectionId', 'name', 'totalMovies', 'watchedMovieIds', 'startedAt', 'lastUpdated'])
+          && request.resource.data.collectionId is number
+          && request.resource.data.name is string
+          && request.resource.data.totalMovies is number
+          && request.resource.data.watchedMovieIds is list
+          && request.resource.data.startedAt is number
+          && request.resource.data.lastUpdated is number;
+        // Allow update for both partial updates (adding watched movies) and full rewrites (setDoc)
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['collectionId', 'name', 'totalMovies', 'watchedMovieIds', 'startedAt', 'lastUpdated']);
+        allow delete: if isOwner(userId);
+      }
+
       // Favorite persons collection
       match /favorite_persons/{personId} {
         allow read: if isOwner(userId);

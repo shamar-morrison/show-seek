@@ -31,8 +31,8 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
-import { useCurrentTab } from '@/src/context/TabContext';
 import { useRegion } from '@/src/context/RegionProvider';
+import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -51,6 +51,7 @@ import {
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
+import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -130,9 +131,17 @@ export default function MovieDetailScreen() {
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
   const listIcon =
-    listIds.length === 1 ? getListIconComponent(listIds[0]) : isInAnyList ? MultipleListsIcon : undefined;
+    listIds.length === 1
+      ? getListIconComponent(listIds[0])
+      : isInAnyList
+        ? MultipleListsIcon
+        : undefined;
   const listColor =
-    listIds.length === 1 ? getListColor(listIds[0]) : isInAnyList ? MULTIPLE_LISTS_COLOR : undefined;
+    listIds.length === 1
+      ? getListColor(listIds[0])
+      : isInAnyList
+        ? MULTIPLE_LISTS_COLOR
+        : undefined;
 
   const {
     reminder,
@@ -247,7 +256,7 @@ export default function MovieDetailScreen() {
   const movie = movieQuery.data;
   // Get region-specific release date
   const displayReleaseDate = getRegionalReleaseDate(movie, region);
-  
+
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const directors = creditsQuery.data?.crew.filter((c) => c.job === 'Director') || [];
   const videos = videosQuery.data || [];
@@ -353,6 +362,16 @@ export default function MovieDetailScreen() {
     const isFirstWatch = watchCount === 0;
     await addWatchMutation.mutateAsync(date);
 
+    // Update collection tracking if movie belongs to a tracked collection
+    if (movie?.belongs_to_collection) {
+      try {
+        await collectionTrackingService.addWatchedMovie(movie.belongs_to_collection.id, movieId);
+      } catch (collectionError) {
+        // Silent fail - collection might not be tracked
+        console.log('[MovieDetailScreen] Collection tracking update skipped:', collectionError);
+      }
+    }
+
     // Auto-add to "Already Watched" list on first watch
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
       const isNotInAlreadyWatched = !membership['already-watched'];
@@ -395,6 +414,22 @@ export default function MovieDetailScreen() {
         try {
           const isFirstWatch = watchCount === 0;
           await addWatchMutation.mutateAsync(new Date());
+
+          // Update collection tracking if movie belongs to a tracked collection
+          if (movie?.belongs_to_collection) {
+            try {
+              await collectionTrackingService.addWatchedMovie(
+                movie.belongs_to_collection.id,
+                movieId
+              );
+            } catch (collectionError) {
+              // Silent fail - collection might not be tracked
+              console.log(
+                '[MovieDetailScreen] Collection tracking update skipped:',
+                collectionError
+              );
+            }
+          }
 
           // Auto-add to "Already Watched" list on first watch
           if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
