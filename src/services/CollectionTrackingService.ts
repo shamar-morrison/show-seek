@@ -36,6 +36,7 @@ class CollectionTrackingService {
   /**
    * Subscribe to all tracked collections for the current user.
    * Returns empty array if no collections tracked.
+   * Includes 10-second first-event timeout for slow/stalled connections.
    */
   subscribeToTrackedCollections(
     callback: (collections: TrackedCollection[]) => void,
@@ -48,10 +49,40 @@ class CollectionTrackingService {
     }
 
     const collectionRef = this.getCollectionTrackingCollectionRef(user.uid);
+    let firstEventReceived = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let unsubscribeSnapshot: (() => void) | null = null;
 
-    return onSnapshot(
+    // Set up 10-second first-event timeout
+    timeoutId = setTimeout(() => {
+      if (!firstEventReceived) {
+        console.error('[CollectionTrackingService] First event timeout - no response in 10s');
+        // Clean up the listener
+        if (unsubscribeSnapshot) {
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
+        }
+        // Notify error
+        if (onError) {
+          onError(new Error('Connection timed out. Please check your network.'));
+        }
+        // Fallback to empty state
+        callback([]);
+      }
+    }, 10000);
+
+    unsubscribeSnapshot = onSnapshot(
       collectionRef,
       (snapshot) => {
+        // Clear timeout on first event
+        if (!firstEventReceived) {
+          firstEventReceived = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+        }
+
         const collections: TrackedCollection[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
@@ -67,6 +98,11 @@ class CollectionTrackingService {
         callback(collections);
       },
       (error) => {
+        // Clear timeout on error
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         console.error('[CollectionTrackingService] Subscription error:', error);
         const message = getFirestoreErrorMessage(error);
         if (onError) {
@@ -76,11 +112,24 @@ class CollectionTrackingService {
         callback([]);
       }
     );
+
+    // Return unsubscribe function that cleans up both listener and timeout
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+    };
   }
 
   /**
    * Subscribe to a single collection's tracking data.
    * Returns null if collection is not tracked.
+   * Includes 10-second first-event timeout for slow/stalled connections.
    */
   subscribeToCollection(
     collectionId: number,
@@ -94,10 +143,40 @@ class CollectionTrackingService {
     }
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
+    let firstEventReceived = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let unsubscribeSnapshot: (() => void) | null = null;
 
-    return onSnapshot(
+    // Set up 10-second first-event timeout
+    timeoutId = setTimeout(() => {
+      if (!firstEventReceived) {
+        console.error('[CollectionTrackingService] First event timeout - no response in 10s');
+        // Clean up the listener
+        if (unsubscribeSnapshot) {
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
+        }
+        // Notify error
+        if (onError) {
+          onError(new Error('Connection timed out. Please check your network.'));
+        }
+        // Fallback to null state
+        callback(null);
+      }
+    }, 10000);
+
+    unsubscribeSnapshot = onSnapshot(
       trackingRef,
       (snapshot) => {
+        // Clear timeout on first event
+        if (!firstEventReceived) {
+          firstEventReceived = true;
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+        }
+
         if (snapshot.exists()) {
           const data = snapshot.data();
           callback({
@@ -113,6 +192,11 @@ class CollectionTrackingService {
         }
       },
       (error) => {
+        // Clear timeout on error
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         console.error('[CollectionTrackingService] Subscription error:', error);
         const message = getFirestoreErrorMessage(error);
         if (onError) {
@@ -121,6 +205,18 @@ class CollectionTrackingService {
         callback(null);
       }
     );
+
+    // Return unsubscribe function that cleans up both listener and timeout
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
+      }
+    };
   }
 
   /**
