@@ -246,7 +246,7 @@ class CollectionTrackingService {
     if (!user) return 0;
 
     const collectionRef = this.getCollectionTrackingCollectionRef(user.uid);
-    const timeout = createTimeoutWithCleanup(10000);
+    const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
 
     try {
       const snapshot = await Promise.race([getDocs(collectionRef), timeout.promise]).finally(() => {
@@ -254,8 +254,7 @@ class CollectionTrackingService {
       });
       return snapshot.docs.length;
     } catch (error) {
-      console.error('[CollectionTrackingService] Error getting count:', error);
-      return 0;
+      throw new Error(getFirestoreErrorMessage(error));
     }
   }
 
@@ -268,6 +267,7 @@ class CollectionTrackingService {
     totalMovies: number,
     initialWatchedMovieIds: number[] = []
   ): Promise<void> {
+    const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -284,13 +284,11 @@ class CollectionTrackingService {
         lastUpdated: now,
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(trackingRef, data), timeoutPromise]);
+      await Promise.race([setDoc(trackingRef, data), timeout.promise]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -299,6 +297,8 @@ class CollectionTrackingService {
    * Returns the list of watched movie IDs (for clearing watch history if desired).
    */
   async stopTracking(collectionId: number): Promise<number[]> {
+    const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
+    const deleteTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -306,22 +306,20 @@ class CollectionTrackingService {
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
       // First, get the watched movie IDs to return (with timeout)
-      const getDocTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
+      getDocTimeoutHelper.cancel(); // Cancel immediately after success
       const watchedMovieIds: number[] = snapshot.exists()
         ? snapshot.data()?.watchedMovieIds || []
         : [];
 
-      const deleteTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
-      await Promise.race([deleteDoc(trackingRef), deleteTimeout]);
+      await Promise.race([deleteDoc(trackingRef), deleteTimeoutHelper.promise]);
 
       return watchedMovieIds;
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
+    } finally {
+      getDocTimeoutHelper.cancel();
+      deleteTimeoutHelper.cancel();
     }
   }
 
@@ -330,6 +328,8 @@ class CollectionTrackingService {
    * Uses atomic arrayUnion to avoid read-modify-write race conditions.
    */
   async addWatchedMovie(collectionId: number, movieId: number): Promise<void> {
+    const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
+    const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -337,17 +337,11 @@ class CollectionTrackingService {
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
       // Check if collection is being tracked (short-circuit if not) - with timeout
-      const getDocTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
+      getDocTimeoutHelper.cancel(); // Cancel immediately after success
       if (!snapshot.exists()) {
         return;
       }
-
-      const updateTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
 
       // Use arrayUnion for atomic add (no duplicates, no race conditions)
       await Promise.race([
@@ -355,10 +349,13 @@ class CollectionTrackingService {
           watchedMovieIds: arrayUnion(movieId),
           lastUpdated: Date.now(),
         }),
-        updateTimeout,
+        updateTimeoutHelper.promise,
       ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
+    } finally {
+      getDocTimeoutHelper.cancel();
+      updateTimeoutHelper.cancel();
     }
   }
 
@@ -367,6 +364,8 @@ class CollectionTrackingService {
    * Uses atomic arrayRemove to avoid read-modify-write race conditions.
    */
   async removeWatchedMovie(collectionId: number, movieId: number): Promise<void> {
+    const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
+    const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -374,17 +373,11 @@ class CollectionTrackingService {
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
       // Check if collection is being tracked (short-circuit if not) - with timeout
-      const getDocTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
+      getDocTimeoutHelper.cancel(); // Cancel immediately after success
       if (!snapshot.exists()) {
         return;
       }
-
-      const updateTimeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
-      });
 
       // Use arrayRemove for atomic removal (no race conditions)
       await Promise.race([
@@ -392,10 +385,13 @@ class CollectionTrackingService {
           watchedMovieIds: arrayRemove(movieId),
           lastUpdated: Date.now(),
         }),
-        updateTimeout,
+        updateTimeoutHelper.promise,
       ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
+    } finally {
+      getDocTimeoutHelper.cancel();
+      updateTimeoutHelper.cancel();
     }
   }
 
