@@ -418,6 +418,7 @@ const styles = StyleSheet.create({
   // Tracking Section
   trackingSection: {
     marginBottom: SPACING.l,
+    marginTop: SPACING.l,
   },
   trackingButton: {
     flexDirection: 'row',
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     lineHeight: FONT_SIZE.m * 1.5,
-    marginBottom: SPACING.l,
+    marginBottom: SPACING.xs,
   },
   readMore: {
     color: COLORS.primary,

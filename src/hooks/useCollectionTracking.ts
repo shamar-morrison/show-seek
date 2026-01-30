@@ -193,6 +193,7 @@ export const useStartCollectionTracking = () => {
 /**
  * Mutation hook for stopping collection tracking.
  * Shows confirmation alert before stopping.
+ * Resolves with null if user cancels (avoids error state).
  */
 export const useStopCollectionTracking = () => {
   const queryClient = useQueryClient();
@@ -201,7 +202,7 @@ export const useStopCollectionTracking = () => {
     mutationKey: ['stopCollectionTracking'],
     mutationFn: async (params: { collectionId: number; collectionName: string }) => {
       // Show confirmation first
-      return new Promise<number[]>((resolve, reject) => {
+      return new Promise<number[] | null>((resolve, reject) => {
         Alert.alert(
           'Stop Tracking Collection',
           `This will remove the watched status from all movies in "${params.collectionName}". Are you sure?`,
@@ -209,7 +210,7 @@ export const useStopCollectionTracking = () => {
             {
               text: 'Cancel',
               style: 'cancel',
-              onPress: () => reject(new Error('Cancelled')),
+              onPress: () => resolve(null), // Resolve with null instead of rejecting
             },
             {
               text: 'Stop Tracking',
@@ -229,8 +230,11 @@ export const useStopCollectionTracking = () => {
         );
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
+    onSuccess: (result) => {
+      // Only invalidate if stop tracking actually happened (not cancelled)
+      if (result !== null) {
+        queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
+      }
     },
   });
 };
