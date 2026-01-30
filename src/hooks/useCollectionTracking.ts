@@ -11,8 +11,8 @@ import { Alert } from 'react-native';
 import { auth } from '../firebase/config';
 
 // Aggressive cache time for collection data since it rarely changes
-const COLLECTION_STALE_TIME = 24 * 60 * 60 * 1000; // 24 hours
-const COLLECTION_GC_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
+const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
+const COLLECTION_GC_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
  * Hook to subscribe to all tracked collections with real-time updates.
@@ -196,7 +196,6 @@ export const useStartCollectionTracking = () => {
  */
 export const useStopCollectionTracking = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationKey: ['stopCollectionTracking'],
