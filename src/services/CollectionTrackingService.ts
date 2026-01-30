@@ -20,6 +20,11 @@ import type { TrackedCollection } from '../types/collectionTracking';
  */
 export const MAX_FREE_COLLECTIONS = 2;
 
+/**
+ * Timeout duration for Firestore operations (10 seconds)
+ */
+const TIMEOUT_MS = 10000;
+
 class CollectionTrackingService {
   /**
    * Get reference to a collection tracking document
@@ -300,17 +305,19 @@ class CollectionTrackingService {
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
-      // First, get the watched movie IDs to return
-      const snapshot = await getDoc(trackingRef);
+      // First, get the watched movie IDs to return (with timeout)
+      const getDocTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
+      });
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
       const watchedMovieIds: number[] = snapshot.exists()
         ? snapshot.data()?.watchedMovieIds || []
         : [];
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      const deleteTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
       });
-
-      await Promise.race([deleteDoc(trackingRef), timeoutPromise]);
+      await Promise.race([deleteDoc(trackingRef), deleteTimeout]);
 
       return watchedMovieIds;
     } catch (error) {
@@ -329,14 +336,17 @@ class CollectionTrackingService {
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
-      // Check if collection is being tracked (short-circuit if not)
-      const snapshot = await getDoc(trackingRef);
+      // Check if collection is being tracked (short-circuit if not) - with timeout
+      const getDocTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
+      });
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
       if (!snapshot.exists()) {
         return;
       }
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      const updateTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
       });
 
       // Use arrayUnion for atomic add (no duplicates, no race conditions)
@@ -345,7 +355,7 @@ class CollectionTrackingService {
           watchedMovieIds: arrayUnion(movieId),
           lastUpdated: Date.now(),
         }),
-        timeoutPromise,
+        updateTimeout,
       ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
@@ -363,14 +373,17 @@ class CollectionTrackingService {
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
-      // Check if collection is being tracked (short-circuit if not)
-      const snapshot = await getDoc(trackingRef);
+      // Check if collection is being tracked (short-circuit if not) - with timeout
+      const getDocTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
+      });
+      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeout]);
       if (!snapshot.exists()) {
         return;
       }
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      const updateTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), TIMEOUT_MS);
       });
 
       // Use arrayRemove for atomic removal (no race conditions)
@@ -379,7 +392,7 @@ class CollectionTrackingService {
           watchedMovieIds: arrayRemove(movieId),
           lastUpdated: Date.now(),
         }),
-        timeoutPromise,
+        updateTimeout,
       ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
