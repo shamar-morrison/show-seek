@@ -8,6 +8,7 @@ import {
   Bell,
   Film,
   Heart,
+  Layers,
   Layout,
   ListPlus,
   Play,
@@ -150,6 +151,12 @@ export default function LibraryScreen() {
             icon: Play,
             title: t('library.watchProgress'),
             route: '/(tabs)/library/watch-progress',
+          },
+          {
+            id: 'collection-progress',
+            icon: Layers,
+            title: t('library.collectionProgress'),
+            route: '/(tabs)/library/collection-progress',
           },
           {
             id: 'watch-status',
