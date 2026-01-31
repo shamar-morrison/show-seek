@@ -146,8 +146,8 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
-        label={t('profile.hideUnreleasedContent')}
-        subtitle={t('profile.hideUnreleasedContentDescription')}
+        label={t('profile.hideUnreleased')}
+        subtitle={t('profile.hideUnreleasedDescription')}
         value={!!preferences?.hideUnreleasedContent}
         onValueChange={(value) => handleUpdate('hideUnreleasedContent', value)}
         loading={isLoading}

@@ -461,7 +461,9 @@
     "checkConnection": "Please check your connection and try again",
     "sendFeedback": "Send Feedback",
     "exportData": "Export Data",
-    "webApp": "ShowSeek Web App"
+    "webApp": "ShowSeek Web App",
+    "hideUnreleased": "Hide unreleased content",
+    "hideUnreleasedDescription": "Hide movies and TV shows that haven't been released yet"
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",
