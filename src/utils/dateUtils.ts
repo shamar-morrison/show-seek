@@ -58,3 +58,16 @@ export function toLocalDateKey(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Check if a media item has been released based on its date.
+ * For use with client-side filtering when API date filters are unavailable.
+ *
+ * @param releaseDate - YYYY-MM-DD date string (release_date or first_air_date)
+ * @returns true if released (date <= today) or if no date provided (fail-open)
+ */
+export function isReleased(releaseDate: string | null | undefined): boolean {
+  if (!releaseDate) return true; // fail-open: show items with no date
+  const today = toLocalDateKey(new Date());
+  return releaseDate <= today;
+}
