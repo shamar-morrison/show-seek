@@ -144,6 +144,15 @@ export function PreferencesSection({
         isLocked={!isPremium}
         onLockPress={onPremiumPress}
       />
+
+      <PreferenceItem
+        label={t('profile.hideUnreleased')}
+        subtitle={t('profile.hideUnreleasedDescription')}
+        value={!!preferences?.hideUnreleasedContent}
+        onValueChange={(value) => handleUpdate('hideUnreleasedContent', value)}
+        loading={isLoading}
+        disabled={isUpdating}
+      />
     </View>
   );
 }

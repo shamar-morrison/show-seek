@@ -9,6 +9,7 @@ import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ export default function DiscoverScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const { t } = useTranslation();
+  const { preferences } = usePreferences();
 
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
@@ -52,7 +54,7 @@ export default function DiscoverScreen() {
   const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   const discoverQuery = useInfiniteQuery({
-    queryKey: ['discover', mediaType, filters],
+    queryKey: ['discover', mediaType, filters, preferences?.hideUnreleasedContent],
     queryFn: async ({ pageParam = 1 }) => {
       const params = {
         genre: filters.genre?.toString(),
@@ -62,6 +64,7 @@ export default function DiscoverScreen() {
         withOriginalLanguage: filters.language || undefined,
         withWatchProviders: filters.watchProvider || undefined,
         page: pageParam,
+        hideUnreleased: preferences?.hideUnreleasedContent,
       };
 
       if (mediaType === 'movie') {

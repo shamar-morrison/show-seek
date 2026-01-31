@@ -621,6 +621,7 @@ export const tmdbApi = {
     withOriginalLanguage?: string;
     withWatchProviders?: number;
     watchRegion?: string;
+    hideUnreleased?: boolean;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
       params: {
@@ -632,6 +633,9 @@ export const tmdbApi = {
         with_original_language: params?.withOriginalLanguage,
         with_watch_providers: params?.withWatchProviders,
         watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+        'primary_release_date.lte': params?.hideUnreleased
+          ? new Date().toISOString().split('T')[0]
+          : undefined,
       },
     });
     return data;
@@ -646,6 +650,7 @@ export const tmdbApi = {
     withOriginalLanguage?: string;
     withWatchProviders?: number;
     watchRegion?: string;
+    hideUnreleased?: boolean;
   }) => {
     const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
       params: {
@@ -657,6 +662,9 @@ export const tmdbApi = {
         with_original_language: params?.withOriginalLanguage,
         with_watch_providers: params?.withWatchProviders,
         watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+        'first_air_date.lte': params?.hideUnreleased
+          ? new Date().toISOString().split('T')[0]
+          : undefined,
       },
     });
     return data;
