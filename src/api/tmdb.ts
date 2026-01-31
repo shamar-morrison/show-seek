@@ -791,4 +791,31 @@ export const tmdbApi = {
 
     return [...movieTrailers, ...tvTrailers];
   },
+
+  /**
+   * Get external IDs for a movie (IMDB ID, etc.)
+   */
+  getMovieExternalIds: async (id: number) => {
+    const { data } = await tmdbClient.get<{
+      imdb_id: string | null;
+      facebook_id: string | null;
+      instagram_id: string | null;
+      twitter_id: string | null;
+    }>(`/movie/${id}/external_ids`);
+    return data;
+  },
+
+  /**
+   * Get external IDs for a TV show (IMDB ID, etc.)
+   */
+  getTVExternalIds: async (id: number) => {
+    const { data } = await tmdbClient.get<{
+      imdb_id: string | null;
+      facebook_id: string | null;
+      instagram_id: string | null;
+      twitter_id: string | null;
+      tvdb_id: number | null;
+    }>(`/tv/${id}/external_ids`);
+    return data;
+  },
 };

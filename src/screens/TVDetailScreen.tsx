@@ -4,6 +4,7 @@ import { CastSection } from '@/src/components/detail/CastSection';
 import { CreatorsSection } from '@/src/components/detail/CreatorsSection';
 import { DetailScreenSkeleton } from '@/src/components/detail/DetailScreenSkeleton';
 import { detailStyles } from '@/src/components/detail/detailStyles';
+import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
@@ -35,6 +36,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
+import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -95,6 +97,12 @@ export default function TVDetailScreen() {
     selectedMediaItem: selectedSimilarMediaItem,
   } = useDetailLongPress('tv');
 
+  // External ratings (IMDb, RT, Metacritic)
+  const { ratings: externalRatings, isLoading: isLoadingExternalRatings } = useExternalRatings(
+    'tv',
+    tvId
+  );
+
   // Wrap the long-press handler with auth guard
   const guardedHandleMediaLongPress = useCallback(
     (item: any) => {
@@ -109,9 +117,17 @@ export default function TVDetailScreen() {
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
   const listIcon =
-    listIds.length === 1 ? getListIconComponent(listIds[0]) : isInAnyList ? MultipleListsIcon : undefined;
+    listIds.length === 1
+      ? getListIconComponent(listIds[0])
+      : isInAnyList
+        ? MultipleListsIcon
+        : undefined;
   const listColor =
-    listIds.length === 1 ? getListColor(listIds[0]) : isInAnyList ? MULTIPLE_LISTS_COLOR : undefined;
+    listIds.length === 1
+      ? getListColor(listIds[0])
+      : isInAnyList
+        ? MULTIPLE_LISTS_COLOR
+        : undefined;
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
@@ -556,6 +572,9 @@ export default function TVDetailScreen() {
           />
 
           {userRating > 0 && <UserRating rating={userRating} />}
+
+          {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
+          <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
           <Text style={detailStyles.sectionTitle}>Overview</Text>
           {preferences?.blurPlotSpoilers ? (

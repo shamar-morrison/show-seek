@@ -5,6 +5,7 @@ import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { DetailScreenSkeleton } from '@/src/components/detail/DetailScreenSkeleton';
 import { detailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
+import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
@@ -37,6 +38,7 @@ import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
+import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
@@ -116,6 +118,12 @@ export default function MovieDetailScreen() {
     addToListModalRef: similarMediaModalRef,
     selectedMediaItem: selectedSimilarMediaItem,
   } = useDetailLongPress('movie');
+
+  // External ratings (IMDb, RT, Metacritic)
+  const { ratings: externalRatings, isLoading: isLoadingExternalRatings } = useExternalRatings(
+    'movie',
+    movieId
+  );
 
   // Wrap the long-press handler with auth guard
   const guardedHandleMediaLongPress = useCallback(
@@ -653,6 +661,9 @@ export default function MovieDetailScreen() {
           />
 
           {userRating > 0 && <UserRating rating={userRating} />}
+
+          {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
+          <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
           <Text style={[detailStyles.sectionTitle]}>Overview</Text>
           {preferences?.blurPlotSpoilers ? (
