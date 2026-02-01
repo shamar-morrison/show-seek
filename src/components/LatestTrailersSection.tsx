@@ -2,10 +2,11 @@ import { tmdbApi, TrailerItem } from '@/src/api/tmdb';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Tv } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface LatestTrailersSectionProps {
@@ -13,6 +14,7 @@ interface LatestTrailersSectionProps {
 }
 
 export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }) => {
+  const { preferences } = usePreferences();
   const { data: trailers, isLoading } = useQuery({
     queryKey: ['latest-trailers'],
     queryFn: () => tmdbApi.getLatestTrailers(),
@@ -21,7 +23,13 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     refetchOnWindowFocus: false,
   });
 
-  const handleTrailerPress = (trailer: TrailerItem) => {
+  // Use mqdefault.jpg (medium quality) when data saver is enabled, otherwise hqdefault.jpg (high quality)
+  const thumbnailQuality = useMemo(
+    () => (preferences?.dataSaver ? 'mqdefault' : 'hqdefault'),
+    [preferences?.dataSaver]
+  );
+
+  const handleTrailerPress = useCallback((trailer: TrailerItem) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
     Linking.openURL(youtubeUrl).catch((error) => {
       Alert.alert(
@@ -30,7 +38,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
       );
       console.error('Error opening trailer:', error);
     });
-  };
+  }, []);
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => (
@@ -41,7 +49,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
       >
         <MediaImage
           source={{
-            uri: `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`,
+            uri: `https://img.youtube.com/vi/${item.key}/${thumbnailQuality}.jpg`,
           }}
           style={styles.videoThumbnail}
           contentFit="cover"
@@ -64,7 +72,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
         </Text>
       </TouchableOpacity>
     ),
-    [handleTrailerPress]
+    [handleTrailerPress, thumbnailQuality]
   );
 
   return (

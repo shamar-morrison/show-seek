@@ -85,6 +85,36 @@ export const getImageUrl = (path: string | null, size: string = TMDB_IMAGE_SIZES
   return `${IMAGE_BASE_URL}${size}${path}`;
 };
 
+/**
+ * Get an optimized image URL based on data saver mode.
+ * When dataSaver is true, images are downscaled to reduce data usage:
+ * - original → large
+ * - large → medium
+ * - medium → small
+ * - small → small (no change)
+ */
+export const getOptimizedImageUrl = (
+  path: string | null,
+  imageType: 'poster' | 'backdrop' | 'profile',
+  size: 'small' | 'medium' | 'large' | 'original',
+  dataSaver: boolean
+): string | null => {
+  if (!path) return null;
+
+  const sizeMap: Record<
+    'small' | 'medium' | 'large' | 'original',
+    'small' | 'medium' | 'large' | 'original'
+  > = {
+    original: 'large',
+    large: 'medium',
+    medium: 'small',
+    small: 'small',
+  };
+
+  const finalSize = dataSaver ? sizeMap[size] : size;
+  return `${IMAGE_BASE_URL}${TMDB_IMAGE_SIZES[imageType][finalSize]}${path}`;
+};
+
 export interface Movie {
   id: number;
   title: string;

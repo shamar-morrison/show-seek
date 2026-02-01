@@ -162,6 +162,15 @@ export function PreferencesSection({
         loading={isLoading}
         disabled={isUpdating}
       />
+
+      <PreferenceItem
+        label={t('profile.dataSaver')}
+        subtitle={t('profile.dataSaverDescription')}
+        value={!!preferences?.dataSaver}
+        onValueChange={(value) => handleUpdate('dataSaver', value)}
+        loading={isLoading}
+        disabled={isUpdating}
+      />
     </View>
   );
 }

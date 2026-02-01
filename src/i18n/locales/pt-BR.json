@@ -449,7 +449,9 @@
     "exportData": "Exportar dados",
     "webApp": "ShowSeek Web",
     "hideTabLabels": "Ocultar rótulos das abas",
-    "hideTabLabelsDescription": "Mostrar apenas ícones na barra de navegação inferior"
+    "hideTabLabelsDescription": "Mostrar apenas ícones na barra de navegação inferior",
+    "dataSaver": "Modo de economia de dados",
+    "dataSaverDescription": "Carregar imagens de menor resolução para economizar dados"
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",

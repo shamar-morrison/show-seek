@@ -431,7 +431,9 @@
     "exportData": "Exportar datos",
     "webApp": "ShowSeek Web",
     "hideTabLabels": "Ocultar etiquetas de pestañas",
-    "hideTabLabelsDescription": "Mostrar solo los iconos en la barra de navegación inferior"
+    "hideTabLabelsDescription": "Mostrar solo los iconos en la barra de navegación inferior",
+    "dataSaver": "Modo de ahorro de datos",
+    "dataSaverDescription": "Cargar imágenes de menor resolución para ahorrar datos"
   },
   "onboarding": {
     "welcome": "Bienvenido a ShowSeek",
