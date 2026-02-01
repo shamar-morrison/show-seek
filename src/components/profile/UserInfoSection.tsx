@@ -19,7 +19,7 @@ export interface UserInfoSectionProps {
 
 /**
  * Displays user avatar, display name, email, and premium status.
- * Shows upgrade button for non-premium registered users.
+ * Compact horizontal layout with avatar on left, info on right.
  */
 export function UserInfoSection({
   user,
@@ -38,65 +38,76 @@ export function UserInfoSection({
           photoURL={user?.photoURL}
           displayName={user?.displayName}
           email={user?.email}
-          size={80}
+          size={65}
           showPremiumBadge={isPremium}
         />
       </View>
-      <Text style={styles.displayName}>{displayName}</Text>
-      <Text style={styles.email}>{email}</Text>
-      {!isPremium && !isGuest && (
-        <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
-          <Crown size={16} color={COLORS.white} style={{ marginRight: 8 }} />
-          <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
-        </TouchableOpacity>
-      )}
-      {isPremium && (
-        <View style={styles.premiumStatusContainer}>
-          <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
-        </View>
-      )}
+      <View style={styles.userInfo}>
+        <Text style={styles.displayName} numberOfLines={1}>
+          {displayName}
+        </Text>
+        <Text style={styles.email} numberOfLines={1}>
+          {email}
+        </Text>
+        {!isPremium && !isGuest && (
+          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
+            <Crown size={12} color={COLORS.white} style={{ marginRight: 6 }} />
+            <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
+          </TouchableOpacity>
+        )}
+        {isPremium && (
+          <View style={styles.premiumStatusContainer}>
+            <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   userSection: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.l,
   },
   avatarContainer: {
-    marginBottom: SPACING.m,
+    marginRight: SPACING.m,
+  },
+  userInfo: {
+    flex: 1,
   },
   displayName: {
-    fontSize: FONT_SIZE.xl,
+    fontSize: FONT_SIZE.l,
     fontWeight: '600',
     color: COLORS.white,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
+    marginBottom: 2,
   },
   email: {
-    fontSize: FONT_SIZE.m,
+    fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
   upgradeButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.l,
+    paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
-    marginTop: SPACING.m,
+    borderRadius: BORDER_RADIUS.s,
+    marginTop: SPACING.s,
   },
   upgradeButtonText: {
     color: COLORS.white,
     fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
+    fontSize: FONT_SIZE.s,
   },
   premiumStatusContainer: {
-    marginTop: SPACING.m,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.xs,
+    alignSelf: 'flex-start',
+    marginTop: SPACING.s,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: 2,
     backgroundColor: 'rgba(245, 124, 0, 0.2)',
     borderRadius: BORDER_RADIUS.s,
     borderWidth: 1,
@@ -104,7 +115,7 @@ const styles = StyleSheet.create({
   },
   premiumStatusText: {
     color: COLORS.warning,
-    fontSize: FONT_SIZE.s,
+    fontSize: FONT_SIZE.xs,
     fontWeight: '600',
   },
 });

@@ -396,6 +396,11 @@
   "profile": {
     "title": "Perfil",
     "guest": "Invitado",
+    "tabs": {
+      "preferences": "Preferencias",
+      "content": "Contenido",
+      "settings": "Configuración"
+    },
     "editProfile": "Editar perfil",
     "stats": "Estadísticas",
     "moviesWatched": "Películas vistas",

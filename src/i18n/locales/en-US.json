@@ -419,6 +419,11 @@
   "profile": {
     "title": "Profile",
     "guest": "Guest",
+    "tabs": {
+      "preferences": "Preferences",
+      "content": "Content",
+      "settings": "Settings"
+    },
     "editProfile": "Edit Profile",
     "stats": "Stats",
     "moviesWatched": "Movies Watched",

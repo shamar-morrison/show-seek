@@ -1,1 +1,1 @@
-i want to add a preference that will allow the users to remove the labels on the bottom navbar icons and use only the icons, do you understand or have any questions?
+currently on the profile screen we use a list to show all the items and the different categories (preferences, content, settings) i want to change this view to use tabs instead (like the ones on the watch lists screen) so the user can quickly jump to where they want to instead of scrolling, do you think this is a good idea?

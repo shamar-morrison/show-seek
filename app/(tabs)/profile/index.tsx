@@ -5,14 +5,14 @@ import { PreferencesSection } from '@/src/components/profile/PreferencesSection'
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import LoadingModal from '@/src/components/ui/LoadingModal';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
 import { UserPreferences } from '@/src/types/preferences';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -21,9 +21,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+type ProfileTab = 'preferences' | 'content' | 'settings';
+
+interface TabConfig {
+  id: ProfileTab;
+  label: string;
+}
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -62,6 +70,26 @@ export default function ProfileScreen() {
   } = usePreferences();
   const updatePreference = useUpdatePreference();
 
+  // Define available tabs based on user state
+  const tabs: TabConfig[] = useMemo(() => {
+    const baseTabs: TabConfig[] = [
+      { id: 'content', label: t('profile.tabs.content') },
+      { id: 'settings', label: t('profile.tabs.settings') },
+    ];
+
+    // Add preferences tab for logged-in users (at the beginning)
+    if (!isGuest) {
+      return [{ id: 'preferences', label: t('profile.tabs.preferences') }, ...baseTabs];
+    }
+
+    return baseTabs;
+  }, [isGuest, t]);
+
+  // Default to first available tab
+  const [selectedTab, setSelectedTab] = useState<ProfileTab>(() =>
+    isGuest ? 'content' : 'preferences'
+  );
+
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
     updatePreference.mutate(
       { key, value },
@@ -73,46 +101,24 @@ export default function ProfileScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Profile</Text>
-          </View>
-
-          {/* User Info Section */}
-          <UserInfoSection
-            user={user}
+  const renderTabContent = () => {
+    switch (selectedTab) {
+      case 'preferences':
+        return (
+          <PreferencesSection
+            preferences={preferences}
+            isLoading={preferencesLoading}
+            error={preferencesError}
+            onRetry={refetchPreferences}
+            onUpdate={handlePreferenceUpdate}
+            isUpdating={updatePreference.isPending}
             isPremium={isPremium}
-            isGuest={isGuest}
-            onUpgradePress={handleUpgradePress}
+            onPremiumPress={handlePremiumPress}
+            showTitle={false}
           />
-
-          {/* Preferences Section */}
-          {!isGuest && (
-            <PreferencesSection
-              preferences={preferences}
-              isLoading={preferencesLoading}
-              error={preferencesError}
-              onRetry={refetchPreferences}
-              onUpdate={handlePreferenceUpdate}
-              isUpdating={updatePreference.isPending}
-              isPremium={isPremium}
-              onPremiumPress={handlePremiumPress}
-            />
-          )}
-
-          {/* Content Settings */}
+        );
+      case 'content':
+        return (
           <ContentSettingsSection
             language={language}
             region={region}
@@ -124,9 +130,11 @@ export default function ProfileScreen() {
             onRegionPress={handleRegionPress}
             onLaunchScreenPress={handleLaunchScreenPress}
             onTraktPress={handleTraktPress}
+            showTitle={false}
           />
-
-          {/* App Settings */}
+        );
+      case 'settings':
+        return (
           <AppSettingsSection
             isGuest={isGuest}
             isPremium={isPremium}
@@ -136,19 +144,75 @@ export default function ProfileScreen() {
             onExportData={handleExportData}
             onWebApp={handleOpenWebApp}
             onSignOut={handleSignOut}
+            showTitle={false}
           />
+        );
+      default:
+        return null;
+    }
+  };
 
-          {/* Web App Navigation Modal */}
-          <WebAppModal
-            visible={showWebAppModal}
-            onClose={handleCloseWebAppModal}
-            onConfirm={handleConfirmOpenWebApp}
-          />
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Profile</Text>
+        </View>
+
+        {/* User Info Section - Fixed at top */}
+        <UserInfoSection
+          user={user}
+          isPremium={isPremium}
+          isGuest={isGuest}
+          onUpgradePress={handleUpgradePress}
+        />
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsContent}
+          >
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.tab, selectedTab === tab.id && styles.activeTab]}
+                onPress={() => setSelectedTab(tab.id)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <Text style={[styles.tabText, selectedTab === tab.id && styles.activeTabText]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Tab Content */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {renderTabContent()}
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Support Development Modal */}
       <SupportDevelopmentModal visible={showSupportModal} onClose={handleCloseSupportModal} />
+
+      {/* Web App Navigation Modal */}
+      <WebAppModal
+        visible={showWebAppModal}
+        onClose={handleCloseWebAppModal}
+        onConfirm={handleConfirmOpenWebApp}
+      />
 
       {/* Signing Out Modal */}
       <LoadingModal visible={isSigningOut} message={t('auth.signingOut')} />
@@ -165,6 +229,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.m,
     paddingBottom: SPACING.xxl,
   },
   header: {
@@ -176,6 +242,34 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
+    color: COLORS.white,
+  },
+  tabsContainer: {
+    paddingTop: SPACING.m,
+    marginBottom: SPACING.m,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.surfaceLight,
+  },
+  tabsContent: {
+    paddingHorizontal: SPACING.l,
+    gap: SPACING.m,
+    paddingBottom: SPACING.m,
+  },
+  tab: {
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.s,
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+  },
+  activeTab: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+  activeTabText: {
     color: COLORS.white,
   },
 });

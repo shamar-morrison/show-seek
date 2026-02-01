@@ -23,6 +23,8 @@ export interface PreferencesSectionProps {
   isPremium: boolean;
   /** Handler when premium-locked item is pressed */
   onPremiumPress: () => void;
+  /** Whether to show section title (default: true) */
+  showTitle?: boolean;
 }
 
 /**
@@ -38,6 +40,7 @@ export function PreferencesSection({
   isUpdating,
   isPremium,
   onPremiumPress,
+  showTitle = true,
 }: PreferencesSectionProps) {
   const { t } = useTranslation();
 
@@ -47,8 +50,10 @@ export function PreferencesSection({
 
   if (error) {
     return (
-      <View style={styles.preferencesSection}>
-        <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+      <View style={[styles.preferencesSection, !showTitle && styles.noTitleSection]}>
+        {showTitle && (
+          <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+        )}
         <View style={styles.errorContainer}>
           <View style={styles.preferenceInfo}>
             <Text style={styles.preferenceLabel}>{t('profile.unableToLoadPreferences')}</Text>
@@ -75,8 +80,10 @@ export function PreferencesSection({
   }
 
   return (
-    <View style={styles.preferencesSection}>
-      <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+    <View style={[styles.preferencesSection, !showTitle && styles.noTitleSection]}>
+      {showTitle && (
+        <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+      )}
 
       <PreferenceItem
         label={t('profile.autoAddToWatching')}
@@ -180,6 +187,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     marginTop: SPACING.l,
     gap: SPACING.m,
+  },
+  noTitleSection: {
+    paddingHorizontal: 0,
+    marginTop: 0,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.xs,

@@ -22,6 +22,8 @@ export interface AppSettingsSectionProps {
   onWebApp: () => void;
   /** Handler for Sign Out button */
   onSignOut: () => void;
+  /** Whether to show section title (default: true) */
+  showTitle?: boolean;
 }
 
 /**
@@ -36,12 +38,13 @@ export function AppSettingsSection({
   onExportData,
   onWebApp,
   onSignOut,
+  showTitle = true,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation();
 
   return (
-    <View style={styles.actionsSection}>
-      <Text style={styles.sectionTitle}>{t('settings.title').toUpperCase()}</Text>
+    <View style={[styles.actionsSection, !showTitle && styles.noTitleSection]}>
+      {showTitle && <Text style={styles.sectionTitle}>{t('settings.title').toUpperCase()}</Text>}
       <View style={styles.actionsList}>
         <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
         <ActionButton icon={MessageCircle} label={t('profile.sendFeedback')} onPress={onFeedback} />
@@ -66,6 +69,10 @@ const styles = StyleSheet.create({
   actionsSection: {
     paddingHorizontal: SPACING.l,
     marginTop: SPACING.l,
+  },
+  noTitleSection: {
+    paddingHorizontal: 0,
+    marginTop: 0,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.xs,

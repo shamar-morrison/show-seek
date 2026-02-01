@@ -31,6 +31,8 @@ export interface ContentSettingsSectionProps {
   onLaunchScreenPress: () => void;
   /** Handler for Trakt settings button press */
   onTraktPress: () => void;
+  /** Whether to show section title (default: true) */
+  showTitle?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export function ContentSettingsSection({
   onRegionPress,
   onLaunchScreenPress,
   onTraktPress,
+  showTitle = true,
 }: ContentSettingsSectionProps) {
   const { t } = useTranslation();
 
@@ -66,8 +69,8 @@ export function ContentSettingsSection({
   };
 
   return (
-    <View style={styles.actionsSection}>
-      <Text style={styles.sectionTitle}>CONTENT</Text>
+    <View style={[styles.actionsSection, !showTitle && styles.noTitleSection]}>
+      {showTitle && <Text style={styles.sectionTitle}>CONTENT</Text>}
       <View style={styles.actionsList}>
         <ActionButton
           icon={Languages}
@@ -142,6 +145,10 @@ const styles = StyleSheet.create({
   actionsSection: {
     paddingHorizontal: SPACING.l,
     marginTop: SPACING.l,
+  },
+  noTitleSection: {
+    paddingHorizontal: 0,
+    marginTop: 0,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.xs,
