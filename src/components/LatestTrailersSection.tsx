@@ -29,7 +29,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     [preferences?.dataSaver]
   );
 
-  const handleTrailerPress = (trailer: TrailerItem) => {
+  const handleTrailerPress = useCallback((trailer: TrailerItem) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
     Linking.openURL(youtubeUrl).catch((error) => {
       Alert.alert(
@@ -38,7 +38,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
       );
       console.error('Error opening trailer:', error);
     });
-  };
+  }, []);
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => (

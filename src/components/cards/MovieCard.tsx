@@ -17,67 +17,58 @@ interface MovieCardProps {
   showListBadge?: boolean;
 }
 
-export const MovieCard = memo<MovieCardProps>(
-  ({ movie, width = 140, showListBadge = true }) => {
-    const currentTab = useCurrentTab();
-    const { getListsForMedia } = useListMembership();
-    const { preferences } = usePreferences();
+export const MovieCard = memo<MovieCardProps>(({ movie, width = 140, showListBadge = true }) => {
+  const currentTab = useCurrentTab();
+  const { getListsForMedia } = useListMembership();
+  const { preferences } = usePreferences();
 
-    const posterUrl = useMemo(
-      () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
-      [movie.poster_path, preferences?.dataSaver]
-    );
+  const posterUrl = useMemo(
+    () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
+    [movie.poster_path, preferences?.dataSaver]
+  );
 
-    const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
-    const showBadge = listIds.length > 0;
+  const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
+  const showBadge = listIds.length > 0;
 
-    const handlePress = useCallback(() => {
-      const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
-      router.push(path as Route);
-    }, [currentTab, movie.id]);
+  const handlePress = useCallback(() => {
+    const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
+    router.push(path as Route);
+  }, [currentTab, movie.id]);
 
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        style={[styles.container, { width }]}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <View style={styles.posterContainer}>
-          <MediaImage
-            source={{ uri: posterUrl }}
-            style={[styles.poster, { width, height: width * 1.5 }]}
-            contentFit="cover"
-          />
-          {showBadge && <ListMembershipBadge listIds={listIds} />}
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={2}>
-            {movie.title}
-          </Text>
-          {movie.release_date && (
-            <View style={styles.yearRatingContainer}>
-              <Text style={styles.year}>{new Date(movie.release_date).getFullYear()}</Text>
-              {movie.vote_average > 0 && (
-                <>
-                  <Text style={styles.separator}> • </Text>
-                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={styles.rating}>{movie.vote_average.toFixed(1)}</Text>
-                </>
-              )}
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.movie.id === nextProps.movie.id &&
-      prevProps.width === nextProps.width &&
-      prevProps.showListBadge === nextProps.showListBadge
-    );
-  }
-);
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      style={[styles.container, { width }]}
+      activeOpacity={ACTIVE_OPACITY}
+    >
+      <View style={styles.posterContainer}>
+        <MediaImage
+          source={{ uri: posterUrl }}
+          style={[styles.poster, { width, height: width * 1.5 }]}
+          contentFit="cover"
+        />
+        {showBadge && <ListMembershipBadge listIds={listIds} />}
+      </View>
+      <View style={styles.info}>
+        <Text style={styles.title} numberOfLines={2}>
+          {movie.title}
+        </Text>
+        {movie.release_date && (
+          <View style={styles.yearRatingContainer}>
+            <Text style={styles.year}>{new Date(movie.release_date).getFullYear()}</Text>
+            {movie.vote_average > 0 && (
+              <>
+                <Text style={styles.separator}> • </Text>
+                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.rating}>{movie.vote_average.toFixed(1)}</Text>
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 MovieCard.displayName = 'MovieCard';
 
