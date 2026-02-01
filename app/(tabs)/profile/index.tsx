@@ -2,7 +2,6 @@ import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { AppSettingsSection } from '@/src/components/profile/AppSettingsSection';
 import { ContentSettingsSection } from '@/src/components/profile/ContentSettingsSection';
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
-import { ReauthView } from '@/src/components/profile/ReauthView';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import LoadingModal from '@/src/components/ui/LoadingModal';
@@ -32,14 +31,10 @@ export default function ProfileScreen() {
     user,
     isGuest,
     isPremium,
-    showReauthModal,
-    reauthPassword,
-    reauthLoading,
     showSupportModal,
     isExporting,
     isSigningOut,
     showWebAppModal,
-    setReauthPassword,
     handleCloseSupportModal,
     handleRateApp,
     handleSendFeedback,
@@ -48,9 +43,6 @@ export default function ProfileScreen() {
     handleCloseWebAppModal,
     handleExportData,
     handleSignOut,
-    handleDeleteAccount,
-    handleReauthAndDelete,
-    cancelReauth,
     handleUpgradePress,
     handleLanguagePress,
     handleRegionPress,
@@ -144,19 +136,7 @@ export default function ProfileScreen() {
             onExportData={handleExportData}
             onWebApp={handleOpenWebApp}
             onSignOut={handleSignOut}
-            onDeleteAccount={handleDeleteAccount}
           />
-
-          {/* Re-auth Modal (inline) */}
-          {showReauthModal && (
-            <ReauthView
-              password={reauthPassword}
-              onPasswordChange={setReauthPassword}
-              loading={reauthLoading}
-              onCancel={cancelReauth}
-              onConfirm={handleReauthAndDelete}
-            />
-          )}
 
           {/* Web App Navigation Modal */}
           <WebAppModal

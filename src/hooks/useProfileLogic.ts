@@ -1,7 +1,6 @@
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { exportUserData } from '@/src/services/DataExportService';
-import { profileService } from '@/src/services/ProfileService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -20,9 +19,6 @@ export function useProfileLogic() {
   const { isPremium } = usePremium();
   const router = useRouter();
 
-  const [showReauthModal, setShowReauthModal] = useState(false);
-  const [reauthPassword, setReauthPassword] = useState('');
-  const [reauthLoading, setReauthLoading] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -138,56 +134,6 @@ export function useProfileLogic() {
     }
   }, [signOut]);
 
-  const handleDeleteAccount = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-    if (isGuest) {
-      Alert.alert('Guest Account', 'Guest accounts have no data to delete. Sign out to leave.', [
-        { text: 'OK' },
-      ]);
-      return;
-    }
-
-    Alert.alert(
-      'Delete Account',
-      'This action is permanent and cannot be undone. All your data including ratings, favorites, lists, and watch history will be permanently deleted.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => setShowReauthModal(true),
-        },
-      ]
-    );
-  }, [isGuest]);
-
-  const handleReauthAndDelete = useCallback(async () => {
-    if (!reauthPassword.trim()) {
-      Alert.alert('Error', 'Please enter your password');
-      return;
-    }
-
-    setReauthLoading(true);
-    try {
-      await profileService.deleteAccountWithReauth(reauthPassword);
-      setShowReauthModal(false);
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'Unable to delete account. Please check your password and try again.'
-      );
-    } finally {
-      setReauthLoading(false);
-      setReauthPassword('');
-    }
-  }, [reauthPassword]);
-
-  const cancelReauth = useCallback(() => {
-    setShowReauthModal(false);
-    setReauthPassword('');
-  }, []);
-
   const handleUpgradePress = useCallback(() => {
     router.push('/premium');
   }, [router]);
@@ -219,16 +165,10 @@ export function useProfileLogic() {
     isPremium,
 
     // Modal states
-    showReauthModal,
-    reauthPassword,
-    reauthLoading,
     showSupportModal,
     isExporting,
     isSigningOut,
     showWebAppModal,
-
-    // State setters
-    setReauthPassword,
 
     // Handlers
     handleSupportDevelopment,
@@ -240,9 +180,6 @@ export function useProfileLogic() {
     handleCloseWebAppModal,
     handleExportData,
     handleSignOut,
-    handleDeleteAccount,
-    handleReauthAndDelete,
-    cancelReauth,
     handleUpgradePress,
     handleLanguagePress,
     handleRegionPress,

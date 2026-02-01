@@ -1,5 +1,5 @@
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { Download, Globe, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import { Download, Globe, LogOut, MessageCircle, Star } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -22,12 +22,10 @@ export interface AppSettingsSectionProps {
   onWebApp: () => void;
   /** Handler for Sign Out button */
   onSignOut: () => void;
-  /** Handler for Delete Account button */
-  onDeleteAccount: () => void;
 }
 
 /**
- * App settings section with Rate App, Feedback, Export Data, Web App, Sign Out, and Delete Account.
+ * App settings section with Rate App, Feedback, Export Data, Web App, and Sign Out.
  */
 export function AppSettingsSection({
   isGuest,
@@ -38,7 +36,6 @@ export function AppSettingsSection({
   onExportData,
   onWebApp,
   onSignOut,
-  onDeleteAccount,
 }: AppSettingsSectionProps) {
   const { t } = useTranslation();
 
@@ -60,14 +57,6 @@ export function AppSettingsSection({
         )}
         <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
         <ActionButton icon={LogOut} label={t('auth.signOut')} onPress={onSignOut} />
-        {!isGuest && (
-          <ActionButton
-            icon={Trash2}
-            label={t('settings.deleteAccount')}
-            onPress={onDeleteAccount}
-            variant="danger"
-          />
-        )}
       </View>
     </View>
   );
