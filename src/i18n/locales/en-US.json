@@ -463,7 +463,9 @@
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App",
     "hideUnreleased": "Hide unreleased content",
-    "hideUnreleasedDescription": "Hide movies and TV shows that haven't been released yet"
+    "hideUnreleasedDescription": "Hide movies and TV shows that haven't been released yet",
+    "hideTabLabels": "Hide tab bar labels",
+    "hideTabLabelsDescription": "Show only icons in the bottom navigation bar"
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",

@@ -153,6 +153,15 @@ export function PreferencesSection({
         loading={isLoading}
         disabled={isUpdating}
       />
+
+      <PreferenceItem
+        label={t('profile.hideTabLabels')}
+        subtitle={t('profile.hideTabLabelsDescription')}
+        value={!!preferences?.hideTabLabels}
+        onValueChange={(value) => handleUpdate('hideTabLabels', value)}
+        loading={isLoading}
+        disabled={isUpdating}
+      />
     </View>
   );
 }

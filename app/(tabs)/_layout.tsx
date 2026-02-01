@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { Tabs } from 'expo-router';
 import { Bookmark, Compass, Home, Search, User } from 'lucide-react-native';
 import React from 'react';
@@ -8,6 +9,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { preferences } = usePreferences();
+
+  const hideLabels = preferences?.hideTabLabels ?? false;
 
   return (
     <Tabs
@@ -15,11 +19,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
+        tabBarShowLabel: !hideLabels,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.surfaceLight,
           borderTopWidth: 1,
-          height: 70 + insets.bottom,
+          height: (hideLabels ? 56 : 70) + insets.bottom,
           paddingTop: 5,
           paddingBottom: insets.bottom,
         },

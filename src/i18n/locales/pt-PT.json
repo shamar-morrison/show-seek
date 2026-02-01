@@ -447,7 +447,9 @@
     "markPreviousEpisodesDescription": "Marcar automaticamente os episódios anteriores de uma temporada como vistos ao marcar um episódio",
     "sendFeedback": "Enviar feedback",
     "exportData": "Exportar dados",
-    "webApp": "ShowSeek Web"
+    "webApp": "ShowSeek Web",
+    "hideTabLabels": "Ocultar rótulos das abas",
+    "hideTabLabelsDescription": "Mostrar apenas ícones na barra de navegação inferior"
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",

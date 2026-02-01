@@ -37,6 +37,7 @@ export interface UserPreferences {
   hideWatchedContent: boolean; // Premium: hide watched content from search/discover
   hideUnreleasedContent: boolean; // Hide unreleased movies/TV shows from search/discover
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
+  hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -49,4 +50,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   hideWatchedContent: false, // Off by default - show all content
   hideUnreleasedContent: false, // Off by default - show unreleased content
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
+  hideTabLabels: false, // Off by default - show labels
 };
