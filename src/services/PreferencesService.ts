@@ -52,6 +52,7 @@ class PreferencesService {
               data?.preferences?.markPreviousEpisodesWatched ??
               DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
             hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
+            dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
           };
 
           callback(preferences);

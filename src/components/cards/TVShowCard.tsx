@@ -1,9 +1,10 @@
-import { getImageUrl, TMDB_IMAGE_SIZES, TVShow } from '@/src/api/tmdb';
+import { getOptimizedImageUrl, TVShow } from '@/src/api/tmdb';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -20,10 +21,11 @@ export const TVShowCard = memo<TVShowCardProps>(
   ({ show, width = 140, showListBadge = true }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
+    const { preferences } = usePreferences();
 
     const posterUrl = useMemo(
-      () => getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium),
-      [show.poster_path]
+      () => getOptimizedImageUrl(show.poster_path, 'poster', 'medium', preferences?.dataSaver),
+      [show.poster_path, preferences?.dataSaver]
     );
 
     const listIds = showListBadge ? getListsForMedia(show.id, 'tv') : [];

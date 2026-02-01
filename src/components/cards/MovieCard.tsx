@@ -1,9 +1,10 @@
-import { getImageUrl, Movie, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getOptimizedImageUrl, Movie } from '@/src/api/tmdb';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -20,10 +21,11 @@ export const MovieCard = memo<MovieCardProps>(
   ({ movie, width = 140, showListBadge = true }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
+    const { preferences } = usePreferences();
 
     const posterUrl = useMemo(
-      () => getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium),
-      [movie.poster_path]
+      () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
+      [movie.poster_path, preferences?.dataSaver]
     );
 
     const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
