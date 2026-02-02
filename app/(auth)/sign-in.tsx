@@ -1,11 +1,11 @@
 import { legal } from '@/app/(auth)/legal';
+import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
@@ -133,131 +133,130 @@ export default function SignIn() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(229, 9, 20, 0.1)', 'transparent']}
-        style={StyleSheet.absoluteFill}
-      />
+      <AnimatedBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
-              </View>
-              <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
-              <Text style={styles.subtitle}>{t('auth.signInToContinue')}</Text>
-            </View>
-
-            <View style={styles.form}>
-              {/* Google Sign-In Button */}
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={handleGoogleSignIn}
-                disabled={googleLoading || loading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                {googleLoading ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <>
-                    <Image
-                      source={require('@/assets/images/google-icon.png')}
-                      style={styles.googleIcon}
-                    />
-                    <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {/* Separator */}
-              <View style={styles.separator}>
-                <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>{t('auth.orContinueWith').toLowerCase()}</Text>
-                <View style={styles.separatorLine} />
+            <View style={styles.glassCard}>
+              <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                  <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
+                </View>
+                <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+                <Text style={styles.subtitle}>{t('auth.signInToContinue')}</Text>
               </View>
 
-              <View style={styles.inputWithIcon}>
-                <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.inputField}
-                  placeholder={t('auth.email')}
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
-
-              <View style={styles.inputWithIcon}>
-                <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.inputField}
-                  placeholder={t('auth.password')}
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
+              <View style={styles.form}>
+                {/* Google Sign-In Button */}
                 <TouchableOpacity
-                  style={styles.eyeIcon}
-                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.googleButton}
+                  onPress={handleGoogleSignIn}
+                  disabled={googleLoading || loading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
-                  {showPassword ? (
-                    <EyeOff size={20} color={COLORS.textSecondary} />
+                  {googleLoading ? (
+                    <ActivityIndicator color={COLORS.white} />
                   ) : (
-                    <Eye size={20} color={COLORS.textSecondary} />
+                    <>
+                      <Image
+                        source={require('@/assets/images/google-icon.png')}
+                        style={styles.googleIcon}
+                      />
+                      <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
+                    </>
                   )}
                 </TouchableOpacity>
-              </View>
 
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleSignIn}
-                disabled={loading || googleLoading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                {loading ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <Text style={styles.buttonText}>{t('auth.signIn')}</Text>
-                )}
-              </TouchableOpacity>
+                {/* Separator */}
+                <View style={styles.separator}>
+                  <View style={styles.separatorLine} />
+                  <Text style={styles.separatorText}>{t('auth.orContinueWith').toLowerCase()}</Text>
+                  <View style={styles.separatorLine} />
+                </View>
 
-              {!user && (
+                <View style={styles.inputWithIcon}>
+                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder={t('auth.email')}
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+
+                <View style={styles.inputWithIcon}>
+                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.inputField}
+                    placeholder={t('auth.password')}
+                    placeholderTextColor={COLORS.textSecondary}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeIcon}
+                    onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={COLORS.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={COLORS.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity
-                  style={[styles.button, styles.guestButton]}
-                  onPress={handleGuestSignIn}
+                  style={styles.button}
+                  onPress={handleSignIn}
                   disabled={loading || googleLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
-                  <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
+                  {loading ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <Text style={styles.buttonText}>{t('auth.signIn')}</Text>
+                  )}
                 </TouchableOpacity>
-              )}
 
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>{t('auth.dontHaveAccount')} </Text>
-                <Link href="/(auth)/sign-up" asChild>
-                  <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                    <Text style={styles.link}>{t('auth.signUp')}</Text>
+                {!user && (
+                  <TouchableOpacity
+                    style={[styles.button, styles.guestButton]}
+                    onPress={handleGuestSignIn}
+                    disabled={loading || googleLoading}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
                   </TouchableOpacity>
-                </Link>
-              </View>
+                )}
 
-              <Text style={styles.termsText}>
-                {t('auth.bySigningIn')}{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
-                  {t('settings.terms')}
-                </Text>{' '}
-                &amp;{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
-                  {t('settings.privacy')}
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>{t('auth.dontHaveAccount')} </Text>
+                  <Link href="/(auth)/sign-up" asChild>
+                    <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
+                      <Text style={styles.link}>{t('auth.signUp')}</Text>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+
+                <Text style={styles.termsText}>
+                  {t('auth.bySigningIn')}{' '}
+                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                    {t('settings.terms')}
+                  </Text>{' '}
+                  &amp;{' '}
+                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                    {t('settings.privacy')}
+                  </Text>
                 </Text>
-              </Text>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -280,7 +279,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    padding: SPACING.l,
+  },
+  glassCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   header: {
     marginBottom: SPACING.xl,

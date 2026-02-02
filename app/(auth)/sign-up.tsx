@@ -1,9 +1,9 @@
 import { legal } from '@/app/(auth)/legal';
+import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,63 +53,62 @@ export default function SignUp() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(229, 9, 20, 0.1)', 'transparent']}
-        style={StyleSheet.absoluteFill}
-      />
+      <AnimatedBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
-              </View>
-              <Text style={styles.title}>{t('auth.createAccount')}</Text>
-              <Text style={styles.subtitle}>{t('auth.signUpToGetStarted')}</Text>
-            </View>
-
-            <View style={styles.form}>
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={handleGoogleSignUp}
-                disabled={loading}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                {loading ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <>
-                    <Image
-                      source={require('@/assets/images/google-icon.png')}
-                      style={styles.googleIcon}
-                    />
-                    <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')} </Text>
-                <Link href="/(auth)/sign-in" asChild>
-                  <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                    <Text style={styles.link}>{t('auth.signIn')}</Text>
-                  </TouchableOpacity>
-                </Link>
+            <View style={styles.glassCard}>
+              <View style={styles.header}>
+                <View style={styles.logoContainer}>
+                  <RNImage source={require('@/assets/images/icon.png')} style={styles.logo} />
+                </View>
+                <Text style={styles.title}>{t('auth.createAccount')}</Text>
+                <Text style={styles.subtitle}>{t('auth.signUpToGetStarted')}</Text>
               </View>
 
-              <Text style={styles.termsText}>
-                {t('auth.agreeToTerms')}{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
-                  {t('settings.terms')}
-                </Text>{' '}
-                &amp;{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
-                  {t('settings.privacy')}
+              <View style={styles.form}>
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={handleGoogleSignUp}
+                  disabled={loading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Image
+                        source={require('@/assets/images/google-icon.png')}
+                        style={styles.googleIcon}
+                      />
+                      <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')} </Text>
+                  <Link href="/(auth)/sign-in" asChild>
+                    <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
+                      <Text style={styles.link}>{t('auth.signIn')}</Text>
+                    </TouchableOpacity>
+                  </Link>
+                </View>
+
+                <Text style={styles.termsText}>
+                  {t('auth.agreeToTerms')}{' '}
+                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                    {t('settings.terms')}
+                  </Text>{' '}
+                  &amp;{' '}
+                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                    {t('settings.privacy')}
+                  </Text>
                 </Text>
-              </Text>
+              </View>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -132,7 +131,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    padding: SPACING.l,
+  },
+  glassCard: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   header: {
     marginBottom: SPACING.xl,
