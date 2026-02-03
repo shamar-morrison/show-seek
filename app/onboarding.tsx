@@ -121,8 +121,8 @@ export default function OnboardingScreen() {
       setSaveError(
         t(
           'onboarding.saveError',
-          'We could not save your preferences. Please check your connection and try again.',
-        ),
+          'We could not save your preferences. Please check your connection and try again.'
+        )
       );
     } finally {
       setIsSaving(false);
