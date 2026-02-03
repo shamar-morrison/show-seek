@@ -1,0 +1,8 @@
+display_name: React Native (Expo)
+short_description: Implement, debug, and ship Expo + React Native apps.
+default_prompt: |
+  Help me implement or debug an Expo + React Native task.
+  1) Ask for any missing context (platform, command/log, versions).
+  2) Propose a short plan.
+  3) Provide exact commands and code changes, and explain how to verify.
+
