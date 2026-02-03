@@ -1,4 +1,4 @@
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Download, Globe, LogOut, MessageCircle, Star } from 'lucide-react-native';
 import React from 'react';

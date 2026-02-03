@@ -6,9 +6,7 @@ import { Stack } from 'expo-router';
 export default function SearchStackLayout() {
   return (
     <TabProvider tabName="search">
-      <Stack
-        screenOptions={TAB_STACK_SCREEN_OPTIONS}
-      >
+      <Stack screenOptions={TAB_STACK_SCREEN_OPTIONS}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <CommonDetailScreens />
       </Stack>

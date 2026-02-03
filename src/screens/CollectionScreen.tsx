@@ -15,6 +15,7 @@ import {
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
 import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -23,6 +24,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, Play, Star, StopCircle } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -31,7 +33,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { screenStyles } from '@/src/styles/screenStyles';
 
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();

@@ -11,4 +11,6 @@ export const BASE_STACK_SCREEN_OPTIONS = {
 export const TAB_STACK_SCREEN_OPTIONS = {
   ...BASE_STACK_SCREEN_OPTIONS,
   freezeOnBlur: true,
+  // Hide header by default to prevent flash of route path on dynamic screens
+  headerShown: false,
 } as const;

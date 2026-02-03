@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';

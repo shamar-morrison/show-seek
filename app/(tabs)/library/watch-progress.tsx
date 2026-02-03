@@ -18,7 +18,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -188,9 +188,7 @@ export default function WatchProgressScreen() {
         renderItem={renderItem}
         contentContainerStyle={libraryListStyles.listContent}
         keyExtractor={(item) => item.tvShowId.toString()}
-        ListEmptyComponent={
-          searchQuery ? <SearchEmptyState height={300} /> : null
-        }
+        ListEmptyComponent={searchQuery ? <SearchEmptyState height={300} /> : null}
       />
 
       <LibrarySortModal
