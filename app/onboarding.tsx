@@ -19,7 +19,9 @@ interface OnboardingData {
   contentType: ContentType;
   genres: number[];
   providers: number[];
-  blurPlotSpoilers: boolean;
+  showListIndicators: boolean;
+  hideUnreleasedContent: boolean;
+  hideTabLabels: boolean;
   dataSaver: boolean;
 }
 
@@ -60,7 +62,9 @@ export default function OnboardingScreen() {
     contentType: 'both',
     genres: [],
     providers: [],
-    blurPlotSpoilers: false,
+    showListIndicators: false,
+    hideUnreleasedContent: false,
+    hideTabLabels: false,
     dataSaver: false,
   });
 
@@ -103,7 +107,9 @@ export default function OnboardingScreen() {
         favoriteGenres: data.genres,
         watchProviders: data.providers,
         preferredContentTypes: data.contentType,
-        blurPlotSpoilers: data.blurPlotSpoilers,
+        showListIndicators: data.showListIndicators,
+        hideUnreleasedContent: data.hideUnreleasedContent,
+        hideTabLabels: data.hideTabLabels,
         dataSaver: data.dataSaver,
         homeScreenLists,
       };
@@ -153,9 +159,15 @@ export default function OnboardingScreen() {
       case 3:
         return (
           <PreferenceToggles
-            blurPlotSpoilers={data.blurPlotSpoilers}
+            showListIndicators={data.showListIndicators}
+            hideUnreleasedContent={data.hideUnreleasedContent}
+            hideTabLabels={data.hideTabLabels}
             dataSaver={data.dataSaver}
-            onBlurPlotSpoilersChange={(value) => setData({ ...data, blurPlotSpoilers: value })}
+            onShowListIndicatorsChange={(value) => setData({ ...data, showListIndicators: value })}
+            onHideUnreleasedContentChange={(value) =>
+              setData({ ...data, hideUnreleasedContent: value })
+            }
+            onHideTabLabelsChange={(value) => setData({ ...data, hideTabLabels: value })}
             onDataSaverChange={(value) => setData({ ...data, dataSaver: value })}
           />
         );
