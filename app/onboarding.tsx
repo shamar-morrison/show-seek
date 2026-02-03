@@ -54,6 +54,8 @@ export default function OnboardingScreen() {
   const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [data, setData] = useState<OnboardingData>({
     contentType: 'both',
     genres: [],
@@ -63,6 +65,7 @@ export default function OnboardingScreen() {
   });
 
   const handleNext = async () => {
+    if (isSaving) return;
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -71,12 +74,14 @@ export default function OnboardingScreen() {
   };
 
   const handleBack = () => {
+    if (isSaving) return;
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
   };
 
   const handleSkip = async () => {
+    if (isSaving) return;
     // Skip this step with default values and move to next
     if (currentStep < TOTAL_STEPS - 1) {
       setCurrentStep(currentStep + 1);
@@ -86,6 +91,8 @@ export default function OnboardingScreen() {
   };
 
   const completeOnboarding = async () => {
+    setSaveError(null);
+    setIsSaving(true);
     try {
       // Generate home screen lists based on content preference
       const homeScreenLists = generateHomeScreenLists(data.contentType);
@@ -111,8 +118,14 @@ export default function OnboardingScreen() {
       router.replace({ pathname: '/(tabs)/home' });
     } catch (error) {
       console.error('Error completing onboarding:', error);
-      // Navigate anyway - preferences will use defaults
-      router.replace({ pathname: '/(tabs)/home' });
+      setSaveError(
+        t(
+          'onboarding.saveError',
+          'We could not save your preferences. Please check your connection and try again.',
+        ),
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -192,7 +205,13 @@ export default function OnboardingScreen() {
       onSkip={handleSkip}
       isFirstStep={currentStep === 0}
       isLastStep={currentStep === TOTAL_STEPS - 1}
+      nextDisabled={isSaving}
     >
+      {saveError ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{saveError}</Text>
+        </View>
+      ) : null}
       {renderStepContent()}
     </WizardLayout>
   );
@@ -298,6 +317,19 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  errorBanner: {
+    backgroundColor: COLORS.surfaceLight,
+    borderColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    marginBottom: SPACING.l,
+    padding: SPACING.m,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: FONT_SIZE.m,
+    lineHeight: 22,
   },
 
   // Content + Genre step
