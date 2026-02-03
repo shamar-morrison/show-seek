@@ -3,7 +3,8 @@ import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
@@ -14,16 +15,18 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { createSortAction } from '@/src/utils/listActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
+import { Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -158,13 +161,10 @@ export default function WatchStatusScreen() {
         onPress: () => setFilterModalVisible(true),
         showBadge: activeFilters,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ];
   }, [filters, sortState]);
 
@@ -198,7 +198,7 @@ export default function WatchStatusScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.tabsContainer}>
           <ScrollView
             horizontal
@@ -315,9 +315,9 @@ export default function WatchStatusScreen() {
         genreMap={genreMap || {}}
       />
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
@@ -331,10 +331,6 @@ export default function WatchStatusScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   tabsContainer: {
     paddingTop: SPACING.m,
     marginBottom: SPACING.m,

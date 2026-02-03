@@ -1,13 +1,12 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
-import MediaSortModal, {
-  NOTES_SCREEN_SORT_OPTIONS,
-  SortState,
-} from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { NOTES_SCREEN_SORT_OPTIONS, SortState } from '@/src/components/MediaSortModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -21,7 +20,12 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { listCardStyles } from '@/src/styles/listCardStyles';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Note } from '@/src/types/note';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -37,7 +41,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   SectionList,
@@ -205,18 +208,14 @@ export default function NotesScreen() {
 
     if (isSearchActive) {
       // Show search header
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search notes..."
-          />
-        ),
-      });
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: 'Search notes...',
+        })
+      );
     } else {
       // Show normal header with buttons
       navigation.setOptions({
@@ -335,11 +334,14 @@ export default function NotesScreen() {
 
       return (
         <Pressable
-          style={({ pressed }) => [styles.noteCard, pressed && styles.noteCardPressed]}
+          style={({ pressed }) => [
+            listCardStyles.container,
+            pressed && listCardStyles.containerPressed,
+          ]}
           onPress={() => handleCardPress(item)}
         >
-          <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
-          <View style={styles.noteContent}>
+          <MediaImage source={{ uri: posterUrl }} style={listCardStyles.poster} contentFit="cover" />
+          <View style={listCardStyles.info}>
             <Text style={styles.mediaTitle} numberOfLines={1}>
               {item.mediaTitle}
             </Text>
@@ -411,18 +413,14 @@ export default function NotesScreen() {
 
   // Loading state
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   // Empty state
   if (!notes || notes.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={StickyNote}
           title="No Notes Yet"
@@ -433,27 +431,21 @@ export default function NotesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       {viewMode === 'list' ? (
         <FlashList
           data={displayNotes}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <View
-                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
-              >
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
+              <SearchEmptyState
+                height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT}
+              />
             ) : null
           }
         />
@@ -463,30 +455,24 @@ export default function NotesScreen() {
           renderItem={renderItem}
           renderSectionHeader={renderSectionHeader}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
           SectionSeparatorComponent={SectionSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <View
-                style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}
-              >
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
+              <SearchEmptyState
+                height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT}
+              />
             ) : null
           }
         />
       )}
       <NoteModal ref={noteSheetRef} />
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={NOTES_SCREEN_SORT_OPTIONS}
@@ -496,25 +482,6 @@ export default function NotesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
-  },
   separator: {
     height: SPACING.m,
   },
@@ -529,29 +496,6 @@ const styles = StyleSheet.create({
   },
   sectionSeparator: {
     height: SPACING.l,
-  },
-  noteCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  noteCardPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  poster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  noteContent: {
-    flex: 1,
-    gap: SPACING.xs,
   },
   mediaTitle: {
     fontSize: FONT_SIZE.m,
@@ -578,18 +522,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sortIconWrapper: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
-  },
+  sortIconWrapper: iconBadgeStyles.wrapper,
+  sortBadge: iconBadgeStyles.badge,
   // Premium gate styles
   premiumGate: {
     flex: 1,

@@ -3,14 +3,15 @@ import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   ScrollView,
@@ -67,17 +68,13 @@ export default function PremiumScreen() {
   };
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   // If already premium, show status
   if (isPremium) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={screenStyles.container}>
         <View style={styles.content}>
           <Ionicons name="checkmark-circle" size={80} color={COLORS.primary} />
           <Text style={styles.title}>You are Premium!</Text>
@@ -91,7 +88,7 @@ export default function PremiumScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+      <SafeAreaView style={screenStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Ionicons name="star" size={60} color={COLORS.primary} />
@@ -199,16 +196,6 @@ function FeatureCategorySection({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: 24,
     alignItems: 'center',

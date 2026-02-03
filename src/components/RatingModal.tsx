@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
 import { ratingService } from '@/src/services/RatingService';
 import { getRatingText } from '@/src/utils/ratingHelpers';
@@ -296,14 +297,14 @@ export default function RatingModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Rate this Title</Text>
+        <View style={modalLayoutStyles.card}>
+          <View style={[modalHeaderStyles.header, styles.header]}>
+            <Text style={modalHeaderStyles.title}>Rate this Title</Text>
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -394,35 +395,8 @@ export default function RatingModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   errorBanner: {
     backgroundColor: COLORS.error,

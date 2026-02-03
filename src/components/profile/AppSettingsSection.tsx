@@ -1,4 +1,5 @@
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { Download, Globe, LogOut, MessageCircle, Star } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +45,11 @@ export function AppSettingsSection({
 
   return (
     <View style={[styles.actionsSection, !showTitle && styles.noTitleSection]}>
-      {showTitle && <Text style={styles.sectionTitle}>{t('settings.title').toUpperCase()}</Text>}
+      {showTitle && (
+        <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+          {t('settings.title').toUpperCase()}
+        </Text>
+      )}
       <View style={styles.actionsList}>
         <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
         <ActionButton icon={MessageCircle} label={t('profile.sendFeedback')} onPress={onFeedback} />
@@ -75,11 +80,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
     marginBottom: SPACING.m,
   },
   actionsList: {

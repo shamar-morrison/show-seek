@@ -1,12 +1,14 @@
 import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -72,17 +74,13 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   };
 
   if (creditsQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (creditsQuery.isError || !creditsQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load credits</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load credits</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -97,7 +95,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   const data = activeTab === 'cast' ? creditsQuery.data.cast : creditsQuery.data.crew;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
@@ -148,26 +146,6 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   backButton: {
     padding: SPACING.m,
   },

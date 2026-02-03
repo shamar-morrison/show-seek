@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -156,14 +157,14 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       onDidDismiss={handleDismiss}
       grabber={false}
     >
-      <GestureHandlerRootView style={[styles.content, { width }]}>
+        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={modalHeaderStyles.header}>
           <View style={styles.headerLeft}>
             <Pressable onPress={handleClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
-            <Text style={styles.title}>Note</Text>
+            <Text style={modalHeaderStyles.title}>Note</Text>
           </View>
           {isEditing && (
             <Pressable onPress={handleDelete} disabled={isLoading} hitSlop={HIT_SLOP.m}>
@@ -219,25 +220,10 @@ NoteModal.displayName = 'NoteSheet';
 export default NoteModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   inputContainer: {
     marginBottom: SPACING.s,

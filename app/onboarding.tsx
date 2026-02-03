@@ -1,6 +1,7 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -85,7 +86,7 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <FlashList
         ref={flatListRef}
         data={onboardingData}
@@ -168,10 +169,6 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   slide: {
     justifyContent: 'flex-end',
     alignItems: 'center',

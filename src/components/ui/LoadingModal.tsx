@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 
@@ -15,7 +16,7 @@ interface LoadingModalProps {
 export default function LoadingModal({ visible, message }: LoadingModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.container}>
+      <View style={modalLayoutStyles.container}>
         <ModalBackground />
         <View style={styles.content}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -27,12 +28,6 @@ export default function LoadingModal({ visible, message }: LoadingModalProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     width: '100%',
     maxWidth: 280,

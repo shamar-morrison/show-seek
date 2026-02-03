@@ -13,10 +13,12 @@ import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -131,10 +133,8 @@ export default function TraktSettingsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
+        <FullScreenLoading />
       </SafeAreaView>
     );
   }
@@ -142,7 +142,7 @@ export default function TraktSettingsScreen() {
   // State: Syncing
   if (isSyncing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
@@ -170,7 +170,7 @@ export default function TraktSettingsScreen() {
   // State: Enriching
   if (isEnriching) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
@@ -196,7 +196,7 @@ export default function TraktSettingsScreen() {
   // State: Not connected
   if (!isConnected) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
@@ -292,7 +292,7 @@ export default function TraktSettingsScreen() {
   // State: Connected but not synced yet
   if (!lastSyncedAt) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
@@ -343,7 +343,7 @@ export default function TraktSettingsScreen() {
   const itemsSynced = syncStatus?.itemsSynced;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
           <ArrowLeft size={24} color={COLORS.white} />
@@ -476,15 +476,6 @@ function StatItem({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { EnrichedMovieRating } from '@/src/hooks/useEnrichedRatings';
+import { listCardStyles } from '@/src/styles/listCardStyles';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -25,21 +27,27 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPre
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+      style={({ pressed }) => [
+        listCardStyles.container,
+        styles.container,
+        pressed && listCardStyles.containerPressed,
+      ]}
       onPress={handlePress}
     >
       <MediaImage
         source={{ uri: getImageUrl(item.movie.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
-        style={styles.poster}
+        style={listCardStyles.poster}
         contentFit="cover"
       />
-      <View style={styles.info}>
+      <View style={listCardStyles.info}>
         <Text style={styles.title} numberOfLines={2}>
           {item.movie.title}
         </Text>
         <View style={styles.metaContainer}>
-          {year && <Text style={styles.year}>{year}</Text>}
-          {item.movie.vote_average > 0 && year && <Text style={styles.separator}> • </Text>}
+          {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
+          {item.movie.vote_average > 0 && year && (
+            <Text style={metaTextStyles.secondary}> • </Text>
+          )}
           {item.movie.vote_average > 0 && (
             <View style={styles.tmdbRating}>
               <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
@@ -57,28 +65,7 @@ MovieRatingListCard.displayName = 'MovieRatingListCard';
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
     marginBottom: SPACING.m,
-  },
-  containerPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  poster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    flex: 1,
-    gap: SPACING.xs,
   },
   title: {
     fontSize: FONT_SIZE.m,
@@ -88,14 +75,6 @@ const styles = StyleSheet.create({
   metaContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  year: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  separator: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   tmdbRating: {
     flexDirection: 'row',

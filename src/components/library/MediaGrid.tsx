@@ -1,5 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
+import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
@@ -53,18 +55,18 @@ const MediaGridItem = memo<{
         style={styles.poster}
         contentFit="cover"
       />
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={1}>
+      <View style={mediaCardStyles.info}>
+        <Text style={mediaCardStyles.title} numberOfLines={1}>
           {displayTitle}
         </Text>
         {(year || item.vote_average > 0) && (
-          <View style={styles.yearRatingContainer}>
-            {year && <Text style={styles.year}>{year}</Text>}
-            {year && item.vote_average > 0 && <Text style={styles.separator}> • </Text>}
+          <View style={mediaMetaStyles.yearRatingContainer}>
+            {year && <Text style={mediaMetaStyles.year}>{year}</Text>}
+            {year && item.vote_average > 0 && <Text style={mediaMetaStyles.separator}> • </Text>}
             {item.vote_average > 0 && (
               <>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
               </>
             )}
           </View>
@@ -160,32 +162,5 @@ const styles = StyleSheet.create({
     height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    marginTop: SPACING.s,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  yearRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-    gap: SPACING.xs,
-  },
-  year: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  separator: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  rating: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
   },
 });

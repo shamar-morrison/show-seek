@@ -7,6 +7,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { Check, ChevronDown, X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -196,14 +197,18 @@ export default function WatchStatusFiltersModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={modalLayoutStyles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
 
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Filter Lists</Text>
+        <View style={modalLayoutStyles.card}>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>Filter Lists</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -266,36 +271,6 @@ export default function WatchStatusFiltersModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   filtersContainer: {
     gap: SPACING.m,
     marginBottom: SPACING.l,

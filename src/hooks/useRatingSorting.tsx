@@ -1,6 +1,7 @@
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { COLORS, SPACING } from '@/src/constants/theme';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -100,9 +101,9 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
           onPress={() => setSortModalVisible(true)}
           style={sortHeaderStyles.headerButton}
         >
-          <View style={sortHeaderStyles.iconWrapper}>
+          <View style={iconBadgeStyles.wrapper}>
             <ArrowUpDown size={22} color={COLORS.text} />
-            {hasActiveSort && <View style={sortHeaderStyles.sortBadge} />}
+            {hasActiveSort && <View style={iconBadgeStyles.badge} />}
           </View>
         </HeaderIconButton>
       ),
@@ -142,17 +143,5 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
 export const sortHeaderStyles = StyleSheet.create({
   headerButton: {
     marginRight: SPACING.s,
-  },
-  iconWrapper: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

@@ -1,54 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { useAuth } from '../context/auth';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { favoritePersonsService } from '../services/FavoritePersonsService';
 import { FavoritePerson } from '../types/favoritePerson';
 
 export const useFavoritePersons = () => {
-  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const subscribe = useCallback(
+    (onData: (data: FavoritePerson[]) => void, onError: (error: Error) => void) =>
+      favoritePersonsService.subscribeToFavoritePersons(onData, onError),
+    []
+  );
 
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    setIsSubscriptionLoading(true);
-
-    const unsubscribe = favoritePersonsService.subscribeToFavoritePersons(
-      (persons) => {
-        queryClient.setQueryData(['favoritePersons', userId], persons);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useFavoritePersons] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, queryClient]);
-
-  const query = useQuery({
+  const query = useRealtimeSubscription<FavoritePerson[]>({
     queryKey: ['favoritePersons', userId],
-    queryFn: () => {
-      return queryClient.getQueryData<FavoritePerson[]>(['favoritePersons', userId]) || [];
-    },
     enabled: !!userId,
-    staleTime: Infinity,
-    meta: { error },
+    initialData: [],
+    subscribe,
+    logLabel: 'useFavoritePersons',
   });
 
   return {
     ...query,
-    isLoading: isSubscriptionLoading,
   };
 };
 

@@ -1,6 +1,7 @@
 import { getImageUrl, Review, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
 import React from 'react';
@@ -35,7 +36,7 @@ export default function ReviewDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <SafeAreaView style={styles.header} edges={['top']}>
@@ -77,10 +78,6 @@ export default function ReviewDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

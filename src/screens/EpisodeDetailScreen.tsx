@@ -10,6 +10,7 @@ import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -18,6 +19,8 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useIsEpisodeWatched,
@@ -266,18 +269,20 @@ export default function EpisodeDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
+      <SafeAreaView style={screenStyles.container} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <FullScreenLoading />
       </SafeAreaView>
     );
   }
 
   if (isError || !episode) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
+      <SafeAreaView style={[errorStyles.container, styles.errorContainer]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.errorText}>Failed to load episode details</Text>
+        <Text style={[errorStyles.text, styles.errorText]}>
+          Failed to load episode details
+        </Text>
         <TouchableOpacity style={styles.errorButton} onPress={handleBack}>
           <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -290,7 +295,7 @@ export default function EpisodeDetailScreen() {
   const headerSubtitle = `Season ${seasonNumber}, Episode ${episodeNumber}`;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={screenStyles.container} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -554,26 +559,11 @@ export default function EpisodeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
     padding: SPACING.xl,
   },
   errorText: {
     fontSize: FONT_SIZE.l,
-    color: COLORS.error,
     textAlign: 'center',
     marginBottom: SPACING.l,
   },

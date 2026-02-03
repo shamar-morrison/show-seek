@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
@@ -52,7 +53,9 @@ export function PreferencesSection({
     return (
       <View style={[styles.preferencesSection, !showTitle && styles.noTitleSection]}>
         {showTitle && (
-          <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+            {t('settings.preferences').toUpperCase()}
+          </Text>
         )}
         <View style={styles.errorContainer}>
           <View style={styles.preferenceInfo}>
@@ -82,7 +85,9 @@ export function PreferencesSection({
   return (
     <View style={[styles.preferencesSection, !showTitle && styles.noTitleSection]}>
       {showTitle && (
-        <Text style={styles.sectionTitle}>{t('settings.preferences').toUpperCase()}</Text>
+        <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+          {t('settings.preferences').toUpperCase()}
+        </Text>
       )}
 
       <PreferenceItem
@@ -193,11 +198,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
     marginBottom: SPACING.m,
   },
   errorContainer: {

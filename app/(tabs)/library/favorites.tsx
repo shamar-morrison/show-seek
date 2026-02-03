@@ -1,12 +1,15 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
@@ -17,17 +20,20 @@ import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { createSortAction } from '@/src/utils/listActions';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Heart, Search, SlidersHorizontal } from 'lucide-react-native';
+import { Heart, Search, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
@@ -153,13 +159,10 @@ export default function FavoritesScreen() {
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ],
     [hasActiveFilterState, hasActiveSort]
   );
@@ -194,17 +197,13 @@ export default function FavoritesScreen() {
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (listItems.length === 0 && !hasActiveFilterState) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Heart}
           title="No Favorites Yet"
@@ -218,8 +217,8 @@ export default function FavoritesScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <View style={styles.content}>
           {viewMode === 'grid' ? (
             <MediaGrid
@@ -260,17 +259,11 @@ export default function FavoritesScreen() {
               data={displayItems}
               renderItem={renderListItem}
               keyExtractor={keyExtractor}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={libraryListStyles.listContent}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 searchQuery ? (
-                  <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                    <EmptyState
-                      icon={Search}
-                      title="No results found"
-                      description="Try a different search term."
-                    />
-                  </View>
+                  <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
                 ) : hasActiveFilterState ? (
                   <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                     <EmptyState
@@ -296,9 +289,9 @@ export default function FavoritesScreen() {
         />
       )}
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
@@ -322,26 +315,8 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
   content: {
     flex: 1,
     paddingTop: SPACING.m,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.xl,
   },
 });

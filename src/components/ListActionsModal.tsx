@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Ellipsis, LucideIcon } from 'lucide-react-native';
@@ -86,7 +87,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
               >
                 <View style={styles.iconContainer}>
                   <IconComponent size={24} color={iconColor} />
-                  {action.showBadge && <View style={styles.badge} />}
+                  {action.showBadge && <View style={iconBadgeStyles.badge} />}
                 </View>
                 <Text style={[styles.label, { color: iconColor }]}>{action.label}</Text>
               </Pressable>
@@ -127,15 +128,6 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
   label: {
     fontSize: FONT_SIZE.m,

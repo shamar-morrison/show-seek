@@ -1,18 +1,24 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
-import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { InProgressShow } from '@/src/types/episodeTracking';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -107,18 +113,14 @@ export default function WatchProgressScreen() {
   // Configure header with search + sort buttons
   useLayoutEffect(() => {
     if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search shows..."
-          />
-        ),
-      });
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: 'Search shows...',
+        })
+      );
     } else {
       navigation.setOptions({
         header: undefined,
@@ -130,9 +132,9 @@ export default function WatchProgressScreen() {
               <Search size={22} color={COLORS.text} />
             </HeaderIconButton>
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
-              <View style={styles.iconWrapper}>
+              <View style={iconBadgeStyles.wrapper}>
                 <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={styles.sortBadge} />}
+                {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
           </View>
@@ -154,12 +156,7 @@ export default function WatchProgressScreen() {
   const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your watch history...</Text>
-      </View>
-    );
+    return <FullScreenLoading message="Loading your watch history..." />;
   }
 
   if (error) {
@@ -172,8 +169,8 @@ export default function WatchProgressScreen() {
 
   if (sortedData.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={TvIcon}
           title="No Shows in Progress"
@@ -184,29 +181,21 @@ export default function WatchProgressScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       <FlashList
         data={displayItems}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={libraryListStyles.listContent}
         keyExtractor={(item) => item.tvShowId.toString()}
         ListEmptyComponent={
-          searchQuery ? (
-            <View style={{ height: 300 }}>
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
-            </View>
-          ) : null
+          searchQuery ? <SearchEmptyState height={300} /> : null
         }
       />
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={ALLOWED_SORT_OPTIONS}
@@ -216,29 +205,6 @@ export default function WatchProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  listContent: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    color: COLORS.textSecondary,
-    fontSize: 14,
-  },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -253,17 +219,5 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconWrapper: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

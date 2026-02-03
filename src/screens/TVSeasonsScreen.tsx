@@ -2,7 +2,10 @@ import type { Episode } from '@/src/api/tmdb';
 import { tmdbApi } from '@/src/api/tmdb';
 import { SeasonItem } from '@/src/components/tv/SeasonItem';
 import { seasonScreenStyles as styles } from '@/src/components/tv/seasonScreenStyles';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useMarkAllEpisodesWatched,
@@ -22,7 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TVSeasonsScreen() {
@@ -115,17 +118,13 @@ export default function TVSeasonsScreen() {
   );
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (tvQuery.isError || !tvQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load seasons</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load seasons</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -154,7 +153,7 @@ export default function TVSeasonsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <SafeAreaView edges={['top']} style={styles.header}>

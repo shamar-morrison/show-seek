@@ -8,19 +8,25 @@ import {
   TVShow,
 } from '@/src/api/tmdb';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { SortState } from '@/src/components/MediaSortModal';
+import { SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import { createSortAction } from '@/src/utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
@@ -30,10 +36,9 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowUpDown, Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
+import { Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   Pressable,
   StyleSheet,
@@ -225,13 +230,10 @@ export default function PersonCreditsScreen() {
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ],
     [hasActiveFilterState, hasActiveSort]
   );
@@ -252,13 +254,15 @@ export default function PersonCreditsScreen() {
             {item.title}
           </Text>
           {item.release_date && (
-            <View style={styles.yearRatingContainer}>
-              <Text style={styles.year}>{new Date(item.release_date).getFullYear()}</Text>
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              <Text style={mediaMetaStyles.year}>
+                {new Date(item.release_date).getFullYear()}
+              </Text>
               {item.vote_average > 0 && (
                 <>
-                  <Text style={styles.separator}> • </Text>
+                  <Text style={mediaMetaStyles.separator}> • </Text>
                   <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
                 </>
               )}
             </View>
@@ -282,17 +286,13 @@ export default function PersonCreditsScreen() {
   );
 
   if (creditsQuery.isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (creditsQuery.isError) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load credits</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load credits</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButtonError}
@@ -306,7 +306,7 @@ export default function PersonCreditsScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <Stack.Screen
           options={{
             headerShown: true,
@@ -355,9 +355,9 @@ export default function PersonCreditsScreen() {
         )}
       </SafeAreaView>
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={setSortState}
         allowedOptions={['popularity', 'releaseDate', 'rating', 'alphabetical']}
@@ -381,26 +381,6 @@ export default function PersonCreditsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   backButtonError: {
     padding: SPACING.m,
   },
@@ -470,24 +450,5 @@ const styles = StyleSheet.create({
   // Shared styles
   cardPressed: {
     opacity: ACTIVE_OPACITY,
-  },
-  yearRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-    gap: SPACING.xs,
-  },
-  year: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  separator: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  rating: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
   },
 });

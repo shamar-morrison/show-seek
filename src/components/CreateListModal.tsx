@@ -2,6 +2,7 @@ import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -127,9 +128,9 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <GestureHandlerRootView style={[styles.content, { width }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Create New List</Text>
+        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>Create New List</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -187,21 +188,6 @@ CreateListModal.displayName = 'CreateListModal';
 export default CreateListModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   createContainer: {
     gap: SPACING.m,
   },

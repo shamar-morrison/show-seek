@@ -5,6 +5,7 @@ import { useAuth } from '@/src/context/auth';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { Link, useRouter } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
@@ -132,7 +133,7 @@ export default function SignIn() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <AnimatedBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -266,10 +267,6 @@ export default function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   safeArea: {
     flex: 1,
   },

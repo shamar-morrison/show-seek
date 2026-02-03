@@ -3,6 +3,7 @@ import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   useAddToList,
   useDeleteList,
@@ -378,9 +379,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           onDidDismiss={handleDismiss}
           grabber={true}
         >
-          <GestureHandlerRootView style={[styles.content, { width }]}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Add to List</Text>
+          <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+            <View style={modalHeaderStyles.header}>
+              <Text style={modalHeaderStyles.title}>Add to List</Text>
             </View>
 
             {successMessage && (
@@ -477,21 +478,6 @@ AddToListModal.displayName = 'AddToListModal';
 export default AddToListModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   loader: {
     padding: SPACING.xl,
   },

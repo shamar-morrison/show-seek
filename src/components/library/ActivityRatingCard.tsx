@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { ActivityItem } from '@/src/types/history';
+import { listCardStyles } from '@/src/styles/listCardStyles';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -38,15 +39,19 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+      style={({ pressed }) => [
+        listCardStyles.container,
+        styles.container,
+        pressed && listCardStyles.containerPressed,
+      ]}
       onPress={handlePress}
     >
       <MediaImage
         source={{ uri: getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-        style={styles.poster}
+        style={listCardStyles.poster}
         contentFit="cover"
       />
-      <View style={styles.info}>
+      <View style={listCardStyles.info}>
         <Text style={styles.title} numberOfLines={2}>
           {item.title}
         </Text>
@@ -65,28 +70,7 @@ ActivityRatingCard.displayName = 'ActivityRatingCard';
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
     marginBottom: SPACING.m,
-  },
-  containerPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  poster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    flex: 1,
-    gap: SPACING.xs,
   },
   title: {
     fontSize: FONT_SIZE.m,

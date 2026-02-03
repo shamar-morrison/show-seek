@@ -34,6 +34,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { errorStyles } from '@/src/styles/errorStyles';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -248,8 +249,8 @@ export default function MovieDetailScreen() {
 
   if (movieQuery.isError || !movieQuery.data) {
     return (
-      <View style={detailStyles.errorContainer}>
-        <Text style={detailStyles.errorText}>Failed to load movie details</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load movie details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={detailStyles.backButton}

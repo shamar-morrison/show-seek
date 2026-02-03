@@ -1,6 +1,7 @@
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -162,7 +163,7 @@ export default function MarkAsWatchedModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ModalBackground />
@@ -173,8 +174,8 @@ export default function MarkAsWatchedModal({
         />
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>When did you watch this?</Text>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>When did you watch this?</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -282,7 +283,7 @@ export default function MarkAsWatchedModal({
         onRequestClose={() => setShowDatePicker(false)}
       >
         <KeyboardAvoidingView
-          style={styles.container}
+          style={modalLayoutStyles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ModalBackground />
@@ -305,12 +306,6 @@ export default function MarkAsWatchedModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -318,17 +313,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '85%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: SPACING.xs,

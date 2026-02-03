@@ -1,6 +1,9 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useHistory } from '@/src/hooks/useHistory';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import type { MonthlyStats } from '@/src/types/history';
 import { useRouter } from 'expo-router';
 import {
@@ -18,7 +21,6 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -144,17 +146,12 @@ export default function StatsScreen() {
   );
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your stats...</Text>
-      </View>
-    );
+    return <FullScreenLoading message="Loading your stats..." />;
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={BarChart3}
@@ -173,7 +170,7 @@ export default function StatsScreen() {
 
   if (!hasData) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={BarChart3}
@@ -185,12 +182,14 @@ export default function StatsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={styles.divider} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Overview Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>LAST 6 MONTHS OVERVIEW</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+            LAST 6 MONTHS OVERVIEW
+          </Text>
           <View style={styles.statsGrid}>
             <StatCard
               icon={Tv}
@@ -215,7 +214,7 @@ export default function StatsScreen() {
 
         {/* Streaks Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>STREAKS</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>STREAKS</Text>
           <View style={styles.streakRow}>
             <View style={styles.streakItem}>
               <Flame size={28} color="#FF6B35" />
@@ -237,7 +236,7 @@ export default function StatsScreen() {
         {/* Activity Patterns Section */}
         {(historyData.mostActiveDay || historyData.mostActiveTimeOfDay) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ACTIVITY PATTERNS</Text>
+            <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>ACTIVITY PATTERNS</Text>
             <View style={styles.patternRow}>
               {historyData.mostActiveDay && (
                 <View style={styles.patternItem}>
@@ -259,7 +258,7 @@ export default function StatsScreen() {
 
         {/* Monthly Breakdown Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>MONTHLY BREAKDOWN</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>MONTHLY BREAKDOWN</Text>
           {historyData.monthlyStats.map((monthStats) => (
             <MonthRow
               key={monthStats.month}
@@ -274,24 +273,9 @@ export default function StatsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   divider: {
     height: 1,
     backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: SPACING.m,
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
   },
   scrollContent: {
     padding: SPACING.l,
@@ -301,11 +285,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
     marginBottom: SPACING.m,
   },
   statsGrid: {

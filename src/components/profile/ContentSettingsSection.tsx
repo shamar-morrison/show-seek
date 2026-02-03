@@ -1,5 +1,6 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { SUPPORTED_LANGUAGES } from '@/src/context/LanguageProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { UserPreferences } from '@/src/types/preferences';
@@ -70,7 +71,7 @@ export function ContentSettingsSection({
 
   return (
     <View style={[styles.actionsSection, !showTitle && styles.noTitleSection]}>
-      {showTitle && <Text style={styles.sectionTitle}>CONTENT</Text>}
+      {showTitle && <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>CONTENT</Text>}
       <View style={styles.actionsList}>
         <ActionButton
           icon={Languages}
@@ -151,11 +152,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
     marginBottom: SPACING.m,
   },
   actionsList: {

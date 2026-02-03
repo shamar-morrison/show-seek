@@ -1,12 +1,16 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { COLORS, FONT_SIZE, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
 import { RatingItem } from '@/src/services/RatingService';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -14,7 +18,6 @@ import { useNavigation, useRouter } from 'expo-router';
 import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   SectionList,
   StyleSheet,
   Text,
@@ -91,18 +94,14 @@ export default function EpisodeRatingsScreen() {
 
   useLayoutEffect(() => {
     if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search episodes..."
-          />
-        ),
-      });
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: 'Search episodes...',
+        })
+      );
     } else {
       navigation.setOptions({
         header: undefined,
@@ -205,29 +204,21 @@ export default function EpisodeRatingsScreen() {
   const searchEmptyComponent = useMemo(
     () =>
       searchQuery ? (
-        <View style={{ height: windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT }}>
-          <EmptyState
-            icon={Search}
-            title="No results found"
-            description="Try a different search term."
-          />
-        </View>
+        <SearchEmptyState
+          height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT}
+        />
       ) : null,
     [searchQuery, windowHeight, insets.top, insets.bottom]
   );
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (episodeRatings.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Star}
           title="No Episode Ratings"
@@ -238,14 +229,14 @@ export default function EpisodeRatingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
           data={filteredItems}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={searchEmptyComponent}
@@ -257,7 +248,7 @@ export default function EpisodeRatingsScreen() {
           renderSectionHeader={renderSectionHeader}
           SectionSeparatorComponent={renderSectionSeparator}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
@@ -269,25 +260,6 @@ export default function EpisodeRatingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
-  },
   separator: {
     height: SPACING.m,
   },

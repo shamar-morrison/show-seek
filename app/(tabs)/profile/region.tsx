@@ -4,6 +4,7 @@
  */
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
+import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
@@ -39,7 +40,7 @@ export default function RegionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.description}>
           Select your region to see local streaming availability and release dates.
@@ -91,10 +92,6 @@ export default function RegionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: SPACING.l,
   },

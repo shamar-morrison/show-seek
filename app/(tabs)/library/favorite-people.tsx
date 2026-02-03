@@ -1,20 +1,23 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { FavoritePerson } from '@/src/types/favoritePerson';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { Grid3X3, List, Search, User } from 'lucide-react-native';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   SectionList,
   StyleSheet,
@@ -90,18 +93,14 @@ export default function FavoritePeopleScreen() {
   // Swap header when search is active
   useLayoutEffect(() => {
     if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search people..."
-          />
-        ),
-      });
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: 'Search people...',
+        })
+      );
     } else {
       navigation.setOptions({
         header: undefined,
@@ -199,17 +198,13 @@ export default function FavoritePeopleScreen() {
   const SectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (sortedPersons.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={User}
           title="No Favorite People"
@@ -220,8 +215,8 @@ export default function FavoritePeopleScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       {viewMode === 'grid' ? (
         <FlatList
           data={displayItems}
@@ -233,13 +228,7 @@ export default function FavoritePeopleScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
+              <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
             ) : null
           }
         />
@@ -250,19 +239,13 @@ export default function FavoritePeopleScreen() {
           renderSectionHeader={renderSectionHeader}
           SectionSeparatorComponent={SectionSeparator}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={
             searchQuery ? (
-              <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                <EmptyState
-                  icon={Search}
-                  title="No results found"
-                  description="Try a different search term."
-                />
-              </View>
+              <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
             ) : null
           }
         />
@@ -272,27 +255,8 @@ export default function FavoritePeopleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   gridListContent: {
     padding: SPACING.m,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
   },
   columnWrapper: {
     gap: SPACING.m,

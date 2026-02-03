@@ -1,9 +1,10 @@
 import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { tmdbApi } from '../api/tmdb';
 import { usePremium } from '../context/PremiumContext';
 import { auth } from '../firebase/config';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
@@ -12,56 +13,23 @@ import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
 
 export const useLists = () => {
-  const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
-    if (!userId) return true;
-    return !queryClient.getQueryData(['lists', userId]);
-  });
+  const subscribe = useCallback(
+    (onData: (data: UserList[]) => void, onError: (error: Error) => void) =>
+      listService.subscribeToUserLists(onData, onError),
+    []
+  );
 
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    if (!queryClient.getQueryData(['lists', userId])) {
-      setIsSubscriptionLoading(true);
-    }
-
-    const unsubscribe = listService.subscribeToUserLists(
-      (lists) => {
-        queryClient.setQueryData(['lists', userId], lists);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useLists] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, queryClient]);
-
-  const query = useQuery({
+  const query = useRealtimeSubscription<UserList[]>({
     queryKey: ['lists', userId],
-    queryFn: () => {
-      // Initial data is handled by subscription, but we need a queryFn
-      // We can return existing data or empty array if not yet populated
-      return queryClient.getQueryData<UserList[]>(['lists', userId]) || [];
-    },
     enabled: !!userId,
-    staleTime: Infinity, // Data is updated via subscription
-    meta: { error }, // Attach error to query meta
+    initialData: [],
+    subscribe,
+    logLabel: 'useLists',
   });
 
   return {
     ...query,
-    isLoading: isSubscriptionLoading,
   };
 };
 

@@ -7,6 +7,7 @@ import { Calendar, Crown } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { screenStyles } from '@/src/styles/screenStyles';
 
 // Import the background image
 const CALENDAR_BG = require('@/assets/images/calendar_bg.png');
@@ -25,7 +26,7 @@ export function CalendarPremiumGate() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       {/* Background Image */}
       <Image source={CALENDAR_BG} style={styles.backgroundImage} contentFit="cover" />
 
@@ -77,10 +78,6 @@ export function CalendarPremiumGate() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   backgroundImage: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',

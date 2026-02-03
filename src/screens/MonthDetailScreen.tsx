@@ -1,16 +1,18 @@
 import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
+import { screenStyles } from '@/src/styles/screenStyles';
 import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabType = 'watched' | 'rated' | 'added';
@@ -184,16 +186,12 @@ export default function MonthDetailScreen() {
   }, [monthDetail]);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (!monthDetail) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
@@ -209,7 +207,7 @@ export default function MonthDetailScreen() {
 
   if (hasNoActivity) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
@@ -224,7 +222,7 @@ export default function MonthDetailScreen() {
   const currentItems = activeTab === 'watched' ? watched : activeTab === 'rated' ? rated : added;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={styles.divider} />
 
       {/* Summary Card */}
@@ -331,19 +329,9 @@ export default function MonthDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   divider: {
     height: 1,
     backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
   },
   summaryCard: {
     backgroundColor: COLORS.surface,

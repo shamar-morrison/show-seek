@@ -4,6 +4,7 @@
 
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { X } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import {
@@ -77,13 +78,13 @@ export function MonthYearPickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <View style={modalLayoutStyles.container}>
         <ModalBackground />
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Select Month & Year</Text>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>Select Month & Year</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -179,12 +180,6 @@ export function MonthYearPickerModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -192,17 +187,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: SPACING.xs,

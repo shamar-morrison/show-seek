@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -18,7 +19,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   RefreshControl,
   ScrollView,
@@ -28,6 +28,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -73,17 +75,13 @@ export default function PersonDetailScreen() {
   );
 
   if (personQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (personQuery.isError || !personQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load person details</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load person details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -233,7 +231,7 @@ export default function PersonDetailScreen() {
   const age = calculateAge(person.birthday, person.deathday);
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -472,26 +470,6 @@ export default function PersonDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   backButton: {
     padding: SPACING.m,
   },

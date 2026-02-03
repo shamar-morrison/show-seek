@@ -1,7 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, FONT_SIZE } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
+import { listCardStyles } from '@/src/styles/listCardStyles';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import React, { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -26,19 +27,22 @@ export const PersonListCard = memo<PersonListCardProps>(
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+        style={({ pressed }) => [
+          listCardStyles.container,
+          pressed && listCardStyles.containerPressed,
+        ]}
         onPress={handlePress}
       >
         <View style={styles.imageContainer}>
           <MediaImage
             source={{ uri: getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
-            style={styles.profileImage}
+            style={listCardStyles.poster}
             contentFit="cover"
             placeholderType="person"
           />
           {showBadge && <FavoritePersonBadge size="medium" />}
         </View>
-        <View style={styles.info}>
+        <View style={listCardStyles.info}>
           <Text style={styles.name} numberOfLines={1}>
             {person.name}
           </Text>
@@ -56,31 +60,8 @@ export const PersonListCard = memo<PersonListCardProps>(
 PersonListCard.displayName = 'PersonListCard';
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  containerPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
   imageContainer: {
     position: 'relative',
-  },
-  profileImage: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    flex: 1,
-    gap: SPACING.xs,
   },
   name: {
     fontSize: FONT_SIZE.m,

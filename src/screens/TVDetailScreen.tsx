@@ -32,6 +32,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { errorStyles } from '@/src/styles/errorStyles';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -43,6 +44,7 @@ import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissio
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
+import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
 import {
   useCancelReminder,
   useCreateReminder,
@@ -50,7 +52,6 @@ import {
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
-import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import {
   getListColor,
   getListIconComponent,
@@ -59,9 +60,6 @@ import {
 } from '@/src/utils/listIcons';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
-import { hasEpisodeChanged, isReleaseToday } from '@/src/utils/reminderHelpers';
-import { getNextUpcomingSeason } from '@/src/utils/seasonHelpers';
-import { getSubsequentEpisode } from '@/src/utils/subsequentEpisodeHelpers';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -203,194 +201,30 @@ export default function TVDetailScreen() {
     [currentTab, router]
   );
 
-  // Compute next episode info for reminders (must be before early returns)
-  const nextEpisodeInfo = useMemo((): NextEpisodeInfo | null => {
-    const show = tvQuery.data;
+  const handleToast = useCallback((message: string) => {
+    toastRef.current?.show(message);
+  }, []);
 
-    // If we have next_episode_to_air, use it
-    if (show?.next_episode_to_air?.air_date) {
-      return {
-        seasonNumber: show.next_episode_to_air.season_number,
-        episodeNumber: show.next_episode_to_air.episode_number,
-        episodeName: show.next_episode_to_air.name || 'TBA',
-        airDate: show.next_episode_to_air.air_date,
-      };
-    }
-
-    // Fallback: Use first_air_date for series premiere (S1E1)
-    // Only when: show is in pre-air status OR first_air_date is in the future
-    if (show?.first_air_date) {
-      const preAirStatuses = ['Planned', 'Pilot', 'In Production'];
-      const isPreAirStatus = preAirStatuses.includes(show.status || '');
-
-      // Check if first_air_date is today or in the future
-      const firstAirDate = new Date(show.first_air_date + 'T00:00:00');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const isFirstAirDateFuture = firstAirDate >= today;
-
-      if (isPreAirStatus || isFirstAirDateFuture) {
-        return {
-          seasonNumber: 1,
-          episodeNumber: 1,
-          episodeName: 'Series Premiere',
-          airDate: show.first_air_date,
-        };
-      }
-    }
-
-    return null;
-  }, [tvQuery.data]);
-
-  // Compute next season premiere date (must be before early returns)
-  const { nextSeasonAirDate, nextSeasonNumber } = useMemo(() => {
-    return getNextUpcomingSeason(tvQuery.data?.seasons);
-  }, [tvQuery.data]);
-
-  // Fetch subsequent episode when current next episode airs today
-  const subsequentEpisodeQuery = useQuery({
-    queryKey: [
-      'tv',
-      tvId,
-      'subsequent-episode',
-      nextEpisodeInfo?.seasonNumber,
-      nextEpisodeInfo?.episodeNumber,
-    ],
-    queryFn: () => getSubsequentEpisode(tvId, nextEpisodeInfo!),
-    enabled: !!(nextEpisodeInfo?.airDate && isReleaseToday(nextEpisodeInfo.airDate)),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+  const {
+    nextEpisodeInfo: originalNextEpisode,
+    effectiveNextEpisode,
+    nextSeasonAirDate,
+    nextSeasonNumber,
+    isUsingSubsequent,
+    isLoadingSubsequent,
+    handleSetReminder,
+    handleCancelReminder,
+  } = useTVReminderLogic({
+    tvId,
+    tvShowData: tvQuery.data,
+    reminder,
+    hasReminder,
+    createReminderMutation,
+    cancelReminderMutation,
+    updateReminderMutation,
+    requestPermission,
+    onToast: handleToast,
   });
-
-  const subsequentEpisode = subsequentEpisodeQuery.data ?? null;
-  const isLoadingSubsequent = subsequentEpisodeQuery.isLoading;
-
-  // Whether we should use the subsequent episode instead of the current next episode
-  const isUsingSubsequent = useMemo(() => {
-    return !!(nextEpisodeInfo && isReleaseToday(nextEpisodeInfo.airDate) && subsequentEpisode);
-  }, [nextEpisodeInfo, subsequentEpisode]);
-
-  // The effective episode to use for reminders:
-  // If today's episode is airing, use subsequent episode (if available)
-  const effectiveNextEpisode = useMemo(() => {
-    if (isUsingSubsequent) {
-      return subsequentEpisode;
-    }
-    return nextEpisodeInfo;
-  }, [nextEpisodeInfo, subsequentEpisode, isUsingSubsequent]);
-
-  const handleSetReminder = useCallback(
-    async (
-      timing: ReminderTiming,
-      frequency: TVReminderFrequency,
-      nextEpisode: NextEpisodeInfo | null
-    ) => {
-      const show = tvQuery.data;
-      if (!show) return;
-
-      const hasPermission = await requestPermission();
-      if (!hasPermission) {
-        toastRef.current?.show('Please enable notifications in settings');
-        return;
-      }
-
-      const releaseDate = frequency === 'every_episode' ? nextEpisode?.airDate : nextSeasonAirDate;
-
-      if (!releaseDate) {
-        toastRef.current?.show('No upcoming date available');
-        return;
-      }
-
-      if (hasReminder && reminder) {
-        // Check if frequency or nextEpisode have changed
-        const frequencyChanged = frequency !== reminder.tvFrequency;
-        const episodeChanged = hasEpisodeChanged(reminder.nextEpisode, nextEpisode);
-
-        if (frequencyChanged || episodeChanged) {
-          // Frequency or episode data changed - cancel existing and create new reminder
-          await cancelReminderMutation.mutateAsync(reminder.id);
-
-          if (frequency === 'every_episode') {
-            if (!nextEpisode) {
-              toastRef.current?.show('No upcoming episode available');
-              return;
-            }
-            await createReminderMutation.mutateAsync({
-              mediaId: show.id,
-              mediaType: 'tv',
-              title: show.name,
-              posterPath: show.poster_path,
-              releaseDate,
-              reminderTiming: timing,
-              tvFrequency: frequency,
-              nextEpisode,
-            });
-          } else {
-            await createReminderMutation.mutateAsync({
-              mediaId: show.id,
-              mediaType: 'tv',
-              title: show.name,
-              posterPath: show.poster_path,
-              releaseDate,
-              reminderTiming: timing,
-              tvFrequency: frequency,
-              ...(nextEpisode && { nextEpisode }),
-            });
-          }
-        } else {
-          // Only timing changed - use simple update
-          await updateReminderMutation.mutateAsync({
-            reminderId: reminder.id,
-            timing,
-          });
-        }
-      } else if (frequency === 'every_episode') {
-        // For episode reminders, nextEpisode is required
-        if (!nextEpisode) {
-          toastRef.current?.show('No upcoming episode available');
-          return;
-        }
-        await createReminderMutation.mutateAsync({
-          mediaId: show.id,
-          mediaType: 'tv',
-          title: show.name,
-          posterPath: show.poster_path,
-          releaseDate,
-          reminderTiming: timing,
-          tvFrequency: frequency,
-          nextEpisode,
-        });
-      } else {
-        // For season premiere reminders, nextEpisode is optional
-        await createReminderMutation.mutateAsync({
-          mediaId: show.id,
-          mediaType: 'tv',
-          title: show.name,
-          posterPath: show.poster_path,
-          releaseDate,
-          reminderTiming: timing,
-          tvFrequency: frequency,
-          ...(nextEpisode && { nextEpisode }),
-        });
-      }
-    },
-    [
-      tvQuery.data,
-      requestPermission,
-      hasReminder,
-      reminder,
-      cancelReminderMutation,
-      updateReminderMutation,
-      createReminderMutation,
-      nextSeasonAirDate,
-    ]
-  );
-
-  const handleCancelReminder = useCallback(async () => {
-    if (reminder) {
-      await cancelReminderMutation.mutateAsync(reminder.id);
-    }
-  }, [reminder, cancelReminderMutation]);
 
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
@@ -407,8 +241,8 @@ export default function TVDetailScreen() {
 
   if (tvQuery.isError || !tvQuery.data) {
     return (
-      <View style={detailStyles.errorContainer}>
-        <Text style={detailStyles.errorText}>Failed to load TV show details</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>Failed to load TV show details</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={detailStyles.backButton}
@@ -781,7 +615,7 @@ export default function TVDetailScreen() {
             onClose={() => setReminderModalVisible(false)}
             tvTitle={show.name}
             nextEpisode={effectiveNextEpisode}
-            originalNextEpisode={nextEpisodeInfo}
+            originalNextEpisode={originalNextEpisode}
             isUsingSubsequentEpisode={isUsingSubsequent}
             isLoadingSubsequentEpisode={isLoadingSubsequent}
             nextSeasonAirDate={nextSeasonAirDate}

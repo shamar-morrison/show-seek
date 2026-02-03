@@ -7,6 +7,7 @@ import {
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
@@ -158,9 +159,9 @@ const HomeScreenCustomizationModal = forwardRef<
       backgroundColor={COLORS.surface}
       grabber={true}
     >
-      <GestureHandlerRootView style={[styles.content, { width }]}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Customize Home Screen</Text>
+        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+        <View style={modalHeaderStyles.header}>
+          <Text style={modalHeaderStyles.title}>Customize Home Screen</Text>
           <Text style={styles.subtitle}>
             {pendingSelections.length}/{MAX_HOME_LISTS} selected
           </Text>
@@ -253,21 +254,6 @@ HomeScreenCustomizationModal.displayName = 'HomeScreenCustomizationModal';
 export default HomeScreenCustomizationModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   subtitle: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,

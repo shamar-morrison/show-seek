@@ -1,14 +1,17 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import ShuffleModal from '@/src/components/ShuffleModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { COLORS, SPACING } from '@/src/constants/theme';
@@ -19,26 +22,21 @@ import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { createSortAction } from '@/src/utils/listActions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ArrowUpDown,
-  Bookmark,
-  Pencil,
-  Search,
-  Shuffle,
-  SlidersHorizontal,
-  Trash2,
-} from 'lucide-react-native';
+import { Bookmark, Pencil, Search, Shuffle, SlidersHorizontal, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
@@ -248,13 +246,10 @@ export default function CustomListDetailScreen() {
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
       {
         id: 'rename',
         icon: Pencil,
@@ -331,11 +326,7 @@ export default function CustomListDetailScreen() {
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (!list) {
@@ -350,9 +341,9 @@ export default function CustomListDetailScreen() {
         }}
       />
 
-      <View style={styles.divider} />
+      <View style={libraryListStyles.divider} />
 
-      <View style={styles.container}>
+      <View style={[screenStyles.container, styles.container]}>
         {viewMode === 'grid' ? (
           <MediaGrid
             key="grid"
@@ -380,7 +371,7 @@ export default function CustomListDetailScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[libraryListStyles.listContent, styles.listContent]}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View
@@ -389,11 +380,7 @@ export default function CustomListDetailScreen() {
                 }}
               >
                 {searchQuery ? (
-                  <EmptyState
-                    icon={Search}
-                    title="No results found"
-                    description="Try a different search term."
-                  />
+                  <SearchEmptyState />
                 ) : (
                   <EmptyState {...(hasActiveFilterState ? filterEmptyState : defaultEmptyState)} />
                 )}
@@ -411,9 +398,9 @@ export default function CustomListDetailScreen() {
         />
       )}
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
@@ -447,22 +434,9 @@ export default function CustomListDetailScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
     paddingTop: SPACING.m,
   },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.xl,
+    paddingTop: 0,
   },
 });

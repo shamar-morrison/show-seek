@@ -3,6 +3,7 @@ import { WidgetTypeSelector } from '@/src/components/widgets/WidgetTypeSelector'
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { WidgetConfig } from '@/src/types';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Save } from 'lucide-react-native';
@@ -80,7 +81,7 @@ export default function ConfigureWidgetScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionTitle}>Widget Type</Text>
         <WidgetTypeSelector selectedType={type} onSelect={setType} />
@@ -136,10 +137,6 @@ export default function ConfigureWidgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: SPACING.l,
   },

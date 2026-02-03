@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -13,6 +14,7 @@ import {
   useStartCollectionTracking,
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
+import { errorStyles } from '@/src/styles/errorStyles';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -21,7 +23,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, Play, Star, StopCircle } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -30,6 +31,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { screenStyles } from '@/src/styles/screenStyles';
 
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();
@@ -128,17 +130,13 @@ export default function CollectionScreen() {
   }, [requireAuth, collectionQuery.data, stopTrackingMutation, collectionId]);
 
   if (collectionQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (collectionQuery.isError || !collectionQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load collection</Text>
+      <View style={[errorStyles.container, styles.errorContainer]}>
+        <Text style={[errorStyles.text, styles.errorText]}>Failed to load collection</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -167,7 +165,7 @@ export default function CollectionScreen() {
   const isButtonLoading = startTrackingMutation.isPending || stopTrackingMutation.isPending;
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -337,21 +335,7 @@ export default function CollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
     padding: SPACING.xl,
   },
   errorText: {

@@ -2,6 +2,8 @@ import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigatio
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { useRouter } from 'expo-router';
 import {
   BarChart3,
@@ -287,7 +289,7 @@ export default function LibraryScreen() {
 
   const renderSectionHeader = useCallback(
     ({ section }: { section: SectionData }) => (
-      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={sectionTitleStyles.title}>{section.title}</Text>
     ),
     []
   );
@@ -298,7 +300,7 @@ export default function LibraryScreen() {
   const keyExtractor = useCallback((item: NavigationItem) => item.id, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={screenStyles.container} edges={['top']}>
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>{t('tabs.library')}</Text>
         <Pressable onPress={() => router.push('/manage-lists' as any)} hitSlop={HIT_SLOP.m}>
@@ -322,10 +324,6 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -344,13 +342,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.l,
     paddingBottom: SPACING.xl,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
   sectionSeparator: {
     height: SPACING.xl,

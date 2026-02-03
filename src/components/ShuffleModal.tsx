@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -178,15 +179,15 @@ export default function ShuffleModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <ModalBackground />
-      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-      <View style={styles.container}>
-        <View style={styles.content}>
+      <View style={modalLayoutStyles.container}>
+        <View style={[modalLayoutStyles.card, styles.content]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[modalHeaderStyles.header, styles.header]}>
             <View style={styles.headerTitleRow}>
               <Shuffle size={20} color={COLORS.primary} />
-              <Text style={styles.title}>Random Pick</Text>
+              <Text style={modalHeaderStyles.title}>Random Pick</Text>
             </View>
             <Pressable onPress={handleClose} testID="shuffle-close-button">
               {({ pressed }) => (
@@ -275,40 +276,16 @@ export default function ShuffleModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
-    width: '100%',
     maxWidth: 320,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: SPACING.l,
   },
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.s,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   posterContainer: {
     alignItems: 'center',

@@ -1,8 +1,11 @@
 import EditTimingModal from '@/src/components/library/EditTimingModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { ReminderCard } from '@/src/components/library/ReminderCard';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCancelReminder, useReminders, useUpdateReminder } from '@/src/hooks/useReminders';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -11,7 +14,6 @@ import { useNavigation } from 'expo-router';
 import { Bell, List, Rows3 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   SectionList,
   StyleSheet,
@@ -214,18 +216,14 @@ export default function RemindersScreen() {
 
   // Loading state
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   // Empty state
   if (!sortedReminders || sortedReminders.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Bell}
           title="No Active Reminders"
@@ -236,14 +234,14 @@ export default function RemindersScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
           data={sortedReminders}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
         />
@@ -254,7 +252,7 @@ export default function RemindersScreen() {
           renderSectionHeader={renderSectionHeader}
           SectionSeparatorComponent={renderSectionSeparator}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
@@ -274,25 +272,6 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
-  },
   separator: {
     height: SPACING.m,
   },

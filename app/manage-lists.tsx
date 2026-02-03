@@ -1,20 +1,14 @@
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
+import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useRef } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const DEFAULT_LIST_IDS = [
@@ -81,7 +75,7 @@ export default function ManageListsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={screenStyles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.text} />
@@ -91,9 +85,7 @@ export default function ManageListsScreen() {
         </View>
 
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          </View>
+          <FullScreenLoading />
         ) : (
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
             <View style={styles.section}>
@@ -162,10 +154,6 @@ export default function ManageListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -179,11 +167,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     fontWeight: 'bold',
     color: COLORS.text,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,

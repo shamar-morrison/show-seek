@@ -1,8 +1,9 @@
-import { ArrowUpDown, SlidersHorizontal } from 'lucide-react-native';
+import { SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Movie, TVShow } from '../api/tmdb';
 import { ListActionsIcon, ListActionsModalRef } from '../components/ListActionsModal';
 import { DEFAULT_SORT_STATE, SortState } from '../components/MediaSortModal';
+import { createSortAction } from '../utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterRatingItems,
@@ -184,13 +185,10 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ],
     [hasActiveFilterState, hasActiveSort]
   );

@@ -1,19 +1,24 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CustomListsScreen() {
@@ -107,9 +112,9 @@ export default function CustomListsScreen() {
       headerRight: () => (
         <View style={styles.headerButtons}>
           <HeaderIconButton onPress={() => setSortModalVisible(true)}>
-            <View style={styles.sortIconWrapper}>
+            <View style={iconBadgeStyles.wrapper}>
               <ArrowUpDown size={22} color={COLORS.text} />
-              {hasActiveSort && <View style={styles.sortBadge} />}
+              {hasActiveSort && <View style={iconBadgeStyles.badge} />}
             </View>
           </HeaderIconButton>
           <HeaderIconButton onPress={handleCreateList}>
@@ -145,17 +150,13 @@ export default function CustomListsScreen() {
   const keyExtractor = useCallback((item: UserList) => item.id, []);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         {customLists.length === 0 ? (
           <EmptyState
             icon={FolderPlus}
@@ -170,7 +171,7 @@ export default function CustomListsScreen() {
             data={customLists}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={libraryListStyles.listContent}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={ItemSeparator}
           />
@@ -179,9 +180,9 @@ export default function CustomListsScreen() {
       <CreateListModal ref={createListModalRef} onSuccess={handleCreateSuccess} />
       {AuthGuardModal}
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'lastUpdated', 'alphabetical']}
@@ -191,25 +192,6 @@ export default function CustomListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
-  },
   listCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -237,17 +219,5 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  sortIconWrapper: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

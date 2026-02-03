@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
@@ -156,13 +157,13 @@ export default function ShareCardModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <ModalBackground />
-      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-      <View style={styles.container}>
-        <View style={styles.content}>
+      <View style={modalLayoutStyles.container}>
+        <View style={[modalLayoutStyles.card, styles.content]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Share Card</Text>
+            <Text style={modalHeaderStyles.title}>Share Card</Text>
             <Pressable onPress={handleClose} disabled={isProcessing}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -254,24 +255,9 @@ export default function ShareCardModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
-    width: '100%',
-    maxWidth: 400,
     maxHeight: '85%',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    padding: 0,
     overflow: 'hidden',
   },
   header: {
@@ -281,11 +267,6 @@ const styles = StyleSheet.create({
     padding: SPACING.l,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   previewScroll: {
     flexGrow: 0,

@@ -1,7 +1,8 @@
 import { Note, NoteInput } from '@/src/types/note';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { noteService } from '../services/NoteService';
 
 /**
@@ -13,11 +14,6 @@ export const useNotes = () => {
   const { user } = useAuth();
   const userId = user?.uid;
   const previousUserIdRef = useRef<string | undefined>(userId);
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
-    if (!userId) return false;
-    return !queryClient.getQueryData(['notes', userId]);
-  });
 
   useEffect(() => {
     const previousUserId = previousUserIdRef.current;
@@ -29,45 +25,24 @@ export const useNotes = () => {
     previousUserIdRef.current = userId;
   }, [userId, queryClient]);
 
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
+  const subscribe = useCallback(
+    (onData: (data: Note[]) => void, onError: (error: Error) => void) => {
+      if (!userId) return () => {};
+      return noteService.subscribeToUserNotes(userId, onData, onError);
+    },
+    [userId]
+  );
 
-    setError(null);
-    if (!queryClient.getQueryData(['notes', userId])) {
-      setIsSubscriptionLoading(true);
-    }
-
-    const unsubscribe = noteService.subscribeToUserNotes(
-      userId,
-      (notes) => {
-        queryClient.setQueryData(['notes', userId], notes);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useNotes] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, queryClient]);
-
-  const query = useQuery({
+  const query = useRealtimeSubscription<Note[]>({
     queryKey: ['notes', userId],
-    queryFn: () => queryClient.getQueryData<Note[]>(['notes', userId]) || [],
     enabled: !!userId,
-    staleTime: Infinity,
-    meta: { error },
+    initialData: [],
+    subscribe,
+    logLabel: 'useNotes',
   });
 
   return {
     ...query,
-    isLoading: isSubscriptionLoading,
   };
 };
 

@@ -11,6 +11,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu, Settings2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -69,7 +70,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <HeaderIconButton onPress={handleOpenDrawer}>
           <Menu size={24} color={COLORS.text} />
@@ -130,10 +131,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

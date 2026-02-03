@@ -1,13 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { listCardStyles } from '@/src/styles/listCardStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
@@ -90,16 +84,19 @@ export const ReminderCard = memo<ReminderCardProps>(
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+        style={({ pressed }) => [
+          listCardStyles.container,
+          pressed && listCardStyles.containerPressed,
+        ]}
         onPress={handlePress}
         disabled={isLoading}
       >
         <MediaImage
           source={{ uri: getImageUrl(reminder.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-          style={styles.poster}
+          style={listCardStyles.poster}
           contentFit="cover"
         />
-        <View style={styles.info}>
+        <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={1}>
             {reminder.title}
           </Text>
@@ -168,29 +165,6 @@ export const ReminderCard = memo<ReminderCardProps>(
 ReminderCard.displayName = 'ReminderCard';
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  containerPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  poster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
   title: {
     fontSize: FONT_SIZE.m,
     fontWeight: '600',

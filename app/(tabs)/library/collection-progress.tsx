@@ -1,18 +1,24 @@
 import { CollectionProgressCard } from '@/src/components/library/CollectionProgressCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
-import MediaSortModal, { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { SortOption, SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
 import { useCollectionProgressList } from '@/src/hooks/useCollectionTracking';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { CollectionProgressItem } from '@/src/types/collectionTracking';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Layers, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'collectionProgressSortState';
@@ -104,18 +110,14 @@ export default function CollectionProgressScreen() {
   // Configure header with search + sort buttons
   useLayoutEffect(() => {
     if (isSearchActive) {
-      navigation.setOptions({
-        headerTitle: () => null,
-        headerRight: () => null,
-        header: () => (
-          <SearchableHeader
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onClose={deactivateSearch}
-            placeholder="Search collections..."
-          />
-        ),
-      });
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: 'Search collections...',
+        })
+      );
     } else {
       navigation.setOptions({
         header: undefined,
@@ -126,9 +128,9 @@ export default function CollectionProgressScreen() {
               <Search size={22} color={COLORS.text} />
             </HeaderIconButton>
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
-              <View style={styles.iconWrapper}>
+              <View style={iconBadgeStyles.wrapper}>
                 <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={styles.sortBadge} />}
+                {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
           </View>
@@ -150,18 +152,13 @@ export default function CollectionProgressScreen() {
   );
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your collections...</Text>
-      </View>
-    );
+    return <FullScreenLoading message="Loading your collections..." />;
   }
 
   if (isEmpty) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Layers}
           title="No Collections Tracked"
@@ -172,29 +169,21 @@ export default function CollectionProgressScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       <FlashList
         data={displayItems}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={libraryListStyles.listContent}
         keyExtractor={(item) => item.collectionId.toString()}
         ListEmptyComponent={
-          searchQuery ? (
-            <View style={{ height: 300 }}>
-              <EmptyState
-                icon={Search}
-                title="No results found"
-                description="Try a different search term."
-              />
-            </View>
-          ) : null
+          searchQuery ? <SearchEmptyState height={300} /> : null
         }
       />
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={ALLOWED_SORT_OPTIONS}
@@ -204,43 +193,8 @@ export default function CollectionProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  listContent: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    color: COLORS.textSecondary,
-    fontSize: 14,
-  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconWrapper: {
-    position: 'relative',
-  },
-  sortBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

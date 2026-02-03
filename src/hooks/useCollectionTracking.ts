@@ -6,9 +6,10 @@ import {
 } from '@/src/services/CollectionTrackingService';
 import type { CollectionProgressItem, TrackedCollection } from '@/src/types/collectionTracking';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { auth } from '../firebase/config';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 // Aggressive cache time for collection data since it rarely changes
 const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -19,53 +20,26 @@ const COLLECTION_GC_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
  * Pattern matches useShowEpisodeTracking for consistency.
  */
 export const useTrackedCollections = () => {
-  const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const queryKey = ['collectionTracking', 'all', userId];
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const subscribe = useCallback(
+    (onData: (data: TrackedCollection[]) => void, onError: (error: Error) => void) =>
+      collectionTrackingService.subscribeToTrackedCollections(onData, onError),
+    []
+  );
 
-  // Set up real-time listener IMMEDIATELY (no deferred timeout)
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    setIsSubscriptionLoading(true);
-
-    const unsubscribe = collectionTrackingService.subscribeToTrackedCollections(
-      (collections) => {
-        queryClient.setQueryData(queryKey, collections);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useTrackedCollections] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, queryClient]);
-
-  // Query just reads from cache - data is populated by the listener
-  const query = useQuery({
+  const query = useRealtimeSubscription<TrackedCollection[]>({
     queryKey,
-    queryFn: () => {
-      // Return from cache, initial data comes from subscription
-      return queryClient.getQueryData<TrackedCollection[]>(queryKey) ?? [];
-    },
     enabled: !!userId,
-    staleTime: Infinity, // Data is updated via subscription
+    initialData: [],
+    subscribe,
+    logLabel: 'useTrackedCollections',
   });
 
   return {
     collections: query.data ?? [],
-    isLoading: isSubscriptionLoading,
-    error,
+    isLoading: query.isLoading,
+    error: query.error,
   };
 };
 
@@ -75,48 +49,20 @@ export const useTrackedCollections = () => {
  * Pattern matches useShowEpisodeTracking for consistency.
  */
 export const useCollectionTracking = (collectionId: number) => {
-  const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
   const queryKey = ['collectionTracking', userId, collectionId];
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const subscribe = useCallback(
+    (onData: (data: TrackedCollection | null) => void, onError: (error: Error) => void) =>
+      collectionTrackingService.subscribeToCollection(collectionId, onData, onError),
+    [collectionId]
+  );
 
-  // Set up real-time listener IMMEDIATELY (no deferred timeout)
-  useEffect(() => {
-    if (!userId || !collectionId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    setIsSubscriptionLoading(true);
-
-    const unsubscribe = collectionTrackingService.subscribeToCollection(
-      collectionId,
-      (collection) => {
-        queryClient.setQueryData(queryKey, collection);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useCollectionTracking] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, collectionId, queryClient]);
-
-  // Query just reads from cache - data is populated by the listener
-  const query = useQuery({
+  const query = useRealtimeSubscription<TrackedCollection | null>({
     queryKey,
-    queryFn: () => {
-      // Return from cache, initial data comes from subscription
-      return queryClient.getQueryData<TrackedCollection | null>(queryKey) ?? null;
-    },
     enabled: !!userId && !!collectionId,
-    staleTime: Infinity, // Data is updated via subscription
+    initialData: null,
+    subscribe,
+    logLabel: 'useCollectionTracking',
   });
 
   const tracking = query.data ?? null;
@@ -131,8 +77,8 @@ export const useCollectionTracking = (collectionId: number) => {
     watchedCount,
     totalMovies,
     percentage,
-    isLoading: isSubscriptionLoading,
-    error,
+    isLoading: query.isLoading,
+    error: query.error,
   };
 };
 

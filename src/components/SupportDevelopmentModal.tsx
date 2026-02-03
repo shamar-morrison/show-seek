@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Check, Copy, X } from 'lucide-react-native';
@@ -90,14 +91,18 @@ export default function SupportDevelopmentModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.container}>
+      <View style={modalLayoutStyles.container}>
         <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+        <TouchableOpacity
+          style={modalLayoutStyles.backdrop}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
 
-        <View style={styles.content}>
+        <View style={modalLayoutStyles.card}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Support Development 🙏</Text>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>Support Development 🙏</Text>
             <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -136,36 +141,6 @@ export default function SupportDevelopmentModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   message: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
