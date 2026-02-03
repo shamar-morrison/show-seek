@@ -67,8 +67,12 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { loading, user, hasCompletedOnboarding } = useAuth();
-  const { preferences, isLoading: preferencesLoading } = usePreferences();
+  const { loading, user } = useAuth();
+  const {
+    preferences,
+    isLoading: preferencesLoading,
+    hasLoaded: preferencesHasLoaded,
+  } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
   const segments = useSegments();
@@ -107,8 +111,20 @@ function RootLayoutNav() {
 
   useEffect(() => {
     // For non-anonymous users, wait for preferences to load before routing
-    const waitingForPreferences = user && !user.isAnonymous && preferencesLoading;
-    if (loading || !isLanguageReady || !isRegionReady || waitingForPreferences) return;
+    const waitingForPreferences =
+      user && !user.isAnonymous && (preferencesLoading || !preferencesHasLoaded);
+    if (loading || !isLanguageReady || !isRegionReady || waitingForPreferences) {
+      console.log('[Routing] Waiting...', {
+        loading,
+        isLanguageReady,
+        isRegionReady,
+        preferencesLoading,
+        preferencesHasLoaded,
+        hasUser: !!user,
+        isAnonymous: user?.isAnonymous,
+      });
+      return;
+    }
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
@@ -116,53 +132,73 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
 
-    if (loading) return;
+    console.log('[Routing] Making decision...', {
+      hasUser: !!user,
+      isAnonymous: user?.isAnonymous,
+      inAuthGroup,
+      isOnboarding,
+      onboardingCompleted: preferences?.onboardingCompleted,
+      preferencesHasLoaded,
+    });
 
     // Helper to navigate with deduplication
     const safeNavigate = (destination: string) => {
       if (lastNavigationRef.current === destination) return;
       lastNavigationRef.current = destination;
+      console.log('[Routing] Navigating to:', destination);
       // Use requestAnimationFrame to defer navigation past any pending unmounts
       requestAnimationFrame(() => {
         router.replace(destination as any);
       });
     };
 
-    if (!hasCompletedOnboarding && !isOnboarding) {
-      // If not onboarded, go to onboarding
-      safeNavigate('/onboarding');
-    } else if (hasCompletedOnboarding && !user && !inAuthGroup) {
-      // If onboarded but not logged in, go to sign-in
+    // Routing logic
+    if (!user && !inAuthGroup) {
+      // Not logged in, go to sign-in
       safeNavigate('/(auth)/sign-in');
-    } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
-      // If logged in as a real user (not guest) and in auth/onboarding, go to preferred launch screen
-      // Guest users (anonymous) are allowed to access auth screens to upgrade their account
+    } else if (
+      user &&
+      !user.isAnonymous &&
+      preferences?.onboardingCompleted === false &&
+      !isOnboarding
+    ) {
+      // New user who hasn't completed onboarding - redirect to onboarding from anywhere
+      safeNavigate('/onboarding');
+    } else if (user && !user.isAnonymous && inAuthGroup) {
+      // Logged in as a real user and still in auth group - go to home (or default screen)
+      // Only reach here if onboarding is already completed or undefined (existing user)
       const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
       safeNavigate(destination);
+    } else if (user && !user.isAnonymous && isOnboarding) {
+      // User is on onboarding - only redirect if they've already completed it
+      if (preferences?.onboardingCompleted === true) {
+        const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
+        safeNavigate(destination);
+      }
     } else if (user && user.isAnonymous && inAuthGroup) {
-      // Guest user signing in — navigate to home
-      // Small delay to let auth state settle before navigation
+      // Guest user in auth group — navigate to home (guests skip wizard)
       setTimeout(() => {
         safeNavigate('/(tabs)/home');
       }, 50);
+    } else if (user && user.isAnonymous && isOnboarding) {
+      // Guest on onboarding screen — redirect to home
+      safeNavigate('/(tabs)/home');
     }
   }, [
     user,
     loading,
-    hasCompletedOnboarding,
     segments,
     router,
     isLanguageReady,
     isRegionReady,
     preferences,
     preferencesLoading,
+    preferencesHasLoaded,
   ]);
 
   // Show loading state while auth, language, region, or preferences are loading
-  // Also wait for hasCompletedOnboarding to be resolved to prevent onboarding flash
   const isInitializing =
     loading ||
-    hasCompletedOnboarding === null ||
     !isLanguageReady ||
     !isRegionReady ||
     (user && !user.isAnonymous && preferencesLoading);

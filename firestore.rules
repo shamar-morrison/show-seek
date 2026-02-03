@@ -48,6 +48,11 @@ service cloud.firestore {
           && (!('hideUnreleasedContent' in request.resource.data.preferences) || request.resource.data.preferences.hideUnreleasedContent is bool)
           && (!('hideTabLabels' in request.resource.data.preferences) || request.resource.data.preferences.hideTabLabels is bool)
           && (!('dataSaver' in request.resource.data.preferences) || request.resource.data.preferences.dataSaver is bool)
+          // Onboarding preference fields
+          && (!('onboardingCompleted' in request.resource.data.preferences) || request.resource.data.preferences.onboardingCompleted is bool)
+          && (!('favoriteGenres' in request.resource.data.preferences) || request.resource.data.preferences.favoriteGenres is list)
+          && (!('watchProviders' in request.resource.data.preferences) || request.resource.data.preferences.watchProviders is list)
+          && (!('preferredContentTypes' in request.resource.data.preferences) || request.resource.data.preferences.preferredContentTypes in ['movie', 'tv', 'both'])
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);

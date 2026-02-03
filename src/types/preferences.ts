@@ -39,6 +39,11 @@ export interface UserPreferences {
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
   dataSaver: boolean; // Load lower resolution images to save data
+  // Onboarding-related preferences
+  onboardingCompleted?: boolean; // Whether user has completed post-auth onboarding wizard
+  favoriteGenres?: number[]; // TMDB genre IDs selected during onboarding
+  watchProviders?: number[]; // TMDB provider IDs selected during onboarding
+  preferredContentTypes?: 'movie' | 'tv' | 'both'; // User's preferred content type
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -53,4 +58,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
   hideTabLabels: false, // Off by default - show labels
   dataSaver: false, // Off by default - load full quality images
+  // Onboarding defaults
+  onboardingCompleted: false, // New users haven't completed onboarding
+  favoriteGenres: [],
+  watchProviders: [],
+  preferredContentTypes: 'both',
 };

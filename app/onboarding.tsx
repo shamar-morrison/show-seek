@@ -1,254 +1,346 @@
-import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import { GenreSelector } from '@/src/components/onboarding/GenreSelector';
+import { PreferenceToggles } from '@/src/components/onboarding/PreferenceToggles';
+import { ProviderSelector } from '@/src/components/onboarding/ProviderSelector';
+import { WizardLayout } from '@/src/components/onboarding/WizardLayout';
+import { DEFAULT_HOME_LISTS } from '@/src/constants/homeScreenLists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAuth } from '@/src/context/auth';
-import { FlashList, FlashListRef } from '@shopify/flash-list';
-import { LinearGradient } from 'expo-linear-gradient';
+import { preferencesService } from '@/src/services/PreferencesService';
+import { HomeScreenListItem, UserPreferences } from '@/src/types/preferences';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-interface OnboardingSlide {
-  id: string;
-  titleKey: string;
-  descriptionKey: string;
-  image: string;
-  showTraktLogo?: boolean;
-  // Added by translation mapping
-  title?: string;
-  description?: string;
+type ContentType = 'movie' | 'tv' | 'both';
+
+interface OnboardingData {
+  contentType: ContentType;
+  genres: number[];
+  providers: number[];
+  blurPlotSpoilers: boolean;
+  dataSaver: boolean;
 }
 
-const ONBOARDING_SLIDES: OnboardingSlide[] = [
-  {
-    id: '1',
-    titleKey: 'onboarding.welcome',
-    descriptionKey: 'onboarding.welcomeDescription',
-    image:
-      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    titleKey: 'onboarding.discoverTitle',
-    descriptionKey: 'onboarding.discoverDescription',
-    image:
-      'https://images.unsplash.com/photo-1615986201152-7686a4867f30?q=80&w=1000&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    titleKey: 'onboarding.trackTitle',
-    descriptionKey: 'onboarding.trackDescription',
-    image:
-      'https://images.unsplash.com/photo-1584905066893-7d5c142ba4e1?q=80&w=1000&auto=format&fit=crop',
-  },
-  {
-    id: '4',
-    titleKey: 'profile.traktIntegration',
-    descriptionKey: 'trakt.connectToSync',
-    image:
-      'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1000&auto=format&fit=crop',
-    showTraktLogo: true,
-  },
-];
+const TOTAL_STEPS = 4;
+
+// Generate home screen lists based on content preference
+function generateHomeScreenLists(contentType: ContentType): HomeScreenListItem[] {
+  switch (contentType) {
+    case 'movie':
+      return [
+        { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
+        { id: 'popular-movies', type: 'tmdb', label: 'Popular Movies' },
+        { id: 'upcoming-movies', type: 'tmdb', label: 'Upcoming Movies' },
+        { id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' },
+      ];
+    case 'tv':
+      return [
+        { id: 'trending-tv', type: 'tmdb', label: 'Trending TV Shows' },
+        { id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' },
+        { id: 'popular-movies', type: 'tmdb', label: 'Popular Movies' },
+        { id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' },
+      ];
+    case 'both':
+    default:
+      return DEFAULT_HOME_LISTS;
+  }
+}
 
 export default function OnboardingScreen() {
-  const { width, height } = useWindowDimensions();
-  const flatListRef = useRef<FlashListRef<OnboardingSlide> | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const { completeOnboarding } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
-  // Memoize translated data to avoid re-rendering on every frame
-  const onboardingData = useMemo(
-    () =>
-      ONBOARDING_SLIDES.map((slide) => ({
-        ...slide,
-        title: t(slide.titleKey),
-        description: t(slide.descriptionKey),
-      })),
-    [t]
-  );
+  const [currentStep, setCurrentStep] = useState(0);
+  const [data, setData] = useState<OnboardingData>({
+    contentType: 'both',
+    genres: [],
+    providers: [],
+    blurPlotSpoilers: false,
+    dataSaver: false,
+  });
 
-  const handleNext = () => {
-    if (currentIndex < onboardingData.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+  const handleNext = async () => {
+    if (currentStep < TOTAL_STEPS - 1) {
+      setCurrentStep(currentStep + 1);
     } else {
-      finishOnboarding();
+      await completeOnboarding();
     }
   };
 
-  const finishOnboarding = async () => {
-    await completeOnboarding();
-    router.replace('/(auth)/sign-in');
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSkip = async () => {
+    // Skip this step with default values and move to next
+    if (currentStep < TOTAL_STEPS - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      await completeOnboarding();
+    }
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      // Generate home screen lists based on content preference
+      const homeScreenLists = generateHomeScreenLists(data.contentType);
+
+      // Prepare preferences to save
+      const preferencesToSave: Partial<UserPreferences> = {
+        onboardingCompleted: true,
+        favoriteGenres: data.genres,
+        watchProviders: data.providers,
+        preferredContentTypes: data.contentType,
+        blurPlotSpoilers: data.blurPlotSpoilers,
+        dataSaver: data.dataSaver,
+        homeScreenLists,
+      };
+
+      // Save all preferences at once
+      await preferencesService.updatePreferences(preferencesToSave);
+
+      // Invalidate preferences cache
+      queryClient.invalidateQueries({ queryKey: ['preferences'] });
+
+      // Navigate to home
+      router.replace('/(tabs)/home');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Navigate anyway - preferences will use defaults
+      router.replace('/(tabs)/home');
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return <WelcomeStep />;
+      case 1:
+        return (
+          <ContentGenreStep
+            contentType={data.contentType}
+            selectedGenres={data.genres}
+            onContentTypeChange={(contentType) => setData({ ...data, contentType })}
+            onGenresChange={(genres) => setData({ ...data, genres })}
+          />
+        );
+      case 2:
+        return (
+          <ProviderSelector
+            selectedProviders={data.providers}
+            onSelectionChange={(providers) => setData({ ...data, providers })}
+            maxProviders={5}
+          />
+        );
+      case 3:
+        return (
+          <PreferenceToggles
+            blurPlotSpoilers={data.blurPlotSpoilers}
+            dataSaver={data.dataSaver}
+            onBlurPlotSpoilersChange={(value) => setData({ ...data, blurPlotSpoilers: value })}
+            onDataSaverChange={(value) => setData({ ...data, dataSaver: value })}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 0:
+        return t('onboarding.welcome');
+      case 1:
+        return t('onboarding.whatDoYouWatch');
+      case 2:
+        return t('onboarding.streamingServices');
+      case 3:
+        return t('onboarding.appExperience');
+      default:
+        return '';
+    }
+  };
+
+  const getStepSubtitle = () => {
+    switch (currentStep) {
+      case 0:
+        return t('onboarding.letsPersonalize');
+      case 1:
+        return t('onboarding.selectGenresHint');
+      case 2:
+        return t('onboarding.selectProvidersHint');
+      case 3:
+        return t('onboarding.customizeExperienceHint');
+      default:
+        return '';
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <FlashList
-        ref={flatListRef}
-        data={onboardingData}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onMomentumScrollEnd={(event) => {
-          setCurrentIndex(Math.round(event.nativeEvent.contentOffset.x / width));
-        }}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width, height }]}>
-            <Image
-              source={{ uri: item.image }}
-              style={StyleSheet.absoluteFillObject}
-              resizeMode="cover"
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <SafeAreaView style={styles.contentContainer}>
-              <View style={styles.textContainer}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  {item.showTraktLogo && (
-                    <View style={styles.logoContainer}>
-                      <TraktLogo size={32} />
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.description}>{item.description}</Text>
-              </View>
-            </SafeAreaView>
-          </View>
-        )}
-        keyExtractor={(item) => item.id}
-      />
+    <WizardLayout
+      currentStep={currentStep}
+      totalSteps={TOTAL_STEPS}
+      title={getStepTitle()}
+      subtitle={getStepSubtitle()}
+      onNext={handleNext}
+      onBack={handleBack}
+      onSkip={handleSkip}
+      isFirstStep={currentStep === 0}
+      isLastStep={currentStep === TOTAL_STEPS - 1}
+    >
+      {renderStepContent()}
+    </WizardLayout>
+  );
+}
 
-      <SafeAreaView style={styles.footer} pointerEvents="box-none">
-        <View style={styles.pagination}>
-          {onboardingData.map((_, index) => (
-            <View
-              key={index}
+// Step 0: Welcome
+function WelcomeStep() {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.welcomeContainer}>
+      <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.welcomeContent}>
+        <Text style={styles.welcomeEmoji}>🎬</Text>
+        <Text style={styles.welcomeTitle}>{t('onboarding.welcomeTitle')}</Text>
+        <Text style={styles.welcomeDescription}>{t('onboarding.welcomeDescription')}</Text>
+      </Animated.View>
+    </View>
+  );
+}
+
+// Step 1: Content Type + Genres
+interface ContentGenreStepProps {
+  contentType: ContentType;
+  selectedGenres: number[];
+  onContentTypeChange: (type: ContentType) => void;
+  onGenresChange: (genres: number[]) => void;
+}
+
+function ContentGenreStep({
+  contentType,
+  selectedGenres,
+  onContentTypeChange,
+  onGenresChange,
+}: ContentGenreStepProps) {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.contentGenreContainer}>
+      {/* Content Type Selection */}
+      <View style={styles.contentTypeSection}>
+        <Text style={styles.sectionLabel}>{t('onboarding.preferredContent')}</Text>
+        <View style={styles.contentTypeButtons}>
+          {(['movie', 'tv', 'both'] as ContentType[]).map((type) => (
+            <TouchableOpacity
+              key={type}
               style={[
-                styles.dot,
-                {
-                  backgroundColor: index === currentIndex ? COLORS.primary : COLORS.textSecondary,
-                  width: index === currentIndex ? 20 : 8,
-                },
+                styles.contentTypeButton,
+                contentType === type && styles.contentTypeButtonActive,
               ]}
-            />
+              onPress={() => onContentTypeChange(type)}
+              activeOpacity={ACTIVE_OPACITY}
+            >
+              <Text
+                style={[
+                  styles.contentTypeText,
+                  contentType === type && styles.contentTypeTextActive,
+                ]}
+              >
+                {type === 'movie'
+                  ? t('media.movies')
+                  : type === 'tv'
+                    ? t('media.tvShows')
+                    : t('onboarding.both')}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
+      </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            onPress={finishOnboarding}
-            style={styles.skipButton}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={styles.skipText}>{t('common.skip')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleNext}
-            style={styles.nextButton}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={styles.nextText}>
-              {currentIndex === onboardingData.length - 1
-                ? t('onboarding.getStarted')
-                : t('common.next')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      {/* Genre Selection */}
+      <View style={styles.genreSection}>
+        <Text style={styles.sectionLabel}>{t('onboarding.favoriteGenres')}</Text>
+        <GenreSelector selectedGenres={selectedGenres} onSelectionChange={onGenresChange} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // Welcome step
+  welcomeContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  slide: {
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: 180, // Space for footer and pagination
-    width: '100%',
-  },
-  textContainer: {
+  welcomeContent: {
+    alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    alignItems: 'center',
   },
-  title: {
+  welcomeEmoji: {
+    fontSize: 80,
+    marginBottom: SPACING.xl,
+  },
+  welcomeTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: COLORS.text,
     textAlign: 'center',
     marginBottom: SPACING.m,
   },
-  description: {
+  welcomeDescription: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: SPACING.l,
-    justifyContent: 'flex-end',
+
+  // Content + Genre step
+  contentGenreContainer: {
+    flex: 1,
   },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: SPACING.xl,
+  contentTypeSection: {
+    marginBottom: SPACING.l,
   },
-  dot: {
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  skipButton: {
-    padding: SPACING.m,
-  },
-  skipText: {
+  sectionLabel: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
     color: COLORS.textSecondary,
+    marginBottom: SPACING.s,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  contentTypeButtons: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+  },
+  contentTypeButton: {
+    flex: 1,
+    paddingVertical: SPACING.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.m,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  contentTypeButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  contentTypeText: {
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
+    color: COLORS.text,
   },
-  nextButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  nextText: {
+  contentTypeTextActive: {
     color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.m,
-  },
-  logoContainer: {
-    marginLeft: SPACING.s,
-    top: -6,
+  genreSection: {
+    flex: 1,
   },
 });

@@ -53,6 +53,16 @@ class PreferencesService {
               DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
             hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
             dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
+            // Onboarding-related fields
+            // For onboardingCompleted: if undefined and user has no preferences at all, use default (false)
+            // This distinguishes new users (no preferences) from existing users (have other preferences but no onboardingCompleted)
+            onboardingCompleted:
+              data?.preferences?.onboardingCompleted ??
+              (data?.preferences ? undefined : DEFAULT_PREFERENCES.onboardingCompleted),
+            favoriteGenres: data?.preferences?.favoriteGenres ?? DEFAULT_PREFERENCES.favoriteGenres,
+            watchProviders: data?.preferences?.watchProviders ?? DEFAULT_PREFERENCES.watchProviders,
+            preferredContentTypes:
+              data?.preferences?.preferredContentTypes ?? DEFAULT_PREFERENCES.preferredContentTypes,
           };
 
           callback(preferences);
@@ -106,6 +116,38 @@ class PreferencesService {
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[PreferencesService] updatePreference error:', error);
+      throw new Error(message);
+    }
+  }
+
+  /**
+   * Update multiple preferences at once using merge
+   * This is more efficient than calling updatePreference multiple times
+   */
+  async updatePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Please sign in to continue');
+
+      const userRef = this.getUserDocRef(user.uid);
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
+      await Promise.race([
+        setDoc(
+          userRef,
+          {
+            preferences,
+          },
+          { merge: true }
+        ),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[PreferencesService] updatePreferences error:', error);
       throw new Error(message);
     }
   }

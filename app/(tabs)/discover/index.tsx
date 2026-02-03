@@ -36,9 +36,16 @@ export default function DiscoverScreen() {
   const segments = useSegments();
   const [mediaType, setMediaType] = useState<MediaType>('movie');
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const { t } = useTranslation();
-  const { preferences } = usePreferences();
+  const { preferences, hasLoaded: preferencesLoaded } = usePreferences();
+
+  // Initialize filters with user's first favorite genre if available
+  const initialGenre =
+    preferencesLoaded && preferences?.favoriteGenres?.length ? preferences.favoriteGenres[0] : null;
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    ...DEFAULT_FILTERS,
+    genre: initialGenre,
+  }));
 
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);

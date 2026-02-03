@@ -1,6 +1,6 @@
-import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import React from 'react';
 
 // Capture the auth state callback so we can trigger it in tests
@@ -126,72 +126,6 @@ describe('AuthProvider', () => {
       // Should not throw
       await act(async () => {
         await result.current.signOut();
-      });
-
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('onboarding status', () => {
-    it('should read onboarding status from AsyncStorage on mount', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        capturedAuthCallback?.(null);
-      });
-
-      await waitFor(() => {
-        expect(result.current.hasCompletedOnboarding).toBe(true);
-      });
-
-      expect(AsyncStorage.getItem).toHaveBeenCalledWith('hasCompletedOnboarding');
-    });
-
-    it('should default hasCompletedOnboarding to false when not stored', async () => {
-      (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        capturedAuthCallback?.(null);
-      });
-
-      await waitFor(() => {
-        expect(result.current.hasCompletedOnboarding).toBe(false);
-      });
-    });
-
-    it('should update hasCompletedOnboarding and persist when completeOnboarding is called', async () => {
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        capturedAuthCallback?.(null);
-      });
-
-      await act(async () => {
-        await result.current.completeOnboarding();
-      });
-
-      expect(result.current.hasCompletedOnboarding).toBe(true);
-      expect(AsyncStorage.setItem).toHaveBeenCalledWith('hasCompletedOnboarding', 'true');
-    });
-
-    it('should handle AsyncStorage read errors gracefully', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('Storage error'));
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      await act(async () => {
-        capturedAuthCallback?.(null);
-      });
-
-      await waitFor(() => {
-        // Should default to false on error
-        expect(result.current.hasCompletedOnboarding).toBe(false);
       });
 
       expect(consoleSpy).toHaveBeenCalled();
