@@ -39,8 +39,8 @@ function generateHomeScreenLists(contentType: ContentType): HomeScreenListItem[]
       return [
         { id: 'trending-tv', type: 'tmdb', label: 'Trending TV Shows' },
         { id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' },
-        { id: 'popular-movies', type: 'tmdb', label: 'Popular Movies' },
-        { id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' },
+        { id: 'popular-tv', type: 'tmdb', label: 'Popular TV Shows' },
+        { id: 'top-rated-tv', type: 'tmdb', label: 'Top Rated TV Shows' },
       ];
     case 'both':
     default:
@@ -108,11 +108,11 @@ export default function OnboardingScreen() {
       queryClient.invalidateQueries({ queryKey: ['preferences'] });
 
       // Navigate to home
-      router.replace('/(tabs)/home');
+      router.replace({ pathname: '/(tabs)/home' });
     } catch (error) {
       console.error('Error completing onboarding:', error);
       // Navigate anyway - preferences will use defaults
-      router.replace('/(tabs)/home');
+      router.replace({ pathname: '/(tabs)/home' });
     }
   };
 

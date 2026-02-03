@@ -94,6 +94,22 @@ export default function DiscoverScreen() {
     setFilters((prev) => ({ ...prev, genre: null }));
   }, [mediaType]);
 
+  // Track if favorite genre was already applied (to avoid re-applying after user changes)
+  const hasAppliedFavoriteGenreRef = useRef(initialGenre !== null);
+
+  // Apply favorite genre when preferences load after initial render
+  useEffect(() => {
+    if (
+      preferencesLoaded &&
+      !hasAppliedFavoriteGenreRef.current &&
+      preferences?.favoriteGenres?.[0] &&
+      filters.genre === null
+    ) {
+      hasAppliedFavoriteGenreRef.current = true;
+      setFilters((prev) => ({ ...prev, genre: preferences.favoriteGenres![0] }));
+    }
+  }, [preferencesLoaded, preferences?.favoriteGenres, filters.genre]);
+
   const hasActiveFilters = () => {
     return (
       filters.sortBy !== DEFAULT_FILTERS.sortBy ||

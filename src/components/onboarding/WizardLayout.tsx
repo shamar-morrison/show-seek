@@ -66,6 +66,7 @@ export function WizardLayout({
 
       {/* Content */}
       <Animated.View
+        key={currentStep}
         style={styles.content}
         entering={FadeIn.duration(300)}
         exiting={FadeOut.duration(200)}

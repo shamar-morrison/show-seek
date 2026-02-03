@@ -56,6 +56,7 @@ export const usePreferences = () => {
       (err) => {
         setError(err);
         setIsLoading(false);
+        setHasLoaded(true); // Treat error as loaded to unblock routing
         console.error('[usePreferences] Subscription error:', err);
       }
     );

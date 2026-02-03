@@ -72,6 +72,7 @@ function RootLayoutNav() {
     preferences,
     isLoading: preferencesLoading,
     hasLoaded: preferencesHasLoaded,
+    error: preferencesError,
   } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
@@ -111,8 +112,9 @@ function RootLayoutNav() {
 
   useEffect(() => {
     // For non-anonymous users, wait for preferences to load before routing
+    // Treat errors as "loaded" so we proceed with defaults instead of hanging
     const waitingForPreferences =
-      user && !user.isAnonymous && (preferencesLoading || !preferencesHasLoaded);
+      user && !user.isAnonymous && !preferencesHasLoaded && !preferencesError;
     if (loading || !isLanguageReady || !isRegionReady || waitingForPreferences) {
       console.log('[Routing] Waiting...', {
         loading,
@@ -142,13 +144,14 @@ function RootLayoutNav() {
     });
 
     // Helper to navigate with deduplication
-    const safeNavigate = (destination: string) => {
-      if (lastNavigationRef.current === destination) return;
-      lastNavigationRef.current = destination;
-      console.log('[Routing] Navigating to:', destination);
+    const safeNavigate = (destination: Parameters<typeof router.replace>[0]) => {
+      const destString = typeof destination === 'string' ? destination : destination.pathname;
+      if (lastNavigationRef.current === destString) return;
+      lastNavigationRef.current = destString ?? null;
+      console.log('[Routing] Navigating to:', destString);
       // Use requestAnimationFrame to defer navigation past any pending unmounts
       requestAnimationFrame(() => {
-        router.replace(destination as any);
+        router.replace(destination);
       });
     };
 
@@ -197,11 +200,12 @@ function RootLayoutNav() {
   ]);
 
   // Show loading state while auth, language, region, or preferences are loading
+  // Treat preferences error as "ready" so we proceed with defaults
   const isInitializing =
     loading ||
     !isLanguageReady ||
     !isRegionReady ||
-    (user && !user.isAnonymous && preferencesLoading);
+    (user && !user.isAnonymous && !preferencesHasLoaded && !preferencesError);
   if (isInitializing) {
     return (
       <View

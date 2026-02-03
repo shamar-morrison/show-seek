@@ -121,6 +121,20 @@ class PreferencesService {
   }
 
   /**
+   * Remove undefined values from an object to make it Firestore-compatible
+   * Firestore doesn't accept undefined values - they must be omitted entirely
+   */
+  private sanitizeForFirestore<T extends Record<string, any>>(obj: T): Partial<T> {
+    const sanitized: any = {};
+    Object.keys(obj).forEach((key) => {
+      if (obj[key] !== undefined) {
+        sanitized[key] = obj[key];
+      }
+    });
+    return sanitized;
+  }
+
+  /**
    * Update multiple preferences at once using merge
    * This is more efficient than calling updatePreference multiple times
    */
@@ -135,11 +149,14 @@ class PreferencesService {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
       });
 
+      // Sanitize to remove undefined values that Firestore rejects
+      const sanitizedPreferences = this.sanitizeForFirestore(preferences);
+
       await Promise.race([
         setDoc(
           userRef,
           {
-            preferences,
+            preferences: sanitizedPreferences,
           },
           { merge: true }
         ),
