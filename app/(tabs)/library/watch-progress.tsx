@@ -5,7 +5,7 @@ import { SortOption, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
-import { COLORS } from '@/src/constants/theme';
+import { COLORS, EMPTY_STATE_HEIGHT } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
@@ -188,7 +188,7 @@ export default function WatchProgressScreen() {
         renderItem={renderItem}
         contentContainerStyle={libraryListStyles.listContent}
         keyExtractor={(item) => item.tvShowId.toString()}
-        ListEmptyComponent={searchQuery ? <SearchEmptyState height={300} /> : null}
+        ListEmptyComponent={searchQuery ? <SearchEmptyState height={EMPTY_STATE_HEIGHT} /> : null}
       />
 
       <LibrarySortModal

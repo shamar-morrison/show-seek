@@ -20,9 +20,9 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { listCardStyles } from '@/src/styles/listCardStyles';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Note } from '@/src/types/note';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   SectionList,
@@ -340,7 +341,11 @@ export default function NotesScreen() {
           ]}
           onPress={() => handleCardPress(item)}
         >
-          <MediaImage source={{ uri: posterUrl }} style={listCardStyles.poster} contentFit="cover" />
+          <MediaImage
+            source={{ uri: posterUrl }}
+            style={listCardStyles.poster}
+            contentFit="cover"
+          />
           <View style={listCardStyles.info}>
             <Text style={styles.mediaTitle} numberOfLines={1}>
               {item.mediaTitle}
@@ -390,8 +395,8 @@ export default function NotesScreen() {
   // Premium gate
   if (!isPremium) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <View style={styles.premiumGate}>
           <StickyNote size={60} color={COLORS.textSecondary} />
           <Text style={styles.premiumTitle}>Premium Feature</Text>

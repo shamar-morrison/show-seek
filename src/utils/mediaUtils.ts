@@ -36,12 +36,12 @@ export const getRegionalReleaseDate = (
   if (movie.release_dates?.results?.length > 0) {
     const getReleaseForRegion = (code: string) => {
       const regionData = movie.release_dates.results.find((r) => r.iso_3166_1 === code);
-      if (regionData?.release_dates?.length > 0) {
+      if (regionData?.release_dates && regionData.release_dates.length > 0) {
         // Try to find theatrical (3) or digital (4)
         return (
-          regionData.release_dates.find((d) => d.type === 3) ||
-          regionData.release_dates.find((d) => d.type === 4) ||
-          regionData.release_dates[0]
+          regionData?.release_dates?.find((d) => d.type === 3) ||
+          regionData?.release_dates?.find((d) => d.type === 4) ||
+          regionData?.release_dates[0]
         );
       }
       return null;
@@ -86,7 +86,7 @@ export const getRegionalCertification = (
         // Prioritize theatrical (3) if available
         const theatrical = regionData.release_dates.find((d) => d.type === 3 && d.certification);
         if (theatrical) return theatrical.certification;
-        
+
         const anyCert = regionData.release_dates.find((d) => d.certification);
         return anyCert?.certification;
       }

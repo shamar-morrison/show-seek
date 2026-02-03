@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   ScrollView,
@@ -88,7 +89,7 @@ export default function PremiumScreen() {
   }
 
   return (
-      <SafeAreaView style={screenStyles.container}>
+    <SafeAreaView style={screenStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Ionicons name="star" size={60} color={COLORS.primary} />

@@ -217,7 +217,7 @@ export default function TVDetailScreen() {
   } = useTVReminderLogic({
     tvId,
     tvShowData: tvQuery.data,
-    reminder,
+    reminder: reminder || undefined,
     hasReminder,
     createReminderMutation,
     cancelReminderMutation,

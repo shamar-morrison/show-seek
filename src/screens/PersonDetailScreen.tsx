@@ -19,6 +19,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   RefreshControl,
   ScrollView,
