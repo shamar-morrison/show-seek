@@ -1,3 +1,4 @@
+import { AccentColorProvider } from '@/src/context/AccentColorProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, RenderOptions } from '@testing-library/react-native';
 import React, { ReactElement } from 'react';
@@ -29,7 +30,11 @@ export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptio
   const testQueryClient = createTestQueryClient();
 
   function Wrapper({ children }: WrapperProps) {
-    return <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={testQueryClient}>
+        <AccentColorProvider>{children}</AccentColorProvider>
+      </QueryClientProvider>
+    );
   }
 
   return {

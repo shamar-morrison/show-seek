@@ -26,7 +26,7 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
 
 // Mock seasonScreenStyles
 jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
-  seasonScreenStyles: {
+  useSeasonScreenStyles: () => ({
     seasonContainer: {},
     seasonHeader: {},
     seasonPoster: {},
@@ -40,7 +40,7 @@ jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
     markAllText: {},
     episodesContainer: {},
     seasonFullOverview: {},
-  },
+  }),
 }));
 
 // Mock EpisodeItem

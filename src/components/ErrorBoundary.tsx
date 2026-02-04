@@ -22,7 +22,7 @@ interface State {
  */
 export class ErrorBoundary extends Component<Props, State> {
   static contextType = AccentColorContext;
-  declare context: React.ContextType<typeof AccentColorContext>;
+  context: React.ContextType<typeof AccentColorContext> = null;
 
   constructor(props: Props) {
     super(props);
