@@ -88,7 +88,11 @@ export default function CustomListDetailScreen() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    renameModalRef.current?.present({ listId: id!, currentName: list.name });
+    renameModalRef.current?.present({
+      listId: id!,
+      currentName: list.name,
+      currentDescription: list.description ?? '',
+    });
   }, [list, id, isAuthenticated, requireAuth, t]);
 
   const listItems = useMemo(() => {

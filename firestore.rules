@@ -87,10 +87,18 @@ service cloud.firestore {
           && request.resource.data.keys().hasAll(['name', 'items', 'createdAt'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
-          && request.resource.data.items is map;
+          && request.resource.data.items is map
+          && (!('description' in request.resource.data) || (
+            request.resource.data.description is string
+            && request.resource.data.description.size() <= 120
+          ));
         allow update: if isOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['items', 'updatedAt', 'name', 'createdAt']);
+            .hasOnly(['items', 'updatedAt', 'name', 'createdAt', 'description'])
+          && (!('description' in request.resource.data) || (
+            request.resource.data.description is string
+            && request.resource.data.description.size() <= 120
+          ));
         allow delete: if isOwner(userId);
       }
 

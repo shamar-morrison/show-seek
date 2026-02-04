@@ -36,6 +36,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
+    const [listDescription, setListDescription] = useState('');
     const [error, setError] = useState<string | null>(null);
     const { accentColor } = useAccentColor();
 
@@ -56,6 +57,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     useImperativeHandle(ref, () => ({
       present: async () => {
         setListName('');
+        setListDescription('');
         setError(null);
         skipOnCancelRef.current = false;
         await sheetRef.current?.present();
@@ -67,6 +69,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
     const handleDismiss = useCallback(() => {
       setListName('');
+      setListDescription('');
       setError(null);
       // Only call onCancel if we didn't create a list or navigate to upgrade
       if (!skipOnCancelRef.current) {
@@ -107,7 +110,11 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       }
 
       try {
-        const listId = await createMutation.mutateAsync(trimmedName);
+        const trimmedDescription = listDescription.trim();
+        const listId = await createMutation.mutateAsync({
+          name: trimmedName,
+          description: trimmedDescription ? trimmedDescription : undefined,
+        });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         skipOnCancelRef.current = true;
         onSuccess?.(listId, trimmedName);
@@ -151,6 +158,17 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
               returnKeyType="done"
               editable={!createMutation.isPending}
               onSubmitEditing={handleCreate}
+            />
+            <TextInput
+              style={[styles.input, styles.descriptionInput]}
+              placeholder={t('library.listDescription')}
+              placeholderTextColor={COLORS.textSecondary}
+              value={listDescription}
+              onChangeText={setListDescription}
+              editable={!createMutation.isPending}
+              multiline
+              maxLength={120}
+              textAlignVertical="top"
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.createActions}>
@@ -202,6 +220,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
+  },
+  descriptionInput: {
+    minHeight: 96,
   },
   errorText: {
     color: COLORS.error,

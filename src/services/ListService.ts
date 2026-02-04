@@ -28,6 +28,7 @@ export interface ListMediaItem {
 export interface UserList {
   id: string;
   name: string;
+  description?: string;
   items: Record<string, ListMediaItem>;
   createdAt: number;
   updatedAt?: number;
@@ -218,7 +219,7 @@ class ListService {
   /**
    * Create a new custom list
    */
-  async createList(listName: string) {
+  async createList(listName: string, description?: string) {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -240,15 +241,16 @@ class ListService {
             setTimeout(() => reject(new Error('Request timed out')), 10000);
           });
 
-          await Promise.race([
-            setDoc(listRef, {
-              name: listName,
-              items: {},
-              createdAt: Date.now(),
-              isCustom: true,
-            }),
-            timeoutPromise,
-          ]);
+          const trimmedDescription = description?.trim();
+          const listData = this.sanitizeForFirestore({
+            name: listName,
+            description: trimmedDescription ? trimmedDescription : undefined,
+            items: {},
+            createdAt: Date.now(),
+            isCustom: true,
+          });
+
+          await Promise.race([setDoc(listRef, listData), timeoutPromise]);
 
           return listId;
         }
@@ -297,7 +299,7 @@ class ListService {
   /**
    * Rename a custom list
    */
-  async renameList(listId: string, newName: string) {
+  async renameList(listId: string, newName: string, newDescription?: string) {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -324,13 +326,19 @@ class ListService {
         setTimeout(() => reject(new Error('Request timed out')), 10000);
       });
 
-      await Promise.race([
-        updateDoc(listRef, {
-          name: trimmedName,
-          updatedAt: Date.now(),
-        }),
-        timeoutPromise,
-      ]);
+      const trimmedDescription = newDescription?.trim();
+      const updateData: Record<string, any> = {
+        name: trimmedName,
+        updatedAt: Date.now(),
+      };
+
+      if (trimmedDescription) {
+        updateData.description = trimmedDescription;
+      } else {
+        updateData.description = deleteField();
+      }
+
+      await Promise.race([updateDoc(listRef, updateData), timeoutPromise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] renameList error:', error);

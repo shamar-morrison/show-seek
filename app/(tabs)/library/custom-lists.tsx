@@ -157,6 +157,11 @@ export default function CustomListsScreen() {
           <StackedPosterPreview posterPaths={posterPaths} />
           <View style={styles.listInfo}>
             <Text style={styles.listName}>{item.name}</Text>
+            {!!item.description?.trim() && (
+              <Text style={styles.listDescription} numberOfLines={2}>
+                {item.description.trim()}
+              </Text>
+            )}
             <Text style={styles.itemCount}>
               {itemCount === 1
                 ? t('library.itemCountOne')
@@ -237,6 +242,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  listDescription: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
   itemCount: {
     fontSize: FONT_SIZE.s,
