@@ -111,7 +111,7 @@ describe('ShuffleModal', () => {
       />
     );
 
-    expect(getByText('Random Pick')).toBeTruthy();
+    expect(getByText('Shuffle')).toBeTruthy();
     expect(getByTestId('shuffle-close-button')).toBeTruthy();
   });
 
@@ -152,6 +152,6 @@ describe('ShuffleModal', () => {
       />
     );
 
-    expect(getByText('Random Pick')).toBeTruthy();
+    expect(getByText('Shuffle')).toBeTruthy();
   });
 });

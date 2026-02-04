@@ -190,7 +190,7 @@ describe('SeasonItem', () => {
   it('shows Mark All button when expanded with aired episodes', () => {
     const { getByText } = renderWithProviders(<SeasonItem {...defaultProps} isExpanded={true} />);
 
-    expect(getByText('Mark All')).toBeTruthy();
+    expect(getByText('Mark all')).toBeTruthy();
   });
 
   it('shows progress bar when there is progress', () => {

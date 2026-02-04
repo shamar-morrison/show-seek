@@ -118,7 +118,7 @@ describe('EpisodeItem', () => {
   it('shows "Not Yet Aired" for future episodes', () => {
     const { getByText } = renderWithProviders(<EpisodeItem {...defaultProps} hasAired={false} />);
 
-    expect(getByText('Not Yet Aired')).toBeTruthy();
+    expect(getByText('Not yet aired')).toBeTruthy();
   });
 
   it('calls onPress when episode is tapped', () => {

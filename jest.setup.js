@@ -1,6 +1,38 @@
 /* eslint-disable */
 import '@testing-library/jest-native/extend-expect';
 
+// Mock react-i18next
+jest.mock('react-i18next', () => {
+  const enUS = require('./src/i18n/locales/en-US.json');
+
+  // Helper to get nested translation value
+  const getNestedValue = (obj, path, params) => {
+    const value = path.split('.').reduce((current, key) => current?.[key], obj);
+    if (typeof value !== 'string') return path; // Return key if not found
+
+    // Handle interpolation like {{count}}, {{number}}, etc.
+    if (params) {
+      return value.replace(/\{\{(\w+)\}\}/g, (_, k) => params[k] ?? '');
+    }
+    return value;
+  };
+
+  return {
+    useTranslation: () => ({
+      t: (key, params) => getNestedValue(enUS, key, params),
+      i18n: {
+        language: 'en-US',
+        changeLanguage: jest.fn(),
+      },
+    }),
+    Trans: ({ children }) => children,
+    initReactI18next: {
+      type: '3rdParty',
+      init: jest.fn(),
+    },
+  };
+});
+
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
