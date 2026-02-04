@@ -1,5 +1,6 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { SUPPORTED_LANGUAGES } from '@/src/context/LanguageProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { UserPreferences } from '@/src/types/preferences';
@@ -56,25 +57,27 @@ export function ContentSettingsSection({
   const getDefaultLaunchScreenLabel = () => {
     switch (preferences?.defaultLaunchScreen) {
       case '/(tabs)/discover':
-        return 'Discover';
+        return t('discover.title');
       case '/(tabs)/search':
-        return 'Search';
+        return t('search.title');
       case '/(tabs)/library':
-        return 'Library';
+        return t('library.title');
       case '/(tabs)/profile':
-        return 'Profile';
+        return t('profile.title');
       default:
-        return 'Home';
+        return t('home.title');
     }
   };
 
   return (
     <View style={[styles.actionsSection, !showTitle && styles.noTitleSection]}>
-      {showTitle && <Text style={styles.sectionTitle}>CONTENT</Text>}
+      {showTitle && (
+        <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>{t('profile.content')}</Text>
+      )}
       <View style={styles.actionsList}>
         <ActionButton
           icon={Languages}
-          label="Language"
+          label={t('settings.language')}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             onLanguagePress();
@@ -151,11 +154,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
     marginBottom: SPACING.m,
   },
   actionsList: {

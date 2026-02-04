@@ -8,11 +8,13 @@ import {
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -38,6 +40,7 @@ export default function EditTimingModal({
   reminder,
   onUpdateTiming,
 }: EditTimingModalProps) {
+  const { t } = useTranslation();
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(reminder.reminderTiming);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -116,28 +119,28 @@ export default function EditTimingModal({
   const getReleaseLabel = () => {
     if (reminder.mediaType === 'tv') {
       if (reminder.tvFrequency === 'every_episode') {
-        return 'Next episode airs';
+        return t('reminder.releaseLabel.nextEpisodeAirs');
       }
-      return 'Season premieres';
+      return t('reminder.releaseLabel.seasonPremieres');
     }
-    return 'Releases';
+    return t('reminder.releaseLabel.releases');
   };
 
   // Get context-aware warning message
   const getSkipWarningMessage = () => {
     if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'every_episode') {
-      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+      return t('reminder.skipWarning.episode');
     }
     if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'season_premiere') {
-      return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+      return t('reminder.skipWarning.season');
     }
-    return 'This timing has already passed for the current release.';
+    return t('reminder.skipWarning.release');
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ModalBackground />
@@ -148,8 +151,8 @@ export default function EditTimingModal({
         />
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Edit Reminder Timing</Text>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>{t('reminder.editTimingTitle')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -181,7 +184,7 @@ export default function EditTimingModal({
 
             {/* Timing Options */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notify me:</Text>
+              <Text style={styles.sectionTitle}>{t('reminder.notifyMe')}</Text>
               <ReminderTimingOptions
                 options={timingOptions}
                 selectedValue={selectedTiming}
@@ -201,7 +204,7 @@ export default function EditTimingModal({
               {isLoading ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.buttonText}>Update Reminder</Text>
+                <Text style={styles.buttonText}>{t('reminder.updateReminder')}</Text>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -212,12 +215,6 @@ export default function EditTimingModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -225,17 +222,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '80%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: SPACING.xs,

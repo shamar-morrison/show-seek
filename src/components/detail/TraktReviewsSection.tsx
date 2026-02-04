@@ -5,6 +5,7 @@ import type { TraktReview } from '@/src/types/trakt';
 import { FlashList } from '@shopify/flash-list';
 import { Star, ThumbsUp } from 'lucide-react-native';
 import React, { memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { Review } from './types';
@@ -40,7 +41,7 @@ function traktToReview(traktReview: TraktReview): Review {
  * A single review card with spoiler handling
  */
 const TraktReviewCard = memo(
-  ({ review, onPress }: { review: TraktReview; onPress: () => void }) => {
+  ({ review, onPress, spoilerLabel }: { review: TraktReview; onPress: () => void; spoilerLabel: string }) => {
     const [revealed, setRevealed] = useState(false);
     const isSpoiler = review.spoiler && !revealed;
 
@@ -91,7 +92,7 @@ const TraktReviewCard = memo(
         {isSpoiler ? (
           <View style={styles.spoilerContainer}>
             <View style={styles.spoilerOverlay}>
-              <Text style={styles.spoilerHint}>Tap to reveal spoiler</Text>
+              <Text style={styles.spoilerHint}>{spoilerLabel}</Text>
             </View>
             <Text style={[detailStyles.reviewContent, styles.blurredText]} numberOfLines={4}>
               {review.comment}
@@ -111,13 +112,15 @@ TraktReviewCard.displayName = 'TraktReviewCard';
 
 export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
   ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
+    const { t } = useTranslation();
+    const spoilerLabel = t('reviews.tapToRevealSpoiler');
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
+            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
           <ScrollView
             horizontal
@@ -149,10 +152,10 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
+            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
           <View style={detailStyles.reviewErrorBox}>
-            <Text style={detailStyles.reviewErrorText}>Failed to load Trakt reviews</Text>
+            <Text style={detailStyles.reviewErrorText}>{t('errors.failedToLoadTraktReviews')}</Text>
           </View>
         </View>
       );
@@ -164,7 +167,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
         <View style={style} onLayout={onLayout}>
           <View style={styles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>Trakt Reviews</Text>
+            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
           <View style={detailStyles.similarList}>
             <FlashList
@@ -175,7 +178,11 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
               removeClippedSubviews={true}
               drawDistance={400}
               renderItem={({ item }) => (
-                <TraktReviewCard review={item} onPress={() => onReviewPress(traktToReview(item))} />
+                <TraktReviewCard
+                  review={item}
+                  onPress={() => onReviewPress(traktToReview(item))}
+                  spoilerLabel={spoilerLabel}
+                />
               )}
             />
           </View>

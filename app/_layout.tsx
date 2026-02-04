@@ -2,8 +2,9 @@ import { enableScreens } from 'react-native-screens';
 enableScreens();
 
 // Initialize i18n early to ensure translations are available throughout the app
-import '@/src/i18n';
+import i18n from '@/src/i18n';
 
+import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS } from '@/src/constants/theme';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
@@ -46,7 +47,7 @@ Notifications.setNotificationHandler({
 // Create notification channel for Android - required for Android 13+ permission prompt
 if (Platform.OS === 'android') {
   Notifications.setNotificationChannelAsync('default', {
-    name: 'Release Reminders',
+    name: i18n.t('notifications.channelName'),
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: COLORS.primary,
@@ -185,15 +186,7 @@ function RootLayoutNav() {
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
 
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: COLORS.background },
-          headerTintColor: COLORS.text,
-          headerTitleStyle: { fontWeight: 'bold' },
-          contentStyle: { backgroundColor: COLORS.background },
-          headerBackTitle: '',
-        }}
-      >
+      <Stack screenOptions={BASE_STACK_SCREEN_OPTIONS}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

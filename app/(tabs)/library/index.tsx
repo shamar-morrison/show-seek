@@ -2,6 +2,8 @@ import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigatio
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { useRouter } from 'expo-router';
 import {
   BarChart3,
@@ -34,106 +36,6 @@ type SectionData = {
   title: string;
   data: NavigationItem[];
 };
-
-const SECTIONS: SectionData[] = [
-  {
-    title: 'LISTS & STATS',
-    data: [
-      {
-        id: 'watch-progress',
-        icon: Play,
-        title: 'Watch Progress',
-        route: '/(tabs)/library/watch-progress',
-      },
-      {
-        id: 'watch-status',
-        icon: Tv,
-        title: 'Watch Lists',
-        route: '/(tabs)/library/watch-status',
-      },
-      {
-        id: 'custom-lists',
-        icon: ListPlus,
-        title: 'Custom Lists',
-        route: '/(tabs)/library/custom-lists',
-      },
-      {
-        id: 'stats',
-        icon: BarChart3,
-        title: 'Stats & History',
-        route: '/(tabs)/library/stats',
-      },
-      {
-        id: 'notes',
-        icon: StickyNote,
-        title: 'Notes',
-        route: '/(tabs)/library/notes',
-      },
-    ],
-  },
-  {
-    title: 'RATINGS',
-    data: [
-      {
-        id: 'episode-ratings',
-        icon: TvMinimal,
-        title: 'Episode Ratings',
-        route: '/(tabs)/library/ratings/episodes',
-      },
-      {
-        id: 'movie-ratings',
-        icon: Film,
-        title: 'Movie Ratings',
-        route: '/(tabs)/library/ratings/movies',
-      },
-      {
-        id: 'tv-ratings',
-        icon: Tv,
-        title: 'TV Show Ratings',
-        route: '/(tabs)/library/ratings/tv-shows',
-      },
-    ],
-  },
-  {
-    title: 'FAVORITES',
-    data: [
-      {
-        id: 'favorite-content',
-        icon: Heart,
-        title: 'Favorite Content',
-        route: '/(tabs)/library/favorites',
-      },
-      {
-        id: 'favorite-people',
-        icon: User,
-        title: 'Favorite People',
-        route: '/(tabs)/library/favorite-people',
-      },
-    ],
-  },
-  {
-    title: 'NOTIFICATIONS',
-    data: [
-      {
-        id: 'reminders',
-        icon: Bell,
-        title: 'Reminders',
-        route: '/(tabs)/library/reminders',
-      },
-    ],
-  },
-  {
-    title: 'WIDGETS',
-    data: [
-      {
-        id: 'widgets',
-        icon: Layout,
-        title: 'Home Screen Widgets',
-        route: '/(tabs)/library/widgets',
-      },
-    ],
-  },
-];
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -287,7 +189,7 @@ export default function LibraryScreen() {
 
   const renderSectionHeader = useCallback(
     ({ section }: { section: SectionData }) => (
-      <Text style={styles.sectionTitle}>{section.title}</Text>
+      <Text style={sectionTitleStyles.title}>{section.title}</Text>
     ),
     []
   );
@@ -298,7 +200,7 @@ export default function LibraryScreen() {
   const keyExtractor = useCallback((item: NavigationItem) => item.id, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={screenStyles.container} edges={['top']}>
       <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>{t('tabs.library')}</Text>
         <Pressable onPress={() => router.push('/manage-lists' as any)} hitSlop={HIT_SLOP.m}>
@@ -322,10 +224,6 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -344,13 +242,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.l,
     paddingBottom: SPACING.xl,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
   },
   sectionSeparator: {
     height: SPACING.xl,

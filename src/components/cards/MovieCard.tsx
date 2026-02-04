@@ -1,10 +1,12 @@
 import { getOptimizedImageUrl, Movie } from '@/src/api/tmdb';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
+import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -49,18 +51,18 @@ export const MovieCard = memo<MovieCardProps>(({ movie, width = 140, showListBad
         />
         {showBadge && <ListMembershipBadge listIds={listIds} />}
       </View>
-      <View style={styles.info}>
-        <Text style={styles.title} numberOfLines={2}>
+      <View style={mediaCardStyles.info}>
+        <Text style={mediaCardStyles.title} numberOfLines={2}>
           {movie.title}
         </Text>
         {movie.release_date && (
-          <View style={styles.yearRatingContainer}>
-            <Text style={styles.year}>{new Date(movie.release_date).getFullYear()}</Text>
+          <View style={mediaMetaStyles.yearRatingContainer}>
+            <Text style={mediaMetaStyles.year}>{new Date(movie.release_date).getFullYear()}</Text>
             {movie.vote_average > 0 && (
               <>
-                <Text style={styles.separator}> • </Text>
+                <Text style={mediaMetaStyles.separator}> • </Text>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{movie.vote_average.toFixed(1)}</Text>
+                <Text style={mediaMetaStyles.rating}>{movie.vote_average.toFixed(1)}</Text>
               </>
             )}
           </View>
@@ -82,32 +84,5 @@ const styles = StyleSheet.create({
   poster: {
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    marginTop: SPACING.s,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  yearRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-    gap: SPACING.xs,
-  },
-  year: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  separator: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  rating: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
   },
 });

@@ -1,16 +1,19 @@
 import { ActivityRatingCard } from '@/src/components/library/ActivityRatingCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
+import { screenStyles } from '@/src/styles/screenStyles';
 import type { ListMediaItem } from '@/src/services/ListService';
 import type { ActivityItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabType = 'watched' | 'rated' | 'added';
@@ -62,6 +65,9 @@ function extractNumericId(id: string | number): number {
 }
 
 export default function MonthDetailScreen() {
+  const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const { month } = useLocalSearchParams<{ month: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -184,21 +190,17 @@ export default function MonthDetailScreen() {
   }, [monthDetail]);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (!monthDetail) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
-          title="No Data Found"
-          description="Could not load data for this month."
+          title={t('stats.monthDetail.noDataTitle')}
+          description={t('stats.monthDetail.noDataDescription')}
         />
       </SafeAreaView>
     );
@@ -209,12 +211,12 @@ export default function MonthDetailScreen() {
 
   if (hasNoActivity) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
-          title="No Activity"
-          description="No activity recorded for this month."
+          title={t('stats.monthDetail.noActivityTitle')}
+          description={t('stats.monthDetail.noActivityDescription')}
         />
       </SafeAreaView>
     );
@@ -224,7 +226,7 @@ export default function MonthDetailScreen() {
   const currentItems = activeTab === 'watched' ? watched : activeTab === 'rated' ? rated : added;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={styles.divider} />
 
       {/* Summary Card */}
@@ -233,23 +235,23 @@ export default function MonthDetailScreen() {
           <View style={styles.summaryItem}>
             <Tv size={20} color={COLORS.primary} />
             <Text style={styles.summaryValue}>{monthDetail.stats.watched}</Text>
-            <Text style={styles.summaryLabel}>watched</Text>
+            <Text style={styles.summaryLabel}>{t('stats.watched')}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Star size={20} color={COLORS.warning} />
             <Text style={styles.summaryValue}>{monthDetail.stats.averageRating ?? '-'}</Text>
-            <Text style={styles.summaryLabel}>avg rating</Text>
+            <Text style={styles.summaryLabel}>{t('stats.avgRating')}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Plus size={20} color={COLORS.success} />
             <Text style={styles.summaryValue}>{monthDetail.stats.addedToLists}</Text>
-            <Text style={styles.summaryLabel}>added</Text>
+            <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
           </View>
         </View>
 
         {monthDetail.stats.topGenres.length > 0 && (
           <View style={styles.topGenresRow}>
-            <Text style={styles.topGenresLabel}>Top Genres:</Text>
+            <Text style={styles.topGenresLabel}>{t('stats.topGenres')}</Text>
             <Text style={styles.topGenresValue}>{monthDetail.stats.topGenres.join(', ')}</Text>
           </View>
         )}
@@ -258,7 +260,7 @@ export default function MonthDetailScreen() {
       {/* Tab Bar */}
       <View style={styles.tabBar}>
         <TabButton
-          label="Watched"
+          label={t('stats.watched')}
           count={watched.length}
           isActive={activeTab === 'watched'}
           onPress={() => setActiveTab('watched')}
@@ -266,7 +268,7 @@ export default function MonthDetailScreen() {
           iconColor={COLORS.primary}
         />
         <TabButton
-          label="Rated"
+          label={t('stats.rated')}
           count={rated.length}
           isActive={activeTab === 'rated'}
           onPress={() => setActiveTab('rated')}
@@ -274,7 +276,7 @@ export default function MonthDetailScreen() {
           iconColor={COLORS.warning}
         />
         <TabButton
-          label="Added"
+          label={t('stats.added')}
           count={added.length}
           isActive={activeTab === 'added'}
           onPress={() => setActiveTab('added')}
@@ -286,12 +288,19 @@ export default function MonthDetailScreen() {
       {/* Content based on active tab */}
       {currentItems.length === 0 ? (
         <View style={styles.emptyTabContent}>
-          <Text style={styles.emptyTabText}>No {activeTab} items this month</Text>
+          <Text style={styles.emptyTabText}>{t(`stats.monthDetail.emptyTab.${activeTab}`)}</Text>
         </View>
       ) : activeTab === 'added' ? (
         <FlashList
           data={addedItems}
-          renderItem={({ item }) => <MediaListCard item={item} onPress={handleListItemPress} />}
+          renderItem={({ item }) => (
+            <MediaListCard
+              item={item}
+              onPress={handleListItemPress}
+              movieLabel={movieLabel}
+              tvShowLabel={tvShowLabel}
+            />
+          )}
           keyExtractor={(item) => `${item.id}-${item.addedAt}`}
           contentContainerStyle={styles.listContent}
         />
@@ -300,9 +309,16 @@ export default function MonthDetailScreen() {
           data={combinedWatchedItems}
           renderItem={({ item }) => {
             if (item.type === 'media') {
-              return <MediaListCard item={item.data} onPress={handleListItemPress} />;
+              return (
+                <MediaListCard
+                  item={item.data}
+                  onPress={handleListItemPress}
+                  movieLabel={movieLabel}
+                  tvShowLabel={tvShowLabel}
+                />
+              );
             }
-            return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
+            return <ActivityRatingCard item={item.data} onPress={handleItemPress} t={t} />;
           }}
           keyExtractor={(item, index) => {
             if (item.type === 'media') {
@@ -321,7 +337,7 @@ export default function MonthDetailScreen() {
       ) : (
         <FlashList
           data={rated}
-          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} />}
+          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
         />
@@ -331,19 +347,9 @@ export default function MonthDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   divider: {
     height: 1,
     backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
   },
   summaryCard: {
     backgroundColor: COLORS.surface,

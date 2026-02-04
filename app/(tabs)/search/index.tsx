@@ -4,6 +4,8 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -186,9 +188,13 @@ export default function SearchScreen() {
             <>
               <View style={styles.metaRow}>
                 {releaseDate && (
-                  <Text style={styles.resultYear}>{new Date(releaseDate).getFullYear()}</Text>
+                  <Text style={metaTextStyles.secondary}>
+                    {new Date(releaseDate).getFullYear()}
+                  </Text>
                 )}
-                {item.vote_average > 0 && releaseDate && <Text style={styles.separator}> • </Text>}
+                {item.vote_average > 0 && releaseDate && (
+                  <Text style={metaTextStyles.secondary}> • </Text>
+                )}
                 {item.vote_average > 0 && (
                   <View style={styles.ratingContainer}>
                     <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
@@ -205,7 +211,7 @@ export default function SearchScreen() {
           )}
           {isPerson && item.known_for && item.known_for.length > 0 && (
             <Text style={styles.knownFor} numberOfLines={2}>
-              Known for:{' '}
+              {t('person.knownForLabel')}{' '}
               {item.known_for
                 .slice(0, 3)
                 .map((work: any) => work.title || work.name)
@@ -225,7 +231,7 @@ export default function SearchScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('tabs.search')}</Text>
         </View>
@@ -325,10 +331,6 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.s,
@@ -428,14 +430,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-  },
-  resultYear: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  separator: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   ratingContainer: {
     flexDirection: 'row',

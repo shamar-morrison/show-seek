@@ -1,6 +1,7 @@
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
-import { COLORS, SPACING } from '@/src/constants/theme';
+import { COLORS } from '@/src/constants/theme';
+import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
@@ -140,17 +141,17 @@ export function useViewModeToggle({
             </HeaderIconButton>
             {showSortButton && onSortPress && (
               <HeaderIconButton onPress={onSortPress}>
-                <View style={styles.iconWrapper}>
+                <View style={iconBadgeStyles.wrapper}>
                   <ArrowUpDown size={22} color={COLORS.text} />
-                  {hasActiveSort && <View style={styles.badge} />}
+                  {hasActiveSort && <View style={iconBadgeStyles.badge} />}
                 </View>
               </HeaderIconButton>
             )}
             {actionButton && (
               <HeaderIconButton onPress={actionButton.onPress}>
-                <View style={styles.iconWrapper}>
+                <View style={iconBadgeStyles.wrapper}>
                   <actionButton.icon size={22} color={COLORS.text} />
-                  {actionButton.showBadge && <View style={styles.badge} />}
+                  {actionButton.showBadge && <View style={iconBadgeStyles.badge} />}
                 </View>
               </HeaderIconButton>
             )}
@@ -181,17 +182,5 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconWrapper: {
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: SPACING.s,
-    height: SPACING.s,
-    borderRadius: SPACING.xs,
-    backgroundColor: COLORS.primary,
   },
 });

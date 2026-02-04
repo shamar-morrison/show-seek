@@ -4,9 +4,11 @@
  */
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
+import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function RegionScreen() {
   const { region, setRegion } = useRegion();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const handleSelectRegion = async (regionCode: string) => {
     if (regionCode === region) return;
@@ -32,17 +35,17 @@ export default function RegionScreen() {
       await setRegion(regionCode);
     } catch (error) {
       console.error('[RegionScreen] Error updating region:', error);
-      Alert.alert('Error', 'Failed to update region. Please try again.');
+      Alert.alert(t('common.error'), t('settings.updateRegionError'));
     } finally {
       setIsUpdating(null);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.description}>
-          Select your region to see local streaming availability and release dates.
+          {t('settings.regionScreenDescription')}
         </Text>
 
         <View style={styles.regionList}>
@@ -83,7 +86,7 @@ export default function RegionScreen() {
         </View>
 
         <Text style={styles.note}>
-          This affects where to watch information and local release dates.
+          {t('settings.regionScreenNote')}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -91,10 +94,6 @@ export default function RegionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: SPACING.l,
   },

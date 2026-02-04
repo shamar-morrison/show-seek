@@ -1,9 +1,11 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRenameList } from '@/src/hooks/useLists';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -33,6 +35,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
     const [error, setError] = useState<string | null>(null);
 
     const renameMutation = useRenameList();
+    const { t } = useTranslation();
 
     useImperativeHandle(ref, () => ({
       present: async ({ listId: id, currentName }) => {
@@ -67,7 +70,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
         await sheetRef.current?.dismiss();
       } catch (err) {
         console.error('Failed to rename list:', err);
-        setError(err instanceof Error ? err.message : 'Failed to rename list. Please try again.');
+        setError(err instanceof Error ? err.message : t('errors.saveFailed'));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     };
@@ -83,9 +86,9 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <GestureHandlerRootView style={[styles.content, { width }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Rename List</Text>
+        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>{t('library.renameList')}</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -94,7 +97,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
           <View style={styles.formContainer}>
             <TextInput
               style={styles.input}
-              placeholder="List Name"
+              placeholder={t('library.listName')}
               placeholderTextColor={COLORS.textSecondary}
               value={listName}
               onChangeText={setListName}
@@ -113,7 +116,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
                 <Text
                   style={[styles.cancelButtonText, renameMutation.isPending && styles.disabledText]}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Text>
               </Pressable>
               <Pressable
@@ -127,7 +130,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
                 {renameMutation.isPending ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>{t('common.save')}</Text>
                 )}
               </Pressable>
             </View>
@@ -143,21 +146,6 @@ RenameListModal.displayName = 'RenameListModal';
 export default RenameListModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   formContainer: {
     gap: SPACING.m,
   },

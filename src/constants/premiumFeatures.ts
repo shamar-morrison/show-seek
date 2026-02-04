@@ -14,10 +14,10 @@ export interface PremiumFeature {
   id: string;
   /** Ionicons icon name */
   icon: IoniconsName;
-  /** Display title */
-  title: string;
-  /** Optional short description */
-  description?: string;
+  /** Translation key for display title */
+  titleKey: string;
+  /** Translation key for optional short description */
+  descriptionKey?: string;
   /** Show "NEW" badge if true */
   isNew?: boolean;
 }
@@ -28,8 +28,8 @@ export interface PremiumFeature {
 export interface PremiumCategory {
   /** Unique identifier for the category */
   id: string;
-  /** Category display title */
-  title: string;
+  /** Translation key for category display title */
+  titleKey: string;
   /** Features within this category */
   features: PremiumFeature[];
 }
@@ -45,116 +45,116 @@ export interface PremiumCategory {
 export const PREMIUM_CATEGORIES: PremiumCategory[] = [
   {
     id: 'lists',
-    title: 'Lists & Organization',
+    titleKey: 'premiumFeatures.categories.lists',
     features: [
       {
         id: 'unlimited-lists',
         icon: 'list',
-        title: 'Unlimited Custom Lists',
-        description: 'Create as many lists as you need',
+        titleKey: 'premiumFeatures.features.unlimited-lists.title',
+        descriptionKey: 'premiumFeatures.features.unlimited-lists.description',
       },
       {
         id: 'unlimited-items',
         icon: 'infinite',
-        title: 'Unlimited Items per List',
-        description: 'No cap on items in each list',
+        titleKey: 'premiumFeatures.features.unlimited-items.title',
+        descriptionKey: 'premiumFeatures.features.unlimited-items.description',
       },
       {
         id: 'personal-notes',
         icon: 'document-text-outline',
-        title: 'Personal Notes',
-        description: 'Add notes to movies and TV shows',
+        titleKey: 'premiumFeatures.features.personal-notes.title',
+        descriptionKey: 'premiumFeatures.features.personal-notes.description',
       },
       {
         id: 'release-reminders',
         icon: 'alarm-outline',
-        title: 'Release Reminders',
-        description: 'Get notified when new episodes air',
+        titleKey: 'premiumFeatures.features.release-reminders.title',
+        descriptionKey: 'premiumFeatures.features.release-reminders.description',
       },
     ],
   },
   {
     id: 'home-screen',
-    title: 'Home Screen',
+    titleKey: 'premiumFeatures.categories.home-screen',
     features: [
       {
         id: 'widgets',
         icon: 'apps-outline',
-        title: 'Home Screen Widgets',
-        description: "Add widgets to your phone's home screen",
+        titleKey: 'premiumFeatures.features.widgets.title',
+        descriptionKey: 'premiumFeatures.features.widgets.description',
         isNew: true,
       },
       {
         id: 'latest-trailers',
         icon: 'videocam-outline',
-        title: 'Latest Trailers',
-        description: 'Add the latest TMDB trailers to your home screen in-app',
+        titleKey: 'premiumFeatures.features.latest-trailers.title',
+        descriptionKey: 'premiumFeatures.features.latest-trailers.description',
       },
       {
         id: 'release-calendar',
         icon: 'calendar-outline',
-        title: 'Release Calendar',
-        description: 'Track upcoming episodes and movies',
+        titleKey: 'premiumFeatures.features.release-calendar.title',
+        descriptionKey: 'premiumFeatures.features.release-calendar.description',
       },
     ],
   },
   {
     id: 'discover',
-    title: 'Discover & Browse',
+    titleKey: 'premiumFeatures.categories.discover',
     features: [
       {
         id: 'streaming-filter',
         icon: 'play-circle',
-        title: 'Filter by Streaming Service',
-        description: 'Find content on your favorite platforms',
+        titleKey: 'premiumFeatures.features.streaming-filter.title',
+        descriptionKey: 'premiumFeatures.features.streaming-filter.description',
       },
       {
         id: 'blur-spoilers',
         icon: 'eye-off-outline',
-        title: 'Blur Plot Spoilers',
-        description: "Avoid spoilers until you're ready",
+        titleKey: 'premiumFeatures.features.blur-spoilers.title',
+        descriptionKey: 'premiumFeatures.features.blur-spoilers.description',
       },
       {
         id: 'hide-watched',
         icon: 'checkmark-circle-outline',
-        title: 'Hide Watched Content',
-        description: 'Keep your browsing fresh',
+        titleKey: 'premiumFeatures.features.hide-watched.title',
+        descriptionKey: 'premiumFeatures.features.hide-watched.description',
       },
     ],
   },
   {
     id: 'data',
-    title: 'Data & Sync',
+    titleKey: 'premiumFeatures.categories.data',
     features: [
       {
         id: 'trakt-integration',
         icon: 'sync',
-        title: 'Trakt Integration',
-        description: 'Sync your watch history and lists',
+        titleKey: 'premiumFeatures.features.trakt-integration.title',
+        descriptionKey: 'premiumFeatures.features.trakt-integration.description',
       },
       {
         id: 'export-data',
         icon: 'download-outline',
-        title: 'Export Your Data',
-        description: 'Download your lists and watch history',
+        titleKey: 'premiumFeatures.features.export-data.title',
+        descriptionKey: 'premiumFeatures.features.export-data.description',
       },
     ],
   },
   {
     id: 'support',
-    title: 'Support & Future',
+    titleKey: 'premiumFeatures.categories.support',
     features: [
       {
         id: 'future-features',
         icon: 'sparkles',
-        title: 'Access to Future Premium Features',
-        description: 'Get new features as they launch',
+        titleKey: 'premiumFeatures.features.future-features.title',
+        descriptionKey: 'premiumFeatures.features.future-features.description',
       },
       {
         id: 'indie-support',
         icon: 'heart',
-        title: 'Support Indie Development',
-        description: 'Help keep the app growing',
+        titleKey: 'premiumFeatures.features.indie-support.title',
+        descriptionKey: 'premiumFeatures.features.indie-support.description',
       },
     ],
   },

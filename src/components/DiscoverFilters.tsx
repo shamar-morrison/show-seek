@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Check, ChevronDown, Lock, Search, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
@@ -24,20 +25,7 @@ interface DiscoverFiltersProps {
   genreMap: Record<number, string>;
 }
 
-const SORT_OPTIONS = [
-  { label: 'Popularity', value: 'popularity.desc' },
-  { label: 'Top Rated', value: 'vote_average.desc' },
-  { label: 'Newest', value: 'primary_release_date.desc' },
-];
-
-const RATING_OPTIONS = [
-  { label: 'Any Rating', value: 0 },
-  { label: '5+ Stars', value: 5 },
-  { label: '6+ Stars', value: 6 },
-  { label: '7+ Stars', value: 7 },
-  { label: '8+ Stars', value: 8 },
-  { label: '9+ Stars', value: 9 },
-];
+const RATING_VALUES = [0, 5, 6, 7, 8, 9] as const;
 
 interface SelectOption {
   label: string;
@@ -63,9 +51,10 @@ const FilterSelect = ({
   value,
   options,
   onSelect,
-  placeholder = 'Select...',
+  placeholder,
   isActive = false,
 }: BaseFilterSelectProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -78,7 +67,7 @@ const FilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
         </Text>
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
@@ -96,7 +85,7 @@ const FilterSelect = ({
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label}</Text>
+              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <TouchableOpacity onPress={() => setVisible(false)} activeOpacity={ACTIVE_OPACITY}>
                 <X size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -143,10 +132,11 @@ const SearchableFilterSelect = ({
   value,
   options,
   onSelect,
-  placeholder = 'Select...',
+  placeholder,
   isActive = false,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder,
 }: SearchableFilterSelectProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const selectedOption = options.find((opt) => opt.value === value);
@@ -171,7 +161,7 @@ const SearchableFilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
         </Text>
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
@@ -180,7 +170,7 @@ const SearchableFilterSelect = ({
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
           <View style={styles.searchableModalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label}</Text>
+              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
                 <X size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -189,7 +179,7 @@ const SearchableFilterSelect = ({
               <Search size={18} color={COLORS.textSecondary} />
               <TextInput
                 style={styles.searchInput}
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder ?? t('filters.searchPlaceholder')}
                 placeholderTextColor={COLORS.textSecondary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -218,7 +208,7 @@ const SearchableFilterSelect = ({
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No results found</Text>
+                  <Text style={styles.emptyText}>{t('common.noResults')}</Text>
                 </View>
               }
               renderItem={({ item }) => (
@@ -248,6 +238,7 @@ const SearchableFilterSelect = ({
 
 // Premium-locked filter that redirects to upgrade screen
 const PremiumLockedFilter = ({ label }: { label: string }) => {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const handlePress = () => {
@@ -266,7 +257,7 @@ const PremiumLockedFilter = ({ label }: { label: string }) => {
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>
-          Premium Feature
+          {t('premiumFeature.title')}
         </Text>
         <Lock size={16} color={COLORS.primary} />
       </TouchableOpacity>
@@ -275,11 +266,14 @@ const PremiumLockedFilter = ({ label }: { label: string }) => {
 };
 
 const FilterLoadingSkeleton = ({ label }: { label: string }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.selectContainer}>
       <Text style={styles.selectLabel}>{label}</Text>
       <View style={[styles.selectButton, styles.selectButtonLoading]}>
-        <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>Loading...</Text>
+        <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>
+          {t('common.loading')}
+        </Text>
       </View>
     </View>
   );
@@ -292,6 +286,7 @@ export default function DiscoverFilters({
   onClearFilters,
   genreMap,
 }: DiscoverFiltersProps) {
+  const { t } = useTranslation();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const watchProvidersQuery = useQuery({
     queryKey: ['watchProviders', mediaType],
@@ -320,25 +315,36 @@ export default function DiscoverFilters({
     onChange({ ...filters, [key]: value });
   };
 
+  const sortOptions: SelectOption[] = [
+    { label: t('discover.popularity'), value: 'popularity.desc' },
+    { label: t('discover.topRated'), value: 'vote_average.desc' },
+    { label: t('discover.newest'), value: 'primary_release_date.desc' },
+  ];
+
+  const ratingOptions: SelectOption[] = RATING_VALUES.map((value) => {
+    if (value === 0) return { label: t('filters.anyRating'), value: 0 };
+    return { label: t('filters.starsPlus', { count: value }), value };
+  });
+
   const genreOptions = [
-    { label: 'All Genres', value: null },
+    { label: t('discover.anyGenre'), value: null },
     ...genres.map((g) => ({ label: g.name, value: g.id })),
   ];
 
   const languageOptions = [
-    { label: 'All Languages', value: null },
+    { label: t('discover.anyLanguage'), value: null },
     ...languages.map((l) => ({ label: l.english_name, value: l.iso_639_1 })),
   ];
 
   const watchProviderOptions = [
-    { label: 'All Services', value: null },
+    { label: t('discover.anyStreamingService'), value: null },
     ...watchProviders.map((p: WatchProvider) => ({ label: p.provider_name, value: p.provider_id })),
   ];
 
   // Generate year options from current year down to 1950
   const currentYear = new Date().getFullYear();
   const yearOptions = [
-    { label: 'All Years', value: null },
+    { label: t('discover.anyYear'), value: null },
     ...Array.from({ length: currentYear - 1949 }, (_, i) => {
       const year = currentYear - i;
       return { label: String(year), value: year };
@@ -346,24 +352,24 @@ export default function DiscoverFilters({
   ];
 
   return (
-    <View style={styles.container}>
+      <View style={styles.container}>
       <View style={styles.row}>
         <View style={styles.col}>
           <FilterSelect
-            label="Sort By"
+            label={t('discover.sortBy')}
             value={filters.sortBy}
-            options={SORT_OPTIONS}
+            options={sortOptions}
             onSelect={(val) => updateFilter('sortBy', val)}
             isActive={filters.sortBy !== 'popularity.desc'}
           />
         </View>
         <View style={styles.col}>
           <FilterSelect
-            label="Genre"
+            label={t('discover.genres')}
             value={filters.genre}
             options={genreOptions}
             onSelect={(val) => updateFilter('genre', val)}
-            placeholder="All Genres"
+            placeholder={t('discover.anyGenre')}
             isActive={filters.genre !== null}
           />
         </View>
@@ -372,22 +378,22 @@ export default function DiscoverFilters({
       <View style={styles.row}>
         <View style={styles.col}>
           <FilterSelect
-            label="Rating"
+            label={t('discover.rating')}
             value={filters.rating}
-            options={RATING_OPTIONS}
+            options={ratingOptions}
             onSelect={(val) => updateFilter('rating', val)}
             isActive={filters.rating !== 0}
           />
         </View>
         <View style={styles.col}>
           <SearchableFilterSelect
-            label="Language"
+            label={t('discover.language')}
             value={filters.language}
             options={languageOptions}
             onSelect={(val) => updateFilter('language', val)}
-            placeholder="All Languages"
+            placeholder={t('discover.anyLanguage')}
             isActive={filters.language !== null}
-            searchPlaceholder="Search languages..."
+            searchPlaceholder={t('discover.searchLanguages')}
           />
         </View>
       </View>
@@ -395,29 +401,29 @@ export default function DiscoverFilters({
       <View style={styles.row}>
         <View style={styles.col}>
           <FilterSelect
-            label="Release Year"
+            label={t('discover.releaseYear')}
             value={filters.year}
             options={yearOptions}
             onSelect={(val) => updateFilter('year', val)}
-            placeholder="All Years"
+            placeholder={t('discover.anyYear')}
             isActive={filters.year !== null}
           />
         </View>
         <View style={styles.col}>
           {isPremiumLoading ? (
-            <FilterLoadingSkeleton label="Streaming Service" />
+            <FilterLoadingSkeleton label={t('discover.streamingService')} />
           ) : isPremium ? (
             <SearchableFilterSelect
-              label="Streaming Service"
+              label={t('discover.streamingService')}
               value={filters.watchProvider}
               options={watchProviderOptions}
               onSelect={(val) => updateFilter('watchProvider', val)}
-              placeholder="All Services"
+              placeholder={t('discover.anyStreamingService')}
               isActive={filters.watchProvider !== null}
-              searchPlaceholder="Search services..."
+              searchPlaceholder={t('discover.searchStreamingServices')}
             />
           ) : (
-            <PremiumLockedFilter label="Streaming Service" />
+            <PremiumLockedFilter label={t('discover.streamingService')} />
           )}
         </View>
       </View>
@@ -428,7 +434,7 @@ export default function DiscoverFilters({
         activeOpacity={ACTIVE_OPACITY}
       >
         <X size={18} color={COLORS.textSecondary} />
-        <Text style={styles.clearButtonText}>Clear Filters</Text>
+        <Text style={styles.clearButtonText}>{t('common.clearFilters')}</Text>
       </TouchableOpacity>
     </View>
   );

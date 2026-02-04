@@ -1,11 +1,13 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Shuffle, Star, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
@@ -34,6 +36,7 @@ export default function ShuffleModal({
   onClose,
   onViewDetails,
 }: ShuffleModalProps) {
+  const { t } = useTranslation();
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedItem, setDisplayedItem] = useState<ListMediaItem | null>(null);
   const [hasRevealed, setHasRevealed] = useState(false);
@@ -172,21 +175,21 @@ export default function ShuffleModal({
 
   // Get display title (movies use 'title', TV shows use 'name')
   const getTitle = (item: ListMediaItem) => {
-    return item.title || item.name || 'Unknown';
+    return item.title || item.name || t('media.unknown');
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <ModalBackground />
-      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-      <View style={styles.container}>
-        <View style={styles.content}>
+      <View style={modalLayoutStyles.container}>
+        <View style={[modalLayoutStyles.card, styles.content]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[modalHeaderStyles.header, styles.header]}>
             <View style={styles.headerTitleRow}>
               <Shuffle size={20} color={COLORS.primary} />
-              <Text style={styles.title}>Random Pick</Text>
+              <Text style={modalHeaderStyles.title}>{t('shuffle.title')}</Text>
             </View>
             <Pressable onPress={handleClose} testID="shuffle-close-button">
               {({ pressed }) => (
@@ -210,14 +213,14 @@ export default function ShuffleModal({
                   />
                 ) : (
                   <View style={[styles.poster, styles.placeholderPoster]}>
-                    <Text style={styles.placeholderText}>No Image</Text>
+                    <Text style={styles.placeholderText}>{t('shuffle.noImage')}</Text>
                   </View>
                 )}
               </Animated.View>
             ) : (
               <View style={[styles.poster, styles.placeholderPoster]}>
                 <Shuffle size={48} color={COLORS.textSecondary} />
-                <Text style={styles.placeholderText}>Shuffling...</Text>
+                <Text style={styles.placeholderText}>{t('shuffle.shuffling')}</Text>
               </View>
             )}
           </View>
@@ -248,7 +251,7 @@ export default function ShuffleModal({
                 onPress={handleViewDetails}
                 testID="shuffle-view-details-button"
               >
-                <Text style={styles.primaryButtonText}>View Details</Text>
+                <Text style={styles.primaryButtonText}>{t('shuffle.viewDetails')}</Text>
               </Pressable>
             )}
 
@@ -264,7 +267,7 @@ export default function ShuffleModal({
             >
               <Shuffle size={18} color={isAnimating ? COLORS.textSecondary : COLORS.primary} />
               <Text style={[styles.secondaryButtonText, isAnimating && styles.disabledText]}>
-                {hasRevealed ? 'Spin Again' : 'Shuffling...'}
+                {hasRevealed ? t('shuffle.spinAgain') : t('shuffle.shuffling')}
               </Text>
             </Pressable>
           </View>
@@ -275,40 +278,16 @@ export default function ShuffleModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
-    width: '100%',
     maxWidth: 320,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: SPACING.l,
   },
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.s,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   posterContainer: {
     alignItems: 'center',

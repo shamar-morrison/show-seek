@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -13,6 +14,8 @@ import {
   useStartCollectionTracking,
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -20,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Check, Play, Star, StopCircle } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -34,6 +38,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -86,7 +91,7 @@ export default function CollectionScreen() {
       if (isTracked) return;
 
       if (!canTrackMore) {
-        showPremiumAlert('Unlimited Collection Tracking');
+        showPremiumAlert('premiumFeature.features.collectionTracking');
         return;
       }
 
@@ -100,8 +105,8 @@ export default function CollectionScreen() {
       } catch (error) {
         console.error('[CollectionScreen] Failed to start tracking:', error);
       }
-    }, 'Sign in to track collections');
-  }, [requireAuth, collectionQuery.data, canTrackMore, startTrackingMutation, collectionId]);
+    }, t('authGuards.trackCollections'));
+  }, [requireAuth, collectionQuery.data, canTrackMore, startTrackingMutation, collectionId, t]);
 
   const handleStopTracking = useCallback(() => {
     if (!collectionQuery.data) return;
@@ -124,27 +129,23 @@ export default function CollectionScreen() {
           },
         }
       );
-    }, 'Sign in to manage collection tracking');
-  }, [requireAuth, collectionQuery.data, stopTrackingMutation, collectionId]);
+    }, t('authGuards.manageCollectionTracking'));
+  }, [requireAuth, collectionQuery.data, stopTrackingMutation, collectionId, t]);
 
   if (collectionQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (collectionQuery.isError || !collectionQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load collection</Text>
+      <View style={[errorStyles.container, styles.errorContainer]}>
+        <Text style={[errorStyles.text, styles.errorText]}>{t('collection.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -167,7 +168,7 @@ export default function CollectionScreen() {
   const isButtonLoading = startTrackingMutation.isPending || stopTrackingMutation.isPending;
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -216,7 +217,7 @@ export default function CollectionScreen() {
                 <View style={styles.progressContainer}>
                   <View style={styles.progressTextRow}>
                     <Text style={styles.progressText}>
-                      {watchedCount}/{totalMovies} Movies Watched
+                      {t('collection.moviesWatched', { watchedCount, totalMovies })}
                     </Text>
                     <Text style={styles.percentageText}>{percentage}%</Text>
                   </View>
@@ -240,7 +241,7 @@ export default function CollectionScreen() {
                   ) : (
                     <>
                       <StopCircle size={20} color={COLORS.error} />
-                      <Text style={styles.stopTrackingText}>Stop Tracking</Text>
+                      <Text style={styles.stopTrackingText}>{t('collection.stopTracking')}</Text>
                     </>
                   )}
                 </Pressable>
@@ -260,7 +261,7 @@ export default function CollectionScreen() {
                 ) : (
                   <>
                     <Play size={20} color={COLORS.white} fill={COLORS.white} />
-                    <Text style={styles.startTrackingText}>Start Tracking</Text>
+                    <Text style={styles.startTrackingText}>{t('collection.startTracking')}</Text>
                   </>
                 )}
               </Pressable>
@@ -269,13 +270,13 @@ export default function CollectionScreen() {
             {/* Free user limit notice */}
             {!isPremium && !isTracked && !canTrackMore && (
               <Text style={styles.limitNotice}>
-                Free users can track up to {maxFreeCollections} collections. Upgrade for unlimited.
+                {t('collection.freeLimitNotice', { count: maxFreeCollections })}
               </Text>
             )}
           </View>
 
           <Text style={styles.sectionTitle}>
-            {sortedMovies.length} {sortedMovies.length === 1 ? 'Movie' : 'Movies'}
+            {t('collection.moviesCount', { count: sortedMovies.length })}
           </Text>
 
           {/* Movie List */}
@@ -337,21 +338,7 @@ export default function CollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
     padding: SPACING.xl,
   },
   errorText: {

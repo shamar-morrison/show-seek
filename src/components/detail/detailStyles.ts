@@ -439,16 +439,6 @@ export const detailStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: COLORS.background,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   scrollView: {
     flex: 1,
   },

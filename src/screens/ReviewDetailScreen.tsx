@@ -1,22 +1,25 @@
 import { getImageUrl, Review, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Star } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReviewDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t, i18n } = useTranslation();
 
   // Parse the review object from params
   const review: Review = JSON.parse((params.review as string) || '{}');
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -35,14 +38,14 @@ export default function ReviewDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <SafeAreaView style={styles.header} edges={['top']}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Review</Text>
+        <Text style={styles.headerTitle}>{t('media.review')}</Text>
         <View style={{ width: 40 }} />
       </SafeAreaView>
 
@@ -77,10 +80,6 @@ export default function ReviewDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

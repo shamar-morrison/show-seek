@@ -1,5 +1,6 @@
 import { Star } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING } from '../constants/theme';
 import { getRatingText } from '../utils/ratingHelpers';
@@ -9,11 +10,13 @@ interface UserRatingProps {
 }
 
 export default function UserRating({ rating }: UserRatingProps) {
+  const { t } = useTranslation();
+
   if (!rating) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Your Rating:</Text>
+      <Text style={styles.label}>{t('rating.yourRating')}:</Text>
       <View style={styles.ratingContent}>
         <Star size={16} color={COLORS.primary} fill={COLORS.primary} />
         <Text style={styles.ratingText}>

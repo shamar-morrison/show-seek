@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   StyleProp,
   StyleSheet,
@@ -26,6 +27,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
   readMoreStyle,
   containerStyle,
 }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [shouldTruncate, setShouldTruncate] = useState(false);
   const [measured, setMeasured] = useState(false);
@@ -68,7 +70,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
           hitSlop={HIT_SLOP.m}
         >
           <Text style={[styles.readMore, readMoreStyle]}>
-            {expanded ? 'Read less' : 'Read more'}
+            {expanded ? t('common.readLess') : t('common.readMore')}
           </Text>
         </TouchableOpacity>
       )}

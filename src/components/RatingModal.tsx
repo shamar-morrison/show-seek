@@ -1,11 +1,13 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
 import { ratingService } from '@/src/services/RatingService';
 import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -145,6 +147,7 @@ export default function RatingModal({
   onShowToast,
   autoAddOptions,
 }: RatingModalProps) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -230,7 +233,7 @@ export default function RatingModal({
                 release_date: metadata.release_date,
                 genre_ids: metadata.genre_ids,
               },
-              'Already Watched'
+              t('lists.alreadyWatched')
             );
 
             console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
@@ -245,7 +248,7 @@ export default function RatingModal({
       onRatingSuccess(rating);
     } catch (err) {
       console.error('Failed to save rating:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save rating';
+      const errorMessage = err instanceof Error ? err.message : t('rating.failedToSave');
       onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -274,7 +277,7 @@ export default function RatingModal({
       onRatingSuccess(0);
     } catch (err) {
       console.error('Failed to delete rating:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete rating';
+      const errorMessage = err instanceof Error ? err.message : t('rating.failedToDelete');
       onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -288,22 +291,28 @@ export default function RatingModal({
 
   // Format rating display - show decimal if half-star
   const formatRating = (r: number) => {
-    if (r === 0) return 'Tap to rate';
+    if (r === 0) return t('rating.tapToRate');
     return Number.isInteger(r) ? `${r}/10` : `${r.toFixed(1)}/10`;
   };
+
+  const rateTypeLabel = episodeData
+    ? t('media.episode')
+    : mediaType === 'tv'
+      ? t('media.tvShow')
+      : t('media.movie');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={modalLayoutStyles.container}
       >
         <ModalBackground />
-        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Rate this Title</Text>
+        <View style={modalLayoutStyles.card}>
+          <View style={[modalHeaderStyles.header, styles.header]}>
+            <Text style={modalHeaderStyles.title}>{t('rating.rateThis', { type: rateTypeLabel })}</Text>
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -357,7 +366,7 @@ export default function RatingModal({
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.submitButtonText}>Confirm Rating</Text>
+                <Text style={styles.submitButtonText}>{t('rating.confirmRating')}</Text>
               )}
             </Pressable>
             {initialRating > 0 && (
@@ -373,7 +382,7 @@ export default function RatingModal({
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={COLORS.error} />
                 ) : (
-                  <Text style={styles.deleteButtonText}>Clear Rating</Text>
+                  <Text style={styles.deleteButtonText}>{t('rating.removeRating')}</Text>
                 )}
               </Pressable>
             )}
@@ -383,7 +392,7 @@ export default function RatingModal({
               disabled={isSubmitting}
             >
               <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
-                Cancel
+                {t('common.cancel')}
               </Text>
             </Pressable>
           </View>
@@ -394,35 +403,8 @@ export default function RatingModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-  },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   errorBanner: {
     backgroundColor: COLORS.error,

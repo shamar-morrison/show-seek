@@ -34,6 +34,7 @@ import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { errorStyles } from '@/src/styles/errorStyles';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -248,14 +249,14 @@ export default function MovieDetailScreen() {
 
   if (movieQuery.isError || !movieQuery.data) {
     return (
-      <View style={detailStyles.errorContainer}>
-        <Text style={detailStyles.errorText}>Failed to load movie details</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>{t('movieDetail.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={detailStyles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={detailStyles.backButtonText}>Go Back</Text>
+          <Text style={detailStyles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -283,7 +284,7 @@ export default function MovieDetailScreen() {
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
 
   const formatRuntime = (minutes: number | null) => {
-    if (!minutes) return 'N/A';
+    if (!minutes) return t('common.notAvailable');
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return `${h}h ${m}m`;
@@ -334,11 +335,11 @@ export default function MovieDetailScreen() {
     // Request permission first
     const hasPermission = await requestPermission();
     if (!hasPermission) {
-      throw new Error('Notification permission required');
+      throw new Error(t('reminder.permissionRequired'));
     }
 
     if (!displayReleaseDate) {
-      throw new Error('This movie does not have a release date');
+      throw new Error(t('reminder.noReleaseDate'));
     }
 
     if (hasReminder && reminder) {
@@ -398,7 +399,7 @@ export default function MovieDetailScreen() {
               release_date: displayReleaseDate || movie.release_date,
               genre_ids: movie.genres?.map((g) => g.id),
             },
-            'Already Watched'
+            t('lists.alreadyWatched')
           );
           console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
         } catch (autoAddError) {
@@ -457,7 +458,7 @@ export default function MovieDetailScreen() {
                     release_date: displayReleaseDate || movie.release_date,
                     genre_ids: movie.genres?.map((g) => g.id),
                   },
-                  'Already Watched'
+                  t('lists.alreadyWatched')
                 );
                 console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
               } catch (autoAddError) {
@@ -469,9 +470,9 @@ export default function MovieDetailScreen() {
             }
           }
 
-          toastRef.current?.show('Marked as watched');
+          toastRef.current?.show(t('library.markedAsWatched'));
         } catch (error) {
-          toastRef.current?.show(error instanceof Error ? error.message : 'Failed to save');
+          toastRef.current?.show(error instanceof Error ? error.message : t('errors.saveFailed'));
         } finally {
           setIsSavingWatch(false);
         }
@@ -479,7 +480,7 @@ export default function MovieDetailScreen() {
         // Show modal for date selection
         setWatchedModalVisible(true);
       }
-    }, 'Sign in to track watched movies');
+    }, t('authGuards.trackWatchedMovies'));
   };
 
   return (
@@ -550,7 +551,7 @@ export default function MovieDetailScreen() {
             onLongPress={async () => {
               await Clipboard.setStringAsync(movie.title);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              toastRef.current?.show('Title copied to clipboard');
+              toastRef.current?.show(t('common.copiedToClipboard'));
             }}
           >
             <Text style={detailStyles.title}>{movie.title}</Text>
@@ -566,7 +567,7 @@ export default function MovieDetailScreen() {
                       day: 'numeric',
                       year: 'numeric',
                     })
-                  : 'Unknown'}
+                  : t('common.unknown')}
               </Text>
             </View>
             <View style={detailStyles.metaItem}>
@@ -609,18 +610,18 @@ export default function MovieDetailScreen() {
             onAddToList={() =>
               requireAuth(
                 () => addToListModalRef.current?.present(),
-                'Sign in to add items to your lists'
+                t('discover.signInToAdd')
               )
             }
             onRate={() =>
-              requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+              requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
             }
             onReminder={
               canShowReminder(displayReleaseDate)
                 ? () =>
                     requireAuth(
                       () => setReminderModalVisible(true),
-                      'Sign in to set release reminders'
+                      t('authGuards.setReleaseReminders')
                     )
                 : undefined
             }
@@ -634,7 +635,7 @@ export default function MovieDetailScreen() {
                     mediaTitle: movie.title,
                     initialNote: note?.content,
                   }),
-                'Sign in to add notes'
+                t('authGuards.addNotes')
               )
             }
             onTrailer={handleTrailerPress}
@@ -665,17 +666,17 @@ export default function MovieDetailScreen() {
           {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
           <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
-          <Text style={[detailStyles.sectionTitle]}>Overview</Text>
+          <Text style={[detailStyles.sectionTitle]}>{t('media.overview')}</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
-              text={movie.overview || 'No overview available'}
+              text={movie.overview || t('media.noOverview')}
               style={detailStyles.overview}
               readMoreStyle={detailStyles.readMore}
               isBlurred={true}
             />
           ) : (
             <ExpandableText
-              text={movie.overview || 'No overview available'}
+              text={movie.overview || t('media.noOverview')}
               style={detailStyles.overview}
               readMoreStyle={detailStyles.readMore}
             />
@@ -707,7 +708,7 @@ export default function MovieDetailScreen() {
             items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
             onMediaLongPress={guardedHandleMediaLongPress}
-            title="Similar Movies"
+            title={t('media.similarMovies')}
           />
 
           {filteredSimilarMovies.length > 0 && <SectionSeparator />}

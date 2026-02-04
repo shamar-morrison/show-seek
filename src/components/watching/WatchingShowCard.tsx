@@ -6,13 +6,15 @@ import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
 import { Play } from 'lucide-react-native';
 import React from 'react';
+import type { TFunction } from 'i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface WatchingShowCardProps {
   show: InProgressShow;
+  t: TFunction;
 }
 
-export function WatchingShowCard({ show }: WatchingShowCardProps) {
+export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   const router = useRouter();
 
   const currentTab = useCurrentTab();
@@ -31,10 +33,11 @@ export function WatchingShowCard({ show }: WatchingShowCardProps) {
   };
 
   const getFormatTimeRemaining = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m left`;
+    if (minutes < 60) return t('watching.timeRemainingMinutes', { count: minutes });
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    return mins === 0 ? `${hours}h left` : `${hours}h ${mins}m left`;
+    if (mins === 0) return t('watching.timeRemainingHours', { count: hours });
+    return t('watching.timeRemainingHoursMinutes', { hours, minutes: mins });
   };
 
   return (
@@ -54,10 +57,16 @@ export function WatchingShowCard({ show }: WatchingShowCardProps) {
 
         <View style={styles.episodeInfo}>
           <Text style={styles.episodeText} numberOfLines={1}>
-            <Text style={styles.seasonEpLabel}>Next: </Text>
+            <Text style={styles.seasonEpLabel}>{t('watching.next')}</Text>{' '}
             {show.nextEpisode
-              ? `S${show.nextEpisode.season}E${show.nextEpisode.episode}: ${show.nextEpisode.title}`
-              : 'Caught up!'}
+              ? t('watching.nextEpisode', {
+                  seasonEpisode: t('media.seasonEpisode', {
+                    season: show.nextEpisode.season,
+                    episode: show.nextEpisode.episode,
+                  }),
+                  title: show.nextEpisode.title,
+                })
+              : t('watching.caughtUp')}
           </Text>
         </View>
 

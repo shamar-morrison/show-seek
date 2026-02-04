@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
+import i18n from '@/src/i18n';
 
 // Product ID for the one-time premium purchase
 const PREMIUM_PRODUCT_ID = 'premium_unlock';
@@ -266,14 +267,17 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         if (premiumPurchase && premiumPurchase.purchaseToken) {
           await RNIap.consumePurchaseAndroid(premiumPurchase.purchaseToken);
           setIsPremium(false);
-          Alert.alert('Reset Complete', 'Purchase consumed. You can now buy it again.');
+          Alert.alert(i18n.t('premium.resetCompleteTitle'), i18n.t('premium.resetCompleteMessage'));
         } else {
-          Alert.alert('No Purchase Found', 'Could not find a purchase to consume.');
+          Alert.alert(
+            i18n.t('premium.noPurchaseFoundTitle'),
+            i18n.t('premium.noPurchaseFoundMessage')
+          );
         }
       }
     } catch (err: any) {
       console.error('Reset error:', err);
-      Alert.alert('Reset Failed', err.message);
+      Alert.alert(i18n.t('premium.resetFailedTitle'), err.message);
     }
   };
 

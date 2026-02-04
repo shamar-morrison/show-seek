@@ -159,7 +159,7 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      expect(getByText('An unexpected error occurred')).toBeTruthy();
+      expect(getByText('Unexpected error')).toBeTruthy();
     });
   });
 });

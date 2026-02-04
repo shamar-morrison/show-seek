@@ -1,12 +1,15 @@
 import AddToListModal from '@/src/components/AddToListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
@@ -17,17 +20,21 @@ import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { createSortAction } from '@/src/utils/listActions';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Heart, Search, SlidersHorizontal } from 'lucide-react-native';
+import { Heart, Search, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
@@ -35,6 +42,9 @@ const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+  const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -136,7 +146,7 @@ export default function FavoritesScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search favorites...',
+      placeholder: t('library.searchFavoritesPlaceholder'),
     },
   });
 
@@ -149,19 +159,16 @@ export default function FavoritesScreen() {
       {
         id: 'filter',
         icon: SlidersHorizontal,
-        label: 'Filter Items',
+        label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ],
-    [hasActiveFilterState, hasActiveSort]
+    [hasActiveFilterState, hasActiveSort, t]
   );
 
   // Track if initial mount to avoid scrolling on first render
@@ -186,30 +193,32 @@ export default function FavoritesScreen() {
 
   const renderListItem = useCallback(
     ({ item }: { item: ListMediaItem }) => (
-      <MediaListCard item={item} onPress={handleItemPress} onLongPress={handleLongPress} />
+      <MediaListCard
+        item={item}
+        onPress={handleItemPress}
+        onLongPress={handleLongPress}
+        movieLabel={movieLabel}
+        tvShowLabel={tvShowLabel}
+      />
     ),
-    [handleItemPress, handleLongPress]
+    [handleItemPress, handleLongPress, movieLabel, tvShowLabel]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (listItems.length === 0 && !hasActiveFilterState) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Heart}
-          title="No Favorites Yet"
-          description="Mark movies and TV shows as favorites to see them here."
-          actionLabel="Browse Content"
+          title={t('library.emptyFavorites')}
+          description={t('library.emptyFavoritesHint')}
+          actionLabel={t('library.browseContent')}
           onAction={() => router.push('/(tabs)/discover' as any)}
         />
       </SafeAreaView>
@@ -218,8 +227,8 @@ export default function FavoritesScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <View style={styles.content}>
           {viewMode === 'grid' ? (
             <MediaGrid
@@ -231,22 +240,22 @@ export default function FavoritesScreen() {
                 searchQuery
                   ? {
                       icon: Search,
-                      title: 'No results found',
-                      description: 'Try a different search term.',
+                      title: t('common.noResults'),
+                      description: t('search.adjustSearch'),
                     }
                   : hasActiveFilterState
                     ? {
                         icon: SlidersHorizontal,
-                        title: 'No items match your filters',
-                        description: 'Try adjusting your filters to see more results.',
-                        actionLabel: 'Clear Filters',
+                        title: t('discover.noResultsWithFilters'),
+                        description: t('discover.adjustFilters'),
+                        actionLabel: t('common.reset'),
                         onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
                       }
                     : {
                         icon: Heart,
-                        title: 'No Favorites Yet',
-                        description: 'Mark movies and TV shows as favorites to see them here.',
-                        actionLabel: 'Browse Content',
+                        title: t('library.emptyFavorites'),
+                        description: t('library.emptyFavoritesHint'),
+                        actionLabel: t('library.browseContent'),
                         onAction: () => router.push('/(tabs)/discover' as any),
                       }
               }
@@ -260,24 +269,18 @@ export default function FavoritesScreen() {
               data={displayItems}
               renderItem={renderListItem}
               keyExtractor={keyExtractor}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={libraryListStyles.listContent}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={
                 searchQuery ? (
-                  <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                    <EmptyState
-                      icon={Search}
-                      title="No results found"
-                      description="Try a different search term."
-                    />
-                  </View>
+                  <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
                 ) : hasActiveFilterState ? (
                   <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                     <EmptyState
                       icon={SlidersHorizontal}
-                      title="No items match your filters"
-                      description="Try adjusting your filters to see more results."
-                      actionLabel="Clear Filters"
+                      title={t('discover.noResultsWithFilters')}
+                      description={t('discover.adjustFilters')}
+                      actionLabel={t('common.reset')}
                       onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
                     />
                   </View>
@@ -296,9 +299,9 @@ export default function FavoritesScreen() {
         />
       )}
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
@@ -322,26 +325,8 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
   content: {
     flex: 1,
     paddingTop: SPACING.m,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.xl,
   },
 });

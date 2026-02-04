@@ -5,6 +5,7 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -54,7 +55,7 @@ export default function ForYouScreen() {
   // Guest state - show sign in prompt
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
             <LogIn size={64} color={COLORS.primary} />
@@ -72,7 +73,7 @@ export default function ForYouScreen() {
   // Loading state
   if (isLoadingRatings) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <SkeletonSection />
           <SkeletonSection />
@@ -85,7 +86,7 @@ export default function ForYouScreen() {
   // Empty state - no high ratings yet
   if (!hasEnoughData) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
             <Sparkles size={64} color={COLORS.primary} />
@@ -101,7 +102,7 @@ export default function ForYouScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Recommendation sections based on user's high-rated content */}
         {sections.map((section, index) => (
@@ -229,10 +230,6 @@ function SkeletonSection() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollView: {
     flex: 1,
   },

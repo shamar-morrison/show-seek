@@ -2,6 +2,7 @@ import { COLORS } from '@/src/constants/theme';
 import { WidgetConfig } from '@/src/types';
 import { Settings, Smartphone, Trash2 } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface WidgetCardProps {
@@ -11,21 +12,23 @@ interface WidgetCardProps {
 }
 
 export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
+  const { t } = useTranslation();
+
   const getTypeLabel = () => {
     switch (widget.type) {
       case 'upcoming-movies':
-        return 'Upcoming Movies';
+        return t('widgets.type.upcomingMovies');
       case 'upcoming-tv':
-        return 'Upcoming TV Shows';
+        return t('widgets.type.upcomingTV');
       case 'watchlist':
-        return 'My Watchlist';
+        return t('widgets.type.watchlist');
       default:
-        return 'Unknown';
+        return t('media.unknown');
     }
   };
 
   const getSizeLabel = () => {
-    return widget.size.charAt(0).toUpperCase() + widget.size.slice(1);
+    return t(`widgets.size.${widget.size}`);
   };
 
   return (
@@ -36,8 +39,10 @@ export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
 
       <View style={styles.content}>
         <Text style={styles.title}>{getTypeLabel()}</Text>
-        <Text style={styles.subtitle}>{getSizeLabel()} Widget</Text>
-        {widget.listId && <Text style={styles.listInfo}>List ID: {widget.listId}</Text>}
+        <Text style={styles.subtitle}>{t('widgets.widgetSizeLabel', { size: getSizeLabel() })}</Text>
+        {widget.listId && (
+          <Text style={styles.listInfo}>{t('widgets.listIdLabel', { id: widget.listId })}</Text>
+        )}
       </View>
 
       <View style={styles.actions}>

@@ -8,25 +8,29 @@ export const EPISODE_TIMING_OPTIONS: TimingOption[] = __DEV__
   ? [
       {
         value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 10 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 10 },
       },
       {
         value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 20 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 20 },
       },
     ]
   : [
       {
         value: 'on_release_day',
-        label: 'On Air Day',
-        description: 'Get notified when the episode airs',
+        labelKey: 'reminder.timingOptions.episode.onAirDay.label',
+        descriptionKey: 'reminder.timingOptions.episode.onAirDay.description',
       },
       {
         value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before the episode airs',
+        labelKey: 'reminder.timingOptions.episode.oneDayBefore.label',
+        descriptionKey: 'reminder.timingOptions.episode.oneDayBefore.description',
       },
     ];
 
@@ -38,35 +42,41 @@ export const SEASON_TIMING_OPTIONS: TimingOption[] = __DEV__
   ? [
       {
         value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 10 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 10 },
       },
       {
         value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 20 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 20 },
       },
       {
         value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 30 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 30 },
       },
     ]
   : [
       {
         value: 'on_release_day',
-        label: 'On Premiere Day',
-        description: 'Get notified when the season premieres',
+        labelKey: 'reminder.timingOptions.season.onPremiereDay.label',
+        descriptionKey: 'reminder.timingOptions.season.onPremiereDay.description',
       },
       {
         value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before premiere',
+        labelKey: 'reminder.timingOptions.season.oneDayBefore.label',
+        descriptionKey: 'reminder.timingOptions.season.oneDayBefore.description',
       },
       {
         value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before premiere',
+        labelKey: 'reminder.timingOptions.season.oneWeekBefore.label',
+        descriptionKey: 'reminder.timingOptions.season.oneWeekBefore.description',
       },
     ];
 
@@ -78,34 +88,40 @@ export const MOVIE_TIMING_OPTIONS: TimingOption[] = __DEV__
   ? [
       {
         value: 'on_release_day',
-        label: 'Test in 10 seconds',
-        description: 'DEV MODE: Notification in 10 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 10 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 10 },
       },
       {
         value: '1_day_before',
-        label: 'Test in 20 seconds',
-        description: 'DEV MODE: Notification in 20 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 20 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 20 },
       },
       {
         value: '1_week_before',
-        label: 'Test in 30 seconds',
-        description: 'DEV MODE: Notification in 30 seconds',
+        labelKey: 'reminder.timingOptions.devTestInSeconds',
+        labelParams: { count: 30 },
+        descriptionKey: 'reminder.timingOptions.devNotificationInSeconds',
+        descriptionParams: { count: 30 },
       },
     ]
   : [
       {
         value: 'on_release_day',
-        label: 'On Release Day',
-        description: 'Get notified on the day of release',
+        labelKey: 'reminder.timingOptions.movie.onReleaseDay.label',
+        descriptionKey: 'reminder.timingOptions.movie.onReleaseDay.description',
       },
       {
         value: '1_day_before',
-        label: '1 Day Before',
-        description: 'Get notified one day before release',
+        labelKey: 'reminder.timingOptions.movie.oneDayBefore.label',
+        descriptionKey: 'reminder.timingOptions.movie.oneDayBefore.description',
       },
       {
         value: '1_week_before',
-        label: '1 Week Before',
-        description: 'Get notified one week before release',
+        labelKey: 'reminder.timingOptions.movie.oneWeekBefore.label',
+        descriptionKey: 'reminder.timingOptions.movie.oneWeekBefore.description',
       },
     ];

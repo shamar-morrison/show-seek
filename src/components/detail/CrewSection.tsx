@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CrewSectionProps } from './types';
@@ -46,6 +47,8 @@ CrewCard.displayName = 'CrewCard';
 
 export const CrewSection = memo<CrewSectionProps>(
   ({ crew, onCrewPress, style }) => {
+    const { t } = useTranslation();
+
     // Filter and sort crew by priority roles
     const priorityCrew = useMemo(() => {
       const filtered = crew.filter((member) => PRIORITY_ROLES.includes(member.job));
@@ -65,7 +68,7 @@ export const CrewSection = memo<CrewSectionProps>(
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
         <View style={detailStyles.sectionHeader}>
-          <Text style={detailStyles.sectionTitle}>Crew</Text>
+          <Text style={detailStyles.sectionTitle}>{t('media.crew')}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
           {priorityCrew.map((member) => (

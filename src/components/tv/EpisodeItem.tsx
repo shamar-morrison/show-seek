@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { Calendar, Check, Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import type { TFunction } from 'i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { seasonScreenStyles as styles } from './seasonScreenStyles';
 
@@ -22,6 +23,7 @@ export interface EpisodeItemProps {
   onPress: () => void;
   onMarkWatched: () => void;
   onMarkUnwatched: () => void;
+  t: TFunction;
   progress?: { watchedCount: number; totalAiredCount: number };
   showStatus?: string;
   autoAddToWatching: boolean;
@@ -41,6 +43,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     onPress,
     onMarkWatched,
     onMarkUnwatched,
+    t,
   }) => {
     const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
     const isDisabled = isPending || (!isWatched && !hasAired);
@@ -74,7 +77,9 @@ export const EpisodeItem = memo<EpisodeItemProps>(
 
           <View style={styles.episodeInfo}>
             <View style={styles.episodeHeader}>
-              <Text style={styles.episodeNumber}>Episode {episode.episode_number}</Text>
+              <Text style={styles.episodeNumber}>
+                {t('media.episodeNumber', { number: episode.episode_number })}
+              </Text>
               <View style={styles.ratingsContainer}>
                 {/* User Rating */}
                 {userRating > 0 && (
@@ -106,7 +111,9 @@ export const EpisodeItem = memo<EpisodeItemProps>(
                   <Text style={styles.metaText}>{formatDate(episode.air_date)}</Text>
                 </View>
               )}
-              {episode.runtime && <Text style={styles.metaText}>• {episode.runtime}m</Text>}
+              {episode.runtime && (
+                <Text style={styles.metaText}>• {t('common.minutesShort', { count: episode.runtime })}</Text>
+              )}
             </View>
 
             {episode.overview && (
@@ -132,7 +139,11 @@ export const EpisodeItem = memo<EpisodeItemProps>(
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
             <Text style={styles.watchButtonText}>
-              {isWatched ? 'Mark as Unwatched' : !hasAired ? 'Not Yet Aired' : 'Mark as Watched'}
+              {isWatched
+                ? t('media.markAsUnwatched')
+                : !hasAired
+                  ? t('media.notYetAired')
+                  : t('media.markAsWatched')}
             </Text>
           )}
         </TouchableOpacity>

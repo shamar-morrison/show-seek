@@ -3,6 +3,7 @@ import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import { getAvatarUrl } from './detailUtils';
@@ -10,11 +11,13 @@ import type { ReviewsSectionProps } from './types';
 
 export const ReviewsSection = memo<ReviewsSectionProps>(
   ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
+    const { t } = useTranslation();
+
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            TMDB Reviews
+            {t('media.tmdbReviews')}
           </Text>
           <ScrollView
             horizontal
@@ -45,10 +48,10 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            TMDB Reviews
+            {t('media.tmdbReviews')}
           </Text>
           <View style={detailStyles.reviewErrorBox}>
-            <Text style={detailStyles.reviewErrorText}>Failed to load reviews</Text>
+            <Text style={detailStyles.reviewErrorText}>{t('errors.failedToLoadReviews')}</Text>
           </View>
         </View>
       );
@@ -58,7 +61,7 @@ export const ReviewsSection = memo<ReviewsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            TMDB Reviews
+            {t('media.tmdbReviews')}
           </Text>
           <View style={detailStyles.similarList}>
             <FlashList

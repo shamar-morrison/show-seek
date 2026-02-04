@@ -82,19 +82,19 @@ describe('RatingModal', () => {
     it('should show "Tap to rate" when no rating selected', () => {
       const { getByText } = render(<RatingModal {...defaultProps} initialRating={0} />);
 
-      expect(getByText('Tap to rate')).toBeTruthy();
+      expect(getByText('Tap a star to rate')).toBeTruthy();
     });
 
-    it('should show Clear Rating button when initialRating > 0', () => {
+    it('should show Remove Rating button when initialRating > 0', () => {
       const { getByText } = render(<RatingModal {...defaultProps} initialRating={5} />);
 
-      expect(getByText('Clear Rating')).toBeTruthy();
+      expect(getByText('Remove Rating')).toBeTruthy();
     });
 
-    it('should not show Clear Rating button when initialRating is 0', () => {
+    it('should not show Remove Rating button when initialRating is 0', () => {
       const { queryByText } = render(<RatingModal {...defaultProps} initialRating={0} />);
 
-      expect(queryByText('Clear Rating')).toBeNull();
+      expect(queryByText('Remove Rating')).toBeNull();
     });
   });
 });

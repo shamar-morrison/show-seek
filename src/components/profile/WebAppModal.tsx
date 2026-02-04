@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Globe } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface WebAppModalProps {
@@ -16,16 +17,18 @@ export interface WebAppModalProps {
  * Modal confirming navigation to the ShowSeek web app.
  */
 export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.webAppModalOverlay}>
         <View style={styles.webAppModalContent}>
           <View style={styles.webAppModalHeader}>
             <Globe size={24} color={COLORS.primary} />
-            <Text style={styles.webAppModalTitle}>Leaving App</Text>
+            <Text style={styles.webAppModalTitle}>{t('profile.webAppModal.title')}</Text>
           </View>
           <Text style={styles.webAppModalDescription}>
-            You are about to leave the ShowSeek app and open the ShowSeek website in your browser.
+            {t('profile.webAppModal.description')}
           </Text>
           <View style={styles.webAppModalButtons}>
             <TouchableOpacity
@@ -34,7 +37,7 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
               activeOpacity={ACTIVE_OPACITY}
               testID="webapp-modal-cancel"
             >
-              <Text style={styles.webAppModalCancelText}>Cancel</Text>
+              <Text style={styles.webAppModalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.webAppModalButton, styles.webAppModalConfirmButton]}
@@ -42,7 +45,7 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
               activeOpacity={ACTIVE_OPACITY}
               testID="webapp-modal-confirm"
             >
-              <Text style={styles.webAppModalConfirmText}>Continue</Text>
+              <Text style={styles.webAppModalConfirmText}>{t('common.continue')}</Text>
             </TouchableOpacity>
           </View>
         </View>

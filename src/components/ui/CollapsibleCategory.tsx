@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface CollapsibleCategoryProps {
@@ -56,6 +57,8 @@ export function CollapsibleFeatureItem({
   description,
   isNew,
 }: CollapsibleFeatureItemProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.featureItem}>
       {icon && <Ionicons name={icon} size={22} color={COLORS.primary} style={styles.featureIcon} />}
@@ -64,7 +67,7 @@ export function CollapsibleFeatureItem({
           <Text style={styles.featureTitle}>{text}</Text>
           {isNew && (
             <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
+              <Text style={styles.newBadgeText}>{t('common.new')}</Text>
             </View>
           )}
         </View>

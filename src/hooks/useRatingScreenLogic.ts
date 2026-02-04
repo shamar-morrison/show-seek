@@ -1,8 +1,10 @@
-import { ArrowUpDown, SlidersHorizontal } from 'lucide-react-native';
+import { SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Movie, TVShow } from '../api/tmdb';
 import { ListActionsIcon, ListActionsModalRef } from '../components/ListActionsModal';
 import { DEFAULT_SORT_STATE, SortState } from '../components/MediaSortModal';
+import { createSortAction } from '../utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterRatingItems,
@@ -111,6 +113,8 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   searchButton,
   searchState,
 }: UseRatingScreenLogicOptions<TItem>): UseRatingScreenLogicReturn<TItem> {
+  const { t } = useTranslation();
+
   // Sort state
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
@@ -180,19 +184,16 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
       {
         id: 'filter',
         icon: SlidersHorizontal,
-        label: 'Filter Items',
+        label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ],
-    [hasActiveFilterState, hasActiveSort]
+    [hasActiveFilterState, hasActiveSort, t]
   );
 
   // Filter and sort data

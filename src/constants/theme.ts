@@ -55,6 +55,9 @@ export const BUTTON_HEIGHT = 48;
 /** Combined height of header + navigation chrome to subtract from empty state container */
 export const HEADER_CHROME_HEIGHT = 150;
 
+/** Standard height for empty state containers in lists */
+export const EMPTY_STATE_HEIGHT = 300;
+
 /**
  * Helper to add alpha transparency to a hex color
  * @param hex Hex color string (e.g., #E50914)

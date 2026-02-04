@@ -8,6 +8,8 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -188,9 +190,11 @@ export default function DiscoverScreen() {
           </Text>
           <View style={styles.metaRow}>
             {releaseDate && (
-              <Text style={styles.resultYear}>{new Date(releaseDate).getFullYear()}</Text>
+              <Text style={metaTextStyles.secondary}>{new Date(releaseDate).getFullYear()}</Text>
             )}
-            {item.vote_average > 0 && releaseDate && <Text style={styles.separator}> • </Text>}
+            {item.vote_average > 0 && releaseDate && (
+              <Text style={metaTextStyles.secondary}> • </Text>
+            )}
             {item.vote_average > 0 && (
               <View style={styles.ratingContainer}>
                 <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
@@ -216,7 +220,7 @@ export default function DiscoverScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('tabs.discover')}</Text>
           <TouchableOpacity
@@ -306,10 +310,6 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -409,14 +409,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-  },
-  resultYear: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  separator: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   ratingContainer: {
     flexDirection: 'row',

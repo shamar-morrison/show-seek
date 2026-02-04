@@ -3,12 +3,15 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { PhotosSectionProps } from './types';
 
 export const PhotosSection = memo<PhotosSectionProps>(
   ({ images, onPhotoPress, style }) => {
+    const { t } = useTranslation();
+
     // Limit to 10 images
     const displayImages = images.slice(0, 10);
 
@@ -34,7 +37,9 @@ export const PhotosSection = memo<PhotosSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Photos</Text>
+        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          {t('media.photos')}
+        </Text>
         <FlashList
           horizontal
           data={displayImages}

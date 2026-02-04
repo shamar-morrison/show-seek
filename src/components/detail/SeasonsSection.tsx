@@ -3,6 +3,7 @@ import { SeasonCard } from '@/src/components/SeasonCard';
 import { SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
 
@@ -15,6 +16,8 @@ interface SeasonsSectionProps {
 
 export const SeasonsSection = memo<SeasonsSectionProps>(
   ({ tvShowId, seasons, onSeasonPress, style }) => {
+    const { t } = useTranslation();
+
     const handleSeasonPress = useCallback(
       (seasonNumber: number) => {
         onSeasonPress(seasonNumber);
@@ -28,7 +31,9 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Seasons</Text>
+        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          {t('media.seasons')}
+        </Text>
         <FlashList
           data={seasons}
           keyExtractor={(item) => item.id.toString()}

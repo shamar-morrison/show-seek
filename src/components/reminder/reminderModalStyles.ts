@@ -5,13 +5,6 @@ import { StyleSheet } from 'react-native';
  * Shared styles for ReminderModal and TVReminderModal
  */
 export const reminderModalStyles = StyleSheet.create({
-  // Modal container & wrapper
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -21,18 +14,6 @@ export const reminderModalStyles = StyleSheet.create({
     maxHeight: '85%',
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.l,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   closeButton: {
     padding: SPACING.xs,
   },

@@ -14,6 +14,7 @@ import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import * as Haptics from 'expo-haptics';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import type { TFunction } from 'i18next';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
 import { seasonScreenStyles as styles } from './seasonScreenStyles';
@@ -47,6 +48,7 @@ export interface SeasonItemProps {
   firstAirDate: string | undefined;
   voteAverage: number | undefined;
   markPreviousEpisodesWatched: boolean;
+  t: TFunction;
 }
 
 export const SeasonItem = memo<SeasonItemProps>(
@@ -74,6 +76,7 @@ export const SeasonItem = memo<SeasonItemProps>(
     firstAirDate,
     voteAverage,
     markPreviousEpisodesWatched,
+    t,
   }) => {
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
@@ -99,12 +102,15 @@ export const SeasonItem = memo<SeasonItemProps>(
       if (allAiredWatched) {
         // Unmark all episodes
         Alert.alert(
-          'Unmark All as Watched',
-          `Unmark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as unwatched?`,
+          t('watched.unmarkAllEpisodesTitle'),
+          t('watched.unmarkAllAiredEpisodesConfirm', {
+            count: airedEpisodes.length,
+            seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
+          }),
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Unmark All',
+              text: t('watched.unmarkAll'),
               onPress: () => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -123,12 +129,15 @@ export const SeasonItem = memo<SeasonItemProps>(
       } else {
         // Mark all episodes
         Alert.alert(
-          'Mark All as Watched',
-          `Mark all ${airedEpisodes.length} aired episode${airedEpisodes.length !== 1 ? 's' : ''} in ${season.name} as watched?`,
+          t('watched.markAllEpisodesTitle'),
+          t('watched.markAllAiredEpisodesConfirm', {
+            count: airedEpisodes.length,
+            seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
+          }),
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Mark All',
+              text: t('watched.markAll'),
               onPress: () => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -156,6 +165,7 @@ export const SeasonItem = memo<SeasonItemProps>(
       showPosterPath,
       onMarkUnwatched,
       onMarkAllWatched,
+      t,
     ]);
 
     // Calculate if all aired episodes are watched
@@ -191,10 +201,12 @@ export const SeasonItem = memo<SeasonItemProps>(
 
           <View style={styles.seasonInfo}>
             <Text style={styles.seasonTitle}>
-              {season.name || `Season ${season.season_number}`}
+              {season.name || t('media.seasonNumber', { number: season.season_number })}
             </Text>
             <Text style={styles.seasonMeta}>
-              {season.episode_count || season.episodes?.length || 0} Episodes
+              {t('media.numberOfEpisodes', {
+                count: season.episode_count || season.episodes?.length || 0,
+              })}
               {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
             </Text>
             {progress && (
@@ -222,7 +234,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={styles.markAllText}>
-                  {allAiredWatched ? 'Unmark All' : 'Mark All'}
+                  {allAiredWatched ? t('watched.unmarkAll') : t('watched.markAll')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -323,6 +335,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                       episodeNumber: episode.episode_number,
                     });
                   }}
+                  t={t}
                   progress={progress ?? undefined}
                   showStatus={showStatus}
                   autoAddToWatching={autoAddToWatching}

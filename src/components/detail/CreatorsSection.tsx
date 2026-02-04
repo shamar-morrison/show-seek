@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
 
@@ -15,7 +16,9 @@ interface Creator {
 const CreatorCard = memo<{
   creator: Creator;
   onPress: (id: number) => void;
-}>(({ creator, onPress }) => {
+  label: string;
+}>(({ creator, onPress, label }) => {
+
   const handlePress = useCallback(() => {
     onPress(creator.id);
   }, [creator.id, onPress]);
@@ -38,7 +41,7 @@ const CreatorCard = memo<{
         {creator.name}
       </Text>
       <Text style={detailStyles.characterName} numberOfLines={1}>
-        Creator
+        {label}
       </Text>
     </TouchableOpacity>
   );
@@ -54,11 +57,14 @@ interface CreatorsSectionProps {
 
 export const CreatorsSection = memo<CreatorsSectionProps>(
   ({ creators, onCreatorPress, style }) => {
+    const { t } = useTranslation();
+
     if (creators.length === 0) {
       return null;
     }
 
-    const title = creators.length > 1 ? 'Creators' : 'Creator';
+    const creatorLabel = t('media.creator');
+    const title = creators.length > 1 ? t('media.creators') : creatorLabel;
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
@@ -71,6 +77,7 @@ export const CreatorsSection = memo<CreatorsSectionProps>(
               key={`${creator.id}-${index}`}
               creator={creator}
               onPress={onCreatorPress}
+              label={creatorLabel}
             />
           ))}
         </ScrollView>

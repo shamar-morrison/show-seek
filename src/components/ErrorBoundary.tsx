@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import i18n from '@/src/i18n';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -45,16 +46,16 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container} testID="error-boundary-fallback">
           <Text style={styles.emoji}>😵</Text>
-          <Text style={styles.title}>Something went wrong</Text>
+          <Text style={styles.title}>{i18n.t('errors.generic')}</Text>
           <Text style={styles.message}>
-            {this.state.error?.message || 'An unexpected error occurred'}
+            {this.state.error?.message || i18n.t('errors.unexpectedError')}
           </Text>
           <TouchableOpacity
             style={styles.button}
             onPress={this.handleReset}
             testID="error-boundary-retry"
           >
-            <Text style={styles.buttonText}>Try Again</Text>
+            <Text style={styles.buttonText}>{i18n.t('errors.tryAgain')}</Text>
           </TouchableOpacity>
         </View>
       );

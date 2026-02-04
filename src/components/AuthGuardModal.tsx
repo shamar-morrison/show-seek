@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useRouter } from 'expo-router';
 import { LogIn, X } from 'lucide-react-native';
 import React from 'react';
@@ -36,11 +37,15 @@ export default function AuthGuardModal({ visible, onClose, message }: AuthGuardM
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <View style={modalLayoutStyles.container}>
         <ModalBackground />
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={modalLayoutStyles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
 
-        <View style={styles.content}>
+        <View style={[modalLayoutStyles.card, styles.content]}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <LogIn size={32} color={COLORS.primary} />
@@ -56,7 +61,7 @@ export default function AuthGuardModal({ visible, onClose, message }: AuthGuardM
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>{t('errors.unauthorized')}</Text>
+          <Text style={[modalHeaderStyles.title, styles.title]}>{t('errors.unauthorized')}</Text>
           <Text style={styles.message}>{displayMessage}</Text>
 
           <View style={styles.actions}>
@@ -87,24 +92,8 @@ export default function AuthGuardModal({ visible, onClose, message }: AuthGuardM
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
   content: {
-    width: '100%',
     maxWidth: 340,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    padding: SPACING.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
     alignItems: 'center',
   },
   header: {
@@ -130,9 +119,6 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
   },
   title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
     marginBottom: SPACING.s,
     textAlign: 'center',
   },

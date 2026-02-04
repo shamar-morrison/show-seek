@@ -154,6 +154,7 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
  * User List Section - displays items from user's default or custom lists
  */
 function UserListSection({ listId, label }: { listId: string; label: string }) {
+  const { t } = useTranslation();
   const { data: lists, isLoading } = useLists();
 
   const listData = useMemo(() => {
@@ -189,7 +190,7 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{label}</Text>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No items in this list</Text>
+          <Text style={styles.emptyText}>{t('library.emptyList')}</Text>
         </View>
       </View>
     );

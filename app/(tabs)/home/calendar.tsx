@@ -1,9 +1,11 @@
 import { CalendarPremiumGate } from '@/src/components/calendar/CalendarPremiumGate';
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
+import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, LogIn } from 'lucide-react-native';
@@ -43,7 +45,7 @@ export default function CalendarScreen() {
   // Guest state - show sign in prompt
   if (isGuest) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
             <LogIn size={64} color={COLORS.primary} />
@@ -67,11 +69,8 @@ export default function CalendarScreen() {
   // Loading state
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
-        </View>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
+        <FullScreenLoading message={t('common.loading')} />
       </SafeAreaView>
     );
   }
@@ -79,7 +78,7 @@ export default function CalendarScreen() {
   // Empty state - no upcoming releases
   if (sections.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
             <Calendar size={64} color={COLORS.primary} />
@@ -95,12 +94,12 @@ export default function CalendarScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       {/* Enrichment loading indicator */}
       {isLoadingEnrichment && (
         <View style={styles.enrichmentIndicator}>
           <ActivityIndicator size="small" color={COLORS.primary} />
-          <Text style={styles.enrichmentText}>Updating TV episodes...</Text>
+          <Text style={styles.enrichmentText}>{t('calendar.updatingEpisodes')}</Text>
         </View>
       )}
 
@@ -110,20 +109,6 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.m,
-  },
-  loadingText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

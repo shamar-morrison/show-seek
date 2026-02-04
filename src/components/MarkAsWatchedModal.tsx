@@ -1,9 +1,11 @@
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -51,6 +53,7 @@ export default function MarkAsWatchedModal({
   onClearAll,
   onShowToast,
 }: MarkAsWatchedModalProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -83,10 +86,10 @@ export default function MarkAsWatchedModal({
     try {
       setIsLoading(true);
       await onMarkAsWatched(new Date());
-      onShowToast?.('Marked as watched');
+      onShowToast?.(t('library.markedAsWatched'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+      onShowToast?.(error instanceof Error ? error.message : t('errors.saveFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -98,10 +101,10 @@ export default function MarkAsWatchedModal({
     try {
       setIsLoading(true);
       await onMarkAsWatched(parsedReleaseDate);
-      onShowToast?.('Marked as watched');
+      onShowToast?.(t('library.markedAsWatched'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+      onShowToast?.(error instanceof Error ? error.message : t('errors.saveFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -114,10 +117,10 @@ export default function MarkAsWatchedModal({
       try {
         setIsLoading(true);
         await onMarkAsWatched(date);
-        onShowToast?.('Marked as watched');
+        onShowToast?.(t('library.markedAsWatched'));
         onClose();
       } catch (error) {
-        onShowToast?.(error instanceof Error ? error.message : 'Failed to save');
+        onShowToast?.(error instanceof Error ? error.message : t('errors.saveFailed'));
       } finally {
         setIsLoading(false);
       }
@@ -126,21 +129,21 @@ export default function MarkAsWatchedModal({
 
   const handleClearAll = () => {
     Alert.alert(
-      'Clear Watch History',
-      'Clear all watch history for this movie? This cannot be undone.',
+      t('watched.clearWatchHistoryTitle'),
+      t('watched.clearWatchHistoryMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Clear All',
+          text: t('common.clearAll'),
           style: 'destructive',
           onPress: async () => {
             try {
               setIsLoading(true);
               await onClearAll();
-              onShowToast?.('Watch history cleared');
+              onShowToast?.(t('watched.watchHistoryCleared'));
               onClose();
             } catch (error) {
-              onShowToast?.(error instanceof Error ? error.message : 'Failed to clear');
+              onShowToast?.(error instanceof Error ? error.message : t('watched.failedToClear'));
             } finally {
               setIsLoading(false);
             }
@@ -162,7 +165,7 @@ export default function MarkAsWatchedModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ModalBackground />
@@ -173,8 +176,8 @@ export default function MarkAsWatchedModal({
         />
         <View style={styles.content}>
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>When did you watch this?</Text>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>{t('watched.whenDidYouWatch')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -198,8 +201,8 @@ export default function MarkAsWatchedModal({
                   <Clock size={20} color={COLORS.primary} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>Right now</Text>
-                  <Text style={styles.optionDescription}>Use current date and time</Text>
+                  <Text style={styles.optionTitle}>{t('watched.rightNow')}</Text>
+                  <Text style={styles.optionDescription}>{t('watched.useCurrentDateTime')}</Text>
                 </View>
               </Pressable>
 
@@ -214,7 +217,7 @@ export default function MarkAsWatchedModal({
                     <Calendar size={20} color={COLORS.primary} />
                   </View>
                   <View style={styles.optionContent}>
-                    <Text style={styles.optionTitle}>Release Date</Text>
+                    <Text style={styles.optionTitle}>{t('watched.releaseDate')}</Text>
                     <Text style={styles.optionDescription}>{getFormattedReleaseDate()}</Text>
                   </View>
                 </Pressable>
@@ -230,8 +233,8 @@ export default function MarkAsWatchedModal({
                   <CalendarDays size={20} color={COLORS.primary} />
                 </View>
                 <View style={styles.optionContent}>
-                  <Text style={styles.optionTitle}>Custom date</Text>
-                  <Text style={styles.optionDescription}>Choose a specific date</Text>
+                  <Text style={styles.optionTitle}>{t('watched.customDate')}</Text>
+                  <Text style={styles.optionDescription}>{t('watched.chooseSpecificDate')}</Text>
                 </View>
               </Pressable>
 
@@ -253,10 +256,10 @@ export default function MarkAsWatchedModal({
                     </View>
                     <View style={styles.optionContent}>
                       <Text style={[styles.optionTitle, styles.dangerText]}>
-                        Clear all watch history
+                        {t('watched.clearAllWatchHistory')}
                       </Text>
                       <Text style={styles.optionDescription}>
-                        Remove all {watchCount} watch{watchCount !== 1 ? 'es' : ''}
+                        {t('watched.removeAllWatches', { count: watchCount })}
                       </Text>
                     </View>
                   </Pressable>
@@ -282,7 +285,7 @@ export default function MarkAsWatchedModal({
         onRequestClose={() => setShowDatePicker(false)}
       >
         <KeyboardAvoidingView
-          style={styles.container}
+          style={modalLayoutStyles.container}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ModalBackground />
@@ -305,12 +308,6 @@ export default function MarkAsWatchedModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -318,17 +315,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     maxHeight: '85%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   closeButton: {
     padding: SPACING.xs,

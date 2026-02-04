@@ -1,12 +1,15 @@
 import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -26,6 +29,7 @@ interface CastCrewScreenProps {
 export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
 
   const creditsQuery = useQuery({
@@ -72,23 +76,19 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   };
 
   if (creditsQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (creditsQuery.isError || !creditsQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load credits</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>{t('credits.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -97,7 +97,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   const data = activeTab === 'cast' ? creditsQuery.data.cast : creditsQuery.data.crew;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
@@ -109,7 +109,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Cast & Crew</Text>
+          <Text style={styles.headerTitle}>{t('media.castAndCrew')}</Text>
           {mediaTitle && (
             <Text style={styles.headerSubtitle} numberOfLines={1}>
               {mediaTitle}
@@ -124,14 +124,18 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           onPress={() => setActiveTab('cast')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>Cast</Text>
+          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>
+            {t('media.cast')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'crew' && styles.activeTab]}
           onPress={() => setActiveTab('crew')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>Crew</Text>
+          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>
+            {t('media.crew')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -148,26 +152,6 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   backButton: {
     padding: SPACING.m,
   },

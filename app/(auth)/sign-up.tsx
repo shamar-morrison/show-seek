@@ -3,6 +3,7 @@ import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -52,7 +53,7 @@ export default function SignUp() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <AnimatedBackground />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -103,7 +104,7 @@ export default function SignUp() {
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
                     {t('settings.terms')}
                   </Text>{' '}
-                  &amp;{' '}
+                  {t('common.and')}{' '}
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
                     {t('settings.privacy')}
                   </Text>
@@ -118,10 +119,6 @@ export default function SignUp() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   safeArea: {
     flex: 1,
   },

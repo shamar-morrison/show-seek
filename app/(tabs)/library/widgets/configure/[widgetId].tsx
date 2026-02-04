@@ -3,10 +3,12 @@ import { WidgetTypeSelector } from '@/src/components/widgets/WidgetTypeSelector'
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { WidgetConfig } from '@/src/types';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Save } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +27,7 @@ export default function ConfigureWidgetScreen() {
   const { widgets, addWidget, updateWidget, loading: widgetsLoading } = useWidgets(user?.uid);
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation();
 
   const [type, setType] = useState<WidgetConfig['type']>('upcoming-movies');
   const [size, setSize] = useState<WidgetConfig['size']>('medium');
@@ -35,9 +38,9 @@ export default function ConfigureWidgetScreen() {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isNew ? 'New Widget' : 'Configure Widget',
+      title: isNew ? t('widgets.newWidget') : t('widgets.configureWidget'),
     });
-  }, [navigation, isNew]);
+  }, [navigation, isNew, t]);
 
   useEffect(() => {
     if (!isNew && !widgetsLoading) {
@@ -52,7 +55,7 @@ export default function ConfigureWidgetScreen() {
 
   const handleSave = async () => {
     if (type === 'watchlist' && !listId) {
-      Alert.alert('Error', 'Please select a watchlist to display.');
+      Alert.alert(t('common.error'), t('widgets.selectWatchlistError'));
       return;
     }
 
@@ -73,19 +76,27 @@ export default function ConfigureWidgetScreen() {
       }
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save widget configuration.');
+      Alert.alert(t('common.error'), t('widgets.saveFailed'));
     } finally {
       setIsSaving(false);
     }
   };
 
+  const previewCount = size === 'small' ? 1 : size === 'medium' ? 3 : 5;
+  const previewText =
+    type === 'upcoming-movies'
+      ? t('widgets.preview.upcomingMovies', { count: previewCount })
+      : type === 'upcoming-tv'
+        ? t('widgets.preview.upcomingTV', { count: previewCount })
+        : t('widgets.preview.watchlist', { count: previewCount });
+
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Widget Type</Text>
+        <Text style={styles.sectionTitle}>{t('widgets.widgetType')}</Text>
         <WidgetTypeSelector selectedType={type} onSelect={setType} />
 
-        <Text style={styles.sectionTitle}>Widget Size</Text>
+        <Text style={styles.sectionTitle}>{t('widgets.widgetSize')}</Text>
         <View style={styles.sizeContainer}>
           {SIZES.map((s) => (
             <Pressable
@@ -94,7 +105,7 @@ export default function ConfigureWidgetScreen() {
               onPress={() => setSize(s)}
             >
               <Text style={[styles.sizeText, size === s && styles.selectedSizeText]}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
+                {t(`widgets.size.${s}`)}
               </Text>
             </Pressable>
           ))}
@@ -103,15 +114,8 @@ export default function ConfigureWidgetScreen() {
         {type === 'watchlist' && <ListSelector selectedListId={listId} onSelect={setListId} />}
 
         <View style={styles.previewContainer}>
-          <Text style={styles.sectionTitle}>Preview Description</Text>
-          <Text style={styles.previewText}>
-            {type === 'upcoming-movies' &&
-              `Shows up to ${size === 'small' ? 1 : size === 'medium' ? 3 : 5} upcoming movie releases.`}
-            {type === 'upcoming-tv' &&
-              `Shows up to ${size === 'small' ? 1 : size === 'medium' ? 3 : 5} upcoming TV show releases.`}
-            {type === 'watchlist' &&
-              `Shows up to ${size === 'small' ? 1 : size === 'medium' ? 3 : 5} items from your selected watchlist.`}
-          </Text>
+          <Text style={styles.sectionTitle}>{t('widgets.previewDescription')}</Text>
+          <Text style={styles.previewText}>{previewText}</Text>
         </View>
       </ScrollView>
 
@@ -126,7 +130,7 @@ export default function ConfigureWidgetScreen() {
           ) : (
             <>
               <Save size={20} color={COLORS.white} />
-              <Text style={styles.saveButtonText}>Save Configuration</Text>
+              <Text style={styles.saveButtonText}>{t('widgets.saveConfiguration')}</Text>
             </>
           )}
         </Pressable>
@@ -136,10 +140,6 @@ export default function ConfigureWidgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: SPACING.l,
   },

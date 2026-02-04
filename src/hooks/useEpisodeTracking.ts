@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
@@ -74,57 +75,23 @@ export interface MarkAllEpisodesWatchedParams {
  * Subscribe to episode tracking data for a specific TV show
  */
 export const useShowEpisodeTracking = (tvShowId: number) => {
-  const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
+  const subscribe = useCallback(
+    (onData: (data: TVShowEpisodeTracking | null) => void, onError: (error: Error) => void) =>
+      episodeTrackingService.subscribeToShowTracking(tvShowId, onData, onError),
+    [tvShowId]
+  );
 
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    setIsSubscriptionLoading(true);
-
-    const unsubscribe = episodeTrackingService.subscribeToShowTracking(
-      tvShowId,
-      (tracking) => {
-        queryClient.setQueryData(['episodeTracking', userId, tvShowId], tracking);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useShowEpisodeTracking] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, tvShowId, queryClient]);
-
-  const query = useQuery({
+  const query = useRealtimeSubscription<TVShowEpisodeTracking | null>({
     queryKey: ['episodeTracking', userId, tvShowId],
-    queryFn: () => {
-      // Initial data is handled by subscription
-      return (
-        queryClient.getQueryData<TVShowEpisodeTracking | null>([
-          'episodeTracking',
-          userId,
-          tvShowId,
-        ]) || null
-      );
-    },
     enabled: !!userId,
-    staleTime: Infinity, // Data is updated via subscription
-    meta: { error },
+    initialData: null,
+    subscribe,
+    logLabel: 'useShowEpisodeTracking',
   });
 
   return {
     ...query,
-    isLoading: isSubscriptionLoading,
   };
 };
 

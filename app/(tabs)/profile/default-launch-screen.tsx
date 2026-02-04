@@ -5,6 +5,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { LaunchScreenRoute } from '@/src/types/preferences';
+import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Bookmark, Check, Compass, Home, Search, User } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
@@ -56,7 +57,7 @@ export default function DefaultLaunchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.description}>{t('settings.launchScreenDescription')}</Text>
 
@@ -109,10 +110,6 @@ export default function DefaultLaunchScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   scrollContent: {
     padding: SPACING.l,
   },

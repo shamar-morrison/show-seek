@@ -81,6 +81,10 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
 import { fireEvent, renderWithProviders } from '@/__tests__/utils/test-utils';
 import { SeasonItem, SeasonItemProps, SeasonWithEpisodes } from '@/src/components/tv/SeasonItem';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+// Get the mock t function
+const { t: mockT } = useTranslation();
 
 const mockSeason: SeasonWithEpisodes = {
   id: 1,
@@ -140,6 +144,7 @@ const defaultProps: SeasonItemProps = {
   firstAirDate: '2020-01-15',
   voteAverage: 8.5,
   markPreviousEpisodesWatched: false,
+  t: mockT,
 };
 
 describe('SeasonItem', () => {
@@ -190,7 +195,7 @@ describe('SeasonItem', () => {
   it('shows Mark All button when expanded with aired episodes', () => {
     const { getByText } = renderWithProviders(<SeasonItem {...defaultProps} isExpanded={true} />);
 
-    expect(getByText('Mark All')).toBeTruthy();
+    expect(getByText('Mark all')).toBeTruthy();
   });
 
   it('shows progress bar when there is progress', () => {

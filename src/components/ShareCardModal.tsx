@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
@@ -7,6 +8,7 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { Download, Share2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Modal,
@@ -40,6 +42,7 @@ export default function ShareCardModal({
   mediaData,
   onShowToast,
 }: ShareCardModalProps) {
+  const { t } = useTranslation();
   const [state, setState] = useState<ModalState>('generating');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const cardRef = useRef<View>(null);
@@ -79,7 +82,7 @@ export default function ShareCardModal({
       setState('preview');
     } catch (error) {
       console.error('[ShareCardModal] Failed to capture card:', error);
-      onShowToast?.('Failed to generate share card');
+      onShowToast?.(t('shareCard.failedToGenerate'));
       onClose();
     }
   };
@@ -92,20 +95,19 @@ export default function ShareCardModal({
     try {
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        onShowToast?.('Sharing is not available on this device');
+        onShowToast?.(t('shareCard.sharingNotAvailable'));
         setState('preview');
         return;
       }
 
       // Copy promotional message to clipboard for easy pasting
-      const shareMessage =
-        "Check out what I'm watching on ShowSeek! 🎬🍿 Download the app: https://play.google.com/store/apps/details?id=app.horizon.showseek";
+      const shareMessage = t('shareCard.caption');
       await Clipboard.setStringAsync(shareMessage);
-      onShowToast?.('Caption copied to clipboard!');
+      onShowToast?.(t('shareCard.captionCopied'));
 
       await Sharing.shareAsync(imageUri, {
         mimeType: 'image/png',
-        dialogTitle: 'Share your ShowSeek card',
+        dialogTitle: t('shareCard.dialogTitle'),
         UTI: 'public.png', // Helps on iOS
       });
 
@@ -113,10 +115,10 @@ export default function ShareCardModal({
       onClose();
     } catch (error) {
       console.error('[ShareCardModal] Failed to share:', error);
-      onShowToast?.('Failed to share');
+      onShowToast?.(t('shareCard.failedToShare'));
       setState('preview');
     }
-  }, [imageUri, onClose, onShowToast]);
+  }, [imageUri, onClose, onShowToast, t]);
 
   const handleSave = useCallback(async () => {
     if (!imageUri) return;
@@ -128,7 +130,7 @@ export default function ShareCardModal({
       const { status } = await MediaLibrary.requestPermissionsAsync();
 
       if (status !== 'granted') {
-        onShowToast?.('Permission to access gallery was denied');
+        onShowToast?.(t('shareCard.permissionDenied'));
         setState('preview');
         return;
       }
@@ -137,14 +139,14 @@ export default function ShareCardModal({
       await MediaLibrary.saveToLibraryAsync(imageUri);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onShowToast?.('Saved to gallery!');
+      onShowToast?.(t('shareCard.savedToGallery'));
       onClose();
     } catch (error) {
       console.error('[ShareCardModal] Failed to save:', error);
-      onShowToast?.('Failed to save to gallery');
+      onShowToast?.(t('shareCard.failedToSave'));
       setState('preview');
     }
-  }, [imageUri, onClose, onShowToast]);
+  }, [imageUri, onClose, onShowToast, t]);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -156,13 +158,13 @@ export default function ShareCardModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <ModalBackground />
-      <Pressable style={styles.backdrop} onPress={handleClose} />
+      <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
-      <View style={styles.container}>
-        <View style={styles.content}>
+      <View style={modalLayoutStyles.container}>
+        <View style={[modalLayoutStyles.card, styles.content]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Share Card</Text>
+            <Text style={modalHeaderStyles.title}>{t('shareCard.title')}</Text>
             <Pressable onPress={handleClose} disabled={isProcessing}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -181,11 +183,11 @@ export default function ShareCardModal({
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.loadingText}>Generating...</Text>
+                <Text style={styles.loadingText}>{t('shareCard.generating')}</Text>
               </View>
             ) : (
               <View style={styles.previewWrapper}>
-                <Text style={styles.previewLabel}>Preview</Text>
+                <Text style={styles.previewLabel}>{t('shareCard.preview')}</Text>
                 {/* Display the captured image */}
                 <View style={styles.previewImageContainer}>
                   {imageUri && (
@@ -217,7 +219,7 @@ export default function ShareCardModal({
               ) : (
                 <>
                   <Share2 size={20} color={COLORS.white} />
-                  <Text style={styles.actionButtonText}>Share to...</Text>
+                  <Text style={styles.actionButtonText}>{t('shareCard.share')}</Text>
                 </>
               )}
             </Pressable>
@@ -237,7 +239,7 @@ export default function ShareCardModal({
               ) : (
                 <>
                   <Download size={20} color={COLORS.primary} />
-                  <Text style={styles.saveButtonText}>Save to Gallery</Text>
+                  <Text style={styles.saveButtonText}>{t('shareCard.save')}</Text>
                 </>
               )}
             </Pressable>
@@ -254,24 +256,9 @@ export default function ShareCardModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.overlay,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.l,
-  },
   content: {
-    width: '100%',
-    maxWidth: 400,
     maxHeight: '85%',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
+    padding: 0,
     overflow: 'hidden',
   },
   header: {
@@ -281,11 +268,6 @@ const styles = StyleSheet.create({
     padding: SPACING.l,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
   },
   previewScroll: {
     flexGrow: 0,

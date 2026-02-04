@@ -1,19 +1,15 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  HIT_SLOP,
-  SPACING,
-} from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import i18n from '@/src/i18n';
+import { listCardStyles } from '@/src/styles/listCardStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import type { TFunction } from 'i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
@@ -22,16 +18,45 @@ interface ReminderCardProps {
   onEditTiming: (reminder: Reminder) => void;
   onCancel: (reminderId: string) => void;
   isLoading?: boolean;
+  t: TFunction;
 }
 
-const getTimingLabel = (timing: ReminderTiming): string => {
+const getTimingLabelKey = (reminder: Reminder): string => {
+  const timing = reminder.reminderTiming;
+
+  if (reminder.mediaType === 'movie') {
+    switch (timing) {
+      case 'on_release_day':
+        return 'reminder.timingOptions.movie.onReleaseDay.label';
+      case '1_day_before':
+        return 'reminder.timingOptions.movie.oneDayBefore.label';
+      case '1_week_before':
+        return 'reminder.timingOptions.movie.oneWeekBefore.label';
+    }
+  }
+
+  const frequency = reminder.tvFrequency ?? 'season_premiere';
+
+  if (frequency === 'every_episode') {
+    switch (timing) {
+      case 'on_release_day':
+        return 'reminder.timingOptions.episode.onAirDay.label';
+      case '1_day_before':
+        return 'reminder.timingOptions.episode.oneDayBefore.label';
+      case '1_week_before':
+        // Shouldn't happen for episode-level reminders, but handle gracefully.
+        return 'reminder.timingOptions.movie.oneWeekBefore.label';
+    }
+  }
+
+  // season_premiere
   switch (timing) {
     case 'on_release_day':
-      return 'On Release Day';
+      return 'reminder.timingOptions.season.onPremiereDay.label';
     case '1_day_before':
-      return '1 Day Before';
+      return 'reminder.timingOptions.season.oneDayBefore.label';
     case '1_week_before':
-      return '1 Week Before';
+      return 'reminder.timingOptions.season.oneWeekBefore.label';
   }
 };
 
@@ -52,7 +77,7 @@ const formatReleaseDate = (date: string): string => {
 
 const formatNotificationTime = (timestamp: number): string => {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(i18n.language, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -61,7 +86,7 @@ const formatNotificationTime = (timestamp: number): string => {
 };
 
 export const ReminderCard = memo<ReminderCardProps>(
-  ({ reminder, onEditTiming, onCancel, isLoading = false }) => {
+  ({ reminder, onEditTiming, onCancel, isLoading = false, t }) => {
     const router = useRouter();
     const currentTab = useCurrentTab();
 
@@ -90,23 +115,26 @@ export const ReminderCard = memo<ReminderCardProps>(
 
     return (
       <Pressable
-        style={({ pressed }) => [styles.container, pressed && styles.containerPressed]}
+        style={({ pressed }) => [
+          listCardStyles.container,
+          pressed && listCardStyles.containerPressed,
+        ]}
         onPress={handlePress}
         disabled={isLoading}
       >
         <MediaImage
           source={{ uri: getImageUrl(reminder.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-          style={styles.poster}
+          style={listCardStyles.poster}
           contentFit="cover"
         />
-        <View style={styles.info}>
+        <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={1}>
             {reminder.title}
           </Text>
           <View style={styles.row}>
             <Calendar size={14} color={COLORS.textSecondary} />
             <Text style={styles.releaseDate}>
-              Releases {formatReleaseDate(reminder.releaseDate)}
+              {t('media.releasesOn', { date: formatReleaseDate(reminder.releaseDate) })}
             </Text>
           </View>
           <View style={styles.timingRow}>
@@ -117,7 +145,7 @@ export const ReminderCard = memo<ReminderCardProps>(
               ]}
             >
               <Text style={[styles.timingText, { color: getTimingColor(reminder.reminderTiming) }]}>
-                {getTimingLabel(reminder.reminderTiming)}
+                {t(getTimingLabelKey(reminder))}
               </Text>
             </View>
           </View>
@@ -125,16 +153,16 @@ export const ReminderCard = memo<ReminderCardProps>(
             // Show different status based on whether this is an every_episode reminder with no next episode
             reminder.noNextEpisodeFound && reminder.tvFrequency === 'every_episode' ? (
               <Text style={[styles.notificationTime, { color: COLORS.warning, fontWeight: '600' }]}>
-                No upcoming episodes
+                {t('reminder.noUpcomingEpisodes')}
               </Text>
             ) : (
               <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
-                Released
+                {t('reminder.released')}
               </Text>
             )
           ) : (
             <Text style={styles.notificationTime}>
-              Notify: {formatNotificationTime(reminder.notificationScheduledFor)}
+              {t('reminder.notify')} {formatNotificationTime(reminder.notificationScheduledFor)}
             </Text>
           )}
         </View>
@@ -168,29 +196,6 @@ export const ReminderCard = memo<ReminderCardProps>(
 ReminderCard.displayName = 'ReminderCard';
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    padding: SPACING.s,
-    gap: SPACING.m,
-  },
-  containerPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  poster: {
-    width: 60,
-    height: 90,
-    borderRadius: BORDER_RADIUS.s,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  info: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
   title: {
     fontSize: FONT_SIZE.m,
     fontWeight: '600',

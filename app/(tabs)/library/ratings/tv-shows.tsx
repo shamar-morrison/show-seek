@@ -1,24 +1,30 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
+import { RatingsEmptyState } from '@/src/components/library/RatingsEmptyState';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
 import ListActionsModal from '@/src/components/ListActionsModal';
-import MediaSortModal, { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
+import { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
-import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
+import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Dimensions,
   Pressable,
   StyleSheet,
@@ -41,8 +47,10 @@ export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
 
   // Search functionality using shared hook (initialize with empty array first)
   const {
@@ -85,7 +93,7 @@ export default function TVShowRatingsScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search TV shows...',
+      placeholder: t('library.searchTVShowsPlaceholder'),
     },
   });
 
@@ -129,20 +137,22 @@ export default function TVShowRatingsScreen() {
             <RatingBadge rating={item.rating.rating} size="medium" />
           </View>
           {item.tvShow && (
-            <View style={styles.info}>
-              <Text style={styles.title} numberOfLines={1}>
+            <View style={mediaCardStyles.info}>
+              <Text style={mediaCardStyles.title} numberOfLines={1}>
                 {item.tvShow.name}
               </Text>
               {item.tvShow.first_air_date && (
-                <View style={styles.yearRatingContainer}>
-                  <Text style={styles.year}>
+                <View style={mediaMetaStyles.yearRatingContainer}>
+                  <Text style={mediaMetaStyles.year}>
                     {new Date(item.tvShow.first_air_date).getFullYear()}
                   </Text>
                   {item.tvShow.vote_average > 0 && (
                     <>
-                      <Text style={styles.separator}> • </Text>
+                      <Text style={mediaMetaStyles.separator}> • </Text>
                       <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                      <Text style={styles.rating}>{item.tvShow.vote_average.toFixed(1)}</Text>
+                      <Text style={mediaMetaStyles.rating}>
+                        {item.tvShow.vote_average.toFixed(1)}
+                      </Text>
                     </>
                   )}
                 </View>
@@ -165,21 +175,17 @@ export default function TVShowRatingsScreen() {
   const keyExtractor = useCallback((item: EnrichedTVRating) => item.rating.id, []);
 
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (sortedData.length === 0 && !hasActiveFilterState) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Star}
-          title="No TV Show Ratings"
-          description="Rate TV shows to see them here."
+          title={t('library.emptyRatings')}
+          description={t('library.emptyRatingsHint')}
         />
       </SafeAreaView>
     );
@@ -187,8 +193,8 @@ export default function TVShowRatingsScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         {viewMode === 'grid' ? (
           <FlashList
             key="grid"
@@ -199,27 +205,14 @@ export default function TVShowRatingsScreen() {
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              searchQuery ? (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={Search}
-                    title="No results found"
-                    description="Try a different search term."
-                  />
-                </View>
-              ) : hasActiveFilterState ? (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title="No items match your filters"
-                    description="Try adjusting your filters to see more results."
-                    actionLabel="Clear Filters"
-                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                  />
-                </View>
-              ) : null
-            }
+          ListEmptyComponent={
+            <RatingsEmptyState
+              searchQuery={searchQuery}
+              hasActiveFilterState={hasActiveFilterState}
+              height={emptyStateHeight}
+              onClearFilters={setFilterState}
+            />
+          }
           />
         ) : (
           <FlashList
@@ -228,36 +221,23 @@ export default function TVShowRatingsScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={libraryListStyles.listContent}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              searchQuery ? (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={Search}
-                    title="No results found"
-                    description="Try a different search term."
-                  />
-                </View>
-              ) : hasActiveFilterState ? (
-                <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
-                  <EmptyState
-                    icon={SlidersHorizontal}
-                    title="No items match your filters"
-                    description="Try adjusting your filters to see more results."
-                    actionLabel="Clear Filters"
-                    onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
-                  />
-                </View>
-              ) : null
-            }
+          ListEmptyComponent={
+            <RatingsEmptyState
+              searchQuery={searchQuery}
+              hasActiveFilterState={hasActiveFilterState}
+              height={emptyStateHeight}
+              onClearFilters={setFilterState}
+            />
+          }
           />
         )}
       </SafeAreaView>
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         showUserRatingOption
@@ -282,28 +262,9 @@ export default function TVShowRatingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
   gridListContent: {
     paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
   },
   mediaCard: {
     width: ITEM_WIDTH,
@@ -323,32 +284,5 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.xs,
     right: SPACING.xs,
-  },
-  info: {
-    marginTop: SPACING.s,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-  },
-  yearRatingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-    gap: SPACING.xs,
-  },
-  year: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  separator: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-  },
-  rating: {
-    color: COLORS.warning,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
   },
 });

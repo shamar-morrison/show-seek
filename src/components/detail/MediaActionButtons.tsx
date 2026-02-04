@@ -3,6 +3,7 @@ import ReminderButton from '@/src/components/ReminderButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { Check, ImageIcon, LucideIcon, Pencil, Play, Plus, StickyNote } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 
@@ -60,6 +61,8 @@ export function MediaActionButtons({
   isLoadingNote,
   hasTrailer,
 }: MediaActionButtonsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={detailStyles.actionButtons}>
       {/* Secondary Action Buttons Row */}
@@ -145,7 +148,7 @@ export function MediaActionButtons({
           activeOpacity={ACTIVE_OPACITY}
         >
           <Play size={18} color={COLORS.white} fill={COLORS.white} />
-          <Text style={detailStyles.playButtonText}>Watch Trailer</Text>
+          <Text style={detailStyles.playButtonText}>{t('media.watchTrailer')}</Text>
         </TouchableOpacity>
       </View>
     </View>

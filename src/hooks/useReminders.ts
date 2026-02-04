@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef } from 'react';
 import { tmdbApi } from '../api/tmdb';
 import { auth } from '../firebase/config';
 import { reminderService } from '../services/ReminderService';
@@ -9,54 +9,25 @@ import {
   ReminderMediaType,
   ReminderTiming,
 } from '../types/reminder';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 /**
  * Hook to get all active reminders for current user
  */
 export const useReminders = () => {
-  const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
-  const [error, setError] = useState<Error | null>(null);
-  const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(() => {
-    if (!userId) return true;
-    return !queryClient.getQueryData(['reminders', userId]);
-  });
+  const subscribe = useCallback(
+    (onData: (data: Reminder[]) => void, onError: (error: Error) => void) =>
+      reminderService.subscribeToUserReminders(onData, onError),
+    []
+  );
 
-  useEffect(() => {
-    if (!userId) {
-      setIsSubscriptionLoading(false);
-      return;
-    }
-
-    setError(null);
-    if (!queryClient.getQueryData(['reminders', userId])) {
-      setIsSubscriptionLoading(true);
-    }
-
-    const unsubscribe = reminderService.subscribeToUserReminders(
-      (reminders) => {
-        queryClient.setQueryData(['reminders', userId], reminders);
-        setError(null);
-        setIsSubscriptionLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setIsSubscriptionLoading(false);
-        console.error('[useReminders] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, queryClient]);
-
-  const query = useQuery({
+  const query = useRealtimeSubscription<Reminder[]>({
     queryKey: ['reminders', userId],
-    queryFn: () => {
-      return queryClient.getQueryData<Reminder[]>(['reminders', userId]) || [];
-    },
     enabled: !!userId,
-    staleTime: Infinity,
-    meta: { error },
+    initialData: [],
+    subscribe,
+    logLabel: 'useReminders',
   });
 
   /*
@@ -66,7 +37,7 @@ export const useReminders = () => {
 
   return {
     ...query,
-    isLoading: isSubscriptionLoading,
+    isLoading: query.isLoading,
   };
 };
 

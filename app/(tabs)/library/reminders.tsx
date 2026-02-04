@@ -1,8 +1,11 @@
 import EditTimingModal from '@/src/components/library/EditTimingModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { ReminderCard } from '@/src/components/library/ReminderCard';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCancelReminder, useReminders, useUpdateReminder } from '@/src/hooks/useReminders';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -10,8 +13,8 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
 import { Bell, List, Rows3 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Alert,
   SectionList,
   StyleSheet,
@@ -32,6 +35,7 @@ const STORAGE_KEY = 'remindersViewMode';
 export default function RemindersScreen() {
   const navigation = useNavigation();
   const { data: reminders, isLoading } = useReminders();
+  const { t } = useTranslation();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -132,13 +136,15 @@ export default function RemindersScreen() {
     });
 
     const sections: ReminderSection[] = [];
-    if (groups.today.length) sections.push({ title: 'TODAY', data: groups.today });
-    if (groups.thisWeek.length) sections.push({ title: 'THIS WEEK', data: groups.thisWeek });
-    if (groups.thisMonth.length) sections.push({ title: 'THIS MONTH', data: groups.thisMonth });
-    if (groups.later.length) sections.push({ title: 'LATER', data: groups.later });
+    if (groups.today.length) sections.push({ title: t('common.today'), data: groups.today });
+    if (groups.thisWeek.length)
+      sections.push({ title: t('common.thisWeek'), data: groups.thisWeek });
+    if (groups.thisMonth.length)
+      sections.push({ title: t('common.thisMonth'), data: groups.thisMonth });
+    if (groups.later.length) sections.push({ title: t('common.later'), data: groups.later });
 
     return sections;
-  }, [sortedReminders, viewMode]);
+  }, [sortedReminders, viewMode, t]);
 
   // Action handlers
   const handleEditTiming = useCallback((reminder: Reminder) => {
@@ -151,21 +157,24 @@ export default function RemindersScreen() {
       try {
         await updateMutation.mutateAsync({ reminderId, timing });
         setEditModalVisible(false);
-        Alert.alert('Success', 'Reminder timing updated successfully');
+        Alert.alert(t('common.success'), t('reminder.timingUpdated'));
       } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update reminder');
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : t('reminder.failedToUpdateTiming')
+        );
         throw error; // Re-throw to keep modal open
       }
     },
-    [updateMutation]
+    [updateMutation, t]
   );
 
   const handleCancelReminder = useCallback(
     async (reminderId: string) => {
-      Alert.alert('Cancel Reminder', 'Are you sure you want to cancel this reminder?', [
-        { text: 'Keep', style: 'cancel' },
+      Alert.alert(t('reminder.removeReminder'), t('reminder.confirmCancel'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Cancel Reminder',
+          text: t('reminder.removeReminder'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -173,8 +182,8 @@ export default function RemindersScreen() {
               await cancelMutation.mutateAsync(reminderId);
             } catch (error) {
               Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to cancel reminder'
+                t('common.error'),
+                error instanceof Error ? error.message : t('reminder.failedToCancel')
               );
             } finally {
               setCancellingId(null);
@@ -183,7 +192,7 @@ export default function RemindersScreen() {
         },
       ]);
     },
-    [cancelMutation]
+    [cancelMutation, t]
   );
 
   // Render callbacks
@@ -196,9 +205,10 @@ export default function RemindersScreen() {
         onEditTiming={handleEditTiming}
         onCancel={handleCancelReminder}
         isLoading={cancellingId === item.id}
+        t={t}
       />
     ),
-    [handleEditTiming, handleCancelReminder, cancellingId]
+    [handleEditTiming, handleCancelReminder, cancellingId, t]
   );
 
   const keyExtractor = useCallback((item: Reminder) => item.id, []);
@@ -214,36 +224,32 @@ export default function RemindersScreen() {
 
   // Loading state
   if (isLoading || isLoadingPreference) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   // Empty state
   if (!sortedReminders || sortedReminders.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.divider} />
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Bell}
-          title="No Active Reminders"
-          description="Set reminders for upcoming releases to get notified."
+          title={t('library.emptyReminders')}
+          description={t('library.emptyRemindersHint')}
         />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.divider} />
+    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={libraryListStyles.divider} />
       {viewMode === 'flat' ? (
         <FlashList
           data={sortedReminders}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
         />
@@ -254,7 +260,7 @@ export default function RemindersScreen() {
           renderSectionHeader={renderSectionHeader}
           SectionSeparatorComponent={renderSectionSeparator}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
           ItemSeparatorComponent={ItemSeparator}
@@ -274,25 +280,6 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.xl,
-  },
   separator: {
     height: SPACING.m,
   },

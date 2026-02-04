@@ -1,5 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { Share } from 'react-native';
+import i18n from '@/src/i18n';
 
 export interface ShareMediaOptions {
   id: number;
@@ -18,7 +19,7 @@ export async function shareMedia(
   const { id, title, mediaType } = options;
 
   const tmdbUrl = `https://www.themoviedb.org/${mediaType}/${id}`;
-  const message = `${title} - Check this out on TMDB! ${tmdbUrl}`;
+  const message = i18n.t('share.message', { title, url: tmdbUrl });
 
   try {
     await Share.share({
@@ -27,9 +28,9 @@ export async function shareMedia(
   } catch (error) {
     try {
       await Clipboard.setStringAsync(message);
-      onShowToast('Link copied to clipboard');
+      onShowToast(i18n.t('share.linkCopied'));
     } catch (clipboardError) {
-      onShowToast('Unable to share. Please try again.');
+      onShowToast(i18n.t('share.unableToShare'));
       console.error('Share and clipboard both failed:', error, clipboardError);
     }
   }

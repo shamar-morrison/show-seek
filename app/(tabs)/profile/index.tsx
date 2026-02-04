@@ -8,6 +8,7 @@ import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
@@ -95,7 +96,7 @@ export default function ProfileScreen() {
       { key, value },
       {
         onError: () => {
-          Alert.alert('Error', 'Failed to update preference. Please try again.');
+          Alert.alert(t('common.error'), t('profile.updatePreferenceError'));
         },
       }
     );
@@ -153,7 +154,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -161,7 +162,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         </View>
 
         {/* User Info Section - Fixed at top */}
@@ -221,10 +222,6 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   keyboardAvoidingView: {
     flex: 1,
   },

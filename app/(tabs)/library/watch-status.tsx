@@ -3,7 +3,8 @@ import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
-import MediaSortModal, { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
+import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
@@ -14,17 +15,20 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { screenStyles } from '@/src/styles/screenStyles';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
   filterMediaItems,
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { createSortAction } from '@/src/utils/listActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
+import { Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,6 +41,9 @@ export default function WatchStatusScreen() {
   const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
   const { data: genreMap } = useAllGenres();
+  const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const [selectedListId, setSelectedListId] = useState<string>('watchlist');
   const [filters, setFilters] = useState<WatchStatusFilterState>(DEFAULT_WATCH_STATUS_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -146,6 +153,11 @@ export default function WatchStatusScreen() {
     return activeFilters || hasActiveSort;
   }, [filters, sortState]);
 
+  const selectedListLabel = useMemo(() => {
+    const config = WATCH_STATUS_LISTS.find((l) => l.id === selectedListId);
+    return config ? t(config.labelKey) : '';
+  }, [selectedListId, t]);
+
   const listActions = useMemo(() => {
     const activeFilters = hasActiveFilters(filters);
     const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
@@ -154,19 +166,16 @@ export default function WatchStatusScreen() {
       {
         id: 'filter',
         icon: SlidersHorizontal,
-        label: 'Filter Items',
+        label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: activeFilters,
       },
-      {
-        id: 'sort',
-        icon: ArrowUpDown,
-        label: 'Sort Items',
+      createSortAction({
         onPress: () => setSortModalVisible(true),
         showBadge: hasActiveSort,
-      },
+      }),
     ];
-  }, [filters, sortState]);
+  }, [filters, sortState, t]);
 
   const handleOpenActionsModal = useCallback(() => {
     listActionsModalRef.current?.present();
@@ -198,7 +207,7 @@ export default function WatchStatusScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.tabsContainer}>
           <ScrollView
             horizontal
@@ -213,7 +222,7 @@ export default function WatchStatusScreen() {
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={[styles.tabText, selectedListId === list.id && styles.activeTabText]}>
-                  {list.label}
+                  {t(list.labelKey)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -231,6 +240,8 @@ export default function WatchStatusScreen() {
                   item={item}
                   onPress={handleItemPress}
                   onLongPress={handleLongPress}
+                  movieLabel={movieLabel}
+                  tvShowLabel={tvShowLabel}
                 />
               )}
               contentContainerStyle={styles.listContent}
@@ -241,13 +252,13 @@ export default function WatchStatusScreen() {
                     <Bookmark size={48} color={COLORS.textSecondary} />
                     <Text style={styles.emptyTitle}>
                       {hasActiveFilters(filters) && listItems.length > 0
-                        ? 'No items match your filters'
-                        : 'No items yet'}
+                        ? t('discover.noResultsWithFilters')
+                        : t('library.emptyList')}
                     </Text>
                     <Text style={styles.emptyDescription}>
                       {hasActiveFilters(filters) && listItems.length > 0
-                        ? 'Try adjusting your filters to see more items.'
-                        : `Add movies and TV shows to your ${selectedList?.name?.toLowerCase() ?? 'watch'} list to see them here.`}
+                        ? t('discover.adjustFilters')
+                        : t('library.watchStatusEmptyDescription', { listName: selectedListLabel })}
                     </Text>
                     <TouchableOpacity
                       style={styles.emptyButton}
@@ -260,8 +271,8 @@ export default function WatchStatusScreen() {
                     >
                       <Text style={styles.emptyButtonText}>
                         {hasActiveFilters(filters) && listItems.length > 0
-                          ? 'Clear Filters'
-                          : 'Browse Content'}
+                          ? t('common.reset')
+                          : t('library.browseContent')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -277,16 +288,16 @@ export default function WatchStatusScreen() {
                 icon: Bookmark,
                 title:
                   hasActiveFilters(filters) && listItems.length > 0
-                    ? 'No items match your filters'
-                    : 'No items yet',
+                    ? t('discover.noResultsWithFilters')
+                    : t('library.emptyList'),
                 description:
                   hasActiveFilters(filters) && listItems.length > 0
-                    ? 'Try adjusting your filters to see more items.'
-                    : `Add movies and TV shows to your ${selectedList?.name?.toLowerCase() ?? 'watch'} list to see them here.`,
+                    ? t('discover.adjustFilters')
+                    : t('library.watchStatusEmptyDescription', { listName: selectedListLabel }),
                 actionLabel:
                   hasActiveFilters(filters) && listItems.length > 0
-                    ? 'Clear Filters'
-                    : 'Browse Content',
+                    ? t('common.reset')
+                    : t('library.browseContent'),
                 onAction:
                   hasActiveFilters(filters) && listItems.length > 0
                     ? () => setFilters(DEFAULT_WATCH_STATUS_FILTERS)
@@ -315,9 +326,9 @@ export default function WatchStatusScreen() {
         genreMap={genreMap || {}}
       />
 
-      <MediaSortModal
+      <LibrarySortModal
         visible={sortModalVisible}
-        onClose={() => setSortModalVisible(false)}
+        setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
@@ -331,10 +342,6 @@ export default function WatchStatusScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   tabsContainer: {
     paddingTop: SPACING.m,
     marginBottom: SPACING.m,

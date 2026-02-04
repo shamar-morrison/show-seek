@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
@@ -37,7 +38,7 @@ export const DetailScreenSkeleton = memo(() => {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       {/* Hero Section Skeleton */}
       <View style={styles.heroContainer}>
         <Animated.View style={[styles.backdrop, { opacity: shimmerOpacity }]} />
@@ -96,10 +97,6 @@ export const DetailScreenSkeleton = memo(() => {
 DetailScreenSkeleton.displayName = 'DetailScreenSkeleton';
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
   heroContainer: {
     height: 400,
     position: 'relative',

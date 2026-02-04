@@ -6,8 +6,11 @@
 import { COLORS } from '@/src/constants/theme';
 import { Stack } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function ProfileLayout() {
+  const { t } = useTranslation();
+
   return (
     <Stack
       screenOptions={{
@@ -21,7 +24,7 @@ export default function ProfileLayout() {
         name="language"
         options={{
           headerShown: true,
-          headerTitle: 'Language',
+          headerTitle: t('settings.language'),
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
         }}
@@ -30,7 +33,7 @@ export default function ProfileLayout() {
         name="region"
         options={{
           headerShown: true,
-          headerTitle: 'Region',
+          headerTitle: t('settings.region'),
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
         }}
@@ -39,7 +42,7 @@ export default function ProfileLayout() {
         name="default-launch-screen"
         options={{
           headerShown: true,
-          headerTitle: 'Default Launch Screen',
+          headerTitle: t('settings.defaultLaunchScreen'),
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
         }}

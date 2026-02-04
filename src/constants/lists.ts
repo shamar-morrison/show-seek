@@ -47,9 +47,9 @@ export const filterWatchStatusLists = (lists: UserList[]): UserList[] => {
  * Map of list IDs to their display names and order
  */
 export const WATCH_STATUS_LISTS = [
-  { id: 'watchlist', label: 'Should Watch' },
-  { id: 'currently-watching', label: 'Watching' },
-  { id: 'already-watched', label: 'Already Watched' },
-  { id: 'favorites', label: 'Favorites' },
-  { id: 'dropped', label: 'Dropped' },
+  { id: 'watchlist', labelKey: 'lists.shouldWatch' },
+  { id: 'currently-watching', labelKey: 'lists.watching' },
+  { id: 'already-watched', labelKey: 'lists.alreadyWatched' },
+  { id: 'favorites', labelKey: 'lists.favorites' },
+  { id: 'dropped', labelKey: 'lists.dropped' },
 ] as const;

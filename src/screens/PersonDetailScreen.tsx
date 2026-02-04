@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -17,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ArrowRight, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -28,10 +30,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,23 +78,19 @@ export default function PersonDetailScreen() {
   );
 
   if (personQuery.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (personQuery.isError || !personQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load person details</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>{t('person.failedToLoadDetails')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -153,8 +154,8 @@ export default function PersonDetailScreen() {
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return t('common.unknown');
+    return new Date(dateString).toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -227,13 +228,13 @@ export default function PersonDetailScreen() {
         console.error('Failed to toggle favorite:', error);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    }, 'Sign in to add people to your favorites');
+    }, t('authGuards.addFavoritePeople'));
   };
 
   const age = calculateAge(person.birthday, person.deathday);
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -288,7 +289,10 @@ export default function PersonDetailScreen() {
                   <Calendar size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
                     {formatDate(person.birthday)}
-                    {age && ` (${age} ${person.deathday ? 'at death' : 'years old'})`}
+                    {age !== null &&
+                      ` ${t(person.deathday ? 'person.ageAtDeath' : 'person.ageYearsOld', {
+                        count: age,
+                      })}`}
                   </Text>
                 </View>
               )}
@@ -321,7 +325,7 @@ export default function PersonDetailScreen() {
                   fill={isFavorited ? COLORS.white : 'transparent'}
                 />
                 <Text style={styles.favoriteButtonText}>
-                  {isFavorited ? 'Remove from Favorite People' : 'Add to Favorite People'}
+                  {isFavorited ? t('person.removeFromFavoritePeople') : t('person.addToFavoritePeople')}
                 </Text>
               </>
             )}
@@ -331,7 +335,7 @@ export default function PersonDetailScreen() {
         {/* Biography */}
         {person.biography && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Biography</Text>
+            <Text style={styles.sectionTitle}>{t('person.biography')}</Text>
             <ExpandableText
               text={person.biography}
               style={[styles.biography, { marginBottom: SPACING.s }]}
@@ -350,14 +354,14 @@ export default function PersonDetailScreen() {
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={styles.sectionTitle}>
-                  {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+                  {isCrewRole ? t('person.directedWrittenMovies') : t('person.knownForMovies')}
                 </Text>
                 <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
-                  {isCrewRole ? 'Directed/Written (Movies)' : 'Known For (Movies)'}
+                  {isCrewRole ? t('person.directedWrittenMovies') : t('person.knownForMovies')}
                 </Text>
               </View>
             )}
@@ -413,14 +417,14 @@ export default function PersonDetailScreen() {
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <Text style={styles.sectionTitle}>
-                  {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+                  {isCrewRole ? t('person.directedWrittenTV') : t('person.knownForTV')}
                 </Text>
                 <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>
-                  {isCrewRole ? 'Directed/Written (TV Shows)' : 'Known For (TV Shows)'}
+                  {isCrewRole ? t('person.directedWrittenTV') : t('person.knownForTV')}
                 </Text>
               </View>
             )}
@@ -472,26 +476,6 @@ export default function PersonDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    marginBottom: SPACING.m,
-  },
   backButton: {
     padding: SPACING.m,
   },

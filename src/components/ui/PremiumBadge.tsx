@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Lock } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 /**
@@ -8,10 +9,12 @@ import { StyleSheet, Text, View } from 'react-native';
  * Uses Lock icon with primary color scheme.
  */
 export const PremiumBadge: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.premiumBadge}>
       <Lock size={10} color={COLORS.primary} />
-      <Text style={styles.premiumBadgeText}>Premium</Text>
+      <Text style={styles.premiumBadgeText}>{t('common.premium')}</Text>
     </View>
   );
 };

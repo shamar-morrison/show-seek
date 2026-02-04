@@ -1,8 +1,10 @@
 import { getImageUrl } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import i18n from '@/src/i18n';
 import React, { memo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { detailStyles } from './detailStyles';
 import type { WatchProvider, WatchProviders, WatchProvidersSectionProps } from './types';
 
@@ -22,15 +24,15 @@ const openJustWatchLink = async (link: string) => {
       await Linking.openURL(link);
     } else {
       Alert.alert(
-        'Unable to Open Link',
-        'The watch provider link cannot be opened on this device.',
-        [{ text: 'OK' }]
+        i18n.t('watchProviders.unableToOpenLinkTitle'),
+        i18n.t('watchProviders.unableToOpenLinkMessage'),
+        [{ text: i18n.t('common.ok') }]
       );
     }
   } catch (error) {
     console.error('Error opening JustWatch link:', error);
-    Alert.alert('Error', 'An error occurred while trying to open the link. Please try again.', [
-      { text: 'OK' },
+    Alert.alert(i18n.t('common.errorTitle'), i18n.t('watchProviders.openLinkErrorMessage'), [
+      { text: i18n.t('common.ok') },
     ]);
   }
 };
@@ -60,7 +62,9 @@ const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => 
               style={({ pressed }) => [detailStyles.providerCard, { opacity: pressed ? 0.7 : 1 }]}
               onPress={handlePress}
               accessibilityRole="button"
-              accessibilityLabel={`Watch on ${provider.provider_name} via JustWatch`}
+              accessibilityLabel={i18n.t('watchProviders.accessibility.watchOnProviderViaJustWatch', {
+                provider: provider.provider_name,
+              })}
               hitSlop={SPACING.s}
             >
               <MediaImage
@@ -95,6 +99,8 @@ const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => 
 
 export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
   ({ watchProviders, link, style }) => {
+    const { t } = useTranslation();
+
     if (!hasAnyProviders(watchProviders)) {
       return null;
     }
@@ -104,20 +110,26 @@ export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
         <View
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <Text style={detailStyles.sectionTitle}>Where to Watch</Text>
-          <Text style={{ color: COLORS.textSecondary, fontSize: FONT_SIZE.xs }}>by JustWatch</Text>
+          <Text style={detailStyles.sectionTitle}>{t('watchProviders.whereToWatch')}</Text>
+          <Text style={{ color: COLORS.textSecondary, fontSize: FONT_SIZE.xs }}>
+            {t('watchProviders.byJustWatch')}
+          </Text>
         </View>
 
         {watchProviders!.flatrate && watchProviders!.flatrate.length > 0 && (
-          <ProviderCategory label="Streaming" providers={watchProviders!.flatrate} link={link} />
+          <ProviderCategory
+            label={t('watchProviders.streaming')}
+            providers={watchProviders!.flatrate}
+            link={link}
+          />
         )}
 
         {watchProviders!.rent && watchProviders!.rent.length > 0 && (
-          <ProviderCategory label="Rent" providers={watchProviders!.rent} link={link} />
+          <ProviderCategory label={t('watchProviders.rent')} providers={watchProviders!.rent} link={link} />
         )}
 
         {watchProviders!.buy && watchProviders!.buy.length > 0 && (
-          <ProviderCategory label="Buy" providers={watchProviders!.buy} link={link} />
+          <ProviderCategory label={t('watchProviders.buy')} providers={watchProviders!.buy} link={link} />
         )}
       </View>
     );

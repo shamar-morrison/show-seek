@@ -2,11 +2,13 @@ import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { X } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -37,6 +39,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
 
     const createMutation = useCreateList();
     const router = useRouter();
+    const { t } = useTranslation();
     const { isPremium, isLoading: isPremiumLoading } = usePremium();
     const { data: lists, isLoading: isListsLoading } = useLists();
 
@@ -72,12 +75,12 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const showUpgradeAlert = useCallback(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
-        'Limit Reached',
-        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        t('library.limitReachedTitle'),
+        t('library.limitReachedMessage', { max: MAX_FREE_LISTS }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Upgrade',
+            text: t('profile.upgradeToPremium'),
             style: 'default',
             onPress: async () => {
               skipOnCancelRef.current = true;
@@ -87,7 +90,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
           },
         ]
       );
-    }, [router]);
+    }, [router, t]);
 
     const handleCreate = async () => {
       const trimmedName = listName.trim();
@@ -113,7 +116,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
           showUpgradeAlert();
           return;
         }
-        setError('Failed to create list. Please try again.');
+        setError(t('library.failedToCreateList'));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
     };
@@ -127,9 +130,9 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         onDidDismiss={handleDismiss}
         grabber={false}
       >
-        <GestureHandlerRootView style={[styles.content, { width }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Create New List</Text>
+        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+          <View style={modalHeaderStyles.header}>
+            <Text style={modalHeaderStyles.title}>{t('library.createNewList')}</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -138,7 +141,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
           <View style={styles.createContainer}>
             <TextInput
               style={styles.input}
-              placeholder="List Name"
+              placeholder={t('library.listName')}
               placeholderTextColor={COLORS.textSecondary}
               value={listName}
               onChangeText={setListName}
@@ -157,7 +160,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
                 <Text
                   style={[styles.cancelButtonText, createMutation.isPending && styles.disabledText]}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Text>
               </Pressable>
               <Pressable
@@ -171,7 +174,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
                 {createMutation.isPending ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
-                  <Text style={styles.createButtonText}>Create</Text>
+                  <Text style={styles.createButtonText}>{t('common.create')}</Text>
                 )}
               </Pressable>
             </View>
@@ -187,21 +190,6 @@ CreateListModal.displayName = 'CreateListModal';
 export default CreateListModal;
 
 const styles = StyleSheet.create({
-  content: {
-    padding: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.m,
-  },
-  title: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   createContainer: {
     gap: SPACING.m,
   },

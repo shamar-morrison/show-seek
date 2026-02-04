@@ -2,7 +2,10 @@ import type { Episode } from '@/src/api/tmdb';
 import { tmdbApi } from '@/src/api/tmdb';
 import { SeasonItem } from '@/src/components/tv/SeasonItem';
 import { seasonScreenStyles as styles } from '@/src/components/tv/seasonScreenStyles';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useMarkAllEpisodesWatched,
@@ -22,12 +25,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TVSeasonsScreen() {
   const { id, season } = useLocalSearchParams();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
@@ -91,47 +96,43 @@ export default function TVSeasonsScreen() {
     ) => {
       requireAuth(() => {
         markWatched.mutate(params, callbacks);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markWatched]
+    [requireAuth, markWatched, t]
   );
 
   const handleMarkUnwatched = useCallback(
     (params: MarkEpisodeUnwatchedParams) => {
       requireAuth(() => {
         markUnwatched.mutate(params);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markUnwatched]
+    [requireAuth, markUnwatched, t]
   );
 
   const handleMarkAllWatched = useCallback(
     (params: MarkAllEpisodesWatchedParams) => {
       requireAuth(() => {
         markAllWatched.mutate(params);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markAllWatched]
+    [requireAuth, markAllWatched, t]
   );
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
+    return <FullScreenLoading />;
   }
 
   if (tvQuery.isError || !tvQuery.data) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load seasons</Text>
+      <View style={errorStyles.container}>
+        <Text style={errorStyles.text}>{t('tvSeasons.failedToLoadSeasons')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -145,8 +146,8 @@ export default function TVSeasonsScreen() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'TBA';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return t('common.tba');
+    return new Date(dateString).toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -154,7 +155,7 @@ export default function TVSeasonsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <SafeAreaView edges={['top']} style={styles.header}>
@@ -169,7 +170,7 @@ export default function TVSeasonsScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {show.name}
           </Text>
-          <Text style={styles.headerSubtitle}>Seasons & Episodes</Text>
+          <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
         </View>
       </SafeAreaView>
 
@@ -203,6 +204,7 @@ export default function TVSeasonsScreen() {
               firstAirDate={show.first_air_date}
               voteAverage={show.vote_average}
               markPreviousEpisodesWatched={!!preferences.markPreviousEpisodesWatched}
+              t={t}
             />
           </View>
         ))}
