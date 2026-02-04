@@ -7,6 +7,7 @@
 import { ExternalRatings } from '@/src/api/omdb';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { Trophy } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
@@ -96,6 +97,13 @@ export const ExternalRatingsSection = memo<ExternalRatingsSectionProps>(
             <RatingItem logo={mcLogo} value={ratings.metacritic} label="Metacritic" />
           )}
         </View>
+
+        {ratings.awards && (
+          <View style={styles.awardsContainer}>
+            <Trophy size={16} color={COLORS.warning} />
+            <Text style={styles.awardsText}>{ratings.awards}</Text>
+          </View>
+        )}
         <SectionSeparator />
       </>
     );
@@ -132,6 +140,22 @@ const styles = StyleSheet.create({
   ratingLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
+  },
+  awardsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // paddingBottom: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    gap: SPACING.s,
+  },
+  awardsText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: SPACING.m,
+    flex: 1,
   },
   // Skeleton styles
   skeletonLogo: {

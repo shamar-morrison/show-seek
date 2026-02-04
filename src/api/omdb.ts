@@ -30,6 +30,7 @@ export interface OMDbResponse {
   imdbVotes: string;
   imdbID: string;
   Ratings: OMDbRating[];
+  Awards: string;
   Response: 'True' | 'False';
   Error?: string;
 }
@@ -41,6 +42,7 @@ export interface ExternalRatings {
   imdb: { rating: string; votes: string } | null;
   rottenTomatoes: string | null;
   metacritic: string | null;
+  awards: string | null;
 }
 
 /**
@@ -59,6 +61,7 @@ function parseRatings(response: OMDbResponse): ExternalRatings {
     imdb: null,
     rottenTomatoes: null,
     metacritic: null,
+    awards: response.Awards !== 'N/A' ? response.Awards : null,
   };
 
   // IMDb rating from main fields
