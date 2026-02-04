@@ -28,6 +28,24 @@ interface MoodDiscoveryResult {
 }
 
 /**
+ * Calculate a stable random starting page (1-5) for variety.
+ * Uses a hash of moodId + mediaType + time window to ensure cache consistency.
+ * Results change every ~6 hours.
+ */
+function getStartingPage(moodId: string, mediaType: MoodMediaType): number {
+  const now = new Date();
+  const hourSeed =
+    now.getFullYear() * 10000 +
+    (now.getMonth() + 1) * 100 +
+    now.getDate() * 10 +
+    Math.floor(now.getHours() / 6);
+  const hash = `${moodId}-${mediaType}-${hourSeed}`.split('').reduce((acc, char) => {
+    return (acc << 5) - acc + char.charCodeAt(0);
+  }, 0);
+  return Math.abs(hash % 5) + 1; // Random page 1-5
+}
+
+/**
  * Hook to fetch mood-based content using TMDB's discover API.
  * Supports infinite scroll pagination with randomized starting page for variety.
  */
@@ -38,22 +56,8 @@ export function useMoodDiscovery({
 }: UseMoodDiscoveryOptions): MoodDiscoveryResult {
   const mood = getMoodById(moodId);
 
-  // Generate a stable random starting page (1-5) per mood/mediaType combination
-  // This adds variety to results while maintaining cache consistency
-  const startingPage = useMemo(() => {
-    // Use a simple hash of moodId + mediaType + current hour to vary results
-    // Results will change roughly every hour but stay cached within that window
-    const now = new Date();
-    const hourSeed =
-      now.getFullYear() * 10000 +
-      (now.getMonth() + 1) * 100 +
-      now.getDate() * 10 +
-      Math.floor(now.getHours() / 6);
-    const hash = `${moodId}-${mediaType}-${hourSeed}`.split('').reduce((acc, char) => {
-      return (acc << 5) - acc + char.charCodeAt(0);
-    }, 0);
-    return Math.abs(hash % 5) + 1; // Random page 1-5
-  }, [moodId, mediaType]);
+  // Use shared function for stable starting page calculation
+  const startingPage = useMemo(() => getStartingPage(moodId, mediaType), [moodId, mediaType]);
 
   const {
     data,
@@ -122,15 +126,18 @@ export function prefetchMoodDiscovery(
   const mood = getMoodById(moodId);
   if (!mood) return;
 
+  // Use the same starting page calculation as useMoodDiscovery for cache key consistency
+  const startingPage = getStartingPage(moodId, mediaType);
+
   const params = {
-    page: 1,
+    page: startingPage,
     withGenres: formatMoodGenres(mood),
     withKeywords: formatMoodKeywords(mood),
     withoutGenres: formatExcludedGenres(mood),
   };
 
   queryClient.prefetchInfiniteQuery({
-    queryKey: ['moodDiscovery', moodId, mediaType],
+    queryKey: ['moodDiscovery', moodId, mediaType, startingPage],
     queryFn: async () => {
       if (mediaType === 'movie') {
         return tmdbApi.discoverMoviesByMood(params);
@@ -138,6 +145,6 @@ export function prefetchMoodDiscovery(
         return tmdbApi.discoverTVByMood(params);
       }
     },
-    initialPageParam: 1,
+    initialPageParam: startingPage,
   });
 }
