@@ -111,7 +111,7 @@ export function prefetchMoodDiscovery(
     withoutGenres: formatExcludedGenres(mood),
   };
 
-  queryClient.prefetchQuery({
+  queryClient.prefetchInfiniteQuery({
     queryKey: ['moodDiscovery', moodId, mediaType],
     queryFn: async () => {
       if (mediaType === 'movie') {
@@ -120,5 +120,6 @@ export function prefetchMoodDiscovery(
         return tmdbApi.discoverTVByMood(params);
       }
     },
+    initialPageParam: 1,
   });
 }

@@ -5,7 +5,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Shuffle } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -97,6 +97,18 @@ export default function MoodPickerScreen() {
     handleMoodSelect(randomMood.id);
   }, [handleMoodSelect]);
 
+  // Ref to store timeout ID for cleanup
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSurpriseMe = () => {
     if (isSpinning) return;
 
@@ -110,7 +122,7 @@ export default function MoodPickerScreen() {
     );
 
     // Navigate after animation
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       setIsSpinning(false);
       navigateToRandomMood();
     }, 850);
