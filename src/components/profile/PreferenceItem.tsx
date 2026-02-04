@@ -80,20 +80,22 @@ export function PreferenceItem({
         </Text>
       </View>
       {!isLocked && (
-        <>
-          {loading ? (
-            <ActivityIndicator size="small" color={accentColor} />
-          ) : (
-            <Switch
-              value={value}
-              onValueChange={handleValueChange}
-              disabled={loading || disabled}
-              trackColor={{ false: COLORS.surfaceLight, true: accentColor }}
-              thumbColor={COLORS.white}
-              testID="preference-switch"
-            />
+        <View style={styles.switchContainer}>
+          <Switch
+            value={value}
+            onValueChange={handleValueChange}
+            disabled={loading || disabled}
+            trackColor={{ false: COLORS.surfaceLight, true: accentColor }}
+            thumbColor={COLORS.white}
+            testID="preference-switch"
+            style={loading && styles.switchHidden}
+          />
+          {loading && (
+            <View style={styles.spinnerOverlay} pointerEvents="none">
+              <ActivityIndicator size="small" color={accentColor} testID="preference-spinner" />
+            </View>
           )}
-        </>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -137,5 +139,18 @@ const styles = StyleSheet.create({
   },
   preferenceSubtitleLocked: {
     color: COLORS.textSecondary,
+  },
+  switchContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinnerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchHidden: {
+    opacity: 0,
   },
 });

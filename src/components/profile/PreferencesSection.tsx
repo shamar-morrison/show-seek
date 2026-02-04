@@ -21,6 +21,8 @@ export interface PreferencesSectionProps {
   onUpdate: (key: keyof UserPreferences, value: boolean) => void;
   /** Whether an update is pending */
   isUpdating: boolean;
+  /** Preference key currently updating (for per-item spinner) */
+  updatingPreferenceKey?: keyof UserPreferences | null;
   /** Whether user has premium */
   isPremium: boolean;
   /** Handler when premium-locked item is pressed */
@@ -40,12 +42,16 @@ export function PreferencesSection({
   onRetry,
   onUpdate,
   isUpdating,
+  updatingPreferenceKey = null,
   isPremium,
   onPremiumPress,
   showTitle = true,
 }: PreferencesSectionProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+
+  const isItemUpdating = (key: keyof UserPreferences) =>
+    isUpdating && updatingPreferenceKey === key;
 
   const handleUpdate = (key: keyof UserPreferences, value: boolean) => {
     onUpdate(key, value);
@@ -101,7 +107,7 @@ export function PreferencesSection({
         subtitle={t('profile.autoAddToWatchingDescription')}
         value={!!preferences?.autoAddToWatching}
         onValueChange={(value) => handleUpdate('autoAddToWatching', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('autoAddToWatching')}
         disabled={isUpdating}
       />
 
@@ -110,7 +116,7 @@ export function PreferencesSection({
         subtitle={t('profile.autoAddToAlreadyWatchedDescription')}
         value={!!preferences?.autoAddToAlreadyWatched}
         onValueChange={(value) => handleUpdate('autoAddToAlreadyWatched', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('autoAddToAlreadyWatched')}
         disabled={isUpdating}
       />
 
@@ -119,7 +125,7 @@ export function PreferencesSection({
         subtitle={t('profile.showListIndicatorsDescription')}
         value={!!preferences?.showListIndicators}
         onValueChange={(value) => handleUpdate('showListIndicators', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('showListIndicators')}
         disabled={isUpdating}
       />
 
@@ -128,7 +134,7 @@ export function PreferencesSection({
         subtitle={t('profile.quickMarkAsWatchedDescription')}
         value={!!preferences?.quickMarkAsWatched}
         onValueChange={(value) => handleUpdate('quickMarkAsWatched', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('quickMarkAsWatched')}
         disabled={isUpdating}
       />
 
@@ -137,7 +143,7 @@ export function PreferencesSection({
         subtitle={t('profile.markPreviousEpisodesDescription')}
         value={!!preferences?.markPreviousEpisodesWatched}
         onValueChange={(value) => handleUpdate('markPreviousEpisodesWatched', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('markPreviousEpisodesWatched')}
         disabled={isUpdating}
       />
 
@@ -146,7 +152,7 @@ export function PreferencesSection({
         subtitle={t('profile.blurPlotSpoilersDescription')}
         value={!!preferences?.blurPlotSpoilers}
         onValueChange={(value) => handleUpdate('blurPlotSpoilers', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('blurPlotSpoilers')}
         disabled={isUpdating}
         isLocked={!isPremium}
         onLockPress={onPremiumPress}
@@ -157,7 +163,7 @@ export function PreferencesSection({
         subtitle={t('profile.hideWatchedContentDescription')}
         value={!!preferences?.hideWatchedContent}
         onValueChange={(value) => handleUpdate('hideWatchedContent', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('hideWatchedContent')}
         disabled={isUpdating}
         isLocked={!isPremium}
         onLockPress={onPremiumPress}
@@ -168,7 +174,7 @@ export function PreferencesSection({
         subtitle={t('profile.hideUnreleasedDescription')}
         value={!!preferences?.hideUnreleasedContent}
         onValueChange={(value) => handleUpdate('hideUnreleasedContent', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('hideUnreleasedContent')}
         disabled={isUpdating}
       />
 
@@ -177,7 +183,7 @@ export function PreferencesSection({
         subtitle={t('profile.hideTabLabelsDescription')}
         value={!!preferences?.hideTabLabels}
         onValueChange={(value) => handleUpdate('hideTabLabels', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('hideTabLabels')}
         disabled={isUpdating}
       />
 
@@ -186,7 +192,7 @@ export function PreferencesSection({
         subtitle={t('profile.dataSaverDescription')}
         value={!!preferences?.dataSaver}
         onValueChange={(value) => handleUpdate('dataSaver', value)}
-        loading={isLoading}
+        loading={isLoading || isItemUpdating('dataSaver')}
         disabled={isUpdating}
       />
     </View>

@@ -73,6 +73,8 @@ export default function ProfileScreen() {
     refetch: refetchPreferences,
   } = usePreferences();
   const updatePreference = useUpdatePreference();
+  const [updatingPreferenceKey, setUpdatingPreferenceKey] =
+    useState<keyof UserPreferences | null>(null);
 
   // Define available tabs based on user state
   const tabs: TabConfig[] = useMemo(() => {
@@ -95,11 +97,15 @@ export default function ProfileScreen() {
   );
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
+    setUpdatingPreferenceKey(key);
     updatePreference.mutate(
       { key, value },
       {
         onError: () => {
           Alert.alert(t('common.error'), t('profile.updatePreferenceError'));
+        },
+        onSettled: () => {
+          setUpdatingPreferenceKey(null);
         },
       }
     );
@@ -118,6 +124,7 @@ export default function ProfileScreen() {
             isUpdating={updatePreference.isPending}
             isPremium={isPremium}
             onPremiumPress={handlePremiumPress}
+            updatingPreferenceKey={updatingPreferenceKey}
             showTitle={false}
           />
         );

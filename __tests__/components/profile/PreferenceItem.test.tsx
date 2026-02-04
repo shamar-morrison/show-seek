@@ -97,7 +97,7 @@ describe('PreferenceItem', () => {
 
   describe('loading state', () => {
     it('should show ActivityIndicator when loading', () => {
-      const { queryByTestId } = render(
+      const { getByTestId } = render(
         <PreferenceItem
           label="Loading Preference"
           subtitle="Loading..."
@@ -106,8 +106,7 @@ describe('PreferenceItem', () => {
           loading={true}
         />
       );
-      // Switch should not be visible when loading
-      expect(queryByTestId('preference-switch')).toBeNull();
+      expect(getByTestId('preference-spinner')).toBeTruthy();
     });
   });
 

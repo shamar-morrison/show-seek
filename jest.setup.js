@@ -73,6 +73,56 @@ jest.mock('expo-notifications', () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
+// Mock expo-haptics
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'light',
+    Medium: 'medium',
+    Heavy: 'heavy',
+  },
+  NotificationFeedbackType: {
+    Success: 'success',
+    Warning: 'warning',
+    Error: 'error',
+  },
+}));
+
+// Mock react-native-svg (required for lucide-react-native icons)
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const createMockComponent = (name) => (props) => React.createElement(name, props, props.children);
+
+  return {
+    __esModule: true,
+    default: createMockComponent('Svg'),
+    Svg: createMockComponent('Svg'),
+    Circle: createMockComponent('Circle'),
+    Ellipse: createMockComponent('Ellipse'),
+    G: createMockComponent('G'),
+    Text: createMockComponent('Text'),
+    TSpan: createMockComponent('TSpan'),
+    TextPath: createMockComponent('TextPath'),
+    Path: createMockComponent('Path'),
+    Polygon: createMockComponent('Polygon'),
+    Polyline: createMockComponent('Polyline'),
+    Line: createMockComponent('Line'),
+    Rect: createMockComponent('Rect'),
+    Use: createMockComponent('Use'),
+    Image: createMockComponent('Image'),
+    Symbol: createMockComponent('Symbol'),
+    Defs: createMockComponent('Defs'),
+    LinearGradient: createMockComponent('LinearGradient'),
+    RadialGradient: createMockComponent('RadialGradient'),
+    Stop: createMockComponent('Stop'),
+    ClipPath: createMockComponent('ClipPath'),
+    Pattern: createMockComponent('Pattern'),
+    Mask: createMockComponent('Mask'),
+  };
+});
+
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({
