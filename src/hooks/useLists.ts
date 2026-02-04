@@ -224,7 +224,13 @@ export const useCreateList = () => {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: async (listName: string) => {
+    mutationFn: async ({
+      name,
+      description,
+    }: {
+      name: string;
+      description?: string;
+    }) => {
       // Check limits only when premium status is confirmed (not loading)
       if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
@@ -237,7 +243,7 @@ export const useCreateList = () => {
           );
         }
       }
-      return listService.createList(listName);
+      return listService.createList(name, description);
     },
   });
 };
@@ -281,7 +287,14 @@ export const useDeleteList = () => {
 
 export const useRenameList = () => {
   return useMutation({
-    mutationFn: ({ listId, newName }: { listId: string; newName: string }) =>
-      listService.renameList(listId, newName),
+    mutationFn: ({
+      listId,
+      newName,
+      newDescription,
+    }: {
+      listId: string;
+      newName: string;
+      newDescription?: string;
+    }) => listService.renameList(listId, newName, newDescription),
   });
 };

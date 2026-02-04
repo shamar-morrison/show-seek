@@ -18,7 +18,7 @@ import {
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 export interface RenameListModalRef {
-  present: (params: { listId: string; currentName: string }) => Promise<void>;
+  present: (params: { listId: string; currentName: string; currentDescription?: string }) => Promise<void>;
   dismiss: () => Promise<void>;
 }
 
@@ -33,6 +33,8 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
     const [listId, setListId] = useState('');
     const [listName, setListName] = useState('');
     const [originalName, setOriginalName] = useState('');
+    const [listDescription, setListDescription] = useState('');
+    const [originalDescription, setOriginalDescription] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     const renameMutation = useRenameList();
@@ -40,10 +42,13 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
     const { accentColor } = useAccentColor();
 
     useImperativeHandle(ref, () => ({
-      present: async ({ listId: id, currentName }) => {
+      present: async ({ listId: id, currentName, currentDescription }) => {
         setListId(id);
         setListName(currentName);
         setOriginalName(currentName);
+        const safeDescription = currentDescription ?? '';
+        setListDescription(safeDescription);
+        setOriginalDescription(safeDescription);
         setError(null);
         await sheetRef.current?.present();
       },
@@ -56,17 +61,26 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
       setListId('');
       setListName('');
       setOriginalName('');
+      setListDescription('');
+      setOriginalDescription('');
       setError(null);
     }, []);
 
     const handleRename = async () => {
       const trimmedName = listName.trim();
-      if (!trimmedName || trimmedName === originalName) return;
+      const trimmedDescription = listDescription.trim();
+      const isNameUnchanged = trimmedName === originalName;
+      const isDescriptionUnchanged = trimmedDescription === originalDescription.trim();
+      if (!trimmedName || (isNameUnchanged && isDescriptionUnchanged)) return;
 
       setError(null);
 
       try {
-        await renameMutation.mutateAsync({ listId, newName: trimmedName });
+        await renameMutation.mutateAsync({
+          listId,
+          newName: trimmedName,
+          newDescription: trimmedDescription ? trimmedDescription : undefined,
+        });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onSuccess?.(listId, trimmedName);
         await sheetRef.current?.dismiss();
@@ -77,7 +91,9 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
       }
     };
 
-    const hasChanges = listName.trim() && listName.trim() !== originalName;
+    const hasChanges =
+      listName.trim() &&
+      (listName.trim() !== originalName || listDescription.trim() !== originalDescription.trim());
 
     return (
       <TrueSheet
@@ -90,7 +106,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
       >
         <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>{t('library.renameList')}</Text>
+            <Text style={modalHeaderStyles.title}>{t('library.editList')}</Text>
             <Pressable onPress={() => sheetRef.current?.dismiss()}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -107,6 +123,17 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
               returnKeyType="done"
               editable={!renameMutation.isPending}
               onSubmitEditing={handleRename}
+            />
+            <TextInput
+              style={[styles.input, styles.descriptionInput]}
+              placeholder={t('library.listDescription')}
+              placeholderTextColor={COLORS.textSecondary}
+              value={listDescription}
+              onChangeText={setListDescription}
+              editable={!renameMutation.isPending}
+              multiline
+              maxLength={120}
+              textAlignVertical="top"
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
             <View style={styles.actions}>
@@ -158,6 +185,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     color: COLORS.text,
     fontSize: FONT_SIZE.m,
+  },
+  descriptionInput: {
+    minHeight: 96,
   },
   errorText: {
     color: COLORS.error,

@@ -28,10 +28,14 @@ export default function ManageListsScreen() {
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
 
-  const handleRenameList = (listId: string, currentName: string) => {
+  const handleRenameList = (listId: string, currentName: string, currentDescription?: string) => {
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      renameModalRef.current?.present({ listId, currentName });
+      renameModalRef.current?.present({
+        listId,
+        currentName,
+        currentDescription,
+      });
     }, t('library.signInToRenameList'));
   };
 
@@ -133,7 +137,9 @@ export default function ManageListsScreen() {
                       </View>
                       <View style={styles.listActions}>
                         <TouchableOpacity
-                          onPress={() => handleRenameList(list.id, list.name)}
+                          onPress={() =>
+                            handleRenameList(list.id, list.name, list.description ?? '')
+                          }
                           style={styles.actionButton}
                           activeOpacity={ACTIVE_OPACITY}
                         >
