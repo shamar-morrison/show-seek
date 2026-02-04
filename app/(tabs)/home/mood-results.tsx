@@ -21,6 +21,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_COUNT = 2;
 const HORIZONTAL_PADDING = SPACING.l;
 const ITEM_GAP = SPACING.m;
+const LIST_HORIZONTAL_PADDING = HORIZONTAL_PADDING - ITEM_GAP / 2;
 const ITEM_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - ITEM_GAP) / COLUMN_COUNT;
 
 /**
@@ -309,23 +310,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingHorizontal: LIST_HORIZONTAL_PADDING,
     paddingBottom: SPACING.xl,
   },
   cardWrapper: {
     width: ITEM_WIDTH,
-    marginRight: ITEM_GAP,
+    marginHorizontal: ITEM_GAP / 2,
     marginBottom: SPACING.m,
   },
   skeletonContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingHorizontal: LIST_HORIZONTAL_PADDING,
     paddingTop: SPACING.m,
   },
   skeletonCard: {
     width: ITEM_WIDTH,
-    marginRight: ITEM_GAP,
+    marginHorizontal: ITEM_GAP / 2,
     marginBottom: SPACING.m,
   },
   emptyContainer: {

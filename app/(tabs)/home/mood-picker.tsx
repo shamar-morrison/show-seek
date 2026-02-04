@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.s,
   },
   moodName: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: SPACING.xs,
     textAlign: 'center',
