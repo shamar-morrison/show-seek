@@ -147,14 +147,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: SPACING.m,
     gap: SPACING.s,
+    marginTop: SPACING.m,
   },
   awardsText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: SPACING.m,
-    flex: 1,
   },
   // Skeleton styles
   skeletonLogo: {
