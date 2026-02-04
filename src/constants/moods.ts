@@ -77,7 +77,7 @@ export const MOODS: MoodConfig[] = [
     keywords: [
       9717, // feel-good
       155714, // heartwarming
-      4565, // friendship
+      6054, // friendship
       9799, // romantic comedy
     ],
     movieExcludeGenres: [27, 53], // Exclude Horror, Thriller
@@ -92,9 +92,9 @@ export const MOODS: MoodConfig[] = [
     movieGenres: [9648, 878], // Mystery, Science Fiction
     tvGenres: [9648, 10765], // Mystery, Sci-Fi & Fantasy
     keywords: [
-      4565, // plot twist
+      275311, // plot twist
       10349, // psychological
-      10617, // dream
+      1721, // dream
       156277, // mind control
       11019, // paranoia
     ],
@@ -111,10 +111,10 @@ export const MOODS: MoodConfig[] = [
     tvGenres: [10759], // Action & Adventure (TV-specific genre)
     keywords: [
       1308, // survival
-      10617, // escape
+      1562, // escape
       14819, // mission
       9748, // revenge
-      11322, // explosion
+      14601, // explosion
     ],
     movieExcludeGenres: [],
     tvExcludeGenres: [],
@@ -131,8 +131,8 @@ export const MOODS: MoodConfig[] = [
       6270, // tragedy
       4336, // death
       10683, // coming of age
-      11322, // love
-      9673, // based on true story
+      5216, // love
+      9672, // based on true story
     ],
     movieExcludeGenres: [35], // Exclude Comedy
     tvExcludeGenres: [35], // Exclude Comedy
