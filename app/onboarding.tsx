@@ -6,9 +6,16 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface OnboardingSlide {
@@ -54,6 +61,119 @@ const ONBOARDING_SLIDES: OnboardingSlide[] = [
   },
 ];
 
+const IMAGE_FADE_DURATION = 450;
+const TEXT_IN_DURATION = 450;
+const TEXT_STAGGER_DELAY = 120;
+const TEXT_SLIDE_OFFSET = 24;
+const TEXT_EASING = Easing.out(Easing.cubic);
+const IMAGE_EASING = Easing.out(Easing.cubic);
+
+interface OnboardingSlideItemProps {
+  item: OnboardingSlide;
+  index: number;
+  width: number;
+  height: number;
+  isActive: boolean;
+}
+
+function OnboardingSlideItem({ item, index, width, height, isActive }: OnboardingSlideItemProps) {
+  const imageOpacity = useSharedValue(0);
+  const titleOpacity = useSharedValue(0);
+  const titleTranslateY = useSharedValue(TEXT_SLIDE_OFFSET);
+  const descriptionOpacity = useSharedValue(0);
+  const descriptionTranslateY = useSharedValue(TEXT_SLIDE_OFFSET);
+
+  useEffect(() => {
+    if (isActive) {
+      imageOpacity.value = withTiming(1, {
+        duration: IMAGE_FADE_DURATION,
+        easing: IMAGE_EASING,
+      });
+      titleOpacity.value = withTiming(1, {
+        duration: TEXT_IN_DURATION,
+        easing: TEXT_EASING,
+      });
+      titleTranslateY.value = withTiming(0, {
+        duration: TEXT_IN_DURATION,
+        easing: TEXT_EASING,
+      });
+      descriptionOpacity.value = withDelay(
+        TEXT_STAGGER_DELAY,
+        withTiming(1, {
+          duration: TEXT_IN_DURATION,
+          easing: TEXT_EASING,
+        })
+      );
+      descriptionTranslateY.value = withDelay(
+        TEXT_STAGGER_DELAY,
+        withTiming(0, {
+          duration: TEXT_IN_DURATION,
+          easing: TEXT_EASING,
+        })
+      );
+    } else {
+      imageOpacity.value = 0;
+      titleOpacity.value = 0;
+      titleTranslateY.value = TEXT_SLIDE_OFFSET;
+      descriptionOpacity.value = 0;
+      descriptionTranslateY.value = TEXT_SLIDE_OFFSET;
+    }
+  }, [
+    descriptionOpacity,
+    descriptionTranslateY,
+    imageOpacity,
+    isActive,
+    titleOpacity,
+    titleTranslateY,
+  ]);
+
+  const imageAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: imageOpacity.value,
+  }));
+
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: titleTranslateY.value }],
+  }));
+
+  const descriptionAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: descriptionOpacity.value,
+    transform: [{ translateY: descriptionTranslateY.value }],
+  }));
+
+  return (
+    <View
+      style={[styles.slide, { width, height }]}
+      accessibilityLabel={`Onboarding slide ${index + 1}`}
+    >
+      <Animated.Image
+        source={{ uri: item.image }}
+        style={[StyleSheet.absoluteFillObject, imageAnimatedStyle]}
+        resizeMode="cover"
+      />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <SafeAreaView style={styles.contentContainer}>
+        <View style={styles.textContainer}>
+          <Animated.View style={[styles.titleRow, titleAnimatedStyle]}>
+            <Text style={styles.title}>{item.title}</Text>
+            {item.showTraktLogo && (
+              <View style={styles.logoContainer}>
+                <TraktLogo size={32} />
+              </View>
+            )}
+          </Animated.View>
+          <Animated.Text style={[styles.description, descriptionAnimatedStyle]}>
+            {item.description}
+          </Animated.Text>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
 export default function OnboardingScreen() {
   const { width, height } = useWindowDimensions();
   const flatListRef = useRef<FlashListRef<OnboardingSlide> | null>(null);
@@ -94,36 +214,20 @@ export default function OnboardingScreen() {
         data={onboardingData}
         horizontal
         pagingEnabled
+        extraData={currentIndex}
         showsHorizontalScrollIndicator={false}
         bounces={false}
         onMomentumScrollEnd={(event) => {
           setCurrentIndex(Math.round(event.nativeEvent.contentOffset.x / width));
         }}
-        renderItem={({ item }) => (
-          <View style={[styles.slide, { width, height }]}>
-            <Image
-              source={{ uri: item.image }}
-              style={StyleSheet.absoluteFillObject}
-              resizeMode="cover"
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <SafeAreaView style={styles.contentContainer}>
-              <View style={styles.textContainer}>
-                <View style={styles.titleRow}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  {item.showTraktLogo && (
-                    <View style={styles.logoContainer}>
-                      <TraktLogo size={32} />
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.description}>{item.description}</Text>
-              </View>
-            </SafeAreaView>
-          </View>
+        renderItem={({ item, index }) => (
+          <OnboardingSlideItem
+            item={item}
+            index={index}
+            width={width}
+            height={height}
+            isActive={currentIndex === index}
+          />
         )}
         keyExtractor={(item) => item.id}
       />
