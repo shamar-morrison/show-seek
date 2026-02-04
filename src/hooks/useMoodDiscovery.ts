@@ -77,9 +77,9 @@ export function useMoodDiscovery({
 
       const params = {
         page: pageParam as number,
-        withGenres: formatMoodGenres(mood),
+        withGenres: formatMoodGenres(mood, mediaType),
         withKeywords: formatMoodKeywords(mood),
-        withoutGenres: formatExcludedGenres(mood),
+        withoutGenres: formatExcludedGenres(mood, mediaType),
       };
 
       if (mediaType === 'movie') {
@@ -131,9 +131,9 @@ export function prefetchMoodDiscovery(
 
   const params = {
     page: startingPage,
-    withGenres: formatMoodGenres(mood),
+    withGenres: formatMoodGenres(mood, mediaType),
     withKeywords: formatMoodKeywords(mood),
-    withoutGenres: formatExcludedGenres(mood),
+    withoutGenres: formatExcludedGenres(mood, mediaType),
   };
 
   queryClient.prefetchInfiniteQuery({

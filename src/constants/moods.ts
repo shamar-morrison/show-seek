@@ -2,7 +2,9 @@
  * Mood-based content discovery configuration.
  * Each mood maps to specific TMDB genre and keyword IDs for discovery queries.
  *
- * TMDB Genre IDs reference:
+ * IMPORTANT: TMDB uses DIFFERENT genre IDs for Movies vs TV Shows!
+ *
+ * MOVIE Genre IDs:
  * - 28: Action
  * - 12: Adventure
  * - 16: Animation
@@ -16,7 +18,21 @@
  * - 53: Thriller
  * - 10751: Family
  *
- * TMDB Keyword IDs are researched and hardcoded for fast lookups.
+ * TV Genre IDs (different from movies!):
+ * - 10759: Action & Adventure (replaces Action + Adventure)
+ * - 16: Animation (same)
+ * - 35: Comedy (same)
+ * - 18: Drama (same)
+ * - 10751: Family (same)
+ * - 9648: Mystery (same)
+ * - 10765: Sci-Fi & Fantasy (replaces Sci-Fi + Fantasy)
+ * - 10768: War & Politics
+ * - 37: Western (same)
+ *
+ * Note: Horror, Thriller, Romance do NOT exist as TV genres on TMDB!
+ * For TV: use keywords + Drama/Mystery genres to approximate.
+ *
+ * TMDB Keyword IDs are shared between Movies and TV.
  */
 
 import type { LucideIcon } from 'lucide-react-native';
@@ -33,12 +49,16 @@ export interface MoodConfig {
   icon: LucideIcon;
   /** Unique accent color for the mood card (hex) */
   color: string;
-  /** TMDB genre IDs to include (pipe-separated = OR logic) */
-  genres: number[];
-  /** TMDB keyword IDs to include (pipe-separated = OR logic) */
+  /** TMDB genre IDs for MOVIES (pipe-separated = OR logic) */
+  movieGenres: number[];
+  /** TMDB genre IDs for TV SHOWS (pipe-separated = OR logic) */
+  tvGenres: number[];
+  /** TMDB keyword IDs to include (pipe-separated = OR logic, shared for both) */
   keywords: number[];
-  /** TMDB genre IDs to exclude (optional) */
-  excludeGenres?: number[];
+  /** TMDB genre IDs to exclude for MOVIES (optional) */
+  movieExcludeGenres?: number[];
+  /** TMDB genre IDs to exclude for TV SHOWS (optional) */
+  tvExcludeGenres?: number[];
 }
 
 /**
@@ -52,14 +72,16 @@ export const MOODS: MoodConfig[] = [
     emoji: '🧣',
     icon: Armchair,
     color: '#FF8C42', // Warm orange
-    genres: [35, 10751], // Comedy, Family
+    movieGenres: [35, 10751], // Comedy, Family
+    tvGenres: [35, 10751], // Comedy, Family (same IDs)
     keywords: [
       9717, // feel-good
       155714, // heartwarming
       4565, // friendship
       9799, // romantic comedy
     ],
-    excludeGenres: [27, 53], // Exclude Horror, Thriller
+    movieExcludeGenres: [27, 53], // Exclude Horror, Thriller
+    tvExcludeGenres: [], // TV doesn't have Horror/Thriller genres
   },
   {
     id: 'mindBending',
@@ -67,15 +89,17 @@ export const MOODS: MoodConfig[] = [
     emoji: '🌀',
     icon: Brain,
     color: '#9B59B6', // Purple
-    genres: [9648, 878], // Mystery, Science Fiction
+    movieGenres: [9648, 878], // Mystery, Science Fiction
+    tvGenres: [9648, 10765], // Mystery, Sci-Fi & Fantasy
     keywords: [
-      4565, // plot twist (note: this is a common ID, actual may vary)
+      4565, // plot twist
       10349, // psychological
       10617, // dream
       156277, // mind control
       11019, // paranoia
     ],
-    excludeGenres: [],
+    movieExcludeGenres: [],
+    tvExcludeGenres: [],
   },
   {
     id: 'adrenaline',
@@ -83,7 +107,8 @@ export const MOODS: MoodConfig[] = [
     emoji: '⚡',
     icon: Zap,
     color: '#E74C3C', // Red
-    genres: [28, 12], // Action, Adventure
+    movieGenres: [28, 12], // Action, Adventure
+    tvGenres: [10759], // Action & Adventure (TV-specific genre)
     keywords: [
       1308, // survival
       10617, // escape
@@ -91,7 +116,8 @@ export const MOODS: MoodConfig[] = [
       9748, // revenge
       11322, // explosion
     ],
-    excludeGenres: [],
+    movieExcludeGenres: [],
+    tvExcludeGenres: [],
   },
   {
     id: 'heartbreaking',
@@ -99,7 +125,8 @@ export const MOODS: MoodConfig[] = [
     emoji: '💔',
     icon: Heart,
     color: '#3498DB', // Blue
-    genres: [18, 10749], // Drama, Romance
+    movieGenres: [18, 10749], // Drama, Romance
+    tvGenres: [18], // Drama (Romance doesn't exist for TV)
     keywords: [
       6270, // tragedy
       4336, // death
@@ -107,7 +134,8 @@ export const MOODS: MoodConfig[] = [
       11322, // love
       9673, // based on true story
     ],
-    excludeGenres: [35], // Exclude Comedy
+    movieExcludeGenres: [35], // Exclude Comedy
+    tvExcludeGenres: [35], // Exclude Comedy
   },
   {
     id: 'spooky',
@@ -115,7 +143,8 @@ export const MOODS: MoodConfig[] = [
     emoji: '👻',
     icon: Ghost,
     color: '#1A1A2E', // Dark purple/navy
-    genres: [27, 53], // Horror, Thriller
+    movieGenres: [27, 53], // Horror, Thriller
+    tvGenres: [9648], // Mystery (Horror/Thriller don't exist for TV)
     keywords: [
       162846, // supernatural
       10224, // haunting
@@ -123,7 +152,8 @@ export const MOODS: MoodConfig[] = [
       12339, // possession
       224636, // paranormal
     ],
-    excludeGenres: [],
+    movieExcludeGenres: [],
+    tvExcludeGenres: [35], // Exclude Comedy for TV
   },
   {
     id: 'whimsical',
@@ -131,7 +161,8 @@ export const MOODS: MoodConfig[] = [
     emoji: '✨',
     icon: Sparkles,
     color: '#F39C12', // Gold
-    genres: [14, 16], // Fantasy, Animation
+    movieGenres: [14, 16], // Fantasy, Animation
+    tvGenres: [10765, 16], // Sci-Fi & Fantasy, Animation
     keywords: [
       2343, // magic
       4344, // fairy tale
@@ -139,7 +170,8 @@ export const MOODS: MoodConfig[] = [
       1826, // fantasy world
       3205, // witch
     ],
-    excludeGenres: [27], // Exclude Horror
+    movieExcludeGenres: [27], // Exclude Horror
+    tvExcludeGenres: [], // No Horror genre for TV
   },
 ];
 
@@ -159,11 +191,12 @@ export function getRandomMood(): MoodConfig {
 }
 
 /**
- * Format mood genres for TMDB API (comma-separated).
- * Uses OR logic - matches content with ANY of the genres.
+ * Format mood genres for TMDB API based on media type.
+ * Uses OR logic (pipe-separated) - matches content with ANY of the genres.
  */
-export function formatMoodGenres(mood: MoodConfig): string {
-  return mood.genres.join('|');
+export function formatMoodGenres(mood: MoodConfig, mediaType: 'movie' | 'tv'): string {
+  const genres = mediaType === 'movie' ? mood.movieGenres : mood.tvGenres;
+  return genres.join('|');
 }
 
 /**
@@ -174,11 +207,15 @@ export function formatMoodKeywords(mood: MoodConfig): string {
 }
 
 /**
- * Format excluded genres for TMDB API (comma-separated).
+ * Format excluded genres for TMDB API based on media type (comma-separated).
  */
-export function formatExcludedGenres(mood: MoodConfig): string | undefined {
-  if (!mood.excludeGenres || mood.excludeGenres.length === 0) {
+export function formatExcludedGenres(
+  mood: MoodConfig,
+  mediaType: 'movie' | 'tv'
+): string | undefined {
+  const excludeGenres = mediaType === 'movie' ? mood.movieExcludeGenres : mood.tvExcludeGenres;
+  if (!excludeGenres || excludeGenres.length === 0) {
     return undefined;
   }
-  return mood.excludeGenres.join(',');
+  return excludeGenres.join(',');
 }

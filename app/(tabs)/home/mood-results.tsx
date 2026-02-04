@@ -133,11 +133,12 @@ export default function MoodResultsScreen() {
 
   const mood = useMemo(() => getMoodById(moodId), [moodId]);
 
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useMoodDiscovery({
-    moodId,
-    mediaType,
-    enabled: !!moodId,
-  });
+  const { data, isLoading, isError, hasNextPage, isFetchingNextPage, fetchNextPage, refetch } =
+    useMoodDiscovery({
+      moodId,
+      mediaType,
+      enabled: !!moodId,
+    });
 
   // Get mood name for display
   const moodKey = mood?.translationKey?.replace('mood.', '') || '';
@@ -231,6 +232,28 @@ export default function MoodResultsScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         {ListHeader}
         <ResultsSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
+        {ListHeader}
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyIcon, { backgroundColor: accentColor + '20' }]}>
+            <Frown size={48} color={accentColor} />
+          </View>
+          <Text style={styles.emptyTitle}>{t('common.error')}</Text>
+          <Pressable
+            style={[styles.tryAnotherButton, { backgroundColor: accentColor }]}
+            onPress={() => refetch()}
+          >
+            <RefreshCw size={20} color={COLORS.text} />
+            <Text style={styles.tryAnotherText}>{t('common.retry')}</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
