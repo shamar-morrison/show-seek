@@ -9,7 +9,7 @@ import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Frown, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -124,6 +124,7 @@ function EmptyState({
 export default function MoodResultsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigation = useNavigation();
   const { accentColor } = useAccentColor();
   const params = useLocalSearchParams<{ moodId: string }>();
   const moodId = params.moodId || '';
@@ -137,6 +138,18 @@ export default function MoodResultsScreen() {
     mediaType,
     enabled: !!moodId,
   });
+
+  // Get mood name for display
+  const moodKey = mood?.translationKey?.replace('mood.', '') || '';
+  const moodName = t(`mood.${moodKey}.name`);
+
+  // Update navigation header title dynamically based on media type and mood
+  useEffect(() => {
+    const mediaTypeLabel = mediaType === 'movie' ? t('discover.movies') : t('discover.tvShows');
+    navigation.setOptions({
+      title: `${mediaTypeLabel} • ${moodName}`,
+    });
+  }, [mediaType, moodName, navigation, t]);
 
   // Haptic feedback on mount
   useEffect(() => {
@@ -157,10 +170,6 @@ export default function MoodResultsScreen() {
   const handleMediaTypeToggle = useCallback((type: MoodMediaType) => {
     setMediaType(type);
   }, []);
-
-  // Get mood name for display
-  const moodKey = mood?.translationKey?.replace('mood.', '') || '';
-  const moodName = t(`mood.${moodKey}.name`);
 
   const renderItem = useCallback(({ item }: { item: Movie | TVShow }) => {
     // Type guard to determine if it's a Movie or TVShow

@@ -6,6 +6,7 @@ import {
   getMoodById,
 } from '@/src/constants/moods';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 export type MoodMediaType = 'movie' | 'tv';
 
@@ -28,7 +29,7 @@ interface MoodDiscoveryResult {
 
 /**
  * Hook to fetch mood-based content using TMDB's discover API.
- * Supports infinite scroll pagination.
+ * Supports infinite scroll pagination with randomized starting page for variety.
  */
 export function useMoodDiscovery({
   moodId,
@@ -36,6 +37,23 @@ export function useMoodDiscovery({
   enabled = true,
 }: UseMoodDiscoveryOptions): MoodDiscoveryResult {
   const mood = getMoodById(moodId);
+
+  // Generate a stable random starting page (1-5) per mood/mediaType combination
+  // This adds variety to results while maintaining cache consistency
+  const startingPage = useMemo(() => {
+    // Use a simple hash of moodId + mediaType + current hour to vary results
+    // Results will change roughly every hour but stay cached within that window
+    const now = new Date();
+    const hourSeed =
+      now.getFullYear() * 10000 +
+      (now.getMonth() + 1) * 100 +
+      now.getDate() * 10 +
+      Math.floor(now.getHours() / 6);
+    const hash = `${moodId}-${mediaType}-${hourSeed}`.split('').reduce((acc, char) => {
+      return (acc << 5) - acc + char.charCodeAt(0);
+    }, 0);
+    return Math.abs(hash % 5) + 1; // Random page 1-5
+  }, [moodId, mediaType]);
 
   const {
     data,
@@ -47,7 +65,7 @@ export function useMoodDiscovery({
     fetchNextPage,
     refetch,
   } = useInfiniteQuery<PaginatedResponse<Movie> | PaginatedResponse<TVShow>>({
-    queryKey: ['moodDiscovery', moodId, mediaType],
+    queryKey: ['moodDiscovery', moodId, mediaType, startingPage],
     queryFn: async ({ pageParam }) => {
       if (!mood) {
         throw new Error(`Mood not found: ${moodId}`);
@@ -66,7 +84,7 @@ export function useMoodDiscovery({
         return tmdbApi.discoverTVByMood(params);
       }
     },
-    initialPageParam: 1,
+    initialPageParam: startingPage,
     getNextPageParam: (lastPage) => {
       if (lastPage.page < lastPage.total_pages) {
         return lastPage.page + 1;
