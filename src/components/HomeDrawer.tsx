@@ -1,15 +1,24 @@
-import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import LoadingModal from '@/src/components/ui/LoadingModal';
+import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, LogOut, Sparkles } from 'lucide-react-native';
+import { Calendar, ChevronRight, LogOut, Palette, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, BackHandler, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  BackHandler,
+  Dimensions,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Divider } from 'react-native-paper';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,10 +101,16 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
     router.push({ pathname: '/(tabs)/home/calendar' });
   };
 
+  const handleMoodPickerPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    router.push({ pathname: '/(tabs)/home/mood-picker' });
+  };
+
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
-    
+
     // Small delay to allow drawer to start closing before showing loading
     setTimeout(async () => {
       setIsSigningOut(true);
@@ -174,6 +189,18 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
             >
               <Calendar size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('calendar.title')}</Text>
+              <ChevronRight size={20} color={COLORS.textSecondary} />
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.navigationCard,
+                pressed && styles.navigationCardPressed,
+              ]}
+              onPress={handleMoodPickerPress}
+            >
+              <Palette size={24} color={accentColor} />
+              <Text style={styles.navigationTitle}>{t('mood.picker')}</Text>
               <ChevronRight size={20} color={COLORS.textSecondary} />
             </Pressable>
           </View>

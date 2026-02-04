@@ -1242,5 +1242,38 @@
     },
     "unlockWidgets": "Desbloquear widgets",
     "widgetSizeLabel": "Tamanho: {{size}}"
+  },
+  "mood": {
+    "picker": "Seletor de disposição",
+    "title": "Como se está a sentir?",
+    "subtitle": "Escolha uma disposição para descobrir conteúdo",
+    "surpriseMe": "Surpreenda-me!",
+    "results": "Seleções de {{mood}}",
+    "noResults": "Sem resultados para esta disposição",
+    "tryAnother": "Experimente outra disposição",
+    "cozy": {
+      "name": "Aconchegante",
+      "description": "Quentinho e reconfortante"
+    },
+    "mindBending": {
+      "name": "Intrigante",
+      "description": "Reviravoltas e mistérios"
+    },
+    "adrenaline": {
+      "name": "Adrenalina",
+      "description": "Ação e emoção"
+    },
+    "heartbreaking": {
+      "name": "Emocionante",
+      "description": "Jornadas emocionais"
+    },
+    "spooky": {
+      "name": "Assustador",
+      "description": "Arrepios sobrenaturais"
+    },
+    "whimsical": {
+      "name": "Fantástico",
+      "description": "Aventuras mágicas"
+    }
   }
 }

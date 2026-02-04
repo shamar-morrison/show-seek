@@ -700,6 +700,60 @@ export const tmdbApi = {
     return data;
   },
 
+  /**
+   * Discover movies by mood using genre and keyword filters.
+   * @param params.withGenres - Pipe-separated genre IDs (OR logic)
+   * @param params.withKeywords - Pipe-separated keyword IDs (OR logic)
+   * @param params.withoutGenres - Comma-separated genre IDs to exclude
+   */
+  discoverMoviesByMood: async (params: {
+    page?: number;
+    withGenres?: string;
+    withKeywords?: string;
+    withoutGenres?: string;
+  }) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
+      params: {
+        page: params?.page || 1,
+        with_genres: params?.withGenres,
+        with_keywords: params?.withKeywords,
+        without_genres: params?.withoutGenres,
+        sort_by: 'popularity.desc',
+        'vote_average.gte': 5.0, // Filter out low-quality content
+        'vote_count.gte': 50, // Ensure enough votes for relevance
+        'primary_release_date.lte': new Date().toISOString().split('T')[0], // Only released
+      },
+    });
+    return data;
+  },
+
+  /**
+   * Discover TV shows by mood using genre and keyword filters.
+   * @param params.withGenres - Pipe-separated genre IDs (OR logic)
+   * @param params.withKeywords - Pipe-separated keyword IDs (OR logic)
+   * @param params.withoutGenres - Comma-separated genre IDs to exclude
+   */
+  discoverTVByMood: async (params: {
+    page?: number;
+    withGenres?: string;
+    withKeywords?: string;
+    withoutGenres?: string;
+  }) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
+      params: {
+        page: params?.page || 1,
+        with_genres: params?.withGenres,
+        with_keywords: params?.withKeywords,
+        without_genres: params?.withoutGenres,
+        sort_by: 'popularity.desc',
+        'vote_average.gte': 5.0, // Filter out low-quality content
+        'vote_count.gte': 50, // Ensure enough votes for relevance
+        'first_air_date.lte': new Date().toISOString().split('T')[0], // Only released
+      },
+    });
+    return data;
+  },
+
   getMovieImages: async (id: number) => {
     const { data } = await tmdbClient.get<{ backdrops: ImageData[]; posters: ImageData[] }>(
       `/movie/${id}/images`
