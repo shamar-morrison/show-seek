@@ -37,7 +37,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bookmark, Pencil, Search, Shuffle, SlidersHorizontal, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
@@ -358,6 +358,11 @@ export default function CustomListDetailScreen() {
       <View style={libraryListStyles.divider} />
 
       <View style={[screenStyles.container, styles.container]}>
+        {!!list.description?.trim() && (
+          <View style={styles.detailHeader}>
+            <Text style={styles.detailDescription}>{list.description.trim()}</Text>
+          </View>
+        )}
         {viewMode === 'grid' ? (
           <MediaGrid
             key="grid"
@@ -449,6 +454,14 @@ export default function CustomListDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingTop: SPACING.m,
+  },
+  detailHeader: {
+    paddingHorizontal: SPACING.l,
+    paddingBottom: SPACING.m,
+  },
+  detailDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
   },
   listContent: {
     paddingTop: 0,
