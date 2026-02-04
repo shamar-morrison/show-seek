@@ -59,6 +59,10 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 import { fireEvent, renderWithProviders } from '@/__tests__/utils/test-utils';
 import { EpisodeItem, EpisodeItemProps } from '@/src/components/tv/EpisodeItem';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+
+// Get the mock t function
+const { t: mockT } = useTranslation();
 
 const mockEpisode = {
   id: 1,
@@ -88,6 +92,7 @@ const defaultProps: EpisodeItemProps = {
   onMarkUnwatched: jest.fn(),
   autoAddToWatching: false,
   listMembership: {},
+  t: mockT,
 };
 
 describe('EpisodeItem', () => {
