@@ -86,7 +86,10 @@ export default function PremiumScreen() {
           <Ionicons name="checkmark-circle" size={80} color={accentColor} />
           <Text style={styles.title}>{t('premium.alreadyPremiumTitle')}</Text>
           <Text style={styles.description}>{t('premium.alreadyPremiumDescription')}</Text>
-          <TouchableOpacity style={[styles.button, { backgroundColor: accentColor }]} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: accentColor }]}
+            onPress={() => router.back()}
+          >
             <Text style={styles.buttonText}>{t('common.goBack')}</Text>
           </TouchableOpacity>
         </View>
@@ -114,7 +117,7 @@ export default function PremiumScreen() {
         </View>
 
         <View style={styles.pricing}>
-          <Text style={[styles.price, { color: accentColor }]}>{price || 'US$10.00'}</Text>
+          <Text style={[styles.price, { color: accentColor }]}>{price || 'US$30.00'}</Text>
           <Text style={styles.paymentType}>{t('premium.oneTimePayment')}</Text>
         </View>
 
@@ -143,20 +146,16 @@ export default function PremiumScreen() {
           <TouchableOpacity
             style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
             onPress={async () => {
-              Alert.alert(
-                t('premium.devResetTitle'),
-                t('premium.devResetMessage'),
-                [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('common.reset'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      if (resetTestPurchase) await resetTestPurchase();
-                    },
+              Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('common.reset'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (resetTestPurchase) await resetTestPurchase();
                   },
-                ]
-              );
+                },
+              ]);
             }}
           >
             <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
