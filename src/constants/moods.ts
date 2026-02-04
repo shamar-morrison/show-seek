@@ -33,7 +33,7 @@ export interface MoodConfig {
   icon: LucideIcon;
   /** Unique accent color for the mood card (hex) */
   color: string;
-  /** TMDB genre IDs to include (comma-separated = AND logic) */
+  /** TMDB genre IDs to include (pipe-separated = OR logic) */
   genres: number[];
   /** TMDB keyword IDs to include (pipe-separated = OR logic) */
   keywords: number[];
