@@ -1242,5 +1242,38 @@
     "timeRemainingHours": "{{count}}h left",
     "timeRemainingHoursMinutes": "{{hours}}h {{minutes}}m left",
     "timeRemainingMinutes": "{{count}}m left"
+  },
+  "mood": {
+    "picker": "Mood Picker",
+    "title": "How are you feeling?",
+    "subtitle": "Pick a mood to discover matching content",
+    "surpriseMe": "Surprise Me",
+    "results": "{{mood}} Picks",
+    "noResults": "No matches for this mood",
+    "tryAnother": "Try a different mood",
+    "cozy": {
+      "name": "Cozy",
+      "description": "Warm and heartfelt"
+    },
+    "mindBending": {
+      "name": "Mind-Bending",
+      "description": "Twists and turns"
+    },
+    "adrenaline": {
+      "name": "Adrenaline",
+      "description": "Action-packed thrills"
+    },
+    "heartbreaking": {
+      "name": "Heartbreaking",
+      "description": "Emotional journeys"
+    },
+    "spooky": {
+      "name": "Spooky",
+      "description": "Supernatural chills"
+    },
+    "whimsical": {
+      "name": "Whimsical",
+      "description": "Magical adventures"
+    }
   }
 }

@@ -1242,5 +1242,38 @@
     },
     "unlockWidgets": "Desbloquear widgets",
     "widgetSizeLabel": "Tamaño: {{size}}"
+  },
+  "mood": {
+    "picker": "Selector de ánimo",
+    "title": "¿Cómo te sientes?",
+    "subtitle": "Elige un estado de ánimo para descubrir contenido",
+    "surpriseMe": "¡Sorpréndeme!",
+    "results": "Selecciones de {{mood}}",
+    "noResults": "No hay coincidencias para este ánimo",
+    "tryAnother": "Prueba otro estado de ánimo",
+    "cozy": {
+      "name": "Acogedor",
+      "description": "Calientito y reconfortante"
+    },
+    "mindBending": {
+      "name": "Desconcertante",
+      "description": "Giros y vueltas"
+    },
+    "adrenaline": {
+      "name": "Adrenalina",
+      "description": "Acción y emoción"
+    },
+    "heartbreaking": {
+      "name": "Desgarrador",
+      "description": "Viajes emocionales"
+    },
+    "spooky": {
+      "name": "Escalofriante",
+      "description": "Sustos sobrenaturales"
+    },
+    "whimsical": {
+      "name": "Fantasioso",
+      "description": "Aventuras mágicas"
+    }
   }
 }

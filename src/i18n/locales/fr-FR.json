@@ -537,5 +537,38 @@
     "seasonEpisode": "Saison {{season}} Épisode {{episode}}",
     "signInRequired": "Connectez-vous pour voir votre calendrier",
     "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit"
+  },
+  "mood": {
+    "picker": "Choix d'ambiance",
+    "title": "Comment vous sentez-vous ?",
+    "subtitle": "Choisissez une ambiance pour découvrir du contenu",
+    "surpriseMe": "Surprenez-moi !",
+    "results": "Sélections {{mood}}",
+    "noResults": "Aucun résultat pour cette ambiance",
+    "tryAnother": "Essayez une autre ambiance",
+    "cozy": {
+      "name": "Cosy",
+      "description": "Chaleureux et réconfortant"
+    },
+    "mindBending": {
+      "name": "Déroutant",
+      "description": "Retournements de situation"
+    },
+    "adrenaline": {
+      "name": "Adrénaline",
+      "description": "Action et sensations fortes"
+    },
+    "heartbreaking": {
+      "name": "Poignant",
+      "description": "Voyages émotionnels"
+    },
+    "spooky": {
+      "name": "Effrayant",
+      "description": "Frissons surnaturels"
+    },
+    "whimsical": {
+      "name": "Féerique",
+      "description": "Aventures magiques"
+    }
   }
 }

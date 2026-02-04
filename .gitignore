@@ -14,7 +14,7 @@ functions/service-account-key.json
 # Android
 *.apk
 *.aab
-
+prompt.md
 /android
 /ios
 
