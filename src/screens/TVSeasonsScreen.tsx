@@ -25,12 +25,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TVSeasonsScreen() {
   const { id, season } = useLocalSearchParams();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
@@ -94,27 +96,27 @@ export default function TVSeasonsScreen() {
     ) => {
       requireAuth(() => {
         markWatched.mutate(params, callbacks);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markWatched]
+    [requireAuth, markWatched, t]
   );
 
   const handleMarkUnwatched = useCallback(
     (params: MarkEpisodeUnwatchedParams) => {
       requireAuth(() => {
         markUnwatched.mutate(params);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markUnwatched]
+    [requireAuth, markUnwatched, t]
   );
 
   const handleMarkAllWatched = useCallback(
     (params: MarkAllEpisodesWatchedParams) => {
       requireAuth(() => {
         markAllWatched.mutate(params);
-      }, 'Sign in to track your watched episodes');
+      }, t('authGuards.trackEpisodes'));
     },
-    [requireAuth, markAllWatched]
+    [requireAuth, markAllWatched, t]
   );
 
   if (tvQuery.isLoading || seasonQueries.isLoading) {
@@ -124,13 +126,13 @@ export default function TVSeasonsScreen() {
   if (tvQuery.isError || !tvQuery.data) {
     return (
       <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>Failed to load seasons</Text>
+        <Text style={errorStyles.text}>{t('tvSeasons.failedToLoadSeasons')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -144,8 +146,8 @@ export default function TVSeasonsScreen() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'TBA';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    if (!dateString) return t('common.tba');
+    return new Date(dateString).toLocaleDateString(i18n.language, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -168,7 +170,7 @@ export default function TVSeasonsScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {show.name}
           </Text>
-          <Text style={styles.headerSubtitle}>Seasons & Episodes</Text>
+          <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
         </View>
       </SafeAreaView>
 

@@ -18,6 +18,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,6 +33,7 @@ const DEFAULT_SORT_STATE: SortState = {
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
   const { data, isLoading, isFetching, error } = useCurrentlyWatching();
+  const { t } = useTranslation();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const hasActiveSort =
@@ -118,7 +120,7 @@ export default function WatchProgressScreen() {
           searchQuery,
           onSearchChange: setSearchQuery,
           onClose: deactivateSearch,
-          placeholder: 'Search shows...',
+          placeholder: t('library.searchShowsPlaceholder'),
         })
       );
     } else {
@@ -151,12 +153,13 @@ export default function WatchProgressScreen() {
     searchButton,
     isFetching,
     hasActiveSort,
+    t,
   ]);
 
   const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
 
   if (isLoading || isLoadingPreference) {
-    return <FullScreenLoading message="Loading your watch history..." />;
+    return <FullScreenLoading message={t('library.loadingWatchHistory')} />;
   }
 
   if (error) {
@@ -173,8 +176,8 @@ export default function WatchProgressScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={TvIcon}
-          title="No Shows in Progress"
-          description="Start watching a show to see your progress tracked here."
+          title={t('library.emptyWatchProgress')}
+          description={t('library.emptyWatchProgressHint')}
         />
       </SafeAreaView>
     );

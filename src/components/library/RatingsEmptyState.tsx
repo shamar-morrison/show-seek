@@ -4,6 +4,7 @@ import { SlidersHorizontal } from 'lucide-react-native';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { DEFAULT_WATCH_STATUS_FILTERS } from '@/src/utils/listFilters';
+import { useTranslation } from 'react-i18next';
 
 interface RatingsEmptyStateProps {
   searchQuery: string;
@@ -18,6 +19,8 @@ export const RatingsEmptyState = ({
   height,
   onClearFilters,
 }: RatingsEmptyStateProps) => {
+  const { t } = useTranslation();
+
   if (searchQuery) {
     return <SearchEmptyState height={height} />;
   }
@@ -30,9 +33,9 @@ export const RatingsEmptyState = ({
     <View style={{ height }}>
       <EmptyState
         icon={SlidersHorizontal}
-        title="No items match your filters"
-        description="Try adjusting your filters to see more results."
-        actionLabel="Clear Filters"
+        title={t('discover.noResultsWithFilters')}
+        description={t('discover.adjustFilters')}
+        actionLabel={t('common.reset')}
         onAction={() => onClearFilters(DEFAULT_WATCH_STATUS_FILTERS)}
       />
     </View>

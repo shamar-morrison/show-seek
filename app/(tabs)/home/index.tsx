@@ -15,6 +15,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu, Settings2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { user } = useAuth();
   const { isPremium } = usePremium();
+  const { t } = useTranslation();
 
   // Check if user can access Latest Trailers (signed in + premium)
   const canAccessTrailers = useMemo(() => {
@@ -58,7 +60,7 @@ export default function HomeScreen() {
   const handleOpenCustomization = () => {
     requireAuth(() => {
       modalRef.current?.present();
-    }, 'Sign in to customize your home screen');
+    }, t('homeCustomization.signInToCustomize'));
   };
 
   const handleOpenDrawer = () => {
@@ -76,7 +78,7 @@ export default function HomeScreen() {
           <Menu size={24} color={COLORS.text} />
         </HeaderIconButton>
         <View style={styles.headerTitleContainer} pointerEvents="none">
-          <Text style={styles.headerTitle}>ShowSeek</Text>
+          <Text style={styles.headerTitle}>{t('common.appName')}</Text>
         </View>
         <HeaderIconButton onPress={handleOpenCustomization}>
           <Settings2 size={24} color={COLORS.text} />
@@ -113,7 +115,7 @@ export default function HomeScreen() {
             {/* Show Top Rated at the end for guests and non-premium users */}
             {showTopRatedAtEnd && (
               <HomeListSection
-                config={{ id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' }}
+                config={{ id: 'top-rated-movies', type: 'tmdb', label: t('home.topRated') }}
               />
             )}
           </>

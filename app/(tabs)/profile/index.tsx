@@ -96,7 +96,7 @@ export default function ProfileScreen() {
       { key, value },
       {
         onError: () => {
-          Alert.alert('Error', 'Failed to update preference. Please try again.');
+          Alert.alert(t('common.error'), t('profile.updatePreferenceError'));
         },
       }
     );
@@ -162,7 +162,7 @@ export default function ProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         </View>
 
         {/* User Info Section - Fixed at top */}

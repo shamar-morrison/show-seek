@@ -2,14 +2,17 @@ import { TAB_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { TabProvider } from '@/src/context/TabContext';
 import { CommonDetailScreens } from '@/src/navigation/CommonDetailScreens';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export default function HomeStackLayout() {
+  const { t } = useTranslation();
+
   return (
     <TabProvider tabName="home">
       <Stack screenOptions={TAB_STACK_SCREEN_OPTIONS}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="for-you" options={{ title: 'Just for you', headerShown: true }} />
-        <Stack.Screen name="calendar" options={{ title: 'Release Calendar', headerShown: true }} />
+        <Stack.Screen name="for-you" options={{ title: t('forYou.title'), headerShown: true }} />
+        <Stack.Screen name="calendar" options={{ title: t('calendar.title'), headerShown: true }} />
         <CommonDetailScreens />
       </Stack>
     </TabProvider>

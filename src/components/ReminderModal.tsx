@@ -15,6 +15,7 @@ import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { Calendar } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 interface ReminderModalProps {
@@ -40,6 +41,7 @@ export default function ReminderModal({
   onCancelReminder,
   onShowToast,
 }: ReminderModalProps) {
+  const { t } = useTranslation();
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(
     currentTiming || 'on_release_day'
   );
@@ -82,10 +84,10 @@ export default function ReminderModal({
     try {
       setIsLoading(true);
       await onSetReminder(selectedTiming);
-      onShowToast?.('Reminder set successfully!');
+      onShowToast?.(t('reminder.setSuccess'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to set reminder');
+      onShowToast?.(error instanceof Error ? error.message : t('reminder.failedToSet'));
     } finally {
       setIsLoading(false);
     }
@@ -95,10 +97,10 @@ export default function ReminderModal({
     try {
       setIsLoading(true);
       await onCancelReminder();
-      onShowToast?.('Reminder cancelled');
+      onShowToast?.(t('reminder.reminderRemoved'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to cancel reminder');
+      onShowToast?.(error instanceof Error ? error.message : t('reminder.failedToCancel'));
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +123,9 @@ export default function ReminderModal({
       {releaseDate && (
         <View style={sharedStyles.dateContainer}>
           <Calendar size={16} color={COLORS.textSecondary} />
-          <Text style={sharedStyles.dateText}>Releases {formatReleaseDate(releaseDate)}</Text>
+          <Text style={sharedStyles.dateText}>
+            {t('reminder.releasesOn', { date: formatReleaseDate(releaseDate) })}
+          </Text>
         </View>
       )}
 
@@ -130,7 +134,7 @@ export default function ReminderModal({
 
       {/* Timing Change Info */}
       {willSkipCurrentNotification && (
-        <ReminderInfoBanner message="Changing the timing will reschedule your notification." />
+        <ReminderInfoBanner message={t('reminder.timingChangeInfo')} />
       )}
 
       {/* All Options Disabled Warning */}
@@ -138,8 +142,8 @@ export default function ReminderModal({
         <ReminderErrorBanner
           message={
             isReleasingToday
-              ? 'This movie releases today! Notification times have already passed.'
-              : 'All notification times for this release have passed. You cannot set a reminder for this movie.'
+              ? t('reminder.releasesTodayPastTimesMovie')
+              : t('reminder.allTimesPassedMovie')
           }
         />
       )}
@@ -147,7 +151,7 @@ export default function ReminderModal({
       {/* Timing Options */}
       {!allOptionsDisabled && (
         <View style={sharedStyles.section}>
-          <Text style={sharedStyles.sectionTitle}>Notify me:</Text>
+          <Text style={sharedStyles.sectionTitle}>{t('reminder.notifyMe')}</Text>
           <ReminderTimingOptions
             options={MOVIE_TIMING_OPTIONS}
             selectedValue={selectedTiming}

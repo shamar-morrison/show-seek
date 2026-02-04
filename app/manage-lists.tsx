@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,32 +26,35 @@ export default function ManageListsScreen() {
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+  const { t } = useTranslation();
 
   const handleRenameList = (listId: string, currentName: string) => {
     requireAuth(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       renameModalRef.current?.present({ listId, currentName });
-    }, 'Sign in to rename this list');
+    }, t('library.signInToRenameList'));
   };
 
   const handleDeleteList = (listId: string, listName: string) => {
     if (DEFAULT_LIST_IDS.includes(listId)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+      Alert.alert(t('library.cannotDeleteTitle'), t('library.cannotDeleteDefaultLists'), [
+        { text: t('common.ok') },
+      ]);
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
-      'Delete List',
-      `This will remove "${listName}" and all its items. This cannot be undone.`,
+      t('library.deleteList'),
+      `${t('library.confirmDeleteList', { name: listName })}\n${t('library.deleteListWarning')}`,
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -60,8 +64,8 @@ export default function ManageListsScreen() {
               console.error('Failed to delete list:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert(
-                'Delete Failed',
-                error instanceof Error ? error.message : 'Failed to delete list'
+                t('common.error'),
+                error instanceof Error ? error.message : t('errors.deleteFailed')
               );
             }
           },
@@ -80,7 +84,7 @@ export default function ManageListsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>Manage Lists</Text>
+          <Text style={styles.title}>{t('library.manageLists')}</Text>
           <View style={{ width: 28 }} />
         </View>
 
@@ -89,8 +93,8 @@ export default function ManageListsScreen() {
         ) : (
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Default Lists</Text>
-              <Text style={styles.sectionSubtitle}>These lists cannot be deleted</Text>
+              <Text style={styles.sectionTitle}>{t('library.defaultLists')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('library.defaultListsDescription')}</Text>
               {lists
                 ?.filter((list) => DEFAULT_LIST_IDS.includes(list.id))
                 .map((list) => (
@@ -98,27 +102,33 @@ export default function ManageListsScreen() {
                     <View style={styles.listInfo}>
                       <Text style={styles.listName}>{list.name}</Text>
                       <Text style={styles.listCount}>
-                        {Object.keys(list.items || {}).length} items
+                        {(() => {
+                          const count = Object.keys(list.items || {}).length;
+                          return count === 1 ? t('library.itemCountOne') : t('library.itemCount', { count });
+                        })()}
                       </Text>
                     </View>
                     <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultBadgeText}>Default</Text>
+                      <Text style={styles.defaultBadgeText}>{t('library.defaultBadge')}</Text>
                     </View>
                   </View>
                 ))}
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Custom Lists</Text>
+              <Text style={styles.sectionTitle}>{t('library.customLists')}</Text>
               {customLists.length > 0 ? (
                 <>
-                  <Text style={styles.sectionSubtitle}>Tap icons to edit or delete lists</Text>
+                  <Text style={styles.sectionSubtitle}>{t('library.customListsDescription')}</Text>
                   {customLists.map((list) => (
                     <View key={list.id} style={styles.listItem}>
                       <View style={styles.listInfo}>
                         <Text style={styles.listName}>{list.name}</Text>
                         <Text style={styles.listCount}>
-                          {Object.keys(list.items || {}).length} items
+                          {(() => {
+                            const count = Object.keys(list.items || {}).length;
+                            return count === 1 ? t('library.itemCountOne') : t('library.itemCount', { count });
+                          })()}
                         </Text>
                       </View>
                       <View style={styles.listActions}>
@@ -141,7 +151,7 @@ export default function ManageListsScreen() {
                   ))}
                 </>
               ) : (
-                <Text style={styles.emptyText}>No custom lists yet</Text>
+                <Text style={styles.emptyText}>{t('library.emptyLists')}</Text>
               )}
             </View>
           </ScrollView>

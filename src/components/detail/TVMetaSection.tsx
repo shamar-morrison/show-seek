@@ -7,6 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Calendar, Globe, Layers, Star, Tv } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export interface TVMetaSectionProps {
@@ -30,11 +31,13 @@ export interface TVMetaSectionProps {
  * - Genre tags
  */
 export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, onShowToast }) => {
+  const { t } = useTranslation();
+
   const handleTitleLongPress = useCallback(async () => {
     await Clipboard.setStringAsync(show.name);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onShowToast('Title copied to clipboard');
-  }, [show.name, onShowToast]);
+    onShowToast(t('common.copiedToClipboard'));
+  }, [show.name, onShowToast, t]);
 
   return (
     <>
@@ -52,7 +55,7 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
                   day: 'numeric',
                   year: 'numeric',
                 })
-              : 'Unknown'}
+              : t('media.unknown')}
           </Text>
         </View>
         <TouchableOpacity
@@ -62,12 +65,12 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
         >
           <Layers size={14} color={COLORS.primary} />
           <Text style={[detailStyles.metaText, { color: COLORS.primary }]}>
-            {show.number_of_seasons} Seasons
+            {t('media.numberOfSeasons', { count: show.number_of_seasons })}
           </Text>
         </TouchableOpacity>
         <View style={detailStyles.metaItem}>
           <Tv size={14} color={COLORS.textSecondary} />
-          <Text style={detailStyles.metaText}>{show.number_of_episodes} Episodes</Text>
+          <Text style={detailStyles.metaText}>{t('media.numberOfEpisodes', { count: show.number_of_episodes })}</Text>
         </View>
         <View style={detailStyles.metaItem}>
           <Star size={14} color={COLORS.warning} fill={COLORS.warning} />

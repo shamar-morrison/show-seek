@@ -7,6 +7,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { X } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Pressable,
@@ -31,6 +32,7 @@ export function MonthYearPickerModal({
   onSelect,
   onClose,
 }: MonthYearPickerProps) {
+  const { t } = useTranslation();
   const [tempMonth, setTempMonth] = useState(selectedMonth);
   const [tempYear, setTempYear] = useState(selectedYear);
   const yearScrollRef = useRef<ScrollView>(null);
@@ -84,7 +86,7 @@ export function MonthYearPickerModal({
         <View style={styles.content}>
           {/* Header */}
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>Select Month & Year</Text>
+            <Text style={modalHeaderStyles.title}>{t('datePicker.selectMonthYear')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -94,7 +96,7 @@ export function MonthYearPickerModal({
           <View style={styles.pickerContainer}>
             {/* Months Column */}
             <View style={styles.column}>
-              <Text style={styles.columnHeader}>Month</Text>
+              <Text style={styles.columnHeader}>{t('datePicker.month')}</Text>
               <ScrollView
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
@@ -131,7 +133,7 @@ export function MonthYearPickerModal({
 
             {/* Years Column */}
             <View style={styles.column}>
-              <Text style={styles.columnHeader}>Year</Text>
+              <Text style={styles.columnHeader}>{t('datePicker.year')}</Text>
               <ScrollView
                 ref={yearScrollRef}
                 style={styles.scrollView}
@@ -163,14 +165,14 @@ export function MonthYearPickerModal({
               onPress={onClose}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.confirmButton]}
               onPress={handleConfirm}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.confirmButtonText}>Confirm</Text>
+              <Text style={styles.confirmButtonText}>{t('common.confirm')}</Text>
             </TouchableOpacity>
           </View>
         </View>

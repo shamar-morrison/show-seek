@@ -36,6 +36,7 @@ import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bookmark, Pencil, Search, Shuffle, SlidersHorizontal, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,6 +49,7 @@ export default function CustomListDetailScreen() {
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
+  const { t } = useTranslation();
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -80,12 +82,12 @@ export default function CustomListDetailScreen() {
   const handleRenameList = useCallback(() => {
     if (!list) return;
     if (!isAuthenticated) {
-      requireAuth(() => {}, 'Sign in to rename this list');
+      requireAuth(() => {}, t('library.signInToRenameList'));
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     renameModalRef.current?.present({ listId: id!, currentName: list.name });
-  }, [list, id, isAuthenticated, requireAuth]);
+  }, [list, id, isAuthenticated, requireAuth, t]);
 
   const listItems = useMemo(() => {
     if (!list?.items) return [];
@@ -136,19 +138,19 @@ export default function CustomListDetailScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert(
-      'Delete List',
-      `This will remove "${list.name}" and all its items. This cannot be undone.`,
+      t('library.deleteList'),
+      `${t('library.confirmDeleteList', { name: list.name })}\n${t('library.deleteListWarning')}`,
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             if (!isAuthenticated) {
-              requireAuth(() => {}, 'Sign in to delete this list');
+              requireAuth(() => {}, t('library.signInToDeleteList'));
               return;
             }
             try {
@@ -159,15 +161,15 @@ export default function CustomListDetailScreen() {
               console.error('Failed to delete list:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
               Alert.alert(
-                'Delete Failed',
-                error instanceof Error ? error.message : 'Failed to delete list'
+                t('common.error'),
+                error instanceof Error ? error.message : t('errors.deleteFailed')
               );
             }
           },
         },
       ]
     );
-  }, [list, id, deleteMutation, requireAuth, isAuthenticated]);
+  }, [list, id, deleteMutation, requireAuth, isAuthenticated, t]);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -209,7 +211,7 @@ export default function CustomListDetailScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search list...',
+      placeholder: t('library.searchListPlaceholder'),
     },
   });
 
@@ -235,14 +237,14 @@ export default function CustomListDetailScreen() {
       {
         id: 'shuffle',
         icon: Shuffle,
-        label: 'Shuffle Pick',
+        label: t('library.shufflePick'),
         onPress: () => setShuffleModalVisible(true),
         disabled: !canShuffle,
       },
       {
         id: 'filter',
         icon: SlidersHorizontal,
-        label: 'Filter Items',
+        label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
@@ -253,40 +255,40 @@ export default function CustomListDetailScreen() {
       {
         id: 'rename',
         icon: Pencil,
-        label: 'Rename List',
+        label: t('library.renameList'),
         onPress: handleRenameList,
       },
       {
         id: 'delete',
         icon: Trash2,
-        label: 'Delete List',
+        label: t('library.deleteList'),
         onPress: handleDeleteList,
         color: COLORS.error,
       },
     ],
-    [canShuffle, hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList]
+    [canShuffle, hasActiveFilterState, hasActiveSort, handleRenameList, handleDeleteList, t]
   );
 
   const filterEmptyState = useMemo(
     () => ({
       icon: SlidersHorizontal,
-      title: 'No items match your filters',
-      description: 'Try adjusting your filters to see more results.',
-      actionLabel: 'Clear Filters',
+      title: t('discover.noResultsWithFilters'),
+      description: t('discover.adjustFilters'),
+      actionLabel: t('common.reset'),
       onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
     }),
-    []
+    [t]
   );
 
   const defaultEmptyState = useMemo(
     () => ({
       icon: Bookmark,
-      title: 'No items yet',
-      description: 'Add movies and TV shows to this list to see them here.',
-      actionLabel: 'Browse Content',
+      title: t('library.emptyList'),
+      description: t('library.emptyListHint'),
+      actionLabel: t('library.browseContent'),
       onAction: () => router.push('/(tabs)/discover' as any),
     }),
-    [router]
+    [router, t]
   );
 
   // Navigate back if list is deleted
@@ -354,8 +356,8 @@ export default function CustomListDetailScreen() {
               searchQuery
                 ? {
                     icon: Search,
-                    title: 'No results found',
-                    description: 'Try a different search term.',
+                    title: t('common.noResults'),
+                    description: t('search.adjustSearch'),
                   }
                 : hasActiveFilterState
                   ? filterEmptyState

@@ -3,6 +3,7 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/const
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -55,23 +56,27 @@ interface MediaSortModalProps {
   allowedOptions?: SortOption[];
 }
 
-const BASE_SORT_OPTIONS: { label: string; value: SortOption; defaultDirection: SortDirection }[] = [
-  { label: 'Recently Added', value: 'recentlyAdded', defaultDirection: 'desc' },
-  { label: 'Release Date', value: 'releaseDate', defaultDirection: 'desc' },
-  { label: 'Rating', value: 'rating', defaultDirection: 'desc' },
-  { label: 'Popularity', value: 'popularity', defaultDirection: 'desc' },
-  { label: 'Progress', value: 'progress', defaultDirection: 'desc' },
-  { label: 'Last Watched', value: 'lastWatched', defaultDirection: 'desc' },
-  { label: 'Date Added', value: 'dateAdded', defaultDirection: 'desc' },
-  { label: 'Last Updated', value: 'lastUpdated', defaultDirection: 'desc' },
-  { label: 'Alphabetically', value: 'alphabetical', defaultDirection: 'asc' },
+const BASE_SORT_OPTIONS: {
+  labelKey: string;
+  value: SortOption;
+  defaultDirection: SortDirection;
+}[] = [
+  { labelKey: 'sort.recentlyAdded', value: 'recentlyAdded', defaultDirection: 'desc' },
+  { labelKey: 'discover.releaseDate', value: 'releaseDate', defaultDirection: 'desc' },
+  { labelKey: 'discover.rating', value: 'rating', defaultDirection: 'desc' },
+  { labelKey: 'discover.popularity', value: 'popularity', defaultDirection: 'desc' },
+  { labelKey: 'sort.progress', value: 'progress', defaultDirection: 'desc' },
+  { labelKey: 'sort.lastWatched', value: 'lastWatched', defaultDirection: 'desc' },
+  { labelKey: 'sort.dateAdded', value: 'dateAdded', defaultDirection: 'desc' },
+  { labelKey: 'sort.lastUpdated', value: 'lastUpdated', defaultDirection: 'desc' },
+  { labelKey: 'sort.alphabetical', value: 'alphabetical', defaultDirection: 'asc' },
 ];
 
 /** Sort options for notes screens */
 export const NOTES_SCREEN_SORT_OPTIONS: SortOption[] = ['dateAdded', 'lastUpdated', 'alphabetical'];
 
 const USER_RATING_OPTION = {
-  label: 'Your Rating',
+  labelKey: 'media.userRating',
   value: 'userRating' as SortOption,
   defaultDirection: 'desc' as SortDirection,
 };
@@ -84,6 +89,7 @@ export default function MediaSortModal({
   showUserRatingOption = false,
   allowedOptions,
 }: MediaSortModalProps) {
+  const { t } = useTranslation();
   let SORT_OPTIONS = showUserRatingOption
     ? [
         ...BASE_SORT_OPTIONS.slice(0, -1),
@@ -142,7 +148,7 @@ export default function MediaSortModal({
 
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
-            <Text style={modalHeaderStyles.title}>Sort By</Text>
+            <Text style={modalHeaderStyles.title}>{t('discover.sortBy')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -159,7 +165,7 @@ export default function MediaSortModal({
                 >
                   <View style={styles.optionContent}>
                     <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </Text>
                     {isSelected && (
                       <View style={styles.directionIndicator}>
@@ -178,7 +184,7 @@ export default function MediaSortModal({
           </View>
 
           <Pressable style={styles.applyButton} onPress={handleApply}>
-            <Text style={styles.applyButtonText}>Apply</Text>
+            <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>

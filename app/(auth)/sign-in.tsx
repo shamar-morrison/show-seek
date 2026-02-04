@@ -7,7 +7,7 @@ import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -29,7 +29,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignIn() {
-  const router = useRouter();
   const { user } = useAuth();
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -252,7 +251,7 @@ export default function SignIn() {
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
                     {t('settings.terms')}
                   </Text>{' '}
-                  &amp;{' '}
+                  {t('common.and')}{' '}
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
                     {t('settings.privacy')}
                   </Text>

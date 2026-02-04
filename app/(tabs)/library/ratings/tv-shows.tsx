@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
   Pressable,
@@ -46,6 +47,7 @@ export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
@@ -91,7 +93,7 @@ export default function TVShowRatingsScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search TV shows...',
+      placeholder: t('library.searchTVShowsPlaceholder'),
     },
   });
 
@@ -182,8 +184,8 @@ export default function TVShowRatingsScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Star}
-          title="No TV Show Ratings"
-          description="Rate TV shows to see them here."
+          title={t('library.emptyRatings')}
+          description={t('library.emptyRatingsHint')}
         />
       </SafeAreaView>
     );

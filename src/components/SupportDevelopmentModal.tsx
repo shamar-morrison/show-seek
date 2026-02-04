@@ -5,6 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Check, Copy, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const CRYPTO_ADDRESSES = {
@@ -85,6 +86,8 @@ export default function SupportDevelopmentModal({
   visible,
   onClose,
 }: SupportDevelopmentModalProps) {
+  const { t } = useTranslation();
+
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -102,7 +105,7 @@ export default function SupportDevelopmentModal({
         <View style={modalLayoutStyles.card}>
           {/* Header */}
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>Support Development 🙏</Text>
+            <Text style={modalHeaderStyles.title}>{t('profile.supportDevelopment')} 🙏</Text>
             <TouchableOpacity onPress={handleClose} activeOpacity={ACTIVE_OPACITY}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -110,9 +113,7 @@ export default function SupportDevelopmentModal({
 
           {/* Message */}
           <Text style={styles.message}>
-            We don't put ads in our app because we put our users and their experience first. If you
-            enjoy the app and want to support development and future features, please consider
-            donating. Your support means a lot!
+            {t('profile.supportDevelopmentMessage')}
           </Text>
 
           {/* Crypto Cards */}

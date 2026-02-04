@@ -33,6 +33,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { Heart, Search, SlidersHorizontal } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,6 +42,7 @@ const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -142,7 +144,7 @@ export default function FavoritesScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search favorites...',
+      placeholder: t('library.searchFavoritesPlaceholder'),
     },
   });
 
@@ -155,7 +157,7 @@ export default function FavoritesScreen() {
       {
         id: 'filter',
         icon: SlidersHorizontal,
-        label: 'Filter Items',
+        label: t('library.filterItems'),
         onPress: () => setFilterModalVisible(true),
         showBadge: hasActiveFilterState,
       },
@@ -164,7 +166,7 @@ export default function FavoritesScreen() {
         showBadge: hasActiveSort,
       }),
     ],
-    [hasActiveFilterState, hasActiveSort]
+    [hasActiveFilterState, hasActiveSort, t]
   );
 
   // Track if initial mount to avoid scrolling on first render
@@ -206,9 +208,9 @@ export default function FavoritesScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Heart}
-          title="No Favorites Yet"
-          description="Mark movies and TV shows as favorites to see them here."
-          actionLabel="Browse Content"
+          title={t('library.emptyFavorites')}
+          description={t('library.emptyFavoritesHint')}
+          actionLabel={t('library.browseContent')}
           onAction={() => router.push('/(tabs)/discover' as any)}
         />
       </SafeAreaView>
@@ -230,22 +232,22 @@ export default function FavoritesScreen() {
                 searchQuery
                   ? {
                       icon: Search,
-                      title: 'No results found',
-                      description: 'Try a different search term.',
+                      title: t('common.noResults'),
+                      description: t('search.adjustSearch'),
                     }
                   : hasActiveFilterState
                     ? {
                         icon: SlidersHorizontal,
-                        title: 'No items match your filters',
-                        description: 'Try adjusting your filters to see more results.',
-                        actionLabel: 'Clear Filters',
+                        title: t('discover.noResultsWithFilters'),
+                        description: t('discover.adjustFilters'),
+                        actionLabel: t('common.reset'),
                         onAction: () => setFilterState(DEFAULT_WATCH_STATUS_FILTERS),
                       }
                     : {
                         icon: Heart,
-                        title: 'No Favorites Yet',
-                        description: 'Mark movies and TV shows as favorites to see them here.',
-                        actionLabel: 'Browse Content',
+                        title: t('library.emptyFavorites'),
+                        description: t('library.emptyFavoritesHint'),
+                        actionLabel: t('library.browseContent'),
                         onAction: () => router.push('/(tabs)/discover' as any),
                       }
               }
@@ -268,9 +270,9 @@ export default function FavoritesScreen() {
                   <View style={{ height: windowHeight - insets.top - insets.bottom - 150 }}>
                     <EmptyState
                       icon={SlidersHorizontal}
-                      title="No items match your filters"
-                      description="Try adjusting your filters to see more results."
-                      actionLabel="Clear Filters"
+                      title={t('discover.noResultsWithFilters')}
+                      description={t('discover.adjustFilters')}
+                      actionLabel={t('common.reset')}
                       onAction={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
                     />
                   </View>

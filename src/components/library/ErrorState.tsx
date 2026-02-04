@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { AlertCircle } from 'lucide-react-native';
 import React, { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ErrorStateProps {
@@ -10,6 +11,8 @@ interface ErrorStateProps {
 }
 
 export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <AlertCircle size={48} color={COLORS.error} />
@@ -17,7 +20,7 @@ export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) =>
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
         <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={ACTIVE_OPACITY}>
-          <Text style={styles.buttonText}>Retry</Text>
+          <Text style={styles.buttonText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       )}
     </View>

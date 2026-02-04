@@ -7,6 +7,7 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Trash2, X } from 'lucide-react-native';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -40,6 +41,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
   const { isPremium } = usePremium();
+  const { t } = useTranslation();
   const saveNoteMutation = useSaveNote();
   const deleteNoteMutation = useDeleteNote();
 
@@ -93,7 +95,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
 
     // Premium check
     if (!isPremium) {
-      showPremiumAlert('Notes');
+      showPremiumAlert('premiumFeature.features.notes');
       return;
     }
 
@@ -112,16 +114,16 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       await handleClose();
     } catch (err) {
       console.error('Failed to save note:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save note. Please try again.');
+      setError(err instanceof Error ? err.message : t('errors.saveFailed'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
   const handleDelete = async () => {
-    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('notes.deleteNote'), t('notes.confirmDeleteNote'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -131,7 +133,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
             await handleClose();
           } catch (err) {
             console.error('Failed to delete note:', err);
-            setError(err instanceof Error ? err.message : 'Failed to delete note.');
+            setError(err instanceof Error ? err.message : t('errors.deleteFailed'));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           }
         },
@@ -164,7 +166,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
             <Pressable onPress={handleClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
-            <Text style={modalHeaderStyles.title}>Note</Text>
+            <Text style={modalHeaderStyles.title}>
+              {isEditing ? t('notes.editNote') : t('notes.addNote')}
+            </Text>
           </View>
           {isEditing && (
             <Pressable onPress={handleDelete} disabled={isLoading} hitSlop={HIT_SLOP.m}>
@@ -177,7 +181,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.textInput}
-            placeholder="Write your note..."
+            placeholder={t('notes.notePlaceholder')}
             placeholderTextColor={COLORS.textSecondary}
             value={noteContent}
             onChangeText={handleTextChange}
@@ -196,7 +200,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         {/* Action Buttons */}
         <View style={styles.actions}>
           <Pressable style={styles.cancelButton} onPress={handleClose} disabled={isLoading}>
-            <Text style={[styles.cancelButtonText, isLoading && styles.disabledText]}>Cancel</Text>
+            <Text style={[styles.cancelButtonText, isLoading && styles.disabledText]}>
+              {t('common.cancel')}
+            </Text>
           </Pressable>
           <Pressable
             style={[styles.saveButton, (!canSave || isLoading) && styles.disabledButton]}
@@ -206,7 +212,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
             {saveNoteMutation.isPending ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+              <Text style={styles.saveButtonText}>{t('common.save')}</Text>
             )}
           </Pressable>
         </View>

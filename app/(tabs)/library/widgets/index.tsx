@@ -6,12 +6,14 @@ import { useWidgets } from '@/src/hooks/useWidgets';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Info, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function WidgetsScreen() {
   const { user } = useAuth();
   const { widgets, removeWidget, reloadWidgets } = useWidgets(user?.uid);
   const router = useRouter();
+  const { t } = useTranslation();
 
   useFocusEffect(
     useCallback(() => {
@@ -25,12 +27,12 @@ export default function WidgetsScreen() {
 
   const handleDelete = (id: string) => {
     Alert.alert(
-      'Delete Widget',
-      'Are you sure you want to remove this widget configuration? This will stop updates for this widget.',
+      t('widgets.deleteWidgetTitle'),
+      t('widgets.deleteWidgetMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => removeWidget(id),
         },
@@ -43,10 +45,7 @@ export default function WidgetsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.infoCard}>
           <Info size={20} color={COLORS.primary} />
-          <Text style={styles.infoText}>
-            Configure widgets here, then long-press on your Android home screen to add the
-            "ShowSeek" widget.
-          </Text>
+          <Text style={styles.infoText}>{t('widgets.info')}</Text>
         </View>
 
         {widgets.length > 0 ? (
@@ -60,7 +59,7 @@ export default function WidgetsScreen() {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No widgets configured yet.</Text>
+            <Text style={styles.emptyText}>{t('widgets.empty')}</Text>
           </View>
         )}
 
@@ -70,7 +69,7 @@ export default function WidgetsScreen() {
               <Pressable
                 onPress={async () => {
                   await reloadWidgets();
-                  Alert.alert('Success', 'Widgets refreshed successfully');
+                  Alert.alert(t('common.success'), t('widgets.refreshed'));
                 }}
                 style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, padding: 8 })}
               >
@@ -82,7 +81,7 @@ export default function WidgetsScreen() {
 
         <Pressable style={styles.addButton} onPress={handleAddWidget}>
           <Plus size={20} color={COLORS.white} />
-          <Text style={styles.addButtonText}>Add New Widget</Text>
+          <Text style={styles.addButtonText}>{t('widgets.addNew')}</Text>
         </Pressable>
       </ScrollView>
     </PremiumWidgetGate>

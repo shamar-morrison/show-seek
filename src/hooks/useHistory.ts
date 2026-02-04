@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useAuth } from '../context/auth';
+import i18n from '../i18n';
 import { historyService } from '../services/HistoryService';
 import type { HistoryData, MonthlyDetail } from '../types/history';
 import { useAllGenres } from './useGenres';
@@ -13,7 +14,7 @@ export function useHistory(monthsBack = 6) {
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<HistoryData>({
-    queryKey: ['userHistory', user?.uid, monthsBack],
+    queryKey: ['userHistory', user?.uid, monthsBack, i18n.language],
     queryFn: () => historyService.fetchUserHistory(genreMap, monthsBack),
     enabled: !!user && !user.isAnonymous && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -29,7 +30,7 @@ export function useMonthDetail(month: string | null) {
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<MonthlyDetail | null>({
-    queryKey: ['monthDetail', user?.uid, month],
+    queryKey: ['monthDetail', user?.uid, month, i18n.language],
     queryFn: () => (month ? historyService.fetchMonthDetail(month, genreMap) : null),
     enabled: !!user && !user.isAnonymous && !!month && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes

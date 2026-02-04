@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
   Pressable,
@@ -44,6 +45,7 @@ export default function MovieRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { data: enrichedRatings, isLoading } = useEnrichedMovieRatings();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
@@ -97,7 +99,7 @@ export default function MovieRatingsScreen() {
       query: searchQuery,
       onQueryChange: setSearchQuery,
       onClose: deactivateSearch,
-      placeholder: 'Search movies...',
+      placeholder: t('library.searchMoviesPlaceholder'),
     },
   });
 
@@ -189,8 +191,8 @@ export default function MovieRatingsScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Star}
-          title="No Movie Ratings"
-          description="Rate movies to see them here."
+          title={t('library.emptyRatings')}
+          description={t('library.emptyRatingsHint')}
         />
       </SafeAreaView>
     );

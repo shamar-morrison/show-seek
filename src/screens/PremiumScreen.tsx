@@ -11,6 +11,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -27,16 +28,19 @@ export default function PremiumScreen() {
   const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
     usePremium();
   const router = useRouter();
+  const { t } = useTranslation();
   const [isRestoring, setIsRestoring] = React.useState(false);
+  const wasPremiumRef = React.useRef(isPremium);
 
   // Watch for premium status change to show success
   React.useEffect(() => {
-    if (isPremium) {
-      Alert.alert('Success', 'You are now a Premium member!', [
-        { text: 'OK', onPress: () => router.back() },
+    if (!wasPremiumRef.current && isPremium) {
+      Alert.alert(t('premium.successTitle'), t('premium.successMessage'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     }
-  }, [isPremium]);
+    wasPremiumRef.current = isPremium;
+  }, [isPremium, router, t]);
 
   const handlePurchase = async () => {
     try {
@@ -45,7 +49,7 @@ export default function PremiumScreen() {
     } catch (error: any) {
       // Only show error for real errors, not cancellations
       if (error.code !== 'E_USER_CANCELLED' && error.message !== 'User canceled') {
-        Alert.alert('Purchase Failed', error.message || 'Something went wrong');
+        Alert.alert(t('premium.purchaseFailedTitle'), error.message || t('errors.generic'));
       }
     }
   };
@@ -57,12 +61,12 @@ export default function PremiumScreen() {
     try {
       const restored = await restorePurchases();
       if (restored) {
-        Alert.alert('Restore Complete', 'Purchases have been restored.');
+        Alert.alert(t('premium.restoreCompleteTitle'), t('premium.restoreCompleteMessage'));
       } else {
-        Alert.alert('No Purchases', 'No premium purchase history found.');
+        Alert.alert(t('premium.noPurchasesTitle'), t('premium.noPurchasesMessage'));
       }
     } catch (error: any) {
-      Alert.alert('Restore Failed', error.message);
+      Alert.alert(t('premium.restoreFailedTitle'), error.message);
     } finally {
       setIsRestoring(false);
     }
@@ -78,10 +82,10 @@ export default function PremiumScreen() {
       <SafeAreaView style={screenStyles.container}>
         <View style={styles.content}>
           <Ionicons name="checkmark-circle" size={80} color={COLORS.primary} />
-          <Text style={styles.title}>You are Premium!</Text>
-          <Text style={styles.description}>Thank you for supporting the app.</Text>
+          <Text style={styles.title}>{t('premium.alreadyPremiumTitle')}</Text>
+          <Text style={styles.description}>{t('premium.alreadyPremiumDescription')}</Text>
           <TouchableOpacity style={styles.button} onPress={() => router.back()}>
-            <Text style={styles.buttonText}>Go Back</Text>
+            <Text style={styles.buttonText}>{t('common.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -93,8 +97,8 @@ export default function PremiumScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Ionicons name="star" size={60} color={COLORS.primary} />
-          <Text style={styles.title}>Unlock Premium</Text>
-          <Text style={styles.subtitle}>Get the most out of your tracking experience</Text>
+          <Text style={styles.title}>{t('premium.unlockTitle')}</Text>
+          <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
         </View>
 
         <View style={styles.features}>
@@ -109,7 +113,7 @@ export default function PremiumScreen() {
 
         <View style={styles.pricing}>
           <Text style={styles.price}>{price || 'US$10.00'}</Text>
-          <Text style={styles.paymentType}>One-time payment</Text>
+          <Text style={styles.paymentType}>{t('premium.oneTimePayment')}</Text>
         </View>
 
         <TouchableOpacity
@@ -117,7 +121,7 @@ export default function PremiumScreen() {
           onPress={handlePurchase}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.buttonText}>Unlock Premium</Text>
+          <Text style={styles.buttonText}>{t('premium.unlockButton')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -128,7 +132,7 @@ export default function PremiumScreen() {
           {isRestoring ? (
             <ActivityIndicator size="small" color={COLORS.text} />
           ) : (
-            <Text style={styles.restoreButtonText}>Restore Purchase</Text>
+            <Text style={styles.restoreButtonText}>{t('premium.restorePurchase')}</Text>
           )}
         </TouchableOpacity>
 
@@ -138,12 +142,12 @@ export default function PremiumScreen() {
             style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
             onPress={async () => {
               Alert.alert(
-                'DEV: Reset Purchase?',
-                'This will consume the purchase so you can buy it again.',
+                t('premium.devResetTitle'),
+                t('premium.devResetMessage'),
                 [
-                  { text: 'Cancel', style: 'cancel' },
+                  { text: t('common.cancel'), style: 'cancel' },
                   {
-                    text: 'Reset',
+                    text: t('common.reset'),
                     style: 'destructive',
                     onPress: async () => {
                       if (resetTestPurchase) await resetTestPurchase();
@@ -153,17 +157,17 @@ export default function PremiumScreen() {
               );
             }}
           >
-            <Text style={styles.restoreButtonText}>[DEV] Reset Purchase</Text>
+            <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.legalLinks}>
           <TouchableOpacity onPress={() => Linking.openURL(legal.tos)}>
-            <Text style={styles.legalLinkText}>Terms of Service</Text>
+            <Text style={styles.legalLinkText}>{t('settings.terms')}</Text>
           </TouchableOpacity>
           <Text style={styles.legalDot}>•</Text>
           <TouchableOpacity onPress={() => Linking.openURL(legal.privacy)}>
-            <Text style={styles.legalLinkText}>Privacy Policy</Text>
+            <Text style={styles.legalLinkText}>{t('settings.privacy')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -181,14 +185,16 @@ function FeatureCategorySection({
   category: PremiumCategory;
   defaultExpanded?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
-    <CollapsibleCategory title={category.title} defaultExpanded={defaultExpanded}>
+    <CollapsibleCategory title={t(category.titleKey)} defaultExpanded={defaultExpanded}>
       {category.features.map((feature) => (
         <CollapsibleFeatureItem
           key={feature.id}
-          text={feature.title}
+          text={t(feature.titleKey)}
           icon={feature.icon}
-          description={feature.description}
+          description={feature.descriptionKey ? t(feature.descriptionKey) : undefined}
           isNew={feature.isNew}
         />
       ))}

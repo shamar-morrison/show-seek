@@ -1,5 +1,6 @@
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { reminderModalStyles as styles } from './reminderModalStyles';
 
@@ -30,6 +31,8 @@ export function ReminderActionButtons({
   onSet,
   onCancel,
 }: ReminderActionButtonsProps) {
+  const { t } = useTranslation();
+
   if (hasReminder) {
     return (
       <View style={styles.actions}>
@@ -52,7 +55,7 @@ export function ReminderActionButtons({
                 (!canSet || isUpdateDisabled) && styles.buttonTextDisabled,
               ]}
             >
-              Update Reminder
+              {t('reminder.updateReminder')}
             </Text>
           )}
         </TouchableOpacity>
@@ -62,7 +65,7 @@ export function ReminderActionButtons({
           disabled={isLoading}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel Reminder</Text>
+          <Text style={[styles.buttonText, styles.cancelButtonText]}>{t('reminder.removeReminder')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -80,7 +83,7 @@ export function ReminderActionButtons({
           <ActivityIndicator size="small" color={COLORS.white} />
         ) : (
           <Text style={[styles.buttonText, !canSet && styles.buttonTextDisabled]}>
-            Set Reminder
+            {t('reminder.setReminder')}
           </Text>
         )}
       </TouchableOpacity>

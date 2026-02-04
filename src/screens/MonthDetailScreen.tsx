@@ -12,6 +12,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -64,6 +65,7 @@ function extractNumericId(id: string | number): number {
 }
 
 export default function MonthDetailScreen() {
+  const { t } = useTranslation();
   const { month } = useLocalSearchParams<{ month: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -195,8 +197,8 @@ export default function MonthDetailScreen() {
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
-          title="No Data Found"
-          description="Could not load data for this month."
+          title={t('stats.monthDetail.noDataTitle')}
+          description={t('stats.monthDetail.noDataDescription')}
         />
       </SafeAreaView>
     );
@@ -211,8 +213,8 @@ export default function MonthDetailScreen() {
         <View style={styles.divider} />
         <EmptyState
           icon={Calendar}
-          title="No Activity"
-          description="No activity recorded for this month."
+          title={t('stats.monthDetail.noActivityTitle')}
+          description={t('stats.monthDetail.noActivityDescription')}
         />
       </SafeAreaView>
     );
@@ -231,23 +233,23 @@ export default function MonthDetailScreen() {
           <View style={styles.summaryItem}>
             <Tv size={20} color={COLORS.primary} />
             <Text style={styles.summaryValue}>{monthDetail.stats.watched}</Text>
-            <Text style={styles.summaryLabel}>watched</Text>
+            <Text style={styles.summaryLabel}>{t('stats.watched')}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Star size={20} color={COLORS.warning} />
             <Text style={styles.summaryValue}>{monthDetail.stats.averageRating ?? '-'}</Text>
-            <Text style={styles.summaryLabel}>avg rating</Text>
+            <Text style={styles.summaryLabel}>{t('stats.avgRating')}</Text>
           </View>
           <View style={styles.summaryItem}>
             <Plus size={20} color={COLORS.success} />
             <Text style={styles.summaryValue}>{monthDetail.stats.addedToLists}</Text>
-            <Text style={styles.summaryLabel}>added</Text>
+            <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
           </View>
         </View>
 
         {monthDetail.stats.topGenres.length > 0 && (
           <View style={styles.topGenresRow}>
-            <Text style={styles.topGenresLabel}>Top Genres:</Text>
+            <Text style={styles.topGenresLabel}>{t('stats.topGenres')}</Text>
             <Text style={styles.topGenresValue}>{monthDetail.stats.topGenres.join(', ')}</Text>
           </View>
         )}
@@ -256,7 +258,7 @@ export default function MonthDetailScreen() {
       {/* Tab Bar */}
       <View style={styles.tabBar}>
         <TabButton
-          label="Watched"
+          label={t('stats.watched')}
           count={watched.length}
           isActive={activeTab === 'watched'}
           onPress={() => setActiveTab('watched')}
@@ -264,7 +266,7 @@ export default function MonthDetailScreen() {
           iconColor={COLORS.primary}
         />
         <TabButton
-          label="Rated"
+          label={t('stats.rated')}
           count={rated.length}
           isActive={activeTab === 'rated'}
           onPress={() => setActiveTab('rated')}
@@ -272,7 +274,7 @@ export default function MonthDetailScreen() {
           iconColor={COLORS.warning}
         />
         <TabButton
-          label="Added"
+          label={t('stats.added')}
           count={added.length}
           isActive={activeTab === 'added'}
           onPress={() => setActiveTab('added')}
@@ -284,7 +286,7 @@ export default function MonthDetailScreen() {
       {/* Content based on active tab */}
       {currentItems.length === 0 ? (
         <View style={styles.emptyTabContent}>
-          <Text style={styles.emptyTabText}>No {activeTab} items this month</Text>
+          <Text style={styles.emptyTabText}>{t(`stats.monthDetail.emptyTab.${activeTab}`)}</Text>
         </View>
       ) : activeTab === 'added' ? (
         <FlashList

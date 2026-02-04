@@ -7,6 +7,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Film, Tv } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface LatestTrailersSectionProps {
@@ -14,6 +15,7 @@ interface LatestTrailersSectionProps {
 }
 
 export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }) => {
+  const { t } = useTranslation();
   const { preferences } = usePreferences();
   const { data: trailers, isLoading } = useQuery({
     queryKey: ['latest-trailers'],
@@ -33,12 +35,12 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
     Linking.openURL(youtubeUrl).catch((error) => {
       Alert.alert(
-        'Error',
-        'Unable to open video. Please make sure you have a web browser or YouTube installed.'
+        t('common.errorTitle'),
+        t('errors.unableToOpenVideo')
       );
       console.error('Error opening trailer:', error);
     });
-  }, []);
+  }, [t]);
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => (
@@ -61,7 +63,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
             <Tv size={12} color={COLORS.text} />
           )}
           <Text style={styles.mediaTypeText}>
-            {item.mediaType === 'movie' ? 'Movie' : 'TV Show'}
+            {item.mediaType === 'movie' ? t('media.movie') : t('media.tvShow')}
           </Text>
         </View>
         <Text style={styles.videoTitle} numberOfLines={2}>
@@ -102,7 +104,7 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No trailers available</Text>
+          <Text style={styles.emptyText}>{t('home.noTrailersAvailable')}</Text>
         </View>
       )}
     </View>

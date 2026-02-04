@@ -3,6 +3,7 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { ActivityItem } from '@/src/types/history';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
@@ -17,6 +18,8 @@ interface ActivityRatingCardProps {
  * Consistent with MovieRatingListCard and TVShowRatingListCard styling.
  */
 export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress }) => {
+  const { t } = useTranslation();
+
   const handlePress = useCallback(() => {
     onPress(item);
   }, [onPress, item]);
@@ -27,14 +30,14 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
   // Format subtitle based on media type
   let subtitle = '';
   if (item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber) {
-    subtitle = `S${item.seasonNumber} E${item.episodeNumber}`;
+    subtitle = t('media.seasonEpisode', { season: item.seasonNumber, episode: item.episodeNumber });
     if (item.tvShowName) {
       subtitle += ` • ${item.tvShowName}`;
     }
   } else if (item.mediaType === 'movie' && year) {
     subtitle = year.toString();
   } else if (item.mediaType === 'tv') {
-    subtitle = year ? `TV Show • ${year}` : 'TV Show';
+    subtitle = year ? `${t('media.tvShow')} • ${year}` : t('media.tvShow');
   }
 
   return (

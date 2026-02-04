@@ -3,6 +3,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useRouter } from 'expo-router';
 import { Crown, Lock } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface PremiumWidgetGateProps {
@@ -10,6 +11,7 @@ interface PremiumWidgetGateProps {
 }
 
 export function PremiumWidgetGate({ children }: PremiumWidgetGateProps) {
+  const { t } = useTranslation();
   const { isPremium } = usePremium();
   const router = useRouter();
 
@@ -24,14 +26,14 @@ export function PremiumWidgetGate({ children }: PremiumWidgetGateProps) {
           <Crown size={48} color="#FFD700" />
         </View>
 
-        <Text style={styles.title}>Premium Feature</Text>
+        <Text style={styles.title}>{t('premiumFeature.title')}</Text>
         <Text style={styles.description}>
-          Add beautiful home screen widgets to track your favorite movies and shows.
+          {t('widgets.premiumGateDescription')}
         </Text>
 
         <TouchableOpacity style={styles.button} onPress={() => router.push('/premium')}>
           <Lock size={18} color="#000" style={styles.lockIcon} />
-          <Text style={styles.buttonText}>Unlock widgets</Text>
+          <Text style={styles.buttonText}>{t('widgets.unlockWidgets')}</Text>
         </TouchableOpacity>
       </View>
     </View>

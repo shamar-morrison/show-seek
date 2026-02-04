@@ -8,6 +8,7 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function LanguageScreen() {
   const { language, setLanguage } = useLanguage();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const handleSelectLanguage = async (languageCode: string) => {
     if (languageCode === language) return;
@@ -33,7 +35,7 @@ export default function LanguageScreen() {
       await setLanguage(languageCode);
     } catch (error) {
       console.error('[LanguageScreen] Error updating language:', error);
-      Alert.alert('Error', 'Failed to update language. Please try again.');
+      Alert.alert(t('common.error'), t('settings.updateLanguageError'));
     } finally {
       setIsUpdating(null);
     }
@@ -43,7 +45,7 @@ export default function LanguageScreen() {
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.description}>
-          Select your preferred language for movie and TV show information.
+          {t('settings.languageScreenDescription')}
         </Text>
 
         <View style={styles.languageList}>
@@ -89,8 +91,7 @@ export default function LanguageScreen() {
         </View>
 
         <Text style={styles.note}>
-          This affects titles, descriptions, and other text from our movie database. Some content
-          may not be available in all languages.
+          {t('settings.languageScreenNote')}
         </Text>
       </ScrollView>
     </SafeAreaView>

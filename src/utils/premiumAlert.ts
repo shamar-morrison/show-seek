@@ -1,27 +1,27 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
+import i18n from '@/src/i18n';
 
 /**
  * Shows a standardized premium feature alert with haptic feedback.
  *
- * @param featureName - The name of the premium feature (e.g., "Notes", "Reminders")
+ * @param featureNameKey - Translation key for the premium feature name (e.g., "premiumFeature.features.notes")
  * @param onDismiss - Optional callback when the alert is dismissed (via Cancel)
  */
-export function showPremiumAlert(featureName: string, onDismiss?: () => void): void {
+export function showPremiumAlert(featureNameKey: string, onDismiss?: () => void): void {
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 
-  const isPlural = featureName.endsWith('s');
-  const verb = isPlural ? 'are' : 'is';
+  const featureName = i18n.t(featureNameKey);
 
-  Alert.alert('Premium Feature', `${featureName} ${verb} only available for premium members.`, [
+  Alert.alert(i18n.t('premiumFeature.title'), i18n.t('premiumFeature.message', { featureName }), [
     {
-      text: 'Cancel',
+      text: i18n.t('common.cancel'),
       style: 'cancel',
       onPress: onDismiss,
     },
     {
-      text: 'Upgrade',
+      text: i18n.t('profile.upgradeToPremium'),
       onPress: () => router.push('/premium' as any),
     },
   ]);

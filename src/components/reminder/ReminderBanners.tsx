@@ -1,5 +1,6 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 interface ReminderWarningBannerProps {
@@ -10,11 +11,14 @@ interface ReminderWarningBannerProps {
  * Warning banner for when some (but not all) timing options have passed.
  */
 export function ReminderWarningBanner({
-  message = '⚠️ Some notification times have already passed',
+  message,
 }: ReminderWarningBannerProps) {
+  const { t } = useTranslation();
+  const resolvedMessage = message ?? t('reminder.warningSomeTimesPassed');
+
   return (
     <View style={styles.warningBanner}>
-      <Text style={styles.warningBannerText}>{message}</Text>
+      <Text style={styles.warningBannerText}>{resolvedMessage}</Text>
     </View>
   );
 }
@@ -42,13 +46,16 @@ interface DevModeBannerProps {
  * Dev mode banner shown during development.
  */
 export function DevModeBanner({
-  message = '🧪 DEV MODE: Notifications scheduled for 10-30 seconds',
+  message,
 }: DevModeBannerProps) {
+  const { t } = useTranslation();
+  const resolvedMessage = message ?? t('reminder.devBanner');
+
   if (!__DEV__) return null;
 
   return (
     <View style={styles.devBanner}>
-      <Text style={styles.devBannerText}>{message}</Text>
+      <Text style={styles.devBannerText}>{resolvedMessage}</Text>
     </View>
   );
 }

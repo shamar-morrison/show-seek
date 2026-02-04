@@ -2,7 +2,7 @@ import { enableScreens } from 'react-native-screens';
 enableScreens();
 
 // Initialize i18n early to ensure translations are available throughout the app
-import '@/src/i18n';
+import i18n from '@/src/i18n';
 
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS } from '@/src/constants/theme';
@@ -47,7 +47,7 @@ Notifications.setNotificationHandler({
 // Create notification channel for Android - required for Android 13+ permission prompt
 if (Platform.OS === 'android') {
   Notifications.setNotificationChannelAsync('default', {
-    name: 'Release Reminders',
+    name: i18n.t('notifications.channelName'),
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: COLORS.primary,

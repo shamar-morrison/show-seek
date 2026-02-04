@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Check, Eye } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 interface MarkAsWatchedButtonProps {
@@ -26,6 +27,7 @@ export function MarkAsWatchedButton({
   onPress,
   disabled = false,
 }: MarkAsWatchedButtonProps) {
+  const { t } = useTranslation();
   const hasBeenWatched = watchCount > 0;
 
   return (
@@ -50,8 +52,8 @@ export function MarkAsWatchedButton({
           )}
           <Text style={[styles.buttonText, hasBeenWatched && styles.watchedButtonText]}>
             {hasBeenWatched
-              ? `Watched ${watchCount} ${watchCount === 1 ? 'time' : 'times'}`
-              : 'Mark as Watched'}
+              ? t('watched.watchedTimes', { count: watchCount })
+              : t('media.markAsWatched')}
           </Text>
         </>
       )}

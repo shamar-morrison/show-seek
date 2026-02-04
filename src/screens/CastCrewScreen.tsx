@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   StyleSheet,
@@ -28,6 +29,7 @@ interface CastCrewScreenProps {
 export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
 
   const creditsQuery = useQuery({
@@ -80,13 +82,13 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   if (creditsQuery.isError || !creditsQuery.data) {
     return (
       <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>Failed to load credits</Text>
+        <Text style={errorStyles.text}>{t('credits.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -107,7 +109,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Cast & Crew</Text>
+          <Text style={styles.headerTitle}>{t('media.castAndCrew')}</Text>
           {mediaTitle && (
             <Text style={styles.headerSubtitle} numberOfLines={1}>
               {mediaTitle}
@@ -122,14 +124,18 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           onPress={() => setActiveTab('cast')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>Cast</Text>
+          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>
+            {t('media.cast')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'crew' && styles.activeTab]}
           onPress={() => setActiveTab('crew')}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>Crew</Text>
+          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>
+            {t('media.crew')}
+          </Text>
         </TouchableOpacity>
       </View>
 

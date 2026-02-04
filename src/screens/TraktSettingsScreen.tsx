@@ -20,6 +20,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatDistanceToNow } from 'date-fns';
+import { enUS, es, pt, ptBR } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -33,7 +34,8 @@ import {
   Sparkles,
   Unlink,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -50,6 +52,7 @@ const TRAKT_COLOR = '#ED1C24';
 
 export default function TraktSettingsScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const {
     isConnected,
     isSyncing,
@@ -69,6 +72,20 @@ export default function TraktSettingsScreen() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
+  const distanceLocale = useMemo(() => {
+    switch (i18n.language) {
+      case 'es-ES':
+      case 'es-MX':
+        return es;
+      case 'pt-BR':
+        return ptBR;
+      case 'pt-PT':
+        return pt;
+      default:
+        return enUS;
+    }
+  }, [i18n.language]);
+
   const handleConnect = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsConnecting(true);
@@ -76,11 +93,11 @@ export default function TraktSettingsScreen() {
       await connectTrakt();
     } catch (error) {
       console.error('Failed to connect Trakt:', error);
-      Alert.alert('Connection Failed', 'Unable to connect to Trakt. Please try again.');
+      Alert.alert(t('trakt.connectionFailedTitle'), t('trakt.connectionFailedMessage'));
     } finally {
       setIsConnecting(false);
     }
-  }, [connectTrakt]);
+  }, [connectTrakt, t]);
 
   const handleSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -88,19 +105,19 @@ export default function TraktSettingsScreen() {
       await syncNow();
     } catch (error) {
       console.error('Failed to sync:', error);
-      Alert.alert('Sync Failed', 'Unable to sync with Trakt. Please try again.');
+      Alert.alert(t('trakt.syncFailedTitle'), t('trakt.syncFailedMessage'));
     }
-  }, [syncNow]);
+  }, [syncNow, t]);
 
   const handleDisconnect = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
-      'Disconnect Trakt',
-      'Are you sure you want to disconnect your Trakt account? Your synced data will remain in the app.',
+      t('trakt.disconnectTitle'),
+      t('trakt.disconnectMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Disconnect',
+          text: t('trakt.disconnectButton'),
           style: 'destructive',
           onPress: async () => {
             setIsDisconnecting(true);
@@ -109,8 +126,8 @@ export default function TraktSettingsScreen() {
             } catch (error) {
               console.error('Failed to disconnect:', error);
               Alert.alert(
-                'Disconnect Failed',
-                'Unable to disconnect from Trakt. Please try again.'
+                t('trakt.disconnectFailedTitle'),
+                t('trakt.disconnectFailedMessage')
               );
             } finally {
               setIsDisconnecting(false);
@@ -119,7 +136,7 @@ export default function TraktSettingsScreen() {
         },
       ]
     );
-  }, [disconnectTrakt]);
+  }, [disconnectTrakt, t]);
 
   const handleEnrich = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -127,9 +144,9 @@ export default function TraktSettingsScreen() {
       await enrichData();
     } catch (error) {
       console.error('Failed to enrich:', error);
-      Alert.alert('Enrichment Failed', 'Unable to enrich data. Please try again.');
+      Alert.alert(t('trakt.enrichmentFailedTitle'), t('trakt.enrichmentFailedMessage'));
     }
-  }, [enrichData]);
+  }, [enrichData, t]);
 
   if (isLoading) {
     return (
@@ -147,20 +164,20 @@ export default function TraktSettingsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Syncing with Trakt...</Text>
+          <Text style={styles.headerTitle}>{t('trakt.syncingHeader')}</Text>
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
             <RefreshCw size={48} color={TRAKT_COLOR} />
           </View>
-          <Text style={styles.syncingTitle}>Importing your watch history</Text>
+          <Text style={styles.syncingTitle}>{t('trakt.syncingTitle')}</Text>
           <Text style={styles.syncingSubtitle}>
-            This may take a few minutes depending on the size of your library...
+            {t('trakt.syncingSubtitle')}
           </Text>
           <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
-            <Text style={styles.estimateText}>Usually takes 2-3 minutes</Text>
+            <Text style={styles.estimateText}>{t('trakt.syncingEstimate')}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -175,18 +192,18 @@ export default function TraktSettingsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Enriching Your Library...</Text>
+          <Text style={styles.headerTitle}>{t('trakt.enrichingHeader')}</Text>
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
             <Sparkles size={48} color={COLORS.warning} />
           </View>
-          <Text style={styles.syncingTitle}>Fetching posters, ratings, and genres</Text>
-          <Text style={styles.syncingSubtitle}>Adding TMDB metadata to your synced items...</Text>
+          <Text style={styles.syncingTitle}>{t('trakt.enrichingTitle')}</Text>
+          <Text style={styles.syncingSubtitle}>{t('trakt.enrichingSubtitle')}</Text>
           <ActivityIndicator size="large" color={COLORS.warning} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
-            <Text style={styles.estimateText}>Takes 1-5 minutes for large libraries</Text>
+            <Text style={styles.estimateText}>{t('trakt.enrichingEstimate')}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -201,7 +218,7 @@ export default function TraktSettingsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Connect with Trakt</Text>
+          <Text style={styles.headerTitle}>{t('trakt.connectHeader')}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
@@ -216,9 +233,9 @@ export default function TraktSettingsScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.heroTitle}>Sync your movie and TV show history from Trakt</Text>
+            <Text style={styles.heroTitle}>{t('trakt.connectHeroTitle')}</Text>
             <Text style={styles.heroSubtitle}>
-              Import your watched items, ratings, and lists from your Trakt account.
+              {t('trakt.connectHeroSubtitle')}
             </Text>
           </View>
 
@@ -236,44 +253,44 @@ export default function TraktSettingsScreen() {
             disabled={isConnecting}
           >
             {isConnecting ? (
-              <ActivityIndicator color={COLORS.white} />
+                <ActivityIndicator color={COLORS.white} />
             ) : (
               <>
                 <Link2 size={20} color={COLORS.white} />
-                <Text style={styles.primaryButtonText}>Connect to Trakt</Text>
+                <Text style={styles.primaryButtonText}>{t('trakt.connectButton')}</Text>
                 {!isPremium && <PremiumBadge />}
               </>
             )}
           </TouchableOpacity>
 
-          <CollapsibleCategory title="What will be synced" defaultExpanded>
-            <CollapsibleFeatureItem text="Watched movies & shows" icon="checkmark-circle" />
-            <CollapsibleFeatureItem text="Ratings" icon="checkmark-circle" />
-            <CollapsibleFeatureItem text="Custom lists" icon="checkmark-circle" />
-            <CollapsibleFeatureItem text="Watchlist" icon="checkmark-circle" />
-            <CollapsibleFeatureItem text="Favorites" icon="checkmark-circle" />
-            <CollapsibleFeatureItem text="Episode progress" icon="checkmark-circle" />
+          <CollapsibleCategory title={t('trakt.whatWillBeSyncedTitle')} defaultExpanded>
+            <CollapsibleFeatureItem text={t('trakt.willSync.watchedMoviesAndShows')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('library.ratings')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('trakt.willSync.customLists')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('library.watchlist')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('library.favorites')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem text={t('trakt.willSync.episodeProgress')} icon="checkmark-circle" />
           </CollapsibleCategory>
 
-          <CollapsibleCategory title="How it works">
+          <CollapsibleCategory title={t('trakt.howItWorksTitle')}>
             <CollapsibleFeatureItem
-              text="Connect your Trakt account"
-              description="Login with your Trakt account and grant access."
+              text={t('trakt.howItWorks.connectTitle')}
+              description={t('trakt.howItWorks.connectDescription')}
               icon="log-in-outline"
             />
             <CollapsibleFeatureItem
-              text="Import your data"
-              description="This usually takes 2-3 minutes depending on the size of your library."
+              text={t('trakt.howItWorks.importTitle')}
+              description={t('trakt.howItWorks.importDescription')}
               icon="cloud-download-outline"
             />
             <CollapsibleFeatureItem
-              text="Enrich your data"
-              description="Data imported from Trakt is enriched with metadata from TMDB."
+              text={t('trakt.howItWorks.enrichTitle')}
+              description={t('trakt.howItWorks.enrichDescription')}
               icon="sparkles-outline"
             />
             <CollapsibleFeatureItem
-              text="Conflict resolution"
-              description="Trakt is the source of truth. Conflicting local data will be overwritten to match Trakt."
+              text={t('trakt.howItWorks.conflictsTitle')}
+              description={t('trakt.howItWorks.conflictsDescription')}
               icon="information-circle-outline"
             />
           </CollapsibleCategory>
@@ -281,7 +298,7 @@ export default function TraktSettingsScreen() {
           <View style={styles.privacyNote}>
             <AlertCircle size={16} color={COLORS.textSecondary} />
             <Text style={styles.privacyNoteText}>
-              Data is imported read-only. Your Trakt account will not be modified.
+              {t('trakt.privacyNote')}
             </Text>
           </View>
         </ScrollView>
@@ -297,16 +314,16 @@ export default function TraktSettingsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Connected to Trakt</Text>
+          <Text style={styles.headerTitle}>{t('trakt.connectedHeader')}</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.heroSection}>
             <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
               <Check size={32} color={COLORS.white} />
             </View>
-            <Text style={styles.heroTitle}>Your Trakt account is connected!</Text>
+            <Text style={styles.heroTitle}>{t('trakt.connectedTitle')}</Text>
             <Text style={styles.heroSubtitle}>
-              You haven't synced yet. Import your watch history to get started.
+              {t('trakt.connectedSubtitle')}
             </Text>
           </View>
 
@@ -316,7 +333,7 @@ export default function TraktSettingsScreen() {
             activeOpacity={ACTIVE_OPACITY}
           >
             <RefreshCw size={20} color={COLORS.white} />
-            <Text style={styles.primaryButtonText}>Import from Trakt</Text>
+            <Text style={styles.primaryButtonText}>{t('trakt.importButton')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -330,7 +347,7 @@ export default function TraktSettingsScreen() {
             ) : (
               <>
                 <Unlink size={18} color={COLORS.error} />
-                <Text style={styles.disconnectButtonText}>Disconnect</Text>
+                <Text style={styles.disconnectButtonText}>{t('trakt.disconnectButton')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -348,7 +365,7 @@ export default function TraktSettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
           <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trakt Connected</Text>
+        <Text style={styles.headerTitle}>{t('trakt.connectedScreenHeader')}</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.statusSection}>
@@ -356,26 +373,28 @@ export default function TraktSettingsScreen() {
             <Check size={32} color={COLORS.white} />
           </View>
           <Text style={styles.lastSyncText}>
-            Last synced: {formatDistanceToNow(lastSyncedAt, { addSuffix: true })}
+            {t('trakt.lastSynced', {
+              time: formatDistanceToNow(lastSyncedAt, { addSuffix: true, locale: distanceLocale }),
+            })}
           </Text>
         </View>
 
         {itemsSynced && (
           <View style={styles.statsContainer}>
-            <Text style={styles.statsTitle}>Synced Items</Text>
+            <Text style={styles.statsTitle}>{t('trakt.syncedItemsTitle')}</Text>
             <View style={styles.statsGrid}>
-              {itemsSynced.movies > 0 && <StatItem label="Movies" value={itemsSynced.movies} />}
-              {itemsSynced.shows > 0 && <StatItem label="Shows" value={itemsSynced.shows} />}
+              {itemsSynced.movies > 0 && <StatItem label={t('media.movies')} value={itemsSynced.movies} />}
+              {itemsSynced.shows > 0 && <StatItem label={t('media.tvShows')} value={itemsSynced.shows} />}
               {itemsSynced.episodes > 0 && (
-                <StatItem label="Episodes" value={itemsSynced.episodes} />
+                <StatItem label={t('media.episodes')} value={itemsSynced.episodes} />
               )}
-              {itemsSynced.ratings > 0 && <StatItem label="Ratings" value={itemsSynced.ratings} />}
-              {itemsSynced.lists > 0 && <StatItem label="Lists" value={itemsSynced.lists} />}
+              {itemsSynced.ratings > 0 && <StatItem label={t('library.ratings')} value={itemsSynced.ratings} />}
+              {itemsSynced.lists > 0 && <StatItem label={t('library.lists')} value={itemsSynced.lists} />}
               {itemsSynced.favorites > 0 && (
-                <StatItem label="Favorites" value={itemsSynced.favorites} />
+                <StatItem label={t('library.favorites')} value={itemsSynced.favorites} />
               )}
               {itemsSynced.watchlistItems > 0 && (
-                <StatItem label="Watchlist" value={itemsSynced.watchlistItems} />
+                <StatItem label={t('library.watchlist')} value={itemsSynced.watchlistItems} />
               )}
             </View>
           </View>
@@ -383,14 +402,16 @@ export default function TraktSettingsScreen() {
 
         {syncStatus?.errors && syncStatus.errors.length > 0 && (
           <View style={styles.errorsContainer}>
-            <Text style={styles.errorsTitle}>Some items could not be synced:</Text>
+            <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
             {syncStatus.errors.slice(0, 3).map((error, index) => (
               <Text key={index} style={styles.errorText}>
                 • {error}
               </Text>
             ))}
             {syncStatus.errors.length > 3 && (
-              <Text style={styles.errorText}>...and {syncStatus.errors.length - 3} more</Text>
+              <Text style={styles.errorText}>
+                {t('trakt.moreErrors', { count: syncStatus.errors.length - 3 })}
+              </Text>
             )}
           </View>
         )}
@@ -401,7 +422,7 @@ export default function TraktSettingsScreen() {
           activeOpacity={ACTIVE_OPACITY}
         >
           <RefreshCw size={20} color={COLORS.white} />
-          <Text style={styles.primaryButtonText}>Sync Now</Text>
+          <Text style={styles.primaryButtonText}>{t('trakt.syncNowButton')}</Text>
         </TouchableOpacity>
 
         {/* Enrichment Section - show if synced but not enriched yet, or always in dev mode */}
@@ -410,13 +431,15 @@ export default function TraktSettingsScreen() {
             <View style={styles.enrichmentHeader}>
               <Sparkles size={24} color={COLORS.warning} />
               <Text style={styles.enrichmentTitle}>
-                {__DEV__ && lastEnrichedAt ? 'Re-Enrich Library (Dev)' : 'Add Posters & Ratings'}
+                {__DEV__ && lastEnrichedAt
+                  ? t('trakt.enrichment.devTitle')
+                  : t('trakt.enrichment.title')}
               </Text>
             </View>
             <Text style={styles.enrichmentDescription}>
               {__DEV__ && lastEnrichedAt
-                ? 'Dev mode: Run enrichment again for testing.'
-                : 'Enhance your library with movie posters and ratings from TMDB.'}
+                ? t('trakt.enrichment.devDescription')
+                : t('trakt.enrichment.description')}
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: COLORS.warning }]}
@@ -425,13 +448,15 @@ export default function TraktSettingsScreen() {
             >
               <Sparkles size={20} color={COLORS.white} />
               <Text style={styles.primaryButtonText}>
-                {__DEV__ && lastEnrichedAt ? 'Re-Enrich (Dev)' : 'Enrich My Library'}
+                {__DEV__ && lastEnrichedAt
+                  ? t('trakt.enrichment.devButton')
+                  : t('trakt.enrichment.button')}
               </Text>
             </TouchableOpacity>
             <Text style={styles.enrichmentNote}>
               {__DEV__
-                ? 'Dev mode: No timeout restrictions'
-                : 'Takes 1-5 minutes for large libraries'}
+                ? t('trakt.enrichment.devNote')
+                : t('trakt.enrichment.note')}
             </Text>
           </View>
         )}
@@ -441,7 +466,9 @@ export default function TraktSettingsScreen() {
           <View style={styles.enrichedBadge}>
             <Check size={16} color={COLORS.success} />
             <Text style={styles.enrichedText}>
-              Enriched {formatDistanceToNow(lastEnrichedAt, { addSuffix: true })}
+              {t('trakt.enriched', {
+                time: formatDistanceToNow(lastEnrichedAt, { addSuffix: true, locale: distanceLocale }),
+              })}
             </Text>
           </View>
         )}
@@ -457,7 +484,7 @@ export default function TraktSettingsScreen() {
           ) : (
             <>
               <Unlink size={18} color={COLORS.error} />
-              <Text style={styles.disconnectButtonText}>Disconnect Trakt</Text>
+              <Text style={styles.disconnectButtonText}>{t('trakt.disconnectTraktButton')}</Text>
             </>
           )}
         </TouchableOpacity>

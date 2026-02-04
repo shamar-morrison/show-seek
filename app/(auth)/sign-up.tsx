@@ -104,7 +104,7 @@ export default function SignUp() {
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
                     {t('settings.terms')}
                   </Text>{' '}
-                  &amp;{' '}
+                  {t('common.and')}{' '}
                   <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
                     {t('settings.privacy')}
                   </Text>

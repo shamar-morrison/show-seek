@@ -211,7 +211,7 @@ export default function SearchScreen() {
           )}
           {isPerson && item.known_for && item.known_for.length > 0 && (
             <Text style={styles.knownFor} numberOfLines={2}>
-              Known for:{' '}
+              {t('person.knownForLabel')}{' '}
               {item.known_for
                 .slice(0, 3)
                 .map((work: any) => work.title || work.name)

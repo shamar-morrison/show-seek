@@ -6,6 +6,7 @@ import { useListMembership } from '@/src/hooks/useListMembership';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
@@ -82,12 +83,14 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     style,
     mediaType,
   }) => {
+    const { t } = useTranslation();
+
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            You May Also Like
+            {t('media.youMayAlsoLike')}
           </Text>
           <ScrollView
             horizontal
@@ -111,10 +114,10 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            You May Also Like
+            {t('media.youMayAlsoLike')}
           </Text>
           <View style={detailStyles.reviewErrorBox}>
-            <Text style={detailStyles.reviewErrorText}>Failed to load recommendations</Text>
+            <Text style={detailStyles.reviewErrorText}>{t('errors.failedToLoadRecommendations')}</Text>
           </View>
         </View>
       );
@@ -125,7 +128,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
       return (
         <View style={style} onLayout={onLayout}>
           <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
-            You May Also Like
+            {t('media.youMayAlsoLike')}
           </Text>
           <View style={detailStyles.similarList}>
             <FlashList

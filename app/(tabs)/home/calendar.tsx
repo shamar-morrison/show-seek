@@ -99,7 +99,7 @@ export default function CalendarScreen() {
       {isLoadingEnrichment && (
         <View style={styles.enrichmentIndicator}>
           <ActivityIndicator size="small" color={COLORS.primary} />
-          <Text style={styles.enrichmentText}>Updating TV episodes...</Text>
+          <Text style={styles.enrichmentText}>{t('calendar.updatingEpisodes')}</Text>
         </View>
       )}
 

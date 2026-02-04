@@ -9,6 +9,8 @@
  * These utilities parse dates as local dates to avoid timezone issues.
  */
 
+import i18n from '@/src/i18n';
+
 /**
  * Parse a TMDB date string (YYYY-MM-DD) as a local date at midnight.
  * This prevents timezone offset issues where UTC midnight shifts to
@@ -41,7 +43,8 @@ export function formatTmdbDate(
   options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
 ): string {
   const date = parseTmdbDate(dateString);
-  return date.toLocaleDateString('en-US', options);
+  const locale = i18n.language || 'en-US';
+  return date.toLocaleDateString(locale, options);
 }
 
 /**

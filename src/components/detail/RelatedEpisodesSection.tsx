@@ -3,12 +3,15 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { Check } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { RelatedEpisodesSectionProps } from './types';
 
 export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
   ({ episodes, currentEpisodeNumber, seasonNumber, watchedEpisodes, onEpisodePress, style }) => {
+    const { t } = useTranslation();
+
     // Sort episodes by episode number
     const sortedEpisodes = useMemo(() => {
       return [...episodes].sort((a, b) => a.episode_number - b.episode_number);
@@ -21,7 +24,9 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>More Episodes</Text>
+        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          {t('media.moreEpisodes')}
+        </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {sortedEpisodes.map((episode) => {
             const isCurrent = episode.episode_number === currentEpisodeNumber;
@@ -63,6 +68,7 @@ const EpisodeCard = memo<{
   isWatched: boolean;
   onPress: (episodeNumber: number) => void;
 }>(({ episode, isCurrent, isWatched, onPress }) => {
+  const { t } = useTranslation();
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
 
   const handlePress = useCallback(() => {
@@ -89,7 +95,9 @@ const EpisodeCard = memo<{
         )}
       </View>
       <View style={detailStyles.relatedEpisodeInfo}>
-        <Text style={detailStyles.relatedEpisodeNumber}>Episode {episode.episode_number}</Text>
+        <Text style={detailStyles.relatedEpisodeNumber}>
+          {t('media.episodeNumber', { number: episode.episode_number })}
+        </Text>
         <Text style={detailStyles.relatedEpisodeTitle} numberOfLines={2}>
           {episode.name}
         </Text>

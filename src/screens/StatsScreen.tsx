@@ -20,6 +20,7 @@ import {
   Tv,
 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -56,12 +57,14 @@ function StatCard({
  * Comparison indicator showing percentage change
  */
 function ComparisonBadge({ value, label }: { value: number; label: string }) {
+  const { t } = useTranslation();
+
   if (value === 0) {
     return (
       <View style={styles.comparisonBadge}>
         <Minus size={12} color={COLORS.textSecondary} />
         <Text style={[styles.comparisonText, { color: COLORS.textSecondary }]}>
-          No change {label}
+          {t('stats.noChange', { label })}
         </Text>
       </View>
     );
@@ -86,6 +89,7 @@ function ComparisonBadge({ value, label }: { value: number; label: string }) {
  * Monthly stats row component
  */
 function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void }) {
+  const { t } = useTranslation();
   const hasActivity = stats.watched > 0 || stats.rated > 0 || stats.addedToLists > 0;
 
   return (
@@ -93,7 +97,7 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
       <View style={styles.monthHeader}>
         <Text style={styles.monthName}>{stats.monthName}</Text>
         {stats.comparisonToPrevious && (
-          <ComparisonBadge value={stats.comparisonToPrevious.watched} label="vs last month" />
+          <ComparisonBadge value={stats.comparisonToPrevious.watched} label={t('stats.vsLastMonth')} />
         )}
       </View>
 
@@ -102,23 +106,23 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
           <View style={styles.monthStatItem}>
             <Tv size={16} color={COLORS.textSecondary} />
             <Text style={styles.monthStatValue}>{stats.watched}</Text>
-            <Text style={styles.monthStatLabel}>watched</Text>
+            <Text style={styles.monthStatLabel}>{t('stats.watched')}</Text>
           </View>
 
           <View style={styles.monthStatItem}>
             <Star size={16} color={COLORS.warning} />
             <Text style={styles.monthStatValue}>{stats.averageRating ?? '-'}</Text>
-            <Text style={styles.monthStatLabel}>avg rating</Text>
+            <Text style={styles.monthStatLabel}>{t('stats.avgRating')}</Text>
           </View>
 
           <View style={styles.monthStatItem}>
             <Plus size={16} color={COLORS.success} />
             <Text style={styles.monthStatValue}>{stats.addedToLists}</Text>
-            <Text style={styles.monthStatLabel}>added</Text>
+            <Text style={styles.monthStatLabel}>{t('stats.added')}</Text>
           </View>
         </View>
       ) : (
-        <Text style={styles.noActivityText}>No activity this month</Text>
+        <Text style={styles.noActivityText}>{t('stats.noActivityThisMonth')}</Text>
       )}
 
       {stats.topGenres.length > 0 && (
@@ -136,6 +140,7 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
 
 export default function StatsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: historyData, isLoading, error } = useHistory();
 
   const handleMonthPress = useCallback(
@@ -146,7 +151,7 @@ export default function StatsScreen() {
   );
 
   if (isLoading) {
-    return <FullScreenLoading message="Loading your stats..." />;
+    return <FullScreenLoading message={t('stats.loading')} />;
   }
 
   if (error) {
@@ -155,8 +160,8 @@ export default function StatsScreen() {
         <View style={styles.divider} />
         <EmptyState
           icon={BarChart3}
-          title="Error Loading Stats"
-          description="Something went wrong. Please try again later."
+          title={t('stats.errorTitle')}
+          description={t('stats.errorDescription')}
         />
       </SafeAreaView>
     );
@@ -174,8 +179,8 @@ export default function StatsScreen() {
         <View style={styles.divider} />
         <EmptyState
           icon={BarChart3}
-          title="No Activity Yet"
-          description="Start watching, rating, and adding items to see your stats here."
+          title={t('stats.noActivityTitle')}
+          description={t('stats.noActivityDescription')}
         />
       </SafeAreaView>
     );
@@ -188,24 +193,24 @@ export default function StatsScreen() {
         {/* Overview Section */}
         <View style={styles.section}>
           <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
-            LAST 6 MONTHS OVERVIEW
+            {t('stats.last6MonthsOverview')}
           </Text>
           <View style={styles.statsGrid}>
             <StatCard
               icon={Tv}
-              label="Watched"
+              label={t('stats.watched')}
               value={historyData.totalWatched}
               iconColor={COLORS.primary}
             />
             <StatCard
               icon={Star}
-              label="Rated"
+              label={t('stats.rated')}
               value={historyData.totalRated}
               iconColor={COLORS.warning}
             />
             <StatCard
               icon={Plus}
-              label="Added"
+              label={t('stats.added')}
               value={historyData.totalAddedToLists}
               iconColor={COLORS.success}
             />
@@ -214,20 +219,24 @@ export default function StatsScreen() {
 
         {/* Streaks Section */}
         <View style={styles.section}>
-          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>STREAKS</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>{t('stats.streaks')}</Text>
           <View style={styles.streakRow}>
             <View style={styles.streakItem}>
               <Flame size={28} color="#FF6B35" />
               <View style={styles.streakInfo}>
-                <Text style={styles.streakValue}>{historyData.currentStreak} days</Text>
-                <Text style={styles.streakLabel}>Current Streak</Text>
+                <Text style={styles.streakValue}>
+                  {t('stats.streakValue', { count: historyData.currentStreak })}
+                </Text>
+                <Text style={styles.streakLabel}>{t('stats.currentStreak')}</Text>
               </View>
             </View>
             <View style={styles.streakItem}>
               <Trophy size={28} color="#FFD700" />
               <View style={styles.streakInfo}>
-                <Text style={styles.streakValue}>{historyData.longestStreak} days</Text>
-                <Text style={styles.streakLabel}>Longest Streak</Text>
+                <Text style={styles.streakValue}>
+                  {t('stats.streakValue', { count: historyData.longestStreak })}
+                </Text>
+                <Text style={styles.streakLabel}>{t('stats.longestStreak')}</Text>
               </View>
             </View>
           </View>
@@ -236,20 +245,22 @@ export default function StatsScreen() {
         {/* Activity Patterns Section */}
         {(historyData.mostActiveDay || historyData.mostActiveTimeOfDay) && (
           <View style={styles.section}>
-            <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>ACTIVITY PATTERNS</Text>
+            <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+              {t('stats.activityPatterns')}
+            </Text>
             <View style={styles.patternRow}>
               {historyData.mostActiveDay && (
                 <View style={styles.patternItem}>
                   <Calendar size={24} color={COLORS.primary} />
-                  <Text style={styles.patternValue}>{historyData.mostActiveDay}s</Text>
-                  <Text style={styles.patternLabel}>Most Active Day</Text>
+                  <Text style={styles.patternValue}>{historyData.mostActiveDay}</Text>
+                  <Text style={styles.patternLabel}>{t('stats.mostActiveDay')}</Text>
                 </View>
               )}
               {historyData.mostActiveTimeOfDay && (
                 <View style={styles.patternItem}>
                   <Clock size={24} color={COLORS.primary} />
                   <Text style={styles.patternValue}>{historyData.mostActiveTimeOfDay}</Text>
-                  <Text style={styles.patternLabel}>Preferred Time</Text>
+                  <Text style={styles.patternLabel}>{t('stats.preferredTime')}</Text>
                 </View>
               )}
             </View>
@@ -258,7 +269,9 @@ export default function StatsScreen() {
 
         {/* Monthly Breakdown Section */}
         <View style={styles.section}>
-          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>MONTHLY BREAKDOWN</Text>
+          <Text style={[sectionTitleStyles.title, styles.sectionTitle]}>
+            {t('stats.monthlyBreakdown')}
+          </Text>
           {historyData.monthlyStats.map((monthStats) => (
             <MonthRow
               key={monthStats.month}

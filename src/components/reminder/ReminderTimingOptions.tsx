@@ -1,12 +1,15 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface TimingOption {
   value: ReminderTiming;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
+  labelParams?: Record<string, unknown>;
+  descriptionParams?: Record<string, unknown>;
 }
 
 interface ReminderTimingOptionsProps {
@@ -15,8 +18,8 @@ interface ReminderTimingOptionsProps {
   disabledValues: Set<ReminderTiming>;
   onSelect: (value: ReminderTiming) => void;
   disabled?: boolean;
-  /** Custom text shown when option is disabled. Defaults to "Notification time has passed" */
-  disabledDescription?: string;
+  /** Custom text shown when option is disabled. Defaults to `reminder.notificationTimePassed` */
+  disabledDescriptionKey?: string;
 }
 
 export function ReminderTimingOptions({
@@ -25,8 +28,11 @@ export function ReminderTimingOptions({
   disabledValues,
   onSelect,
   disabled = false,
-  disabledDescription = 'Notification time has passed',
+  disabledDescriptionKey = 'reminder.notificationTimePassed',
 }: ReminderTimingOptionsProps) {
+  const { t } = useTranslation();
+  const disabledDescription = t(disabledDescriptionKey);
+
   return (
     <>
       {options.map((option) => {
@@ -50,10 +56,12 @@ export function ReminderTimingOptions({
             </View>
             <View style={styles.timingTextContainer}>
               <Text style={[styles.timingLabel, isOptionDisabled && styles.textDisabled]}>
-                {option.label}
+                {t(option.labelKey, option.labelParams)}
               </Text>
               <Text style={[styles.timingDescription, isOptionDisabled && styles.textDisabled]}>
-                {isOptionDisabled ? disabledDescription : option.description}
+                {isOptionDisabled
+                  ? disabledDescription
+                  : t(option.descriptionKey, option.descriptionParams)}
               </Text>
             </View>
           </TouchableOpacity>

@@ -40,6 +40,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -70,30 +71,33 @@ const DEFAULT_SORT_STATE: SortState = {
 /**
  * Format relative time (e.g., "2 days ago")
  */
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(
+  date: Date,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 0) return t('common.today');
+  if (diffDays === 1) return t('common.yesterday');
 
   if (diffDays < 7) {
-    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    return t('relativeTime.daysAgo', { count: diffDays });
   }
 
   const weeks = Math.floor(diffDays / 7);
   if (diffDays < 30) {
-    return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
+    return t('relativeTime.weeksAgo', { count: weeks });
   }
 
   const months = Math.floor(diffDays / 30);
   if (diffDays < 365) {
-    return `${months} month${months === 1 ? '' : 's'} ago`;
+    return t('relativeTime.monthsAgo', { count: months });
   }
 
   const years = Math.floor(diffDays / 365);
-  return `${years} year${years === 1 ? '' : 's'} ago`;
+  return t('relativeTime.yearsAgo', { count: years });
 }
 
 /**
@@ -109,6 +113,7 @@ export default function NotesScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
+  const { t } = useTranslation();
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteModalRef>(null);
@@ -214,7 +219,7 @@ export default function NotesScreen() {
           searchQuery,
           onSearchChange: setSearchQuery,
           onClose: deactivateSearch,
-          placeholder: 'Search notes...',
+          placeholder: t('notes.searchPlaceholder'),
         })
       );
     } else {
@@ -258,6 +263,7 @@ export default function NotesScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
+    t,
   ]);
 
   // Group notes by media type (uses search-filtered notes)
@@ -269,14 +275,14 @@ export default function NotesScreen() {
 
     const sections: NoteSection[] = [];
     if (movieNotes.length > 0) {
-      sections.push({ title: 'Movies', data: movieNotes });
+      sections.push({ title: t('media.movies'), data: movieNotes });
     }
     if (tvNotes.length > 0) {
-      sections.push({ title: 'TV Shows', data: tvNotes });
+      sections.push({ title: t('media.tvShows'), data: tvNotes });
     }
 
     return sections;
-  }, [displayNotes, viewMode]);
+  }, [displayNotes, viewMode, t]);
 
   const handleCardPress = useCallback(
     (note: Note) => {
@@ -307,10 +313,10 @@ export default function NotesScreen() {
 
   const handleDeleteNote = useCallback(
     async (note: Note) => {
-      Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('notes.deleteNote'), t('notes.confirmDeleteNote'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -320,13 +326,13 @@ export default function NotesScreen() {
               });
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete note');
+              Alert.alert(t('common.error'), t('errors.deleteFailed'));
             }
           },
         },
       ]);
     },
-    [deleteNoteMutation]
+    [deleteNoteMutation, t]
   );
 
   const renderItem = useCallback(
@@ -353,7 +359,7 @@ export default function NotesScreen() {
             <Text style={styles.noteText} numberOfLines={2}>
               {truncateText(item.content, 80)}
             </Text>
-            <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt)}</Text>
+            <Text style={styles.timestamp}>{formatRelativeTime(item.updatedAt, t)}</Text>
           </View>
           <View style={styles.actions}>
             <Pressable
@@ -399,17 +405,16 @@ export default function NotesScreen() {
         <View style={libraryListStyles.divider} />
         <View style={styles.premiumGate}>
           <StickyNote size={60} color={COLORS.textSecondary} />
-          <Text style={styles.premiumTitle}>Premium Feature</Text>
+          <Text style={styles.premiumTitle}>{t('premiumFeature.title')}</Text>
           <Text style={styles.premiumDescription}>
-            Notes are a premium feature. Upgrade to unlock and add personal notes to your movies and
-            TV shows.
+            {t('notes.premiumDescription')}
           </Text>
           <TouchableOpacity
             style={styles.upgradeButton}
             onPress={() => router.push('/premium' as any)}
             activeOpacity={ACTIVE_OPACITY}
           >
-            <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -428,8 +433,8 @@ export default function NotesScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={StickyNote}
-          title="No Notes Yet"
-          description="Add notes to movies and TV shows from their detail pages."
+          title={t('library.emptyNotes')}
+          description={t('library.emptyNotesHint')}
         />
       </SafeAreaView>
     );

@@ -4,6 +4,7 @@ import { exportUserData } from '@/src/services/DataExportService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Linking } from 'react-native';
 
 const SHOWSEEK_WEB_URL = 'https://show-seek-web.vercel.app';
@@ -15,6 +16,7 @@ const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
  * Returns state and handlers for the profile screen.
  */
 export function useProfileLogic() {
+  const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
@@ -43,10 +45,10 @@ export function useProfileLogic() {
       try {
         await Linking.openURL(`https://play.google.com/store/apps/details?id=${PACKAGE_ID}`);
       } catch {
-        Alert.alert('Error', 'Unable to open the Play Store');
+        Alert.alert(t('common.errorTitle'), t('profile.unableToOpenPlayStore'));
       }
     }
-  }, []);
+  }, [t]);
 
   const handleSendFeedback = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -55,9 +57,9 @@ export function useProfileLogic() {
     try {
       await Linking.openURL(feedbackUrl);
     } catch {
-      Alert.alert('Error', 'Unable to open the feedback page. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('profile.unableToOpenFeedback'));
     }
-  }, []);
+  }, [t]);
 
   const handleOpenWebApp = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -69,9 +71,9 @@ export function useProfileLogic() {
     try {
       await Linking.openURL(SHOWSEEK_WEB_URL);
     } catch {
-      Alert.alert('Error', 'Unable to open the ShowSeek website. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('profile.unableToOpenWebsite'));
     }
-  }, []);
+  }, [t]);
 
   const handleCloseWebAppModal = useCallback(() => {
     setShowWebAppModal(false);
@@ -83,21 +85,22 @@ export function useProfileLogic() {
       await exportUserData(format);
     } catch (error) {
       console.error('Export failed:', error);
-      const message = error instanceof Error ? error.message : 'Failed to export data';
-      Alert.alert('Export Failed', message);
+      const message =
+        error instanceof Error ? error.message : t('profile.exportFailedFallbackMessage');
+      Alert.alert(t('profile.exportFailedTitle'), message);
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [t]);
 
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (isGuest) {
       Alert.alert(
-        'Guest Account',
-        'Guest accounts have no data to export. Sign in to save and export your data.',
-        [{ text: 'OK' }]
+        t('profile.guestAccountTitle'),
+        t('profile.guestAccountExportMessage'),
+        [{ text: t('common.ok') }]
       );
       return;
     }
@@ -107,21 +110,21 @@ export function useProfileLogic() {
       return;
     }
 
-    Alert.alert('Export Data', 'Choose a format to export your lists, ratings, and favorites.', [
+    Alert.alert(t('profile.exportDataTitle'), t('profile.exportDataMessage'), [
       {
-        text: 'Cancel',
+        text: t('common.cancel'),
         style: 'cancel',
       },
       {
-        text: 'Export as CSV',
+        text: t('profile.exportAsCsv'),
         onPress: () => performExport('csv'),
       },
       {
-        text: 'Export as Markdown',
+        text: t('profile.exportAsMarkdown'),
         onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isGuest, isPremium, router, performExport]);
+  }, [isGuest, isPremium, router, performExport, t]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -130,9 +133,9 @@ export function useProfileLogic() {
       await signOut();
     } catch {
       setIsSigningOut(false);
-      Alert.alert('Error', 'Unable to sign out. Please try again.');
+      Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
     }
-  }, [signOut]);
+  }, [signOut, t]);
 
   const handleUpgradePress = useCallback(() => {
     router.push('/premium');

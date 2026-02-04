@@ -40,8 +40,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const backdropOpacity = useSharedValue(0);
 
   const isGuest = !user || user.isAnonymous;
-  const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
-  const email = user?.email || (isGuest ? 'Not signed in' : 'No email');
+  const displayName = user?.displayName || (isGuest ? t('profile.guest') : t('profile.user'));
+  const email = user?.email || (isGuest ? t('auth.notSignedIn') : t('profile.noEmail'));
 
   useEffect(() => {
     if (visible) {
@@ -101,7 +101,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
         await signOut();
       } catch {
         setIsSigningOut(false);
-        Alert.alert('Error', 'Unable to sign out. Please try again.');
+        Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
       }
     }, 300);
   };

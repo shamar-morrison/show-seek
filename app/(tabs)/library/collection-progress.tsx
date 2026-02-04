@@ -18,6 +18,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Layers, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +33,7 @@ const DEFAULT_SORT_STATE: SortState = {
 export default function CollectionProgressScreen() {
   const navigation = useNavigation();
   const { progressItems, isLoading, isEmpty } = useCollectionProgressList();
+  const { t } = useTranslation();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const hasActiveSort =
@@ -115,13 +117,13 @@ export default function CollectionProgressScreen() {
           searchQuery,
           onSearchChange: setSearchQuery,
           onClose: deactivateSearch,
-          placeholder: 'Search collections...',
+          placeholder: t('library.searchCollectionsPlaceholder'),
         })
       );
     } else {
       navigation.setOptions({
         header: undefined,
-        headerTitle: 'Collection Progress',
+        headerTitle: t('library.collectionProgress'),
         headerRight: () => (
           <View style={styles.headerButtons}>
             <HeaderIconButton onPress={searchButton.onPress}>
@@ -145,6 +147,7 @@ export default function CollectionProgressScreen() {
     deactivateSearch,
     searchButton,
     hasActiveSort,
+    t,
   ]);
 
   const renderItem = ({ item }: { item: CollectionProgressItem }) => (
@@ -152,7 +155,7 @@ export default function CollectionProgressScreen() {
   );
 
   if (isLoading || isLoadingPreference) {
-    return <FullScreenLoading message="Loading your collections..." />;
+    return <FullScreenLoading message={t('library.loadingCollections')} />;
   }
 
   if (isEmpty) {
@@ -161,8 +164,8 @@ export default function CollectionProgressScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Layers}
-          title="No Collections Tracked"
-          description="Start tracking a collection from a movie's collection page to see your progress here."
+          title={t('library.emptyCollectionProgress')}
+          description={t('library.emptyCollectionProgressHint')}
         />
       </SafeAreaView>
     );

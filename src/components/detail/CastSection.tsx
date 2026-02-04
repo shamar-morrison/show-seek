@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { CastSectionProps } from './types';
@@ -49,7 +50,8 @@ const CastCard = memo<{
 CastCard.displayName = 'CastCard';
 
 export const CastSection = memo<CastSectionProps>(
-  ({ cast, onCastPress, onViewAll, title = 'Cast', style }) => {
+  ({ cast, onCastPress, onViewAll, title, style }) => {
+    const { t } = useTranslation();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: CastMember }) => <CastCard actor={item} onPress={onCastPress} />,
@@ -60,6 +62,8 @@ export const CastSection = memo<CastSectionProps>(
       return null;
     }
 
+    const resolvedTitle = title ?? t('media.cast');
+
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
         {onViewAll ? (
@@ -69,12 +73,12 @@ export const CastSection = memo<CastSectionProps>(
             activeOpacity={ACTIVE_OPACITY}
             hitSlop={HIT_SLOP.m}
           >
-            <Text style={detailStyles.sectionTitle}>{title}</Text>
-            <Text style={detailStyles.viewAll}>View All</Text>
+            <Text style={detailStyles.sectionTitle}>{resolvedTitle}</Text>
+            <Text style={detailStyles.viewAll}>{t('common.seeAll')}</Text>
           </TouchableOpacity>
         ) : (
           <View style={detailStyles.sectionHeader}>
-            <Text style={detailStyles.sectionTitle}>{title}</Text>
+            <Text style={detailStyles.sectionTitle}>{resolvedTitle}</Text>
           </View>
         )}
         <FlashList

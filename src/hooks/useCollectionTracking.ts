@@ -7,6 +7,7 @@ import {
 import type { CollectionProgressItem, TrackedCollection } from '@/src/types/collectionTracking';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 import { auth } from '../firebase/config';
 import { useRealtimeSubscription } from './useRealtimeSubscription';
@@ -142,6 +143,7 @@ export const useStartCollectionTracking = () => {
  * Resolves with null if user cancels (avoids error state).
  */
 export const useStopCollectionTracking = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -150,16 +152,16 @@ export const useStopCollectionTracking = () => {
       // Show confirmation first
       return new Promise<number[] | null>((resolve, reject) => {
         Alert.alert(
-          'Stop Tracking Collection',
-          `This will remove the watched status from all movies in "${params.collectionName}". Are you sure?`,
+          t('collection.stopTrackingTitle'),
+          t('collection.stopTrackingConfirm', { name: params.collectionName }),
           [
             {
-              text: 'Cancel',
+              text: t('common.cancel'),
               style: 'cancel',
               onPress: () => resolve(null), // Resolve with null instead of rejecting
             },
             {
-              text: 'Stop Tracking',
+              text: t('collection.stopTracking'),
               style: 'destructive',
               onPress: async () => {
                 try {

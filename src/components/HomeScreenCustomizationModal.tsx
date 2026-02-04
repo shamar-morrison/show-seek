@@ -17,6 +17,7 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ScrollView,
@@ -27,6 +28,16 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 import { PremiumBadge } from './ui/PremiumBadge';
+
+const TMDB_LIST_LABEL_KEYS: Record<string, string> = {
+  'latest-trailers': 'home.latestTrailers',
+  'trending-movies': 'home.trendingMovies',
+  'trending-tv': 'home.trendingTV',
+  'popular-movies': 'home.popularMovies',
+  'top-rated-movies': 'home.topRated',
+  'upcoming-movies': 'home.upcomingMovies',
+  'upcoming-tv': 'home.upcomingTV',
+};
 
 export interface HomeScreenCustomizationModalRef {
   present: () => Promise<void>;
@@ -70,6 +81,7 @@ const HomeScreenCustomizationModal = forwardRef<
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Guest and non-premium users can't access Latest Trailers
   const isGuest = !user;
@@ -114,14 +126,14 @@ const HomeScreenCustomizationModal = forwardRef<
 
         if (isSelected) {
           if (current.length <= MIN_HOME_LISTS) {
-            setError(`Select at least ${MIN_HOME_LISTS} list${MIN_HOME_LISTS === 1 ? '' : 's'}`);
+            setError(t('homeCustomization.minSelected', { count: MIN_HOME_LISTS }));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             return current;
           }
           return current.filter((s) => s.id !== item.id);
         } else {
           if (current.length >= MAX_HOME_LISTS) {
-            setError(`Select at most ${MAX_HOME_LISTS} lists`);
+            setError(t('homeCustomization.maxSelected', { count: MAX_HOME_LISTS }));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             return current;
           }
@@ -136,10 +148,10 @@ const HomeScreenCustomizationModal = forwardRef<
     try {
       await updateMutation.mutateAsync(pendingSelections);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onShowToast?.('Home screen updated');
+      onShowToast?.(t('homeCustomization.updatedToast'));
       sheetRef.current?.dismiss();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(err instanceof Error ? err.message : t('errors.saveFailed'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
@@ -161,9 +173,12 @@ const HomeScreenCustomizationModal = forwardRef<
     >
         <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         <View style={modalHeaderStyles.header}>
-          <Text style={modalHeaderStyles.title}>Customize Home Screen</Text>
+          <Text style={modalHeaderStyles.title}>{t('homeCustomization.title')}</Text>
           <Text style={styles.subtitle}>
-            {pendingSelections.length}/{MAX_HOME_LISTS} selected
+            {t('homeCustomization.selectedCount', {
+              selected: pendingSelections.length,
+              max: MAX_HOME_LISTS,
+            })}
           </Text>
         </View>
 
@@ -179,12 +194,12 @@ const HomeScreenCustomizationModal = forwardRef<
           nestedScrollEnabled={true}
         >
           {/* TMDB Lists Section */}
-          <Text style={styles.sectionHeader}>TMDB Lists</Text>
+          <Text style={styles.sectionHeader}>{t('homeCustomization.tmdbLists')}</Text>
           {AVAILABLE_TMDB_LISTS.map((list) => (
             <ListItem
               key={list.id}
               id={list.id}
-              label={list.label}
+              label={t(TMDB_LIST_LABEL_KEYS[list.id] ?? list.label)}
               type="tmdb"
               isSelected={isSelected(list.id)}
               onToggle={handleToggle}
@@ -193,12 +208,12 @@ const HomeScreenCustomizationModal = forwardRef<
           ))}
 
           {/* Watch Status Lists Section */}
-          <Text style={styles.sectionHeader}>Watch Status</Text>
+          <Text style={styles.sectionHeader}>{t('homeCustomization.watchStatus')}</Text>
           {WATCH_STATUS_LISTS.map((list) => (
             <ListItem
               key={list.id}
               id={list.id}
-              label={list.label}
+              label={t(list.labelKey)}
               type="default"
               isSelected={isSelected(list.id)}
               onToggle={handleToggle}
@@ -208,7 +223,7 @@ const HomeScreenCustomizationModal = forwardRef<
           {/* Custom Lists Section */}
           {customLists.length > 0 && (
             <>
-              <Text style={styles.sectionHeader}>Custom Lists</Text>
+              <Text style={styles.sectionHeader}>{t('library.customLists')}</Text>
               {customLists.map((list) => (
                 <ListItem
                   key={list.id}
@@ -230,7 +245,7 @@ const HomeScreenCustomizationModal = forwardRef<
             onPress={handleCancel}
             disabled={updateMutation.isPending}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
           <Pressable
             style={[styles.applyButton, updateMutation.isPending && styles.disabledButton]}
@@ -240,7 +255,7 @@ const HomeScreenCustomizationModal = forwardRef<
             {updateMutation.isPending ? (
               <ActivityIndicator size="small" color={COLORS.white} />
             ) : (
-              <Text style={styles.applyButtonText}>Apply</Text>
+              <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
             )}
           </Pressable>
         </View>

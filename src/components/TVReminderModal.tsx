@@ -20,6 +20,7 @@ import {
 } from '@/src/utils/reminderHelpers';
 import { Calendar, Tv } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface TVReminderModalProps {
@@ -68,6 +69,7 @@ export default function TVReminderModal({
   onCancelReminder,
   onShowToast,
 }: TVReminderModalProps) {
+  const { t } = useTranslation();
   const [selectedFrequency, setSelectedFrequency] = useState<TVReminderFrequency>(
     currentFrequency || 'every_episode'
   );
@@ -133,10 +135,10 @@ export default function TVReminderModal({
     try {
       setIsLoading(true);
       await onSetReminder(selectedTiming, selectedFrequency, nextEpisode);
-      onShowToast?.('Reminder set successfully!');
+      onShowToast?.(t('reminder.setSuccess'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to set reminder');
+      onShowToast?.(error instanceof Error ? error.message : t('reminder.failedToSet'));
     } finally {
       setIsLoading(false);
     }
@@ -146,10 +148,10 @@ export default function TVReminderModal({
     try {
       setIsLoading(true);
       await onCancelReminder();
-      onShowToast?.('Reminder cancelled');
+      onShowToast?.(t('reminder.reminderRemoved'));
       onClose();
     } catch (error) {
-      onShowToast?.(error instanceof Error ? error.message : 'Failed to cancel reminder');
+      onShowToast?.(error instanceof Error ? error.message : t('reminder.failedToCancel'));
     } finally {
       setIsLoading(false);
     }
@@ -189,9 +191,9 @@ export default function TVReminderModal({
   // Get context-aware warning message for skip notification
   const getSkipWarningMessage = () => {
     if (selectedFrequency === 'every_episode') {
-      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+      return t('reminder.skipWarning.episode');
     }
-    return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+    return t('reminder.skipWarning.season');
   };
 
   // Get the relevant date for display
@@ -218,7 +220,7 @@ export default function TVReminderModal({
 
       {/* Frequency Selection */}
       <View style={sharedStyles.section}>
-        <Text style={sharedStyles.sectionTitle}>Remind me for:</Text>
+        <Text style={sharedStyles.sectionTitle}>{t('reminder.remindMeFor')}</Text>
 
         {/* Every Episode Option */}
         <TouchableOpacity
@@ -238,16 +240,19 @@ export default function TVReminderModal({
             <Text
               style={[styles.frequencyLabel, !canSetEpisodeReminder && sharedStyles.disabledText]}
             >
-              Every Episode
+              {t('reminder.tvFrequency.everyEpisode')}
             </Text>
             {canSetEpisodeReminder && nextEpisode ? (
               <Text style={styles.frequencyDescription}>
-                Next: S{nextEpisode.seasonNumber}E{nextEpisode.episodeNumber} -{' '}
-                {nextEpisode.episodeName}
+                {t('reminder.nextEpisode', {
+                  season: nextEpisode.seasonNumber,
+                  episode: nextEpisode.episodeNumber,
+                  title: nextEpisode.episodeName,
+                })}
               </Text>
             ) : (
               <Text style={[styles.frequencyDescription, sharedStyles.warningText]}>
-                No upcoming episodes found
+                {t('reminder.noUpcomingEpisodes')}
               </Text>
             )}
           </View>
@@ -271,15 +276,18 @@ export default function TVReminderModal({
             <Text
               style={[styles.frequencyLabel, !canSetSeasonReminder && sharedStyles.disabledText]}
             >
-              Season Premieres
+              {t('reminder.tvFrequency.seasonPremieres')}
             </Text>
             {canSetSeasonReminder && nextSeasonNumber ? (
               <Text style={styles.frequencyDescription}>
-                Season {nextSeasonNumber} premieres {formatDate(nextSeasonAirDate!)}
+                {t('reminder.seasonPremieres', {
+                  season: nextSeasonNumber,
+                  date: formatDate(nextSeasonAirDate!),
+                })}
               </Text>
             ) : (
               <Text style={[styles.frequencyDescription, sharedStyles.warningText]}>
-                No upcoming season premiere date announced
+                {t('reminder.noUpcomingSeasonPremiere')}
               </Text>
             )}
           </View>
@@ -291,7 +299,8 @@ export default function TVReminderModal({
         <View style={sharedStyles.dateContainer}>
           <Calendar size={16} color={COLORS.textSecondary} />
           <Text style={sharedStyles.dateText}>
-            {isDateInPast(displayDate) ? 'Aired' : 'Airs'} {formatDate(displayDate)}
+            {isDateInPast(displayDate) ? t('reminder.aired') : t('reminder.airs')}{' '}
+            {formatDate(displayDate)}
           </Text>
         </View>
       )}
@@ -302,7 +311,12 @@ export default function TVReminderModal({
         nextEpisode &&
         selectedFrequency === 'every_episode' && (
           <ReminderInfoBanner
-            message={`📺 S${originalNextEpisode.seasonNumber}E${originalNextEpisode.episodeNumber} airs today! Setting reminder for S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber} instead.`}
+            message={t('reminder.subsequentEpisodeInfo', {
+              originalSeason: originalNextEpisode.seasonNumber,
+              originalEpisode: originalNextEpisode.episodeNumber,
+              season: nextEpisode.seasonNumber,
+              episode: nextEpisode.episodeNumber,
+            })}
           />
         )}
 
@@ -319,8 +333,12 @@ export default function TVReminderModal({
         <ReminderErrorBanner
           message={
             isReleasingToday
-              ? `This ${selectedFrequency === 'every_episode' ? 'episode airs' : 'season premieres'} today! Reminders will begin with the next ${selectedFrequency === 'every_episode' ? 'episode' : 'season'} once available.`
-              : `All notification times for this ${selectedFrequency === 'every_episode' ? 'episode' : 'premiere'} have passed.`
+              ? selectedFrequency === 'every_episode'
+                ? t('reminder.todayEpisodePastTimes')
+                : t('reminder.todaySeasonPremierePastTimes')
+              : selectedFrequency === 'every_episode'
+                ? t('reminder.allTimesPassedEpisode')
+                : t('reminder.allTimesPassedPremiere')
           }
         />
       )}
@@ -328,7 +346,7 @@ export default function TVReminderModal({
       {/* Timing Options */}
       {hasFrequencyDate && (
         <View style={sharedStyles.section}>
-          <Text style={sharedStyles.sectionTitle}>Notify me:</Text>
+          <Text style={sharedStyles.sectionTitle}>{t('reminder.notifyMe')}</Text>
           <ReminderTimingOptions
             options={timingOptions}
             selectedValue={selectedTiming}
@@ -343,7 +361,7 @@ export default function TVReminderModal({
       {!canSetEpisodeReminder && !canSetSeasonReminder && (
         <View style={styles.noOptionsContainer}>
           <Text style={styles.noOptionsText}>
-            No upcoming episodes or season premieres with announced dates. Check back later!
+            {t('reminder.noUpcomingEpisodesOrSeasons')}
           </Text>
         </View>
       )}

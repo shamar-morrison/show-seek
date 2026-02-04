@@ -3,12 +3,15 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { detailStyles } from './detailStyles';
 import type { VideosSectionProps } from './types';
 
 export const VideosSection = memo<VideosSectionProps>(
   ({ videos, onVideoPress, style }) => {
+    const { t } = useTranslation();
+
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: Video }) => (
@@ -42,7 +45,9 @@ export const VideosSection = memo<VideosSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>Videos</Text>
+        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          {t('media.videos')}
+        </Text>
         <FlashList
           horizontal
           data={videos}

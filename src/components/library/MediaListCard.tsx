@@ -5,6 +5,7 @@ import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
@@ -20,6 +21,7 @@ interface MediaListCardProps {
 
 export const MediaListCard = memo<MediaListCardProps>(
   ({ item, onPress, onLongPress, subtitle, hideMediaType }) => {
+    const { t } = useTranslation();
     const handlePress = useCallback(() => {
       onPress(item);
     }, [onPress, item]);
@@ -70,7 +72,7 @@ export const MediaListCard = memo<MediaListCardProps>(
           </View>
           {item.media_type && !hideMediaType && (
             <Text style={styles.mediaType}>
-              {item.media_type === 'movie' ? 'Movie' : 'TV Show'}
+              {item.media_type === 'movie' ? t('media.movie') : t('media.tvShow')}
             </Text>
           )}
         </View>

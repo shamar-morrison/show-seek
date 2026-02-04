@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { detailStyles } from './detailStyles';
 
@@ -9,6 +10,8 @@ const DirectorCard = memo<{
   director: CrewMember;
   onPress: (id: number) => void;
 }>(({ director, onPress }) => {
+  const { t } = useTranslation();
+
   const handlePress = useCallback(() => {
     onPress(director.id);
   }, [director.id, onPress]);
@@ -31,7 +34,7 @@ const DirectorCard = memo<{
         {director.name}
       </Text>
       <Text style={detailStyles.characterName} numberOfLines={1}>
-        Director
+        {t('media.director')}
       </Text>
     </TouchableOpacity>
   );
@@ -47,11 +50,13 @@ interface DirectorsSectionProps {
 
 export const DirectorsSection = memo<DirectorsSectionProps>(
   ({ directors, onDirectorPress, style }) => {
+    const { t } = useTranslation();
+
     if (directors.length === 0) {
       return null;
     }
 
-    const title = directors.length > 1 ? 'Directors' : 'Director';
+    const title = directors.length > 1 ? t('media.directors') : t('media.director');
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>

@@ -27,6 +27,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -62,6 +63,7 @@ const ListItemRow = memo<{
   onDelete: (listId: string, listName: string) => void;
 }>(
   ({ list, isSelected, isSaving, onToggle, onDelete }) => {
+    const { t } = useTranslation();
     const handlePress = useCallback(() => onToggle(list.id), [list.id, onToggle]);
     const handleLongPress = useCallback(
       () => onDelete(list.id, list.name),
@@ -85,7 +87,7 @@ const ListItemRow = memo<{
         </View>
         <Text style={styles.listName}>{list.name}</Text>
         <Text style={styles.itemCount}>
-          {list.itemCount} {list.itemCount === 1 ? 'item' : 'items'}
+          {list.itemCount} {t('common.item', { count: list.itemCount })}
         </Text>
       </Pressable>
     );
@@ -102,6 +104,7 @@ ListItemRow.displayName = 'ListItemRow';
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
     const router = useRouter();
+    const { t } = useTranslation();
     const sheetRef = useRef<TrueSheet>(null);
     const listRef = useRef<FlatList<ListWithCount>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
@@ -193,12 +196,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         if (error.message.includes('LimitReached')) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           Alert.alert(
-            'Limit Reached',
-            error.message + '\n\nUpgrade to Premium for unlimited lists and items.',
+            t('library.limitReachedTitle'),
+            `${error.message}\n\n${t('library.limitReachedUpgradeMessage')}`,
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('common.cancel'), style: 'cancel' },
               {
-                text: 'Upgrade',
+                text: t('profile.upgradeToPremium'),
                 style: 'default',
                 onPress: () => {
                   sheetRef.current?.dismiss();
@@ -211,10 +214,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           return;
         }
 
-        setOperationError(error.message || 'Failed to update list');
+        setOperationError(error.message || t('errors.saveFailed'));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       },
-      [router]
+      [router, t]
     );
 
     // Toggle local state only (no Firebase operations)
@@ -272,17 +275,19 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       if (failures.length === 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (onShowToast) {
-          onShowToast('Lists updated');
+          onShowToast(t('library.listsUpdated'));
         }
         await sheetRef.current?.dismiss();
       } else if (failures.length < operations.length) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-        setOperationError(`${failures.length} of ${operations.length} changes failed to save`);
+        setOperationError(
+          t('library.changesFailedToSave', { failed: failures.length, total: operations.length })
+        );
         setIsSaving(false);
       } else {
         const firstError = failures[0].reason;
         handleMutationError(
-          firstError instanceof Error ? firstError : new Error('Failed to update lists')
+          firstError instanceof Error ? firstError : new Error(t('errors.saveFailed'))
         );
         setIsSaving(false);
       }
@@ -291,21 +296,23 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const handleDeleteList = (listId: string, listName: string) => {
       if (isDefaultList(listId)) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        Alert.alert('Cannot Delete', 'Cannot delete default lists', [{ text: 'OK' }]);
+        Alert.alert(t('library.cannotDeleteTitle'), t('library.cannotDeleteDefaultLists'), [
+          { text: t('common.ok') },
+        ]);
         return;
       }
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       Alert.alert(
-        'Delete List',
-        `This will remove "${listName}" and all its items. This cannot be undone.`,
+        t('library.deleteList'),
+        t('library.deleteListConfirmMessage', { listName }),
         [
           {
-            text: 'Cancel',
+            text: t('common.cancel'),
             style: 'cancel',
           },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               try {
@@ -318,14 +325,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 });
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 if (onShowToast) {
-                  onShowToast('List deleted');
+                  onShowToast(t('library.listDeleted'));
                 }
               } catch (error) {
                 console.error('Failed to delete list:', error);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert(
-                  'Delete Failed',
-                  error instanceof Error ? error.message : 'Failed to delete list'
+                  t('common.error'),
+                  error instanceof Error ? error.message : t('errors.deleteFailed')
                 );
               }
             },
@@ -355,7 +362,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               ...prev,
               [listId]: true,
             }));
-            setSuccessMessage(`Added to '${listName}'`);
+            setSuccessMessage(t('library.addedToList', { listName }));
           },
           onError: handleMutationError,
         }
@@ -381,7 +388,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         >
           <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
             <View style={modalHeaderStyles.header}>
-              <Text style={modalHeaderStyles.title}>Add to List</Text>
+              <Text style={modalHeaderStyles.title}>{t('media.addToList')}</Text>
             </View>
 
             {successMessage && (
@@ -394,7 +401,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               <View style={styles.errorBanner}>
                 <Text style={styles.errorBannerText}>
                   {operationError ||
-                    (listsError instanceof Error ? listsError.message : 'Failed to load lists')}
+                    (listsError instanceof Error ? listsError.message : t('errors.loadingFailed'))}
                 </Text>
               </View>
             )}
@@ -434,7 +441,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                   <Text
                     style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
                   >
-                    Save Changes
+                    {t('common.saveChanges')}
                   </Text>
                 </>
               )}
@@ -446,7 +453,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               disabled={isSaving}
             >
               <Plus size={20} color={COLORS.white} />
-              <Text style={styles.createListText}>Create Custom List</Text>
+              <Text style={styles.createListText}>{t('library.createCustomList')}</Text>
             </Pressable>
 
             <Pressable
@@ -458,7 +465,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               disabled={isSaving}
             >
               <Settings2 size={20} color={COLORS.textSecondary} />
-              <Text style={styles.manageListsText}>Manage Lists</Text>
+              <Text style={styles.manageListsText}>{t('library.manageLists')}</Text>
             </Pressable>
           </GestureHandlerRootView>
         </TrueSheet>

@@ -7,6 +7,7 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   StyleProp,
   StyleSheet,
@@ -40,6 +41,7 @@ export const BlurredText: React.FC<BlurredTextProps> = ({
   containerStyle,
   isBlurred,
 }) => {
+  const { t } = useTranslation();
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [shouldTruncate, setShouldTruncate] = useState(false);
@@ -97,7 +99,7 @@ export const BlurredText: React.FC<BlurredTextProps> = ({
           {shouldBlur && (
             <View style={styles.blurOverlay}>
               <View style={styles.hintContainer}>
-                <Text style={styles.hintText}>Tap to reveal plot</Text>
+                <Text style={styles.hintText}>{t('media.tapToRevealPlot')}</Text>
               </View>
             </View>
           )}
@@ -113,7 +115,7 @@ export const BlurredText: React.FC<BlurredTextProps> = ({
           hitSlop={HIT_SLOP.m}
         >
           <Text style={[styles.readMore, readMoreStyle]}>
-            {expanded ? 'Read less' : 'Read more'}
+            {expanded ? t('common.readLess') : t('common.readMore')}
           </Text>
         </TouchableOpacity>
       )}

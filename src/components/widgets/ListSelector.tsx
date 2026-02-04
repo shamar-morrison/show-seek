@@ -3,6 +3,7 @@ import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { Check } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface ListSelectorProps {
@@ -11,6 +12,7 @@ interface ListSelectorProps {
 }
 
 export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
+  const { t } = useTranslation();
   const { data: lists, isLoading } = useLists();
 
   if (isLoading || !lists) {
@@ -23,7 +25,7 @@ export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Select Watchlist</Text>
+      <Text style={styles.label}>{t('widgets.selectWatchlist')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

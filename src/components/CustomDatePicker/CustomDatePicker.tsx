@@ -7,6 +7,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   StyleProp,
@@ -55,6 +56,8 @@ export function CustomDatePicker({
   maxDate,
   onCancel,
 }: DatePickerProps) {
+  const { t } = useTranslation();
+
   // Stable min/max date references to prevent unnecessary effect runs
   // Use timestamp comparison for stable memoization
   const effectiveMinDate = useMemo(() => {
@@ -233,7 +236,7 @@ export function CustomDatePicker({
           onPress={handleCancel}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -246,7 +249,7 @@ export function CustomDatePicker({
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={[styles.confirmButtonText, !tempSelectedDate && styles.buttonTextDisabled]}>
-            Confirm
+            {t('common.confirm')}
           </Text>
         </TouchableOpacity>
       </View>

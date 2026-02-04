@@ -7,6 +7,7 @@ import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -146,6 +147,7 @@ export default function RatingModal({
   onShowToast,
   autoAddOptions,
 }: RatingModalProps) {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -231,7 +233,7 @@ export default function RatingModal({
                 release_date: metadata.release_date,
                 genre_ids: metadata.genre_ids,
               },
-              'Already Watched'
+              t('lists.alreadyWatched')
             );
 
             console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
@@ -246,7 +248,7 @@ export default function RatingModal({
       onRatingSuccess(rating);
     } catch (err) {
       console.error('Failed to save rating:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save rating';
+      const errorMessage = err instanceof Error ? err.message : t('rating.failedToSave');
       onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -275,7 +277,7 @@ export default function RatingModal({
       onRatingSuccess(0);
     } catch (err) {
       console.error('Failed to delete rating:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete rating';
+      const errorMessage = err instanceof Error ? err.message : t('rating.failedToDelete');
       onShowToast?.(errorMessage);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -289,9 +291,15 @@ export default function RatingModal({
 
   // Format rating display - show decimal if half-star
   const formatRating = (r: number) => {
-    if (r === 0) return 'Tap to rate';
+    if (r === 0) return t('rating.tapToRate');
     return Number.isInteger(r) ? `${r}/10` : `${r.toFixed(1)}/10`;
   };
+
+  const rateTypeLabel = episodeData
+    ? t('media.episode')
+    : mediaType === 'tv'
+      ? t('media.tvShow')
+      : t('media.movie');
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
@@ -304,7 +312,7 @@ export default function RatingModal({
 
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
-            <Text style={modalHeaderStyles.title}>Rate this Title</Text>
+            <Text style={modalHeaderStyles.title}>{t('rating.rateThis', { type: rateTypeLabel })}</Text>
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -358,7 +366,7 @@ export default function RatingModal({
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.submitButtonText}>Confirm Rating</Text>
+                <Text style={styles.submitButtonText}>{t('rating.confirmRating')}</Text>
               )}
             </Pressable>
             {initialRating > 0 && (
@@ -374,7 +382,7 @@ export default function RatingModal({
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color={COLORS.error} />
                 ) : (
-                  <Text style={styles.deleteButtonText}>Clear Rating</Text>
+                  <Text style={styles.deleteButtonText}>{t('rating.removeRating')}</Text>
                 )}
               </Pressable>
             )}
@@ -384,7 +392,7 @@ export default function RatingModal({
               disabled={isSubmitting}
             >
               <Text style={[styles.cancelButtonText, isSubmitting && styles.disabledText]}>
-                Cancel
+                {t('common.cancel')}
               </Text>
             </Pressable>
           </View>

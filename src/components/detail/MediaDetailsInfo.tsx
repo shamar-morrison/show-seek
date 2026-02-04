@@ -1,10 +1,12 @@
 import { MovieDetails, TVShowDetails } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useRegion } from '@/src/context/RegionProvider';
+import i18n from '@/src/i18n';
 import { getCountryFlag } from '@/src/utils/countries';
 import { getLanguageName } from '@/src/utils/languages';
 import { getRegionalCertification } from '@/src/utils/mediaUtils';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 interface MediaDetailsInfoProps {
@@ -13,6 +15,7 @@ interface MediaDetailsInfoProps {
 }
 
 export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
+  const { t } = useTranslation();
   const { region } = useRegion();
   const isMovie = type === 'movie';
   const movie = isMovie ? (media as MovieDetails) : null;
@@ -46,15 +49,18 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
   const { cert, flag } = getCertificationDisplay();
 
   const formatRuntime = (minutes: number | null) => {
-    if (!minutes) return 'N/A';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${h} hrs ${m} mins`;
+    if (!minutes) return t('common.notAvailable');
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+
+    if (hours === 0) return t('mediaDetails.runtimeMinutes', { count: mins });
+    if (mins === 0) return t('mediaDetails.runtimeHours', { count: hours });
+    return t('mediaDetails.runtimeHoursMinutes', { hours, minutes: mins });
   };
 
   const formatMoney = (amount: number) => {
-    if (!amount) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
+    if (!amount) return t('common.notAvailable');
+    return new Intl.NumberFormat(i18n.language, {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0,
@@ -64,26 +70,30 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
   const renderRow = (label: string, value: string | React.ReactNode) => (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      {typeof value === 'string' ? (
+        <Text style={styles.value}>{value}</Text>
+      ) : (
+        <View style={styles.valueContainer}>{value}</View>
+      )}
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Details</Text>
-      {renderRow('Original Title', isMovie ? movie!.original_title : show!.original_name)}
-      {renderRow('Status', media.status)}
+      <Text style={styles.sectionTitle}>{t('media.details')}</Text>
+      {renderRow(t('mediaDetails.originalTitle'), isMovie ? movie!.original_title : show!.original_name)}
+      {renderRow(t('media.status'), media.status)}
       {renderRow(
-        'Runtime',
+        t('media.runtime'),
         isMovie
           ? formatRuntime(movie!.runtime)
           : show!.episode_run_time?.length > 0
             ? formatRuntime(show!.episode_run_time[0])
-            : 'N/A'
+            : t('common.notAvailable')
       )}
-      {renderRow('Original Language', getLanguageName(media.original_language))}
+      {renderRow(t('mediaDetails.originalLanguage'), getLanguageName(media.original_language))}
       {renderRow(
-        'Production Countries',
+        t('mediaDetails.productionCountries'),
         media.production_countries.length > 0 ? (
           <View>
             {media.production_countries.map((c) => (
@@ -93,17 +103,17 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
             ))}
           </View>
         ) : (
-          'N/A'
+          t('common.notAvailable')
         )
       )}
       {renderRow(
-        'Certification',
+        t('mediaDetails.certification'),
         <Text>
-          {cert} {flag ? getCountryFlag(flag) : ''}
+          {cert === 'N/A' ? t('common.notAvailable') : cert} {flag ? getCountryFlag(flag) : ''}
         </Text>
       )}
       {renderRow(
-        'Companies',
+        t('mediaDetails.companies'),
         media.production_companies.length > 0 ? (
           <View>
             {media.production_companies.map((c) => (
@@ -113,11 +123,11 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
             ))}
           </View>
         ) : (
-          'N/A'
+          t('common.notAvailable')
         )
       )}
-      {isMovie && renderRow('Budget', formatMoney(movie!.budget))}
-      {isMovie && renderRow('Revenue', formatMoney(movie!.revenue))}
+      {isMovie && renderRow(t('mediaDetails.budget'), formatMoney(movie!.budget))}
+      {isMovie && renderRow(t('mediaDetails.revenue'), formatMoney(movie!.revenue))}
     </View>
   );
 };
@@ -147,6 +157,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     flex: 1,
     textAlign: 'left',
+  },
+  valueContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   listItemValue: {
     color: COLORS.textSecondary,

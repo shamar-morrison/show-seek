@@ -1,6 +1,7 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Platform } from 'react-native';
 
 /**
@@ -20,6 +21,7 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 5000): Pr
 };
 
 export const useNotificationPermissions = () => {
+  const { t } = useTranslation();
   const [permissionStatus, setPermissionStatus] = useState<
     'granted' | 'denied' | 'undetermined' | 'checking'
   >('checking');
@@ -39,9 +41,9 @@ export const useNotificationPermissions = () => {
       setPermissionStatus('undetermined');
 
       Alert.alert(
-        'Permission Check Unavailable',
-        'Unable to check notification permissions at this time. You can still try to enable notifications when setting a reminder.',
-        [{ text: 'OK' }]
+        t('notifications.permissionCheckUnavailableTitle'),
+        t('notifications.permissionCheckUnavailableMessage'),
+        [{ text: t('common.ok') }]
       );
     }
   };
@@ -50,8 +52,8 @@ export const useNotificationPermissions = () => {
     // Physical device check
     if (!Device.isDevice) {
       Alert.alert(
-        'Notifications Not Available',
-        'Push notifications only work on physical devices, not simulators.'
+        t('notifications.notAvailableTitle'),
+        t('notifications.notAvailableMessage')
       );
       return false;
     }
@@ -70,12 +72,12 @@ export const useNotificationPermissions = () => {
       if (existingStatus === 'denied') {
         // Permission previously denied, need to open settings
         Alert.alert(
-          'Notification Permission Required',
-          'Reminders require notification permission. Please enable notifications in your device settings.',
+          t('notifications.permissionRequiredTitle'),
+          t('notifications.permissionRequiredMessage'),
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Open Settings',
+              text: t('notifications.openSettings'),
               onPress: () => {
                 if (Platform.OS === 'ios') {
                   Linking.openURL('app-settings:');
@@ -96,8 +98,8 @@ export const useNotificationPermissions = () => {
 
         if (status !== 'granted') {
           Alert.alert(
-            'Permission Denied',
-            'You need to enable notifications to set reminders for movie releases.'
+            t('notifications.permissionDeniedTitle'),
+            t('notifications.permissionDeniedMessage')
           );
           return false;
         }
@@ -107,12 +109,12 @@ export const useNotificationPermissions = () => {
         console.error('[useNotificationPermissions] Failed to request permission:', requestError);
 
         Alert.alert(
-          'Permission Request Failed',
-          'Unable to request notification permissions at this time. Please try again later or enable notifications manually in your device settings.',
+          t('notifications.permissionRequestFailedTitle'),
+          t('notifications.permissionRequestFailedMessage'),
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: 'Open Settings',
+              text: t('notifications.openSettings'),
               onPress: () => {
                 if (Platform.OS === 'ios') {
                   Linking.openURL('app-settings:');
@@ -129,9 +131,9 @@ export const useNotificationPermissions = () => {
       console.error('[useNotificationPermissions] Failed to check existing permission:', error);
 
       Alert.alert(
-        'Permission Check Failed',
-        'Unable to verify notification permissions at this time. Please try again later.',
-        [{ text: 'OK' }]
+        t('notifications.permissionCheckFailedTitle'),
+        t('notifications.permissionCheckFailedMessage'),
+        [{ text: t('common.ok') }]
       );
       return false;
     }

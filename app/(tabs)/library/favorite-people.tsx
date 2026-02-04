@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { Grid3X3, List, Search, User } from 'lucide-react-native';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   SectionList,
@@ -38,6 +39,7 @@ const STORAGE_KEY = 'favoritePeopleViewMode';
 export default function FavoritePeopleScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { data: favoritePersons, isLoading } = useFavoritePersons();
   const { height: windowHeight } = useWindowDimensions();
@@ -98,7 +100,7 @@ export default function FavoritePeopleScreen() {
           searchQuery,
           onSearchChange: setSearchQuery,
           onClose: deactivateSearch,
-          placeholder: 'Search people...',
+          placeholder: t('library.searchPeoplePlaceholder'),
         })
       );
     } else {
@@ -130,6 +132,7 @@ export default function FavoritePeopleScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
+    t,
   ]);
 
   const groupedPersons = useMemo(() => {
@@ -139,7 +142,7 @@ export default function FavoritePeopleScreen() {
     const groupedMap = new Map<string, FavoritePerson[]>();
 
     displayItems.forEach((person) => {
-      const department = person.known_for_department || 'Other';
+      const department = person.known_for_department || t('common.other');
 
       if (!groupedMap.has(department)) {
         groupedMap.set(department, []);
@@ -156,7 +159,7 @@ export default function FavoritePeopleScreen() {
       .sort((a, b) => a.title.localeCompare(b.title));
 
     return sections;
-  }, [displayItems, viewMode]);
+  }, [displayItems, viewMode, t]);
 
   const handlePersonPress = useCallback(
     (personId: number) => {
@@ -207,8 +210,8 @@ export default function FavoritePeopleScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={User}
-          title="No Favorite People"
-          description="Favorite actors and directors to see them here."
+          title={t('library.emptyFavoritePeople')}
+          description={t('library.emptyFavoritePeopleHint')}
         />
       </SafeAreaView>
     );

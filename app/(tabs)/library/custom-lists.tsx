@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +27,7 @@ export default function CustomListsScreen() {
   const navigation = useNavigation();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading } = useLists();
+  const { t } = useTranslation();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -72,12 +74,12 @@ export default function CustomListsScreen() {
     if (isLimitReached) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
-        'Limit Reached',
-        'Free users can only create 5 custom lists. Upgrade to Premium for unlimited lists!',
+        t('library.limitReachedTitle'),
+        t('library.customListLimitReached', { count: MAX_FREE_LISTS }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Upgrade',
+            text: t('profile.upgradeToPremium'),
             style: 'default',
             onPress: () => router.push('/premium'),
           },
@@ -160,9 +162,9 @@ export default function CustomListsScreen() {
         {customLists.length === 0 ? (
           <EmptyState
             icon={FolderPlus}
-            title="No Custom Lists"
-            description="Create custom lists to organize your favorite content"
-            actionLabel="Create List"
+            title={t('library.emptyLists')}
+            description={t('library.emptyListsHint')}
+            actionLabel={t('library.createList')}
             onAction={handleCreateList}
           />
         ) : (

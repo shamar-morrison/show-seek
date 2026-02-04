@@ -11,6 +11,7 @@ import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { Check, ChevronDown, X } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -33,21 +34,6 @@ interface WatchStatusFiltersModalProps {
   showMediaTypeFilter?: boolean;
 }
 
-const RATING_OPTIONS = [
-  { label: 'Any Rating', value: 0 },
-  { label: '5+ Stars', value: 5 },
-  { label: '6+ Stars', value: 6 },
-  { label: '7+ Stars', value: 7 },
-  { label: '8+ Stars', value: 8 },
-  { label: '9+ Stars', value: 9 },
-];
-
-const MEDIA_TYPE_OPTIONS = [
-  { label: 'All', value: 'all' },
-  { label: 'Movies', value: 'movie' },
-  { label: 'TV Shows', value: 'tv' },
-];
-
 const ITEM_HEIGHT = 56;
 
 interface SelectOption {
@@ -60,7 +46,7 @@ const FilterSelect = ({
   value,
   options,
   onSelect,
-  placeholder = 'Select...',
+  placeholder,
 }: {
   label: string;
   value: any;
@@ -68,6 +54,7 @@ const FilterSelect = ({
   onSelect: (val: any) => void;
   placeholder?: string;
 }) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -80,7 +67,7 @@ const FilterSelect = ({
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, !selectedOption && { color: COLORS.textSecondary }]}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? selectedOption.label : placeholder ?? t('filters.selectPlaceholder')}
         </Text>
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
@@ -98,7 +85,7 @@ const FilterSelect = ({
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select {label}</Text>
+              <Text style={styles.modalTitle}>{t('filters.selectLabel', { label })}</Text>
               <Pressable onPress={() => setVisible(false)} hitSlop={HIT_SLOP.m}>
                 <X size={24} color={COLORS.text} />
               </Pressable>
@@ -148,6 +135,7 @@ export default function WatchStatusFiltersModal({
   genreMap,
   showMediaTypeFilter = true,
 }: WatchStatusFiltersModalProps) {
+  const { t } = useTranslation();
   const [localFilters, setLocalFilters] = useState<WatchStatusFilterState>(filters);
 
   // Update local filters when modal opens
@@ -177,7 +165,7 @@ export default function WatchStatusFiltersModal({
 
   // Genre options
   const genreOptions = [
-    { label: 'All Genres', value: null },
+    { label: t('discover.anyGenre'), value: null },
     ...Object.entries(genreMap)
       .map(([id, name]) => ({ label: name, value: Number(id) }))
       .sort((a, b) => a.label.localeCompare(b.label)),
@@ -186,11 +174,25 @@ export default function WatchStatusFiltersModal({
   // Year options
   const currentYear = new Date().getFullYear();
   const yearOptions = [
-    { label: 'All Years', value: null },
+    { label: t('discover.anyYear'), value: null },
     ...Array.from({ length: currentYear - 1949 }, (_, i) => {
       const year = currentYear - i;
       return { label: String(year), value: year };
     }),
+  ];
+
+  const ratingOptions: SelectOption[] = [
+    { label: t('filters.anyRating'), value: 0 },
+    ...[5, 6, 7, 8, 9].map((value) => ({
+      label: t('filters.starsPlus', { count: value }),
+      value,
+    })),
+  ];
+
+  const mediaTypeOptions: SelectOption[] = [
+    { label: t('library.allMedia'), value: 'all' },
+    { label: t('media.movies'), value: 'movie' },
+    { label: t('media.tvShows'), value: 'tv' },
   ];
 
   return (
@@ -208,7 +210,7 @@ export default function WatchStatusFiltersModal({
 
         <View style={modalLayoutStyles.card}>
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>Filter Lists</Text>
+            <Text style={modalHeaderStyles.title}>{t('library.filterLists')}</Text>
             <Pressable onPress={onClose} hitSlop={HIT_SLOP.m}>
               <X size={24} color={COLORS.text} />
             </Pressable>
@@ -217,34 +219,34 @@ export default function WatchStatusFiltersModal({
           <View style={styles.filtersContainer}>
             {showMediaTypeFilter && (
               <FilterSelect
-                label="Media Type"
+                label={t('filters.mediaType')}
                 value={localFilters.mediaType}
-                options={MEDIA_TYPE_OPTIONS}
+                options={mediaTypeOptions}
                 onSelect={(val) => updateFilter('mediaType', val)}
               />
             )}
 
             <FilterSelect
-              label="Genre"
+              label={t('discover.genres')}
               value={localFilters.genre}
               options={genreOptions}
               onSelect={(val) => updateFilter('genre', val)}
-              placeholder="All Genres"
+              placeholder={t('discover.anyGenre')}
             />
 
             <FilterSelect
-              label="Rating"
+              label={t('discover.rating')}
               value={localFilters.rating}
-              options={RATING_OPTIONS}
+              options={ratingOptions}
               onSelect={(val) => updateFilter('rating', val)}
             />
 
             <FilterSelect
-              label="Release Year"
+              label={t('discover.releaseYear')}
               value={localFilters.year}
               options={yearOptions}
               onSelect={(val) => updateFilter('year', val)}
-              placeholder="All Years"
+              placeholder={t('discover.anyYear')}
             />
           </View>
 
@@ -254,14 +256,14 @@ export default function WatchStatusFiltersModal({
               onPress={handleClear}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.clearButtonText}>Clear All</Text>
+              <Text style={styles.clearButtonText}>{t('common.clearAll')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.applyButton}
               onPress={handleApply}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <Text style={styles.applyButtonText}>Apply</Text>
+              <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
             </TouchableOpacity>
           </View>
         </View>

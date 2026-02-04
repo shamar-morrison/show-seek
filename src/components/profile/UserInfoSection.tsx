@@ -28,8 +28,8 @@ export function UserInfoSection({
   onUpgradePress,
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
-  const displayName = user?.displayName || (isGuest ? 'Guest' : 'User');
-  const email = user?.email || (isGuest ? 'Not signed in' : 'No email');
+  const displayName = user?.displayName || (isGuest ? t('profile.guest') : t('profile.user'));
+  const email = user?.email || (isGuest ? t('auth.notSignedIn') : t('profile.noEmail'));
 
   return (
     <View style={styles.userSection}>

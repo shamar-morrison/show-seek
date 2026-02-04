@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
+import i18n from '@/src/i18n';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
@@ -8,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
@@ -18,14 +20,42 @@ interface ReminderCardProps {
   isLoading?: boolean;
 }
 
-const getTimingLabel = (timing: ReminderTiming): string => {
+const getTimingLabelKey = (reminder: Reminder): string => {
+  const timing = reminder.reminderTiming;
+
+  if (reminder.mediaType === 'movie') {
+    switch (timing) {
+      case 'on_release_day':
+        return 'reminder.timingOptions.movie.onReleaseDay.label';
+      case '1_day_before':
+        return 'reminder.timingOptions.movie.oneDayBefore.label';
+      case '1_week_before':
+        return 'reminder.timingOptions.movie.oneWeekBefore.label';
+    }
+  }
+
+  const frequency = reminder.tvFrequency ?? 'season_premiere';
+
+  if (frequency === 'every_episode') {
+    switch (timing) {
+      case 'on_release_day':
+        return 'reminder.timingOptions.episode.onAirDay.label';
+      case '1_day_before':
+        return 'reminder.timingOptions.episode.oneDayBefore.label';
+      case '1_week_before':
+        // Shouldn't happen for episode-level reminders, but handle gracefully.
+        return 'reminder.timingOptions.movie.oneWeekBefore.label';
+    }
+  }
+
+  // season_premiere
   switch (timing) {
     case 'on_release_day':
-      return 'On Release Day';
+      return 'reminder.timingOptions.season.onPremiereDay.label';
     case '1_day_before':
-      return '1 Day Before';
+      return 'reminder.timingOptions.season.oneDayBefore.label';
     case '1_week_before':
-      return '1 Week Before';
+      return 'reminder.timingOptions.season.oneWeekBefore.label';
   }
 };
 
@@ -46,7 +76,7 @@ const formatReleaseDate = (date: string): string => {
 
 const formatNotificationTime = (timestamp: number): string => {
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(i18n.language, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -56,6 +86,7 @@ const formatNotificationTime = (timestamp: number): string => {
 
 export const ReminderCard = memo<ReminderCardProps>(
   ({ reminder, onEditTiming, onCancel, isLoading = false }) => {
+    const { t } = useTranslation();
     const router = useRouter();
     const currentTab = useCurrentTab();
 
@@ -103,7 +134,7 @@ export const ReminderCard = memo<ReminderCardProps>(
           <View style={styles.row}>
             <Calendar size={14} color={COLORS.textSecondary} />
             <Text style={styles.releaseDate}>
-              Releases {formatReleaseDate(reminder.releaseDate)}
+              {t('media.releasesOn', { date: formatReleaseDate(reminder.releaseDate) })}
             </Text>
           </View>
           <View style={styles.timingRow}>
@@ -114,7 +145,7 @@ export const ReminderCard = memo<ReminderCardProps>(
               ]}
             >
               <Text style={[styles.timingText, { color: getTimingColor(reminder.reminderTiming) }]}>
-                {getTimingLabel(reminder.reminderTiming)}
+                {t(getTimingLabelKey(reminder))}
               </Text>
             </View>
           </View>
@@ -122,16 +153,16 @@ export const ReminderCard = memo<ReminderCardProps>(
             // Show different status based on whether this is an every_episode reminder with no next episode
             reminder.noNextEpisodeFound && reminder.tvFrequency === 'every_episode' ? (
               <Text style={[styles.notificationTime, { color: COLORS.warning, fontWeight: '600' }]}>
-                No upcoming episodes
+                {t('reminder.noUpcomingEpisodes')}
               </Text>
             ) : (
               <Text style={[styles.notificationTime, { color: COLORS.success, fontWeight: '600' }]}>
-                Released
+                {t('reminder.released')}
               </Text>
             )
           ) : (
             <Text style={styles.notificationTime}>
-              Notify: {formatNotificationTime(reminder.notificationScheduledFor)}
+              {t('reminder.notify')} {formatNotificationTime(reminder.notificationScheduledFor)}
             </Text>
           )}
         </View>

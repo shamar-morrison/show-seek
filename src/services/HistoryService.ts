@@ -1,4 +1,5 @@
 import { auth } from '../firebase/config';
+import i18n from '../i18n';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
 import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
@@ -15,13 +16,11 @@ interface EnrichedWatchedEpisode extends WatchedEpisode {
  * Time periods for grouping
  */
 const TIME_OF_DAY = {
-  MORNING: { start: 5, end: 12, label: 'Morning' },
-  AFTERNOON: { start: 12, end: 17, label: 'Afternoon' },
-  EVENING: { start: 17, end: 21, label: 'Evening' },
-  NIGHT: { start: 21, end: 5, label: 'Night' },
+  MORNING: { start: 5, end: 12, labelKey: 'stats.timeOfDay.morning' },
+  AFTERNOON: { start: 12, end: 17, labelKey: 'stats.timeOfDay.afternoon' },
+  EVENING: { start: 17, end: 21, labelKey: 'stats.timeOfDay.evening' },
+  NIGHT: { start: 21, end: 5, labelKey: 'stats.timeOfDay.night' },
 } as const;
-
-const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 class HistoryService {
   /**
@@ -38,7 +37,7 @@ class HistoryService {
   private formatMonthName(monthKey: string): string {
     const [year, month] = monthKey.split('-').map(Number);
     const date = new Date(year, month - 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
   }
 
   /**
@@ -71,7 +70,7 @@ class HistoryService {
             }
 
             // Use safe defaults when metadata is missing
-            const tvShowName = data.metadata?.tvShowName ?? 'Unknown Show';
+            const tvShowName = data.metadata?.tvShowName ?? i18n.t('media.unknownShow');
             const posterPath = data.metadata?.posterPath ?? null;
 
             Object.values(data.episodes).forEach((episode) => {
@@ -252,26 +251,33 @@ class HistoryService {
       // Count time periods
       let period: string;
       if (hour >= TIME_OF_DAY.MORNING.start && hour < TIME_OF_DAY.MORNING.end) {
-        period = TIME_OF_DAY.MORNING.label;
+        period = i18n.t(TIME_OF_DAY.MORNING.labelKey);
       } else if (hour >= TIME_OF_DAY.AFTERNOON.start && hour < TIME_OF_DAY.AFTERNOON.end) {
-        period = TIME_OF_DAY.AFTERNOON.label;
+        period = i18n.t(TIME_OF_DAY.AFTERNOON.labelKey);
       } else if (hour >= TIME_OF_DAY.EVENING.start && hour < TIME_OF_DAY.EVENING.end) {
-        period = TIME_OF_DAY.EVENING.label;
+        period = i18n.t(TIME_OF_DAY.EVENING.labelKey);
       } else {
-        period = TIME_OF_DAY.NIGHT.label;
+        period = i18n.t(TIME_OF_DAY.NIGHT.labelKey);
       }
       timeCounts.set(period, (timeCounts.get(period) || 0) + 1);
     });
 
     // Find most active day
-    let mostActiveDay: string | null = null;
+    let mostActiveDayIndex: number | null = null;
     let maxDayCount = 0;
     dayCounts.forEach((count, day) => {
       if (count > maxDayCount) {
         maxDayCount = count;
-        mostActiveDay = DAYS_OF_WEEK[day];
+        mostActiveDayIndex = day;
       }
     });
+
+    const mostActiveDay =
+      mostActiveDayIndex === null
+        ? null
+        : new Date(2021, 0, 3 + mostActiveDayIndex).toLocaleDateString(i18n.language, {
+            weekday: 'long',
+          });
 
     // Find most active time
     let mostActiveTimeOfDay: string | null = null;

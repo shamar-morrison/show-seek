@@ -38,6 +38,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
   Pressable,
@@ -66,6 +67,7 @@ interface CreditItem extends ListMediaItem {
 export default function PersonCreditsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { t } = useTranslation();
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
     id: string;
     name: string;
@@ -292,13 +294,13 @@ export default function PersonCreditsScreen() {
   if (creditsQuery.isError) {
     return (
       <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>Failed to load credits</Text>
+        <Text style={errorStyles.text}>{t('credits.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButtonError}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -324,12 +326,14 @@ export default function PersonCreditsScreen() {
               <Film size={48} color={COLORS.textSecondary} />
             )}
             <Text style={styles.emptyTitle}>
-              {hasActiveFilterState ? 'No Items Match Filters' : 'No Credits Found'}
+              {hasActiveFilterState ? t('discover.noResultsWithFilters') : t('personCredits.noCreditsTitle')}
             </Text>
             <Text style={styles.emptyDescription}>
               {hasActiveFilterState
-                ? 'Try adjusting your filters to see more results.'
-                : `No ${isTVCredits ? 'TV show' : 'movie'} credits available for this person.`}
+                ? t('discover.adjustFilters')
+                : isTVCredits
+                  ? t('personCredits.noTVCreditsDescription')
+                  : t('personCredits.noMovieCreditsDescription')}
             </Text>
             {hasActiveFilterState && (
               <TouchableOpacity
@@ -337,7 +341,7 @@ export default function PersonCreditsScreen() {
                 onPress={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
                 activeOpacity={ACTIVE_OPACITY}
               >
-                <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                <Text style={styles.clearFiltersText}>{t('common.clearFilters')}</Text>
               </TouchableOpacity>
             )}
           </View>

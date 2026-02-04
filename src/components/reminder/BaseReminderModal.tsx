@@ -3,6 +3,7 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { X } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -33,9 +34,12 @@ interface BaseReminderModalProps {
 export function BaseReminderModal({
   visible,
   onClose,
-  title = 'Set Reminder',
+  title,
   children,
 }: BaseReminderModalProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('reminder.setReminder');
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -51,7 +55,7 @@ export function BaseReminderModal({
         <View style={styles.content}>
           {/* Header */}
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>{title}</Text>
+            <Text style={modalHeaderStyles.title}>{resolvedTitle}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>

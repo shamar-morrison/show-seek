@@ -63,11 +63,13 @@ import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TVDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
@@ -104,9 +106,9 @@ export default function TVDetailScreen() {
   // Wrap the long-press handler with auth guard
   const guardedHandleMediaLongPress = useCallback(
     (item: any) => {
-      requireAuth(() => handleMediaLongPress(item), 'Sign in to add items to your lists');
+      requireAuth(() => handleMediaLongPress(item), t('discover.signInToAdd'));
     },
-    [requireAuth, handleMediaLongPress]
+    [requireAuth, handleMediaLongPress, t]
   );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
@@ -242,13 +244,13 @@ export default function TVDetailScreen() {
   if (tvQuery.isError || !tvQuery.data) {
     return (
       <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>Failed to load TV show details</Text>
+        <Text style={errorStyles.text}>{t('tvDetail.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
           style={detailStyles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={detailStyles.backButtonText}>Go Back</Text>
+          <Text style={detailStyles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -356,11 +358,11 @@ export default function TVDetailScreen() {
             onAddToList={() =>
               requireAuth(
                 () => addToListModalRef.current?.present(),
-                'Sign in to add items to your lists'
+                t('discover.signInToAdd')
               )
             }
             onRate={() =>
-              requireAuth(() => setRatingModalVisible(true), 'Sign in to rate movies and shows')
+              requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
             }
             onReminder={
               show.status === 'Returning Series' ||
@@ -370,11 +372,11 @@ export default function TVDetailScreen() {
                 ? () =>
                     requireAuth(() => {
                       if (!isPremium) {
-                        showPremiumAlert('Reminders');
+                        showPremiumAlert('premiumFeature.features.reminders');
                         return;
                       }
                       setReminderModalVisible(true);
-                    }, 'Sign in to set release reminders')
+                    }, t('authGuards.setReleaseReminders'))
                 : undefined
             }
             onNote={() =>
@@ -387,7 +389,7 @@ export default function TVDetailScreen() {
                     mediaTitle: show.name,
                     initialNote: note?.content,
                   }),
-                'Sign in to add notes'
+                t('authGuards.addNotes')
               )
             }
             onTrailer={handleTrailerPress}
@@ -410,17 +412,17 @@ export default function TVDetailScreen() {
           {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
           <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
-          <Text style={detailStyles.sectionTitle}>Overview</Text>
+          <Text style={detailStyles.sectionTitle}>{t('media.overview')}</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
-              text={show.overview || 'No overview available'}
+              text={show.overview || t('media.noOverview')}
               style={detailStyles.overview}
               readMoreStyle={detailStyles.readMore}
               isBlurred={true}
             />
           ) : (
             <ExpandableText
-              text={show.overview || 'No overview available'}
+              text={show.overview || t('media.noOverview')}
               style={detailStyles.overview}
               readMoreStyle={detailStyles.readMore}
             />
@@ -464,7 +466,7 @@ export default function TVDetailScreen() {
             items={filteredSimilarShows}
             onMediaPress={handleShowPress}
             onMediaLongPress={guardedHandleMediaLongPress}
-            title="Similar Shows"
+            title={t('media.similarShows')}
           />
 
           {filteredSimilarShows.length > 0 && <SectionSeparator />}

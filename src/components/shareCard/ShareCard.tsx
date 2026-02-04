@@ -3,6 +3,7 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 // Share card dimensions for Instagram Stories (9:16 aspect ratio)
@@ -55,6 +56,8 @@ interface MediaShareCardProps {
 }
 
 const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => {
+  const { t } = useTranslation();
+
   // Use poster for background blur (not backdrop)
   const posterUrl = data.posterPath
     ? getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.original)
@@ -108,11 +111,11 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
         {/* Rating Section */}
         <View style={styles.ratingSection}>
           <View style={styles.ctaContainer}>
-            <Text style={styles.ctaText}>Check it out on ShowSeek!</Text>
+            <Text style={styles.ctaText}>{t('shareCard.rateIt')}</Text>
           </View>
           {hasRating && (
             <>
-              <Text style={styles.ratingLabel}>My Rating</Text>
+              <Text style={styles.ratingLabel}>{t('shareCard.myRating')}</Text>
               <Text style={styles.ratingValue}>{displayRating}/10</Text>
             </>
           )}

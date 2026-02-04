@@ -14,6 +14,7 @@ import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { isNotificationTimeInPast } from '@/src/utils/reminderHelpers';
 import { Calendar, X } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -39,6 +40,7 @@ export default function EditTimingModal({
   reminder,
   onUpdateTiming,
 }: EditTimingModalProps) {
+  const { t } = useTranslation();
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(reminder.reminderTiming);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -117,22 +119,22 @@ export default function EditTimingModal({
   const getReleaseLabel = () => {
     if (reminder.mediaType === 'tv') {
       if (reminder.tvFrequency === 'every_episode') {
-        return 'Next episode airs';
+        return t('reminder.releaseLabel.nextEpisodeAirs');
       }
-      return 'Season premieres';
+      return t('reminder.releaseLabel.seasonPremieres');
     }
-    return 'Releases';
+    return t('reminder.releaseLabel.releases');
   };
 
   // Get context-aware warning message
   const getSkipWarningMessage = () => {
     if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'every_episode') {
-      return 'This timing has already passed for the current episode. Your change will apply starting from the next episode.';
+      return t('reminder.skipWarning.episode');
     }
     if (reminder.mediaType === 'tv' && reminder.tvFrequency === 'season_premiere') {
-      return 'This timing has already passed for the current season premiere. Your change will apply to future seasons.';
+      return t('reminder.skipWarning.season');
     }
-    return 'This timing has already passed for the current release.';
+    return t('reminder.skipWarning.release');
   };
 
   return (
@@ -150,7 +152,7 @@ export default function EditTimingModal({
         <View style={styles.content}>
           {/* Header */}
           <View style={modalHeaderStyles.header}>
-            <Text style={modalHeaderStyles.title}>Edit Reminder Timing</Text>
+            <Text style={modalHeaderStyles.title}>{t('reminder.editTimingTitle')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -182,7 +184,7 @@ export default function EditTimingModal({
 
             {/* Timing Options */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Notify me:</Text>
+              <Text style={styles.sectionTitle}>{t('reminder.notifyMe')}</Text>
               <ReminderTimingOptions
                 options={timingOptions}
                 selectedValue={selectedTiming}
@@ -202,7 +204,7 @@ export default function EditTimingModal({
               {isLoading ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
-                <Text style={styles.buttonText}>Update Reminder</Text>
+                <Text style={styles.buttonText}>{t('reminder.updateReminder')}</Text>
               )}
             </TouchableOpacity>
           </ScrollView>

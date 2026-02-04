@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   SectionList,
   StyleSheet,
@@ -40,6 +41,7 @@ export default function EpisodeRatingsScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading } = useRatings();
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -99,7 +101,7 @@ export default function EpisodeRatingsScreen() {
           searchQuery,
           onSearchChange: setSearchQuery,
           onClose: deactivateSearch,
-          placeholder: 'Search episodes...',
+          placeholder: t('library.searchEpisodesPlaceholder'),
         })
       );
     } else {
@@ -130,6 +132,7 @@ export default function EpisodeRatingsScreen() {
     searchQuery,
     deactivateSearch,
     searchButton,
+    t,
   ]);
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
@@ -152,7 +155,7 @@ export default function EpisodeRatingsScreen() {
     // Convert to sections array
     const sections: EpisodeSection[] = Array.from(groupedMap.entries())
       .map(([tvShowId, episodes]) => ({
-        title: episodes[0].tvShowName || 'Unknown Show',
+        title: episodes[0].tvShowName || t('library.unknownShow'),
         tvShowId,
         data: episodes.sort((a, b) => b.ratedAt - a.ratedAt),
       }))
@@ -164,7 +167,7 @@ export default function EpisodeRatingsScreen() {
       });
 
     return sections;
-  }, [filteredItems, viewMode]);
+  }, [filteredItems, viewMode, t]);
 
   const handleItemPress = useCallback(
     (rating: RatingItem) => {
@@ -221,8 +224,8 @@ export default function EpisodeRatingsScreen() {
         <View style={libraryListStyles.divider} />
         <EmptyState
           icon={Star}
-          title="No Episode Ratings"
-          description="Rate episodes to see them here."
+          title={t('library.emptyRatings')}
+          description={t('library.emptyRatingsHint')}
         />
       </SafeAreaView>
     );

@@ -1,16 +1,19 @@
 import { COLORS } from '@/src/constants/theme';
 import { Tv } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 export const WatchingEmptyState = () => {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
         <Tv size={48} color={COLORS.secondary} />
       </View>
-      <Text style={styles.title}>No shows in progress</Text>
-      <Text style={styles.message}>Start watching a show to see your progress tracked here.</Text>
+      <Text style={styles.title}>{t('library.emptyWatchProgress')}</Text>
+      <Text style={styles.message}>{t('library.emptyWatchProgressHint')}</Text>
     </View>
   );
 };
