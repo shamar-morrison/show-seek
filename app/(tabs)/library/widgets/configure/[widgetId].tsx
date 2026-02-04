@@ -1,6 +1,7 @@
 import { ListSelector } from '@/src/components/widgets/ListSelector';
 import { WidgetTypeSelector } from '@/src/components/widgets/WidgetTypeSelector';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -28,6 +29,7 @@ export default function ConfigureWidgetScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   const [type, setType] = useState<WidgetConfig['type']>('upcoming-movies');
   const [size, setSize] = useState<WidgetConfig['size']>('medium');
@@ -101,10 +103,22 @@ export default function ConfigureWidgetScreen() {
           {SIZES.map((s) => (
             <Pressable
               key={s}
-              style={[styles.sizeButton, size === s && styles.selectedSizeButton]}
+              style={[
+                styles.sizeButton,
+                size === s && {
+                  borderColor: accentColor,
+                  backgroundColor: hexToRGBA(accentColor, 0.1),
+                },
+              ]}
               onPress={() => setSize(s)}
             >
-              <Text style={[styles.sizeText, size === s && styles.selectedSizeText]}>
+              <Text
+                style={[
+                  styles.sizeText,
+                  size === s && styles.selectedSizeText,
+                  size === s && { color: accentColor },
+                ]}
+              >
                 {t(`widgets.size.${s}`)}
               </Text>
             </Pressable>
@@ -121,7 +135,7 @@ export default function ConfigureWidgetScreen() {
 
       <View style={styles.footer}>
         <Pressable
-          style={[styles.saveButton, isSaving && styles.disabledButton]}
+          style={[styles.saveButton, { backgroundColor: accentColor }, isSaving && styles.disabledButton]}
           onPress={handleSave}
           disabled={isSaving}
         >
@@ -165,16 +179,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  selectedSizeButton: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
-  },
   sizeText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
   },
   selectedSizeText: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   previewContainer: {
@@ -195,7 +204,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     justifyContent: 'center',

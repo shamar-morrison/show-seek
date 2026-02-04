@@ -1,12 +1,13 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { StyleSheet } from 'react-native';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
-export const seasonScreenStyles = StyleSheet.create({
+export const useSeasonScreenStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   backButton: {
     padding: SPACING.m,
   },
   backButtonText: {
-    color: COLORS.primary,
+    color: accentColor,
   },
   header: {
     flexDirection: 'row',
@@ -80,7 +81,7 @@ export const seasonScreenStyles = StyleSheet.create({
     gap: SPACING.s,
   },
   markAllButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.s,
     borderRadius: BORDER_RADIUS.s,
@@ -122,7 +123,7 @@ export const seasonScreenStyles = StyleSheet.create({
   },
   episodeNumber: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.primary,
+    color: accentColor,
     fontWeight: '600',
   },
   ratingsContainer: {
@@ -182,7 +183,7 @@ export const seasonScreenStyles = StyleSheet.create({
     opacity: 0.5,
   },
   watchButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
     paddingVertical: SPACING.s,
     paddingHorizontal: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
@@ -203,4 +204,4 @@ export const seasonScreenStyles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },
-});
+  }));

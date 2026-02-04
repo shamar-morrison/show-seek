@@ -1,6 +1,7 @@
 import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -26,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Configure Google Auth on mount
   useEffect(() => {
@@ -94,18 +96,24 @@ export default function SignUp() {
                   <Text style={styles.footerText}>{t('auth.alreadyHaveAccount')} </Text>
                   <Link href="/(auth)/sign-in" asChild>
                     <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                      <Text style={styles.link}>{t('auth.signIn')}</Text>
+                      <Text style={[styles.link, { color: accentColor }]}>{t('auth.signIn')}</Text>
                     </TouchableOpacity>
                   </Link>
                 </View>
 
                 <Text style={styles.termsText}>
                   {t('auth.agreeToTerms')}{' '}
-                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                  <Text
+                    style={[styles.termsLink, { color: accentColor }]}
+                    onPress={() => Linking.openURL(legal.tos)}
+                  >
                     {t('settings.terms')}
                   </Text>{' '}
                   {t('common.and')}{' '}
-                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                  <Text
+                    style={[styles.termsLink, { color: accentColor }]}
+                    onPress={() => Linking.openURL(legal.privacy)}
+                  >
                     {t('settings.privacy')}
                   </Text>
                 </Text>
@@ -205,7 +213,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
   },
   link: {
-    color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
   },
@@ -217,7 +224,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   termsLink: {
-    color: COLORS.primary,
     fontWeight: '600',
   },
 });

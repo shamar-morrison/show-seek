@@ -6,6 +6,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -42,6 +43,7 @@ export const BlurredText: React.FC<BlurredTextProps> = ({
   isBlurred,
 }) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [shouldTruncate, setShouldTruncate] = useState(false);
@@ -114,7 +116,7 @@ export const BlurredText: React.FC<BlurredTextProps> = ({
           style={styles.readMoreContainer}
           hitSlop={HIT_SLOP.m}
         >
-          <Text style={[styles.readMore, readMoreStyle]}>
+          <Text style={[styles.readMore, { color: accentColor }, readMoreStyle]}>
             {expanded ? t('common.readLess') : t('common.readMore')}
           </Text>
         </TouchableOpacity>
@@ -152,7 +154,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   readMore: {
-    color: COLORS.primary,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },

@@ -1,18 +1,9 @@
 /**
- * Region Selection Screen
- * Allows users to select their preferred region for watch providers and release dates
+ * Accent Color Selection Screen
+ * Allows users to select their preferred accent/primary color
  */
-import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
-  COLORS,
-  FONT_SIZE,
-  SPACING,
-  hexToRGBA,
-} from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { SUPPORTED_REGIONS, useRegion } from '@/src/context/RegionProvider';
-import { screenStyles } from '@/src/styles/screenStyles';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import { SUPPORTED_ACCENT_COLORS, useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
@@ -28,64 +19,64 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function RegionScreen() {
-  const { region, setRegion } = useRegion();
-  const { accentColor } = useAccentColor();
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+export default function AccentColorScreen() {
   const { t } = useTranslation();
+  const { accentColor, setAccentColor } = useAccentColor();
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  const handleSelectRegion = async (regionCode: string) => {
-    if (regionCode === region) return;
+  const handleSelectColor = async (colorValue: string) => {
+    if (colorValue === accentColor) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsUpdating(regionCode);
+    setIsUpdating(colorValue);
 
     try {
-      await setRegion(regionCode);
+      await setAccentColor(colorValue);
     } catch (error) {
-      console.error('[RegionScreen] Error updating region:', error);
-      Alert.alert(t('common.error'), t('settings.updateRegionError'));
+      console.error('[AccentColorScreen] Error updating accent color:', error);
+      Alert.alert(t('common.error'), t('errors.saveFailed'));
     } finally {
       setIsUpdating(null);
     }
   };
 
   return (
-    <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>
-          {t('settings.regionScreenDescription')}
-        </Text>
+        <Text style={styles.description}>{t('settings.accentColorDescription')}</Text>
 
-        <View style={styles.regionList}>
-          {SUPPORTED_REGIONS.map((r) => {
-            const isSelected = region === r.code;
-            const isLoading = isUpdating === r.code;
+        <View style={styles.colorList}>
+          {SUPPORTED_ACCENT_COLORS.map((colorOption) => {
+            const isSelected = accentColor === colorOption.value;
+            const isLoading = isUpdating === colorOption.value;
 
             return (
               <Pressable
-                key={r.code}
+                key={colorOption.value}
                 style={({ pressed }) => [
-                  styles.regionItem,
-                  isSelected && styles.regionItemSelected,
-                  pressed && styles.regionItemPressed,
+                  styles.colorItem,
+                  isSelected && styles.colorItemSelected,
+                  pressed && styles.colorItemPressed,
                 ]}
-                onPress={() => handleSelectRegion(r.code)}
+                onPress={() => handleSelectColor(colorOption.value)}
                 disabled={isUpdating !== null}
               >
-                <View style={styles.regionInfo}>
-                  <Text style={styles.regionEmoji}>{r.emoji}</Text>
-                  <Text style={[styles.regionName, isSelected && { color: accentColor }]}>
-                    {r.name}
+                <View style={styles.colorInfo}>
+                  <View style={[styles.colorDot, { backgroundColor: colorOption.value }]} />
+                  <Text style={[styles.colorName, isSelected && { color: accentColor }]}>
+                    {colorOption.name}
                   </Text>
                 </View>
 
-                <View style={styles.regionStatus}>
+                <View style={styles.colorStatus}>
                   {isLoading ? (
                     <ActivityIndicator size="small" color={accentColor} />
                   ) : isSelected ? (
                     <View
-                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
+                      style={[
+                        styles.checkContainer,
+                        { backgroundColor: hexToRGBA(accentColor, 0.2) },
+                      ]}
                     >
                       <Check size={20} color={accentColor} />
                     </View>
@@ -96,15 +87,17 @@ export default function RegionScreen() {
           })}
         </View>
 
-        <Text style={styles.note}>
-          {t('settings.regionScreenNote')}
-        </Text>
+        <Text style={styles.note}>{t('settings.accentColorNote')}</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   scrollContent: {
     padding: SPACING.l,
   },
@@ -114,12 +107,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.l,
     lineHeight: 22,
   },
-  regionList: {
+  colorList: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
     overflow: 'hidden',
   },
-  regionItem: {
+  colorItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -128,27 +121,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.surfaceLight,
   },
-  regionItemSelected: {
+  colorItemSelected: {
     backgroundColor: COLORS.surfaceLight,
   },
-  regionItemPressed: {
+  colorItemPressed: {
     opacity: ACTIVE_OPACITY,
   },
-  regionInfo: {
-    flex: 1,
+  colorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.m,
+    flex: 1,
   },
-  regionEmoji: {
-    fontSize: 24,
+  colorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
-  regionName: {
+  colorName: {
     fontSize: FONT_SIZE.l,
     color: COLORS.text,
     fontWeight: '500',
   },
-  regionStatus: {
+  colorStatus: {
     width: 32,
     height: 32,
     justifyContent: 'center',

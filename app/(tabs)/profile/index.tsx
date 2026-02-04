@@ -6,6 +6,7 @@ import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -36,6 +37,7 @@ interface TabConfig {
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const {
     user,
     isGuest,
@@ -55,6 +57,7 @@ export default function ProfileScreen() {
     handleUpgradePress,
     handleLanguagePress,
     handleRegionPress,
+    handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
     handlePremiumPress,
@@ -129,6 +132,7 @@ export default function ProfileScreen() {
             isGuest={isGuest}
             onLanguagePress={handleLanguagePress}
             onRegionPress={handleRegionPress}
+            onColorPress={handleColorPress}
             onLaunchScreenPress={handleLaunchScreenPress}
             onTraktPress={handleTraktPress}
             showTitle={false}
@@ -183,7 +187,7 @@ export default function ProfileScreen() {
             {tabs.map((tab) => (
               <TouchableOpacity
                 key={tab.id}
-                style={[styles.tab, selectedTab === tab.id && styles.activeTab]}
+                style={[styles.tab, selectedTab === tab.id && { backgroundColor: accentColor }]}
                 onPress={() => setSelectedTab(tab.id)}
                 activeOpacity={ACTIVE_OPACITY}
               >
@@ -257,9 +261,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.s,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
   },
   tabText: {
     color: COLORS.textSecondary,

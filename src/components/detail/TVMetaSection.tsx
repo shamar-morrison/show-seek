@@ -1,6 +1,7 @@
 import type { TVShowDetails } from '@/src/api/tmdb';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
 import * as Clipboard from 'expo-clipboard';
@@ -32,6 +33,8 @@ export interface TVMetaSectionProps {
  */
 export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, onShowToast }) => {
   const { t } = useTranslation();
+  const styles = useDetailStyles();
+  const { accentColor } = useAccentColor();
 
   const handleTitleLongPress = useCallback(async () => {
     await Clipboard.setStringAsync(show.name);
@@ -42,13 +45,13 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
   return (
     <>
       <TouchableOpacity activeOpacity={1} onLongPress={handleTitleLongPress}>
-        <Text style={detailStyles.title}>{show.name}</Text>
+        <Text style={styles.title}>{show.name}</Text>
       </TouchableOpacity>
 
-      <View style={detailStyles.metaContainer}>
-        <View style={detailStyles.metaItem}>
+      <View style={styles.metaContainer}>
+        <View style={styles.metaItem}>
           <Calendar size={14} color={COLORS.textSecondary} />
-          <Text style={detailStyles.metaText}>
+          <Text style={styles.metaText}>
             {show.first_air_date
               ? formatTmdbDate(show.first_air_date, {
                   month: 'short',
@@ -59,34 +62,34 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
           </Text>
         </View>
         <TouchableOpacity
-          style={detailStyles.metaItem}
+          style={styles.metaItem}
           onPress={onSeasonsPress}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Layers size={14} color={COLORS.primary} />
-          <Text style={[detailStyles.metaText, { color: COLORS.primary }]}>
+          <Layers size={14} color={accentColor} />
+          <Text style={[styles.metaText, { color: accentColor }]}>
             {t('media.numberOfSeasons', { count: show.number_of_seasons })}
           </Text>
         </TouchableOpacity>
-        <View style={detailStyles.metaItem}>
+        <View style={styles.metaItem}>
           <Tv size={14} color={COLORS.textSecondary} />
-          <Text style={detailStyles.metaText}>{t('media.numberOfEpisodes', { count: show.number_of_episodes })}</Text>
+          <Text style={styles.metaText}>{t('media.numberOfEpisodes', { count: show.number_of_episodes })}</Text>
         </View>
-        <View style={detailStyles.metaItem}>
+        <View style={styles.metaItem}>
           <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-          <Text style={[detailStyles.metaText, { color: COLORS.warning }]}>
+          <Text style={[styles.metaText, { color: COLORS.warning }]}>
             {show.vote_average.toFixed(1)}
           </Text>
         </View>
         {show.original_language !== 'en' && (
-          <View style={detailStyles.metaItem}>
+          <View style={styles.metaItem}>
             <Globe size={14} color={COLORS.textSecondary} />
-            <Text style={detailStyles.metaText}>{getLanguageName(show.original_language)}</Text>
+            <Text style={styles.metaText}>{getLanguageName(show.original_language)}</Text>
           </View>
         )}
         {(show.status === 'Ended' || show.status === 'Canceled') && (
-          <View style={detailStyles.statusBadge}>
-            <Text style={detailStyles.statusBadgeText}>{show.status}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusBadgeText}>{show.status}</Text>
           </View>
         )}
       </View>
@@ -97,10 +100,10 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
         style={{ marginHorizontal: -SPACING.l }}
         contentContainerStyle={{ paddingHorizontal: SPACING.l }}
       >
-        <View style={detailStyles.genresContainer}>
+        <View style={styles.genresContainer}>
           {show.genres.map((genre) => (
-            <View key={genre.id} style={detailStyles.genreTag}>
-              <Text style={detailStyles.genreText}>{genre.name}</Text>
+            <View key={genre.id} style={styles.genreTag}>
+              <Text style={styles.genreText}>{genre.name}</Text>
             </View>
           ))}
         </View>

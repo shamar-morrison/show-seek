@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import { ChevronRight, LucideIcon } from 'lucide-react-native';
 import React, { memo } from 'react';
@@ -15,6 +16,7 @@ interface LibraryNavigationCardProps {
 
 export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
   ({ icon: Icon, title, onPress, testID, badge, isLocked }) => {
+    const { accentColor } = useAccentColor();
     const handlePress = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onPress();
@@ -30,7 +32,7 @@ export const LibraryNavigationCard = memo<LibraryNavigationCardProps>(
         onPress={handlePress}
         testID={testID}
       >
-        <Icon size={24} color={isLocked ? COLORS.textSecondary : COLORS.primary} />
+        <Icon size={24} color={isLocked ? COLORS.textSecondary : accentColor} />
         <Text style={[styles.title, isLocked && styles.titleLocked]}>{title}</Text>
         {badge}
         <ChevronRight size={20} color={COLORS.textSecondary} />

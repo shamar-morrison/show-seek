@@ -1,5 +1,6 @@
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -39,6 +40,7 @@ export function PreferenceItem({
   isLocked = false,
   onLockPress,
 }: PreferenceItemProps) {
+  const { accentColor } = useAccentColor();
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (isLocked) {
@@ -80,13 +82,13 @@ export function PreferenceItem({
       {!isLocked && (
         <>
           {loading ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
+            <ActivityIndicator size="small" color={accentColor} />
           ) : (
             <Switch
               value={value}
               onValueChange={handleValueChange}
               disabled={loading || disabled}
-              trackColor={{ false: COLORS.surfaceLight, true: COLORS.primary }}
+              trackColor={{ false: COLORS.surfaceLight, true: accentColor }}
               thumbColor={COLORS.white}
               testID="preference-switch"
             />

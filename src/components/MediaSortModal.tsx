@@ -1,5 +1,13 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import {
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  HIT_SLOP,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ArrowDown, ArrowUp, Check, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -90,6 +98,7 @@ export default function MediaSortModal({
   allowedOptions,
 }: MediaSortModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   let SORT_OPTIONS = showUserRatingOption
     ? [
         ...BASE_SORT_OPTIONS.slice(0, -1),
@@ -160,30 +169,44 @@ export default function MediaSortModal({
               return (
                 <Pressable
                   key={option.value}
-                  style={[styles.optionItem, isSelected && styles.optionItemSelected]}
+                  style={[
+                    styles.optionItem,
+                    isSelected && {
+                      borderColor: accentColor,
+                      backgroundColor: hexToRGBA(accentColor, 0.15),
+                    },
+                  ]}
                   onPress={() => handleOptionSelect(option.value)}
                 >
                   <View style={styles.optionContent}>
-                    <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                    <Text
+                      style={[
+                        styles.optionText,
+                        isSelected && { color: accentColor, fontWeight: '600' },
+                      ]}
+                    >
                       {t(option.labelKey)}
                     </Text>
                     {isSelected && (
                       <View style={styles.directionIndicator}>
                         {localSortState.direction === 'asc' ? (
-                          <ArrowUp size={16} color={COLORS.primary} />
+                          <ArrowUp size={16} color={accentColor} />
                         ) : (
-                          <ArrowDown size={16} color={COLORS.primary} />
+                          <ArrowDown size={16} color={accentColor} />
                         )}
                       </View>
                     )}
                   </View>
-                  {isSelected && <Check size={20} color={COLORS.primary} />}
+                  {isSelected && <Check size={20} color={accentColor} />}
                 </Pressable>
               );
             })}
           </View>
 
-          <Pressable style={styles.applyButton} onPress={handleApply}>
+          <Pressable
+            style={[styles.applyButton, { backgroundColor: accentColor }]}
+            onPress={handleApply}
+          >
             <Text style={styles.applyButtonText}>{t('common.apply')}</Text>
           </Pressable>
         </View>
@@ -210,10 +233,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
   },
-  optionItemSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}15`,
-  },
   optionContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,17 +242,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
   },
-  optionTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
   directionIndicator: {
     opacity: 0.8,
   },
   applyButton: {
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
   applyButtonText: {

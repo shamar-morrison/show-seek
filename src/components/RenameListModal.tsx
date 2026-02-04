@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useRenameList } from '@/src/hooks/useLists';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -36,6 +37,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
 
     const renameMutation = useRenameList();
     const { t } = useTranslation();
+    const { accentColor } = useAccentColor();
 
     useImperativeHandle(ref, () => ({
       present: async ({ listId: id, currentName }) => {
@@ -122,6 +124,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
               <Pressable
                 style={[
                   styles.saveButton,
+                  { backgroundColor: accentColor },
                   (!hasChanges || renameMutation.isPending) && styles.disabledButton,
                 ]}
                 onPress={handleRename}
@@ -183,7 +186,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

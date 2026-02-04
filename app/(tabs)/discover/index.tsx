@@ -5,6 +5,7 @@ import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
@@ -41,6 +42,7 @@ export default function DiscoverScreen() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const { t } = useTranslation();
   const { preferences } = usePreferences();
+  const { accentColor } = useAccentColor();
 
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
@@ -230,15 +232,17 @@ export default function DiscoverScreen() {
           >
             <SlidersHorizontal
               size={24}
-              color={showFilters ? COLORS.primary : COLORS.textSecondary}
+              color={showFilters ? accentColor : COLORS.textSecondary}
             />
-            {hasActiveFilters() && <View style={styles.filterBadge} />}
+            {hasActiveFilters() && (
+              <View style={[styles.filterBadge, { backgroundColor: accentColor }]} />
+            )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.typeToggleContainer}>
           <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
+            style={[styles.typeButton, mediaType === 'movie' && { backgroundColor: accentColor }]}
             onPress={() => setMediaType('movie')}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -247,7 +251,7 @@ export default function DiscoverScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
+            style={[styles.typeButton, mediaType === 'tv' && { backgroundColor: accentColor }]}
             onPress={() => setMediaType('tv')}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -269,7 +273,7 @@ export default function DiscoverScreen() {
 
         {discoverQuery.isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <ActivityIndicator size="large" color={accentColor} />
           </View>
         ) : filteredResults.length === 0 ? (
           <View style={styles.centerContainer}>
@@ -288,7 +292,7 @@ export default function DiscoverScreen() {
             ListFooterComponent={
               discoverQuery.isFetchingNextPage ? (
                 <View style={styles.loadingMore}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <ActivityIndicator size="small" color={accentColor} />
                 </View>
               ) : null
             }
@@ -335,7 +339,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
   },
   typeToggleContainer: {
     flexDirection: 'row',
@@ -348,9 +351,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
-  },
-  typeButtonActive: {
-    backgroundColor: COLORS.primary,
   },
   typeText: {
     fontSize: FONT_SIZE.m,

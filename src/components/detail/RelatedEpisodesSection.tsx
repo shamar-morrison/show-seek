@@ -5,12 +5,13 @@ import { Check } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { RelatedEpisodesSectionProps } from './types';
 
 export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
   ({ episodes, currentEpisodeNumber, seasonNumber, watchedEpisodes, onEpisodePress, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     // Sort episodes by episode number
     const sortedEpisodes = useMemo(() => {
@@ -24,7 +25,7 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.moreEpisodes')}
         </Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -72,6 +73,7 @@ const EpisodeCard = memo<{
   onPress: (episodeNumber: number) => void;
   episodeNumberLabel: string;
 }>(({ episode, isCurrent, isWatched, onPress, episodeNumberLabel }) => {
+  const styles = useDetailStyles();
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
 
   const handlePress = useCallback(() => {
@@ -80,7 +82,7 @@ const EpisodeCard = memo<{
 
   return (
     <TouchableOpacity
-      style={[detailStyles.relatedEpisodeCard, isCurrent && detailStyles.currentEpisodeBorder]}
+      style={[styles.relatedEpisodeCard, isCurrent && styles.currentEpisodeBorder]}
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
       disabled={isCurrent} // Don't navigate to current episode
@@ -88,18 +90,18 @@ const EpisodeCard = memo<{
       <View style={{ position: 'relative' }}>
         <MediaImage
           source={{ uri: stillUrl }}
-          style={detailStyles.relatedEpisodeStill}
+          style={styles.relatedEpisodeStill}
           contentFit="cover"
         />
         {isWatched && (
-          <View style={detailStyles.relatedEpisodeWatchedOverlay}>
+          <View style={styles.relatedEpisodeWatchedOverlay}>
             <Check size={16} color="#fff" />
           </View>
         )}
       </View>
-      <View style={detailStyles.relatedEpisodeInfo}>
-        <Text style={detailStyles.relatedEpisodeNumber}>{episodeNumberLabel}</Text>
-        <Text style={detailStyles.relatedEpisodeTitle} numberOfLines={2}>
+      <View style={styles.relatedEpisodeInfo}>
+        <Text style={styles.relatedEpisodeNumber}>{episodeNumberLabel}</Text>
+        <Text style={styles.relatedEpisodeTitle} numberOfLines={2}>
           {episode.name}
         </Text>
       </View>

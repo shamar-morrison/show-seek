@@ -1,5 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Ellipsis, LucideIcon } from 'lucide-react-native';
@@ -39,6 +39,7 @@ interface ListActionsModalProps {
 
 const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
   ({ actions }, ref) => {
+    const iconBadgeStyles = useIconBadgeStyles();
     const sheetRef = useRef<TrueSheet>(null);
     const { width } = useWindowDimensions();
 

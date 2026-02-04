@@ -8,7 +8,7 @@ import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { COLORS } from '@/src/constants/theme';
 import { useCollectionProgressList } from '@/src/hooks/useCollectionTracking';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { CollectionProgressItem } from '@/src/types/collectionTracking';
@@ -34,6 +34,7 @@ export default function CollectionProgressScreen() {
   const navigation = useNavigation();
   const { progressItems, isLoading, isEmpty } = useCollectionProgressList();
   const { t } = useTranslation();
+  const iconBadgeStyles = useIconBadgeStyles();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const hasActiveSort =

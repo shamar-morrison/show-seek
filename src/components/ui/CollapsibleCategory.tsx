@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,15 +59,16 @@ export function CollapsibleFeatureItem({
   isNew,
 }: CollapsibleFeatureItemProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   return (
     <View style={styles.featureItem}>
-      {icon && <Ionicons name={icon} size={22} color={COLORS.primary} style={styles.featureIcon} />}
+      {icon && <Ionicons name={icon} size={22} color={accentColor} style={styles.featureIcon} />}
       <View style={styles.featureContent}>
         <View style={styles.featureTitleRow}>
           <Text style={styles.featureTitle}>{text}</Text>
           {isNew && (
-            <View style={styles.newBadge}>
+            <View style={[styles.newBadge, { backgroundColor: accentColor }]}>
               <Text style={styles.newBadgeText}>{t('common.new')}</Text>
             </View>
           )}
@@ -132,7 +134,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   newBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.s,

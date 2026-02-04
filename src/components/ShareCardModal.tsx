@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -43,6 +44,7 @@ export default function ShareCardModal({
   onShowToast,
 }: ShareCardModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [state, setState] = useState<ModalState>('generating');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const cardRef = useRef<View>(null);
@@ -182,7 +184,7 @@ export default function ShareCardModal({
           >
             {isLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
+                <ActivityIndicator size="large" color={accentColor} />
                 <Text style={styles.loadingText}>{t('shareCard.generating')}</Text>
               </View>
             ) : (
@@ -208,6 +210,7 @@ export default function ShareCardModal({
               style={({ pressed }) => [
                 styles.actionButton,
                 styles.shareButton,
+                { backgroundColor: accentColor },
                 (isLoading || isProcessing) && styles.disabledButton,
                 pressed && { opacity: ACTIVE_OPACITY },
               ]}
@@ -228,6 +231,7 @@ export default function ShareCardModal({
               style={({ pressed }) => [
                 styles.actionButton,
                 styles.saveButton,
+                { borderColor: accentColor },
                 (isLoading || isProcessing) && styles.disabledButton,
                 pressed && { opacity: ACTIVE_OPACITY },
               ]}
@@ -235,11 +239,11 @@ export default function ShareCardModal({
               disabled={isLoading || isProcessing}
             >
               {state === 'saving' ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={accentColor} />
               ) : (
                 <>
-                  <Download size={20} color={COLORS.primary} />
-                  <Text style={styles.saveButtonText}>{t('shareCard.save')}</Text>
+                  <Download size={20} color={accentColor} />
+                  <Text style={[styles.saveButtonText, { color: accentColor }]}>{t('shareCard.save')}</Text>
                 </>
               )}
             </Pressable>
@@ -321,12 +325,10 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
   },
   shareButton: {
-    backgroundColor: COLORS.primary,
   },
   saveButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   actionButtonText: {
     fontSize: FONT_SIZE.m,
@@ -336,7 +338,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: FONT_SIZE.m,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   disabledButton: {
     opacity: 0.5,

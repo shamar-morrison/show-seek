@@ -8,7 +8,7 @@ import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
 import { COLORS, EMPTY_STATE_HEIGHT } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { InProgressShow } from '@/src/types/episodeTracking';
@@ -34,6 +34,7 @@ export default function WatchProgressScreen() {
   const navigation = useNavigation();
   const { data, isLoading, isFetching, error } = useCurrentlyWatching();
   const { t } = useTranslation();
+  const iconBadgeStyles = useIconBadgeStyles();
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const hasActiveSort =

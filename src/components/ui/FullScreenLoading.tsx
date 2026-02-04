@@ -1,4 +1,5 @@
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -8,10 +9,12 @@ interface FullScreenLoadingProps {
   message?: string;
 }
 
-export function FullScreenLoading({ color = COLORS.primary, message }: FullScreenLoadingProps) {
+export function FullScreenLoading({ color, message }: FullScreenLoadingProps) {
+  const { accentColor } = useAccentColor();
+  const resolvedColor = color ?? accentColor;
   return (
     <View style={screenStyles.loadingContainer}>
-      <ActivityIndicator size="large" color={color} />
+      <ActivityIndicator size="large" color={resolvedColor} />
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );

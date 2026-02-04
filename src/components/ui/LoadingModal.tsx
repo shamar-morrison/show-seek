@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
@@ -14,12 +15,13 @@ interface LoadingModalProps {
  * Used for actions that take time and should block user interaction.
  */
 export default function LoadingModal({ visible, message }: LoadingModalProps) {
+  const { accentColor } = useAccentColor();
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={modalLayoutStyles.container}>
         <ModalBackground />
         <View style={styles.content}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={accentColor} />
           <Text style={styles.message}>{message}</Text>
         </View>
       </View>

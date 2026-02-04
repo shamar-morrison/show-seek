@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -82,6 +83,7 @@ export const MediaGrid = memo(
   forwardRef<MediaGridRef, MediaGridProps>(
     ({ items, isLoading, emptyState, onItemPress, onItemLongPress }, ref) => {
       const listRef = useRef<any>(null);
+      const { accentColor } = useAccentColor();
 
       useImperativeHandle(ref, () => ({
         scrollToTop: (animated = true) => {
@@ -104,7 +106,7 @@ export const MediaGrid = memo(
       if (isLoading) {
         return (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <ActivityIndicator size="large" color={accentColor} />
           </View>
         );
       }

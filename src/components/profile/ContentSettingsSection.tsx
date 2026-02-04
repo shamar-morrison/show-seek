@@ -1,11 +1,13 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import { getAccentColorName } from '@/src/constants/accentColors';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { SUPPORTED_LANGUAGES } from '@/src/context/LanguageProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
-import { Check, Languages, LayoutIcon, MapPin } from 'lucide-react-native';
+import { Check, Languages, LayoutIcon, MapPin, Palette } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -28,6 +30,8 @@ export interface ContentSettingsSectionProps {
   onLanguagePress: () => void;
   /** Handler for region button press */
   onRegionPress: () => void;
+  /** Handler for accent color button press */
+  onColorPress: () => void;
   /** Handler for launch screen button press */
   onLaunchScreenPress: () => void;
   /** Handler for Trakt settings button press */
@@ -48,11 +52,14 @@ export function ContentSettingsSection({
   isGuest,
   onLanguagePress,
   onRegionPress,
+  onColorPress,
   onLaunchScreenPress,
   onTraktPress,
   showTitle = true,
 }: ContentSettingsSectionProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const accentLabel = getAccentColorName(accentColor);
 
   const getDefaultLaunchScreenLabel = () => {
     switch (preferences?.defaultLaunchScreen) {
@@ -103,6 +110,20 @@ export function ContentSettingsSection({
               <Text style={styles.languageBadgeText}>
                 {SUPPORTED_REGIONS.find((r) => r.code === region)?.emoji || '🌍'} {region}
               </Text>
+            </View>
+          }
+        />
+        <ActionButton
+          icon={Palette}
+          label={t('settings.accentColor')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onColorPress();
+          }}
+          badge={
+            <View style={[styles.languageBadge, styles.accentBadge]}>
+              <View style={[styles.accentDot, { backgroundColor: accentColor }]} />
+              <Text style={styles.languageBadgeText}>{accentLabel}</Text>
             </View>
           }
         />
@@ -165,6 +186,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     borderRadius: BORDER_RADIUS.s,
     marginLeft: SPACING.s,
+  },
+  accentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  accentDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   languageBadgeText: {
     color: COLORS.textSecondary,

@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { forwardRef } from 'react';
@@ -57,6 +58,7 @@ interface MediaShareCardProps {
 
 const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Use poster for background blur (not backdrop)
   const posterUrl = data.posterPath
@@ -110,13 +112,15 @@ const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => 
 
         {/* Rating Section */}
         <View style={styles.ratingSection}>
-          <View style={styles.ctaContainer}>
+          <View style={[styles.ctaContainer, { backgroundColor: accentColor }]}>
             <Text style={styles.ctaText}>{t('shareCard.rateIt')}</Text>
           </View>
           {hasRating && (
             <>
               <Text style={styles.ratingLabel}>{t('shareCard.myRating')}</Text>
-              <Text style={styles.ratingValue}>{displayRating}/10</Text>
+              <Text style={[styles.ratingValue, { color: accentColor }]}>
+                {displayRating}/10
+              </Text>
             </>
           )}
         </View>
@@ -195,11 +199,9 @@ const styles = StyleSheet.create({
   ratingValue: {
     fontSize: FONT_SIZE.hero * 1.8,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   // Larger CTA button
   ctaContainer: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xxl * 1.5,
     paddingVertical: SPACING.l,
     borderRadius: BORDER_RADIUS.round,

@@ -8,6 +8,7 @@ import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
@@ -60,7 +61,12 @@ interface ListItemProps {
 const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: ListItemProps) => {
   return (
     <Pressable style={styles.listItem} onPress={() => onToggle({ id, type, label })}>
-      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+      <View
+        style={[
+          styles.checkbox,
+          isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+        ]}
+      >
         <AnimatedCheck visible={isSelected} />
       </View>
       <Text style={styles.listName}>{label}</Text>
@@ -82,6 +88,7 @@ const HomeScreenCustomizationModal = forwardRef<
   const { isPremium } = usePremium();
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Guest and non-premium users can't access Latest Trailers
   const isGuest = !user;
@@ -248,7 +255,11 @@ const HomeScreenCustomizationModal = forwardRef<
             <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
           <Pressable
-            style={[styles.applyButton, updateMutation.isPending && styles.disabledButton]}
+            style={[
+              styles.applyButton,
+              { backgroundColor: accentColor },
+              updateMutation.isPending && styles.disabledButton,
+            ]}
             onPress={handleApply}
             disabled={updateMutation.isPending}
           >
@@ -314,10 +325,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
   listName: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
@@ -344,7 +351,6 @@ const styles = StyleSheet.create({
   },
   applyButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

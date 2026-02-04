@@ -1,6 +1,7 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
@@ -29,6 +30,7 @@ export interface HomeDrawerProps {
  */
 export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
@@ -158,7 +160,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleForYouPress}
             >
-              <Sparkles size={24} color={COLORS.primary} />
+              <Sparkles size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('forYou.title')}</Text>
               <ChevronRight size={20} color={COLORS.textSecondary} />
             </Pressable>
@@ -170,7 +172,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               ]}
               onPress={handleCalendarPress}
             >
-              <Calendar size={24} color={COLORS.primary} />
+              <Calendar size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('calendar.title')}</Text>
               <ChevronRight size={20} color={COLORS.textSecondary} />
             </Pressable>

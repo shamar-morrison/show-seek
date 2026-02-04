@@ -1,5 +1,6 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { User } from 'firebase/auth';
 import { Crown } from 'lucide-react-native';
 import React from 'react';
@@ -28,6 +29,7 @@ export function UserInfoSection({
   onUpgradePress,
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const displayName = user?.displayName || (isGuest ? t('profile.guest') : t('profile.user'));
   const email = user?.email || (isGuest ? t('auth.notSignedIn') : t('profile.noEmail'));
 
@@ -50,7 +52,10 @@ export function UserInfoSection({
           {email}
         </Text>
         {!isPremium && !isGuest && (
-          <TouchableOpacity style={styles.upgradeButton} onPress={onUpgradePress}>
+          <TouchableOpacity
+            style={[styles.upgradeButton, { backgroundColor: accentColor }]}
+            onPress={onUpgradePress}
+          >
             <Crown size={12} color={COLORS.white} style={{ marginRight: 6 }} />
             <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
           </TouchableOpacity>
@@ -92,7 +97,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.s,
     borderRadius: BORDER_RADIUS.s,

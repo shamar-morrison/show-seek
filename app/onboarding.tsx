@@ -1,5 +1,6 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
@@ -60,6 +61,7 @@ export default function OnboardingScreen() {
   const { completeOnboarding } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Memoize translated data to avoid re-rendering on every frame
   const onboardingData = useMemo(
@@ -134,7 +136,8 @@ export default function OnboardingScreen() {
               style={[
                 styles.dot,
                 {
-                  backgroundColor: index === currentIndex ? COLORS.primary : COLORS.textSecondary,
+                  backgroundColor:
+                    index === currentIndex ? accentColor : COLORS.textSecondary,
                   width: index === currentIndex ? 20 : 8,
                 },
               ]}
@@ -153,7 +156,7 @@ export default function OnboardingScreen() {
 
           <TouchableOpacity
             onPress={handleNext}
-            style={styles.nextButton}
+            style={[styles.nextButton, { backgroundColor: accentColor }]}
             activeOpacity={ACTIVE_OPACITY}
           >
             <Text style={styles.nextText}>
@@ -228,7 +231,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   nextButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.round,

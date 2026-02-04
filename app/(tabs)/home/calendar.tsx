@@ -2,6 +2,7 @@ import { CalendarPremiumGate } from '@/src/components/calendar/CalendarPremiumGa
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
@@ -24,6 +25,7 @@ export default function CalendarScreen() {
   const { user } = useAuth();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
+  const { accentColor } = useAccentColor();
 
   const { sections, isLoading, isLoadingEnrichment } = useUpcomingReleases();
 
@@ -48,11 +50,11 @@ export default function CalendarScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <LogIn size={64} color={COLORS.primary} />
+            <LogIn size={64} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('calendar.signInRequired')}</Text>
           <Text style={styles.emptyDescription}>{t('calendar.signInDescription')}</Text>
-          <Pressable style={styles.primaryButton} onPress={handleSignIn}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleSignIn}>
             <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
           </Pressable>
         </View>
@@ -81,11 +83,11 @@ export default function CalendarScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <Calendar size={64} color={COLORS.primary} />
+            <Calendar size={64} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('calendar.empty')}</Text>
           <Text style={styles.emptyDescription}>{t('calendar.emptyHint')}</Text>
-          <Pressable style={styles.primaryButton} onPress={handleGoToLibrary}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleGoToLibrary}>
             <Text style={styles.primaryButtonText}>{t('calendar.goToWatchlist')}</Text>
           </Pressable>
         </View>
@@ -98,7 +100,7 @@ export default function CalendarScreen() {
       {/* Enrichment loading indicator */}
       {isLoadingEnrichment && (
         <View style={styles.enrichmentIndicator}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
+          <ActivityIndicator size="small" color={accentColor} />
           <Text style={styles.enrichmentText}>{t('calendar.updatingEpisodes')}</Text>
         </View>
       )}
@@ -139,7 +141,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: 12,

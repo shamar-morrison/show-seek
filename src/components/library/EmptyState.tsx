@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { LucideIcon } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -13,13 +14,18 @@ interface EmptyStateProps {
 
 export const EmptyState = memo<EmptyStateProps>(
   ({ icon: Icon, title, description, actionLabel, onAction }) => {
+    const { accentColor } = useAccentColor();
     return (
       <View style={styles.container}>
         <Icon size={48} color={COLORS.surfaceLight} />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>
         {actionLabel && onAction && (
-          <TouchableOpacity style={styles.button} onPress={onAction} activeOpacity={ACTIVE_OPACITY}>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: accentColor }]}
+            onPress={onAction}
+            activeOpacity={ACTIVE_OPACITY}
+          >
             <Text style={styles.buttonText}>{actionLabel}</Text>
           </TouchableOpacity>
         )}
@@ -53,7 +59,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   button: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,

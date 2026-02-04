@@ -1,6 +1,7 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useHistory } from '@/src/hooks/useHistory';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
@@ -37,12 +38,12 @@ function StatCard({
   icon: Icon,
   label,
   value,
-  iconColor = COLORS.primary,
+  iconColor,
 }: {
   icon: typeof Flame;
   label: string;
   value: string | number;
-  iconColor?: string;
+  iconColor: string;
 }) {
   return (
     <View style={styles.statCard}>
@@ -141,6 +142,7 @@ function MonthRow({ stats, onPress }: { stats: MonthlyStats; onPress: () => void
 export default function StatsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const { data: historyData, isLoading, error } = useHistory();
 
   const handleMonthPress = useCallback(
@@ -200,7 +202,7 @@ export default function StatsScreen() {
               icon={Tv}
               label={t('stats.watched')}
               value={historyData.totalWatched}
-              iconColor={COLORS.primary}
+              iconColor={accentColor}
             />
             <StatCard
               icon={Star}
@@ -251,14 +253,14 @@ export default function StatsScreen() {
             <View style={styles.patternRow}>
               {historyData.mostActiveDay && (
                 <View style={styles.patternItem}>
-                  <Calendar size={24} color={COLORS.primary} />
+                  <Calendar size={24} color={accentColor} />
                   <Text style={styles.patternValue}>{historyData.mostActiveDay}</Text>
                   <Text style={styles.patternLabel}>{t('stats.mostActiveDay')}</Text>
                 </View>
               )}
               {historyData.mostActiveTimeOfDay && (
                 <View style={styles.patternItem}>
-                  <Clock size={24} color={COLORS.primary} />
+                  <Clock size={24} color={accentColor} />
                   <Text style={styles.patternValue}>{historyData.mostActiveTimeOfDay}</Text>
                   <Text style={styles.patternLabel}>{t('stats.preferredTime')}</Text>
                 </View>

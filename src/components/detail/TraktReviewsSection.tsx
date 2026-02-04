@@ -7,7 +7,7 @@ import { Star, ThumbsUp } from 'lucide-react-native';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { Review } from './types';
 
 interface TraktReviewsSectionProps {
@@ -42,6 +42,7 @@ function traktToReview(traktReview: TraktReview): Review {
  */
 const TraktReviewCard = memo(
   ({ review, onPress, spoilerLabel }: { review: TraktReview; onPress: () => void; spoilerLabel: string }) => {
+    const styles = useDetailStyles();
     const [revealed, setRevealed] = useState(false);
     const isSpoiler = review.spoiler && !revealed;
 
@@ -57,32 +58,32 @@ const TraktReviewCard = memo(
 
     return (
       <TouchableOpacity
-        style={detailStyles.reviewCard}
+        style={styles.reviewCard}
         onPress={handlePress}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <View style={detailStyles.reviewHeader}>
+        <View style={styles.reviewHeader}>
           <MediaImage
             source={{ uri: avatarUrl }}
-            style={detailStyles.reviewAvatar}
+            style={styles.reviewAvatar}
             contentFit="cover"
             placeholderType="person"
           />
-          <View style={detailStyles.reviewAuthorInfo}>
-            <Text style={detailStyles.reviewAuthor} numberOfLines={1}>
+          <View style={styles.reviewAuthorInfo}>
+            <Text style={styles.reviewAuthor} numberOfLines={1}>
               {review.user.name || review.user.username}
             </Text>
-            <View style={styles.reviewMeta}>
+            <View style={localStyles.reviewMeta}>
               {review.user_rating && (
-                <View style={detailStyles.reviewRating}>
+                <View style={styles.reviewRating}>
                   <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
-                  <Text style={detailStyles.reviewRatingText}>{review.user_rating.toFixed(1)}</Text>
+                  <Text style={styles.reviewRatingText}>{review.user_rating.toFixed(1)}</Text>
                 </View>
               )}
               {review.likes > 0 && (
-                <View style={styles.likesContainer}>
+                <View style={localStyles.likesContainer}>
                   <ThumbsUp size={12} color={COLORS.textSecondary} />
-                  <Text style={styles.likesText}>{review.likes}</Text>
+                  <Text style={localStyles.likesText}>{review.likes}</Text>
                 </View>
               )}
             </View>
@@ -90,16 +91,16 @@ const TraktReviewCard = memo(
         </View>
 
         {isSpoiler ? (
-          <View style={styles.spoilerContainer}>
-            <View style={styles.spoilerOverlay}>
-              <Text style={styles.spoilerHint}>{spoilerLabel}</Text>
+          <View style={localStyles.spoilerContainer}>
+            <View style={localStyles.spoilerOverlay}>
+              <Text style={localStyles.spoilerHint}>{spoilerLabel}</Text>
             </View>
-            <Text style={[detailStyles.reviewContent, styles.blurredText]} numberOfLines={4}>
+            <Text style={[styles.reviewContent, localStyles.blurredText]} numberOfLines={4}>
               {review.comment}
             </Text>
           </View>
         ) : (
-          <Text style={detailStyles.reviewContent} numberOfLines={4}>
+          <Text style={styles.reviewContent} numberOfLines={4}>
             {review.comment}
           </Text>
         )}
@@ -113,32 +114,33 @@ TraktReviewCard.displayName = 'TraktReviewCard';
 export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
   ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
     const spoilerLabel = t('reviews.tapToRevealSpoiler');
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <View style={styles.headerContainer}>
+          <View style={localStyles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={detailStyles.similarList}
+            style={styles.similarList}
           >
             {[1, 2, 3].map((i) => (
-              <View key={i} style={detailStyles.reviewCardSkeleton}>
-                <View style={detailStyles.skeletonHeader}>
-                  <View style={detailStyles.skeletonAvatar} />
+              <View key={i} style={styles.reviewCardSkeleton}>
+                <View style={styles.skeletonHeader}>
+                  <View style={styles.skeletonAvatar} />
                   <View style={{ flex: 1 }}>
-                    <View style={detailStyles.skeletonText} />
-                    <View style={[detailStyles.skeletonText, { width: '60%' }]} />
+                    <View style={styles.skeletonText} />
+                    <View style={[styles.skeletonText, { width: '60%' }]} />
                   </View>
                 </View>
-                <View style={detailStyles.skeletonText} />
-                <View style={detailStyles.skeletonText} />
-                <View style={[detailStyles.skeletonText, { width: '80%' }]} />
+                <View style={styles.skeletonText} />
+                <View style={styles.skeletonText} />
+                <View style={[styles.skeletonText, { width: '80%' }]} />
               </View>
             ))}
           </ScrollView>
@@ -150,12 +152,12 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
     if (isError && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <View style={styles.headerContainer}>
+          <View style={localStyles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <View style={detailStyles.reviewErrorBox}>
-            <Text style={detailStyles.reviewErrorText}>{t('errors.failedToLoadTraktReviews')}</Text>
+          <View style={styles.reviewErrorBox}>
+            <Text style={styles.reviewErrorText}>{t('errors.failedToLoadTraktReviews')}</Text>
           </View>
         </View>
       );
@@ -165,11 +167,11 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
     if (!isLoading && !isError && reviews.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
-          <View style={styles.headerContainer}>
+          <View style={localStyles.headerContainer}>
             <TraktLogo size={24} />
-            <Text style={[detailStyles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
+            <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <View style={detailStyles.similarList}>
+          <View style={styles.similarList}>
             <FlashList
               horizontal
               data={reviews}
@@ -211,7 +213,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
 
 TraktReviewsSection.displayName = 'TraktReviewsSection';
 
-const styles = StyleSheet.create({
+const localStyles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',

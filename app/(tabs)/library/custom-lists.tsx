@@ -6,10 +6,11 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { UserList } from '@/src/services/ListService';
@@ -28,6 +29,8 @@ export default function CustomListsScreen() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading } = useLists();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const iconBadgeStyles = useIconBadgeStyles();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -141,7 +144,7 @@ export default function CustomListsScreen() {
         style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
         onPress={() => handleListPress(item.id)}
       >
-        <List size={24} color={COLORS.primary} />
+        <List size={24} color={accentColor} />
         <Text style={styles.listName}>{item.name}</Text>
         <ChevronRight size={20} color={COLORS.textSecondary} />
       </Pressable>

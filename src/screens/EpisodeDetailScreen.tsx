@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
@@ -17,6 +17,7 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -50,9 +51,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EpisodeDetailScreen() {
+  const styles = useDetailStyles();
   const { id: tvIdStr, seasonNum: seasonStr, episodeNum: episodeStr } = useLocalSearchParams();
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { accentColor } = useAccentColor();
   const tvId = Number(tvIdStr);
   const seasonNumber = Number(seasonStr);
   const episodeNumber = Number(episodeStr);
@@ -286,7 +289,7 @@ export default function EpisodeDetailScreen() {
         <Text style={[errorStyles.text, styles.errorText]}>
           {t('episodeDetail.failedToLoad')}
         </Text>
-        <TouchableOpacity style={styles.errorButton} onPress={handleBack}>
+        <TouchableOpacity style={[styles.errorButton, { backgroundColor: accentColor }]} onPress={handleBack}>
           <Text style={styles.errorButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -317,13 +320,13 @@ export default function EpisodeDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
         {/* Hero Section */}
-        <View style={detailStyles.episodeHeroContainer}>
+        <View style={styles.episodeHeroContainer}>
           <MediaImage source={{ uri: stillUrl }} style={styles.heroImage} contentFit="cover" />
           <LinearGradient colors={['transparent', COLORS.background]} style={styles.heroGradient} />
 
@@ -340,13 +343,13 @@ export default function EpisodeDetailScreen() {
         {/* Content Section */}
         <View style={styles.content}>
           {/* Breadcrumb Navigation */}
-          <View style={detailStyles.episodeBreadcrumb}>
+          <View style={styles.episodeBreadcrumb}>
             <TouchableOpacity onPress={handleTVShowPress} activeOpacity={ACTIVE_OPACITY}>
-              <Text style={detailStyles.episodeBreadcrumbLink}>{tvShow?.name}</Text>
+              <Text style={styles.episodeBreadcrumbLink}>{tvShow?.name}</Text>
             </TouchableOpacity>
             <ChevronRight size={14} color={COLORS.textSecondary} />
             <TouchableOpacity onPress={handleBack} activeOpacity={ACTIVE_OPACITY}>
-                <Text style={detailStyles.episodeBreadcrumbLink}>
+                <Text style={styles.episodeBreadcrumbLink}>
                 {season?.name || t('media.seasonNumber', { number: seasonNumber })}
               </Text>
             </TouchableOpacity>
@@ -398,6 +401,7 @@ export default function EpisodeDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.watchButton,
+                  !isWatched && { backgroundColor: accentColor },
                   isWatched && styles.unwatchButton,
                   (!hasAired || isPending) && styles.disabledButton,
                 ]}
@@ -451,7 +455,7 @@ export default function EpisodeDetailScreen() {
               <ExpandableText
                 text={episode.overview}
                 style={[styles.overviewText, { marginBottom: SPACING.s }]}
-                readMoreStyle={styles.readMore}
+                readMoreStyle={[styles.readMore, { color: accentColor }]}
               />
             </View>
           )}
@@ -571,7 +575,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.l,
   },
   errorButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.m,
@@ -637,7 +640,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
   },
@@ -705,7 +707,6 @@ const styles = StyleSheet.create({
   },
   readMore: {
     fontSize: FONT_SIZE.m,
-    color: COLORS.primary,
     marginTop: SPACING.xs,
   },
 });

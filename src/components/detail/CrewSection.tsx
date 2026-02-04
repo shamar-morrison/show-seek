@@ -4,7 +4,7 @@ import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { CrewSectionProps } from './types';
 
 // Priority roles to show (in order)
@@ -15,13 +15,14 @@ const CrewCard = memo<{
   member: CrewMember;
   onPress: (id: number) => void;
 }>(({ member, onPress }) => {
+  const styles = useDetailStyles();
   const handlePress = useCallback(() => {
     onPress(member.id);
   }, [member.id, onPress]);
 
   return (
     <TouchableOpacity
-      style={detailStyles.castCard}
+      style={styles.castCard}
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
@@ -29,14 +30,14 @@ const CrewCard = memo<{
         source={{
           uri: getImageUrl(member.profile_path, TMDB_IMAGE_SIZES.profile.medium),
         }}
-        style={detailStyles.castImage}
+        style={styles.castImage}
         contentFit="cover"
         placeholderType="person"
       />
-      <Text style={detailStyles.castName} numberOfLines={2}>
+      <Text style={styles.castName} numberOfLines={2}>
         {member.name}
       </Text>
-      <Text style={detailStyles.characterName} numberOfLines={1}>
+      <Text style={styles.characterName} numberOfLines={1}>
         {member.job}
       </Text>
     </TouchableOpacity>
@@ -48,6 +49,7 @@ CrewCard.displayName = 'CrewCard';
 export const CrewSection = memo<CrewSectionProps>(
   ({ crew, onCrewPress, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     // Filter and sort crew by priority roles
     const priorityCrew = useMemo(() => {
@@ -67,10 +69,10 @@ export const CrewSection = memo<CrewSectionProps>(
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
-        <View style={detailStyles.sectionHeader}>
-          <Text style={detailStyles.sectionTitle}>{t('media.crew')}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('media.crew')}</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
           {priorityCrew.map((member) => (
             <CrewCard key={`${member.id}-${member.job}`} member={member} onPress={onCrewPress} />
           ))}

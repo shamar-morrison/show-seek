@@ -5,6 +5,7 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -38,6 +39,7 @@ export default function PersonDetailScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -90,7 +92,9 @@ export default function PersonDetailScreen() {
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
+          <Text style={[styles.backButtonText, { color: accentColor }]}>
+            {t('common.goBack')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -252,8 +256,8 @@ export default function PersonDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
@@ -280,7 +284,9 @@ export default function PersonDetailScreen() {
             <Text style={styles.name}>{person.name}</Text>
 
             {person.known_for_department && (
-              <Text style={styles.department}>{person.known_for_department}</Text>
+              <Text style={[styles.department, { color: accentColor }]}>
+                {person.known_for_department}
+              </Text>
             )}
 
             <View style={styles.detailsContainer}>
@@ -310,7 +316,11 @@ export default function PersonDetailScreen() {
         {/* Action Row */}
         <View style={styles.actionRow}>
           <TouchableOpacity
-            style={[styles.favoriteButton, isFavorited && styles.favoritedButton]}
+            style={[
+              styles.favoriteButton,
+              { backgroundColor: accentColor },
+              isFavorited && [styles.favoritedButton, { borderColor: accentColor }],
+            ]}
             onPress={handleFavoriteToggle}
             disabled={isLoadingFavorite}
             activeOpacity={ACTIVE_OPACITY}
@@ -339,7 +349,7 @@ export default function PersonDetailScreen() {
             <ExpandableText
               text={person.biography}
               style={[styles.biography, { marginBottom: SPACING.s }]}
-              readMoreStyle={styles.readMore}
+              readMoreStyle={[styles.readMore, { color: accentColor }]}
             />
           </View>
         )}
@@ -356,7 +366,7 @@ export default function PersonDetailScreen() {
                 <Text style={styles.sectionTitle}>
                   {isCrewRole ? t('person.directedWrittenMovies') : t('person.knownForMovies')}
                 </Text>
-                <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
+                <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
@@ -419,7 +429,7 @@ export default function PersonDetailScreen() {
                 <Text style={styles.sectionTitle}>
                   {isCrewRole ? t('person.directedWrittenTV') : t('person.knownForTV')}
                 </Text>
-                <ArrowRight size={23} color={COLORS.primary} style={styles.viewAll} />
+                <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
               </TouchableOpacity>
             ) : (
               <View style={styles.sectionHeader}>
@@ -480,7 +490,6 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
   },
   backButtonText: {
-    color: COLORS.primary,
   },
   scrollView: {
     flex: 1,
@@ -518,7 +527,6 @@ const styles = StyleSheet.create({
   },
   department: {
     fontSize: FONT_SIZE.m,
-    color: COLORS.primary,
     marginBottom: SPACING.m,
   },
   detailsContainer: {
@@ -556,7 +564,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   readMore: {
-    color: COLORS.primary,
     fontSize: FONT_SIZE.s,
   },
   creditCard: {
@@ -605,14 +612,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.l,
     borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.primary,
     minWidth: 200,
     width: '87%',
     justifyContent: 'center',
   },
   favoritedButton: {
     backgroundColor: COLORS.surfaceLight,
-    borderColor: COLORS.primary,
     borderWidth: 1,
   },
   favoriteButtonText: {

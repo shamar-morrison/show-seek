@@ -7,7 +7,7 @@ import {
   ReminderInfoBanner,
   ReminderTimingOptions,
   ReminderWarningBanner,
-  reminderModalStyles as sharedStyles,
+  useReminderModalStyles,
 } from '@/src/components/reminder';
 import { COLORS } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
@@ -42,6 +42,7 @@ export default function ReminderModal({
   onShowToast,
 }: ReminderModalProps) {
   const { t } = useTranslation();
+  const sharedStyles = useReminderModalStyles();
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(
     currentTiming || 'on_release_day'
   );

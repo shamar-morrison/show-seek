@@ -3,7 +3,7 @@ import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListMod
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CollectionSection } from '@/src/components/detail/CollectionSection';
 import { DetailScreenSkeleton } from '@/src/components/detail/DetailScreenSkeleton';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { DirectorsSection } from '@/src/components/detail/DirectorsSection';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
@@ -32,6 +32,7 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -87,10 +88,12 @@ const canShowReminder = (releaseDate: string | null | undefined): boolean => {
 };
 
 export default function MovieDetailScreen() {
+  const styles = useDetailStyles();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const movieId = Number(id);
   const { region } = useRegion();
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
@@ -147,7 +150,7 @@ export default function MovieDetailScreen() {
         : undefined;
   const listColor =
     listIds.length === 1
-      ? getListColor(listIds[0])
+      ? getListColor(listIds[0], accentColor)
       : isInAnyList
         ? MULTIPLE_LISTS_COLOR
         : undefined;
@@ -253,10 +256,10 @@ export default function MovieDetailScreen() {
         <Text style={errorStyles.text}>{t('movieDetail.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={detailStyles.backButton}
+          style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={detailStyles.backButtonText}>{t('common.goBack')}</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -484,7 +487,7 @@ export default function MovieDetailScreen() {
   };
 
   return (
-    <View style={detailStyles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
@@ -494,33 +497,33 @@ export default function MovieDetailScreen() {
       />
 
       <Animated.ScrollView
-        style={detailStyles.scrollView}
+        style={styles.scrollView}
         bounces={true}
         {...scrollViewProps}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
         {/* Hero Section */}
-        <View style={detailStyles.heroContainer}>
+        <View style={styles.heroContainer}>
           <MediaImage
             source={{ uri: backdropUrl }}
-            style={detailStyles.backdrop}
+            style={styles.backdrop}
             contentFit="cover"
           />
           <LinearGradient
             colors={['transparent', COLORS.background]}
-            style={detailStyles.gradient}
+            style={styles.gradient}
           />
 
-          <SafeAreaView style={detailStyles.headerSafe} edges={['top']}>
+          <SafeAreaView style={styles.headerSafe} edges={['top']}>
             <TouchableOpacity
-              style={detailStyles.headerButton}
+              style={styles.headerButton}
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
@@ -535,17 +538,17 @@ export default function MovieDetailScreen() {
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
 
-          <View style={detailStyles.posterContainer}>
+          <View style={styles.posterContainer}>
             <MediaImage
               source={{ uri: posterUrl }}
-              style={detailStyles.poster}
+              style={styles.poster}
               contentFit="cover"
             />
           </View>
         </View>
 
         {/* Content */}
-        <View style={detailStyles.content}>
+        <View style={styles.content}>
           <TouchableOpacity
             activeOpacity={1}
             onLongPress={async () => {
@@ -554,13 +557,13 @@ export default function MovieDetailScreen() {
               toastRef.current?.show(t('common.copiedToClipboard'));
             }}
           >
-            <Text style={detailStyles.title}>{movie.title}</Text>
+            <Text style={styles.title}>{movie.title}</Text>
           </TouchableOpacity>
 
-          <View style={detailStyles.metaContainer}>
-            <View style={detailStyles.metaItem}>
+          <View style={styles.metaContainer}>
+            <View style={styles.metaItem}>
               <Calendar size={14} color={COLORS.textSecondary} />
-              <Text style={detailStyles.metaText}>
+              <Text style={styles.metaText}>
                 {displayReleaseDate
                   ? formatTmdbDate(displayReleaseDate, {
                       month: 'short',
@@ -570,20 +573,20 @@ export default function MovieDetailScreen() {
                   : t('common.unknown')}
               </Text>
             </View>
-            <View style={detailStyles.metaItem}>
+            <View style={styles.metaItem}>
               <Clock size={14} color={COLORS.textSecondary} />
-              <Text style={detailStyles.metaText}>{formatRuntime(movie.runtime)}</Text>
+              <Text style={styles.metaText}>{formatRuntime(movie.runtime)}</Text>
             </View>
-            <View style={detailStyles.metaItem}>
+            <View style={styles.metaItem}>
               <Star size={14} color={COLORS.warning} fill={COLORS.warning} />
-              <Text style={[detailStyles.metaText, { color: COLORS.warning }]}>
+              <Text style={[styles.metaText, { color: COLORS.warning }]}>
                 {movie.vote_average.toFixed(1)}
               </Text>
             </View>
             {movie.original_language !== 'en' && (
-              <View style={detailStyles.metaItem}>
+              <View style={styles.metaItem}>
                 <Globe size={14} color={COLORS.textSecondary} />
-                <Text style={detailStyles.metaText}>
+                <Text style={styles.metaText}>
                   {getLanguageName(movie.original_language)}
                 </Text>
               </View>
@@ -596,10 +599,10 @@ export default function MovieDetailScreen() {
             style={{ marginHorizontal: -SPACING.l }}
             contentContainerStyle={{ paddingHorizontal: SPACING.l }}
           >
-            <View style={detailStyles.genresContainer}>
+            <View style={styles.genresContainer}>
               {movie.genres.map((genre) => (
-                <View key={genre.id} style={detailStyles.genreTag}>
-                  <Text style={detailStyles.genreText}>{genre.name}</Text>
+                <View key={genre.id} style={styles.genreTag}>
+                  <Text style={styles.genreText}>{genre.name}</Text>
                 </View>
               ))}
             </View>
@@ -666,19 +669,19 @@ export default function MovieDetailScreen() {
           {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
           <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
-          <Text style={[detailStyles.sectionTitle]}>{t('media.overview')}</Text>
+          <Text style={[styles.sectionTitle]}>{t('media.overview')}</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
               text={movie.overview || t('media.noOverview')}
-              style={detailStyles.overview}
-              readMoreStyle={detailStyles.readMore}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
               isBlurred={true}
             />
           ) : (
             <ExpandableText
               text={movie.overview || t('media.noOverview')}
-              style={detailStyles.overview}
-              readMoreStyle={detailStyles.readMore}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
             />
           )}
 

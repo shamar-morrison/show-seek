@@ -3,6 +3,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import type {
   MarkAllEpisodesWatchedParams,
   MarkEpisodeUnwatchedParams,
@@ -17,7 +18,7 @@ import React, { memo, useCallback } from 'react';
 import type { TFunction } from 'i18next';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
-import { seasonScreenStyles as styles } from './seasonScreenStyles';
+import { useSeasonScreenStyles } from './seasonScreenStyles';
 
 export type SeasonWithEpisodes = Season & { episodes?: Episode[] };
 
@@ -78,6 +79,8 @@ export const SeasonItem = memo<SeasonItemProps>(
     markPreviousEpisodesWatched,
     t,
   }) => {
+    const { accentColor } = useAccentColor();
+    const styles = useSeasonScreenStyles();
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
 
@@ -239,7 +242,7 @@ export const SeasonItem = memo<SeasonItemProps>(
               </TouchableOpacity>
             )}
             {isExpanded ? (
-              <ChevronDown size={24} color={COLORS.primary} />
+              <ChevronDown size={24} color={accentColor} />
             ) : (
               <ChevronRight size={24} color={COLORS.textSecondary} />
             )}

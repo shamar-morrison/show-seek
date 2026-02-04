@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
@@ -44,6 +45,7 @@ export function PreferencesSection({
   showTitle = true,
 }: PreferencesSectionProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   const handleUpdate = (key: keyof UserPreferences, value: boolean) => {
     onUpdate(key, value);
@@ -63,7 +65,11 @@ export function PreferencesSection({
             <Text style={styles.preferenceSubtitle}>{t('profile.checkConnection')}</Text>
           </View>
           <TouchableOpacity
-            style={[styles.retryButton, isLoading && styles.retryButtonDisabled]}
+            style={[
+              styles.retryButton,
+              { backgroundColor: accentColor },
+              isLoading && styles.retryButtonDisabled,
+            ]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               onRetry();
@@ -224,7 +230,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   retryButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.m,
     paddingVertical: SPACING.s,
     borderRadius: BORDER_RADIUS.m,

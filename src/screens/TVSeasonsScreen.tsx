@@ -1,7 +1,7 @@
 import type { Episode } from '@/src/api/tmdb';
 import { tmdbApi } from '@/src/api/tmdb';
 import { SeasonItem } from '@/src/components/tv/SeasonItem';
-import { seasonScreenStyles as styles } from '@/src/components/tv/seasonScreenStyles';
+import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -30,6 +30,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TVSeasonsScreen() {
+  const styles = useSeasonScreenStyles();
   const { id, season } = useLocalSearchParams();
   const router = useRouter();
   const { t, i18n } = useTranslation();

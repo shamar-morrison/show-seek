@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import i18n from '@/src/i18n';
 import { listCardStyles } from '@/src/styles/listCardStyles';
@@ -60,12 +61,12 @@ const getTimingLabelKey = (reminder: Reminder): string => {
   }
 };
 
-const getTimingColor = (timing: ReminderTiming): string => {
+const getTimingColor = (timing: ReminderTiming, accentColor: string): string => {
   switch (timing) {
     case 'on_release_day':
       return COLORS.warning; // Orange
     case '1_day_before':
-      return COLORS.primary; // Red
+      return accentColor; // Accent
     case '1_week_before':
       return '#4FC3F7'; // Light blue
   }
@@ -89,6 +90,7 @@ export const ReminderCard = memo<ReminderCardProps>(
   ({ reminder, onEditTiming, onCancel, isLoading = false, t }) => {
     const router = useRouter();
     const currentTab = useCurrentTab();
+    const { accentColor } = useAccentColor();
 
     const handlePress = useCallback(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -141,10 +143,15 @@ export const ReminderCard = memo<ReminderCardProps>(
             <View
               style={[
                 styles.timingBadge,
-                { backgroundColor: getTimingColor(reminder.reminderTiming) + '20' },
+                { backgroundColor: getTimingColor(reminder.reminderTiming, accentColor) + '20' },
               ]}
             >
-              <Text style={[styles.timingText, { color: getTimingColor(reminder.reminderTiming) }]}>
+              <Text
+                style={[
+                  styles.timingText,
+                  { color: getTimingColor(reminder.reminderTiming, accentColor) },
+                ]}
+              >
                 {t(getTimingLabelKey(reminder))}
               </Text>
             </View>

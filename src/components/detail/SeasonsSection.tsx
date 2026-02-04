@@ -5,7 +5,7 @@ import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, ViewStyle } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 
 interface SeasonsSectionProps {
   tvShowId: number;
@@ -17,6 +17,7 @@ interface SeasonsSectionProps {
 export const SeasonsSection = memo<SeasonsSectionProps>(
   ({ tvShowId, seasons, onSeasonPress, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     const handleSeasonPress = useCallback(
       (seasonNumber: number) => {
@@ -31,7 +32,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.seasons')}
         </Text>
         <FlashList
@@ -42,7 +43,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
           )}
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={detailStyles.similarList}
+          style={styles.similarList}
         />
       </View>
     );

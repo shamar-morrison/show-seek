@@ -1,7 +1,7 @@
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SearchableHeader } from '@/src/components/ui/SearchableHeader';
 import { COLORS } from '@/src/constants/theme';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from 'expo-router';
@@ -72,6 +72,7 @@ export function useViewModeToggle({
   searchState,
 }: UseViewModeToggleOptions): UseViewModeToggleReturn {
   const navigation = useNavigation();
+  const iconBadgeStyles = useIconBadgeStyles();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
 
@@ -167,6 +168,7 @@ export function useViewModeToggle({
     hasActiveSort,
     onSortPress,
     actionButton,
+    iconBadgeStyles,
     searchButton,
     searchState,
   ]);

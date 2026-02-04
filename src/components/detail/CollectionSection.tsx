@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import type { CollectionSectionProps } from './types';
 export const CollectionSection = memo<CollectionSectionProps>(
   ({ collection, shouldLoad, onCollectionPress, onLayout, style }) => {
     const { t } = useTranslation();
+    const { accentColor } = useAccentColor();
     // Lazy loading trigger
     if (!shouldLoad) {
       return <View style={style} onLayout={onLayout} />;
@@ -33,7 +35,9 @@ export const CollectionSection = memo<CollectionSectionProps>(
             <Text style={styles.collectionName} numberOfLines={2}>
               {collection.name}
             </Text>
-            <Text style={styles.viewMore}>{t('media.tapToViewAllMovies')}</Text>
+            <Text style={[styles.viewMore, { color: accentColor }]}>
+              {t('media.tapToViewAllMovies')}
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -83,7 +87,6 @@ const styles = StyleSheet.create({
   },
   viewMore: {
     fontSize: FONT_SIZE.s,
-    color: COLORS.primary,
     fontWeight: '600',
   },
 });

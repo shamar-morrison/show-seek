@@ -1,5 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import { toLocalDateKey } from '@/src/utils/dateUtils';
 import { Image } from 'expo-image';
@@ -22,6 +24,8 @@ interface ReleaseCalendarProps {
 export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const { accentColor } = useAccentColor();
+  const styles = useStyles();
 
   // Get all unique dates for the date strip
   const uniqueDates = useMemo(() => {
@@ -84,11 +88,11 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   const renderSectionHeader = useCallback(
     ({ section }: { section: ReleaseSection }) => (
       <View style={styles.sectionHeader}>
-        <Calendar size={18} color={COLORS.primary} />
+        <Calendar size={18} color={accentColor} />
         <Text style={styles.sectionTitle}>{section.title}</Text>
       </View>
     ),
-    []
+    [accentColor, styles]
   );
 
   const keyExtractor = useCallback((item: UpcomingRelease) => item.uniqueKey, []);
@@ -140,6 +144,7 @@ interface DateStripProps {
  */
 function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
   const { t, i18n } = useTranslation();
+  const styles = useStyles();
   const today = new Date();
   const todayStr = toLocalDateKey(today);
   const tomorrowStr = toLocalDateKey(new Date(today.getTime() + 24 * 60 * 60 * 1000));
@@ -206,6 +211,7 @@ interface ReleaseCardProps {
  */
 function ReleaseCard({ release, onPress }: ReleaseCardProps) {
   const { t, i18n } = useTranslation();
+  const styles = useStyles();
   const today = new Date();
   const todayStr = toLocalDateKey(today);
   const releaseDateStr = toLocalDateKey(release.releaseDate);
@@ -303,7 +309,8 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   container: {
     flex: 1,
   },
@@ -339,11 +346,11 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dateItemSelected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   dateItemToday: {
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: accentColor,
   },
   dateLabel: {
     fontSize: FONT_SIZE.s,
@@ -355,7 +362,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   dateLabelToday: {
-    color: COLORS.primary,
+    color: accentColor,
   },
   listContent: {
     paddingBottom: SPACING.xl,
@@ -404,7 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceLight,
   },
   dateColumnToday: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   dateDay: {
     fontSize: 24,
@@ -432,7 +439,7 @@ const styles = StyleSheet.create({
   todayBadgeText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: accentColor,
   },
   mediaInfo: {
     flex: 1,
@@ -490,7 +497,7 @@ const styles = StyleSheet.create({
   },
   countdown: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.primary,
+    color: accentColor,
     fontWeight: '600',
   },
   mediaTypeBadge: {
@@ -501,4 +508,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-});
+}));

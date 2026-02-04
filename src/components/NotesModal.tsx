@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
@@ -42,6 +43,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const { width } = useWindowDimensions();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const saveNoteMutation = useSaveNote();
   const deleteNoteMutation = useDeleteNote();
 
@@ -205,7 +207,11 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.saveButton, (!canSave || isLoading) && styles.disabledButton]}
+            style={[
+              styles.saveButton,
+              { backgroundColor: accentColor },
+              (!canSave || isLoading) && styles.disabledButton,
+            ]}
             onPress={handleSave}
             disabled={!canSave || isLoading}
           >
@@ -278,7 +284,6 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

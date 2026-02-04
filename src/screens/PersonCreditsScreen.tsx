@@ -19,6 +19,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
@@ -68,6 +69,7 @@ export default function PersonCreditsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
@@ -304,7 +306,9 @@ export default function PersonCreditsScreen() {
           style={styles.backButtonError}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
+          <Text style={[styles.backButtonText, { color: accentColor }]}>
+            {t('common.goBack')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -341,7 +345,7 @@ export default function PersonCreditsScreen() {
             </Text>
             {hasActiveFilterState && (
               <TouchableOpacity
-                style={styles.clearFiltersButton}
+                style={[styles.clearFiltersButton, { backgroundColor: accentColor }]}
                 onPress={() => setFilterState(DEFAULT_WATCH_STATUS_FILTERS)}
                 activeOpacity={ACTIVE_OPACITY}
               >
@@ -393,7 +397,6 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
   },
   backButtonText: {
-    color: COLORS.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -418,7 +421,6 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.primary,
   },
   clearFiltersText: {
     fontSize: FONT_SIZE.m,

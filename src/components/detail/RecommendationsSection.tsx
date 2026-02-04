@@ -8,7 +8,7 @@ import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import { getMediaTitle, getMediaYear } from './detailUtils';
 import type { RecommendationsSectionProps, SimilarMediaItem } from './types';
 
@@ -19,6 +19,7 @@ const RecommendationCard = memo<{
   onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
 }>(({ item, onPress, onLongPress, mediaType }) => {
+  const styles = useDetailStyles();
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
 
@@ -37,31 +38,31 @@ const RecommendationCard = memo<{
 
   return (
     <TouchableOpacity
-      style={detailStyles.similarCard}
+      style={styles.similarCard}
       onPress={handlePress}
       onLongPress={handleLongPress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <View style={detailStyles.similarPosterContainer}>
+      <View style={styles.similarPosterContainer}>
         <MediaImage
           source={{
             uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small),
           }}
-          style={detailStyles.similarPoster}
+          style={styles.similarPoster}
           contentFit="cover"
         />
         {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
       </View>
-      <Text style={detailStyles.similarTitle} numberOfLines={2}>
+      <Text style={styles.similarTitle} numberOfLines={2}>
         {getMediaTitle(item)}
       </Text>
-      <View style={detailStyles.similarMeta}>
-        {year && <Text style={detailStyles.similarYear}>{year}</Text>}
-        {item.vote_average > 0 && year && <Text style={detailStyles.similarSeparator}> • </Text>}
+      <View style={styles.similarMeta}>
+        {year && <Text style={styles.similarYear}>{year}</Text>}
+        {item.vote_average > 0 && year && <Text style={styles.similarSeparator}> • </Text>}
         {item.vote_average > 0 && (
-          <View style={detailStyles.similarRating}>
+          <View style={styles.similarRating}>
             <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-            <Text style={detailStyles.similarRatingText}>{item.vote_average.toFixed(1)}</Text>
+            <Text style={styles.similarRatingText}>{item.vote_average.toFixed(1)}</Text>
           </View>
         )}
       </View>
@@ -84,24 +85,25 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     mediaType,
   }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
             {t('media.youMayAlsoLike')}
           </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={detailStyles.similarList}
+            style={styles.similarList}
           >
             {[1, 2, 3].map((i) => (
-              <View key={i} style={detailStyles.recommendationCardSkeleton}>
-                <View style={detailStyles.skeletonPoster} />
-                <View style={detailStyles.skeletonTitle} />
-                <View style={detailStyles.skeletonMeta} />
+              <View key={i} style={styles.recommendationCardSkeleton}>
+                <View style={styles.skeletonPoster} />
+                <View style={styles.skeletonTitle} />
+                <View style={styles.skeletonMeta} />
               </View>
             ))}
           </ScrollView>
@@ -113,11 +115,11 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     if (isError && shouldLoad) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
             {t('media.youMayAlsoLike')}
           </Text>
-          <View style={detailStyles.reviewErrorBox}>
-            <Text style={detailStyles.reviewErrorText}>{t('errors.failedToLoadRecommendations')}</Text>
+          <View style={styles.reviewErrorBox}>
+            <Text style={styles.reviewErrorText}>{t('errors.failedToLoadRecommendations')}</Text>
           </View>
         </View>
       );
@@ -127,10 +129,10 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     if (!isLoading && !isError && items.length > 0) {
       return (
         <View style={style} onLayout={onLayout}>
-          <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+          <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
             {t('media.youMayAlsoLike')}
           </Text>
-          <View style={detailStyles.similarList}>
+          <View style={styles.similarList}>
             <FlashList
               horizontal
               data={items}

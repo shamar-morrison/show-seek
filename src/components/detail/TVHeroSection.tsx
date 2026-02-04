@@ -1,5 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
@@ -33,21 +33,22 @@ export interface TVHeroSectionProps {
  */
 export const TVHeroSection = memo<TVHeroSectionProps>(
   ({ backdropPath, posterPath, showName, showId, onBackPress, onShowToast }) => {
+    const styles = useDetailStyles();
     const backdropUrl = getImageUrl(backdropPath, TMDB_IMAGE_SIZES.backdrop.medium);
     const posterUrl = getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
 
     return (
-      <View style={detailStyles.heroContainer}>
+      <View style={styles.heroContainer}>
         <MediaImage
           source={{ uri: backdropUrl }}
-          style={detailStyles.backdrop}
+          style={styles.backdrop}
           contentFit="cover"
         />
-        <LinearGradient colors={['transparent', COLORS.background]} style={detailStyles.gradient} />
+        <LinearGradient colors={['transparent', COLORS.background]} style={styles.gradient} />
 
-        <SafeAreaView style={detailStyles.headerSafe} edges={['top']}>
+        <SafeAreaView style={styles.headerSafe} edges={['top']}>
           <TouchableOpacity
-            style={detailStyles.headerButton}
+            style={styles.headerButton}
             onPress={onBackPress}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -57,8 +58,8 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
 
         <ShareButton id={showId} title={showName} mediaType="tv" onShowToast={onShowToast} />
 
-        <View style={detailStyles.posterContainer}>
-          <MediaImage source={{ uri: posterUrl }} style={detailStyles.poster} contentFit="cover" />
+        <View style={styles.posterContainer}>
+          <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
         </View>
       </View>
     );

@@ -2,12 +2,13 @@ import type { Episode } from '@/src/api/tmdb';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import { Calendar, Check, Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
 import type { TFunction } from 'i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { seasonScreenStyles as styles } from './seasonScreenStyles';
+import { useSeasonScreenStyles } from './seasonScreenStyles';
 
 export interface EpisodeItemProps {
   episode: Episode;
@@ -45,6 +46,8 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     onMarkUnwatched,
     t,
   }) => {
+    const styles = useSeasonScreenStyles();
+    const { accentColor } = useAccentColor();
     const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
     const isDisabled = isPending || (!isWatched && !hasAired);
 
@@ -84,8 +87,8 @@ export const EpisodeItem = memo<EpisodeItemProps>(
                 {/* User Rating */}
                 {userRating > 0 && (
                   <View style={styles.episodeRating}>
-                    <Star size={12} color={COLORS.primary} fill={COLORS.primary} />
-                    <Text style={[styles.ratingText, { color: COLORS.primary }]}>
+                    <Star size={12} color={accentColor} fill={accentColor} />
+                    <Text style={[styles.ratingText, { color: accentColor }]}>
                       {userRating.toFixed(1)}
                     </Text>
                   </View>

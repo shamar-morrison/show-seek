@@ -3,6 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -41,17 +42,26 @@ function TabButton({
   icon: typeof Tv;
   iconColor: string;
 }) {
+  const { accentColor } = useAccentColor();
   const displayCount = count > 99 ? '99+' : count.toString();
 
   return (
     <TouchableOpacity
-      style={[styles.tabButton, isActive && styles.tabButtonActive]}
+      style={[
+        styles.tabButton,
+        isActive && [styles.tabButtonActive, { borderColor: accentColor }],
+      ]}
       onPress={onPress}
       activeOpacity={ACTIVE_OPACITY}
     >
       <Icon size={16} color={isActive ? iconColor : COLORS.textSecondary} />
       <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{label}</Text>
-      <View style={[styles.countBadge, isActive && styles.countBadgeActive]}>
+      <View
+        style={[
+          styles.countBadge,
+          isActive && [styles.countBadgeActive, { backgroundColor: accentColor }],
+        ]}
+      >
         <Text style={[styles.countText, isActive && styles.countTextActive]}>{displayCount}</Text>
       </View>
     </TouchableOpacity>
@@ -72,6 +82,7 @@ export default function MonthDetailScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const { data: monthDetail, isLoading } = useMonthDetail(month || null);
 
   const [activeTab, setActiveTab] = useState<TabType>('watched');
@@ -233,7 +244,7 @@ export default function MonthDetailScreen() {
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Tv size={20} color={COLORS.primary} />
+            <Tv size={20} color={accentColor} />
             <Text style={styles.summaryValue}>{monthDetail.stats.watched}</Text>
             <Text style={styles.summaryLabel}>{t('stats.watched')}</Text>
           </View>
@@ -265,7 +276,7 @@ export default function MonthDetailScreen() {
           isActive={activeTab === 'watched'}
           onPress={() => setActiveTab('watched')}
           icon={Tv}
-          iconColor={COLORS.primary}
+          iconColor={accentColor}
         />
         <TabButton
           label={t('stats.rated')}
@@ -412,7 +423,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.surfaceLight,
   },
   tabButtonActive: {
-    borderColor: COLORS.primary,
     backgroundColor: COLORS.surface,
   },
   tabLabel: {
@@ -433,7 +443,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   countBadgeActive: {
-    backgroundColor: COLORS.primary,
   },
   countText: {
     fontSize: FONT_SIZE.xs,

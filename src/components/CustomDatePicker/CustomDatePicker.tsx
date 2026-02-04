@@ -5,13 +5,13 @@
  */
 
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Pressable,
   StyleProp,
-  StyleSheet,
   Text,
   TextStyle,
   TouchableOpacity,
@@ -56,6 +56,7 @@ export function CustomDatePicker({
   maxDate,
   onCancel,
 }: DatePickerProps) {
+  const styles = useStyles();
   const { t } = useTranslation();
 
   // Stable min/max date references to prevent unnecessary effect runs
@@ -270,7 +271,8 @@ export function CustomDatePicker({
 
 const CELL_SIZE = 44; // Minimum touch target
 
-const styles = StyleSheet.create({
+const useStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   container: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -347,7 +349,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   selectedCell: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
     borderRadius: BORDER_RADIUS.round,
   },
   selectedText: {
@@ -356,7 +358,7 @@ const styles = StyleSheet.create({
   },
   todayCell: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: accentColor,
     borderRadius: BORDER_RADIUS.round,
   },
   pressedCell: {
@@ -380,17 +382,17 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: COLORS.transparent,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: accentColor,
   },
   confirmButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   buttonDisabled: {
     backgroundColor: COLORS.surfaceLight,
     opacity: 0.5,
   },
   cancelButtonText: {
-    color: COLORS.primary,
+    color: accentColor,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },
@@ -402,4 +404,4 @@ const styles = StyleSheet.create({
   buttonTextDisabled: {
     color: COLORS.textSecondary,
   },
-});
+  }));

@@ -149,6 +149,10 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/region' as any);
   }, [router]);
 
+  const handleColorPress = useCallback(() => {
+    router.push('/(tabs)/profile/colors' as any);
+  }, [router]);
+
   const handleLaunchScreenPress = useCallback(() => {
     router.push('/(tabs)/profile/default-launch-screen' as any);
   }, [router]);
@@ -186,6 +190,7 @@ export function useProfileLogic() {
     handleUpgradePress,
     handleLanguagePress,
     handleRegionPress,
+    handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
     handlePremiumPress,

@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import * as Haptics from 'expo-haptics';
 import { Search, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
@@ -28,6 +29,7 @@ export function SearchableHeader({
 }: SearchableHeaderProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
+  const { accentColor } = useAccentColor();
 
   // Auto-focus after a brief delay to let layout settle
   useEffect(() => {
@@ -65,7 +67,7 @@ export function SearchableHeader({
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
-          selectionColor={COLORS.primary}
+          selectionColor={accentColor}
         />
         <Pressable onPress={handleClear} hitSlop={HIT_SLOP.l} style={styles.clearButton}>
           <X size={20} color={COLORS.textSecondary} />

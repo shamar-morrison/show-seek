@@ -390,6 +390,7 @@
     "preferences": "Préférences",
     "language": "Langue",
     "region": "Région",
+    "accentColor": "Couleur d’accent",
     "notifications": "Notifications",
     "defaultLaunchScreen": "Écran de démarrage par défaut",
     "appearance": "Apparence",
@@ -409,7 +410,9 @@
     "selectLanguage": "Sélectionner la langue",
     "selectRegion": "Sélectionner la région",
     "regionDescription": "Affecte la disponibilité du contenu et les recommandations",
-    "languageDescription": "Langue de l'application et du contenu"
+    "languageDescription": "Langue de l'application et du contenu",
+    "accentColorDescription": "Choisissez la couleur de surbrillance utilisée dans l’app.",
+    "accentColorNote": "Cela modifie les boutons, surbrillances et autres éléments d’accent."
   },
   "profile": {
     "title": "Profil",

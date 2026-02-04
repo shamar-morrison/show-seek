@@ -2,7 +2,15 @@
  * Language Selection Screen
  * Allows users to select their preferred language for TMDB content
  */
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { SUPPORTED_LANGUAGES, useLanguage } from '@/src/context/LanguageProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
@@ -22,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LanguageScreen() {
   const { language, setLanguage } = useLanguage();
+  const { accentColor } = useAccentColor();
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const { t } = useTranslation();
 
@@ -66,10 +75,7 @@ export default function LanguageScreen() {
               >
                 <View style={styles.languageInfo}>
                   <Text
-                    style={[
-                      styles.languageNativeName,
-                      isSelected && styles.languageNativeNameSelected,
-                    ]}
+                    style={[styles.languageNativeName, isSelected && { color: accentColor }]}
                   >
                     {lang.nativeName}
                   </Text>
@@ -78,10 +84,12 @@ export default function LanguageScreen() {
 
                 <View style={styles.languageStatus}>
                   {isLoading ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <ActivityIndicator size="small" color={accentColor} />
                   ) : isSelected ? (
-                    <View style={styles.checkContainer}>
-                      <Check size={20} color={COLORS.primary} />
+                    <View
+                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
+                    >
+                      <Check size={20} color={accentColor} />
                     </View>
                   ) : null}
                 </View>
@@ -137,9 +145,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 2,
   },
-  languageNativeNameSelected: {
-    color: COLORS.primary,
-  },
   languageEnglishName: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
@@ -154,7 +159,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(229, 9, 20, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },

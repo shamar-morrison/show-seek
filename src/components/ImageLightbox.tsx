@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Image } from 'expo-image';
 import { X } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -19,6 +20,7 @@ export default function ImageLightbox({
   images,
   initialIndex = 0,
 }: ImageLightboxProps) {
+  const { accentColor } = useAccentColor();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   React.useEffect(() => {
@@ -67,7 +69,13 @@ export default function ImageLightbox({
         {images.length > 1 && (
           <View style={styles.indicator}>
             {images.map((_, index) => (
-              <View key={index} style={[styles.dot, currentIndex === index && styles.activeDot]} />
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  currentIndex === index && { backgroundColor: accentColor, width: 24 },
+                ]}
+              />
             ))}
           </View>
         )}
@@ -128,9 +136,5 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  activeDot: {
-    backgroundColor: COLORS.primary,
-    width: 24,
   },
 });

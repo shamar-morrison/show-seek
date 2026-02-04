@@ -1,7 +1,8 @@
 import { BORDER_RADIUS, BUTTON_HEIGHT, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { StyleSheet } from 'react-native';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
-export const detailStyles = StyleSheet.create({
+export const useDetailStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   // Section Headers
   sectionTitle: {
     fontSize: FONT_SIZE.l,
@@ -25,7 +26,7 @@ export const detailStyles = StyleSheet.create({
     marginBottom: SPACING.s,
   },
   readMore: {
-    color: COLORS.primary,
+    color: accentColor,
     fontSize: FONT_SIZE.s,
   },
 
@@ -98,7 +99,7 @@ export const detailStyles = StyleSheet.create({
   viewAll: {
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: accentColor,
   },
 
   // Similar Media
@@ -318,7 +319,7 @@ export const detailStyles = StyleSheet.create({
   },
   episodeBreadcrumbLink: {
     fontSize: FONT_SIZE.s,
-    color: COLORS.primary,
+    color: accentColor,
   },
   episodeNumberBadge: {
     position: 'absolute',
@@ -402,7 +403,7 @@ export const detailStyles = StyleSheet.create({
   },
   currentEpisodeBorder: {
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: accentColor,
   },
   relatedEpisodeWatchedOverlay: {
     position: 'absolute',
@@ -553,7 +554,7 @@ export const detailStyles = StyleSheet.create({
   },
   playButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -587,7 +588,7 @@ export const detailStyles = StyleSheet.create({
     paddingTop: SPACING.xl,
   },
   backButtonText: {
-    color: COLORS.primary,
+    color: accentColor,
   },
 
   // TV-specific status badge
@@ -603,4 +604,4 @@ export const detailStyles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-});
+  }));

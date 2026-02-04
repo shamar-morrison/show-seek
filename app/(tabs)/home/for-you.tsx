@@ -3,6 +3,7 @@ import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -23,6 +24,7 @@ export default function ForYouScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const router = useRouter();
+  const { accentColor } = useAccentColor();
 
   const {
     sections,
@@ -58,11 +60,11 @@ export default function ForYouScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <LogIn size={64} color={COLORS.primary} />
+            <LogIn size={64} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('forYou.signInRequired')}</Text>
           <Text style={styles.emptyDescription}>{t('forYou.signInDescription')}</Text>
-          <Pressable style={styles.primaryButton} onPress={handleSignIn}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleSignIn}>
             <Text style={styles.primaryButtonText}>{t('forYou.signIn')}</Text>
           </Pressable>
         </View>
@@ -89,11 +91,11 @@ export default function ForYouScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <View style={styles.iconContainer}>
-            <Sparkles size={64} color={COLORS.primary} />
+            <Sparkles size={64} color={accentColor} />
           </View>
           <Text style={styles.emptyTitle}>{t('forYou.notEnoughData')}</Text>
           <Text style={styles.emptyDescription}>{t('forYou.notEnoughDataDescription')}</Text>
-          <Pressable style={styles.primaryButton} onPress={handleGoToDiscover}>
+          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleGoToDiscover}>
             <Text style={styles.primaryButtonText}>{t('forYou.goToDiscover')}</Text>
           </Pressable>
         </View>
@@ -123,7 +125,7 @@ export default function ForYouScreen() {
             items={hiddenGems}
             mediaType="movie"
             isLoading={isLoadingHiddenGems}
-            icon={<Sparkles size={20} color={COLORS.primary} />}
+            icon={<Sparkles size={20} color={accentColor} />}
           />
         )}
 
@@ -282,7 +284,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: 12,

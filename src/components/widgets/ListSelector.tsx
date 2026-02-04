@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { Check } from 'lucide-react-native';
@@ -14,11 +15,12 @@ interface ListSelectorProps {
 export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
   const { t } = useTranslation();
   const { data: lists, isLoading } = useLists();
+  const { accentColor } = useAccentColor();
 
   if (isLoading || !lists) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator color={COLORS.primary} />
+        <ActivityIndicator color={accentColor} />
       </View>
     );
   }
@@ -38,13 +40,23 @@ export function ListSelector({ selectedListId, onSelect }: ListSelectorProps) {
               key={list.id}
               style={({ pressed }) => [
                 styles.listButton,
-                isSelected && styles.selectedButton,
+                isSelected && [
+                  styles.selectedButton,
+                  { borderColor: accentColor, backgroundColor: accentColor + '10' },
+                ],
                 pressed && { opacity: ACTIVE_OPACITY },
               ]}
               onPress={() => onSelect(list.id)}
             >
-              <Text style={[styles.listName, isSelected && styles.selectedText]}>{list.name}</Text>
-              {isSelected && <Check size={16} color={COLORS.primary} />}
+              <Text
+                style={[
+                  styles.listName,
+                  isSelected && [styles.selectedText, { color: accentColor }],
+                ]}
+              >
+                {list.name}
+              </Text>
+              {isSelected && <Check size={16} color={accentColor} />}
             </Pressable>
           );
         })}
@@ -78,15 +90,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.surfaceLight,
   },
   selectedButton: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
   },
   listName: {
     fontSize: 14,
     color: COLORS.text,
   },
   selectedText: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   loading: {

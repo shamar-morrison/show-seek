@@ -39,6 +39,15 @@ export default function ProfileLayout() {
         }}
       />
       <Stack.Screen
+        name="colors"
+        options={{
+          headerShown: true,
+          headerTitle: t('settings.accentColor'),
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
+      <Stack.Screen
         name="default-launch-screen"
         options={{
           headerShown: true,

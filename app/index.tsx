@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { Redirect } from 'expo-router';
@@ -13,6 +14,7 @@ import { ActivityIndicator, View } from 'react-native';
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
   const { preferences, isLoading: preferencesLoading, hasLoaded } = usePreferences();
+  const { accentColor } = useAccentColor();
 
   // For authenticated non-guest users, wait for preferences to actually load from Firestore
   const isNonGuestUser = user && !user.isAnonymous;
@@ -30,7 +32,7 @@ export default function Index() {
           alignItems: 'center',
         }}
       >
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={accentColor} />
       </View>
     );
   }
@@ -49,7 +51,7 @@ export default function Index() {
         alignItems: 'center',
       }}
     >
-      <ActivityIndicator size="large" color={COLORS.primary} />
+      <ActivityIndicator size="large" color={accentColor} />
       <Redirect href={destination} />
     </View>
   );

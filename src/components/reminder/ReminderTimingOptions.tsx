@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { ReminderTiming } from '@/src/types/reminder';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +32,7 @@ export function ReminderTimingOptions({
   disabledDescriptionKey = 'reminder.notificationTimePassed',
 }: ReminderTimingOptionsProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const disabledDescription = t(disabledDescriptionKey);
 
   return (
@@ -42,7 +44,7 @@ export function ReminderTimingOptions({
             key={option.value}
             style={[
               styles.timingOption,
-              selectedValue === option.value && styles.timingOptionSelected,
+              selectedValue === option.value && [styles.timingOptionSelected, { borderColor: accentColor }],
               isOptionDisabled && styles.timingOptionDisabled,
             ]}
             onPress={() => !isOptionDisabled && onSelect(option.value)}
@@ -51,7 +53,7 @@ export function ReminderTimingOptions({
           >
             <View style={[styles.radioOuter, isOptionDisabled && styles.radioOuterDisabled]}>
               {selectedValue === option.value && !isOptionDisabled && (
-                <View style={styles.radioInner} />
+                <View style={[styles.radioInner, { backgroundColor: accentColor }]} />
               )}
             </View>
             <View style={styles.timingTextContainer}>
@@ -83,7 +85,6 @@ const styles = StyleSheet.create({
   },
   timingOptionSelected: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   timingOptionDisabled: {
     opacity: 0.5,
@@ -104,7 +105,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: COLORS.primary,
   },
   timingTextContainer: {
     flex: 1,

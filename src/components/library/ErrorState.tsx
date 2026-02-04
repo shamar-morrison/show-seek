@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { AlertCircle } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ interface ErrorStateProps {
 
 export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   return (
     <View style={styles.container}>
@@ -19,7 +21,11 @@ export const ErrorState = memo<ErrorStateProps>(({ title, message, onRetry }) =>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
-        <TouchableOpacity style={styles.button} onPress={onRetry} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: accentColor }]}
+          onPress={onRetry}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <Text style={styles.buttonText}>{t('common.retry')}</Text>
         </TouchableOpacity>
       )}
@@ -51,7 +57,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   button: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
