@@ -5,7 +5,7 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import * as Haptics from 'expo-haptics';
 import { Calendar, Check, Star } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { seasonScreenStyles as styles } from './seasonScreenStyles';
 
@@ -23,6 +23,7 @@ export interface EpisodeItemProps {
   onPress: () => void;
   onMarkWatched: () => void;
   onMarkUnwatched: () => void;
+  t: TFunction;
   progress?: { watchedCount: number; totalAiredCount: number };
   showStatus?: string;
   autoAddToWatching: boolean;
@@ -42,8 +43,8 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     onPress,
     onMarkWatched,
     onMarkUnwatched,
+    t,
   }) => {
-    const { t } = useTranslation();
     const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
     const isDisabled = isPending || (!isWatched && !hasAired);
 

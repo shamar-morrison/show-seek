@@ -42,6 +42,8 @@ export default function WatchStatusScreen() {
   const { data: lists, isLoading } = useLists();
   const { data: genreMap } = useAllGenres();
   const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const [selectedListId, setSelectedListId] = useState<string>('watchlist');
   const [filters, setFilters] = useState<WatchStatusFilterState>(DEFAULT_WATCH_STATUS_FILTERS);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -238,6 +240,8 @@ export default function WatchStatusScreen() {
                   item={item}
                   onPress={handleItemPress}
                   onLongPress={handleLongPress}
+                  movieLabel={movieLabel}
+                  tvShowLabel={tvShowLabel}
                 />
               )}
               contentContainerStyle={styles.listContent}

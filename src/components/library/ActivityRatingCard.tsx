@@ -3,7 +3,7 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import type { ActivityItem } from '@/src/types/history';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import React, { memo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
@@ -11,14 +11,14 @@ import { RatingBadge } from './RatingBadge';
 interface ActivityRatingCardProps {
   item: ActivityItem;
   onPress: (item: ActivityItem) => void;
+  t: TFunction;
 }
 
 /**
  * Card component for displaying rated items in the history/stats screens.
  * Consistent with MovieRatingListCard and TVShowRatingListCard styling.
  */
-export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress }) => {
-  const { t } = useTranslation();
+export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress, t }) => {
 
   const handlePress = useCallback(() => {
     onPress(item);

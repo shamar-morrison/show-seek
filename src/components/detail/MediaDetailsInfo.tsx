@@ -81,7 +81,10 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{t('media.details')}</Text>
-      {renderRow(t('mediaDetails.originalTitle'), isMovie ? movie!.original_title : show!.original_name)}
+      {renderRow(
+        t('mediaDetails.originalTitle'),
+        isMovie ? movie!.original_title : show!.original_name
+      )}
       {renderRow(t('media.status'), media.status)}
       {renderRow(
         t('media.runtime'),
@@ -108,7 +111,7 @@ export const MediaDetailsInfo = ({ media, type }: MediaDetailsInfoProps) => {
       )}
       {renderRow(
         t('mediaDetails.certification'),
-        <Text>
+        <Text style={styles.listItemValue}>
           {cert === 'N/A' ? t('common.notAvailable') : cert} {flag ? getCountryFlag(flag) : ''}
         </Text>
       )}

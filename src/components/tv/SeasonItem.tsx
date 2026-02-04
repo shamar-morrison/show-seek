@@ -14,7 +14,7 @@ import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import * as Haptics from 'expo-haptics';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
 import { seasonScreenStyles as styles } from './seasonScreenStyles';
@@ -48,6 +48,7 @@ export interface SeasonItemProps {
   firstAirDate: string | undefined;
   voteAverage: number | undefined;
   markPreviousEpisodesWatched: boolean;
+  t: TFunction;
 }
 
 export const SeasonItem = memo<SeasonItemProps>(
@@ -75,8 +76,8 @@ export const SeasonItem = memo<SeasonItemProps>(
     firstAirDate,
     voteAverage,
     markPreviousEpisodesWatched,
+    t,
   }) => {
-    const { t } = useTranslation();
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
 
@@ -334,6 +335,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                       episodeNumber: episode.episode_number,
                     });
                   }}
+                  t={t}
                   progress={progress ?? undefined}
                   showStatus={showStatus}
                   autoAddToWatching={autoAddToWatching}

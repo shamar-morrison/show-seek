@@ -16,8 +16,8 @@ interface Creator {
 const CreatorCard = memo<{
   creator: Creator;
   onPress: (id: number) => void;
-}>(({ creator, onPress }) => {
-  const { t } = useTranslation();
+  label: string;
+}>(({ creator, onPress, label }) => {
 
   const handlePress = useCallback(() => {
     onPress(creator.id);
@@ -41,7 +41,7 @@ const CreatorCard = memo<{
         {creator.name}
       </Text>
       <Text style={detailStyles.characterName} numberOfLines={1}>
-        {t('media.creator')}
+        {label}
       </Text>
     </TouchableOpacity>
   );
@@ -63,7 +63,8 @@ export const CreatorsSection = memo<CreatorsSectionProps>(
       return null;
     }
 
-    const title = creators.length > 1 ? t('media.creators') : t('media.creator');
+    const creatorLabel = t('media.creator');
+    const title = creators.length > 1 ? t('media.creators') : creatorLabel;
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
@@ -76,6 +77,7 @@ export const CreatorsSection = memo<CreatorsSectionProps>(
               key={`${creator.id}-${index}`}
               creator={creator}
               onPress={onCreatorPress}
+              label={creatorLabel}
             />
           ))}
         </ScrollView>

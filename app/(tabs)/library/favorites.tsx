@@ -43,6 +43,8 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
   const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -191,9 +193,15 @@ export default function FavoritesScreen() {
 
   const renderListItem = useCallback(
     ({ item }: { item: ListMediaItem }) => (
-      <MediaListCard item={item} onPress={handleItemPress} onLongPress={handleLongPress} />
+      <MediaListCard
+        item={item}
+        onPress={handleItemPress}
+        onLongPress={handleLongPress}
+        movieLabel={movieLabel}
+        tvShowLabel={tvShowLabel}
+      />
     ),
-    [handleItemPress, handleLongPress]
+    [handleItemPress, handleLongPress, movieLabel, tvShowLabel]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);

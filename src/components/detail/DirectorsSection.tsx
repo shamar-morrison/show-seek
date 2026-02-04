@@ -9,9 +9,8 @@ import { detailStyles } from './detailStyles';
 const DirectorCard = memo<{
   director: CrewMember;
   onPress: (id: number) => void;
-}>(({ director, onPress }) => {
-  const { t } = useTranslation();
-
+  label: string;
+}>(({ director, onPress, label }) => {
   const handlePress = useCallback(() => {
     onPress(director.id);
   }, [director.id, onPress]);
@@ -34,7 +33,7 @@ const DirectorCard = memo<{
         {director.name}
       </Text>
       <Text style={detailStyles.characterName} numberOfLines={1}>
-        {t('media.director')}
+        {label}
       </Text>
     </TouchableOpacity>
   );
@@ -56,7 +55,8 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
       return null;
     }
 
-    const title = directors.length > 1 ? t('media.directors') : t('media.director');
+    const directorLabel = t('media.director');
+    const title = directors.length > 1 ? t('media.directors') : directorLabel;
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
@@ -69,6 +69,7 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
               key={`${director.id}-${index}`}
               director={director}
               onPress={onDirectorPress}
+              label={directorLabel}
             />
           ))}
         </ScrollView>

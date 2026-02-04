@@ -50,6 +50,8 @@ export default function CustomListDetailScreen() {
   const deleteMutation = useDeleteList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -320,7 +322,13 @@ export default function CustomListDetailScreen() {
 
   const renderListItem = useCallback(
     ({ item }: { item: ListMediaItem }) => (
-      <MediaListCard item={item} onPress={handleItemPress} onLongPress={handleLongPress} />
+      <MediaListCard
+        item={item}
+        onPress={handleItemPress}
+        onLongPress={handleLongPress}
+        movieLabel={movieLabel}
+        tvShowLabel={tvShowLabel}
+      />
     ),
     [handleItemPress, handleLongPress]
   );

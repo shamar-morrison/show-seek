@@ -68,6 +68,8 @@ export default function PersonCreditsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
     id: string;
     name: string;
@@ -282,9 +284,11 @@ export default function PersonCreditsScreen() {
         onPress={handleItemPress}
         subtitle={item.character || item.job}
         hideMediaType
+        movieLabel={movieLabel}
+        tvShowLabel={tvShowLabel}
       />
     ),
-    [handleItemPress]
+    [handleItemPress, movieLabel, tvShowLabel]
   );
 
   if (creditsQuery.isLoading || isLoadingPreference) {

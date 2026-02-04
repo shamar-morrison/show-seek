@@ -205,9 +205,10 @@ export default function RemindersScreen() {
         onEditTiming={handleEditTiming}
         onCancel={handleCancelReminder}
         isLoading={cancellingId === item.id}
+        t={t}
       />
     ),
-    [handleEditTiming, handleCancelReminder, cancellingId]
+    [handleEditTiming, handleCancelReminder, cancellingId, t]
   );
 
   const keyExtractor = useCallback((item: Reminder) => item.id, []);

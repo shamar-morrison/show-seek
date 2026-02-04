@@ -20,6 +20,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { listCardStyles } from '@/src/styles/listCardStyles';
@@ -77,7 +78,8 @@ function formatRelativeTime(
 ): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  // Clamp to non-negative to handle future timestamps (treat as "today")
+  const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
   if (diffDays === 0) return t('common.today');
   if (diffDays === 1) return t('common.yesterday');
@@ -119,6 +121,11 @@ export default function NotesScreen() {
   const noteSheetRef = useRef<NoteModalRef>(null);
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { preferences } = usePreferences();
+
+  // Calculate tab bar height (matches _layout.tsx)
+  const hideLabels = preferences?.hideTabLabels ?? false;
+  const TAB_BAR_HEIGHT = hideLabels ? 56 : 70;
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
@@ -406,9 +413,7 @@ export default function NotesScreen() {
         <View style={styles.premiumGate}>
           <StickyNote size={60} color={COLORS.textSecondary} />
           <Text style={styles.premiumTitle}>{t('premiumFeature.title')}</Text>
-          <Text style={styles.premiumDescription}>
-            {t('notes.premiumDescription')}
-          </Text>
+          <Text style={styles.premiumDescription}>{t('notes.premiumDescription')}</Text>
           <TouchableOpacity
             style={styles.upgradeButton}
             onPress={() => router.push('/premium' as any)}
@@ -454,7 +459,9 @@ export default function NotesScreen() {
           ListEmptyComponent={
             searchQuery ? (
               <SearchEmptyState
-                height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT}
+                height={
+                  windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT - TAB_BAR_HEIGHT
+                }
               />
             ) : null
           }
@@ -473,7 +480,9 @@ export default function NotesScreen() {
           ListEmptyComponent={
             searchQuery ? (
               <SearchEmptyState
-                height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT}
+                height={
+                  windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT - TAB_BAR_HEIGHT
+                }
               />
             ) : null
           }

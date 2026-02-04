@@ -9,7 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
@@ -18,6 +18,7 @@ interface ReminderCardProps {
   onEditTiming: (reminder: Reminder) => void;
   onCancel: (reminderId: string) => void;
   isLoading?: boolean;
+  t: TFunction;
 }
 
 const getTimingLabelKey = (reminder: Reminder): string => {
@@ -85,8 +86,7 @@ const formatNotificationTime = (timestamp: number): string => {
 };
 
 export const ReminderCard = memo<ReminderCardProps>(
-  ({ reminder, onEditTiming, onCancel, isLoading = false }) => {
-    const { t } = useTranslation();
+  ({ reminder, onEditTiming, onCancel, isLoading = false, t }) => {
     const router = useRouter();
     const currentTab = useCurrentTab();
 

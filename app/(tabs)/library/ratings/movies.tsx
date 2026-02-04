@@ -20,17 +20,10 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
+import { Search, Star } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dimensions,
-  Pressable,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -212,14 +205,14 @@ export default function MovieRatingsScreen() {
             numColumns={COLUMN_COUNT}
             contentContainerStyle={styles.gridListContent}
             showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <RatingsEmptyState
-              searchQuery={searchQuery}
-              hasActiveFilterState={hasActiveFilterState}
-              height={emptyStateHeight}
-              onClearFilters={setFilterState}
-            />
-          }
+            ListEmptyComponent={
+              <RatingsEmptyState
+                searchQuery={searchQuery}
+                hasActiveFilterState={hasActiveFilterState}
+                height={emptyStateHeight}
+                onClearFilters={setFilterState}
+              />
+            }
           />
         ) : (
           <FlashList
@@ -230,14 +223,14 @@ export default function MovieRatingsScreen() {
             keyExtractor={keyExtractor}
             contentContainerStyle={libraryListStyles.listContent}
             showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <RatingsEmptyState
-              searchQuery={searchQuery}
-              hasActiveFilterState={hasActiveFilterState}
-              height={emptyStateHeight}
-              onClearFilters={setFilterState}
-            />
-          }
+            ListEmptyComponent={
+              <RatingsEmptyState
+                searchQuery={searchQuery}
+                hasActiveFilterState={hasActiveFilterState}
+                height={emptyStateHeight}
+                onClearFilters={setFilterState}
+              />
+            }
           />
         )}
       </SafeAreaView>

@@ -33,6 +33,8 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
             const episodeKey = `${seasonNumber}_${episode.episode_number}`;
             const isWatched = watchedEpisodes[episodeKey];
 
+            const episodeNumberLabel = t('media.episodeNumber', { number: episode.episode_number });
+
             return (
               <EpisodeCard
                 key={episode.id}
@@ -40,6 +42,7 @@ export const RelatedEpisodesSection = memo<RelatedEpisodesSectionProps>(
                 isCurrent={isCurrent}
                 isWatched={isWatched}
                 onPress={onEpisodePress}
+                episodeNumberLabel={episodeNumberLabel}
               />
             );
           })}
@@ -67,8 +70,8 @@ const EpisodeCard = memo<{
   isCurrent: boolean;
   isWatched: boolean;
   onPress: (episodeNumber: number) => void;
-}>(({ episode, isCurrent, isWatched, onPress }) => {
-  const { t } = useTranslation();
+  episodeNumberLabel: string;
+}>(({ episode, isCurrent, isWatched, onPress, episodeNumberLabel }) => {
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
 
   const handlePress = useCallback(() => {
@@ -95,9 +98,7 @@ const EpisodeCard = memo<{
         )}
       </View>
       <View style={detailStyles.relatedEpisodeInfo}>
-        <Text style={detailStyles.relatedEpisodeNumber}>
-          {t('media.episodeNumber', { number: episode.episode_number })}
-        </Text>
+        <Text style={detailStyles.relatedEpisodeNumber}>{episodeNumberLabel}</Text>
         <Text style={detailStyles.relatedEpisodeTitle} numberOfLines={2}>
           {episode.name}
         </Text>

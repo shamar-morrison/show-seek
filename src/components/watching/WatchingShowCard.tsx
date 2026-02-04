@@ -6,15 +6,15 @@ import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
 import { Play } from 'lucide-react-native';
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface WatchingShowCardProps {
   show: InProgressShow;
+  t: TFunction;
 }
 
-export function WatchingShowCard({ show }: WatchingShowCardProps) {
-  const { t } = useTranslation();
+export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   const router = useRouter();
 
   const currentTab = useCurrentTab();

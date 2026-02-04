@@ -204,6 +204,7 @@ export default function TVSeasonsScreen() {
               firstAirDate={show.first_air_date}
               voteAverage={show.vote_average}
               markPreviousEpisodesWatched={!!preferences.markPreviousEpisodesWatched}
+              t={t}
             />
           </View>
         ))}

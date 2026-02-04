@@ -66,6 +66,8 @@ function extractNumericId(id: string | number): number {
 
 export default function MonthDetailScreen() {
   const { t } = useTranslation();
+  const movieLabel = t('media.movie');
+  const tvShowLabel = t('media.tvShow');
   const { month } = useLocalSearchParams<{ month: string }>();
   const navigation = useNavigation();
   const router = useRouter();
@@ -291,7 +293,14 @@ export default function MonthDetailScreen() {
       ) : activeTab === 'added' ? (
         <FlashList
           data={addedItems}
-          renderItem={({ item }) => <MediaListCard item={item} onPress={handleListItemPress} />}
+          renderItem={({ item }) => (
+            <MediaListCard
+              item={item}
+              onPress={handleListItemPress}
+              movieLabel={movieLabel}
+              tvShowLabel={tvShowLabel}
+            />
+          )}
           keyExtractor={(item) => `${item.id}-${item.addedAt}`}
           contentContainerStyle={styles.listContent}
         />
@@ -300,9 +309,16 @@ export default function MonthDetailScreen() {
           data={combinedWatchedItems}
           renderItem={({ item }) => {
             if (item.type === 'media') {
-              return <MediaListCard item={item.data} onPress={handleListItemPress} />;
+              return (
+                <MediaListCard
+                  item={item.data}
+                  onPress={handleListItemPress}
+                  movieLabel={movieLabel}
+                  tvShowLabel={tvShowLabel}
+                />
+              );
             }
-            return <ActivityRatingCard item={item.data} onPress={handleItemPress} />;
+            return <ActivityRatingCard item={item.data} onPress={handleItemPress} t={t} />;
           }}
           keyExtractor={(item, index) => {
             if (item.type === 'media') {
@@ -321,7 +337,7 @@ export default function MonthDetailScreen() {
       ) : (
         <FlashList
           data={rated}
-          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} />}
+          renderItem={({ item }) => <ActivityRatingCard item={item} onPress={handleItemPress} t={t} />}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.listContent}
         />

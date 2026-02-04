@@ -41,8 +41,7 @@ function traktToReview(traktReview: TraktReview): Review {
  * A single review card with spoiler handling
  */
 const TraktReviewCard = memo(
-  ({ review, onPress }: { review: TraktReview; onPress: () => void }) => {
-    const { t } = useTranslation();
+  ({ review, onPress, spoilerLabel }: { review: TraktReview; onPress: () => void; spoilerLabel: string }) => {
     const [revealed, setRevealed] = useState(false);
     const isSpoiler = review.spoiler && !revealed;
 
@@ -93,7 +92,7 @@ const TraktReviewCard = memo(
         {isSpoiler ? (
           <View style={styles.spoilerContainer}>
             <View style={styles.spoilerOverlay}>
-              <Text style={styles.spoilerHint}>{t('reviews.tapToRevealSpoiler')}</Text>
+              <Text style={styles.spoilerHint}>{spoilerLabel}</Text>
             </View>
             <Text style={[detailStyles.reviewContent, styles.blurredText]} numberOfLines={4}>
               {review.comment}
@@ -114,6 +113,7 @@ TraktReviewCard.displayName = 'TraktReviewCard';
 export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
   ({ isLoading, isError, reviews, shouldLoad, onReviewPress, onLayout, style }) => {
     const { t } = useTranslation();
+    const spoilerLabel = t('reviews.tapToRevealSpoiler');
     // Render loading skeleton
     if (isLoading && shouldLoad) {
       return (
@@ -178,7 +178,11 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
               removeClippedSubviews={true}
               drawDistance={400}
               renderItem={({ item }) => (
-                <TraktReviewCard review={item} onPress={() => onReviewPress(traktToReview(item))} />
+                <TraktReviewCard
+                  review={item}
+                  onPress={() => onReviewPress(traktToReview(item))}
+                  spoilerLabel={spoilerLabel}
+                />
               )}
             />
           </View>

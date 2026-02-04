@@ -156,7 +156,9 @@ export default function WatchProgressScreen() {
     t,
   ]);
 
-  const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} />;
+  const renderItem = ({ item }: { item: InProgressShow }) => (
+    <WatchingShowCard show={item} t={t} />
+  );
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading message={t('library.loadingWatchHistory')} />;
