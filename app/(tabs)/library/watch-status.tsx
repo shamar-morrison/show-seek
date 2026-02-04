@@ -12,6 +12,7 @@ import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
@@ -53,6 +54,7 @@ export default function WatchStatusScreen() {
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<FlatList>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
+  const { accentColor } = useAccentColor();
 
   const {
     handleItemPress,
@@ -197,7 +199,9 @@ export default function WatchStatusScreen() {
           <HeaderIconButton onPress={handleOpenActionsModal}>
             <View style={styles.iconWrapper}>
               <ListActionsIcon size={24} color={COLORS.text} />
-              {hasActiveFiltersOrSort && <View style={styles.filterBadge} />}
+              {hasActiveFiltersOrSort && (
+                <View style={[styles.filterBadge, { backgroundColor: accentColor }]} />
+              )}
             </View>
           </HeaderIconButton>
         </View>
@@ -217,7 +221,10 @@ export default function WatchStatusScreen() {
             {WATCH_STATUS_LISTS.map((list) => (
               <TouchableOpacity
                 key={list.id}
-                style={[styles.tab, selectedListId === list.id && styles.activeTab]}
+              style={[
+                styles.tab,
+                selectedListId === list.id && { backgroundColor: accentColor },
+              ]}
                 onPress={() => setSelectedListId(list.id)}
                 activeOpacity={ACTIVE_OPACITY}
               >
@@ -261,7 +268,7 @@ export default function WatchStatusScreen() {
                         : t('library.watchStatusEmptyDescription', { listName: selectedListLabel })}
                     </Text>
                     <TouchableOpacity
-                      style={styles.emptyButton}
+                      style={[styles.emptyButton, { backgroundColor: accentColor }]}
                       onPress={
                         hasActiveFilters(filters) && listItems.length > 0
                           ? () => setFilters(DEFAULT_WATCH_STATUS_FILTERS)
@@ -359,9 +366,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
   },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-  },
   tabText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
@@ -387,7 +391,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
   },
   listContent: {
     paddingHorizontal: SPACING.l,
@@ -414,7 +417,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,

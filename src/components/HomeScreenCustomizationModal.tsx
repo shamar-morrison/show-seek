@@ -7,11 +7,12 @@ import {
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -58,9 +59,15 @@ interface ListItemProps {
 }
 
 const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: ListItemProps) => {
+  const { accentColor } = useAccentColor();
   return (
     <Pressable style={styles.listItem} onPress={() => onToggle({ id, type, label })}>
-      <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+      <View
+        style={[
+          styles.checkbox,
+          isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+        ]}
+      >
         <AnimatedCheck visible={isSelected} />
       </View>
       <Text style={styles.listName}>{label}</Text>
@@ -82,6 +89,7 @@ const HomeScreenCustomizationModal = forwardRef<
   const { isPremium } = usePremium();
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Guest and non-premium users can't access Latest Trailers
   const isGuest = !user;
@@ -171,7 +179,7 @@ const HomeScreenCustomizationModal = forwardRef<
       backgroundColor={COLORS.surface}
       grabber={true}
     >
-        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+      <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         <View style={modalHeaderStyles.header}>
           <Text style={modalHeaderStyles.title}>{t('homeCustomization.title')}</Text>
           <Text style={styles.subtitle}>
@@ -248,7 +256,11 @@ const HomeScreenCustomizationModal = forwardRef<
             <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
           <Pressable
-            style={[styles.applyButton, updateMutation.isPending && styles.disabledButton]}
+            style={[
+              styles.applyButton,
+              { backgroundColor: accentColor },
+              updateMutation.isPending && styles.disabledButton,
+            ]}
             onPress={handleApply}
             disabled={updateMutation.isPending}
           >
@@ -314,10 +326,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
   listName: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
@@ -344,7 +352,6 @@ const styles = StyleSheet.create({
   },
   applyButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

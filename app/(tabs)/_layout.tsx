@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { Tabs } from 'expo-router';
 import { Bookmark, Compass, Home, Search, User } from 'lucide-react-native';
@@ -10,13 +11,14 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { preferences } = usePreferences();
+  const { accentColor } = useAccentColor();
 
   const hideLabels = preferences?.hideTabLabels ?? false;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
+        tabBarActiveTintColor: accentColor,
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
         tabBarShowLabel: !hideLabels,

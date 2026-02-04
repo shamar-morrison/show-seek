@@ -1,7 +1,7 @@
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { COLORS, SPACING } from '@/src/constants/theme';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -89,6 +89,7 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(initialSortState);
   const listRef = useRef<ScrollableListRef | null>(null);
+  const iconBadgeStyles = useIconBadgeStyles();
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -108,7 +109,7 @@ export function useRatingSorting(options: UseRatingSortingOptions = {}): UseRati
         </HeaderIconButton>
       ),
     });
-  }, [navigation, hasActiveSort]);
+  }, [navigation, hasActiveSort, iconBadgeStyles]);
 
   // Track if initial mount to avoid scrolling on first render
   const isInitialMount = useRef(true);

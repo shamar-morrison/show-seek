@@ -7,6 +7,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { DEFAULT_WATCH_STATUS_FILTERS, WatchStatusFilterState } from '@/src/utils/listFilters';
 import { Check, ChevronDown, X } from 'lucide-react-native';
@@ -55,6 +56,7 @@ const FilterSelect = ({
   placeholder?: string;
 }) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -112,11 +114,14 @@ const FilterSelect = ({
                   }}
                 >
                   <Text
-                    style={[styles.optionText, item.value === value && styles.optionTextSelected]}
+                    style={[
+                      styles.optionText,
+                      item.value === value && [styles.optionTextSelected, { color: accentColor }],
+                    ]}
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={COLORS.primary} />}
+                  {item.value === value && <Check size={20} color={accentColor} />}
                 </TouchableOpacity>
               )}
             />
@@ -136,6 +141,7 @@ export default function WatchStatusFiltersModal({
   showMediaTypeFilter = true,
 }: WatchStatusFiltersModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [localFilters, setLocalFilters] = useState<WatchStatusFilterState>(filters);
 
   // Update local filters when modal opens
@@ -259,7 +265,7 @@ export default function WatchStatusFiltersModal({
               <Text style={styles.clearButtonText}>{t('common.clearAll')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.applyButton}
+              style={[styles.applyButton, { backgroundColor: accentColor }]}
               onPress={handleApply}
               activeOpacity={ACTIVE_OPACITY}
             >
@@ -340,7 +346,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   optionTextSelected: {
-    color: COLORS.primary,
     fontWeight: '600',
   },
   actions: {
@@ -364,7 +369,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
   },
   applyButtonText: {

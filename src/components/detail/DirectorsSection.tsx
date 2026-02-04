@@ -4,20 +4,21 @@ import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 
 const DirectorCard = memo<{
   director: CrewMember;
   onPress: (id: number) => void;
   label: string;
 }>(({ director, onPress, label }) => {
+  const styles = useDetailStyles();
   const handlePress = useCallback(() => {
     onPress(director.id);
   }, [director.id, onPress]);
 
   return (
     <TouchableOpacity
-      style={detailStyles.castCard}
+      style={styles.castCard}
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
@@ -25,14 +26,14 @@ const DirectorCard = memo<{
         source={{
           uri: getImageUrl(director.profile_path, TMDB_IMAGE_SIZES.profile.medium),
         }}
-        style={detailStyles.castImage}
+        style={styles.castImage}
         contentFit="cover"
         placeholderType="person"
       />
-      <Text style={detailStyles.castName} numberOfLines={2}>
+      <Text style={styles.castName} numberOfLines={2}>
         {director.name}
       </Text>
-      <Text style={detailStyles.characterName} numberOfLines={1}>
+      <Text style={styles.characterName} numberOfLines={1}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -50,6 +51,7 @@ interface DirectorsSectionProps {
 export const DirectorsSection = memo<DirectorsSectionProps>(
   ({ directors, onDirectorPress, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     if (directors.length === 0) {
       return null;
@@ -60,10 +62,10 @@ export const DirectorsSection = memo<DirectorsSectionProps>(
 
     return (
       <View style={[style, { marginTop: -SPACING.m }]}>
-        <View style={detailStyles.sectionHeader}>
-          <Text style={detailStyles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{title}</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={detailStyles.castList}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.castList}>
           {directors.map((director, index) => (
             <DirectorCard
               key={`${director.id}-${index}`}

@@ -3,7 +3,7 @@ import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListMod
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CreatorsSection } from '@/src/components/detail/CreatorsSection';
 import { DetailScreenSkeleton } from '@/src/components/detail/DetailScreenSkeleton';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
@@ -30,6 +30,7 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -67,10 +68,12 @@ import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TVDetailScreen() {
+  const styles = useDetailStyles();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -124,7 +127,7 @@ export default function TVDetailScreen() {
         : undefined;
   const listColor =
     listIds.length === 1
-      ? getListColor(listIds[0])
+      ? getListColor(listIds[0], accentColor)
       : isInAnyList
         ? MULTIPLE_LISTS_COLOR
         : undefined;
@@ -247,10 +250,10 @@ export default function TVDetailScreen() {
         <Text style={errorStyles.text}>{t('tvDetail.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={detailStyles.backButton}
+          style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={detailStyles.backButtonText}>{t('common.goBack')}</Text>
+          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -317,21 +320,21 @@ export default function TVDetailScreen() {
   };
 
   return (
-    <View style={detailStyles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader title={show.name} onBackPress={() => router.back()} scrollY={scrollY} />
 
       <Animated.ScrollView
-        style={detailStyles.scrollView}
+        style={styles.scrollView}
         bounces={true}
         {...scrollViewProps}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
@@ -346,7 +349,7 @@ export default function TVDetailScreen() {
         />
 
         {/* Content */}
-        <View style={detailStyles.content}>
+        <View style={styles.content}>
           <TVMetaSection
             show={show}
             onSeasonsPress={() => handleSeasonsPress()}
@@ -412,19 +415,19 @@ export default function TVDetailScreen() {
           {/* External Ratings (IMDb, Rotten Tomatoes, Metacritic) */}
           <ExternalRatingsSection ratings={externalRatings} isLoading={isLoadingExternalRatings} />
 
-          <Text style={detailStyles.sectionTitle}>{t('media.overview')}</Text>
+          <Text style={styles.sectionTitle}>{t('media.overview')}</Text>
           {preferences?.blurPlotSpoilers ? (
             <BlurredText
               text={show.overview || t('media.noOverview')}
-              style={detailStyles.overview}
-              readMoreStyle={detailStyles.readMore}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
               isBlurred={true}
             />
           ) : (
             <ExpandableText
               text={show.overview || t('media.noOverview')}
-              style={detailStyles.overview}
-              readMoreStyle={detailStyles.readMore}
+              style={styles.overview}
+              readMoreStyle={styles.readMore}
             />
           )}
 

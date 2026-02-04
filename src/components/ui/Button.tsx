@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
@@ -19,22 +20,24 @@ export function Button({
   loading = false,
   style,
 }: ButtonProps) {
+  const { accentColor } = useAccentColor();
+
   const getButtonStyle = () => {
     if (disabled) return [styles.button, styles.disabled, style];
     switch (variant) {
       case 'secondary':
         return [styles.button, styles.secondary, style];
       case 'outline':
-        return [styles.button, styles.outline, style];
+        return [styles.button, styles.outline, { borderColor: accentColor }, style];
       default:
-        return [styles.button, styles.primary, style];
+        return [styles.button, { backgroundColor: accentColor }, style];
     }
   };
 
   const getTextStyle = () => {
     switch (variant) {
       case 'outline':
-        return [styles.text, styles.outlineText];
+        return [styles.text, { color: accentColor }];
       default:
         return styles.text;
     }
@@ -48,7 +51,7 @@ export function Button({
       activeOpacity={ACTIVE_OPACITY}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? COLORS.primary : COLORS.white} />
+        <ActivityIndicator color={variant === 'outline' ? accentColor : COLORS.white} />
       ) : (
         <Text style={getTextStyle()}>{title}</Text>
       )}
@@ -65,16 +68,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 48,
   },
-  primary: {
-    backgroundColor: COLORS.primary,
-  },
   secondary: {
     backgroundColor: COLORS.secondary,
   },
   outline: {
     backgroundColor: COLORS.transparent,
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   disabled: {
     backgroundColor: COLORS.surfaceLight,
@@ -84,8 +83,5 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
-  },
-  outlineText: {
-    color: COLORS.primary,
   },
 });

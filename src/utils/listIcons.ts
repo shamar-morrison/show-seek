@@ -1,3 +1,4 @@
+import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
 import { COLORS } from '@/src/constants/theme';
 import {
   Bookmark,
@@ -33,7 +34,7 @@ export const getListIconComponent = (listId: string): LucideIcon => {
 /**
  * Get the color associated with a list ID.
  */
-export const getListColor = (listId: string): string => {
+export const getListColor = (listId: string, accentColor: string = DEFAULT_ACCENT_COLOR): string => {
   switch (listId) {
     case 'watchlist':
       return '#3b82f6'; // Blue
@@ -42,7 +43,7 @@ export const getListColor = (listId: string): string => {
     case 'already-watched':
       return COLORS.success; // Green
     case 'favorites':
-      return COLORS.primary; // Red
+      return accentColor; // Accent color
     case 'dropped':
       return '#6b7280'; // Gray
     default:

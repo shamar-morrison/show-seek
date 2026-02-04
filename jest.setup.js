@@ -117,6 +117,17 @@ jest.mock('@/src/firebase/config', () => ({
   db: {},
 }));
 
+// Mock AccentColorProvider context
+jest.mock('@/src/context/AccentColorProvider', () => ({
+  AccentColorProvider: ({ children }) => children,
+  useAccentColor: () => ({
+    accentColor: '#6B46C1',
+    isAccentReady: true,
+    setAccentColor: jest.fn(),
+  }),
+  SUPPORTED_ACCENT_COLORS: [],
+}));
+
 // Selectively suppress known expected warnings
 // This preserves real errors for debugging while filtering noise
 const originalWarn = console.warn;

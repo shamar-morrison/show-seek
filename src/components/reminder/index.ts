@@ -11,4 +11,4 @@ export type { TimingOption } from './ReminderTimingOptions';
 // Shared modal components
 export { BaseReminderModal } from './BaseReminderModal';
 export { ReminderActionButtons } from './ReminderActionButtons';
-export { reminderModalStyles } from './reminderModalStyles';
+export { useReminderModalStyles } from './reminderModalStyles';

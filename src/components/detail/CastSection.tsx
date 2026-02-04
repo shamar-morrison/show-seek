@@ -7,13 +7,14 @@ import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { CastSectionProps } from './types';
 
 const CastCard = memo<{
   actor: CastMember;
   onPress: (id: number) => void;
 }>(({ actor, onPress }) => {
+  const styles = useDetailStyles();
   const { isFavorited } = useIsPersonFavorited(actor.id);
 
   const handlePress = useCallback(() => {
@@ -22,25 +23,25 @@ const CastCard = memo<{
 
   return (
     <TouchableOpacity
-      style={detailStyles.castCard}
+      style={styles.castCard}
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <View style={detailStyles.castImageContainer}>
+      <View style={styles.castImageContainer}>
         <MediaImage
           source={{
             uri: getImageUrl(actor.profile_path, TMDB_IMAGE_SIZES.profile.medium),
           }}
-          style={detailStyles.castImage}
+          style={styles.castImage}
           contentFit="cover"
           placeholderType="person"
         />
         {isFavorited && <FavoritePersonBadge />}
       </View>
-      <Text style={detailStyles.castName} numberOfLines={2}>
+      <Text style={styles.castName} numberOfLines={2}>
         {actor.name}
       </Text>
-      <Text style={detailStyles.characterName} numberOfLines={1}>
+      <Text style={styles.characterName} numberOfLines={1}>
         {actor.character}
       </Text>
     </TouchableOpacity>
@@ -52,6 +53,7 @@ CastCard.displayName = 'CastCard';
 export const CastSection = memo<CastSectionProps>(
   ({ cast, onCastPress, onViewAll, title, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: CastMember }) => <CastCard actor={item} onPress={onCastPress} />,
@@ -68,17 +70,17 @@ export const CastSection = memo<CastSectionProps>(
       <View style={[style, { marginTop: -SPACING.m }]}>
         {onViewAll ? (
           <TouchableOpacity
-            style={detailStyles.sectionHeader}
+            style={styles.sectionHeader}
             onPress={onViewAll}
             activeOpacity={ACTIVE_OPACITY}
             hitSlop={HIT_SLOP.m}
           >
-            <Text style={detailStyles.sectionTitle}>{resolvedTitle}</Text>
-            <Text style={detailStyles.viewAll}>{t('common.seeAll')}</Text>
+            <Text style={styles.sectionTitle}>{resolvedTitle}</Text>
+            <Text style={styles.viewAll}>{t('common.seeAll')}</Text>
           </TouchableOpacity>
         ) : (
-          <View style={detailStyles.sectionHeader}>
-            <Text style={detailStyles.sectionTitle}>{resolvedTitle}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{resolvedTitle}</Text>
           </View>
         )}
         <FlashList

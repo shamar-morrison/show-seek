@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
@@ -37,6 +38,7 @@ export default function ShuffleModal({
   onViewDetails,
 }: ShuffleModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedItem, setDisplayedItem] = useState<ListMediaItem | null>(null);
   const [hasRevealed, setHasRevealed] = useState(false);
@@ -188,7 +190,7 @@ export default function ShuffleModal({
           {/* Header */}
           <View style={[modalHeaderStyles.header, styles.header]}>
             <View style={styles.headerTitleRow}>
-              <Shuffle size={20} color={COLORS.primary} />
+              <Shuffle size={20} color={accentColor} />
               <Text style={modalHeaderStyles.title}>{t('shuffle.title')}</Text>
             </View>
             <Pressable onPress={handleClose} testID="shuffle-close-button">
@@ -233,7 +235,7 @@ export default function ShuffleModal({
               </Text>
               {displayedItem.vote_average > 0 && (
                 <View style={styles.ratingBadge}>
-                  <Star size={14} color={COLORS.primary} fill={COLORS.primary} />
+                  <Star size={14} color={accentColor} fill={accentColor} />
                   <Text style={styles.ratingText}>{displayedItem.vote_average.toFixed(1)}</Text>
                 </View>
               )}
@@ -246,6 +248,7 @@ export default function ShuffleModal({
               <Pressable
                 style={({ pressed }) => [
                   styles.primaryButton,
+                  { backgroundColor: accentColor },
                   pressed && { opacity: ACTIVE_OPACITY },
                 ]}
                 onPress={handleViewDetails}
@@ -258,6 +261,7 @@ export default function ShuffleModal({
             <Pressable
               style={({ pressed }) => [
                 styles.secondaryButton,
+                { borderColor: accentColor },
                 isAnimating && styles.disabledButton,
                 pressed && { opacity: ACTIVE_OPACITY },
               ]}
@@ -265,8 +269,14 @@ export default function ShuffleModal({
               disabled={isAnimating}
               testID="shuffle-spin-again-button"
             >
-              <Shuffle size={18} color={isAnimating ? COLORS.textSecondary : COLORS.primary} />
-              <Text style={[styles.secondaryButtonText, isAnimating && styles.disabledText]}>
+              <Shuffle size={18} color={isAnimating ? COLORS.textSecondary : accentColor} />
+              <Text
+                style={[
+                  styles.secondaryButtonText,
+                  { color: accentColor },
+                  isAnimating && styles.disabledText,
+                ]}
+              >
                 {hasRevealed ? t('shuffle.spinAgain') : t('shuffle.shuffling')}
               </Text>
             </Pressable>
@@ -346,7 +356,6 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
@@ -364,11 +373,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     borderWidth: 1,
-    borderColor: COLORS.primary,
     backgroundColor: 'transparent',
   },
   secondaryButtonText: {
-    color: COLORS.primary,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },

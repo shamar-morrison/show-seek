@@ -4,6 +4,7 @@
 
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { X } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
@@ -33,6 +34,7 @@ export function MonthYearPickerModal({
   onClose,
 }: MonthYearPickerProps) {
   const { t } = useTranslation();
+  const styles = useStyles();
   const [tempMonth, setTempMonth] = useState(selectedMonth);
   const [tempYear, setTempYear] = useState(selectedYear);
   const yearScrollRef = useRef<ScrollView>(null);
@@ -181,7 +183,8 @@ export function MonthYearPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   itemSelected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   itemDisabled: {
     opacity: 0.4,
@@ -255,13 +258,13 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: COLORS.transparent,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: accentColor,
   },
   confirmButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   cancelButtonText: {
-    color: COLORS.primary,
+    color: accentColor,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },
@@ -270,4 +273,4 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
   },
-});
+  }));

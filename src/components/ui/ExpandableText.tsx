@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,6 +29,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
   containerStyle,
 }) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [expanded, setExpanded] = useState(false);
   const [shouldTruncate, setShouldTruncate] = useState(false);
   const [measured, setMeasured] = useState(false);
@@ -69,7 +71,7 @@ export const ExpandableText: React.FC<ExpandableTextProps> = ({
           style={styles.readMoreContainer}
           hitSlop={HIT_SLOP.m}
         >
-          <Text style={[styles.readMore, readMoreStyle]}>
+          <Text style={[styles.readMore, { color: accentColor }, readMoreStyle]}>
             {expanded ? t('common.readLess') : t('common.readMore')}
           </Text>
         </TouchableOpacity>
@@ -88,7 +90,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   readMore: {
-    color: COLORS.primary,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
   },

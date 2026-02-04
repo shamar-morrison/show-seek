@@ -24,7 +24,7 @@ jest.mock('expo-haptics', () => ({
 
 // Mock seasonScreenStyles
 jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
-  seasonScreenStyles: {
+  useSeasonScreenStyles: () => ({
     episodeCard: {},
     episodeStillContainer: {},
     watchedOverlay: {},
@@ -45,7 +45,7 @@ jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
     watchedButton: {},
     disabledButton: {},
     watchButtonText: {},
-  },
+  }),
 }));
 
 // Mock MediaImage

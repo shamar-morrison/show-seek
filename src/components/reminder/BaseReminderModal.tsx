@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { reminderModalStyles as styles } from './reminderModalStyles';
+import { useReminderModalStyles } from './reminderModalStyles';
 
 interface BaseReminderModalProps {
   /** Whether the modal is visible */
@@ -38,6 +38,7 @@ export function BaseReminderModal({
   children,
 }: BaseReminderModalProps) {
   const { t } = useTranslation();
+  const styles = useReminderModalStyles();
   const resolvedTitle = title ?? t('reminder.setReminder');
 
   return (

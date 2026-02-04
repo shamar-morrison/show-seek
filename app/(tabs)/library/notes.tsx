@@ -16,12 +16,13 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
 import { usePreferences } from '@/src/hooks/usePreferences';
-import { iconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -116,6 +117,8 @@ export default function NotesScreen() {
   const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const iconBadgeStyles = useIconBadgeStyles();
   const { data: notes, isLoading } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteModalRef>(null);
@@ -242,9 +245,9 @@ export default function NotesScreen() {
             </HeaderIconButton>
             {/* Sort button */}
             <HeaderIconButton onPress={() => setSortModalVisible(true)}>
-              <View style={styles.sortIconWrapper}>
+              <View style={iconBadgeStyles.wrapper}>
                 <ArrowUpDown size={22} color={COLORS.text} />
-                {hasActiveSort && <View style={styles.sortBadge} />}
+                {hasActiveSort && <View style={iconBadgeStyles.badge} />}
               </View>
             </HeaderIconButton>
             {/* View mode button */}
@@ -415,7 +418,7 @@ export default function NotesScreen() {
           <Text style={styles.premiumTitle}>{t('premiumFeature.title')}</Text>
           <Text style={styles.premiumDescription}>{t('notes.premiumDescription')}</Text>
           <TouchableOpacity
-            style={styles.upgradeButton}
+            style={[styles.upgradeButton, { backgroundColor: accentColor }]}
             onPress={() => router.push('/premium' as any)}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -541,8 +544,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sortIconWrapper: iconBadgeStyles.wrapper,
-  sortBadge: iconBadgeStyles.badge,
   // Premium gate styles
   premiumGate: {
     flex: 1,
@@ -565,7 +566,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   upgradeButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,

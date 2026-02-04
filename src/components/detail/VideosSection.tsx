@@ -5,18 +5,19 @@ import { FlashList } from '@shopify/flash-list';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { VideosSectionProps } from './types';
 
 export const VideosSection = memo<VideosSectionProps>(
   ({ videos, onVideoPress, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: Video }) => (
         <TouchableOpacity
-          style={detailStyles.videoCard}
+          style={styles.videoCard}
           onPress={() => onVideoPress(item)}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -27,13 +28,13 @@ export const VideosSection = memo<VideosSectionProps>(
                   ? `https://img.youtube.com/vi/${item.key}/hqdefault.jpg`
                   : null,
             }}
-            style={detailStyles.videoThumbnail}
+            style={styles.videoThumbnail}
             contentFit="cover"
           />
-          <Text style={detailStyles.videoTitle} numberOfLines={2}>
+          <Text style={styles.videoTitle} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={detailStyles.videoType}>{item.type}</Text>
+          <Text style={styles.videoType}>{item.type}</Text>
         </TouchableOpacity>
       ),
       [onVideoPress]
@@ -45,7 +46,7 @@ export const VideosSection = memo<VideosSectionProps>(
 
     return (
       <View style={style}>
-        <Text style={[detailStyles.sectionTitle, { paddingBottom: SPACING.s }]}>
+        <Text style={[styles.sectionTitle, { paddingBottom: SPACING.s }]}>
           {t('media.videos')}
         </Text>
         <FlashList

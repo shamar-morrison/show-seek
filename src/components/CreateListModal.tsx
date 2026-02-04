@@ -1,5 +1,6 @@
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
@@ -36,6 +37,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const { width } = useWindowDimensions();
     const [listName, setListName] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const { accentColor } = useAccentColor();
 
     const createMutation = useCreateList();
     const router = useRouter();
@@ -166,6 +168,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
               <Pressable
                 style={[
                   styles.createButton,
+                  { backgroundColor: accentColor },
                   (!listName.trim() || createMutation.isPending) && styles.disabledButton,
                 ]}
                 onPress={handleCreate}
@@ -227,7 +230,6 @@ const styles = StyleSheet.create({
   },
   createButton: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

@@ -2,7 +2,15 @@
  * Default Launch Screen Selection
  * Allows authenticated users to select which tab the app opens to on launch
  */
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { LaunchScreenRoute } from '@/src/types/preferences';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -25,6 +33,7 @@ export default function DefaultLaunchScreen() {
   const { t } = useTranslation();
   const { preferences } = usePreferences();
   const updatePreference = useUpdatePreference();
+  const { accentColor } = useAccentColor();
   const [isUpdating, setIsUpdating] = useState<LaunchScreenRoute | null>(null);
 
   const SCREEN_OPTIONS = useMemo(
@@ -81,20 +90,22 @@ export default function DefaultLaunchScreen() {
                 <View style={styles.optionInfo}>
                   <Icon
                     size={22}
-                    color={isSelected ? COLORS.primary : COLORS.textSecondary}
+                    color={isSelected ? accentColor : COLORS.textSecondary}
                     style={styles.optionIcon}
                   />
-                  <Text style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}>
+                  <Text style={[styles.optionLabel, isSelected && { color: accentColor }]}>
                     {option.label}
                   </Text>
                 </View>
 
                 <View style={styles.optionStatus}>
                   {isLoading ? (
-                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <ActivityIndicator size="small" color={accentColor} />
                   ) : isSelected ? (
-                    <View style={styles.checkContainer}>
-                      <Check size={20} color={COLORS.primary} />
+                    <View
+                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
+                    >
+                      <Check size={20} color={accentColor} />
                     </View>
                   ) : null}
                 </View>
@@ -152,9 +163,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '500',
   },
-  optionLabelSelected: {
-    color: COLORS.primary,
-  },
   optionStatus: {
     width: 32,
     height: 32,
@@ -165,7 +173,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(229, 9, 20, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },

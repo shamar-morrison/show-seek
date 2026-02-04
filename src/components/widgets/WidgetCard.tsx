@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { WidgetConfig } from '@/src/types';
 import { Settings, Smartphone, Trash2 } from 'lucide-react-native';
 import React from 'react';
@@ -13,6 +14,7 @@ interface WidgetCardProps {
 
 export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   const getTypeLabel = () => {
     switch (widget.type) {
@@ -33,8 +35,8 @@ export function WidgetCard({ widget, onEdit, onDelete }: WidgetCardProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Smartphone size={24} color={COLORS.primary} />
+      <View style={[styles.iconContainer, { backgroundColor: accentColor + '20' }]}>
+        <Smartphone size={24} color={accentColor} />
       </View>
 
       <View style={styles.content}>
@@ -70,7 +72,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,

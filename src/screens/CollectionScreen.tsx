@@ -4,6 +4,7 @@ import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -40,6 +41,7 @@ export default function CollectionScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
@@ -142,7 +144,7 @@ export default function CollectionScreen() {
         <Text style={[errorStyles.text, styles.errorText]}>{t('collection.failedToLoad')}</Text>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: accentColor }]}
           activeOpacity={ACTIVE_OPACITY}
         >
           <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
@@ -205,7 +207,7 @@ export default function CollectionScreen() {
             <ExpandableText
               text={collection.overview}
               style={styles.overview}
-              readMoreStyle={styles.readMore}
+              readMoreStyle={[styles.readMore, { color: accentColor }]}
             />
           )}
 
@@ -219,10 +221,17 @@ export default function CollectionScreen() {
                     <Text style={styles.progressText}>
                       {t('collection.moviesWatched', { watchedCount, totalMovies })}
                     </Text>
-                    <Text style={styles.percentageText}>{percentage}%</Text>
+                    <Text style={[styles.percentageText, { color: accentColor }]}>
+                      {percentage}%
+                    </Text>
                   </View>
                   <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        { width: `${percentage}%`, backgroundColor: accentColor },
+                      ]}
+                    />
                   </View>
                 </View>
 
@@ -251,6 +260,7 @@ export default function CollectionScreen() {
                 style={({ pressed }) => [
                   styles.trackingButton,
                   styles.startTrackingButton,
+                  { backgroundColor: accentColor },
                   pressed && styles.buttonPressed,
                 ]}
                 onPress={handleStartTracking}
@@ -348,7 +358,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   backButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
@@ -417,7 +426,6 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
   },
   startTrackingButton: {
-    backgroundColor: COLORS.primary,
   },
   stopTrackingButton: {
     backgroundColor: 'transparent',
@@ -453,7 +461,6 @@ const styles = StyleSheet.create({
   },
   percentageText: {
     fontSize: FONT_SIZE.s,
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   progressBarBg: {
@@ -463,7 +470,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
     borderRadius: 4,
   },
   limitNotice: {
@@ -480,7 +486,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   readMore: {
-    color: COLORS.primary,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
     marginBottom: SPACING.l,

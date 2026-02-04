@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { getInitials } from '@/src/utils/userUtils';
 import { Image } from 'expo-image';
 import { Crown } from 'lucide-react-native';
@@ -32,8 +33,10 @@ export function UserAvatar({
   email,
   size = 80,
   showPremiumBadge = false,
-  backgroundColor = COLORS.primary,
+  backgroundColor,
 }: UserAvatarProps) {
+  const { accentColor } = useAccentColor();
+  const resolvedBackground = backgroundColor ?? accentColor;
   const initials = getInitials(displayName ?? null, email ?? null);
   const borderRadius = size / 2;
   const fontSize = size * 0.4; // Scale font size relative to avatar size
@@ -54,7 +57,7 @@ export function UserAvatar({
         <View
           style={[
             styles.initialsContainer,
-            { width: size, height: size, borderRadius, backgroundColor },
+            { width: size, height: size, borderRadius, backgroundColor: resolvedBackground },
           ]}
         >
           <Text style={[styles.initialsText, { fontSize }]}>{initials}</Text>

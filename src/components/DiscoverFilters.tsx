@@ -1,5 +1,6 @@
 import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -55,6 +56,7 @@ const FilterSelect = ({
   isActive = false,
 }: BaseFilterSelectProps) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -112,11 +114,14 @@ const FilterSelect = ({
                   }}
                 >
                   <Text
-                    style={[styles.optionText, item.value === value && styles.optionTextSelected]}
+                    style={[
+                      styles.optionText,
+                      item.value === value && { color: accentColor, fontWeight: '600' },
+                    ]}
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={COLORS.primary} />}
+                  {item.value === value && <Check size={20} color={accentColor} />}
                 </TouchableOpacity>
               )}
             />
@@ -137,6 +142,7 @@ const SearchableFilterSelect = ({
   searchPlaceholder,
 }: SearchableFilterSelectProps) => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [visible, setVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const selectedOption = options.find((opt) => opt.value === value);
@@ -221,11 +227,14 @@ const SearchableFilterSelect = ({
                   }}
                 >
                   <Text
-                    style={[styles.optionText, item.value === value && styles.optionTextSelected]}
+                    style={[
+                      styles.optionText,
+                      item.value === value && { color: accentColor, fontWeight: '600' },
+                    ]}
                   >
                     {item.label}
                   </Text>
-                  {item.value === value && <Check size={20} color={COLORS.primary} />}
+                  {item.value === value && <Check size={20} color={accentColor} />}
                 </TouchableOpacity>
               )}
             />
@@ -240,6 +249,7 @@ const SearchableFilterSelect = ({
 const PremiumLockedFilter = ({ label }: { label: string }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const { accentColor } = useAccentColor();
 
   const handlePress = () => {
     router.push('/premium');
@@ -249,17 +259,17 @@ const PremiumLockedFilter = ({ label }: { label: string }) => {
     <View style={styles.selectContainer}>
       <View style={styles.premiumLabelContainer}>
         <Text style={styles.selectLabel}>{label}</Text>
-        <Lock size={12} color={COLORS.primary} />
+        <Lock size={12} color={accentColor} />
       </View>
       <TouchableOpacity
-        style={[styles.selectButton, styles.selectButtonLocked]}
+        style={[styles.selectButton, styles.selectButtonLocked, { borderColor: accentColor }]}
         onPress={handlePress}
         activeOpacity={ACTIVE_OPACITY}
       >
         <Text style={[styles.selectButtonText, { color: COLORS.textSecondary }]}>
           {t('premiumFeature.title')}
         </Text>
-        <Lock size={16} color={COLORS.primary} />
+        <Lock size={16} color={accentColor} />
       </TouchableOpacity>
     </View>
   );
@@ -475,7 +485,6 @@ const styles = StyleSheet.create({
   },
   selectButtonLocked: {
     opacity: 0.7,
-    borderColor: COLORS.primary,
     borderStyle: 'dashed',
   },
   selectButtonLoading: {
@@ -551,10 +560,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
-  },
-  optionTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',

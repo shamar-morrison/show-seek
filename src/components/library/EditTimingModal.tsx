@@ -8,6 +8,7 @@ import {
 } from '@/src/components/reminder';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
@@ -41,6 +42,7 @@ export default function EditTimingModal({
   onUpdateTiming,
 }: EditTimingModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [selectedTiming, setSelectedTiming] = useState<ReminderTiming>(reminder.reminderTiming);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -196,7 +198,11 @@ export default function EditTimingModal({
 
             {/* Update Button */}
             <TouchableOpacity
-              style={[styles.button, isUpdateDisabled && styles.buttonDisabled]}
+              style={[
+                styles.button,
+                { backgroundColor: accentColor },
+                isUpdateDisabled && styles.buttonDisabled,
+              ]}
               onPress={handleUpdateTiming}
               disabled={isUpdateDisabled}
               activeOpacity={ACTIVE_OPACITY}
@@ -258,7 +264,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
-    backgroundColor: COLORS.primary,
   },
   buttonDisabled: {
     opacity: 0.5,

@@ -3,6 +3,7 @@ import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   useAddToList,
@@ -64,6 +65,7 @@ const ListItemRow = memo<{
 }>(
   ({ list, isSelected, isSaving, onToggle, onDelete }) => {
     const { t } = useTranslation();
+    const { accentColor } = useAccentColor();
     const handlePress = useCallback(() => onToggle(list.id), [list.id, onToggle]);
     const handleLongPress = useCallback(
       () => onDelete(list.id, list.name),
@@ -79,7 +81,12 @@ const ListItemRow = memo<{
         onLongPress={handleLongPress}
         disabled={isSaving}
       >
-        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+        <View
+          style={[
+            styles.checkbox,
+            isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+          ]}
+        >
           <AnimatedCheck visible={isSelected} />
         </View>
         <View style={styles.listIcon}>
@@ -105,6 +112,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   ({ mediaItem, onShowToast }, ref) => {
     const router = useRouter();
     const { t } = useTranslation();
+    const { accentColor } = useAccentColor();
     const sheetRef = useRef<TrueSheet>(null);
     const listRef = useRef<FlatList<ListWithCount>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
@@ -407,7 +415,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             )}
 
             {isLoadingLists ? (
-              <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+              <ActivityIndicator size="large" color={accentColor} style={styles.loader} />
             ) : (
               <FlatList
                 ref={listRef}
@@ -429,7 +437,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             )}
 
             <Pressable
-              style={[styles.saveButton, (!hasChanges || isSaving) && styles.saveButtonDisabled]}
+              style={[
+                styles.saveButton,
+                { backgroundColor: accentColor },
+                (!hasChanges || isSaving) && styles.saveButtonDisabled,
+              ]}
               onPress={handleSave}
               disabled={!hasChanges || isSaving}
             >
@@ -448,7 +460,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             </Pressable>
 
             <Pressable
-              style={[styles.createListButton, isSaving && styles.buttonDisabled]}
+              style={[
+                styles.createListButton,
+                { backgroundColor: accentColor },
+                isSaving && styles.buttonDisabled,
+              ]}
               onPress={handleCreateCustomListPress}
               disabled={isSaving}
             >
@@ -508,10 +524,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
   listName: {
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
@@ -532,7 +544,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.s,
     padding: SPACING.m,
     gap: SPACING.s,
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.m,
   },
   createListText: {
@@ -585,7 +596,6 @@ const styles = StyleSheet.create({
     gap: SPACING.s,
     marginTop: SPACING.m,
     padding: SPACING.m,
-    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.m,
   },
   saveButtonDisabled: {

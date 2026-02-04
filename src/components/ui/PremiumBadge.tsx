@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Lock } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,11 +11,12 @@ import { StyleSheet, Text, View } from 'react-native';
  */
 export const PremiumBadge: React.FC = () => {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   return (
     <View style={styles.premiumBadge}>
-      <Lock size={10} color={COLORS.primary} />
-      <Text style={styles.premiumBadgeText}>{t('common.premium')}</Text>
+      <Lock size={10} color={accentColor} />
+      <Text style={[styles.premiumBadgeText, { color: accentColor }]}>{t('common.premium')}</Text>
     </View>
   );
 };
@@ -31,7 +33,6 @@ const styles = StyleSheet.create({
   },
   premiumBadgeText: {
     fontSize: FONT_SIZE.xs,
-    color: COLORS.primary,
     fontWeight: '600',
   },
 });

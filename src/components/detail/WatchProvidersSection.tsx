@@ -5,7 +5,7 @@ import i18n from '@/src/i18n';
 import React, { memo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 import type { WatchProvider, WatchProviders, WatchProvidersSectionProps } from './types';
 
 const hasAnyProviders = (providers: WatchProviders | null | undefined): boolean => {
@@ -43,63 +43,68 @@ interface ProviderCategoryProps {
   link?: string;
 }
 
-const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => (
-  <View style={detailStyles.providersSection}>
-    <Text style={detailStyles.providerType}>{label}</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {providers.map((provider) => {
-        const handlePress = () => {
-          if (link) {
-            openJustWatchLink(link);
-          }
-        };
+const ProviderCategory = ({ label, providers, link }: ProviderCategoryProps) => {
+  const styles = useDetailStyles();
 
-        // If link exists, make it pressable
-        if (link) {
+  return (
+    <View style={styles.providersSection}>
+      <Text style={styles.providerType}>{label}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {providers.map((provider) => {
+          const handlePress = () => {
+            if (link) {
+              openJustWatchLink(link);
+            }
+          };
+
+          // If link exists, make it pressable
+          if (link) {
+            return (
+              <Pressable
+                key={provider.provider_id}
+                style={({ pressed }) => [styles.providerCard, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={handlePress}
+                accessibilityRole="button"
+                accessibilityLabel={i18n.t('watchProviders.accessibility.watchOnProviderViaJustWatch', {
+                  provider: provider.provider_name,
+                })}
+                hitSlop={SPACING.s}
+              >
+                <MediaImage
+                  source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
+                  style={styles.providerLogo}
+                  contentFit="contain"
+                />
+                <Text style={styles.providerName} numberOfLines={1}>
+                  {provider.provider_name}
+                </Text>
+              </Pressable>
+            );
+          }
+
+          // Fallback: non-interactive view if no link
           return (
-            <Pressable
-              key={provider.provider_id}
-              style={({ pressed }) => [detailStyles.providerCard, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={handlePress}
-              accessibilityRole="button"
-              accessibilityLabel={i18n.t('watchProviders.accessibility.watchOnProviderViaJustWatch', {
-                provider: provider.provider_name,
-              })}
-              hitSlop={SPACING.s}
-            >
+            <View key={provider.provider_id} style={styles.providerCard}>
               <MediaImage
                 source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
-                style={detailStyles.providerLogo}
+                style={styles.providerLogo}
                 contentFit="contain"
               />
-              <Text style={detailStyles.providerName} numberOfLines={1}>
+              <Text style={styles.providerName} numberOfLines={1}>
                 {provider.provider_name}
               </Text>
-            </Pressable>
+            </View>
           );
-        }
-
-        // Fallback: non-interactive view if no link
-        return (
-          <View key={provider.provider_id} style={detailStyles.providerCard}>
-            <MediaImage
-              source={{ uri: getImageUrl(provider.logo_path, '/w92') }}
-              style={detailStyles.providerLogo}
-              contentFit="contain"
-            />
-            <Text style={detailStyles.providerName} numberOfLines={1}>
-              {provider.provider_name}
-            </Text>
-          </View>
-        );
-      })}
-    </ScrollView>
-  </View>
-);
+        })}
+      </ScrollView>
+    </View>
+  );
+};
 
 export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
   ({ watchProviders, link, style }) => {
     const { t } = useTranslation();
+    const styles = useDetailStyles();
 
     if (!hasAnyProviders(watchProviders)) {
       return null;
@@ -110,7 +115,7 @@ export const WatchProvidersSection = memo<WatchProvidersSectionProps>(
         <View
           style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
-          <Text style={detailStyles.sectionTitle}>{t('watchProviders.whereToWatch')}</Text>
+          <Text style={styles.sectionTitle}>{t('watchProviders.whereToWatch')}</Text>
           <Text style={{ color: COLORS.textSecondary, fontSize: FONT_SIZE.xs }}>
             {t('watchProviders.byJustWatch')}
           </Text>

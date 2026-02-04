@@ -14,6 +14,7 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
@@ -45,6 +46,7 @@ export default function SearchScreen() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
@@ -182,7 +184,9 @@ export default function SearchScreen() {
             {title}
           </Text>
           {isPerson && item.known_for_department && (
-            <Text style={styles.department}>{item.known_for_department}</Text>
+          <Text style={[styles.department, { color: accentColor }]}>
+            {item.known_for_department}
+          </Text>
           )}
           {!isPerson && (
             <>
@@ -262,7 +266,7 @@ export default function SearchScreen() {
 
         <View style={styles.typeToggleContainer}>
           <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'all' && styles.typeButtonActive]}
+            style={[styles.typeButton, mediaType === 'all' && { backgroundColor: accentColor }]}
             onPress={() => setMediaType('all')}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -271,7 +275,7 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'movie' && styles.typeButtonActive]}
+            style={[styles.typeButton, mediaType === 'movie' && { backgroundColor: accentColor }]}
             onPress={() => setMediaType('movie')}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -280,7 +284,7 @@ export default function SearchScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'tv' && styles.typeButtonActive]}
+            style={[styles.typeButton, mediaType === 'tv' && { backgroundColor: accentColor }]}
             onPress={() => setMediaType('tv')}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -292,7 +296,7 @@ export default function SearchScreen() {
 
         {searchResultsQuery.isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <ActivityIndicator size="large" color={accentColor} />
           </View>
         ) : debouncedQuery.length === 0 ? (
           <View style={styles.centerContainer}>
@@ -372,9 +376,6 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surface,
   },
-  typeButtonActive: {
-    backgroundColor: COLORS.primary,
-  },
   typeText: {
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
@@ -443,7 +444,6 @@ const styles = StyleSheet.create({
   },
   department: {
     fontSize: FONT_SIZE.s,
-    color: COLORS.primary,
     marginTop: 2,
   },
   knownFor: {

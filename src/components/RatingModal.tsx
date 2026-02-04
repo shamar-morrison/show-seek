@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
 import { ratingService } from '@/src/services/RatingService';
@@ -28,16 +29,17 @@ interface RatingStarProps {
 }
 
 const RatingStar = ({ value, currentRating, onRate, isFirstStar = false }: RatingStarProps) => {
+  const { accentColor } = useAccentColor();
   const isFull = currentRating >= value;
   const isHalf = currentRating === value - 0.5;
 
   // Determine what icon to render
   const renderStarIcon = () => {
     if (isFull) {
-      return <Star size={28} color={COLORS.primary} fill={COLORS.primary} />;
+      return <Star size={28} color={accentColor} fill={accentColor} />;
     }
     if (isHalf) {
-      return <StarHalf size={28} color={COLORS.primary} fill={COLORS.primary} />;
+      return <StarHalf size={28} color={accentColor} fill={accentColor} />;
     }
     return <Star size={28} color={COLORS.textSecondary} fill="transparent" />;
   };
@@ -148,6 +150,7 @@ export default function RatingModal({
   autoAddOptions,
 }: RatingModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -349,7 +352,9 @@ export default function RatingModal({
           </View>
 
           <View style={styles.ratingTextContainer}>
-            <Text style={styles.ratingScore}>{formatRating(rating)}</Text>
+            <Text style={[styles.ratingScore, { color: accentColor }]}>
+              {formatRating(rating)}
+            </Text>
             {rating > 0 && <Text style={styles.ratingDescription}>{getRatingText(rating)}</Text>}
           </View>
 
@@ -357,6 +362,7 @@ export default function RatingModal({
             <Pressable
               style={({ pressed }) => [
                 styles.submitButton,
+                { backgroundColor: accentColor },
                 (rating === 0 || isSubmitting) && styles.disabledButton,
                 pressed && { opacity: ACTIVE_OPACITY },
               ]}
@@ -439,7 +445,6 @@ const styles = StyleSheet.create({
   ratingScore: {
     fontSize: FONT_SIZE.xl,
     fontWeight: 'bold',
-    color: COLORS.primary,
     marginBottom: SPACING.xs,
   },
   ratingDescription: {
@@ -460,7 +465,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,

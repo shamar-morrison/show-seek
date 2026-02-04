@@ -1,10 +1,11 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { StyleSheet } from 'react-native';
+import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 
 /**
  * Shared styles for ReminderModal and TVReminderModal
  */
-export const reminderModalStyles = StyleSheet.create({
+export const useReminderModalStyles = () =>
+  useThemedStyles(({ accentColor }) => ({
   content: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.l,
@@ -62,10 +63,10 @@ export const reminderModalStyles = StyleSheet.create({
     minHeight: 48,
   },
   setButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   updateButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: accentColor,
   },
   cancelButton: {
     backgroundColor: 'transparent',
@@ -94,4 +95,4 @@ export const reminderModalStyles = StyleSheet.create({
   warningText: {
     color: COLORS.warning,
   },
-});
+  }));

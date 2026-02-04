@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Video } from '@/src/api/tmdb';
 import { CastSection } from '@/src/components/detail/CastSection';
 import { CrewSection } from '@/src/components/detail/CrewSection';
-import { detailStyles } from '@/src/components/detail/detailStyles';
+import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
@@ -17,10 +17,9 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { errorStyles } from '@/src/styles/errorStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useIsEpisodeWatched,
@@ -31,6 +30,8 @@ import {
 import { useMediaLists } from '@/src/hooks/useLists';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,9 +51,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EpisodeDetailScreen() {
+  const detailStyles = useDetailStyles();
   const { id: tvIdStr, seasonNum: seasonStr, episodeNum: episodeStr } = useLocalSearchParams();
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { accentColor } = useAccentColor();
   const tvId = Number(tvIdStr);
   const seasonNumber = Number(seasonStr);
   const episodeNumber = Number(episodeStr);
@@ -283,10 +286,11 @@ export default function EpisodeDetailScreen() {
     return (
       <SafeAreaView style={[errorStyles.container, styles.errorContainer]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={[errorStyles.text, styles.errorText]}>
-          {t('episodeDetail.failedToLoad')}
-        </Text>
-        <TouchableOpacity style={styles.errorButton} onPress={handleBack}>
+        <Text style={[errorStyles.text, styles.errorText]}>{t('episodeDetail.failedToLoad')}</Text>
+        <TouchableOpacity
+          style={[styles.errorButton, { backgroundColor: accentColor }]}
+          onPress={handleBack}
+        >
           <Text style={styles.errorButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -317,8 +321,8 @@ export default function EpisodeDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
@@ -346,7 +350,7 @@ export default function EpisodeDetailScreen() {
             </TouchableOpacity>
             <ChevronRight size={14} color={COLORS.textSecondary} />
             <TouchableOpacity onPress={handleBack} activeOpacity={ACTIVE_OPACITY}>
-                <Text style={detailStyles.episodeBreadcrumbLink}>
+              <Text style={detailStyles.episodeBreadcrumbLink}>
                 {season?.name || t('media.seasonNumber', { number: seasonNumber })}
               </Text>
             </TouchableOpacity>
@@ -379,7 +383,9 @@ export default function EpisodeDetailScreen() {
             {episode.runtime && (
               <View style={styles.metaItem}>
                 <Clock size={16} color={COLORS.textSecondary} />
-                <Text style={styles.metaText}>{t('common.minutesShort', { count: episode.runtime })}</Text>
+                <Text style={styles.metaText}>
+                  {t('common.minutesShort', { count: episode.runtime })}
+                </Text>
               </View>
             )}
             {episode.vote_average > 0 && (
@@ -398,6 +404,7 @@ export default function EpisodeDetailScreen() {
               <TouchableOpacity
                 style={[
                   styles.watchButton,
+                  !isWatched && { backgroundColor: accentColor },
                   isWatched && styles.unwatchButton,
                   (!hasAired || isPending) && styles.disabledButton,
                 ]}
@@ -447,11 +454,11 @@ export default function EpisodeDetailScreen() {
           {/* Overview */}
           {episode.overview && (
             <View style={styles.overviewSection}>
-              <Text style={styles.sectionTitle}>{t('media.overview')}</Text>
+              <Text style={detailStyles.sectionTitle}>{t('media.overview')}</Text>
               <ExpandableText
                 text={episode.overview}
                 style={[styles.overviewText, { marginBottom: SPACING.s }]}
-                readMoreStyle={styles.readMore}
+                readMoreStyle={[detailStyles.readMore, { color: accentColor }]}
               />
             </View>
           )}
@@ -571,7 +578,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.l,
   },
   errorButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.xl,
     borderRadius: BORDER_RADIUS.m,
@@ -637,7 +643,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
   },
@@ -705,7 +710,6 @@ const styles = StyleSheet.create({
   },
   readMore: {
     fontSize: FONT_SIZE.m,
-    color: COLORS.primary,
     marginTop: SPACING.xs,
   },
 });

@@ -1,4 +1,5 @@
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING, hexToRGBA } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Star } from 'lucide-react-native';
 import React, { memo } from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
@@ -29,9 +30,17 @@ const SIZES = {
 
 export const RatingBadge = memo<RatingBadgeProps>(({ rating, size = 'medium', style }) => {
   const sizeConfig = SIZES[size];
+  const { accentColor } = useAccentColor();
 
   return (
-    <View style={[styles.container, sizeConfig.container, style]}>
+    <View
+      style={[
+        styles.container,
+        sizeConfig.container,
+        style,
+        { backgroundColor: hexToRGBA(accentColor, 0.9) },
+      ]}
+    >
       <Star size={sizeConfig.icon} color={COLORS.warning} fill={COLORS.warning} />
       <Text style={[styles.ratingText, { fontSize: sizeConfig.fontSize }]}>
         {rating.toFixed(1)}
@@ -46,7 +55,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(229, 9, 20, 0.9)',
     borderRadius: BORDER_RADIUS.m,
     gap: 4,
   },

@@ -1,4 +1,6 @@
+import { DEFAULT_ACCENT_COLOR } from '@/src/constants/accentColors';
 import { COLORS } from '@/src/constants/theme';
+import { AccentColorContext } from '@/src/context/AccentColorProvider';
 import i18n from '@/src/i18n';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -19,6 +21,9 @@ interface State {
  * Displays a fallback UI when an error occurs instead of crashing the app.
  */
 export class ErrorBoundary extends Component<Props, State> {
+  static contextType = AccentColorContext;
+  context: React.ContextType<typeof AccentColorContext> = null;
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -43,6 +48,8 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
+      const accentColor = this.context?.accentColor ?? DEFAULT_ACCENT_COLOR;
+
       return (
         <View style={styles.container} testID="error-boundary-fallback">
           <Text style={styles.emoji}>😵</Text>
@@ -51,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error?.message || i18n.t('errors.unexpectedError')}
           </Text>
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, { backgroundColor: accentColor }]}
             onPress={this.handleReset}
             testID="error-boundary-retry"
           >
@@ -92,7 +99,6 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   button: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

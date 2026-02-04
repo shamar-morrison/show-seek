@@ -7,6 +7,7 @@ import { HomeListSectionSkeleton } from '@/src/components/skeletons/HomeListSect
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -30,6 +31,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   // Check if user can access Latest Trailers (signed in + premium)
   const canAccessTrailers = useMemo(() => {
@@ -78,7 +80,7 @@ export default function HomeScreen() {
           <Menu size={24} color={COLORS.text} />
         </HeaderIconButton>
         <View style={styles.headerTitleContainer} pointerEvents="none">
-          <Text style={styles.headerTitle}>{t('common.appName')}</Text>
+          <Text style={[styles.headerTitle, { color: accentColor }]}>{t('common.appName')}</Text>
         </View>
         <HeaderIconButton onPress={handleOpenCustomization}>
           <Settings2 size={24} color={COLORS.text} />
@@ -92,8 +94,8 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={accentColor}
+            colors={[accentColor]}
           />
         }
       >
@@ -151,7 +153,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   scrollView: {
     flex: 1,

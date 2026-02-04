@@ -5,7 +5,7 @@ import { Check, ImageIcon, LucideIcon, Pencil, Play, Plus, StickyNote } from 'lu
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { detailStyles } from './detailStyles';
+import { useDetailStyles } from './detailStyles';
 
 export interface MediaActionButtonsProps {
   // Action callbacks
@@ -62,16 +62,17 @@ export function MediaActionButtons({
   hasTrailer,
 }: MediaActionButtonsProps) {
   const { t } = useTranslation();
+  const styles = useDetailStyles();
 
   return (
-    <View style={detailStyles.actionButtons}>
+    <View style={styles.actionButtons}>
       {/* Secondary Action Buttons Row */}
-      <View style={detailStyles.secondaryActionsRow}>
+      <View style={styles.secondaryActionsRow}>
         {/* Add to List Button */}
         <TouchableOpacity
           style={[
-            detailStyles.addButton,
-            isInAnyList && detailStyles.addedButton,
+            styles.addButton,
+            isInAnyList && styles.addedButton,
             isInAnyList && listColor ? { backgroundColor: listColor } : undefined,
           ]}
           activeOpacity={ACTIVE_OPACITY}
@@ -92,13 +93,13 @@ export function MediaActionButtons({
         </TouchableOpacity>
 
         {/* Rating Button */}
-        <View style={detailStyles.ratingButtonContainer}>
+        <View style={styles.ratingButtonContainer}>
           <RatingButton onPress={onRate} isRated={userRating > 0} isLoading={isLoadingRating} />
         </View>
 
         {/* Reminder Button (optional) */}
         {onReminder && (
-          <View style={detailStyles.ratingButtonContainer}>
+          <View style={styles.ratingButtonContainer}>
             <ReminderButton
               onPress={onReminder}
               hasReminder={hasReminder}
@@ -108,9 +109,9 @@ export function MediaActionButtons({
         )}
 
         {/* Notes Button */}
-        <View style={detailStyles.ratingButtonContainer}>
+        <View style={styles.ratingButtonContainer}>
           <TouchableOpacity
-            style={detailStyles.actionButtonTouchable}
+            style={styles.actionButtonTouchable}
             activeOpacity={ACTIVE_OPACITY}
             onPress={onNote}
             disabled={isLoadingNote}
@@ -127,9 +128,9 @@ export function MediaActionButtons({
 
         {/* Share Card Button (optional) */}
         {onShareCard && (
-          <View style={detailStyles.ratingButtonContainer}>
+          <View style={styles.ratingButtonContainer}>
             <TouchableOpacity
-              style={detailStyles.actionButtonTouchable}
+              style={styles.actionButtonTouchable}
               activeOpacity={ACTIVE_OPACITY}
               onPress={onShareCard}
             >
@@ -140,15 +141,15 @@ export function MediaActionButtons({
       </View>
 
       {/* Watch Trailer Button Row */}
-      <View style={detailStyles.trailerButtonRow}>
+      <View style={styles.trailerButtonRow}>
         <TouchableOpacity
-          style={[detailStyles.playButton, !hasTrailer && detailStyles.disabledButton]}
+          style={[styles.playButton, !hasTrailer && styles.disabledButton]}
           onPress={onTrailer}
           disabled={!hasTrailer}
           activeOpacity={ACTIVE_OPACITY}
         >
           <Play size={18} color={COLORS.white} fill={COLORS.white} />
-          <Text style={detailStyles.playButtonText}>{t('media.watchTrailer')}</Text>
+          <Text style={styles.playButtonText}>{t('media.watchTrailer')}</Text>
         </TouchableOpacity>
       </View>
     </View>

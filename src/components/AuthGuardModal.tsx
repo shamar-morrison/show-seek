@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useRouter } from 'expo-router';
 import { LogIn, X } from 'lucide-react-native';
@@ -27,6 +28,7 @@ interface AuthGuardModalProps {
 export default function AuthGuardModal({ visible, onClose, message }: AuthGuardModalProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   const displayMessage = message ?? t('auth.featureRequiresAccount');
 
@@ -48,7 +50,7 @@ export default function AuthGuardModal({ visible, onClose, message }: AuthGuardM
         <View style={[modalLayoutStyles.card, styles.content]}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <LogIn size={32} color={COLORS.primary} />
+              <LogIn size={32} color={accentColor} />
             </View>
             <TouchableOpacity
               onPress={onClose}
@@ -66,7 +68,7 @@ export default function AuthGuardModal({ visible, onClose, message }: AuthGuardM
 
           <View style={styles.actions}>
             <TouchableOpacity
-              style={styles.signInButton}
+              style={[styles.signInButton, { backgroundColor: accentColor }]}
               onPress={handleSignIn}
               activeOpacity={ACTIVE_OPACITY}
               accessibilityLabel={t('auth.signIn')}
@@ -134,7 +136,6 @@ const styles = StyleSheet.create({
     gap: SPACING.m,
   },
   signInButton: {
-    backgroundColor: COLORS.primary,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',

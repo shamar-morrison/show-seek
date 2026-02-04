@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,7 @@ interface WatchingShowCardProps {
 
 export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   const router = useRouter();
+  const { accentColor } = useAccentColor();
 
   const currentTab = useCurrentTab();
 
@@ -57,7 +59,9 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
 
         <View style={styles.episodeInfo}>
           <Text style={styles.episodeText} numberOfLines={1}>
-            <Text style={styles.seasonEpLabel}>{t('watching.next')}</Text>{' '}
+            <Text style={[styles.seasonEpLabel, { color: accentColor }]}>
+              {t('watching.next')}
+            </Text>{' '}
             {show.nextEpisode
               ? t('watching.nextEpisode', {
                   seasonEpisode: t('media.seasonEpisode', {
@@ -72,9 +76,16 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${show.percentage}%` }]} />
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${show.percentage}%`, backgroundColor: accentColor },
+              ]}
+            />
           </View>
-          <Text style={styles.percentageText}>{show.percentage}%</Text>
+          <Text style={[styles.percentageText, { color: accentColor }]}>
+            {show.percentage}%
+          </Text>
         </View>
       </View>
 
@@ -134,7 +145,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   seasonEpLabel: {
-    color: COLORS.primary,
     fontWeight: '600',
   },
   progressContainer: {
@@ -150,7 +160,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
     borderRadius: 3,
   },
   percentageText: {

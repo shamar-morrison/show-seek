@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { CollectionProgressItem } from '@/src/types/collectionTracking';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,7 @@ interface CollectionProgressCardProps {
 export function CollectionProgressCard({ collection }: CollectionProgressCardProps) {
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
 
   const handlePress = () => {
     const tab = currentTab || 'library';
@@ -47,9 +49,16 @@ export function CollectionProgressCard({ collection }: CollectionProgressCardPro
 
         <View style={styles.progressContainer}>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${collection.percentage}%` }]} />
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${collection.percentage}%`, backgroundColor: accentColor },
+              ]}
+            />
           </View>
-          <Text style={styles.percentageText}>{collection.percentage}%</Text>
+          <Text style={[styles.percentageText, { color: accentColor }]}>
+            {collection.percentage}%
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -108,7 +117,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
     borderRadius: 3,
   },
   percentageText: {

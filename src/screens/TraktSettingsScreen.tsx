@@ -15,7 +15,15 @@ import {
 } from '@/src/components/ui/CollapsibleCategory';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+  hexToRGBA,
+} from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -53,6 +61,7 @@ const TRAKT_COLOR = '#ED1C24';
 export default function TraktSettingsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { accentColor } = useAccentColor();
   const {
     isConnected,
     isSyncing,
@@ -401,7 +410,7 @@ export default function TraktSettingsScreen() {
         )}
 
         {syncStatus?.errors && syncStatus.errors.length > 0 && (
-          <View style={styles.errorsContainer}>
+          <View style={[styles.errorsContainer, { backgroundColor: hexToRGBA(accentColor, 0.1) }]}>
             <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
             {syncStatus.errors.slice(0, 3).map((error, index) => (
               <Text key={index} style={styles.errorText}>
@@ -708,7 +717,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   errorsContainer: {
-    backgroundColor: 'rgba(229, 9, 20, 0.1)',
     borderRadius: BORDER_RADIUS.m,
     padding: SPACING.m,
     marginBottom: SPACING.l,

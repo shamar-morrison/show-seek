@@ -6,6 +6,7 @@ import {
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,7 @@ export default function PremiumScreen() {
     usePremium();
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
 
@@ -81,10 +83,10 @@ export default function PremiumScreen() {
     return (
       <SafeAreaView style={screenStyles.container}>
         <View style={styles.content}>
-          <Ionicons name="checkmark-circle" size={80} color={COLORS.primary} />
+          <Ionicons name="checkmark-circle" size={80} color={accentColor} />
           <Text style={styles.title}>{t('premium.alreadyPremiumTitle')}</Text>
           <Text style={styles.description}>{t('premium.alreadyPremiumDescription')}</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.button, { backgroundColor: accentColor }]} onPress={() => router.back()}>
             <Text style={styles.buttonText}>{t('common.goBack')}</Text>
           </TouchableOpacity>
         </View>
@@ -96,7 +98,7 @@ export default function PremiumScreen() {
     <SafeAreaView style={screenStyles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Ionicons name="star" size={60} color={COLORS.primary} />
+          <Ionicons name="star" size={60} color={accentColor} />
           <Text style={styles.title}>{t('premium.unlockTitle')}</Text>
           <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
         </View>
@@ -112,12 +114,12 @@ export default function PremiumScreen() {
         </View>
 
         <View style={styles.pricing}>
-          <Text style={styles.price}>{price || 'US$10.00'}</Text>
+          <Text style={[styles.price, { color: accentColor }]}>{price || 'US$10.00'}</Text>
           <Text style={styles.paymentType}>{t('premium.oneTimePayment')}</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, { backgroundColor: accentColor }]}
           onPress={handlePurchase}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -249,7 +251,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: SPACING.xl,
     fontWeight: 'bold',
-    color: COLORS.primary,
   },
   paymentType: {
     fontSize: 14,
@@ -257,7 +258,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   button: {
-    backgroundColor: COLORS.primary,
     width: '100%',
     paddingVertical: SPACING.m,
     borderRadius: 12,

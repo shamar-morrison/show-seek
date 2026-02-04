@@ -1,6 +1,7 @@
 import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
 import { auth } from '@/src/firebase/config';
@@ -31,6 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function SignIn() {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -214,7 +216,7 @@ export default function SignIn() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.button}
+                  style={[styles.button, { backgroundColor: accentColor }]}
                   onPress={handleSignIn}
                   disabled={loading || googleLoading}
                   activeOpacity={ACTIVE_OPACITY}
@@ -241,18 +243,24 @@ export default function SignIn() {
                   <Text style={styles.footerText}>{t('auth.dontHaveAccount')} </Text>
                   <Link href="/(auth)/sign-up" asChild>
                     <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                      <Text style={styles.link}>{t('auth.signUp')}</Text>
+                      <Text style={[styles.link, { color: accentColor }]}>{t('auth.signUp')}</Text>
                     </TouchableOpacity>
                   </Link>
                 </View>
 
                 <Text style={styles.termsText}>
                   {t('auth.bySigningIn')}{' '}
-                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.tos)}>
+                  <Text
+                    style={[styles.termsLink, { color: accentColor }]}
+                    onPress={() => Linking.openURL(legal.tos)}
+                  >
                     {t('settings.terms')}
                   </Text>{' '}
                   {t('common.and')}{' '}
-                  <Text style={styles.termsLink} onPress={() => Linking.openURL(legal.privacy)}>
+                  <Text
+                    style={[styles.termsLink, { color: accentColor }]}
+                    onPress={() => Linking.openURL(legal.privacy)}
+                  >
                     {t('settings.privacy')}
                   </Text>
                 </Text>
@@ -349,7 +357,6 @@ const styles = StyleSheet.create({
     padding: SPACING.s,
   },
   button: {
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
@@ -414,7 +421,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
   },
   link: {
-    color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
   },
@@ -426,7 +432,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   termsLink: {
-    color: COLORS.primary,
     fontWeight: '600',
   },
 });

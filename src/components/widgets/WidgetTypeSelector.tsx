@@ -1,4 +1,5 @@
 import { COLORS } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Film, List, Tv } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,6 +16,7 @@ interface WidgetTypeSelectorProps {
 }
 
 export function WidgetTypeSelector({ selectedType, onSelect }: WidgetTypeSelectorProps) {
+  const { accentColor } = useAccentColor();
   return (
     <View style={styles.container}>
       {TYPES.map((type) => {
@@ -24,11 +26,24 @@ export function WidgetTypeSelector({ selectedType, onSelect }: WidgetTypeSelecto
         return (
           <Pressable
             key={type.id}
-            style={[styles.typeButton, isSelected && styles.selectedButton]}
+            style={[
+              styles.typeButton,
+              isSelected && [
+                styles.selectedButton,
+                { borderColor: accentColor, backgroundColor: accentColor + '10' },
+              ],
+            ]}
             onPress={() => onSelect(type.id)}
           >
-            <Icon size={24} color={isSelected ? COLORS.primary : COLORS.textSecondary} />
-            <Text style={[styles.typeLabel, isSelected && styles.selectedLabel]}>{type.label}</Text>
+            <Icon size={24} color={isSelected ? accentColor : COLORS.textSecondary} />
+            <Text
+              style={[
+                styles.typeLabel,
+                isSelected && [styles.selectedLabel, { color: accentColor }],
+              ]}
+            >
+              {type.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -53,8 +68,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedButton: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
   },
   typeLabel: {
     fontSize: 12,
@@ -62,7 +75,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedLabel: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
 });

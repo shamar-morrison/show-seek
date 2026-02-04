@@ -1,6 +1,7 @@
 import { PremiumWidgetGate } from '@/src/components/widgets/PremiumWidgetGate';
 import { WidgetCard } from '@/src/components/widgets/WidgetCard';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useWidgets } from '@/src/hooks/useWidgets';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -14,6 +15,7 @@ export default function WidgetsScreen() {
   const { widgets, removeWidget, reloadWidgets } = useWidgets(user?.uid);
   const router = useRouter();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   useFocusEffect(
     useCallback(() => {
@@ -44,7 +46,7 @@ export default function WidgetsScreen() {
     <PremiumWidgetGate>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.infoCard}>
-          <Info size={20} color={COLORS.primary} />
+          <Info size={20} color={accentColor} />
           <Text style={styles.infoText}>{t('widgets.info')}</Text>
         </View>
 
@@ -79,7 +81,7 @@ export default function WidgetsScreen() {
           }}
         />
 
-        <Pressable style={styles.addButton} onPress={handleAddWidget}>
+        <Pressable style={[styles.addButton, { backgroundColor: accentColor }]} onPress={handleAddWidget}>
           <Plus size={20} color={COLORS.white} />
           <Text style={styles.addButtonText}>{t('widgets.addNew')}</Text>
         </Pressable>
@@ -118,7 +120,6 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primary,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     justifyContent: 'center',

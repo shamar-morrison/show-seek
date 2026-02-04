@@ -1,6 +1,7 @@
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
@@ -54,6 +55,7 @@ export default function MarkAsWatchedModal({
   onShowToast,
 }: MarkAsWatchedModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -198,7 +200,7 @@ export default function MarkAsWatchedModal({
                 disabled={isLoading}
               >
                 <View style={styles.optionIcon}>
-                  <Clock size={20} color={COLORS.primary} />
+                  <Clock size={20} color={accentColor} />
                 </View>
                 <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>{t('watched.rightNow')}</Text>
@@ -214,7 +216,7 @@ export default function MarkAsWatchedModal({
                   disabled={isLoading}
                 >
                   <View style={styles.optionIcon}>
-                    <Calendar size={20} color={COLORS.primary} />
+                    <Calendar size={20} color={accentColor} />
                   </View>
                   <View style={styles.optionContent}>
                     <Text style={styles.optionTitle}>{t('watched.releaseDate')}</Text>
@@ -230,7 +232,7 @@ export default function MarkAsWatchedModal({
                 disabled={isLoading}
               >
                 <View style={styles.optionIcon}>
-                  <CalendarDays size={20} color={COLORS.primary} />
+                  <CalendarDays size={20} color={accentColor} />
                 </View>
                 <View style={styles.optionContent}>
                   <Text style={styles.optionTitle}>{t('watched.customDate')}</Text>
@@ -271,7 +273,7 @@ export default function MarkAsWatchedModal({
           {/* Loading Overlay */}
           {isLoading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
+              <ActivityIndicator size="large" color={accentColor} />
             </View>
           )}
         </View>

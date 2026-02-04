@@ -6,6 +6,7 @@ import i18n from '@/src/i18n';
 
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS } from '@/src/constants/theme';
+import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
@@ -44,19 +45,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Create notification channel for Android - required for Android 13+ permission prompt
-if (Platform.OS === 'android') {
-  Notifications.setNotificationChannelAsync('default', {
-    name: i18n.t('notifications.channelName'),
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: COLORS.primary,
-    sound: 'default',
-  }).catch((error) => {
-    console.error('[NotificationChannel] Failed to create default channel', error);
-  });
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -72,6 +60,7 @@ function RootLayoutNav() {
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
+  const { accentColor, isAccentReady } = useAccentColor();
   const segments = useSegments();
   const router = useRouter();
 
@@ -107,9 +96,25 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    Notifications.setNotificationChannelAsync('default', {
+      name: i18n.t('notifications.channelName'),
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: accentColor,
+      sound: 'default',
+    }).catch((error) => {
+      console.error('[NotificationChannel] Failed to create default channel', error);
+    });
+  }, [accentColor]);
+
+  useEffect(() => {
     // For non-anonymous users, wait for preferences to load before routing
     const waitingForPreferences = user && !user.isAnonymous && preferencesLoading;
-    if (loading || !isLanguageReady || !isRegionReady || waitingForPreferences) return;
+    if (loading || !isLanguageReady || !isRegionReady || !isAccentReady || waitingForPreferences) {
+      return;
+    }
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
@@ -155,6 +160,7 @@ function RootLayoutNav() {
     router,
     isLanguageReady,
     isRegionReady,
+    isAccentReady,
     preferences,
     preferencesLoading,
   ]);
@@ -166,6 +172,7 @@ function RootLayoutNav() {
     hasCompletedOnboarding === null ||
     !isLanguageReady ||
     !isRegionReady ||
+    !isAccentReady ||
     (user && !user.isAnonymous && preferencesLoading);
   if (isInitializing) {
     return (
@@ -177,7 +184,7 @@ function RootLayoutNav() {
           alignItems: 'center',
         }}
       >
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={accentColor} />
       </View>
     );
   }
@@ -204,9 +211,11 @@ export default function RootLayout() {
           <TraktProvider>
             <LanguageProvider>
               <RegionProvider>
-                <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
+                <AccentColorProvider>
+                  <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </AccentColorProvider>
               </RegionProvider>
             </LanguageProvider>
           </TraktProvider>

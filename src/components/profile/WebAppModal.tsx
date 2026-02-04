@@ -1,4 +1,5 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Globe } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,13 +19,14 @@ export interface WebAppModalProps {
  */
 export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.webAppModalOverlay}>
         <View style={styles.webAppModalContent}>
           <View style={styles.webAppModalHeader}>
-            <Globe size={24} color={COLORS.primary} />
+            <Globe size={24} color={accentColor} />
             <Text style={styles.webAppModalTitle}>{t('profile.webAppModal.title')}</Text>
           </View>
           <Text style={styles.webAppModalDescription}>
@@ -40,7 +42,7 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
               <Text style={styles.webAppModalCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.webAppModalButton, styles.webAppModalConfirmButton]}
+              style={[styles.webAppModalButton, { backgroundColor: accentColor }]}
               onPress={onConfirm}
               activeOpacity={ACTIVE_OPACITY}
               testID="webapp-modal-confirm"
@@ -101,9 +103,6 @@ const styles = StyleSheet.create({
   },
   webAppModalCancelButton: {
     backgroundColor: COLORS.surfaceLight,
-  },
-  webAppModalConfirmButton: {
-    backgroundColor: COLORS.primary,
   },
   webAppModalCancelText: {
     color: COLORS.text,

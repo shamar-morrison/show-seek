@@ -2,7 +2,7 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { reminderModalStyles as styles } from './reminderModalStyles';
+import { useReminderModalStyles } from './reminderModalStyles';
 
 interface ReminderActionButtonsProps {
   /** Whether an existing reminder exists */
@@ -32,6 +32,7 @@ export function ReminderActionButtons({
   onCancel,
 }: ReminderActionButtonsProps) {
   const { t } = useTranslation();
+  const styles = useReminderModalStyles();
 
   if (hasReminder) {
     return (

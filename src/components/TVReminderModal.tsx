@@ -8,7 +8,7 @@ import {
   ReminderTimingOptions,
   ReminderWarningBanner,
   SEASON_TIMING_OPTIONS,
-  reminderModalStyles as sharedStyles,
+  useReminderModalStyles,
 } from '@/src/components/reminder';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
@@ -18,6 +18,7 @@ import {
   isNotificationTimeInPast,
   isReleaseToday,
 } from '@/src/utils/reminderHelpers';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Calendar, Tv } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +71,8 @@ export default function TVReminderModal({
   onShowToast,
 }: TVReminderModalProps) {
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const sharedStyles = useReminderModalStyles();
   const [selectedFrequency, setSelectedFrequency] = useState<TVReminderFrequency>(
     currentFrequency || 'every_episode'
   );
@@ -212,7 +215,7 @@ export default function TVReminderModal({
 
       {/* Show Title */}
       <View style={styles.titleRow}>
-        <Tv size={18} color={COLORS.primary} />
+        <Tv size={18} color={accentColor} />
         <Text style={styles.showTitle} numberOfLines={2}>
           {tvTitle}
         </Text>
@@ -226,7 +229,10 @@ export default function TVReminderModal({
         <TouchableOpacity
           style={[
             styles.frequencyOption,
-            selectedFrequency === 'every_episode' && styles.frequencyOptionSelected,
+            selectedFrequency === 'every_episode' && [
+              styles.frequencyOptionSelected,
+              { borderColor: accentColor },
+            ],
             !canSetEpisodeReminder && styles.frequencyOptionDisabled,
           ]}
           onPress={() => canSetEpisodeReminder && handleFrequencyChange('every_episode')}
@@ -234,7 +240,9 @@ export default function TVReminderModal({
           activeOpacity={ACTIVE_OPACITY}
         >
           <View style={styles.radioOuter}>
-            {selectedFrequency === 'every_episode' && <View style={styles.radioInner} />}
+            {selectedFrequency === 'every_episode' && (
+              <View style={[styles.radioInner, { backgroundColor: accentColor }]} />
+            )}
           </View>
           <View style={styles.frequencyTextContainer}>
             <Text
@@ -262,7 +270,10 @@ export default function TVReminderModal({
         <TouchableOpacity
           style={[
             styles.frequencyOption,
-            selectedFrequency === 'season_premiere' && styles.frequencyOptionSelected,
+            selectedFrequency === 'season_premiere' && [
+              styles.frequencyOptionSelected,
+              { borderColor: accentColor },
+            ],
             !canSetSeasonReminder && styles.frequencyOptionDisabled,
           ]}
           onPress={() => canSetSeasonReminder && handleFrequencyChange('season_premiere')}
@@ -270,7 +281,9 @@ export default function TVReminderModal({
           activeOpacity={ACTIVE_OPACITY}
         >
           <View style={styles.radioOuter}>
-            {selectedFrequency === 'season_premiere' && <View style={styles.radioInner} />}
+            {selectedFrequency === 'season_premiere' && (
+              <View style={[styles.radioInner, { backgroundColor: accentColor }]} />
+            )}
           </View>
           <View style={styles.frequencyTextContainer}>
             <Text
@@ -405,7 +418,6 @@ const styles = StyleSheet.create({
   },
   frequencyOptionSelected: {
     borderWidth: 1,
-    borderColor: COLORS.primary,
   },
   frequencyOptionDisabled: {
     opacity: 0.5,
@@ -436,7 +448,6 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: COLORS.primary,
   },
   noOptionsContainer: {
     backgroundColor: COLORS.surfaceLight,

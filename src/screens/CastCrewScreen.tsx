@@ -2,6 +2,7 @@ import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
@@ -30,6 +31,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   const router = useRouter();
   const segments = useSegments();
   const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
 
   const creditsQuery = useQuery({
@@ -88,7 +90,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
+          <Text style={[styles.backButtonText, { color: accentColor }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -120,7 +122,10 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'cast' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'cast' && [styles.activeTab, { backgroundColor: accentColor }],
+          ]}
           onPress={() => setActiveTab('cast')}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -129,7 +134,10 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'crew' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'crew' && [styles.activeTab, { backgroundColor: accentColor }],
+          ]}
           onPress={() => setActiveTab('crew')}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -156,7 +164,6 @@ const styles = StyleSheet.create({
     padding: SPACING.m,
   },
   backButtonText: {
-    color: COLORS.primary,
   },
   header: {
     flexDirection: 'row',
@@ -196,7 +203,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   activeTab: {
-    backgroundColor: COLORS.primary,
   },
   tabText: {
     fontSize: FONT_SIZE.m,
