@@ -20,8 +20,6 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { errorStyles } from '@/src/styles/errorStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useIsEpisodeWatched,
@@ -32,6 +30,8 @@ import {
 import { useMediaLists } from '@/src/hooks/useLists';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -51,7 +51,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EpisodeDetailScreen() {
-  const styles = useDetailStyles();
+  const detailStyles = useDetailStyles();
   const { id: tvIdStr, seasonNum: seasonStr, episodeNum: episodeStr } = useLocalSearchParams();
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -286,10 +286,11 @@ export default function EpisodeDetailScreen() {
     return (
       <SafeAreaView style={[errorStyles.container, styles.errorContainer]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={[errorStyles.text, styles.errorText]}>
-          {t('episodeDetail.failedToLoad')}
-        </Text>
-        <TouchableOpacity style={[styles.errorButton, { backgroundColor: accentColor }]} onPress={handleBack}>
+        <Text style={[errorStyles.text, styles.errorText]}>{t('episodeDetail.failedToLoad')}</Text>
+        <TouchableOpacity
+          style={[styles.errorButton, { backgroundColor: accentColor }]}
+          onPress={handleBack}
+        >
           <Text style={styles.errorButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -326,7 +327,7 @@ export default function EpisodeDetailScreen() {
         }
       >
         {/* Hero Section */}
-        <View style={styles.episodeHeroContainer}>
+        <View style={detailStyles.episodeHeroContainer}>
           <MediaImage source={{ uri: stillUrl }} style={styles.heroImage} contentFit="cover" />
           <LinearGradient colors={['transparent', COLORS.background]} style={styles.heroGradient} />
 
@@ -343,13 +344,13 @@ export default function EpisodeDetailScreen() {
         {/* Content Section */}
         <View style={styles.content}>
           {/* Breadcrumb Navigation */}
-          <View style={styles.episodeBreadcrumb}>
+          <View style={detailStyles.episodeBreadcrumb}>
             <TouchableOpacity onPress={handleTVShowPress} activeOpacity={ACTIVE_OPACITY}>
-              <Text style={styles.episodeBreadcrumbLink}>{tvShow?.name}</Text>
+              <Text style={detailStyles.episodeBreadcrumbLink}>{tvShow?.name}</Text>
             </TouchableOpacity>
             <ChevronRight size={14} color={COLORS.textSecondary} />
             <TouchableOpacity onPress={handleBack} activeOpacity={ACTIVE_OPACITY}>
-                <Text style={styles.episodeBreadcrumbLink}>
+              <Text style={detailStyles.episodeBreadcrumbLink}>
                 {season?.name || t('media.seasonNumber', { number: seasonNumber })}
               </Text>
             </TouchableOpacity>
@@ -382,7 +383,9 @@ export default function EpisodeDetailScreen() {
             {episode.runtime && (
               <View style={styles.metaItem}>
                 <Clock size={16} color={COLORS.textSecondary} />
-                <Text style={styles.metaText}>{t('common.minutesShort', { count: episode.runtime })}</Text>
+                <Text style={styles.metaText}>
+                  {t('common.minutesShort', { count: episode.runtime })}
+                </Text>
               </View>
             )}
             {episode.vote_average > 0 && (
@@ -451,11 +454,11 @@ export default function EpisodeDetailScreen() {
           {/* Overview */}
           {episode.overview && (
             <View style={styles.overviewSection}>
-              <Text style={styles.sectionTitle}>{t('media.overview')}</Text>
+              <Text style={detailStyles.sectionTitle}>{t('media.overview')}</Text>
               <ExpandableText
                 text={episode.overview}
                 style={[styles.overviewText, { marginBottom: SPACING.s }]}
-                readMoreStyle={[styles.readMore, { color: accentColor }]}
+                readMoreStyle={[detailStyles.readMore, { color: accentColor }]}
               />
             </View>
           )}

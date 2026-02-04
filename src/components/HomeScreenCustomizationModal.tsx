@@ -7,12 +7,12 @@ import {
 import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -59,6 +59,7 @@ interface ListItemProps {
 }
 
 const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: ListItemProps) => {
+  const { accentColor } = useAccentColor();
   return (
     <Pressable style={styles.listItem} onPress={() => onToggle({ id, type, label })}>
       <View
@@ -178,7 +179,7 @@ const HomeScreenCustomizationModal = forwardRef<
       backgroundColor={COLORS.surface}
       grabber={true}
     >
-        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+      <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         <View style={modalHeaderStyles.header}>
           <Text style={modalHeaderStyles.title}>{t('homeCustomization.title')}</Text>
           <Text style={styles.subtitle}>
