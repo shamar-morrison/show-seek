@@ -150,15 +150,12 @@ export default function WatchProgressScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
-    searchButton,
     isFetching,
     hasActiveSort,
     t,
   ]);
 
-  const renderItem = ({ item }: { item: InProgressShow }) => (
-    <WatchingShowCard show={item} t={t} />
-  );
+  const renderItem = ({ item }: { item: InProgressShow }) => <WatchingShowCard show={item} t={t} />;
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading message={t('library.loadingWatchHistory')} />;
