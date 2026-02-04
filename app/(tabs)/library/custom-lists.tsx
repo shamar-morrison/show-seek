@@ -1,6 +1,7 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
@@ -10,14 +11,14 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
+import { UserList } from '@/src/services/ListService';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { UserList } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, ChevronRight, FolderPlus, List, Plus } from 'lucide-react-native';
+import { ArrowUpDown, ChevronRight, FolderPlus, Plus } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -139,17 +140,34 @@ export default function CustomListsScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: UserList }) => (
-      <Pressable
-        style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
-        onPress={() => handleListPress(item.id)}
-      >
-        <List size={24} color={accentColor} />
-        <Text style={styles.listName}>{item.name}</Text>
-        <ChevronRight size={20} color={COLORS.textSecondary} />
-      </Pressable>
-    ),
-    [handleListPress]
+    ({ item }: { item: UserList }) => {
+      // Extract poster paths from list items (up to 3)
+      const posterPaths = Object.values(item.items || {})
+        .slice(0, 3)
+        .map((mediaItem) => mediaItem.poster_path);
+
+      // Count total items
+      const itemCount = Object.keys(item.items || {}).length;
+
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
+          onPress={() => handleListPress(item.id)}
+        >
+          <StackedPosterPreview posterPaths={posterPaths} />
+          <View style={styles.listInfo}>
+            <Text style={styles.listName}>{item.name}</Text>
+            <Text style={styles.itemCount}>
+              {itemCount === 1
+                ? t('library.itemCountOne')
+                : t('library.itemCount', { count: itemCount })}
+            </Text>
+          </View>
+          <ChevronRight size={20} color={COLORS.textSecondary} />
+        </Pressable>
+      );
+    },
+    [handleListPress, t]
   );
 
   const keyExtractor = useCallback((item: UserList) => item.id, []);
@@ -206,17 +224,23 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     borderWidth: 1,
     borderColor: COLORS.surfaceLight,
-    gap: SPACING.m,
+    gap: SPACING.s,
   },
   listCardPressed: {
     transform: [{ scale: 0.98 }],
-    opacity: 0.8,
+  },
+  listInfo: {
+    flex: 1,
+    gap: SPACING.xs,
   },
   listName: {
-    flex: 1,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+  },
+  itemCount: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
   separator: {
     height: SPACING.m,
