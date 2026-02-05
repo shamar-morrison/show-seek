@@ -233,6 +233,8 @@ export default function EpisodeDetailScreen() {
     listMembership,
     season,
     t,
+    isPremium,
+    currentListCount,
   ]);
 
   const handleVideoPress = useCallback((video: Video) => {

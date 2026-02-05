@@ -89,6 +89,56 @@ const canShowReminder = (releaseDate: string | null | undefined): boolean => {
   return release >= today;
 };
 
+// Helper to auto-add movie to "Already Watched" list
+const tryAutoAddToAlreadyWatched = async (params: {
+  movieId: number;
+  movie: {
+    title: string;
+    poster_path: string | null;
+    vote_average: number;
+    genres?: { id: number }[];
+  };
+  releaseDate: string | null | undefined;
+  membership: Record<string, boolean>;
+  lists: { id: string; items?: Record<string, unknown> }[] | undefined;
+  isPremium: boolean;
+  t: (key: string) => string;
+}) => {
+  const { movieId, movie, releaseDate, membership, lists, isPremium, t } = params;
+  const isNotInAlreadyWatched = !membership['already-watched'];
+
+  if (!isNotInAlreadyWatched) return;
+
+  // Check list limit for free users before auto-adding
+  const alreadyWatchedList = lists?.find((l) => l.id === 'already-watched');
+  const currentCount = alreadyWatchedList ? Object.keys(alreadyWatchedList.items || {}).length : 0;
+
+  if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+    console.log('[MovieDetailScreen] Skipping auto-add: list limit reached for free user');
+    return;
+  }
+
+  try {
+    const { listService } = await import('../services/ListService');
+    await listService.addToList(
+      'already-watched',
+      {
+        id: movieId,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        media_type: 'movie',
+        vote_average: movie.vote_average,
+        release_date: releaseDate || '',
+        genre_ids: movie.genres?.map((g) => g.id),
+      },
+      t('lists.alreadyWatched')
+    );
+    console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+  } catch (autoAddError) {
+    console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
+  }
+};
+
 export default function MovieDetailScreen() {
   const styles = useDetailStyles();
   const { id } = useLocalSearchParams();
@@ -390,38 +440,15 @@ export default function MovieDetailScreen() {
 
     // Auto-add to "Already Watched" list on first watch
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-      const isNotInAlreadyWatched = !membership['already-watched'];
-
-      if (isNotInAlreadyWatched) {
-        // Check list limit for free users before auto-adding
-        const alreadyWatchedList = lists?.find((l) => l.id === 'already-watched');
-        const currentCount = alreadyWatchedList
-          ? Object.keys(alreadyWatchedList.items || {}).length
-          : 0;
-        if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
-          console.log('[MovieDetailScreen] Skipping auto-add: list limit reached for free user');
-        } else {
-          try {
-            const { listService } = await import('../services/ListService');
-            await listService.addToList(
-              'already-watched',
-              {
-                id: movieId,
-                title: movie.title,
-                poster_path: movie.poster_path,
-                media_type: 'movie',
-                vote_average: movie.vote_average,
-                release_date: displayReleaseDate || movie.release_date,
-                genre_ids: movie.genres?.map((g) => g.id),
-              },
-              t('lists.alreadyWatched')
-            );
-            console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
-          } catch (autoAddError) {
-            console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
-          }
-        }
-      }
+      await tryAutoAddToAlreadyWatched({
+        movieId,
+        movie,
+        releaseDate: displayReleaseDate || movie.release_date,
+        membership,
+        lists,
+        isPremium,
+        t,
+      });
     }
   };
 
@@ -458,46 +485,15 @@ export default function MovieDetailScreen() {
 
           // Auto-add to "Already Watched" list on first watch
           if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-            const isNotInAlreadyWatched = !membership['already-watched'];
-
-            if (isNotInAlreadyWatched) {
-              // Check list limit for free users before auto-adding
-              const alreadyWatchedList = lists?.find((l) => l.id === 'already-watched');
-              const currentCount = alreadyWatchedList
-                ? Object.keys(alreadyWatchedList.items || {}).length
-                : 0;
-              if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
-                console.log(
-                  '[MovieDetailScreen] Skipping auto-add: list limit reached for free user'
-                );
-              } else {
-                try {
-                  const { listService } = await import('../services/ListService');
-                  await listService.addToList(
-                    'already-watched',
-                    {
-                      id: movieId,
-                      title: movie.title,
-                      poster_path: movie.poster_path,
-                      media_type: 'movie',
-                      vote_average: movie.vote_average,
-                      release_date: displayReleaseDate || movie.release_date,
-                      genre_ids: movie.genres?.map((g) => g.id),
-                    },
-                    t('lists.alreadyWatched')
-                  );
-                  console.log(
-                    '[MovieDetailScreen] Auto-added to Already Watched list:',
-                    movie.title
-                  );
-                } catch (autoAddError) {
-                  console.error(
-                    '[MovieDetailScreen] Auto-add to Already Watched failed:',
-                    autoAddError
-                  );
-                }
-              }
-            }
+            await tryAutoAddToAlreadyWatched({
+              movieId,
+              movie,
+              releaseDate: displayReleaseDate || movie.release_date,
+              membership,
+              lists,
+              isPremium,
+              t,
+            });
           }
 
           toastRef.current?.show(t('library.markedAsWatched'));
@@ -886,9 +882,10 @@ export default function MovieDetailScreen() {
                 genre_ids: movie.genres?.map((g) => g.id),
               },
               isPremium,
-              currentListCount: lists?.find((l) => l.id === 'already-watched')
-                ? Object.keys(lists.find((l) => l.id === 'already-watched')?.items || {}).length
-                : 0,
+              currentListCount: (() => {
+                const list = lists?.find((l) => l.id === 'already-watched');
+                return list ? Object.keys(list.items || {}).length : 0;
+              })(),
             }}
           />
           <ReminderModal
