@@ -18,6 +18,7 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
@@ -27,7 +28,7 @@ import {
   useMarkEpisodeWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
-import { useMediaLists } from '@/src/hooks/useLists';
+import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -85,6 +86,14 @@ export default function EpisodeDetailScreen() {
 
   const { preferences } = usePreferences();
   const { membership: listMembership } = useMediaLists(tvId);
+  const { data: lists } = useLists();
+  const { isPremium } = usePremium();
+
+  // Calculate current count for 'currently-watching' list
+  const currentlyWatchingList = lists?.find((l) => l.id === 'currently-watching');
+  const currentListCount = currentlyWatchingList
+    ? Object.keys(currentlyWatchingList.items || {}).length
+    : 0;
 
   const tvShowQuery = useQuery({
     queryKey: ['tv', tvId],
@@ -200,6 +209,8 @@ export default function EpisodeDetailScreen() {
             firstAirDate: tvShow.first_air_date,
             voteAverage: tvShow.vote_average,
             genreIds: tvShow.genres?.map((g) => g.id) || [],
+            isPremium,
+            currentListCount,
           },
           previousEpisodesOptions: {
             seasonEpisodes: season?.episodes || [],

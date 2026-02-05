@@ -1,9 +1,10 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
+import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
 import { ratingService } from '@/src/services/RatingService';
+import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
@@ -135,6 +136,10 @@ interface RatingModalProps {
       release_date: string;
       genre_ids?: number[];
     };
+    /** Whether the user is a premium subscriber */
+    isPremium?: boolean;
+    /** Current number of items in the target list (for limit checking) */
+    currentListCount?: number;
   };
 }
 
@@ -220,29 +225,36 @@ export default function RatingModal({
           isNotInAlreadyWatched &&
           autoAddOptions?.mediaMetadata
         ) {
-          try {
-            // Dynamically import to avoid circular dependencies
-            const { listService } = await import('../services/ListService');
-            const metadata = autoAddOptions.mediaMetadata;
+          // Check list limit for free users before auto-adding
+          const isPremium = autoAddOptions.isPremium ?? false;
+          const currentCount = autoAddOptions.currentListCount ?? 0;
+          if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+            console.log('[RatingModal] Skipping auto-add: list limit reached for free user');
+          } else {
+            try {
+              // Dynamically import to avoid circular dependencies
+              const { listService } = await import('../services/ListService');
+              const metadata = autoAddOptions.mediaMetadata;
 
-            await listService.addToList(
-              'already-watched',
-              {
-                id: mediaId,
-                title: metadata.title,
-                poster_path: metadata.poster_path,
-                media_type: 'movie',
-                vote_average: metadata.vote_average,
-                release_date: metadata.release_date,
-                genre_ids: metadata.genre_ids,
-              },
-              t('lists.alreadyWatched')
-            );
+              await listService.addToList(
+                'already-watched',
+                {
+                  id: mediaId,
+                  title: metadata.title,
+                  poster_path: metadata.poster_path,
+                  media_type: 'movie',
+                  vote_average: metadata.vote_average,
+                  release_date: metadata.release_date,
+                  genre_ids: metadata.genre_ids,
+                },
+                t('lists.alreadyWatched')
+              );
 
-            console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
-          } catch (autoAddError) {
-            // Log but don't throw - auto-add is non-critical
-            console.error('[RatingModal] Auto-add to Already Watched list failed:', autoAddError);
+              console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
+            } catch (autoAddError) {
+              // Log but don't throw - auto-add is non-critical
+              console.error('[RatingModal] Auto-add to Already Watched list failed:', autoAddError);
+            }
           }
         }
       }
@@ -315,7 +327,9 @@ export default function RatingModal({
 
         <View style={modalLayoutStyles.card}>
           <View style={[modalHeaderStyles.header, styles.header]}>
-            <Text style={modalHeaderStyles.title}>{t('rating.rateThis', { type: rateTypeLabel })}</Text>
+            <Text style={modalHeaderStyles.title}>
+              {t('rating.rateThis', { type: rateTypeLabel })}
+            </Text>
             <Pressable onPress={handleClose}>
               {({ pressed }) => (
                 <View style={{ opacity: pressed ? ACTIVE_OPACITY : 1 }}>
@@ -352,9 +366,7 @@ export default function RatingModal({
           </View>
 
           <View style={styles.ratingTextContainer}>
-            <Text style={[styles.ratingScore, { color: accentColor }]}>
-              {formatRating(rating)}
-            </Text>
+            <Text style={[styles.ratingScore, { color: accentColor }]}>{formatRating(rating)}</Text>
             {rating > 0 && <Text style={styles.ratingDescription}>{getRatingText(rating)}</Text>}
           </View>
 

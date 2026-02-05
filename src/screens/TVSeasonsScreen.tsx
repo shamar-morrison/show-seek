@@ -4,8 +4,7 @@ import { SeasonItem } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
-import { errorStyles } from '@/src/styles/errorStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useMarkAllEpisodesWatched,
@@ -16,11 +15,13 @@ import {
   type MarkEpisodeUnwatchedParams,
   type MarkEpisodeWatchedParams,
 } from '@/src/hooks/useEpisodeTracking';
-import { useMediaLists } from '@/src/hooks/useLists';
+import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useRatings } from '@/src/hooks/useRatings';
 import { useSeasonScroll } from '@/src/hooks/useSeasonScroll';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -67,6 +68,14 @@ export default function TVSeasonsScreen() {
   // Auto-add to Watching list hooks
   const { preferences } = usePreferences();
   const { membership: listMembership } = useMediaLists(tvId);
+  const { data: lists } = useLists();
+  const { isPremium } = usePremium();
+
+  // Calculate current count for 'currently-watching' list
+  const currentlyWatchingList = lists?.find((l) => l.id === 'currently-watching');
+  const currentListCount = currentlyWatchingList
+    ? Object.keys(currentlyWatchingList.items || {}).length
+    : 0;
 
   const { data: ratings } = useRatings();
 
@@ -205,6 +214,8 @@ export default function TVSeasonsScreen() {
               firstAirDate={show.first_air_date}
               voteAverage={show.vote_average}
               markPreviousEpisodesWatched={!!preferences.markPreviousEpisodesWatched}
+              isPremium={isPremium}
+              currentListCount={currentListCount}
               t={t}
             />
           </View>

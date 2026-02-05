@@ -1,10 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 const getUserId = () => auth.currentUser?.uid;
 
@@ -37,6 +38,10 @@ export interface MarkEpisodeWatchedParams {
     voteAverage?: number;
     /** Genre IDs for show metadata */
     genreIds?: number[];
+    /** Whether the user is a premium subscriber */
+    isPremium?: boolean;
+    /** Current number of items in the target list (for limit checking) */
+    currentListCount?: number;
   };
   /**
    * Optional configuration for marking previous episodes as watched
@@ -172,33 +177,45 @@ export const useMarkEpisodeWatched = () => {
         autoAddOptions?.listMembership &&
         !autoAddOptions.listMembership['currently-watching']
       ) {
-        try {
-          // Dynamically import to avoid circular dependencies
-          const { listService } = await import('../services/ListService');
-
-          await listService.addToList(
-            'currently-watching',
-            {
-              id: params.tvShowId,
-              title: params.showMetadata.tvShowName,
-              name: params.showMetadata.tvShowName,
-              poster_path: params.showMetadata.posterPath,
-              media_type: 'tv',
-              vote_average: autoAddOptions.voteAverage ?? 0,
-              release_date: autoAddOptions.firstAirDate ?? '',
-              first_air_date: autoAddOptions.firstAirDate,
-              genre_ids: autoAddOptions.genreIds,
-            },
-            'Watching'
-          );
-
+        // Check list limit for free users before auto-adding
+        const isPremium = autoAddOptions.isPremium ?? false;
+        const currentCount = autoAddOptions.currentListCount ?? 0;
+        if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
           console.log(
-            '[useMarkEpisodeWatched] Auto-added to Watching list:',
-            params.showMetadata.tvShowName
+            '[useMarkEpisodeWatched] Skipping auto-add: list limit reached for free user'
           );
-        } catch (autoAddError) {
-          // Log but don't throw - auto-add is non-critical
-          console.error('[useMarkEpisodeWatched] Auto-add to Watching list failed:', autoAddError);
+        } else {
+          try {
+            // Dynamically import to avoid circular dependencies
+            const { listService } = await import('../services/ListService');
+
+            await listService.addToList(
+              'currently-watching',
+              {
+                id: params.tvShowId,
+                title: params.showMetadata.tvShowName,
+                name: params.showMetadata.tvShowName,
+                poster_path: params.showMetadata.posterPath,
+                media_type: 'tv',
+                vote_average: autoAddOptions.voteAverage ?? 0,
+                release_date: autoAddOptions.firstAirDate ?? '',
+                first_air_date: autoAddOptions.firstAirDate,
+                genre_ids: autoAddOptions.genreIds,
+              },
+              'Watching'
+            );
+
+            console.log(
+              '[useMarkEpisodeWatched] Auto-added to Watching list:',
+              params.showMetadata.tvShowName
+            );
+          } catch (autoAddError) {
+            // Log but don't throw - auto-add is non-critical
+            console.error(
+              '[useMarkEpisodeWatched] Auto-add to Watching list failed:',
+              autoAddError
+            );
+          }
         }
       }
 

@@ -144,6 +144,8 @@ const defaultProps: SeasonItemProps = {
   firstAirDate: '2020-01-15',
   voteAverage: 8.5,
   markPreviousEpisodesWatched: false,
+  isPremium: false,
+  currentListCount: 0,
   t: mockT,
 };
 
