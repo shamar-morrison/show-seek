@@ -1,430 +1,215 @@
-import AddToListModal from '@/src/components/AddToListModal';
-import ListActionsModal, {
-  ListActionsIcon,
-  ListActionsModalRef,
-} from '@/src/components/ListActionsModal';
+import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
-import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
-import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
-import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
+import { SortState } from '@/src/components/MediaSortModal';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import Toast from '@/src/components/ui/Toast';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAllGenres } from '@/src/hooks/useGenres';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useLists } from '@/src/hooks/useLists';
-import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
-import {
-  DEFAULT_WATCH_STATUS_FILTERS,
-  filterMediaItems,
-  hasActiveFilters,
-  WatchStatusFilterState,
-} from '@/src/utils/listFilters';
-import { createSortAction } from '@/src/utils/listActions';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { Bookmark, Grid3X3, List, SlidersHorizontal } from 'lucide-react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpDown, Bookmark, ChevronRight } from 'lucide-react-native';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const VIEW_MODE_STORAGE_KEY = 'watch_status_view_mode';
-
-type ViewMode = 'grid' | 'list';
 
 export default function WatchStatusScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { data: lists, isLoading } = useLists();
-  const { data: genreMap } = useAllGenres();
   const { t } = useTranslation();
-  const movieLabel = t('media.movie');
-  const tvShowLabel = t('media.tvShow');
-  const [selectedListId, setSelectedListId] = useState<string>('watchlist');
-  const [filters, setFilters] = useState<WatchStatusFilterState>(DEFAULT_WATCH_STATUS_FILTERS);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const iconBadgeStyles = useIconBadgeStyles();
+  const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
-  const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const mediaGridRef = useRef<MediaGridRef>(null);
-  const listRef = useRef<FlatList>(null);
-  const listActionsModalRef = useRef<ListActionsModalRef>(null);
-  const { accentColor } = useAccentColor();
+  const [sortState, setSortState] = useState<SortState>({
+    option: 'lastUpdated',
+    direction: 'desc',
+  });
 
-  const {
-    handleItemPress,
-    handleLongPress,
-    handleShowToast,
-    addToListModalRef,
-    selectedMediaItem,
-    toastRef,
-  } = useMediaGridHandlers(isLoading);
+  const ItemSeparator = () => <View style={styles.separator} />;
 
-  const selectedList = useMemo(() => {
-    return lists?.find((l) => l.id === selectedListId);
-  }, [lists, selectedListId]);
+  const hasActiveSort = sortState.option !== 'lastUpdated' || sortState.direction !== 'desc';
 
-  const listItems = useMemo(() => {
-    if (!selectedList?.items) return [];
-    const items = Object.values(selectedList.items);
+  // Build watch status lists with data from useLists
+  const watchStatusLists = useMemo(() => {
+    if (!lists) return [];
 
-    // Apply sorting based on current sort state
-    const sortedItems = [...items].sort((a, b) => {
-      // Compute ascending comparison first, then negate for descending
+    // Map each config to its corresponding list data
+    const mapped = WATCH_STATUS_LISTS.map((config) => {
+      const listData = lists.find((l) => l.id === config.id);
+      return {
+        id: config.id,
+        labelKey: config.labelKey,
+        name: t(config.labelKey),
+        items: listData?.items || {},
+        createdAt: listData?.createdAt || 0,
+        updatedAt: listData?.updatedAt || 0,
+      };
+    });
+
+    // Apply sorting
+    return [...mapped].sort((a, b) => {
       const direction = sortState.direction === 'asc' ? 1 : -1;
 
       switch (sortState.option) {
-        case 'recentlyAdded':
-          // Ascending: oldest first (a.addedAt - b.addedAt)
-          return (a.addedAt - b.addedAt) * direction;
-        case 'releaseDate': {
-          const dateA = a.release_date || '';
-          const dateB = b.release_date || '';
-          // Ascending: earliest date first
-          return dateA.localeCompare(dateB) * direction;
+        case 'lastUpdated': {
+          const aTime = a.updatedAt || a.createdAt || 0;
+          const bTime = b.updatedAt || b.createdAt || 0;
+          return (aTime - bTime) * direction;
         }
-        case 'rating':
-          // Ascending: lowest rating first
-          return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
-        case 'alphabetical':
-          // Ascending: A-Z
-          return a.title.localeCompare(b.title) * direction;
+        case 'alphabetical': {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+          return nameA.localeCompare(nameB) * direction;
+        }
         default:
           return 0;
       }
     });
-
-    return sortedItems;
-  }, [selectedList, sortState]);
-
-  const filteredItems = useMemo(() => {
-    return filterMediaItems(listItems, filters);
-  }, [listItems, filters]);
-
-  const handleApplyFilters = (newFilters: WatchStatusFilterState) => {
-    setFilters(newFilters);
-    setFilterModalVisible(false);
-  };
+  }, [lists, sortState, t]);
 
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
     setTimeout(() => {
-      if (viewMode === 'grid') {
-        mediaGridRef.current?.scrollToTop();
-      } else {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }, 100);
   };
-
-  // Load view mode preference on mount
-  useEffect(() => {
-    const loadViewMode = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY);
-        if (saved === 'grid' || saved === 'list') {
-          setViewMode(saved);
-        }
-      } catch (error) {
-        console.error('Failed to load view mode preference:', error);
-      }
-    };
-    loadViewMode();
-  }, []);
-
-  // Toggle view mode and persist preference
-  const toggleViewMode = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newMode: ViewMode = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(newMode);
-    try {
-      await AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode);
-    } catch (error) {
-      console.error('Failed to save view mode preference:', error);
-    }
-  }, [viewMode]);
-
-  const hasActiveFiltersOrSort = useMemo(() => {
-    const activeFilters = hasActiveFilters(filters);
-    const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
-    return activeFilters || hasActiveSort;
-  }, [filters, sortState]);
-
-  const selectedListLabel = useMemo(() => {
-    const config = WATCH_STATUS_LISTS.find((l) => l.id === selectedListId);
-    return config ? t(config.labelKey) : '';
-  }, [selectedListId, t]);
-
-  const listActions = useMemo(() => {
-    const activeFilters = hasActiveFilters(filters);
-    const hasActiveSort = sortState.option !== 'recentlyAdded' || sortState.direction !== 'desc';
-
-    return [
-      {
-        id: 'filter',
-        icon: SlidersHorizontal,
-        label: t('library.filterItems'),
-        onPress: () => setFilterModalVisible(true),
-        showBadge: activeFilters,
-      },
-      createSortAction({
-        onPress: () => setSortModalVisible(true),
-        showBadge: hasActiveSort,
-      }),
-    ];
-  }, [filters, sortState, t]);
-
-  const handleOpenActionsModal = useCallback(() => {
-    listActionsModalRef.current?.present();
-  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <View style={styles.headerButtons}>
-          {/* View Mode Toggle */}
-          <HeaderIconButton onPress={toggleViewMode}>
-            {viewMode === 'grid' ? (
-              <List size={24} color={COLORS.text} />
-            ) : (
-              <Grid3X3 size={24} color={COLORS.text} />
-            )}
-          </HeaderIconButton>
-          {/* Actions Modal */}
-          <HeaderIconButton onPress={handleOpenActionsModal}>
-            <View style={styles.iconWrapper}>
-              <ListActionsIcon size={24} color={COLORS.text} />
-              {hasActiveFiltersOrSort && (
-                <View style={[styles.filterBadge, { backgroundColor: accentColor }]} />
-              )}
+          <HeaderIconButton onPress={() => setSortModalVisible(true)}>
+            <View style={iconBadgeStyles.wrapper}>
+              <ArrowUpDown size={22} color={COLORS.text} />
+              {hasActiveSort && <View style={iconBadgeStyles.badge} />}
             </View>
           </HeaderIconButton>
         </View>
       ),
     });
-  }, [navigation, viewMode, toggleViewMode, handleOpenActionsModal, hasActiveFiltersOrSort]);
+  }, [navigation, hasActiveSort]);
+
+  const handleListPress = useCallback(
+    (listId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push(`/(tabs)/library/watch-status/${listId}` as any);
+    },
+    [router]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: (typeof watchStatusLists)[number] }) => {
+      // Extract poster paths from list items (up to 3)
+      const posterPaths = Object.values(item.items || {})
+        .slice(0, 3)
+        .map((mediaItem) => mediaItem.poster_path);
+
+      // Count total items
+      const itemCount = Object.keys(item.items || {}).length;
+
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
+          onPress={() => handleListPress(item.id)}
+        >
+          <StackedPosterPreview posterPaths={posterPaths} />
+          <View style={styles.listInfo}>
+            <Text style={styles.listName}>{item.name}</Text>
+            <Text style={styles.itemCount}>
+              {itemCount === 1
+                ? t('library.itemCountOne')
+                : t('library.itemCount', { count: itemCount })}
+            </Text>
+          </View>
+          <ChevronRight size={20} color={COLORS.textSecondary} />
+        </Pressable>
+      );
+    },
+    [handleListPress, t]
+  );
+
+  const keyExtractor = useCallback((item: (typeof watchStatusLists)[number]) => item.id, []);
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
 
   return (
     <>
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
-        <View style={styles.tabsContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}
-          >
-            {WATCH_STATUS_LISTS.map((list) => (
-              <TouchableOpacity
-                key={list.id}
-              style={[
-                styles.tab,
-                selectedListId === list.id && { backgroundColor: accentColor },
-              ]}
-                onPress={() => setSelectedListId(list.id)}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={[styles.tabText, selectedListId === list.id && styles.activeTabText]}>
-                  {t(list.labelKey)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.content}>
-          {viewMode === 'list' ? (
-            <FlatList
-              ref={listRef}
-              data={filteredItems}
-              keyExtractor={(item) => `${item.media_type}-${item.id}`}
-              renderItem={({ item }) => (
-                <MediaListCard
-                  item={item}
-                  onPress={handleItemPress}
-                  onLongPress={handleLongPress}
-                  movieLabel={movieLabel}
-                  tvShowLabel={tvShowLabel}
-                />
-              )}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                !isLoading ? (
-                  <View style={styles.emptyContainer}>
-                    <Bookmark size={48} color={COLORS.textSecondary} />
-                    <Text style={styles.emptyTitle}>
-                      {hasActiveFilters(filters) && listItems.length > 0
-                        ? t('discover.noResultsWithFilters')
-                        : t('library.emptyList')}
-                    </Text>
-                    <Text style={styles.emptyDescription}>
-                      {hasActiveFilters(filters) && listItems.length > 0
-                        ? t('discover.adjustFilters')
-                        : t('library.watchStatusEmptyDescription', { listName: selectedListLabel })}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.emptyButton, { backgroundColor: accentColor }]}
-                      onPress={
-                        hasActiveFilters(filters) && listItems.length > 0
-                          ? () => setFilters(DEFAULT_WATCH_STATUS_FILTERS)
-                          : () => router.push('/(tabs)/discover' as any)
-                      }
-                      activeOpacity={ACTIVE_OPACITY}
-                    >
-                      <Text style={styles.emptyButtonText}>
-                        {hasActiveFilters(filters) && listItems.length > 0
-                          ? t('common.reset')
-                          : t('library.browseContent')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null
-              }
-            />
-          ) : (
-            <MediaGrid
-              ref={mediaGridRef}
-              items={filteredItems}
-              isLoading={isLoading}
-              emptyState={{
-                icon: Bookmark,
-                title:
-                  hasActiveFilters(filters) && listItems.length > 0
-                    ? t('discover.noResultsWithFilters')
-                    : t('library.emptyList'),
-                description:
-                  hasActiveFilters(filters) && listItems.length > 0
-                    ? t('discover.adjustFilters')
-                    : t('library.watchStatusEmptyDescription', { listName: selectedListLabel }),
-                actionLabel:
-                  hasActiveFilters(filters) && listItems.length > 0
-                    ? t('common.reset')
-                    : t('library.browseContent'),
-                onAction:
-                  hasActiveFilters(filters) && listItems.length > 0
-                    ? () => setFilters(DEFAULT_WATCH_STATUS_FILTERS)
-                    : () => router.push('/(tabs)/discover' as any),
-              }}
-              onItemPress={handleItemPress}
-              onItemLongPress={handleLongPress}
-            />
-          )}
-        </View>
+        <View style={libraryListStyles.divider} />
+        {watchStatusLists.length === 0 ? (
+          <EmptyState
+            icon={Bookmark}
+            title={t('library.emptyLists')}
+            description={t('library.browseContent')}
+            actionLabel={t('library.browseContent')}
+            onAction={() => router.push('/(tabs)/discover' as any)}
+          />
+        ) : (
+          <FlashList
+            ref={listRef}
+            data={watchStatusLists}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={libraryListStyles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={ItemSeparator}
+          />
+        )}
       </SafeAreaView>
-
-      {selectedMediaItem && (
-        <AddToListModal
-          ref={addToListModalRef}
-          mediaItem={selectedMediaItem}
-          onShowToast={handleShowToast}
-        />
-      )}
-
-      <WatchStatusFiltersModal
-        visible={filterModalVisible}
-        onClose={() => setFilterModalVisible(false)}
-        filters={filters}
-        onApplyFilters={handleApplyFilters}
-        genreMap={genreMap || {}}
-      />
 
       <LibrarySortModal
         visible={sortModalVisible}
         setVisible={setSortModalVisible}
         sortState={sortState}
         onApplySort={handleApplySort}
-        allowedOptions={['recentlyAdded', 'releaseDate', 'rating', 'alphabetical']}
+        allowedOptions={['lastUpdated', 'alphabetical']}
       />
-
-      <ListActionsModal ref={listActionsModalRef} actions={listActions} />
-
-      <Toast ref={toastRef} />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  tabsContainer: {
-    paddingTop: SPACING.m,
-    marginBottom: SPACING.m,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  tabsContent: {
-    paddingHorizontal: SPACING.l,
-    gap: SPACING.m,
-    paddingBottom: SPACING.m,
-  },
-  tab: {
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.m,
+  listCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    gap: SPACING.s,
   },
-  tabText: {
-    color: COLORS.textSecondary,
+  listCardPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  listInfo: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  listName: {
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
+    color: COLORS.text,
   },
-  activeTabText: {
-    color: COLORS.white,
+  itemCount: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
-  content: {
-    flex: 1,
+  separator: {
+    height: SPACING.m,
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconWrapper: {
-    position: 'relative',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    paddingBottom: SPACING.xl,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.xxl,
-    gap: SPACING.m,
-  },
-  emptyTitle: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: '600',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginTop: SPACING.m,
-  },
-  emptyDescription: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    marginTop: SPACING.m,
-  },
-  emptyButtonText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.white,
   },
 });

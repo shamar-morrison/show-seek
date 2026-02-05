@@ -31,17 +31,18 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
-import { useMediaLists } from '@/src/hooks/useLists';
+import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -56,6 +57,7 @@ import {
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
+import { errorStyles } from '@/src/styles/errorStyles';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -85,6 +87,56 @@ const canShowReminder = (releaseDate: string | null | undefined): boolean => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return release >= today;
+};
+
+// Helper to auto-add movie to "Already Watched" list
+const tryAutoAddToAlreadyWatched = async (params: {
+  movieId: number;
+  movie: {
+    title: string;
+    poster_path: string | null;
+    vote_average: number;
+    genres?: { id: number }[];
+  };
+  releaseDate: string | null | undefined;
+  membership: Record<string, boolean>;
+  lists: { id: string; items?: Record<string, unknown> }[] | undefined;
+  isPremium: boolean;
+  t: (key: string) => string;
+}) => {
+  const { movieId, movie, releaseDate, membership, lists, isPremium, t } = params;
+  const isNotInAlreadyWatched = !membership['already-watched'];
+
+  if (!isNotInAlreadyWatched) return;
+
+  // Check list limit for free users before auto-adding
+  const alreadyWatchedList = lists?.find((l) => l.id === 'already-watched');
+  const currentCount = alreadyWatchedList ? Object.keys(alreadyWatchedList.items || {}).length : 0;
+
+  if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+    console.log('[MovieDetailScreen] Skipping auto-add: list limit reached for free user');
+    return;
+  }
+
+  try {
+    const { listService } = await import('../services/ListService');
+    await listService.addToList(
+      'already-watched',
+      {
+        id: movieId,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        media_type: 'movie',
+        vote_average: movie.vote_average,
+        release_date: releaseDate || '',
+        genre_ids: movie.genres?.map((g) => g.id),
+      },
+      t('lists.alreadyWatched')
+    );
+    console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+  } catch (autoAddError) {
+    console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
+  }
 };
 
 export default function MovieDetailScreen() {
@@ -138,6 +190,8 @@ export default function MovieDetailScreen() {
   );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
+  const { data: lists } = useLists();
+  const { isPremium } = usePremium();
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const { preferences } = usePreferences();
   const listIds = Object.keys(membership);
@@ -386,29 +440,15 @@ export default function MovieDetailScreen() {
 
     // Auto-add to "Already Watched" list on first watch
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-      const isNotInAlreadyWatched = !membership['already-watched'];
-
-      if (isNotInAlreadyWatched) {
-        try {
-          const { listService } = await import('../services/ListService');
-          await listService.addToList(
-            'already-watched',
-            {
-              id: movieId,
-              title: movie.title,
-              poster_path: movie.poster_path,
-              media_type: 'movie',
-              vote_average: movie.vote_average,
-              release_date: displayReleaseDate || movie.release_date,
-              genre_ids: movie.genres?.map((g) => g.id),
-            },
-            t('lists.alreadyWatched')
-          );
-          console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
-        } catch (autoAddError) {
-          console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
-        }
-      }
+      await tryAutoAddToAlreadyWatched({
+        movieId,
+        movie,
+        releaseDate: displayReleaseDate || movie.release_date,
+        membership,
+        lists,
+        isPremium,
+        t,
+      });
     }
   };
 
@@ -445,32 +485,15 @@ export default function MovieDetailScreen() {
 
           // Auto-add to "Already Watched" list on first watch
           if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-            const isNotInAlreadyWatched = !membership['already-watched'];
-
-            if (isNotInAlreadyWatched) {
-              try {
-                const { listService } = await import('../services/ListService');
-                await listService.addToList(
-                  'already-watched',
-                  {
-                    id: movieId,
-                    title: movie.title,
-                    poster_path: movie.poster_path,
-                    media_type: 'movie',
-                    vote_average: movie.vote_average,
-                    release_date: displayReleaseDate || movie.release_date,
-                    genre_ids: movie.genres?.map((g) => g.id),
-                  },
-                  t('lists.alreadyWatched')
-                );
-                console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
-              } catch (autoAddError) {
-                console.error(
-                  '[MovieDetailScreen] Auto-add to Already Watched failed:',
-                  autoAddError
-                );
-              }
-            }
+            await tryAutoAddToAlreadyWatched({
+              movieId,
+              movie,
+              releaseDate: displayReleaseDate || movie.release_date,
+              membership,
+              lists,
+              isPremium,
+              t,
+            });
           }
 
           toastRef.current?.show(t('library.markedAsWatched'));
@@ -511,15 +534,8 @@ export default function MovieDetailScreen() {
       >
         {/* Hero Section */}
         <View style={styles.heroContainer}>
-          <MediaImage
-            source={{ uri: backdropUrl }}
-            style={styles.backdrop}
-            contentFit="cover"
-          />
-          <LinearGradient
-            colors={['transparent', COLORS.background]}
-            style={styles.gradient}
-          />
+          <MediaImage source={{ uri: backdropUrl }} style={styles.backdrop} contentFit="cover" />
+          <LinearGradient colors={['transparent', COLORS.background]} style={styles.gradient} />
 
           <SafeAreaView style={styles.headerSafe} edges={['top']}>
             <TouchableOpacity
@@ -539,11 +555,7 @@ export default function MovieDetailScreen() {
           />
 
           <View style={styles.posterContainer}>
-            <MediaImage
-              source={{ uri: posterUrl }}
-              style={styles.poster}
-              contentFit="cover"
-            />
+            <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
           </View>
         </View>
 
@@ -586,9 +598,7 @@ export default function MovieDetailScreen() {
             {movie.original_language !== 'en' && (
               <View style={styles.metaItem}>
                 <Globe size={14} color={COLORS.textSecondary} />
-                <Text style={styles.metaText}>
-                  {getLanguageName(movie.original_language)}
-                </Text>
+                <Text style={styles.metaText}>{getLanguageName(movie.original_language)}</Text>
               </View>
             )}
           </View>
@@ -611,10 +621,7 @@ export default function MovieDetailScreen() {
           {/* Action Buttons */}
           <MediaActionButtons
             onAddToList={() =>
-              requireAuth(
-                () => addToListModalRef.current?.present(),
-                t('discover.signInToAdd')
-              )
+              requireAuth(() => addToListModalRef.current?.present(), t('discover.signInToAdd'))
             }
             onRate={() =>
               requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
@@ -874,6 +881,11 @@ export default function MovieDetailScreen() {
                 release_date: displayReleaseDate || movie.release_date || '',
                 genre_ids: movie.genres?.map((g) => g.id),
               },
+              isPremium,
+              currentListCount: (() => {
+                const list = lists?.find((l) => l.id === 'already-watched');
+                return list ? Object.keys(list.items || {}).length : 0;
+              })(),
             }}
           />
           <ReminderModal

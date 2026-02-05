@@ -1,7 +1,6 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { notifyManager } from '@tanstack/query-core';
+import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
+import React from 'react';
 
 const mockAddToList = jest.fn();
 
@@ -38,11 +37,11 @@ function createWrapper(client: QueryClient) {
 
 describe('useAddToList', () => {
   beforeAll(() => {
-    notifyManager.setNotifyFunction((fn) => act(fn));
+    notifyManager.setNotifyFunction((fn: () => void) => act(fn));
   });
 
   afterAll(() => {
-    notifyManager.setNotifyFunction((fn) => fn());
+    notifyManager.setNotifyFunction((fn: () => void) => fn());
   });
 
   beforeEach(() => {
@@ -58,17 +57,20 @@ describe('useAddToList', () => {
     });
 
     const items: Record<string, any> = {};
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 50; i += 1) {
       items[i] = { id: i, media_type: 'movie', addedAt: Date.now() };
     }
 
-    client.setQueryData(['lists', 'test-user-id'], [
-      {
-        id: 'watchlist',
-        name: 'Watchlist',
-        items,
-      },
-    ]);
+    client.setQueryData(
+      ['lists', 'test-user-id'],
+      [
+        {
+          id: 'watchlist',
+          name: 'Watchlist',
+          items,
+        },
+      ]
+    );
 
     const { result } = renderHook(() => useAddToList(), {
       wrapper: createWrapper(client),

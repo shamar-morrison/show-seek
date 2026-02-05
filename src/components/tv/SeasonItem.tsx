@@ -13,9 +13,9 @@ import { useSeasonProgress } from '@/src/hooks/useEpisodeTracking';
 import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import * as Haptics from 'expo-haptics';
+import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import type { TFunction } from 'i18next';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
 import { useSeasonScreenStyles } from './seasonScreenStyles';
@@ -49,6 +49,8 @@ export interface SeasonItemProps {
   firstAirDate: string | undefined;
   voteAverage: number | undefined;
   markPreviousEpisodesWatched: boolean;
+  isPremium: boolean;
+  currentListCount: number;
   t: TFunction;
 }
 
@@ -77,6 +79,8 @@ export const SeasonItem = memo<SeasonItemProps>(
     firstAirDate,
     voteAverage,
     markPreviousEpisodesWatched,
+    isPremium,
+    currentListCount,
     t,
   }) => {
     const { accentColor } = useAccentColor();
@@ -312,6 +316,8 @@ export const SeasonItem = memo<SeasonItemProps>(
                           listMembership,
                           firstAirDate,
                           voteAverage,
+                          isPremium,
+                          currentListCount,
                         },
                         previousEpisodesOptions: {
                           seasonEpisodes: season.episodes || [],

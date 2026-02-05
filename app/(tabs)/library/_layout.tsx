@@ -27,6 +27,7 @@ export default function LibraryStackLayout() {
           name="watch-status"
           options={{ title: t('library.watchLists'), headerShown: true }}
         />
+        <Stack.Screen name="watch-status/[id]" options={{ title: '', headerShown: true }} />
         <Stack.Screen
           name="custom-lists"
           options={{ title: t('library.customLists'), headerShown: true }}
@@ -65,7 +66,10 @@ export default function LibraryStackLayout() {
         />
 
         {/* Notifications */}
-        <Stack.Screen name="reminders" options={{ title: t('library.reminders'), headerShown: true }} />
+        <Stack.Screen
+          name="reminders"
+          options={{ title: t('library.reminders'), headerShown: true }}
+        />
         <Stack.Screen name="notes" options={{ title: t('library.notes'), headerShown: true }} />
 
         {/* Widgets - has its own layout */}
