@@ -7,8 +7,8 @@ import {
   TVCrewCredit,
   TVShow,
 } from '@/src/api/tmdb';
-import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { MediaListCard } from '@/src/components/library/MediaListCard';
 import ListActionsModal, {
   ListActionsIcon,
   ListActionsModalRef,
@@ -21,12 +21,12 @@ import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
-import { errorStyles } from '@/src/styles/errorStyles';
-import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { createSortAction } from '@/src/utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
@@ -36,18 +36,11 @@ import {
 } from '@/src/utils/listFilters';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dimensions,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Dimensions, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -67,6 +60,7 @@ interface CreditItem extends ListMediaItem {
 
 export default function PersonCreditsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -82,6 +76,19 @@ export default function PersonCreditsScreen() {
   const personId = Number(id);
   const isTVCredits = mediaType === 'tv';
   const isCrewCredits = creditType === 'crew';
+
+  // Compute screen title early for the header
+  const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
+
+  // Set header options synchronously before first paint to prevent status bar overlap
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      title: screenTitle,
+      headerStyle: { backgroundColor: COLORS.background },
+      headerTintColor: COLORS.text,
+    });
+  }, [navigation, screenTitle]);
 
   // Sort and filter state
   const [sortModalVisible, setSortModalVisible] = useState(false);
@@ -225,8 +232,6 @@ export default function PersonCreditsScreen() {
     [currentTab, router]
   );
 
-  const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
-
   const listActions = useMemo(
     () => [
       {
@@ -261,9 +266,7 @@ export default function PersonCreditsScreen() {
           </Text>
           {item.release_date && (
             <View style={mediaMetaStyles.yearRatingContainer}>
-              <Text style={mediaMetaStyles.year}>
-                {new Date(item.release_date).getFullYear()}
-              </Text>
+              <Text style={mediaMetaStyles.year}>{new Date(item.release_date).getFullYear()}</Text>
               {item.vote_average > 0 && (
                 <>
                   <Text style={mediaMetaStyles.separator}> • </Text>
@@ -306,9 +309,7 @@ export default function PersonCreditsScreen() {
           style={styles.backButtonError}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.backButtonText, { color: accentColor }]}>
-            {t('common.goBack')}
-          </Text>
+          <Text style={[styles.backButtonText, { color: accentColor }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -317,15 +318,6 @@ export default function PersonCreditsScreen() {
   return (
     <>
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: screenTitle,
-            headerStyle: { backgroundColor: COLORS.background },
-            headerTintColor: COLORS.text,
-          }}
-        />
-
         {credits.length === 0 ? (
           <View style={styles.emptyContainer}>
             {isTVCredits ? (
@@ -334,7 +326,9 @@ export default function PersonCreditsScreen() {
               <Film size={48} color={COLORS.textSecondary} />
             )}
             <Text style={styles.emptyTitle}>
-              {hasActiveFilterState ? t('discover.noResultsWithFilters') : t('personCredits.noCreditsTitle')}
+              {hasActiveFilterState
+                ? t('discover.noResultsWithFilters')
+                : t('personCredits.noCreditsTitle')}
             </Text>
             <Text style={styles.emptyDescription}>
               {hasActiveFilterState
@@ -396,8 +390,7 @@ const styles = StyleSheet.create({
   backButtonError: {
     padding: SPACING.m,
   },
-  backButtonText: {
-  },
+  backButtonText: {},
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

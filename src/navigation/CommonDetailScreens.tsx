@@ -38,6 +38,7 @@ export const CommonDetailScreens = () => (
       name="person/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
+    <Stack.Screen name="person/[id]/credits" options={{ headerShown: true }} />
     <Stack.Screen
       name="collection/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
