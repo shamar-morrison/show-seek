@@ -103,12 +103,6 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
     titleKey: 'premiumFeatures.categories.discover',
     features: [
       {
-        id: 'streaming-filter',
-        icon: 'play-circle',
-        titleKey: 'premiumFeatures.features.streaming-filter.title',
-        descriptionKey: 'premiumFeatures.features.streaming-filter.description',
-      },
-      {
         id: 'blur-spoilers',
         icon: 'eye-off-outline',
         titleKey: 'premiumFeatures.features.blur-spoilers.title',
