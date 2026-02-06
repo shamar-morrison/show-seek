@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
@@ -228,6 +229,8 @@ export default function CustomListDetailScreen() {
     selectionContentBottomPadding,
     handleActionBarHeightChange,
     handleRemoveSelectedItems,
+    bulkRemoveProgress,
+    isBulkRemoving,
   } = useListDetailMultiSelectActions({
     sourceListId: id,
     sourceListName: list?.name ?? id ?? '',
@@ -500,6 +503,12 @@ export default function CustomListDetailScreen() {
         items={displayItems}
         onClose={() => setShuffleModalVisible(false)}
         onViewDetails={handleShuffleSelect}
+      />
+
+      <BulkRemoveProgressModal
+        visible={isBulkRemoving}
+        current={bulkRemoveProgress?.processed ?? 0}
+        total={bulkRemoveProgress?.total ?? 0}
       />
 
       {isSelectionMode && (

@@ -346,6 +346,8 @@
     "copyToLists": "Copier vers des listes",
     "moveToLists": "Déplacer vers des listes",
     "removeItems": "Retirer des éléments",
+    "removingItemsTitle": "Suppression des éléments",
+    "removingItemsProgress": "Suppression des éléments {{current}} sur {{total}}.",
     "removeItemsConfirm": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
     "removeItemsConfirm_one": "Retirer {{count}} élément sélectionné de {{listName}} ?",
     "removeItemsConfirm_other": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",

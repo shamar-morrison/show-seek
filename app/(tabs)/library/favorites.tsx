@@ -1,4 +1,5 @@
 import AddToListModal from '@/src/components/AddToListModal';
+import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
@@ -164,6 +165,8 @@ export default function FavoritesScreen() {
     selectionContentBottomPadding,
     handleActionBarHeightChange,
     handleRemoveSelectedItems,
+    bulkRemoveProgress,
+    isBulkRemoving,
   } = useListDetailMultiSelectActions({
     sourceListId: DEFAULT_LIST_IDS[3],
     sourceListName: favoritesList?.name ?? t('library.favoritesSection'),
@@ -379,6 +382,12 @@ export default function FavoritesScreen() {
       <Toast ref={toastRef} />
       {AuthGuardModal}
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      <BulkRemoveProgressModal
+        visible={isBulkRemoving}
+        current={bulkRemoveProgress?.processed ?? 0}
+        total={bulkRemoveProgress?.total ?? 0}
+      />
 
       {isSelectionMode && (
         <MultiSelectActionBar

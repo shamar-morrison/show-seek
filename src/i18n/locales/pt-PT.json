@@ -440,6 +440,8 @@
     "copyToLists": "Copiar para listas",
     "moveToLists": "Mover para listas",
     "removeItems": "Remover itens",
+    "removingItemsTitle": "Removendo itens",
+    "removingItemsProgress": "Removendo itens {{current}} de {{total}}.",
     "removeItemsConfirm": "Remover {{count}} itens selecionados de {{listName}}?",
     "removeItemsConfirm_one": "Remover {{count}} item selecionado de {{listName}}?",
     "removeItemsConfirm_other": "Remover {{count}} itens selecionados de {{listName}}?",

@@ -27,6 +27,11 @@ interface UseListDetailMultiSelectActionsParams {
   insetsBottom: number;
 }
 
+export interface BulkRemoveProgress {
+  processed: number;
+  total: number;
+}
+
 export function useListDetailMultiSelectActions({
   sourceListId,
   sourceListName,
@@ -49,6 +54,8 @@ export function useListDetailMultiSelectActions({
   const { preferences } = usePreferences();
   const { t } = useTranslation();
   const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
+  const [bulkRemoveProgress, setBulkRemoveProgress] = useState<BulkRemoveProgress | null>(null);
+  const [isBulkRemoving, setIsBulkRemoving] = useState(false);
 
   const bulkAddMode = preferences.copyInsteadOfMove ? ('copy' as const) : ('move' as const);
   const bulkPrimaryLabel =
@@ -75,7 +82,7 @@ export function useListDetailMultiSelectActions({
   }, [dismissListActionsModal, isSelectionMode]);
 
   const handleRemoveSelectedItems = useCallback(() => {
-    if (!sourceListId || selectedMediaItems.length === 0 || isRemoving) return;
+    if (!sourceListId || selectedMediaItems.length === 0 || isRemoving || isBulkRemoving) return;
 
     if (guardBeforeConfirmation && !isAuthenticated) {
       requireAuth(() => {}, authPromptMessage);
@@ -96,25 +103,35 @@ export function useListDetailMultiSelectActions({
           onPress: () => {
             requireAuth(
               async () => {
+                const total = selectedMediaItems.length;
                 let failed = 0;
+                let processed = 0;
 
-                for (const item of selectedMediaItems) {
-                  try {
-                    await removeItemFromSource(item.id);
-                  } catch {
-                    failed += 1;
+                setIsBulkRemoving(true);
+                setBulkRemoveProgress({ processed: 0, total });
+
+                try {
+                  for (const item of selectedMediaItems) {
+                    try {
+                      await removeItemFromSource(item.id);
+                    } catch {
+                      failed += 1;
+                    } finally {
+                      processed += 1;
+                      setBulkRemoveProgress({ processed, total });
+                    }
                   }
-                }
 
-                if (failed === 0) {
-                  showToast(t('library.itemsRemoved', { count: selectedCount }));
-                } else {
-                  showToast(
-                    t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
-                  );
+                  if (failed === 0) {
+                    showToast(t('library.itemsRemoved', { count: total }));
+                  } else {
+                    showToast(t('library.changesFailedToSave', { failed, total }));
+                  }
+                } finally {
+                  clearSelection();
+                  setIsBulkRemoving(false);
+                  setBulkRemoveProgress(null);
                 }
-
-                clearSelection();
               },
               authPromptMessage
             );
@@ -127,6 +144,7 @@ export function useListDetailMultiSelectActions({
     clearSelection,
     guardBeforeConfirmation,
     isAuthenticated,
+    isBulkRemoving,
     isRemoving,
     removeItemFromSource,
     requireAuth,
@@ -144,5 +162,7 @@ export function useListDetailMultiSelectActions({
     selectionContentBottomPadding,
     handleActionBarHeightChange,
     handleRemoveSelectedItems,
+    bulkRemoveProgress,
+    isBulkRemoving,
   };
 }
