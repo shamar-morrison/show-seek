@@ -1,17 +1,22 @@
 import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { errorStyles } from '@/src/styles/errorStyles';
+import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Grid3X3, List } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Dimensions,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -27,12 +32,21 @@ interface CastCrewScreenProps {
   mediaTitle?: string;
 }
 
+const { width } = Dimensions.get('window');
+const COLUMN_COUNT = 3;
+const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+
 export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
+  const { viewMode, isLoadingPreference, toggleViewMode } = useViewModeToggle({
+    storageKey: `cast-crew-view-${type}`,
+    showSortButton: false,
+    manageHeader: false,
+  });
 
   const creditsQuery = useQuery({
     queryKey: [type, id, 'credits'],
@@ -49,7 +63,7 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
     }
   };
 
-  const renderItem = ({ item }: { item: CastMember | CrewMember }) => {
+  const renderGridItem = ({ item }: { item: CastMember | CrewMember }) => {
     const isCast = 'character' in item;
     const role = isCast ? (item as CastMember).character : (item as CrewMember).job;
 
@@ -77,7 +91,38 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
     );
   };
 
-  if (creditsQuery.isLoading) {
+  const renderListItem = ({ item }: { item: CastMember | CrewMember }) => {
+    const isCast = 'character' in item;
+    const role = isCast ? (item as CastMember).character : (item as CrewMember).job;
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          listCardStyles.container,
+          styles.listCard,
+          pressed && listCardStyles.containerPressed,
+        ]}
+        onPress={() => handlePersonPress(item.id)}
+      >
+        <MediaImage
+          source={{ uri: getImageUrl(item.profile_path, TMDB_IMAGE_SIZES.profile.medium) }}
+          style={listCardStyles.poster}
+          contentFit="cover"
+          placeholderType="person"
+        />
+        <View style={listCardStyles.info}>
+          <Text style={styles.listName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.listRole} numberOfLines={1}>
+            {role}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  if (creditsQuery.isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
   }
 
@@ -118,6 +163,15 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
             </Text>
           )}
         </View>
+        <View style={styles.headerActions}>
+          <HeaderIconButton onPress={toggleViewMode}>
+            {viewMode === 'grid' ? (
+              <List size={24} color={COLORS.text} />
+            ) : (
+              <Grid3X3 size={24} color={COLORS.text} />
+            )}
+          </HeaderIconButton>
+        </View>
       </View>
 
       <View style={styles.tabContainer}>
@@ -148,12 +202,14 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
       </View>
 
       <FlatList
+        key={viewMode}
         data={data}
-        renderItem={renderItem}
+        renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
         keyExtractor={(item, index) => `${item.id}-${index}`}
-        contentContainerStyle={styles.listContent}
-        numColumns={3}
-        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
+        numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+        columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -179,6 +235,10 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: FONT_SIZE.l,
@@ -212,19 +272,25 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: COLORS.white,
   },
+  gridContent: {
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.m,
+    paddingBottom: SPACING.s,
+  },
   listContent: {
-    padding: SPACING.m,
+    paddingHorizontal: SPACING.l,
+    paddingTop: SPACING.m,
+    paddingBottom: SPACING.xl,
   },
   columnWrapper: {
     gap: SPACING.m,
     marginBottom: SPACING.m,
   },
   card: {
-    flex: 1,
+    width: ITEM_WIDTH,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
-    maxWidth: '31%', // Ensure 3 columns fit with gap
   },
   profileImage: {
     width: '100%',
@@ -242,6 +308,18 @@ const styles = StyleSheet.create({
   },
   role: {
     fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+  },
+  listCard: {
+    marginBottom: SPACING.m,
+  },
+  listName: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  listRole: {
+    fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
 });

@@ -37,6 +37,8 @@ interface SearchState {
 interface UseViewModeToggleOptions {
   /** Unique storage key for persisting the view mode preference */
   storageKey: string;
+  /** Whether this hook should manage navigation header options */
+  manageHeader?: boolean;
   /** Whether to show the sort button in the header */
   showSortButton?: boolean;
   /** Whether the sort is active (shows badge on sort button) */
@@ -64,6 +66,7 @@ interface UseViewModeToggleReturn {
  */
 export function useViewModeToggle({
   storageKey,
+  manageHeader = true,
   showSortButton = true,
   hasActiveSort = false,
   onSortPress,
@@ -107,6 +110,10 @@ export function useViewModeToggle({
   // Set up header with view mode toggle and optional sort/action button
   // Also handles search header swap when searchState is provided
   useLayoutEffect(() => {
+    if (!manageHeader) {
+      return;
+    }
+
     if (searchState?.isActive) {
       // Show search header
       navigation.setOptions({
@@ -161,6 +168,7 @@ export function useViewModeToggle({
       });
     }
   }, [
+    manageHeader,
     navigation,
     viewMode,
     toggleViewMode,
