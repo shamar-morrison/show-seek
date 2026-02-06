@@ -48,7 +48,8 @@
     "year": "an",
     "years": "ans",
     "ago": "il y a",
-    "in": "dans"
+    "in": "dans",
+    "move": "Déplacer"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -335,7 +336,22 @@
     "favoritesSection": "Favoris",
     "favoriteContent": "Contenu favori",
     "widgets": "Widgets",
-    "homeScreenWidgets": "Widgets de l'écran d'accueil"
+    "homeScreenWidgets": "Widgets de l'écran d'accueil",
+    "selectedItemsCount": "{{count}} sélectionnés",
+    "selectedItemsCount_one": "{{count}} sélectionné",
+    "selectedItemsCount_other": "{{count}} sélectionnés",
+    "bulkAddModeMove": "Mode déplacement",
+    "bulkAddModeCopy": "Mode copie",
+    "signInToModifyList": "Connectez-vous pour modifier cette liste",
+    "copyToLists": "Copier vers des listes",
+    "moveToLists": "Déplacer vers des listes",
+    "removeItems": "Retirer des éléments",
+    "removeItemsConfirm": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
+    "removeItemsConfirm_one": "Retirer {{count}} élément sélectionné de {{listName}} ?",
+    "removeItemsConfirm_other": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
+    "itemsRemoved": "{{count}} éléments retirés",
+    "itemsRemoved_one": "{{count}} élément retiré",
+    "itemsRemoved_other": "{{count}} éléments retirés"
   },
   "rating": {
     "title": "Noter",
@@ -452,6 +468,8 @@
     "autoAddToAlreadyWatchedDescription": "Ajouter automatiquement les films à votre liste Déjà vus lorsque vous les notez ou les marquez comme vus",
     "quickMarkAsWatched": "Marquage rapide comme vu",
     "quickMarkAsWatchedDescription": "Ignorer la sélection de date et utiliser l'heure actuelle pour marquer les films comme vus",
+    "copyInsteadOfMove": "Copier au lieu de déplacer",
+    "copyInsteadOfMoveDescription": "Lors d’un ajout en lot depuis une liste, conserver les éléments dans la liste source",
     "markPreviousEpisodes": "Marquer les épisodes précédents",
     "markPreviousEpisodesDescription": "Marque automatiquement les épisodes précédents d'une saison comme vus lorsque vous marquez un épisode",
     "sendFeedback": "Envoyer des commentaires",
@@ -460,7 +478,9 @@
     "hideTabLabels": "Masquer les libellés des onglets",
     "hideTabLabelsDescription": "Afficher uniquement les icônes dans la barre de navigation",
     "dataSaver": "Mode économie de données",
-    "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données"
+    "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données",
+    "defaultBulkAction": "Action groupée par défaut : {{mode}}",
+    "defaultBulkActionDescription": "Choisissez ce qui se passe lorsque vous ajoutez des éléments en lot depuis une liste."
   },
   "onboarding": {
     "welcome": "Bienvenue sur ShowSeek",

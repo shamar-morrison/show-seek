@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
@@ -27,6 +28,9 @@ interface MediaGridProps {
   };
   onItemPress: (item: ListMediaItem) => void;
   onItemLongPress: (item: ListMediaItem) => void;
+  selectionMode?: boolean;
+  isItemSelected?: (item: ListMediaItem) => boolean;
+  contentBottomPadding?: number;
 }
 
 export interface MediaGridRef {
@@ -37,7 +41,10 @@ const MediaGridItem = memo<{
   item: ListMediaItem;
   onPress: (item: ListMediaItem) => void;
   onLongPress: (item: ListMediaItem) => void;
-}>(({ item, onPress, onLongPress }) => {
+  selectionMode?: boolean;
+  isSelected?: boolean;
+}>(({ item, onPress, onLongPress, selectionMode = false, isSelected = false }) => {
+  const { accentColor } = useAccentColor();
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
 
@@ -51,11 +58,32 @@ const MediaGridItem = memo<{
       onPress={handlePress}
       onLongPress={handleLongPress}
     >
-      <MediaImage
-        source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-        style={styles.poster}
-        contentFit="cover"
-      />
+      <View style={styles.posterContainer}>
+        <MediaImage
+          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
+          style={styles.poster}
+          contentFit="cover"
+        />
+        {selectionMode && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.selectionOverlay,
+              isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
+            ]}
+          />
+        )}
+      </View>
+      {selectionMode && (
+        <View
+          style={[
+            styles.selectionBadge,
+            isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+          ]}
+        >
+          <AnimatedCheck visible={isSelected} />
+        </View>
+      )}
       <View style={mediaCardStyles.info}>
         <Text style={mediaCardStyles.title} numberOfLines={1}>
           {displayTitle}
@@ -81,7 +109,19 @@ MediaGridItem.displayName = 'MediaGridItem';
 
 export const MediaGrid = memo(
   forwardRef<MediaGridRef, MediaGridProps>(
-    ({ items, isLoading, emptyState, onItemPress, onItemLongPress }, ref) => {
+    (
+      {
+        items,
+        isLoading,
+        emptyState,
+        onItemPress,
+        onItemLongPress,
+        selectionMode = false,
+        isItemSelected,
+        contentBottomPadding = 0,
+      },
+      ref
+    ) => {
       const listRef = useRef<any>(null);
       const { accentColor } = useAccentColor();
 
@@ -93,9 +133,15 @@ export const MediaGrid = memo(
 
       const renderItem = useCallback(
         ({ item }: { item: ListMediaItem }) => (
-          <MediaGridItem item={item} onPress={onItemPress} onLongPress={onItemLongPress} />
+          <MediaGridItem
+            item={item}
+            onPress={onItemPress}
+            onLongPress={onItemLongPress}
+            selectionMode={selectionMode}
+            isSelected={isItemSelected?.(item) ?? false}
+          />
         ),
-        [onItemPress, onItemLongPress]
+        [isItemSelected, onItemLongPress, onItemPress, selectionMode]
       );
 
       const keyExtractor = useCallback(
@@ -129,10 +175,11 @@ export const MediaGrid = memo(
           data={items}
           renderItem={renderItem}
           numColumns={COLUMN_COUNT}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, contentBottomPadding > 0 && { paddingBottom: contentBottomPadding }]}
           showsVerticalScrollIndicator={false}
           keyExtractor={keyExtractor}
           drawDistance={400}
+          extraData={isItemSelected}
         />
       );
     }
@@ -159,10 +206,32 @@ const styles = StyleSheet.create({
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
   },
+  posterContainer: {
+    position: 'relative',
+  },
   poster: {
     width: ITEM_WIDTH,
     height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
+  },
+  selectionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 2,
+    borderColor: COLORS.transparent,
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: SPACING.xs,
+    right: SPACING.s,
+    width: 24,
+    height: 24,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 2,
+    borderColor: COLORS.textSecondary,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

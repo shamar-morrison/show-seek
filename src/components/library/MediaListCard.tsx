@@ -1,5 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -16,12 +18,27 @@ interface MediaListCardProps {
   subtitle?: string;
   /** Hide the media type label (Movie/TV Show) */
   hideMediaType?: boolean;
+  /** Whether list is currently in multi-select mode */
+  selectionMode?: boolean;
+  /** Whether this item is selected in multi-select mode */
+  isSelected?: boolean;
   movieLabel: string;
   tvShowLabel: string;
 }
 
 export const MediaListCard = memo<MediaListCardProps>(
-  ({ item, onPress, onLongPress, subtitle, hideMediaType, movieLabel, tvShowLabel }) => {
+  ({
+    item,
+    onPress,
+    onLongPress,
+    subtitle,
+    hideMediaType,
+    selectionMode = false,
+    isSelected = false,
+    movieLabel,
+    tvShowLabel,
+  }) => {
+    const { accentColor } = useAccentColor();
     const handlePress = useCallback(() => {
       onPress(item);
     }, [onPress, item]);
@@ -42,16 +59,29 @@ export const MediaListCard = memo<MediaListCardProps>(
           listCardStyles.container,
           styles.container,
           pressed && listCardStyles.containerPressed,
+          selectionMode && styles.selectionEnabledContainer,
+          isSelected && { borderColor: accentColor, backgroundColor: COLORS.surfaceLight },
         ]}
         onPress={handlePress}
         onLongPress={handleLongPress}
       >
-      <MediaImage
-        source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
-        style={listCardStyles.poster}
-        contentFit="cover"
-      />
-      <View style={listCardStyles.info}>
+        {selectionMode && (
+          <View
+            style={[
+              styles.selectionBadge,
+              isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+            ]}
+            testID="media-list-card-selection-badge"
+          >
+            <AnimatedCheck visible={isSelected} />
+          </View>
+        )}
+        <MediaImage
+          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+          style={listCardStyles.poster}
+          contentFit="cover"
+        />
+        <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={2}>
             {item.title || item.name}
           </Text>
@@ -86,6 +116,20 @@ MediaListCard.displayName = 'MediaListCard';
 const styles = StyleSheet.create({
   container: {
     marginBottom: SPACING.m,
+  },
+  selectionEnabledContainer: {
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  selectionBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.textSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.m,
   },
   title: {
     fontSize: FONT_SIZE.m,

@@ -39,6 +39,8 @@ class PreferencesService {
               data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
             showListIndicators:
               data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
+            copyInsteadOfMove:
+              data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
             homeScreenLists: data?.preferences?.homeScreenLists,
             quickMarkAsWatched:
               data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,

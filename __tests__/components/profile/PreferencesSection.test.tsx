@@ -1,6 +1,7 @@
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { renderWithProviders } from '@/__tests__/utils/test-utils';
+import { fireEvent, within } from '@testing-library/react-native';
 import React from 'react';
 
 describe('PreferencesSection', () => {
@@ -20,5 +21,51 @@ describe('PreferencesSection', () => {
     );
 
     expect(getAllByTestId('preference-spinner')).toHaveLength(1);
+  });
+
+  it('renders default bulk action preference and updates it', () => {
+    const onUpdate = jest.fn();
+    const { getByText, getAllByTestId, rerender } = renderWithProviders(
+      <PreferencesSection
+        preferences={DEFAULT_PREFERENCES}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Default bulk action: Move')).toBeTruthy();
+
+    const preferenceItems = getAllByTestId('preference-item');
+    const preferenceItem = preferenceItems.find((item) =>
+      within(item).queryByText('Default bulk action: Move')
+    );
+    expect(preferenceItem).toBeTruthy();
+    if (!preferenceItem) {
+      throw new Error('Default bulk action preference row not found');
+    }
+    const bulkActionSwitch = within(preferenceItem).getByTestId('preference-switch');
+    fireEvent(bulkActionSwitch, 'valueChange', true);
+
+    expect(onUpdate).toHaveBeenCalledWith('copyInsteadOfMove', true);
+
+    rerender(
+      <PreferencesSection
+        preferences={{ ...DEFAULT_PREFERENCES, copyInsteadOfMove: true }}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Default bulk action: Copy')).toBeTruthy();
   });
 });

@@ -3,6 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -15,9 +16,11 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { useLists } from '@/src/hooks/useLists';
+import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
+import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -45,6 +48,8 @@ export default function WatchStatusDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
+  const removeMutation = useRemoveFromList();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
@@ -68,10 +73,13 @@ export default function WatchStatusDetailScreen() {
     handleLongPress,
     handleShowToast,
     addToListModalRef,
-    selectedMediaItem,
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
-
   // Get list title from config
   const listConfig = useMemo(() => {
     return WATCH_STATUS_LISTS.find((l) => l.id === id);
@@ -140,6 +148,39 @@ export default function WatchStatusDetailScreen() {
     getSearchableText: (item) => item.title || item.name || '',
   });
 
+  const dismissListActionsModal = useCallback(() => {
+    listActionsModalRef.current?.dismiss();
+  }, []);
+
+  const removeSelectedItemFromList = useCallback(
+    (mediaId: number) => removeMutation.mutateAsync({ listId: id, mediaId }),
+    [id, removeMutation]
+  );
+
+  const {
+    bulkAddMode,
+    bulkPrimaryLabel,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleRemoveSelectedItems,
+  } = useListDetailMultiSelectActions({
+    sourceListId: id,
+    sourceListName: list?.name ?? listTitle ?? '',
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isRemoving: removeMutation.isPending,
+    clearSelection,
+    showToast: handleShowToast,
+    removeItemFromSource: removeSelectedItemFromList,
+    requireAuth,
+    authPromptMessage: t('library.signInToDeleteList'),
+    isSearchActive,
+    deactivateSearch,
+    dismissListActionsModal,
+    insetsBottom: insets.bottom,
+  });
+
   const actionButton = useMemo(
     () => ({
       icon: ListActionsIcon,
@@ -154,8 +195,8 @@ export default function WatchStatusDetailScreen() {
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: `@watch_status_view_mode_${id}`,
     showSortButton: false,
-    actionButton,
-    searchButton,
+    actionButton: isSelectionMode ? undefined : actionButton,
+    searchButton: isSelectionMode ? undefined : searchButton,
     searchState: {
       isActive: isSearchActive,
       query: searchQuery,
@@ -258,11 +299,13 @@ export default function WatchStatusDetailScreen() {
         item={item}
         onPress={handleItemPress}
         onLongPress={handleLongPress}
+        selectionMode={isSelectionMode}
+        isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
       />
     ),
-    [handleItemPress, handleLongPress]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
@@ -305,6 +348,9 @@ export default function WatchStatusDetailScreen() {
             }
             onItemPress={handleItemPress}
             onItemLongPress={handleLongPress}
+            selectionMode={isSelectionMode}
+            isItemSelected={isItemSelected}
+            contentBottomPadding={selectionContentBottomPadding}
           />
         ) : (
           <FlashList
@@ -313,8 +359,13 @@ export default function WatchStatusDetailScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={[libraryListStyles.listContent, styles.listContent]}
+            contentContainerStyle={[
+              libraryListStyles.listContent,
+              styles.listContent,
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
+            extraData={selectedMediaItems}
             ListEmptyComponent={
               <View
                 style={{
@@ -332,11 +383,14 @@ export default function WatchStatusDetailScreen() {
         )}
       </View>
 
-      {selectedMediaItem && (
+      {selectedCount > 0 && (
         <AddToListModal
           ref={addToListModalRef}
-          mediaItem={selectedMediaItem}
+          mediaItems={selectedMediaItems}
+          sourceListId={id}
+          bulkAddMode={bulkAddMode}
           onShowToast={handleShowToast}
+          onComplete={clearSelection}
         />
       )}
 
@@ -360,6 +414,7 @@ export default function WatchStatusDetailScreen() {
       />
 
       <Toast ref={toastRef} />
+      {AuthGuardModal}
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
 
       <ShuffleModal
@@ -368,6 +423,17 @@ export default function WatchStatusDetailScreen() {
         onClose={() => setShuffleModalVisible(false)}
         onViewDetails={handleShuffleSelect}
       />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onRemoveItems={handleRemoveSelectedItems}
+          bulkPrimaryLabel={bulkPrimaryLabel}
+          onHeightChange={handleActionBarHeightChange}
+          onAddToList={() => addToListModalRef.current?.present()}
+        />
+      )}
     </>
   );
 }

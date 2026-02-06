@@ -73,7 +73,8 @@
     "readMore": "Read more",
     "saveChanges": "Save Changes",
     "tba": "TBA",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "move": "Move"
   },
   "auth": {
     "signIn": "Sign In",
@@ -414,6 +415,7 @@
     "unknownShow": "Unknown Show",
     "signInToRenameList": "Sign in to edit this list",
     "signInToDeleteList": "Sign in to delete this list",
+    "signInToModifyList": "Sign in to modify this list",
     "cannotDeleteTitle": "Cannot Delete",
     "cannotDeleteDefaultLists": "Cannot delete default lists",
     "defaultLists": "Default Lists",
@@ -429,7 +431,21 @@
     "filterLists": "Filter lists",
     "limitReachedMessage": "Free users can create up to {{max}} custom lists. Upgrade to Premium for unlimited lists!",
     "limitReachedUpgradeMessage": "Upgrade to Premium for unlimited lists and items.",
-    "listsUpdated": "Lists updated"
+    "listsUpdated": "Lists updated",
+    "selectedItemsCount": "{{count}} selected",
+    "selectedItemsCount_one": "{{count}} selected",
+    "selectedItemsCount_other": "{{count}} selected",
+    "bulkAddModeMove": "Move mode",
+    "bulkAddModeCopy": "Copy mode",
+    "copyToLists": "Copy to lists",
+    "moveToLists": "Move to lists",
+    "removeItems": "Remove items",
+    "removeItemsConfirm": "Remove {{count}} selected items from {{listName}}?",
+    "removeItemsConfirm_one": "Remove {{count}} selected item from {{listName}}?",
+    "removeItemsConfirm_other": "Remove {{count}} selected items from {{listName}}?",
+    "itemsRemoved": "{{count}} items removed",
+    "itemsRemoved_one": "{{count}} item removed",
+    "itemsRemoved_other": "{{count}} items removed"
   },
   "rating": {
     "title": "Rate",
@@ -673,6 +689,8 @@
     "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
     "showListIndicators": "Show list indicators",
     "showListIndicatorsDescription": "Display a badge on cards when an item is in any of your lists",
+    "copyInsteadOfMove": "Copy instead of move",
+    "copyInsteadOfMoveDescription": "When bulk adding from a list, keep items in the source list",
     "markPreviousEpisodes": "Mark previous episodes",
     "markPreviousEpisodesDescription": "Automatically mark earlier episodes in a season as watched when you mark an episode",
     "blurPlotSpoilers": "Blur movie and TV plot",
@@ -709,7 +727,9 @@
     "webAppModal": {
       "description": "Continue to the ShowSeek web app?",
       "title": "Open Web App"
-    }
+    },
+    "defaultBulkAction": "Default bulk action: {{mode}}",
+    "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list."
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",

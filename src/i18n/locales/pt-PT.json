@@ -73,7 +73,8 @@
     "tba": "A confirmar",
     "thisMonth": "Este mês",
     "thisWeek": "Esta semana",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "move": "Mover"
   },
   "auth": {
     "signIn": "Iniciar sessão",
@@ -413,6 +414,7 @@
     "unknownShow": "Série desconhecida",
     "signInToRenameList": "Inicie sessão para editar esta lista",
     "signInToDeleteList": "Inicie sessão para eliminar esta lista",
+    "signInToModifyList": "Inicie sessão para modificar esta lista",
     "cannotDeleteTitle": "Não é possível eliminar",
     "cannotDeleteDefaultLists": "Não é possível eliminar listas predefinidas",
     "defaultLists": "Listas predefinidas",
@@ -429,7 +431,21 @@
     "limitReachedMessage": "Os utilizadores gratuitos podem criar até {{max}} listas personalizadas. Atualize para Premium para listas ilimitadas!",
     "limitReachedUpgradeMessage": "Atualize para Premium para listas e itens ilimitados.",
     "listsUpdated": "Listas atualizadas",
-    "collectionProgress": "Progresso da coleção"
+    "selectedItemsCount": "{{count}} selecionados",
+    "selectedItemsCount_one": "{{count}} selecionado",
+    "selectedItemsCount_other": "{{count}} selecionados",
+    "bulkAddModeMove": "Modo mover",
+    "bulkAddModeCopy": "Modo copiar",
+    "collectionProgress": "Progresso da coleção",
+    "copyToLists": "Copiar para listas",
+    "moveToLists": "Mover para listas",
+    "removeItems": "Remover itens",
+    "removeItemsConfirm": "Remover {{count}} itens selecionados de {{listName}}?",
+    "removeItemsConfirm_one": "Remover {{count}} item selecionado de {{listName}}?",
+    "removeItemsConfirm_other": "Remover {{count}} itens selecionados de {{listName}}?",
+    "itemsRemoved": "{{count}} itens removidos",
+    "itemsRemoved_one": "{{count}} item removido",
+    "itemsRemoved_other": "{{count}} itens removidos"
   },
   "rating": {
     "title": "Avaliar",
@@ -699,6 +715,8 @@
     "noEmail": "Sem e-mail",
     "showListIndicators": "Mostrar indicadores de lista",
     "showListIndicatorsDescription": "Mostrar um emblema nos cartões quando um item estiver em alguma das suas listas",
+    "copyInsteadOfMove": "Copiar em vez de mover",
+    "copyInsteadOfMoveDescription": "Ao adicionar em massa de uma lista, manter os itens na lista de origem",
     "supportDevelopmentMessage": "Se gosta do ShowSeek e quer apoiar o desenvolvimento, pode doar usando um dos endereços abaixo. Obrigado!",
     "unableToLoadPreferences": "Não foi possível carregar preferências",
     "unableToOpenFeedback": "Não foi possível abrir a página de feedback.",
@@ -709,7 +727,9 @@
     "webAppModal": {
       "description": "Continuar para a aplicação web do ShowSeek?",
       "title": "Abrir aplicação web"
-    }
+    },
+    "defaultBulkAction": "Ação em massa predefinida: {{mode}}",
+    "defaultBulkActionDescription": "Escolha o que acontece quando adiciona itens em massa a partir de uma lista."
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",
