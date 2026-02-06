@@ -415,6 +415,7 @@
     "unknownShow": "Unknown Show",
     "signInToRenameList": "Sign in to edit this list",
     "signInToDeleteList": "Sign in to delete this list",
+    "signInToModifyList": "Sign in to modify this list",
     "cannotDeleteTitle": "Cannot Delete",
     "cannotDeleteDefaultLists": "Cannot delete default lists",
     "defaultLists": "Default Lists",

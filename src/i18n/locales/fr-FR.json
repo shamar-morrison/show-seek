@@ -342,6 +342,7 @@
     "selectedItemsCount_other": "{{count}} sélectionnés",
     "bulkAddModeMove": "Mode déplacement",
     "bulkAddModeCopy": "Mode copie",
+    "signInToModifyList": "Connectez-vous pour modifier cette liste",
     "copyToLists": "Copier vers des listes",
     "moveToLists": "Déplacer vers des listes",
     "removeItems": "Retirer des éléments",
