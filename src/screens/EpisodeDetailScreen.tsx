@@ -138,6 +138,9 @@ export default function EpisodeDetailScreen() {
   const credits = episodeCreditsQuery.data;
   const videos = episodeVideosQuery.data || [];
   const images = episodeImagesQuery.data;
+  const lightboxImages = (images?.stills || [])
+    .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original))
+    .filter((url): url is string => url !== null);
 
   const isLoading = episodeDetailsQuery.isLoading || tvShowQuery.isLoading || seasonQuery.isLoading;
 
@@ -545,11 +548,11 @@ export default function EpisodeDetailScreen() {
 
       <ImageLightbox
         visible={lightboxVisible}
-        images={(images?.stills || [])
-          .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original))
-          .filter((url): url is string => url !== null)}
+        images={lightboxImages}
+        downloadImages={lightboxImages}
         initialIndex={lightboxIndex}
         onClose={() => setLightboxVisible(false)}
+        onShowToast={(message) => toastRef.current?.show(message)}
       />
 
       {/* Rating Modal */}
