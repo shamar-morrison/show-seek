@@ -53,4 +53,32 @@ describe('MultiSelectActionBar', () => {
     expect(onAddToList).toHaveBeenCalledTimes(1);
     expect(onRemoveItems).toHaveBeenCalledTimes(1);
   });
+
+  it('reports rendered height when layout changes', () => {
+    const onHeightChange = jest.fn();
+
+    const { getByTestId } = render(
+      <MultiSelectActionBar
+        selectedCount={1}
+        bulkPrimaryLabel="Move to lists"
+        onAddToList={jest.fn()}
+        onCancel={jest.fn()}
+        onRemoveItems={jest.fn()}
+        onHeightChange={onHeightChange}
+      />
+    );
+
+    fireEvent(getByTestId('multi-select-action-bar'), 'layout', {
+      nativeEvent: {
+        layout: {
+          x: 0,
+          y: 0,
+          width: 360,
+          height: 212,
+        },
+      },
+    });
+
+    expect(onHeightChange).toHaveBeenCalledWith(212);
+  });
 });

@@ -16,11 +16,12 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
-import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -37,19 +38,18 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bookmark, Search, Shuffle, SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
 const HEADER_FOOTER_CHROME_HEIGHT = 150;
-const MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 export default function WatchStatusDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
   const removeMutation = useRemoveFromList();
-  const { preferences } = usePreferences();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
@@ -80,10 +80,6 @@ export default function WatchStatusDetailScreen() {
     clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
-  const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
-  const bulkPrimaryLabel =
-    bulkAddMode === 'copy' ? t('library.copyToLists') : t('library.moveToLists');
-
   // Get list title from config
   const listConfig = useMemo(() => {
     return WATCH_STATUS_LISTS.find((l) => l.id === id);
@@ -139,55 +135,6 @@ export default function WatchStatusDetailScreen() {
 
   const hasActiveFilterState = hasActiveFilters(filterState);
 
-  const handleRemoveSelectedItems = useCallback(() => {
-    if (!id || selectedMediaItems.length === 0 || removeMutation.isPending) return;
-
-    Alert.alert(
-      t('library.removeItems'),
-      t('library.removeItemsConfirm', { count: selectedCount, listName: list?.name ?? listTitle }),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('library.removeItems'),
-          style: 'destructive',
-          onPress: async () => {
-            const results = await Promise.allSettled(
-              selectedMediaItems.map((item) =>
-                removeMutation.mutateAsync({ listId: id, mediaId: item.id })
-              )
-            );
-            const failed = results.filter(
-              (result): result is PromiseRejectedResult => result.status === 'rejected'
-            ).length;
-
-            if (failed === 0) {
-              handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
-            } else {
-              handleShowToast(
-                t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
-              );
-            }
-
-            clearSelection();
-          },
-        },
-      ]
-    );
-  }, [
-    clearSelection,
-    handleShowToast,
-    id,
-    list?.name,
-    listTitle,
-    removeMutation,
-    selectedCount,
-    selectedMediaItems,
-    t,
-  ]);
-
   // Search functionality
   const {
     searchQuery,
@@ -199,6 +146,39 @@ export default function WatchStatusDetailScreen() {
   } = useHeaderSearch({
     items: listItems,
     getSearchableText: (item) => item.title || item.name || '',
+  });
+
+  const dismissListActionsModal = useCallback(() => {
+    listActionsModalRef.current?.dismiss();
+  }, []);
+
+  const removeSelectedItemFromList = useCallback(
+    (mediaId: number) => removeMutation.mutateAsync({ listId: id, mediaId }),
+    [id, removeMutation]
+  );
+
+  const {
+    bulkAddMode,
+    bulkPrimaryLabel,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleRemoveSelectedItems,
+  } = useListDetailMultiSelectActions({
+    sourceListId: id,
+    sourceListName: list?.name ?? listTitle ?? '',
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isRemoving: removeMutation.isPending,
+    clearSelection,
+    showToast: handleShowToast,
+    removeItemFromSource: removeSelectedItemFromList,
+    requireAuth,
+    authPromptMessage: t('library.signInToDeleteList'),
+    isSearchActive,
+    deactivateSearch,
+    dismissListActionsModal,
+    insetsBottom: insets.bottom,
   });
 
   const actionButton = useMemo(
@@ -227,21 +207,6 @@ export default function WatchStatusDetailScreen() {
   });
 
   const canShuffle = displayItems.length >= 2;
-  const selectionContentBottomPadding = isSelectionMode
-    ? MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom
-    : 0;
-
-  useEffect(() => {
-    if (isSelectionMode && isSearchActive) {
-      deactivateSearch();
-    }
-  }, [deactivateSearch, isSearchActive, isSelectionMode]);
-
-  useEffect(() => {
-    if (isSelectionMode) {
-      listActionsModalRef.current?.dismiss();
-    }
-  }, [isSelectionMode]);
 
   const handleShuffleSelect = useCallback(
     (item: ListMediaItem) => {
@@ -449,6 +414,7 @@ export default function WatchStatusDetailScreen() {
       />
 
       <Toast ref={toastRef} />
+      {AuthGuardModal}
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
 
       <ShuffleModal
@@ -464,6 +430,7 @@ export default function WatchStatusDetailScreen() {
           onCancel={clearSelection}
           onRemoveItems={handleRemoveSelectedItems}
           bulkPrimaryLabel={bulkPrimaryLabel}
+          onHeightChange={handleActionBarHeightChange}
           onAddToList={() => addToListModalRef.current?.present()}
         />
       )}

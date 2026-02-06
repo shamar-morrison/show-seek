@@ -3,8 +3,10 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Check, Trash2, X } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+export const DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 interface MultiSelectActionBarProps {
   selectedCount: number;
@@ -12,6 +14,7 @@ interface MultiSelectActionBarProps {
   onCancel: () => void;
   onRemoveItems: () => void;
   bulkPrimaryLabel: string;
+  onHeightChange?: (height: number) => void;
 }
 
 export function MultiSelectActionBar({
@@ -20,13 +23,21 @@ export function MultiSelectActionBar({
   onCancel,
   onRemoveItems,
   bulkPrimaryLabel,
+  onHeightChange,
 }: MultiSelectActionBarProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const insets = useSafeAreaInsets();
+  const handleLayout = (event: LayoutChangeEvent) => {
+    onHeightChange?.(event.nativeEvent.layout.height);
+  };
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, SPACING.s) }]}>
+    <View
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom, SPACING.s) }]}
+      onLayout={handleLayout}
+      testID="multi-select-action-bar"
+    >
       <View style={styles.content}>
         <Text style={styles.countLabel}>
           {t('library.selectedItemsCount', { count: selectedCount })}

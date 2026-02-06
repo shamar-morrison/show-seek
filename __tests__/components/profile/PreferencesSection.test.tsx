@@ -1,7 +1,7 @@
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { renderWithProviders } from '@/__tests__/utils/test-utils';
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, within } from '@testing-library/react-native';
 import React from 'react';
 
 describe('PreferencesSection', () => {
@@ -40,8 +40,16 @@ describe('PreferencesSection', () => {
 
     expect(getByText('Default bulk action: Move')).toBeTruthy();
 
-    const switches = getAllByTestId('preference-switch');
-    fireEvent(switches[3], 'valueChange', true);
+    const preferenceItems = getAllByTestId('preference-item');
+    const preferenceItem = preferenceItems.find((item) =>
+      within(item).queryByText('Default bulk action: Move')
+    );
+    expect(preferenceItem).toBeTruthy();
+    if (!preferenceItem) {
+      throw new Error('Default bulk action preference row not found');
+    }
+    const bulkActionSwitch = within(preferenceItem).getByTestId('preference-switch');
+    fireEvent(bulkActionSwitch, 'valueChange', true);
 
     expect(onUpdate).toHaveBeenCalledWith('copyInsteadOfMove', true);
 

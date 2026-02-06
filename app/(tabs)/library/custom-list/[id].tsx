@@ -19,9 +19,9 @@ import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
 import { useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
-import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -44,13 +44,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
 const HEADER_FOOTER_CHROME_HEIGHT = 150;
-const MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
-  const { preferences } = usePreferences();
   const deleteMutation = useDeleteList();
   const removeMutation = useRemoveFromList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
@@ -85,10 +83,6 @@ export default function CustomListDetailScreen() {
     clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
-  const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
-  const bulkPrimaryLabel =
-    bulkAddMode === 'copy' ? t('library.copyToLists') : t('library.moveToLists');
-
   const list = useMemo(() => {
     return lists?.find((l) => l.id === id);
   }, [lists, id]);
@@ -189,54 +183,6 @@ export default function CustomListDetailScreen() {
     );
   }, [list, id, deleteMutation, requireAuth, isAuthenticated, t]);
 
-  const handleRemoveSelectedItems = useCallback(() => {
-    if (!id || selectedMediaItems.length === 0 || removeMutation.isPending) return;
-
-    Alert.alert(
-      t('library.removeItems'),
-      t('library.removeItemsConfirm', { count: selectedCount, listName: list?.name ?? id }),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('library.removeItems'),
-          style: 'destructive',
-          onPress: async () => {
-            const results = await Promise.allSettled(
-              selectedMediaItems.map((item) =>
-                removeMutation.mutateAsync({ listId: id, mediaId: item.id })
-              )
-            );
-            const failed = results.filter(
-              (result): result is PromiseRejectedResult => result.status === 'rejected'
-            ).length;
-
-            if (failed === 0) {
-              handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
-            } else {
-              handleShowToast(
-                t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
-              );
-            }
-
-            clearSelection();
-          },
-        },
-      ]
-    );
-  }, [
-    clearSelection,
-    handleShowToast,
-    id,
-    list?.name,
-    removeMutation,
-    selectedCount,
-    selectedMediaItems,
-    t,
-  ]);
-
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
     sortState.direction !== DEFAULT_SORT_STATE.direction;
@@ -267,6 +213,41 @@ export default function CustomListDetailScreen() {
     [hasActiveSort, hasActiveFilterState]
   );
 
+  const dismissListActionsModal = useCallback(() => {
+    listActionsModalRef.current?.dismiss();
+  }, []);
+
+  const removeSelectedItemFromList = useCallback(
+    (mediaId: number) => removeMutation.mutateAsync({ listId: id, mediaId }),
+    [id, removeMutation]
+  );
+
+  const {
+    bulkAddMode,
+    bulkPrimaryLabel,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleRemoveSelectedItems,
+  } = useListDetailMultiSelectActions({
+    sourceListId: id,
+    sourceListName: list?.name ?? id ?? '',
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isRemoving: removeMutation.isPending,
+    clearSelection,
+    showToast: handleShowToast,
+    removeItemFromSource: removeSelectedItemFromList,
+    requireAuth,
+    authPromptMessage: t('library.signInToDeleteList'),
+    isAuthenticated,
+    guardBeforeConfirmation: true,
+    isSearchActive,
+    deactivateSearch,
+    dismissListActionsModal,
+    insetsBottom: insets.bottom,
+  });
+
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: `@custom_list_view_mode_${id}`,
     showSortButton: false,
@@ -282,21 +263,6 @@ export default function CustomListDetailScreen() {
   });
 
   const canShuffle = displayItems.length >= 2;
-  const selectionContentBottomPadding = isSelectionMode
-    ? MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom
-    : 0;
-
-  useEffect(() => {
-    if (isSelectionMode && isSearchActive) {
-      deactivateSearch();
-    }
-  }, [deactivateSearch, isSearchActive, isSelectionMode]);
-
-  useEffect(() => {
-    if (isSelectionMode) {
-      listActionsModalRef.current?.dismiss();
-    }
-  }, [isSelectionMode]);
 
   const handleShuffleSelect = useCallback(
     (item: import('@/src/services/ListService').ListMediaItem) => {
@@ -542,6 +508,7 @@ export default function CustomListDetailScreen() {
           onCancel={clearSelection}
           onRemoveItems={handleRemoveSelectedItems}
           bulkPrimaryLabel={bulkPrimaryLabel}
+          onHeightChange={handleActionBarHeightChange}
           onAddToList={() => addToListModalRef.current?.present()}
         />
       )}

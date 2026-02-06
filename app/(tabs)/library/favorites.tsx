@@ -3,7 +3,10 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
-import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
+import {
+  DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT,
+  MultiSelectActionBar,
+} from '@/src/components/library/MultiSelectActionBar';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -15,6 +18,7 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
 import { COLORS, SPACING } from '@/src/constants/theme';
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
@@ -40,12 +44,12 @@ import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
-const MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
   const removeMutation = useRemoveFromList();
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { preferences } = usePreferences();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
@@ -58,6 +62,7 @@ export default function FavoritesScreen() {
   const [filterState, setFilterState] = useState<WatchStatusFilterState>(
     DEFAULT_WATCH_STATUS_FILTERS
   );
+  const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<any>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
@@ -117,25 +122,34 @@ export default function FavoritesScreen() {
         {
           text: t('library.removeItems'),
           style: 'destructive',
-          onPress: async () => {
-            const results = await Promise.allSettled(
-              selectedMediaItems.map((item) =>
-                removeMutation.mutateAsync({ listId: DEFAULT_LIST_IDS[3], mediaId: item.id })
-              )
+          onPress: () => {
+            requireAuth(
+              async () => {
+                let failed = 0;
+
+                for (const item of selectedMediaItems) {
+                  try {
+                    await removeMutation.mutateAsync({
+                      listId: DEFAULT_LIST_IDS[3],
+                      mediaId: item.id,
+                    });
+                  } catch {
+                    failed += 1;
+                  }
+                }
+
+                if (failed === 0) {
+                  handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
+                } else {
+                  handleShowToast(
+                    t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
+                  );
+                }
+
+                clearSelection();
+              },
+              t('library.signInToDeleteList')
             );
-            const failed = results.filter(
-              (result): result is PromiseRejectedResult => result.status === 'rejected'
-            ).length;
-
-            if (failed === 0) {
-              handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
-            } else {
-              handleShowToast(
-                t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
-              );
-            }
-
-            clearSelection();
           },
         },
       ]
@@ -145,10 +159,15 @@ export default function FavoritesScreen() {
     favoritesList?.name,
     handleShowToast,
     removeMutation,
+    requireAuth,
     selectedCount,
     selectedMediaItems,
     t,
   ]);
+
+  const handleActionBarHeightChange = useCallback((height: number) => {
+    setActionBarHeight((prevHeight) => (prevHeight === height ? prevHeight : height));
+  }, []);
 
   const listItems = useMemo(() => {
     if (!favoritesList?.items) return [];
@@ -217,7 +236,7 @@ export default function FavoritesScreen() {
   };
 
   const selectionContentBottomPadding = isSelectionMode
-    ? MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom
+    ? (actionBarHeight ?? (DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom))
     : 0;
 
   useEffect(() => {
@@ -409,6 +428,7 @@ export default function FavoritesScreen() {
       />
 
       <Toast ref={toastRef} />
+      {AuthGuardModal}
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
 
       {isSelectionMode && (
@@ -417,6 +437,7 @@ export default function FavoritesScreen() {
           onCancel={clearSelection}
           onRemoveItems={handleRemoveSelectedItems}
           bulkPrimaryLabel={bulkPrimaryLabel}
+          onHeightChange={handleActionBarHeightChange}
           onAddToList={() => addToListModalRef.current?.present()}
         />
       )}

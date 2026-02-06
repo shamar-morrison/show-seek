@@ -69,7 +69,7 @@ const MediaGridItem = memo<{
             pointerEvents="none"
             style={[
               styles.selectionOverlay,
-              isSelected && { borderColor: accentColor, backgroundColor: 'rgba(0, 0, 0, 0.12)' },
+              isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
             ]}
           />
         )}
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: BORDER_RADIUS.m,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: COLORS.transparent,
   },
   selectionBadge: {
     position: 'absolute',
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     right: SPACING.s,
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: BORDER_RADIUS.m,
     borderWidth: 2,
     borderColor: COLORS.textSecondary,
     backgroundColor: COLORS.surface,
