@@ -429,7 +429,10 @@
     "filterLists": "Filter lists",
     "limitReachedMessage": "Free users can create up to {{max}} custom lists. Upgrade to Premium for unlimited lists!",
     "limitReachedUpgradeMessage": "Upgrade to Premium for unlimited lists and items.",
-    "listsUpdated": "Lists updated"
+    "listsUpdated": "Lists updated",
+    "selectedItemsCount": "{{count}} selected",
+    "selectedItemsCount_one": "{{count}} selected",
+    "selectedItemsCount_other": "{{count}} selected"
   },
   "rating": {
     "title": "Rate",

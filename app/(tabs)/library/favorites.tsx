@@ -3,6 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -38,6 +39,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
+const MULTI_SELECT_ACTION_BAR_HEIGHT = 124;
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -65,7 +67,11 @@ export default function FavoritesScreen() {
     handleLongPress,
     handleShowToast,
     addToListModalRef,
-    selectedMediaItem,
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
 
@@ -139,8 +145,8 @@ export default function FavoritesScreen() {
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: VIEW_MODE_STORAGE_KEY,
     showSortButton: false,
-    actionButton,
-    searchButton,
+    actionButton: isSelectionMode ? undefined : actionButton,
+    searchButton: isSelectionMode ? undefined : searchButton,
     searchState: {
       isActive: isSearchActive,
       query: searchQuery,
@@ -153,6 +159,22 @@ export default function FavoritesScreen() {
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
   };
+
+  const selectionContentBottomPadding = isSelectionMode
+    ? MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom
+    : 0;
+
+  useEffect(() => {
+    if (isSelectionMode && isSearchActive) {
+      deactivateSearch();
+    }
+  }, [deactivateSearch, isSearchActive, isSelectionMode]);
+
+  useEffect(() => {
+    if (isSelectionMode) {
+      listActionsModalRef.current?.dismiss();
+    }
+  }, [isSelectionMode]);
 
   const listActions = useMemo(
     () => [
@@ -197,11 +219,13 @@ export default function FavoritesScreen() {
         item={item}
         onPress={handleItemPress}
         onLongPress={handleLongPress}
+        selectionMode={isSelectionMode}
+        isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
       />
     ),
-    [handleItemPress, handleLongPress, movieLabel, tvShowLabel]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode, movieLabel, tvShowLabel]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
@@ -261,6 +285,9 @@ export default function FavoritesScreen() {
               }
               onItemPress={handleItemPress}
               onItemLongPress={handleLongPress}
+              selectionMode={isSelectionMode}
+              isItemSelected={isItemSelected}
+              contentBottomPadding={selectionContentBottomPadding}
             />
           ) : (
             <FlashList
@@ -269,8 +296,12 @@ export default function FavoritesScreen() {
               data={displayItems}
               renderItem={renderListItem}
               keyExtractor={keyExtractor}
-              contentContainerStyle={libraryListStyles.listContent}
+              contentContainerStyle={[
+                libraryListStyles.listContent,
+                selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+              ]}
               showsVerticalScrollIndicator={false}
+              extraData={selectedMediaItems}
               ListEmptyComponent={
                 searchQuery ? (
                   <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
@@ -291,11 +322,13 @@ export default function FavoritesScreen() {
         </View>
       </SafeAreaView>
 
-      {selectedMediaItem && (
+      {selectedCount > 0 && (
         <AddToListModal
           ref={addToListModalRef}
-          mediaItem={selectedMediaItem}
+          mediaItems={selectedMediaItems}
+          sourceListId={DEFAULT_LIST_IDS[3]}
           onShowToast={handleShowToast}
+          onComplete={clearSelection}
         />
       )}
 
@@ -320,6 +353,14 @@ export default function FavoritesScreen() {
 
       <Toast ref={toastRef} />
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onAddToList={() => addToListModalRef.current?.present()}
+        />
+      )}
     </>
   );
 }

@@ -5,13 +5,7 @@ import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
-import {
-  useAddToList,
-  useDeleteList,
-  useLists,
-  useMediaLists,
-  useRemoveFromList,
-} from '@/src/hooks/useLists';
+import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { getListIconComponent } from '@/src/utils/listIcons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -46,8 +40,11 @@ export interface AddToListModalRef {
 }
 
 interface AddToListModalProps {
-  mediaItem: Omit<ListMediaItem, 'addedAt'>;
+  mediaItem?: Omit<ListMediaItem, 'addedAt'>;
+  mediaItems?: Omit<ListMediaItem, 'addedAt'>[];
+  sourceListId?: string;
   onShowToast?: (message: string) => void;
+  onComplete?: () => void;
 }
 
 // Pre-computed list item with cached item count
@@ -62,15 +59,16 @@ const ListItemRow = memo<{
   isSaving: boolean;
   onToggle: (listId: string) => void;
   onDelete: (listId: string, listName: string) => void;
+  allowDelete?: boolean;
 }>(
-  ({ list, isSelected, isSaving, onToggle, onDelete }) => {
+  ({ list, isSelected, isSaving, onToggle, onDelete, allowDelete = true }) => {
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
     const handlePress = useCallback(() => onToggle(list.id), [list.id, onToggle]);
-    const handleLongPress = useCallback(
-      () => onDelete(list.id, list.name),
-      [list.id, list.name, onDelete]
-    );
+    const handleLongPress = useCallback(() => {
+      if (!allowDelete) return;
+      onDelete(list.id, list.name);
+    }, [allowDelete, list.id, list.name, onDelete]);
 
     const ListIcon = getListIconComponent(list.id);
 
@@ -80,6 +78,7 @@ const ListItemRow = memo<{
         onPress={handlePress}
         onLongPress={handleLongPress}
         disabled={isSaving}
+        testID={`add-to-list-row-${list.id}`}
       >
         <View
           style={[
@@ -103,13 +102,14 @@ const ListItemRow = memo<{
     prev.list.id === next.list.id &&
     prev.list.itemCount === next.list.itemCount &&
     prev.isSelected === next.isSelected &&
-    prev.isSaving === next.isSaving
+    prev.isSaving === next.isSaving &&
+    prev.allowDelete === next.allowDelete
 );
 
 ListItemRow.displayName = 'ListItemRow';
 
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
-  ({ mediaItem, onShowToast }, ref) => {
+  ({ mediaItem, mediaItems, sourceListId, onShowToast, onComplete }, ref) => {
     const router = useRouter();
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
@@ -121,12 +121,18 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
+    const bulkMediaItems = mediaItems ?? [];
+    const isBulkMode = !!sourceListId && bulkMediaItems.length > 0;
+
     // Local state to track pending selections (toggled independently of Firebase)
     const [pendingSelections, setPendingSelections] = useState<Record<string, boolean>>({});
     // Stable snapshot of membership at modal open time (not reactive)
     const initialMembershipRef = useRef<Record<string, boolean>>({});
     // Flag to preserve state when temporarily dismissing for create list flow
     const isTransitioningToCreateRef = useRef(false);
+    // Track lifecycle semantics across a modal session
+    const wasBulkSessionRef = useRef(false);
+    const didCompleteRef = useRef(false);
 
     useEffect(() => {
       if (operationError) {
@@ -147,33 +153,63 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }, [successMessage]);
 
     const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
-    const { membership } = useMediaLists(mediaItem.id);
 
     const addMutation = useAddToList();
     const removeMutation = useRemoveFromList();
     const deleteMutation = useDeleteList();
 
+    const singleMembership = useMemo<Record<string, boolean>>(() => {
+      if (isBulkMode || !mediaItem || !lists) return {};
+
+      const membership: Record<string, boolean> = {};
+      lists.forEach((list) => {
+        if (list.items && list.items[mediaItem.id]) {
+          membership[list.id] = true;
+        }
+      });
+
+      return membership;
+    }, [isBulkMode, lists, mediaItem]);
+
     // Pre-compute item counts once when lists change (not on every render)
     const listsWithCounts = useMemo<ListWithCount[]>(() => {
       if (!lists) return [];
-      return lists.map((list) => ({
+
+      const filteredLists =
+        isBulkMode && sourceListId ? lists.filter((list) => list.id !== sourceListId) : lists;
+
+      return filteredLists.map((list) => ({
         ...list,
         itemCount: list.items ? Object.keys(list.items).length : 0,
       }));
-    }, [lists]);
+    }, [isBulkMode, lists, sourceListId]);
 
-    // Check if there are unsaved changes (compare against initial snapshot, not reactive membership)
+    // Check if there are unsaved changes
     const hasChanges = useMemo(() => {
+      if (isBulkMode) {
+        return Object.values(pendingSelections).some(Boolean);
+      }
+
       return Object.keys(pendingSelections).some((listId) => {
         const originalMembership = !!initialMembershipRef.current[listId];
         return pendingSelections[listId] !== originalMembership;
       });
-    }, [pendingSelections]);
+    }, [isBulkMode, pendingSelections]);
 
     useImperativeHandle(ref, () => ({
       present: async () => {
-        initialMembershipRef.current = { ...membership };
-        setPendingSelections({ ...membership });
+        wasBulkSessionRef.current = isBulkMode;
+        didCompleteRef.current = false;
+
+        if (isBulkMode) {
+          initialMembershipRef.current = {};
+          setPendingSelections({});
+        } else {
+          initialMembershipRef.current = { ...singleMembership };
+          setPendingSelections({ ...singleMembership });
+        }
+
+        setSuccessMessage(null);
         setOperationError(null);
         setIsSaving(false);
         await sheetRef.current?.present();
@@ -194,7 +230,16 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       initialMembershipRef.current = {};
       setOperationError(null);
       setIsSaving(false);
-    }, []);
+
+      // For bulk mode sessions, dismissing the modal is treated as ending the selection flow.
+      // For non-bulk sessions, only fire completion callback after successful save.
+      if (didCompleteRef.current || wasBulkSessionRef.current) {
+        onComplete?.();
+      }
+
+      didCompleteRef.current = false;
+      wasBulkSessionRef.current = false;
+    }, [onComplete]);
 
     // Error handler for mutations
     const handleMutationError = useCallback(
@@ -239,11 +284,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }));
     };
 
-    // Save all pending changes to Firebase
-    const handleSave = async () => {
-      if (!listsWithCounts.length) return;
+    const handleSingleSave = useCallback(async () => {
+      if (!mediaItem || !listsWithCounts.length) return;
 
-      // Early exit: check if there are actually any changes to save
       const changedLists = listsWithCounts.filter((list) => {
         const wasInList = !!initialMembershipRef.current[list.id];
         const isNowInList = !!pendingSelections[list.id];
@@ -260,7 +303,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       const operations: Promise<unknown>[] = [];
 
-      // Only loop through changed lists, not all lists
       for (const list of changedLists) {
         const wasInList = !!initialMembershipRef.current[list.id];
         const isNowInList = !!pendingSelections[list.id];
@@ -268,13 +310,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         if (wasInList && !isNowInList) {
           operations.push(removeMutation.mutateAsync({ listId: list.id, mediaId: mediaItem.id }));
         } else if (!wasInList && isNowInList) {
-          operations.push(
-            addMutation.mutateAsync({ listId: list.id, mediaItem, listName: list.name })
-          );
+          operations.push(addMutation.mutateAsync({ listId: list.id, mediaItem, listName: list.name }));
         }
       }
 
-      // Use allSettled to handle partial failures gracefully
       const results = await Promise.allSettled(operations);
       const failures = results.filter(
         (result): result is PromiseRejectedResult => result.status === 'rejected'
@@ -285,6 +324,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         if (onShowToast) {
           onShowToast(t('library.listsUpdated'));
         }
+        didCompleteRef.current = true;
         await sheetRef.current?.dismiss();
       } else if (failures.length < operations.length) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -299,7 +339,111 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         );
         setIsSaving(false);
       }
-    };
+    }, [
+      addMutation,
+      handleMutationError,
+      listsWithCounts,
+      mediaItem,
+      onComplete,
+      onShowToast,
+      pendingSelections,
+      removeMutation,
+      t,
+    ]);
+
+    const handleBulkSave = useCallback(async () => {
+      if (!sourceListId || bulkMediaItems.length === 0 || !listsWithCounts.length) return;
+
+      const targetLists = listsWithCounts.filter((list) => !!pendingSelections[list.id]);
+      if (targetLists.length === 0) return;
+
+      setIsSaving(true);
+      setOperationError(null);
+
+      let totalOperations = 0;
+      let failedOperations = 0;
+      let firstError: Error | null = null;
+
+      for (const selectedMedia of bulkMediaItems) {
+        let itemHadAddFailure = false;
+
+        for (const targetList of targetLists) {
+          const alreadyInTargetList = !!targetList.items?.[selectedMedia.id];
+          if (alreadyInTargetList) continue;
+
+          totalOperations++;
+
+          try {
+            await addMutation.mutateAsync({
+              listId: targetList.id,
+              mediaItem: selectedMedia,
+              listName: targetList.name,
+            });
+          } catch (error) {
+            failedOperations++;
+            itemHadAddFailure = true;
+            if (!firstError) {
+              firstError = error instanceof Error ? error : new Error(t('errors.saveFailed'));
+            }
+          }
+        }
+
+        if (itemHadAddFailure) {
+          continue;
+        }
+
+        totalOperations++;
+
+        try {
+          await removeMutation.mutateAsync({ listId: sourceListId, mediaId: selectedMedia.id });
+        } catch (error) {
+          failedOperations++;
+          if (!firstError) {
+            firstError = error instanceof Error ? error : new Error(t('errors.saveFailed'));
+          }
+        }
+      }
+
+      if (failedOperations === 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onShowToast?.(t('library.listsUpdated'));
+        didCompleteRef.current = true;
+        await sheetRef.current?.dismiss();
+        return;
+      }
+
+      if (failedOperations < totalOperations) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setOperationError(
+          t('library.changesFailedToSave', { failed: failedOperations, total: totalOperations })
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      handleMutationError(firstError ?? new Error(t('errors.saveFailed')));
+      setIsSaving(false);
+    }, [
+      addMutation,
+      bulkMediaItems,
+      handleMutationError,
+      listsWithCounts,
+      onComplete,
+      onShowToast,
+      pendingSelections,
+      removeMutation,
+      sourceListId,
+      t,
+    ]);
+
+    const handleSave = useCallback(async () => {
+      if (isBulkMode) {
+        await handleBulkSave();
+        return;
+      }
+
+      await handleSingleSave();
+    }, [handleBulkSave, handleSingleSave, isBulkMode]);
 
     const handleDeleteList = (listId: string, listName: string) => {
       if (isDefaultList(listId)) {
@@ -325,7 +469,6 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             onPress: async () => {
               try {
                 await deleteMutation.mutateAsync(listId);
-                // Remove from pending selections too
                 setPendingSelections((prev) => {
                   const updated = { ...prev };
                   delete updated[listId];
@@ -350,32 +493,42 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     };
 
     const handleCreateCustomListPress = async () => {
-      // Mark that we're transitioning to prevent state reset
       isTransitioningToCreateRef.current = true;
       await sheetRef.current?.dismiss();
       await createListModalRef.current?.present();
     };
 
     const handleListCreated = async (listId: string, listName: string) => {
-      // Still save immediately for new list creation
-      // Update initialMembershipRef only on success to prevent duplicate adds
+      if (isBulkMode) {
+        setPendingSelections((prev) => ({
+          ...prev,
+          [listId]: true,
+        }));
+        setSuccessMessage(t('library.listCreated'));
+        await sheetRef.current?.present();
+        return;
+      }
+
+      if (!mediaItem) {
+        await sheetRef.current?.present();
+        return;
+      }
+
       addMutation.mutate(
         { listId, mediaItem, listName },
         {
           onSuccess: () => {
-            // Mark as already saved in the initial ref so Save Changes won't re-add
             initialMembershipRef.current[listId] = true;
-            // Add to pending selections so UI reflects the change
             setPendingSelections((prev) => ({
               ...prev,
               [listId]: true,
             }));
-            setSuccessMessage(t('library.addedToList', { listName }));
+            setSuccessMessage(t('library.addedToList', { list: listName }));
           },
           onError: handleMutationError,
         }
       );
-      // Present the sheet immediately so user sees modal return
+
       await sheetRef.current?.present();
     };
 
@@ -397,6 +550,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
             <View style={modalHeaderStyles.header}>
               <Text style={modalHeaderStyles.title}>{t('media.addToList')}</Text>
+              {isBulkMode && (
+                <Text style={styles.subtitle}>
+                  {t('library.selectedItemsCount', { count: bulkMediaItems.length })}
+                </Text>
+              )}
             </View>
 
             {successMessage && (
@@ -431,6 +589,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                     isSaving={isSaving}
                     onToggle={handleToggleList}
                     onDelete={handleDeleteList}
+                    allowDelete={!isBulkMode}
                   />
                 )}
               />
@@ -444,15 +603,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               ]}
               onPress={handleSave}
               disabled={!hasChanges || isSaving}
+              testID="add-to-list-save-button"
             >
               {isSaving ? (
                 <ActivityIndicator size="small" color={COLORS.white} />
               ) : (
                 <>
                   <Check size={20} color={hasChanges ? COLORS.white : COLORS.textSecondary} />
-                  <Text
-                    style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}
-                  >
+                  <Text style={[styles.saveButtonText, !hasChanges && styles.saveButtonTextDisabled]}>
                     {t('common.saveChanges')}
                   </Text>
                 </>
@@ -503,6 +661,10 @@ export default AddToListModal;
 const styles = StyleSheet.create({
   loader: {
     padding: SPACING.xl,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
   },
   listContainer: {
     maxHeight: MODAL_LIST_HEIGHT,

@@ -1,5 +1,5 @@
 import { Image, ImageProps } from 'expo-image';
-import React, { memo, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { View, ViewStyle } from 'react-native';
 import { ImagePlaceholder, PlaceholderType } from './ImagePlaceholder';
 
@@ -17,10 +17,14 @@ interface MediaImageProps extends Omit<ImageProps, 'source'> {
 export const MediaImage = memo(
   ({ source, style, placeholderStyle, placeholderType = 'movie', ...props }: MediaImageProps) => {
     const [hasError, setHasError] = useState(false);
-    const [_, setIsLoading] = useState(true);
 
     const uri =
       typeof source === 'object' && source !== null && 'uri' in source ? source.uri : null;
+
+    useEffect(() => {
+      // Clear stale error state whenever the image source changes.
+      setHasError(false);
+    }, [uri]);
 
     const shouldShowPlaceholder = !uri || hasError;
 
@@ -44,8 +48,6 @@ export const MediaImage = memo(
         source={imageSource}
         style={style}
         onError={() => setHasError(true)}
-        onLoadStart={() => setIsLoading(true)}
-        onLoadEnd={() => setIsLoading(false)}
         transition={{ duration: 200 }}
         recyclingKey={uri}
       />

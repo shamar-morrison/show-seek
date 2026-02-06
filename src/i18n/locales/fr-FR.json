@@ -335,7 +335,10 @@
     "favoritesSection": "Favoris",
     "favoriteContent": "Contenu favori",
     "widgets": "Widgets",
-    "homeScreenWidgets": "Widgets de l'écran d'accueil"
+    "homeScreenWidgets": "Widgets de l'écran d'accueil",
+    "selectedItemsCount": "{{count}} sélectionnés",
+    "selectedItemsCount_one": "{{count}} sélectionné",
+    "selectedItemsCount_other": "{{count}} sélectionnés"
   },
   "rating": {
     "title": "Noter",

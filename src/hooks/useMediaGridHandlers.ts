@@ -4,7 +4,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 /**
  * Custom hook that provides shared handlers for media grid interactions.
@@ -16,14 +16,43 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export function useMediaGridHandlers(isLoading: boolean) {
   const router = useRouter();
   const currentTab = useCurrentTab();
-  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
-    null
-  );
+  const [selectedItems, setSelectedItems] = useState<Record<string, ListMediaItem>>({});
   const toastRef = useRef<ToastRef>(null);
   const addToListModalRef = useRef<AddToListModalRef>(null);
 
+  const getItemKey = useCallback((item: Pick<ListMediaItem, 'id' | 'media_type'>) => {
+    return `${item.id}-${item.media_type}`;
+  }, []);
+
+  const toggleSelection = useCallback(
+    (item: ListMediaItem) => {
+      const itemKey = getItemKey(item);
+
+      setSelectedItems((prev) => {
+        const next = { ...prev };
+
+        if (next[itemKey]) {
+          delete next[itemKey];
+          return next;
+        }
+
+        next[itemKey] = item;
+        return next;
+      });
+    },
+    [getItemKey]
+  );
+
+  const isSelectionMode = Object.keys(selectedItems).length > 0;
+
   const handleItemPress = useCallback(
     (item: ListMediaItem) => {
+      if (isSelectionMode) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        toggleSelection(item);
+        return;
+      }
+
       if (!currentTab) {
         console.warn('Cannot navigate: currentTab is null');
         return;
@@ -37,7 +66,7 @@ export function useMediaGridHandlers(isLoading: boolean) {
         router.push(`${basePath}/tv/${item.id}` as any);
       }
     },
-    [currentTab, router]
+    [currentTab, isSelectionMode, router, toggleSelection]
   );
 
   const handleLongPress = useCallback(
@@ -45,21 +74,33 @@ export function useMediaGridHandlers(isLoading: boolean) {
       if (isLoading) return;
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      const { addedAt: _addedAt, ...mediaItem } = item;
-      setSelectedMediaItem(mediaItem);
+      toggleSelection(item);
     },
-    [isLoading]
+    [isLoading, toggleSelection]
   );
 
-  // Present the modal when an item is selected
-  // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
-  // before we try to present it
-  useEffect(() => {
-    if (selectedMediaItem) {
-      addToListModalRef.current?.present();
-    }
-  }, [selectedMediaItem]);
+  const selectedMediaItems = useMemo(
+    () =>
+      Object.values(selectedItems).map((item) => {
+        const { addedAt: _addedAt, ...mediaItem } = item;
+        return mediaItem;
+      }),
+    [selectedItems]
+  );
+
+  const selectedCount = selectedMediaItems.length;
+
+  const isItemSelected = useCallback(
+    (item: ListMediaItem) => {
+      const itemKey = getItemKey(item);
+      return !!selectedItems[itemKey];
+    },
+    [getItemKey, selectedItems]
+  );
+
+  const clearSelection = useCallback(() => {
+    setSelectedItems({});
+  }, []);
 
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);
@@ -70,7 +111,11 @@ export function useMediaGridHandlers(isLoading: boolean) {
     handleLongPress,
     handleShowToast,
     addToListModalRef,
-    selectedMediaItem,
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
     toastRef,
   };
 }

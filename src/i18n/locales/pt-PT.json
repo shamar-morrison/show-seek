@@ -429,6 +429,9 @@
     "limitReachedMessage": "Os utilizadores gratuitos podem criar até {{max}} listas personalizadas. Atualize para Premium para listas ilimitadas!",
     "limitReachedUpgradeMessage": "Atualize para Premium para listas e itens ilimitados.",
     "listsUpdated": "Listas atualizadas",
+    "selectedItemsCount": "{{count}} selecionados",
+    "selectedItemsCount_one": "{{count}} selecionado",
+    "selectedItemsCount_other": "{{count}} selecionados",
     "collectionProgress": "Progresso da coleção"
   },
   "rating": {

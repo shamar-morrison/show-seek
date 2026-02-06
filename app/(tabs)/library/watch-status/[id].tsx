@@ -3,6 +3,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -40,6 +41,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
 const HEADER_FOOTER_CHROME_HEIGHT = 150;
+const MULTI_SELECT_ACTION_BAR_HEIGHT = 124;
 
 export default function WatchStatusDetailScreen() {
   const router = useRouter();
@@ -68,7 +70,11 @@ export default function WatchStatusDetailScreen() {
     handleLongPress,
     handleShowToast,
     addToListModalRef,
-    selectedMediaItem,
+    selectedMediaItems,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
 
@@ -154,8 +160,8 @@ export default function WatchStatusDetailScreen() {
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey: `@watch_status_view_mode_${id}`,
     showSortButton: false,
-    actionButton,
-    searchButton,
+    actionButton: isSelectionMode ? undefined : actionButton,
+    searchButton: isSelectionMode ? undefined : searchButton,
     searchState: {
       isActive: isSearchActive,
       query: searchQuery,
@@ -166,6 +172,21 @@ export default function WatchStatusDetailScreen() {
   });
 
   const canShuffle = displayItems.length >= 2;
+  const selectionContentBottomPadding = isSelectionMode
+    ? MULTI_SELECT_ACTION_BAR_HEIGHT + insets.bottom
+    : 0;
+
+  useEffect(() => {
+    if (isSelectionMode && isSearchActive) {
+      deactivateSearch();
+    }
+  }, [deactivateSearch, isSearchActive, isSelectionMode]);
+
+  useEffect(() => {
+    if (isSelectionMode) {
+      listActionsModalRef.current?.dismiss();
+    }
+  }, [isSelectionMode]);
 
   const handleShuffleSelect = useCallback(
     (item: ListMediaItem) => {
@@ -258,11 +279,13 @@ export default function WatchStatusDetailScreen() {
         item={item}
         onPress={handleItemPress}
         onLongPress={handleLongPress}
+        selectionMode={isSelectionMode}
+        isSelected={isItemSelected(item)}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
       />
     ),
-    [handleItemPress, handleLongPress]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
   const keyExtractor = useCallback((item: ListMediaItem) => `${item.id}-${item.media_type}`, []);
@@ -305,6 +328,9 @@ export default function WatchStatusDetailScreen() {
             }
             onItemPress={handleItemPress}
             onItemLongPress={handleLongPress}
+            selectionMode={isSelectionMode}
+            isItemSelected={isItemSelected}
+            contentBottomPadding={selectionContentBottomPadding}
           />
         ) : (
           <FlashList
@@ -313,8 +339,13 @@ export default function WatchStatusDetailScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={[libraryListStyles.listContent, styles.listContent]}
+            contentContainerStyle={[
+              libraryListStyles.listContent,
+              styles.listContent,
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
+            extraData={selectedMediaItems}
             ListEmptyComponent={
               <View
                 style={{
@@ -332,11 +363,13 @@ export default function WatchStatusDetailScreen() {
         )}
       </View>
 
-      {selectedMediaItem && (
+      {selectedCount > 0 && (
         <AddToListModal
           ref={addToListModalRef}
-          mediaItem={selectedMediaItem}
+          mediaItems={selectedMediaItems}
+          sourceListId={id}
           onShowToast={handleShowToast}
+          onComplete={clearSelection}
         />
       )}
 
@@ -368,6 +401,14 @@ export default function WatchStatusDetailScreen() {
         onClose={() => setShuffleModalVisible(false)}
         onViewDetails={handleShuffleSelect}
       />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onAddToList={() => addToListModalRef.current?.present()}
+        />
+      )}
     </>
   );
 }
