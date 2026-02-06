@@ -21,6 +21,7 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -49,6 +50,7 @@ export default function CustomListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
+  const { preferences } = usePreferences();
   const deleteMutation = useDeleteList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
@@ -82,6 +84,7 @@ export default function CustomListDetailScreen() {
     clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
+  const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
 
   const list = useMemo(() => {
     return lists?.find((l) => l.id === id);
@@ -445,6 +448,7 @@ export default function CustomListDetailScreen() {
           ref={addToListModalRef}
           mediaItems={selectedMediaItems}
           sourceListId={id}
+          bulkAddMode={bulkAddMode}
           onShowToast={handleShowToast}
           onComplete={clearSelection}
         />

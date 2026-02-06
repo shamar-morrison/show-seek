@@ -130,6 +130,15 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
+        label={t('profile.copyInsteadOfMove')}
+        subtitle={t('profile.copyInsteadOfMoveDescription')}
+        value={!!preferences?.copyInsteadOfMove}
+        onValueChange={(value) => handleUpdate('copyInsteadOfMove', value)}
+        loading={isLoading || isItemUpdating('copyInsteadOfMove')}
+        disabled={isUpdating}
+      />
+
+      <PreferenceItem
         label={t('profile.quickMarkAsWatched')}
         subtitle={t('profile.quickMarkAsWatchedDescription')}
         value={!!preferences?.quickMarkAsWatched}

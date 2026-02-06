@@ -432,6 +432,8 @@
     "selectedItemsCount": "{{count}} selecionados",
     "selectedItemsCount_one": "{{count}} selecionado",
     "selectedItemsCount_other": "{{count}} selecionados",
+    "bulkAddModeMove": "Modo mover",
+    "bulkAddModeCopy": "Modo copiar",
     "collectionProgress": "Progresso da coleção"
   },
   "rating": {
@@ -702,6 +704,8 @@
     "noEmail": "Sem e-mail",
     "showListIndicators": "Mostrar indicadores de lista",
     "showListIndicatorsDescription": "Mostrar um emblema nos cartões quando um item estiver em alguma das suas listas",
+    "copyInsteadOfMove": "Copiar em vez de mover",
+    "copyInsteadOfMoveDescription": "Ao adicionar em massa de uma lista, manter os itens na lista de origem",
     "supportDevelopmentMessage": "Se gosta do ShowSeek e quer apoiar o desenvolvimento, pode doar usando um dos endereços abaixo. Obrigado!",
     "unableToLoadPreferences": "Não foi possível carregar preferências",
     "unableToOpenFeedback": "Não foi possível abrir a página de feedback.",

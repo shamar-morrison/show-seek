@@ -19,6 +19,7 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -44,6 +45,7 @@ const MULTI_SELECT_ACTION_BAR_HEIGHT = 124;
 export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
+  const { preferences } = usePreferences();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
@@ -74,6 +76,7 @@ export default function FavoritesScreen() {
     clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
+  const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -327,6 +330,7 @@ export default function FavoritesScreen() {
           ref={addToListModalRef}
           mediaItems={selectedMediaItems}
           sourceListId={DEFAULT_LIST_IDS[3]}
+          bulkAddMode={bulkAddMode}
           onShowToast={handleShowToast}
           onComplete={clearSelection}
         />

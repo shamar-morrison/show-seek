@@ -48,6 +48,7 @@ service cloud.firestore {
           && (!('hideUnreleasedContent' in request.resource.data.preferences) || request.resource.data.preferences.hideUnreleasedContent is bool)
           && (!('hideTabLabels' in request.resource.data.preferences) || request.resource.data.preferences.hideTabLabels is bool)
           && (!('dataSaver' in request.resource.data.preferences) || request.resource.data.preferences.dataSaver is bool)
+          && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if isOwner(userId);

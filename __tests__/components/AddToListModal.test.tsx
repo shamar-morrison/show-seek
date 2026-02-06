@@ -17,6 +17,8 @@ const mockListsState: {
 };
 
 const mockAddMutate = jest.fn();
+const mockAddMutateAsync = jest.fn();
+const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
 
 jest.mock('react-native', () => {
@@ -123,11 +125,11 @@ jest.mock('@/src/components/CreateListModal', () => {
 jest.mock('@/src/hooks/useLists', () => ({
   useLists: () => mockListsState,
   useAddToList: () => ({
-    mutateAsync: jest.fn(),
+    mutateAsync: mockAddMutateAsync,
     mutate: mockAddMutate,
   }),
   useRemoveFromList: () => ({
-    mutateAsync: jest.fn(),
+    mutateAsync: mockRemoveMutateAsync,
   }),
   useDeleteList: () => ({
     mutateAsync: mockDeleteMutateAsync,
@@ -158,6 +160,8 @@ describe('AddToListModal (bulk mode)', () => {
     mockListsState.data = [];
     mockListsState.isLoading = false;
     mockListsState.error = null;
+    mockAddMutateAsync.mockResolvedValue(undefined);
+    mockRemoveMutateAsync.mockResolvedValue(undefined);
     mockDeleteMutateAsync.mockResolvedValue(undefined);
   });
 
@@ -197,6 +201,144 @@ describe('AddToListModal (bulk mode)', () => {
     fireEvent.press(getByTestId('add-to-list-row-watchlist'));
 
     expect(getByTestId('add-to-list-save-button').props.disabled).toBe(false);
+  });
+
+  it('shows bulk mode indicator in subtitle', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByText } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItems={[selected]}
+        sourceListId="favorites"
+        bulkAddMode="copy"
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(getByText('1 selected • Copy mode')).toBeTruthy();
+  });
+
+  it('removes from source list in move mode after successful adds', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItems={[selected]}
+        sourceListId="favorites"
+        bulkAddMode="move"
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockAddMutateAsync).toHaveBeenCalledWith({
+        listId: 'watchlist',
+        mediaItem: selected,
+        listName: 'Watchlist',
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
+        listId: 'favorites',
+        mediaId: selected.id,
+      });
+    });
+  });
+
+  it('does not remove from source list in copy mode', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItems={[selected]}
+        sourceListId="favorites"
+        bulkAddMode="copy"
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockAddMutateAsync).toHaveBeenCalledWith({
+        listId: 'watchlist',
+        mediaItem: selected,
+        listName: 'Watchlist',
+      });
+    });
+
+    expect(mockRemoveMutateAsync).not.toHaveBeenCalled();
   });
 
 });

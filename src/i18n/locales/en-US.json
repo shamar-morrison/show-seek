@@ -432,7 +432,9 @@
     "listsUpdated": "Lists updated",
     "selectedItemsCount": "{{count}} selected",
     "selectedItemsCount_one": "{{count}} selected",
-    "selectedItemsCount_other": "{{count}} selected"
+    "selectedItemsCount_other": "{{count}} selected",
+    "bulkAddModeMove": "Move mode",
+    "bulkAddModeCopy": "Copy mode"
   },
   "rating": {
     "title": "Rate",
@@ -676,6 +678,8 @@
     "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
     "showListIndicators": "Show list indicators",
     "showListIndicatorsDescription": "Display a badge on cards when an item is in any of your lists",
+    "copyInsteadOfMove": "Copy instead of move",
+    "copyInsteadOfMoveDescription": "When bulk adding from a list, keep items in the source list",
     "markPreviousEpisodes": "Mark previous episodes",
     "markPreviousEpisodesDescription": "Automatically mark earlier episodes in a season as watched when you mark an episode",
     "blurPlotSpoilers": "Blur movie and TV plot",

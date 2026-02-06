@@ -20,6 +20,7 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -47,6 +48,7 @@ export default function WatchStatusDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
+  const { preferences } = usePreferences();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
@@ -77,6 +79,7 @@ export default function WatchStatusDetailScreen() {
     clearSelection,
     toastRef,
   } = useMediaGridHandlers(isLoading);
+  const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
 
   // Get list title from config
   const listConfig = useMemo(() => {
@@ -368,6 +371,7 @@ export default function WatchStatusDetailScreen() {
           ref={addToListModalRef}
           mediaItems={selectedMediaItems}
           sourceListId={id}
+          bulkAddMode={bulkAddMode}
           onShowToast={handleShowToast}
           onComplete={clearSelection}
         />

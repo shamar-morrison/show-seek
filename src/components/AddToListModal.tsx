@@ -43,6 +43,7 @@ interface AddToListModalProps {
   mediaItem?: Omit<ListMediaItem, 'addedAt'>;
   mediaItems?: Omit<ListMediaItem, 'addedAt'>[];
   sourceListId?: string;
+  bulkAddMode?: 'move' | 'copy';
   onShowToast?: (message: string) => void;
   onComplete?: () => void;
 }
@@ -109,7 +110,10 @@ const ListItemRow = memo<{
 ListItemRow.displayName = 'ListItemRow';
 
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
-  ({ mediaItem, mediaItems, sourceListId, onShowToast, onComplete }, ref) => {
+  (
+    { mediaItem, mediaItems, sourceListId, bulkAddMode = 'move', onShowToast, onComplete },
+    ref
+  ) => {
     const router = useRouter();
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
@@ -123,6 +127,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     const bulkMediaItems = mediaItems ?? [];
     const isBulkMode = !!sourceListId && bulkMediaItems.length > 0;
+    const bulkModeLabel =
+      bulkAddMode === 'copy' ? t('library.bulkAddModeCopy') : t('library.bulkAddModeMove');
 
     // Local state to track pending selections (toggled independently of Firebase)
     const [pendingSelections, setPendingSelections] = useState<Record<string, boolean>>({});
@@ -392,6 +398,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           continue;
         }
 
+        if (bulkAddMode === 'copy') {
+          continue;
+        }
+
         totalOperations++;
 
         try {
@@ -425,6 +435,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       setIsSaving(false);
     }, [
       addMutation,
+      bulkAddMode,
       bulkMediaItems,
       handleMutationError,
       listsWithCounts,
@@ -552,7 +563,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               <Text style={modalHeaderStyles.title}>{t('media.addToList')}</Text>
               {isBulkMode && (
                 <Text style={styles.subtitle}>
-                  {t('library.selectedItemsCount', { count: bulkMediaItems.length })}
+                  {`${t('library.selectedItemsCount', { count: bulkMediaItems.length })} • ${bulkModeLabel}`}
                 </Text>
               )}
             </View>

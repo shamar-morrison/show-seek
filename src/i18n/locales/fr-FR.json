@@ -338,7 +338,9 @@
     "homeScreenWidgets": "Widgets de l'écran d'accueil",
     "selectedItemsCount": "{{count}} sélectionnés",
     "selectedItemsCount_one": "{{count}} sélectionné",
-    "selectedItemsCount_other": "{{count}} sélectionnés"
+    "selectedItemsCount_other": "{{count}} sélectionnés",
+    "bulkAddModeMove": "Mode déplacement",
+    "bulkAddModeCopy": "Mode copie"
   },
   "rating": {
     "title": "Noter",
@@ -455,6 +457,8 @@
     "autoAddToAlreadyWatchedDescription": "Ajouter automatiquement les films à votre liste Déjà vus lorsque vous les notez ou les marquez comme vus",
     "quickMarkAsWatched": "Marquage rapide comme vu",
     "quickMarkAsWatchedDescription": "Ignorer la sélection de date et utiliser l'heure actuelle pour marquer les films comme vus",
+    "copyInsteadOfMove": "Copier au lieu de déplacer",
+    "copyInsteadOfMoveDescription": "Lors d’un ajout en lot depuis une liste, conserver les éléments dans la liste source",
     "markPreviousEpisodes": "Marquer les épisodes précédents",
     "markPreviousEpisodesDescription": "Marque automatiquement les épisodes précédents d'une saison comme vus lorsque vous marquez un épisode",
     "sendFeedback": "Envoyer des commentaires",
