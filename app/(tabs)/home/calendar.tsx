@@ -1,4 +1,3 @@
-import { CalendarPremiumGate } from '@/src/components/calendar/CalendarPremiumGate';
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -18,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Release Calendar screen displaying upcoming releases from user's tracked content.
  * Shows items from Watchlist, Favorites, and Reminders with future release dates.
- * Premium-only feature - non-premium users see the CalendarPremiumGate.
+ * Free users get a limited preview while premium users get full access.
  */
 export default function CalendarScreen() {
   const { t } = useTranslation();
@@ -27,7 +26,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { accentColor } = useAccentColor();
 
-  const { sections, isLoading, isLoadingEnrichment } = useUpcomingReleases();
+  const { sections, allReleases, isLoading, isLoadingEnrichment } = useUpcomingReleases();
 
   const isGuest = !user || user.isAnonymous;
 
@@ -62,14 +61,8 @@ export default function CalendarScreen() {
     );
   }
 
-  // Premium gate - show teaser for non-premium users
-  // Default to locked view while loading (safe default)
-  if (isPremiumLoading || !isPremium) {
-    return <CalendarPremiumGate />;
-  }
-
   // Loading state
-  if (isLoading) {
+  if (isPremiumLoading || isLoading) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <FullScreenLoading message={t('common.loading')} />
@@ -95,6 +88,9 @@ export default function CalendarScreen() {
     );
   }
 
+  const previewLimit = !isPremium ? 3 : undefined;
+  const showUpgradeOverlay = !isPremium && allReleases.length > 3;
+
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       {/* Enrichment loading indicator */}
@@ -105,7 +101,11 @@ export default function CalendarScreen() {
         </View>
       )}
 
-      <ReleaseCalendar sections={sections} />
+      <ReleaseCalendar
+        sections={sections}
+        previewLimit={previewLimit}
+        showUpgradeOverlay={showUpgradeOverlay}
+      />
     </SafeAreaView>
   );
 }
