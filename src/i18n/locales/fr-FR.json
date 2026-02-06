@@ -48,7 +48,8 @@
     "year": "an",
     "years": "ans",
     "ago": "il y a",
-    "in": "dans"
+    "in": "dans",
+    "move": "Déplacer"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -340,7 +341,16 @@
     "selectedItemsCount_one": "{{count}} sélectionné",
     "selectedItemsCount_other": "{{count}} sélectionnés",
     "bulkAddModeMove": "Mode déplacement",
-    "bulkAddModeCopy": "Mode copie"
+    "bulkAddModeCopy": "Mode copie",
+    "copyToLists": "Copier vers des listes",
+    "moveToLists": "Déplacer vers des listes",
+    "removeItems": "Retirer des éléments",
+    "removeItemsConfirm": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
+    "removeItemsConfirm_one": "Retirer {{count}} élément sélectionné de {{listName}} ?",
+    "removeItemsConfirm_other": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
+    "itemsRemoved": "{{count}} éléments retirés",
+    "itemsRemoved_one": "{{count}} élément retiré",
+    "itemsRemoved_other": "{{count}} éléments retirés"
   },
   "rating": {
     "title": "Noter",
@@ -467,7 +477,9 @@
     "hideTabLabels": "Masquer les libellés des onglets",
     "hideTabLabelsDescription": "Afficher uniquement les icônes dans la barre de navigation",
     "dataSaver": "Mode économie de données",
-    "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données"
+    "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données",
+    "defaultBulkAction": "Action groupée par défaut : {{mode}}",
+    "defaultBulkActionDescription": "Choisissez ce qui se passe lorsque vous ajoutez des éléments en lot depuis une liste."
   },
   "onboarding": {
     "welcome": "Bienvenue sur ShowSeek",

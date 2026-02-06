@@ -73,7 +73,8 @@
     "tba": "Por anunciar",
     "thisMonth": "Este mes",
     "thisWeek": "Esta semana",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "move": "Mover"
   },
   "auth": {
     "signIn": "Iniciar sesión",
@@ -434,7 +435,16 @@
     "watchLists": "Listas de seguimiento",
     "watchProgress": "Progreso de visionado",
     "watchStatusEmptyDescription": "Añade películas y series a tu lista de {{listName}} para verlas aquí.",
-    "widgets": "Widgets"
+    "widgets": "Widgets",
+    "copyToLists": "Copiar a listas",
+    "moveToLists": "Mover a listas",
+    "removeItems": "Quitar elementos",
+    "removeItemsConfirm": "¿Quitar {{count}} elementos seleccionados de {{listName}}?",
+    "removeItemsConfirm_one": "¿Quitar {{count}} elemento seleccionado de {{listName}}?",
+    "removeItemsConfirm_other": "¿Quitar {{count}} elementos seleccionados de {{listName}}?",
+    "itemsRemoved": "{{count}} elementos quitados",
+    "itemsRemoved_one": "{{count}} elemento quitado",
+    "itemsRemoved_other": "{{count}} elementos quitados"
   },
   "rating": {
     "title": "Puntuar",
@@ -716,7 +726,9 @@
     "webAppModal": {
       "title": "Abrir versión web",
       "description": "¿Continuar a la app web de ShowSeek?"
-    }
+    },
+    "defaultBulkAction": "Acción masiva predeterminada: {{mode}}",
+    "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista."
   },
   "onboarding": {
     "welcome": "Bienvenido a ShowSeek",

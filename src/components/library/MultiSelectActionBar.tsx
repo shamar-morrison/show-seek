@@ -1,6 +1,6 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { Check, X } from 'lucide-react-native';
+import { Check, Trash2, X } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,12 +10,16 @@ interface MultiSelectActionBarProps {
   selectedCount: number;
   onAddToList: () => void;
   onCancel: () => void;
+  onRemoveItems: () => void;
+  bulkPrimaryLabel: string;
 }
 
 export function MultiSelectActionBar({
   selectedCount,
   onAddToList,
   onCancel,
+  onRemoveItems,
+  bulkPrimaryLabel,
 }: MultiSelectActionBarProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -28,8 +32,8 @@ export function MultiSelectActionBar({
           {t('library.selectedItemsCount', { count: selectedCount })}
         </Text>
 
-        <View style={styles.buttonsRow}>
-          <Pressable style={styles.cancelButton} onPress={onCancel}>
+        <View style={styles.buttonsRow} testID="multi-select-top-row">
+          <Pressable style={styles.cancelButton} onPress={onCancel} testID="multi-select-cancel-button">
             <X size={18} color={COLORS.textSecondary} />
             <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
@@ -42,11 +46,22 @@ export function MultiSelectActionBar({
             ]}
             onPress={onAddToList}
             disabled={selectedCount === 0}
+            testID="multi-select-primary-button"
           >
             <Check size={18} color={COLORS.white} />
-            <Text style={styles.addButtonText}>{t('media.addToList')}</Text>
+            <Text style={styles.addButtonText}>{bulkPrimaryLabel}</Text>
           </Pressable>
         </View>
+
+        <Pressable
+          style={[styles.removeButton, selectedCount === 0 && styles.removeButtonDisabled]}
+          onPress={onRemoveItems}
+          disabled={selectedCount === 0}
+          testID="multi-select-remove-button"
+        >
+          <Trash2 size={18} color={COLORS.error} />
+          <Text style={styles.removeButtonText}>{t('library.removeItems')}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -108,5 +123,24 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
+  },
+  removeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: BORDER_RADIUS.m,
+    paddingVertical: SPACING.s,
+    backgroundColor: COLORS.surface,
+  },
+  removeButtonDisabled: {
+    opacity: 0.5,
+  },
+  removeButtonText: {
+    color: COLORS.error,
+    fontSize: FONT_SIZE.s,
+    fontWeight: '700',
   },
 });

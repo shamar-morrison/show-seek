@@ -18,7 +18,7 @@ import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { useLists } from '@/src/hooks/useLists';
+import { useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -37,17 +37,18 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Bookmark, Search, Shuffle, SlidersHorizontal } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
 const HEADER_FOOTER_CHROME_HEIGHT = 150;
-const MULTI_SELECT_ACTION_BAR_HEIGHT = 124;
+const MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 export default function WatchStatusDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: lists, isLoading } = useLists();
+  const removeMutation = useRemoveFromList();
   const { preferences } = usePreferences();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
@@ -80,6 +81,8 @@ export default function WatchStatusDetailScreen() {
     toastRef,
   } = useMediaGridHandlers(isLoading);
   const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
+  const bulkPrimaryLabel =
+    bulkAddMode === 'copy' ? t('library.copyToLists') : t('library.moveToLists');
 
   // Get list title from config
   const listConfig = useMemo(() => {
@@ -135,6 +138,55 @@ export default function WatchStatusDetailScreen() {
     sortState.direction !== DEFAULT_SORT_STATE.direction;
 
   const hasActiveFilterState = hasActiveFilters(filterState);
+
+  const handleRemoveSelectedItems = useCallback(() => {
+    if (!id || selectedMediaItems.length === 0 || removeMutation.isPending) return;
+
+    Alert.alert(
+      t('library.removeItems'),
+      t('library.removeItemsConfirm', { count: selectedCount, listName: list?.name ?? listTitle }),
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('library.removeItems'),
+          style: 'destructive',
+          onPress: async () => {
+            const results = await Promise.allSettled(
+              selectedMediaItems.map((item) =>
+                removeMutation.mutateAsync({ listId: id, mediaId: item.id })
+              )
+            );
+            const failed = results.filter(
+              (result): result is PromiseRejectedResult => result.status === 'rejected'
+            ).length;
+
+            if (failed === 0) {
+              handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
+            } else {
+              handleShowToast(
+                t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
+              );
+            }
+
+            clearSelection();
+          },
+        },
+      ]
+    );
+  }, [
+    clearSelection,
+    handleShowToast,
+    id,
+    list?.name,
+    listTitle,
+    removeMutation,
+    selectedCount,
+    selectedMediaItems,
+    t,
+  ]);
 
   // Search functionality
   const {
@@ -410,6 +462,8 @@ export default function WatchStatusDetailScreen() {
         <MultiSelectActionBar
           selectedCount={selectedCount}
           onCancel={clearSelection}
+          onRemoveItems={handleRemoveSelectedItems}
+          bulkPrimaryLabel={bulkPrimaryLabel}
           onAddToList={() => addToListModalRef.current?.present()}
         />
       )}

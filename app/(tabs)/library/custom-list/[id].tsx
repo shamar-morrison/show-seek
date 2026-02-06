@@ -19,7 +19,7 @@ import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { useDeleteList, useLists } from '@/src/hooks/useLists';
+import { useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { useMediaGridHandlers } from '@/src/hooks/useMediaGridHandlers';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -44,7 +44,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Height reserved for header/footer chrome in empty state calculations */
 const HEADER_FOOTER_CHROME_HEIGHT = 150;
-const MULTI_SELECT_ACTION_BAR_HEIGHT = 124;
+const MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 export default function CustomListDetailScreen() {
   const router = useRouter();
@@ -52,6 +52,7 @@ export default function CustomListDetailScreen() {
   const { data: lists, isLoading } = useLists();
   const { preferences } = usePreferences();
   const deleteMutation = useDeleteList();
+  const removeMutation = useRemoveFromList();
   const { requireAuth, isAuthenticated, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
@@ -85,6 +86,8 @@ export default function CustomListDetailScreen() {
     toastRef,
   } = useMediaGridHandlers(isLoading);
   const bulkAddMode = preferences.copyInsteadOfMove ? 'copy' : 'move';
+  const bulkPrimaryLabel =
+    bulkAddMode === 'copy' ? t('library.copyToLists') : t('library.moveToLists');
 
   const list = useMemo(() => {
     return lists?.find((l) => l.id === id);
@@ -185,6 +188,54 @@ export default function CustomListDetailScreen() {
       ]
     );
   }, [list, id, deleteMutation, requireAuth, isAuthenticated, t]);
+
+  const handleRemoveSelectedItems = useCallback(() => {
+    if (!id || selectedMediaItems.length === 0 || removeMutation.isPending) return;
+
+    Alert.alert(
+      t('library.removeItems'),
+      t('library.removeItemsConfirm', { count: selectedCount, listName: list?.name ?? id }),
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('library.removeItems'),
+          style: 'destructive',
+          onPress: async () => {
+            const results = await Promise.allSettled(
+              selectedMediaItems.map((item) =>
+                removeMutation.mutateAsync({ listId: id, mediaId: item.id })
+              )
+            );
+            const failed = results.filter(
+              (result): result is PromiseRejectedResult => result.status === 'rejected'
+            ).length;
+
+            if (failed === 0) {
+              handleShowToast(t('library.itemsRemoved', { count: selectedCount }));
+            } else {
+              handleShowToast(
+                t('library.changesFailedToSave', { failed, total: selectedMediaItems.length })
+              );
+            }
+
+            clearSelection();
+          },
+        },
+      ]
+    );
+  }, [
+    clearSelection,
+    handleShowToast,
+    id,
+    list?.name,
+    removeMutation,
+    selectedCount,
+    selectedMediaItems,
+    t,
+  ]);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -489,6 +540,8 @@ export default function CustomListDetailScreen() {
         <MultiSelectActionBar
           selectedCount={selectedCount}
           onCancel={clearSelection}
+          onRemoveItems={handleRemoveSelectedItems}
+          bulkPrimaryLabel={bulkPrimaryLabel}
           onAddToList={() => addToListModalRef.current?.present()}
         />
       )}

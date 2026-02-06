@@ -127,8 +127,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
     const bulkMediaItems = mediaItems ?? [];
     const isBulkMode = !!sourceListId && bulkMediaItems.length > 0;
-    const bulkModeLabel =
-      bulkAddMode === 'copy' ? t('library.bulkAddModeCopy') : t('library.bulkAddModeMove');
+    const bulkHeaderTitle =
+      isBulkMode && bulkAddMode === 'copy'
+        ? t('library.copyToLists')
+        : isBulkMode
+          ? t('library.moveToLists')
+          : t('media.addToList');
 
     // Local state to track pending selections (toggled independently of Firebase)
     const [pendingSelections, setPendingSelections] = useState<Record<string, boolean>>({});
@@ -560,10 +564,10 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         >
           <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
             <View style={modalHeaderStyles.header}>
-              <Text style={modalHeaderStyles.title}>{t('media.addToList')}</Text>
+              <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
               {isBulkMode && (
                 <Text style={styles.subtitle}>
-                  {`${t('library.selectedItemsCount', { count: bulkMediaItems.length })} • ${bulkModeLabel}`}
+                  {t('library.selectedItemsCount', { count: bulkMediaItems.length })}
                 </Text>
               )}
             </View>

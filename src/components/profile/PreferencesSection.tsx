@@ -49,6 +49,8 @@ export function PreferencesSection({
 }: PreferencesSectionProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const bulkActionModeLabel = preferences?.copyInsteadOfMove ? t('common.copy') : t('common.move');
+  const defaultBulkActionLabel = t('profile.defaultBulkAction', { mode: bulkActionModeLabel });
 
   const isItemUpdating = (key: keyof UserPreferences) =>
     isUpdating && updatingPreferenceKey === key;
@@ -130,8 +132,8 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
-        label={t('profile.copyInsteadOfMove')}
-        subtitle={t('profile.copyInsteadOfMoveDescription')}
+        label={defaultBulkActionLabel}
+        subtitle={t('profile.defaultBulkActionDescription')}
         value={!!preferences?.copyInsteadOfMove}
         onValueChange={(value) => handleUpdate('copyInsteadOfMove', value)}
         loading={isLoading || isItemUpdating('copyInsteadOfMove')}

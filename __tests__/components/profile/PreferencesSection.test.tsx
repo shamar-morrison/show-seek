@@ -23,9 +23,9 @@ describe('PreferencesSection', () => {
     expect(getAllByTestId('preference-spinner')).toHaveLength(1);
   });
 
-  it('renders copy-vs-move preference and updates it', () => {
+  it('renders default bulk action preference and updates it', () => {
     const onUpdate = jest.fn();
-    const { getByText, getAllByTestId } = renderWithProviders(
+    const { getByText, getAllByTestId, rerender } = renderWithProviders(
       <PreferencesSection
         preferences={DEFAULT_PREFERENCES}
         isLoading={false}
@@ -38,11 +38,26 @@ describe('PreferencesSection', () => {
       />
     );
 
-    expect(getByText('Copy instead of move')).toBeTruthy();
+    expect(getByText('Default bulk action: Move')).toBeTruthy();
 
     const switches = getAllByTestId('preference-switch');
     fireEvent(switches[3], 'valueChange', true);
 
     expect(onUpdate).toHaveBeenCalledWith('copyInsteadOfMove', true);
+
+    rerender(
+      <PreferencesSection
+        preferences={{ ...DEFAULT_PREFERENCES, copyInsteadOfMove: true }}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Default bulk action: Copy')).toBeTruthy();
   });
 });

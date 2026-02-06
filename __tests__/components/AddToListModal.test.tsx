@@ -203,7 +203,7 @@ describe('AddToListModal (bulk mode)', () => {
     expect(getByTestId('add-to-list-save-button').props.disabled).toBe(false);
   });
 
-  it('shows bulk mode indicator in subtitle', async () => {
+  it('shows copy header in bulk copy mode', async () => {
     const selected = createMediaItem(1);
 
     mockListsState.data = [
@@ -235,7 +235,64 @@ describe('AddToListModal (bulk mode)', () => {
       await ref.current?.present();
     });
 
-    expect(getByText('1 selected • Copy mode')).toBeTruthy();
+    expect(getByText('Copy to lists')).toBeTruthy();
+  });
+
+  it('shows move header in bulk move mode', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByText } = render(
+      <AddToListModal
+        ref={ref}
+        mediaItems={[selected]}
+        sourceListId="favorites"
+        bulkAddMode="move"
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(getByText('Move to lists')).toBeTruthy();
+  });
+
+  it('keeps single-item mode header as Add to List', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByText } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(getByText('Add to List')).toBeTruthy();
   });
 
   it('removes from source list in move mode after successful adds', async () => {

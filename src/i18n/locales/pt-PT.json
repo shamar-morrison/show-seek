@@ -73,7 +73,8 @@
     "tba": "A confirmar",
     "thisMonth": "Este mês",
     "thisWeek": "Esta semana",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "move": "Mover"
   },
   "auth": {
     "signIn": "Iniciar sessão",
@@ -434,7 +435,16 @@
     "selectedItemsCount_other": "{{count}} selecionados",
     "bulkAddModeMove": "Modo mover",
     "bulkAddModeCopy": "Modo copiar",
-    "collectionProgress": "Progresso da coleção"
+    "collectionProgress": "Progresso da coleção",
+    "copyToLists": "Copiar para listas",
+    "moveToLists": "Mover para listas",
+    "removeItems": "Remover itens",
+    "removeItemsConfirm": "Remover {{count}} itens selecionados de {{listName}}?",
+    "removeItemsConfirm_one": "Remover {{count}} item selecionado de {{listName}}?",
+    "removeItemsConfirm_other": "Remover {{count}} itens selecionados de {{listName}}?",
+    "itemsRemoved": "{{count}} itens removidos",
+    "itemsRemoved_one": "{{count}} item removido",
+    "itemsRemoved_other": "{{count}} itens removidos"
   },
   "rating": {
     "title": "Avaliar",
@@ -716,7 +726,9 @@
     "webAppModal": {
       "description": "Continuar para a aplicação web do ShowSeek?",
       "title": "Abrir aplicação web"
-    }
+    },
+    "defaultBulkAction": "Ação em massa predefinida: {{mode}}",
+    "defaultBulkActionDescription": "Escolha o que acontece quando adiciona itens em massa a partir de uma lista."
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",
