@@ -22,6 +22,7 @@ import { useRatings } from '@/src/hooks/useRatings';
 import { useSeasonScroll } from '@/src/hooks/useSeasonScroll';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -157,11 +158,7 @@ export default function TVSeasonsScreen() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return t('common.tba');
-    return new Date(dateString).toLocaleDateString(i18n.language, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return formatTmdbDate(dateString);
   };
 
   return (

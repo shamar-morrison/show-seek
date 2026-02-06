@@ -33,6 +33,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -384,13 +385,7 @@ export default function EpisodeDetailScreen() {
             {episode.air_date && (
               <View style={styles.metaItem}>
                 <Calendar size={16} color={COLORS.textSecondary} />
-                <Text style={styles.metaText}>
-                  {new Date(episode.air_date).toLocaleDateString(i18n.language, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
+                <Text style={styles.metaText}>{formatTmdbDate(episode.air_date)}</Text>
               </View>
             )}
             {episode.runtime && (
