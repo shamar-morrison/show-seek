@@ -330,12 +330,19 @@ export default function MovieDetailScreen() {
     videos.find((v) => v.type === 'Trailer' && v.official) ||
     videos.find((v) => v.type === 'Trailer') ||
     videos[0];
-  const similarMovies = similarQuery.data?.results.slice(0, 10) || [];
+
   const watchProviders = watchProvidersQuery.data;
   const watchProvidersLink = watchProvidersQuery.data?.link;
   const images = imagesQuery.data;
+  const lightboxDisplayImages =
+    images?.backdrops
+      .slice(0, 10)
+      .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.large) || '') || [];
+  const lightboxDownloadImages =
+    images?.backdrops
+      .slice(0, 10)
+      .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original) || '') || [];
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
-  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(movie.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
   const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
@@ -840,11 +847,9 @@ export default function MovieDetailScreen() {
       <ImageLightbox
         visible={lightboxVisible}
         onClose={() => setLightboxVisible(false)}
-        images={
-          images?.backdrops
-            .slice(0, 10)
-            .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.large) || '') || []
-        }
+        images={lightboxDisplayImages}
+        downloadImages={lightboxDownloadImages}
+        onShowToast={(message) => toastRef.current?.show(message)}
         initialIndex={lightboxIndex}
       />
 
