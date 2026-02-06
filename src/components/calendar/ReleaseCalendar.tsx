@@ -7,30 +7,69 @@ import { toLocalDateKey } from '@/src/utils/dateUtils';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Bell, Calendar, Film, Tv } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import { Bell, Calendar, CrownIcon, Film, Tv } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
 
 interface ReleaseCalendarProps {
   sections: ReleaseSection[];
   isLoading?: boolean;
+  previewLimit?: number;
+  showUpgradeOverlay?: boolean;
+  onUpgradePress?: () => void;
+}
+
+function limitSections(sections: ReleaseSection[], previewLimit?: number): ReleaseSection[] {
+  if (previewLimit === undefined) return sections;
+  if (previewLimit <= 0) return [];
+
+  let remaining = previewLimit;
+  const limitedSections: ReleaseSection[] = [];
+
+  for (const section of sections) {
+    if (remaining <= 0) break;
+
+    const sectionItems = section.data.slice(0, remaining);
+    if (sectionItems.length === 0) continue;
+
+    limitedSections.push({
+      ...section,
+      data: sectionItems,
+    });
+
+    remaining -= sectionItems.length;
+  }
+
+  return limitedSections;
 }
 
 /**
  * Vertical agenda/timeline calendar component for displaying upcoming releases.
  * Features a horizontal date strip selector and grouped section list.
  */
-export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
+export function ReleaseCalendar({
+  sections,
+  isLoading,
+  previewLimit,
+  showUpgradeOverlay = false,
+  onUpgradePress,
+}: ReleaseCalendarProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { accentColor } = useAccentColor();
   const styles = useStyles();
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const visibleSections = useMemo(
+    () => limitSections(sections, previewLimit),
+    [sections, previewLimit]
+  );
 
   // Get all unique dates for the date strip
   const uniqueDates = useMemo(() => {
     const dateMap = new Map<string, Date>();
-    sections.forEach((section) => {
+    visibleSections.forEach((section) => {
       section.data.forEach((release) => {
         const dateKey = toLocalDateKey(release.releaseDate);
         if (!dateMap.has(dateKey)) {
@@ -39,16 +78,14 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
       });
     });
     return Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime());
-  }, [sections]);
-
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  }, [visibleSections]);
 
   // Filter sections based on selected date
   const filteredSections = useMemo(() => {
-    if (!selectedDate) return sections;
+    if (!selectedDate) return visibleSections;
 
     const selectedDateStr = toLocalDateKey(selectedDate);
-    return sections
+    return visibleSections
       .map((section) => ({
         ...section,
         data: section.data.filter((release) => {
@@ -57,7 +94,18 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
         }),
       }))
       .filter((section) => section.data.length > 0);
-  }, [sections, selectedDate]);
+  }, [visibleSections, selectedDate]);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+
+    const selectedDateKey = toLocalDateKey(selectedDate);
+    const hasSelectedDate = uniqueDates.some((date) => toLocalDateKey(date) === selectedDateKey);
+
+    if (!hasSelectedDate) {
+      setSelectedDate(null);
+    }
+  }, [selectedDate, uniqueDates]);
 
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate((prev) => {
@@ -78,6 +126,15 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
     [router]
   );
 
+  const handleUpgradePress = useCallback(() => {
+    if (onUpgradePress) {
+      onUpgradePress();
+      return;
+    }
+
+    router.push('/premium');
+  }, [onUpgradePress, router]);
+
   const renderItem = useCallback(
     ({ item }: { item: UpcomingRelease }) => (
       <ReleaseCard release={item} onPress={() => handleReleasePress(item)} />
@@ -96,6 +153,30 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
   );
 
   const keyExtractor = useCallback((item: UpcomingRelease) => item.uniqueKey, []);
+  const listFooter = useMemo(() => {
+    if (!showUpgradeOverlay) return null;
+
+    return (
+      <View style={styles.upgradeOverlayContainer} testID="release-calendar-upgrade-overlay">
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.75)']}
+          locations={[0, 0.6, 1]}
+          style={styles.upgradeShadow}
+        />
+        <View style={styles.upgradeCard}>
+          <CrownIcon size={30} color={accentColor} style={styles.upgradeIcon} />
+          <Text style={styles.upgradeTitle}>{t('calendar.upgradeForFullExperience')}</Text>
+          <Pressable
+            testID="release-calendar-upgrade-button"
+            style={({ pressed }) => [styles.upgradeButton, pressed && styles.upgradeButtonPressed]}
+            onPress={handleUpgradePress}
+          >
+            <Text style={styles.upgradeButtonText}>{t('calendar.upgradeToPremium')}</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }, [handleUpgradePress, showUpgradeOverlay, styles, t]);
 
   if (isLoading) {
     return (
@@ -118,6 +199,7 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
 
       {/* Section List */}
       <SectionList<UpcomingRelease, ReleaseSection>
+        testID="release-calendar-section-list"
         style={styles.content}
         sections={filteredSections}
         renderSectionHeader={renderSectionHeader}
@@ -128,6 +210,7 @@ export function ReleaseCalendar({ sections, isLoading }: ReleaseCalendarProps) {
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
+        ListFooterComponent={listFooter}
       />
     </View>
   );
@@ -176,6 +259,7 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
 
           return (
             <Pressable
+              testID={`release-calendar-date-item-${dateStr}`}
               key={dateStr}
               onPress={() => onSelectDate(date)}
               style={[
@@ -311,201 +395,242 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
 
 const useStyles = () =>
   useThemedStyles(({ accentColor }) => ({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-  },
-  dateStripContainer: {
-    flexShrink: 0,
-  },
-  dateStrip: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  dateStripContent: {
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.m,
-    gap: SPACING.s,
-  },
-  dateItem: {
-    height: 44,
-    paddingHorizontal: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  dateItemSelected: {
-    backgroundColor: accentColor,
-  },
-  dateItemToday: {
-    borderWidth: 2,
-    borderColor: accentColor,
-  },
-  dateLabel: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.text,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  dateLabelSelected: {
-    color: COLORS.white,
-  },
-  dateLabelToday: {
-    color: accentColor,
-  },
-  listContent: {
-    paddingBottom: SPACING.xl,
-  },
-  content: {
-    flex: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.m,
-    paddingTop: SPACING.m,
-    paddingBottom: SPACING.s,
-    backgroundColor: COLORS.background,
-    gap: SPACING.s,
-  },
-  sectionHeaderWithMargin: {
-    marginTop: SPACING.m,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.l,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  itemSeparator: {
-    height: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.m,
-  },
-  releaseCard: {
-    flexDirection: 'row',
-    marginHorizontal: SPACING.m,
-    borderRadius: BORDER_RADIUS.l,
-    overflow: 'hidden',
-    backgroundColor: COLORS.surface,
-  },
-  releaseCardPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  dateColumn: {
-    width: 60,
-    paddingVertical: SPACING.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceLight,
-  },
-  dateColumnToday: {
-    backgroundColor: accentColor,
-  },
-  dateDay: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  dateDayHighlight: {
-    color: COLORS.white,
-  },
-  dateMonth: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  dateMonthHighlight: {
-    color: COLORS.white,
-  },
-  todayBadge: {
-    marginTop: SPACING.xs,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.s,
-  },
-  todayBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: accentColor,
-  },
-  mediaInfo: {
-    flex: 1,
-    height: 100,
-    position: 'relative',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  placeholderBackdrop: {
-    backgroundColor: COLORS.surfaceLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  textOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: SPACING.s,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  releaseTitle: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
-    color: COLORS.white,
-    flex: 1,
-  },
-  reminderBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: SPACING.xs,
-  },
-  episodeInfo: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text,
-    opacity: 0.7,
-    marginTop: SPACING.xs / 2,
-  },
-  countdownRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: SPACING.xs,
-  },
-  countdown: {
-    fontSize: FONT_SIZE.xs,
-    color: accentColor,
-    fontWeight: '600',
-  },
-  mediaTypeBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-}));
+    container: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: COLORS.textSecondary,
+      fontSize: FONT_SIZE.m,
+    },
+    dateStripContainer: {
+      flexShrink: 0,
+    },
+    dateStrip: {
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.surfaceLight,
+    },
+    dateStripContent: {
+      paddingHorizontal: SPACING.m,
+      paddingVertical: SPACING.m,
+      gap: SPACING.s,
+    },
+    dateItem: {
+      height: 44,
+      paddingHorizontal: SPACING.m,
+      borderRadius: BORDER_RADIUS.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.surface,
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    dateItemSelected: {
+      backgroundColor: accentColor,
+    },
+    dateItemToday: {
+      borderWidth: 2,
+      borderColor: accentColor,
+    },
+    dateLabel: {
+      fontSize: FONT_SIZE.s,
+      color: COLORS.text,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    dateLabelSelected: {
+      color: COLORS.white,
+    },
+    dateLabelToday: {
+      color: accentColor,
+    },
+    listContent: {
+      paddingBottom: SPACING.xl,
+    },
+    content: {
+      flex: 1,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: SPACING.m,
+      paddingTop: SPACING.m,
+      paddingBottom: SPACING.s,
+      backgroundColor: COLORS.background,
+      gap: SPACING.s,
+    },
+    upgradeIcon: {
+      marginTop: -30,
+    },
+    sectionHeaderWithMargin: {
+      marginTop: SPACING.m,
+    },
+    sectionTitle: {
+      fontSize: FONT_SIZE.l,
+      fontWeight: 'bold',
+      color: COLORS.text,
+    },
+    itemSeparator: {
+      height: SPACING.s,
+    },
+    sectionSeparator: {
+      height: SPACING.m,
+    },
+    releaseCard: {
+      flexDirection: 'row',
+      marginHorizontal: SPACING.m,
+      borderRadius: BORDER_RADIUS.l,
+      overflow: 'hidden',
+      backgroundColor: COLORS.surface,
+    },
+    releaseCardPressed: {
+      opacity: ACTIVE_OPACITY,
+    },
+    dateColumn: {
+      width: 60,
+      paddingVertical: SPACING.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.surfaceLight,
+    },
+    dateColumnToday: {
+      backgroundColor: accentColor,
+    },
+    dateDay: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: COLORS.text,
+    },
+    dateDayHighlight: {
+      color: COLORS.white,
+    },
+    dateMonth: {
+      fontSize: FONT_SIZE.xs,
+      color: COLORS.textSecondary,
+      fontWeight: '600',
+    },
+    dateMonthHighlight: {
+      color: COLORS.white,
+    },
+    todayBadge: {
+      marginTop: SPACING.xs,
+      paddingHorizontal: SPACING.xs,
+      paddingVertical: 2,
+      backgroundColor: COLORS.white,
+      borderRadius: BORDER_RADIUS.s,
+    },
+    todayBadgeText: {
+      fontSize: 10,
+      fontWeight: 'bold',
+      color: accentColor,
+    },
+    mediaInfo: {
+      flex: 1,
+      height: 100,
+      position: 'relative',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    placeholderBackdrop: {
+      backgroundColor: COLORS.surfaceLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    gradient: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    textOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: SPACING.s,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    releaseTitle: {
+      fontSize: FONT_SIZE.m,
+      fontWeight: 'bold',
+      color: COLORS.white,
+      flex: 1,
+    },
+    reminderBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: SPACING.xs,
+    },
+    episodeInfo: {
+      fontSize: FONT_SIZE.xs,
+      color: COLORS.text,
+      opacity: 0.7,
+      marginTop: SPACING.xs / 2,
+    },
+    countdownRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: SPACING.xs,
+    },
+    countdown: {
+      fontSize: FONT_SIZE.xs,
+      color: accentColor,
+      fontWeight: '600',
+    },
+    mediaTypeBadge: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    upgradeOverlayContainer: {
+      marginTop: SPACING.l,
+      marginHorizontal: SPACING.m,
+      borderRadius: BORDER_RADIUS.l,
+      overflow: 'hidden',
+      backgroundColor: COLORS.surface,
+    },
+    upgradeShadow: {
+      height: 72,
+      width: '100%',
+    },
+    upgradeCard: {
+      backgroundColor: 'rgba(0,0,0,0.78)',
+      paddingHorizontal: SPACING.l,
+      paddingBottom: SPACING.l,
+      alignItems: 'center',
+      gap: SPACING.m,
+    },
+    upgradeTitle: {
+      fontSize: FONT_SIZE.m,
+      fontWeight: '700',
+      color: COLORS.white,
+      textAlign: 'center',
+    },
+    upgradeButton: {
+      backgroundColor: accentColor,
+      paddingHorizontal: SPACING.l,
+      paddingVertical: SPACING.s + 2,
+      borderRadius: BORDER_RADIUS.m,
+    },
+    upgradeButtonPressed: {
+      opacity: ACTIVE_OPACITY,
+    },
+    upgradeButtonText: {
+      color: COLORS.white,
+      fontSize: FONT_SIZE.s,
+      fontWeight: '700',
+    },
+  }));

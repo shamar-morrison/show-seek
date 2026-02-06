@@ -556,7 +556,9 @@
     "comingSoon": "Bientôt disponible",
     "seasonEpisode": "Saison {{season}} Épisode {{episode}}",
     "signInRequired": "Connectez-vous pour voir votre calendrier",
-    "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit"
+    "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit",
+    "upgradeForFullExperience": "Passez à Premium pour l'expérience complète",
+    "upgradeToPremium": "Passer à Premium"
   },
   "mood": {
     "picker": "Choix d'ambiance",
