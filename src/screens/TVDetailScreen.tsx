@@ -341,7 +341,7 @@ export default function TVDetailScreen() {
         scrollY={scrollY}
         rightAction={
           <HeaderIconButton onPress={() => setOpenWithDrawerVisible(true)}>
-            <ExternalLink size={20} color={COLORS.white} />
+            <ExternalLink size={22} color={COLORS.white} />
           </HeaderIconButton>
         }
       />
