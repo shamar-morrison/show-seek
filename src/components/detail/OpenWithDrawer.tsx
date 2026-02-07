@@ -1,5 +1,5 @@
-import { getTraktSlugByTmdbId } from '@/src/api/trakt';
 import { tmdbApi } from '@/src/api/tmdb';
+import { getTraktSlugByTmdbId } from '@/src/api/trakt';
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
@@ -9,15 +9,17 @@ import {
   OpenWithServiceId,
 } from '@/src/utils/openWithLinks';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
-import { Film, Globe, Search } from 'lucide-react-native';
+import { Globe, Search } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Linking, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
 const imdbLogo = require('../../../assets/images/imdb.png');
+const lbLogo = require('../../../assets/images/lb.png');
 const rtLogo = require('../../../assets/images/rt.png');
 const mcLogo = require('../../../assets/images/mc.png');
+const tmdbLogo = require('../../../assets/images/tmdb.png');
 
 interface OpenWithDrawerProps {
   visible: boolean;
@@ -65,7 +67,12 @@ export default function OpenWithDrawer({
       {
         id: 'tmdb',
         label: t('media.tmdb'),
-        icon: <Film size={22} color={COLORS.text} />,
+        icon: <Image source={tmdbLogo} style={styles.logo} resizeMode="contain" />,
+      },
+      {
+        id: 'letterboxd',
+        label: t('media.letterboxd'),
+        icon: <Image source={lbLogo} style={styles.logo} resizeMode="contain" />,
       },
       {
         id: 'rottenTomatoes',
@@ -241,8 +248,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   logo: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
   },
   imdbLogo: {
     width: 46,

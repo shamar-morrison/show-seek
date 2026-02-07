@@ -92,6 +92,7 @@ describe('OpenWithDrawer', () => {
     expect(getByTestId('open-with-item-imdb')).toBeTruthy();
     expect(getByTestId('open-with-item-trakt')).toBeTruthy();
     expect(getByTestId('open-with-item-tmdb')).toBeTruthy();
+    expect(getByTestId('open-with-item-letterboxd')).toBeTruthy();
     expect(getByTestId('open-with-item-rottenTomatoes')).toBeTruthy();
     expect(getByTestId('open-with-item-metacritic')).toBeTruthy();
     expect(getByTestId('open-with-item-wikipedia')).toBeTruthy();
@@ -118,6 +119,7 @@ describe('OpenWithDrawer', () => {
     fireEvent.press(getByTestId('open-with-item-imdb'));
     fireEvent.press(getByTestId('open-with-item-trakt'));
     fireEvent.press(getByTestId('open-with-item-tmdb'));
+    fireEvent.press(getByTestId('open-with-item-letterboxd'));
     fireEvent.press(getByTestId('open-with-item-rottenTomatoes'));
     fireEvent.press(getByTestId('open-with-item-metacritic'));
     fireEvent.press(getByTestId('open-with-item-wikipedia'));
@@ -127,6 +129,9 @@ describe('OpenWithDrawer', () => {
       expect(Linking.openURL).toHaveBeenCalledWith('https://www.imdb.com/title/tt0137523/');
       expect(Linking.openURL).toHaveBeenCalledWith('trakt://movies/fight-club-1999');
       expect(Linking.openURL).toHaveBeenCalledWith('https://www.themoviedb.org/movie/550');
+      expect(Linking.openURL).toHaveBeenCalledWith(
+        'https://letterboxd.com/search/Fight%20Club%201999/'
+      );
       expect(Linking.openURL).toHaveBeenCalledWith(
         'https://www.rottentomatoes.com/search?search=Fight%20Club%201999'
       );

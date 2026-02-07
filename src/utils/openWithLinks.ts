@@ -2,6 +2,7 @@ export type OpenWithServiceId =
   | 'imdb'
   | 'trakt'
   | 'tmdb'
+  | 'letterboxd'
   | 'rottenTomatoes'
   | 'metacritic'
   | 'wikipedia'
@@ -39,6 +40,8 @@ export const buildOpenWithFallbackUrl = ({
       return `https://trakt.tv/search/${traktType}?query=${query}`;
     case 'tmdb':
       return `https://www.themoviedb.org/search/${mediaType}?query=${query}`;
+    case 'letterboxd':
+      return `https://letterboxd.com/search/${query}/`;
     case 'rottenTomatoes':
       return `https://www.rottentomatoes.com/search?search=${query}`;
     case 'metacritic':

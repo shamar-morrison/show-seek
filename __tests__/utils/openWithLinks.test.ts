@@ -71,12 +71,19 @@ describe('openWithLinks', () => {
     expect(tvUrl).toBe('https://www.themoviedb.org/tv/1399');
   });
 
-  it('encodes query for wikipedia, rotten tomatoes, metacritic, and web search fallback URLs', () => {
+  it('encodes query for letterboxd, wikipedia, rotten tomatoes, metacritic, and web search fallback URLs', () => {
     const params = {
       mediaType: 'movie' as const,
       title: 'Spider-Man: No Way Home',
       year: '2021',
     };
+
+    expect(
+      buildOpenWithFallbackUrl({
+        serviceId: 'letterboxd',
+        ...params,
+      })
+    ).toBe('https://letterboxd.com/search/Spider-Man%3A%20No%20Way%20Home%202021/');
 
     expect(
       buildOpenWithFallbackUrl({
