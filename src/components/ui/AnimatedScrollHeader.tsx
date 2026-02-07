@@ -9,6 +9,7 @@ interface AnimatedScrollHeaderProps {
   subtitle?: string;
   onBackPress: () => void;
   scrollY: Animated.Value;
+  rightAction?: React.ReactNode;
 }
 
 export function AnimatedScrollHeader({
@@ -16,6 +17,7 @@ export function AnimatedScrollHeader({
   subtitle,
   onBackPress,
   scrollY,
+  rightAction,
 }: AnimatedScrollHeaderProps) {
   const SCROLL_THRESHOLD = 175;
   const HEADER_HEIGHT = 56;
@@ -63,7 +65,11 @@ export function AnimatedScrollHeader({
               </Text>
             )}
           </View>
-          <View style={styles.spacer} />
+          {rightAction ? (
+            <View style={styles.rightAction}>{rightAction}</View>
+          ) : (
+            <View style={styles.spacer} />
+          )}
         </View>
       </SafeAreaView>
     </Animated.View>
@@ -109,5 +115,10 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 48, // Balance layout (same as back button width)
+  },
+  rightAction: {
+    minWidth: 44,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
 });

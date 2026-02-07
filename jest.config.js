@@ -9,6 +9,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/$1',
     // Mock react-native entirely for unit testing pure functions
     '^react-native$': '<rootDir>/__mocks__/react-native.js',
+    '\\.(png|jpg|jpeg|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
   },
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',

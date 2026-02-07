@@ -26,7 +26,7 @@ export function ShareButton({ id, title, mediaType, onShowToast }: ShareButtonPr
         onPress={handleShare}
         activeOpacity={ACTIVE_OPACITY}
       >
-        <Share2 size={24} color={COLORS.white} />
+        <Share2 size={21} color={COLORS.white} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -40,8 +40,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerButton: {
-    padding: SPACING.m,
-    marginRight: SPACING.s,
+    padding: 14,
+    marginRight: 6,
     backgroundColor: COLORS.overlay,
     borderRadius: BORDER_RADIUS.round,
   },
