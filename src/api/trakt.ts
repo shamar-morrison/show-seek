@@ -50,6 +50,37 @@ export async function getTraktId(
 }
 
 /**
+ * Look up the Trakt slug from a TMDB ID
+ */
+export async function getTraktSlugByTmdbId(
+  tmdbId: number,
+  mediaType: 'movie' | 'tv'
+): Promise<string | null> {
+  try {
+    const type = mediaType === 'tv' ? 'show' : 'movie';
+    const response = await traktClient.get<TraktSearchResult[]>(`/search/tmdb/${tmdbId}`, {
+      params: { type },
+    });
+
+    if (response.data.length === 0) {
+      return null;
+    }
+
+    const result = response.data[0];
+    if (type === 'movie' && result.movie) {
+      return result.movie.ids.slug;
+    } else if (type === 'show' && result.show) {
+      return result.show.ids.slug;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Trakt API] Failed to lookup Trakt slug:', error);
+    return null;
+  }
+}
+
+/**
  * Fetch reviews for a movie or show from Trakt
  */
 export async function getTraktReviews(

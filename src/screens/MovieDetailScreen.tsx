@@ -9,6 +9,7 @@ import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsS
 import { MarkAsWatchedButton } from '@/src/components/detail/MarkAsWatchedButton';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
@@ -25,7 +26,9 @@ import ShareCardModal from '@/src/components/ShareCardModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -73,7 +76,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Clock, Globe, Star } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Clock, ExternalLink, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -163,6 +166,7 @@ export default function MovieDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [watchedModalVisible, setWatchedModalVisible] = useState(false);
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -524,6 +528,11 @@ export default function MovieDetailScreen() {
         title={movie.title}
         onBackPress={() => router.back()}
         scrollY={scrollY}
+        rightAction={
+          <HeaderIconButton onPress={() => setOpenWithDrawerVisible(true)}>
+            <ExternalLink size={22} color={COLORS.white} />
+          </HeaderIconButton>
+        }
       />
 
       <Animated.ScrollView
@@ -550,7 +559,7 @@ export default function MovieDetailScreen() {
               onPress={() => router.back()}
               activeOpacity={ACTIVE_OPACITY}
             >
-              <ArrowLeft size={24} color={COLORS.white} />
+              <ArrowLeft size={22} color={COLORS.white} />
             </TouchableOpacity>
           </SafeAreaView>
 
@@ -560,6 +569,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
+          <OpenWithButton onPress={() => setOpenWithDrawerVisible(true)} />
 
           <View style={styles.posterContainer}>
             <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
@@ -851,6 +861,16 @@ export default function MovieDetailScreen() {
         downloadImages={lightboxDownloadImages}
         onShowToast={(message) => toastRef.current?.show(message)}
         initialIndex={lightboxIndex}
+      />
+
+      <OpenWithDrawer
+        visible={openWithDrawerVisible}
+        onClose={() => setOpenWithDrawerVisible(false)}
+        mediaId={movieId}
+        mediaType="movie"
+        title={movie.title}
+        year={(displayReleaseDate || movie.release_date)?.split('-')[0] || null}
+        onShowToast={(message) => toastRef.current?.show(message)}
       />
 
       {movie && (

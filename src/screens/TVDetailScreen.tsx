@@ -7,6 +7,7 @@ import { useDetailStyles } from '@/src/components/detail/detailStyles';
 import { ExternalRatingsSection } from '@/src/components/detail/ExternalRatingsSection';
 import { MediaActionButtons } from '@/src/components/detail/MediaActionButtons';
 import { MediaDetailsInfo } from '@/src/components/detail/MediaDetailsInfo';
+import OpenWithDrawer from '@/src/components/detail/OpenWithDrawer';
 import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RecommendationsSection } from '@/src/components/detail/RecommendationsSection';
 import { ReviewsSection } from '@/src/components/detail/ReviewsSection';
@@ -25,6 +26,7 @@ import TVReminderModal from '@/src/components/TVReminderModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
@@ -33,7 +35,6 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
@@ -45,7 +46,6 @@ import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissio
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
-import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
 import {
   useCancelReminder,
   useCreateReminder,
@@ -53,6 +53,8 @@ import {
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
+import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
+import { errorStyles } from '@/src/styles/errorStyles';
 import {
   getListColor,
   getListIconComponent,
@@ -63,7 +65,8 @@ import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ExternalLink } from 'lucide-react-native';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
@@ -87,6 +90,7 @@ export default function TVDetailScreen() {
   const [shouldLoadTraktReviews, setShouldLoadTraktReviews] = useState(false);
   const [shouldLoadRecommendations, setShouldLoadRecommendations] = useState(false);
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
+  const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -331,7 +335,16 @@ export default function TVDetailScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <AnimatedScrollHeader title={show.name} onBackPress={() => router.back()} scrollY={scrollY} />
+      <AnimatedScrollHeader
+        title={show.name}
+        onBackPress={() => router.back()}
+        scrollY={scrollY}
+        rightAction={
+          <HeaderIconButton onPress={() => setOpenWithDrawerVisible(true)}>
+            <ExternalLink size={22} color={COLORS.white} />
+          </HeaderIconButton>
+        }
+      />
 
       <Animated.ScrollView
         style={styles.scrollView}
@@ -353,6 +366,7 @@ export default function TVDetailScreen() {
           showName={show.name}
           showId={tvId}
           onBackPress={() => router.back()}
+          onOpenWithPress={() => setOpenWithDrawerVisible(true)}
           onShowToast={(msg) => toastRef.current?.show(msg)}
         />
 
@@ -367,10 +381,7 @@ export default function TVDetailScreen() {
           {/* Action buttons */}
           <MediaActionButtons
             onAddToList={() =>
-              requireAuth(
-                () => addToListModalRef.current?.present(),
-                t('discover.signInToAdd')
-              )
+              requireAuth(() => addToListModalRef.current?.present(), t('discover.signInToAdd'))
             }
             onRate={() =>
               requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
@@ -586,6 +597,16 @@ export default function TVDetailScreen() {
         downloadImages={lightboxDownloadImages}
         onShowToast={(message) => toastRef.current?.show(message)}
         initialIndex={lightboxIndex}
+      />
+
+      <OpenWithDrawer
+        visible={openWithDrawerVisible}
+        onClose={() => setOpenWithDrawerVisible(false)}
+        mediaId={tvId}
+        mediaType="tv"
+        title={show.name}
+        year={show.first_air_date?.split('-')[0] || null}
+        onShowToast={(message) => toastRef.current?.show(message)}
       />
 
       {show && (
