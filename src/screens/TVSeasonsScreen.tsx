@@ -35,7 +35,7 @@ export default function TVSeasonsScreen() {
   const styles = useSeasonScreenStyles();
   const { id, season } = useLocalSearchParams();
   const router = useRouter();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
