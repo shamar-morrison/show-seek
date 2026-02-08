@@ -1,9 +1,9 @@
 import { WatchHistoryList } from '@/src/components/WatchHistoryList';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { useWatchedMovies } from '@/src/hooks/useWatchedMovies';
+import { useDeleteWatch, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -14,8 +14,17 @@ export default function WatchHistoryScreen() {
 
   // Instances are already sorted descending by watchedAt in useWatchedMovies
   const { instances, isLoading } = useWatchedMovies(movieId);
+  const deleteWatch = useDeleteWatch(movieId);
 
-  const headerTitle = title || t('watched.watchHistory');
+  // Format title as "Movie Title • Watch History"
+  const headerTitle = title ? `${title} • ${t('watched.watchHistory')}` : t('watched.watchHistory');
+
+  const handleDeleteInstance = useCallback(
+    (instanceId: string) => {
+      deleteWatch.mutate(instanceId);
+    },
+    [deleteWatch]
+  );
 
   if (isLoading) {
     return (
@@ -29,7 +38,11 @@ export default function WatchHistoryScreen() {
   return (
     <View style={screenStyles.container}>
       <Stack.Screen options={{ title: headerTitle }} />
-      <WatchHistoryList instances={instances} isLoading={isLoading} />
+      <WatchHistoryList
+        instances={instances}
+        isLoading={isLoading}
+        onDeleteInstance={handleDeleteInstance}
+      />
     </View>
   );
 }

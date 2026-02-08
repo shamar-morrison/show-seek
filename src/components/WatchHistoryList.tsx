@@ -7,12 +7,22 @@ import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 
+/**
+ * Returns the ordinal suffix for a number (e.g., 1 -> "1st", 2 -> "2nd", 3 -> "3rd")
+ */
+function getOrdinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 interface WatchHistoryItemProps {
   instance: WatchInstance;
+  watchNumber: number; // 1-based index (1st, 2nd, etc.)
   onDelete?: (instanceId: string) => void;
 }
 
-function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
+function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemProps) {
   const { t, i18n } = useTranslation();
 
   const formattedDate = instance.watchedAt.toLocaleDateString(i18n.language, {
@@ -21,6 +31,8 @@ function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
     day: 'numeric',
     year: 'numeric',
   });
+
+  const ordinalLabel = `${getOrdinalSuffix(watchNumber)} ${t('watched.watch')}`;
 
   const handleDelete = useCallback(() => {
     if (onDelete) {
@@ -38,6 +50,7 @@ function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
   return (
     <View style={styles.itemContainer}>
       <View style={styles.itemContent}>
+        <Text style={styles.ordinalText}>{ordinalLabel}</Text>
         <View style={styles.dateRow}>
           <Calendar size={16} color={COLORS.textSecondary} />
           <Text style={styles.dateText}>{formattedDate}</Text>
@@ -69,11 +82,19 @@ export function WatchHistoryList({
 }: WatchHistoryListProps) {
   const { t } = useTranslation();
 
+  // Instances are sorted newest first, so we need to reverse the numbering
+  // First watch is the oldest, last watch is the newest
+  const totalCount = instances.length;
+
   const renderItem = useCallback(
-    ({ item }: { item: WatchInstance }) => (
-      <WatchHistoryItem instance={item} onDelete={onDeleteInstance} />
+    ({ item, index }: { item: WatchInstance; index: number }) => (
+      <WatchHistoryItem
+        instance={item}
+        watchNumber={totalCount - index} // Reverse: newest shows highest number
+        onDelete={onDeleteInstance}
+      />
     ),
-    [onDeleteInstance]
+    [onDeleteInstance, totalCount]
   );
 
   if (instances.length === 0 && !isLoading) {
@@ -118,6 +139,11 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: FONT_SIZE.m,
     fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  ordinalText: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: '600',
     color: COLORS.text,
   },
   deleteButton: {

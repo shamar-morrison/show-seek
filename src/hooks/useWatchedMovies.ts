@@ -230,3 +230,52 @@ export const useClearWatches = (movieId: number) => {
     },
   });
 };
+
+/**
+ * Mutation hook for deleting a single watch instance
+ */
+export const useDeleteWatch = (movieId: number) => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
+  return useMutation({
+    mutationKey: ['deleteWatch', movieId],
+    mutationFn: async (instanceId: string) => {
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('Please sign in to continue');
+
+      const watchRef = doc(
+        db,
+        `users/${currentUserId}/watched_movies/${movieId}/watches/${instanceId}`
+      );
+
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(watchRef);
+
+      return instanceId;
+    },
+    // Optimistic update for instant UI feedback
+    onMutate: async (instanceId) => {
+      const queryKey = ['watchedMovies', userId, movieId];
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
+
+      // Optimistically remove the watch instance
+      queryClient.setQueryData<WatchInstance[]>(queryKey, (old) => {
+        return (old ?? []).filter((instance) => instance.id !== instanceId);
+      });
+
+      return { previousData };
+    },
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+      }
+      const message = getFirestoreErrorMessage(error);
+      console.error('[useDeleteWatch] Error:', error);
+      throw new Error(message);
+    },
+  });
+};
