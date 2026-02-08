@@ -39,6 +39,7 @@ jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
     markAllButton: {},
     markAllText: {},
     episodesContainer: {},
+    episodesLoadingContainer: {},
     seasonFullOverview: {},
   }),
 }));
@@ -78,7 +79,7 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   }),
 }));
 
-import { fireEvent, renderWithProviders } from '@/__tests__/utils/test-utils';
+import { fireEvent, renderWithProviders, waitFor } from '@/__tests__/utils/test-utils';
 import { SeasonItem, SeasonItemProps, SeasonWithEpisodes } from '@/src/components/tv/SeasonItem';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -169,10 +170,13 @@ describe('SeasonItem', () => {
     expect(onToggle).toHaveBeenCalled();
   });
 
-  it('shows episodes when expanded', () => {
+  it('shows episodes when expanded', async () => {
     const { getByText } = renderWithProviders(<SeasonItem {...defaultProps} isExpanded={true} />);
 
-    expect(getByText('Pilot')).toBeTruthy();
+    // Wait for deferred rendering to complete
+    await waitFor(() => {
+      expect(getByText('Pilot')).toBeTruthy();
+    });
     expect(getByText('Episode 2')).toBeTruthy();
   });
 
@@ -184,20 +188,27 @@ describe('SeasonItem', () => {
     expect(queryByText('Pilot')).toBeNull();
   });
 
-  it('calls onEpisodePress when an episode is pressed', () => {
+  it('calls onEpisodePress when an episode is pressed', async () => {
     const onEpisodePress = jest.fn();
     const { getByTestId } = renderWithProviders(
       <SeasonItem {...defaultProps} isExpanded={true} onEpisodePress={onEpisodePress} />
     );
 
+    // Wait for deferred rendering to complete
+    await waitFor(() => {
+      expect(getByTestId('episode-Pilot')).toBeTruthy();
+    });
     fireEvent.press(getByTestId('episode-Pilot'));
     expect(onEpisodePress).toHaveBeenCalled();
   });
 
-  it('shows Mark All button when expanded with aired episodes', () => {
+  it('shows Mark All button when expanded with aired episodes', async () => {
     const { getByText } = renderWithProviders(<SeasonItem {...defaultProps} isExpanded={true} />);
 
-    expect(getByText('Mark all')).toBeTruthy();
+    // Wait for deferred rendering to complete
+    await waitFor(() => {
+      expect(getByText('Mark all')).toBeTruthy();
+    });
   });
 
   it('shows progress bar when there is progress', () => {
