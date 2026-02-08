@@ -50,10 +50,21 @@ export const useNotes = () => {
  * Hook to get a specific note for a media item.
  * Filters from the global notes cache.
  */
-export const useMediaNote = (mediaType: 'movie' | 'tv', mediaId: number) => {
+export const useMediaNote = (
+  mediaType: 'movie' | 'tv' | 'episode',
+  mediaId: number,
+  seasonNumber?: number,
+  episodeNumber?: number
+) => {
   const { data: notes, isLoading } = useNotes();
 
-  const note = notes?.find((n) => n.mediaType === mediaType && n.mediaId === mediaId);
+  const note = notes?.find((n) => {
+    if (n.mediaType !== mediaType || n.mediaId !== mediaId) return false;
+    if (mediaType === 'episode') {
+      return n.seasonNumber === seasonNumber && n.episodeNumber === episodeNumber;
+    }
+    return true;
+  });
 
   return {
     note: note || null,
@@ -85,9 +96,19 @@ export const useDeleteNote = () => {
   const userId = user?.uid;
 
   return useMutation({
-    mutationFn: ({ mediaType, mediaId }: { mediaType: 'movie' | 'tv'; mediaId: number }) => {
+    mutationFn: ({
+      mediaType,
+      mediaId,
+      seasonNumber,
+      episodeNumber,
+    }: {
+      mediaType: 'movie' | 'tv' | 'episode';
+      mediaId: number;
+      seasonNumber?: number;
+      episodeNumber?: number;
+    }) => {
       if (!userId) throw new Error('Please sign in to continue');
-      return noteService.deleteNote(userId, mediaType, mediaId);
+      return noteService.deleteNote(userId, mediaType, mediaId, seasonNumber, episodeNumber);
     },
   });
 };

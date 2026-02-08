@@ -57,6 +57,11 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
 
+      // Favorite episodes collection
+      match /favorite_episodes/{episodeId} {
+        allow read, write: if isOwner(userId);
+      }
+
       // Watched movies collection (tracking movie watch instances)
       match /watched_movies/{movieId} {
         allow read: if isOwner(userId);
@@ -103,17 +108,17 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
 
-      // Notes collection (personal notes for movies/TV shows)
+      // Notes collection (personal notes for movies/TV shows/episodes)
       match /notes/{noteId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId)
           // Restrict to exactly these allowed fields
-          && request.resource.data.keys().hasOnly(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'posterPath', 'createdAt', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'posterPath', 'createdAt', 'updatedAt', 'seasonNumber', 'episodeNumber', 'showId'])
           && request.resource.data.keys().hasAll(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'createdAt', 'updatedAt'])
           // Validate userId matches authenticated user
           && request.resource.data.userId == userId
-          // Validate mediaType is movie or tv
-          && request.resource.data.mediaType in ['movie', 'tv']
+          // Validate mediaType is movie, tv, or episode
+          && request.resource.data.mediaType in ['movie', 'tv', 'episode']
           // Validate content is string with max 120 chars
           && request.resource.data.content is string
           && request.resource.data.content.size() <= 120
@@ -125,7 +130,11 @@ service cloud.firestore {
           && request.resource.data.createdAt is timestamp
           && request.resource.data.updatedAt is timestamp
           // Validate posterPath is string or null (optional field)
-          && (!('posterPath' in request.resource.data) || request.resource.data.posterPath == null || request.resource.data.posterPath is string);
+          && (!('posterPath' in request.resource.data) || request.resource.data.posterPath == null || request.resource.data.posterPath is string)
+          // Validate optional episode fields
+          && (!('seasonNumber' in request.resource.data) || request.resource.data.seasonNumber is int)
+          && (!('episodeNumber' in request.resource.data) || request.resource.data.episodeNumber is int)
+          && (!('showId' in request.resource.data) || request.resource.data.showId is int);
         allow update: if isOwner(userId)
           && request.resource.data.userId == userId
           && request.resource.data.content is string

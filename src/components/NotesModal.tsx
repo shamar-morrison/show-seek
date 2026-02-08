@@ -24,11 +24,14 @@ const MAX_NOTE_LENGTH = 120;
 
 export interface NoteModalRef {
   present: (params: {
-    mediaType: 'movie' | 'tv';
+    mediaType: 'movie' | 'tv' | 'episode';
     mediaId: number;
     posterPath: string | null;
     mediaTitle: string;
     initialNote?: string;
+    seasonNumber?: number;
+    episodeNumber?: number;
+    showId?: number;
   }) => Promise<void>;
   dismiss: () => Promise<void>;
 }
@@ -47,13 +50,16 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const saveNoteMutation = useSaveNote();
   const deleteNoteMutation = useDeleteNote();
 
-  const [mediaType, setMediaType] = useState<'movie' | 'tv'>('movie');
+  const [mediaType, setMediaType] = useState<'movie' | 'tv' | 'episode'>('movie');
   const [mediaId, setMediaId] = useState(0);
   const [posterPath, setPosterPath] = useState<string | null>(null);
   const [mediaTitle, setMediaTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [initialContent, setInitialContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [seasonNumber, setSeasonNumber] = useState<number | undefined>();
+  const [episodeNumber, setEpisodeNumber] = useState<number | undefined>();
+  const [showId, setShowId] = useState<number | undefined>();
 
   const isEditing = initialContent.length > 0;
   const hasChanges = noteContent.trim() !== initialContent;
@@ -70,6 +76,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       posterPath: poster,
       mediaTitle: title,
       initialNote,
+      seasonNumber: sNum,
+      episodeNumber: eNum,
+      showId: sId,
     }) => {
       setMediaType(type);
       setMediaId(id);
@@ -77,6 +86,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       setMediaTitle(title);
       setNoteContent(initialNote || '');
       setInitialContent(initialNote || '');
+      setSeasonNumber(sNum);
+      setEpisodeNumber(eNum);
+      setShowId(sId);
       setError(null);
       await sheetRef.current?.present();
     },
@@ -89,6 +101,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
     setMediaTitle('');
     setMediaId(0);
     setPosterPath(null);
+    setSeasonNumber(undefined);
+    setEpisodeNumber(undefined);
+    setShowId(undefined);
     setError(null);
   }, []);
 
@@ -110,6 +125,9 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         content: noteContent.trim(),
         posterPath,
         mediaTitle,
+        seasonNumber,
+        episodeNumber,
+        showId,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSave?.();
@@ -129,7 +147,12 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteNoteMutation.mutateAsync({ mediaType, mediaId });
+            await deleteNoteMutation.mutateAsync({ 
+              mediaType, 
+              mediaId,
+              seasonNumber,
+              episodeNumber,
+            });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onDelete?.();
             await handleClose();

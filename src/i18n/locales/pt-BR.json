@@ -343,6 +343,8 @@
     "emptyWatchlistHint": "Adicione filmes e séries para assistir depois",
     "emptyFavorites": "Ainda sem favoritos",
     "emptyFavoritesHint": "Adicione seus filmes e séries favoritos",
+    "emptyFavoriteEpisodes": "Nenhum episódio favorito ainda",
+    "emptyFavoriteEpisodesHint": "Adicione episódios aos seus favoritos para vê-los aqui",
     "emptyWatched": "Sem itens assistidos",
     "emptyWatchedHint": "Marque itens como assistidos para acompanhar seu histórico",
     "emptyLists": "Sem listas personalizadas",
@@ -396,6 +398,7 @@
     "tvShowRatings": "Avaliações de séries",
     "favoritesSection": "Favoritos",
     "favoriteContent": "Conteúdo favorito",
+    "favoriteEpisodes": "Episódios favoritos",
     "widgets": "Widgets",
     "homeScreenWidgets": "Widgets da tela inicial",
     "browseContent": "Explorar conteúdo",
@@ -623,7 +626,7 @@
   "settings": {
     "title": "Configurações",
     "account": "Conta",
-    "preferences": "Preferências",
+    "preferences": "Preferencias",
     "language": "Idioma",
     "region": "Região",
     "accentColor": "Cor de destaque",
@@ -654,7 +657,7 @@
     "updateLaunchScreenError": "Falha ao atualizar a tela inicial padrão. Tente novamente.",
     "updateLanguageError": "Falha ao atualizar o idioma. Tente novamente.",
     "languageScreenDescription": "Selecione o idioma preferido para informações de filmes e séries.",
-    "languageScreenNote": "Isso afeta títulos, descrições e outros textos do nosso banco de dados. Alguns conteúdos podem não estar disponíveis em todos os idiomas.",
+    "languageScreenNote": "Isso afecta os títulos, as descrições e outros textos da nossa base de dados. Algum conteúdo poderá não estar disponível em todos os idiomas.",
     "updateRegionError": "Falha ao atualizar a região. Tente novamente.",
     "regionScreenDescription": "Selecione sua região para ver disponibilidade local de streaming e datas de lançamento.",
     "regionScreenNote": "Isso afeta onde assistir e datas de lançamento locais."
@@ -795,7 +798,7 @@
     "connectedHeader": "Trakt conectado",
     "connectedScreenHeader": "Trakt conectado",
     "connectedSubtitle": "Tudo pronto. Importe seu histórico para começar.",
-    "connectedTitle": "Conectado!",
+    "connectedTitle": "¡Conectado!",
     "connectionFailedMessage": "Não foi possível conectar ao Trakt. Tente novamente.",
     "connectionFailedTitle": "Falha na conexão",
     "disconnectButton": "Desconectar",
@@ -823,7 +826,7 @@
     "enrichmentFailedTitle": "Falha no enriquecimento",
     "howItWorks": {
       "conflictsDescription": "Se detectarmos conflitos, mostraremos o que aconteceu e manteremos seus dados consistentes.",
-      "conflictsTitle": "Resolver conflitos",
+      "conflictsTitle": "Resolver conflictos",
       "connectDescription": "Autorize o ShowSeek a acessar sua conta Trakt.",
       "connectTitle": "Conectar sua conta",
       "enrichDescription": "Opcionalmente, enriqueça seu histórico do Trakt com detalhes do TMDB para melhores insights.",
@@ -832,8 +835,8 @@
       "importTitle": "Importar seu histórico"
     },
     "howItWorksTitle": "Como funciona",
-    "importButton": "Importar histórico",
-    "lastSynced": "Última sincronização {{time}}",
+    "importButton": "Importar historial",
+    "lastSynced": "Última sincronización {{time}}",
     "moreErrors": "e mais {{count}} erros",
     "moreErrors_one": "e mais {{count}} erro",
     "moreErrors_other": "e mais {{count}} erros",
@@ -843,7 +846,7 @@
     "syncFailedTitle": "Falha na sincronização",
     "syncNowButton": "Sincronizar agora",
     "syncedItemsTitle": "Itens sincronizados",
-    "syncingEstimate": "Isso geralmente leva menos de um minuto...",
+    "syncingEstimate": "Normalmente tarda menos de um minuto...",
     "syncingHeader": "Sincronizando",
     "syncingSubtitle": "Importando seu histórico do Trakt para o ShowSeek.",
     "syncingTitle": "Sincronizando seus dados",
@@ -882,7 +885,7 @@
     "notEnoughDataDescription": "Avalie seus filmes e séries favoritos para ver recomendações personalizadas aqui!",
     "goToDiscover": "Ir para Descobrir",
     "signInRequired": "Entre para recomendações personalizadas",
-    "signInDescription": "Crie uma conta para obter conteúdo adaptado aos seus gostos",
+    "signInDescription": "Crie uma cuenta para obter conteúdo adaptado aos seus gostos",
     "signIn": "Entrar"
   },
   "calendar": {
@@ -901,11 +904,12 @@
     "premiumDescription": "Não perca nenhuma estreia de temporada, episódio ou filme.\nVeja uma linha do tempo personalizada com todos os seus próximos filmes e séries.",
     "updatingEpisodes": "Atualizando episódios de TV...",
     "upgradeForFullExperience": "Atualize para ter a experiência completa",
-    "upgradeToPremium": "Atualizar para Premium"
+    "upgradeToPremium": "Actualizar a Premium"
   },
   "authGuards": {
     "addFavoritePeople": "Entre para adicionar pessoas favoritas",
     "addNotes": "Entre para adicionar notas",
+    "favoriteEpisodes": "Faça login para adicionar episódios aos favoritos",
     "manageCollectionTracking": "Entre para gerenciar acompanhamento de coleções",
     "rateEpisodes": "Entre para avaliar episódios",
     "rateMoviesAndShows": "Entre para avaliar filmes e séries",
@@ -916,7 +920,7 @@
   },
   "collection": {
     "failedToLoad": "Falha ao carregar coleção",
-    "freeLimitNotice": "Usuários gratuitos podem acompanhar até {{count}} coleções. Atualize para Premium para acompanhamento ilimitado.",
+    "freeLimitNotice": "Usuários gratuitos podem acompanhar hasta {{count}} colecciones. Actualize para Premium para acompanhamento ilimitado.",
     "moviesCount": "{{count}} filmes",
     "moviesCount_one": "{{count}} filme",
     "moviesCount_other": "{{count}} filmes",
@@ -930,9 +934,9 @@
     "failedToLoad": "Falha ao carregar créditos"
   },
   "datePicker": {
-    "month": "Mês",
+    "month": "Mes",
     "selectMonthYear": "Selecionar mês e ano",
-    "year": "Ano"
+    "year": "Año"
   },
   "episodeDetail": {
     "failedToLoad": "Falha ao carregar detalhes do episódio"
@@ -941,12 +945,12 @@
     "anyRating": "Qualquer avaliação",
     "mediaType": "Tipo de mídia",
     "searchPlaceholder": "Pesquisar...",
-    "selectLabel": "Selecionar",
+    "selectLabel": "Seleccionar",
     "selectPlaceholder": "Selecionar...",
     "starsPlus": "{{count}}+ estrelas"
   },
   "lists": {
-    "alreadyWatched": "Já assistidos",
+    "alreadyWatched": "Ya vistos",
     "dropped": "Abandonados",
     "favorites": "Favoritos",
     "shouldWatch": "Pendentes",
@@ -969,7 +973,7 @@
     "signInToAddItems": "Entre para adicionar itens às suas listas"
   },
   "notFound": {
-    "title": "Ops!",
+    "title": "¡Vaya!",
     "message": "Esta tela não existe.",
     "goHome": "Ir para a tela inicial!"
   },
@@ -1024,7 +1028,7 @@
     "devResetTitle": "Resetar compra (Dev)",
     "noPurchasesMessage": "Não encontramos nenhuma compra para restaurar.",
     "noPurchasesTitle": "Nenhuma compra encontrada",
-    "oneTimePayment": "Pagamento único",
+    "oneTimePayment": "Pago único",
     "purchaseFailedTitle": "Falha na compra",
     "restoreCompleteMessage": "Sua compra foi restaurada.",
     "restoreCompleteTitle": "Restauração concluída",
@@ -1072,7 +1076,7 @@
       },
       "indie-support": {
         "description": "Apoie o desenvolvimento contínuo do ShowSeek.",
-        "title": "Apoiar um desenvolvedor indie"
+        "title": "Apoyar un desarrollador indie"
       },
       "latest-trailers": {
         "description": "Assista aos últimos trailers na tela inicial.",
@@ -1096,7 +1100,7 @@
       },
       "trakt-integration": {
         "description": "Sincronize seu histórico de exibição com Trakt.",
-        "title": "Integração com Trakt"
+        "title": "Integración con Trakt"
       },
       "unlimited-items": {
         "description": "Adicione filmes e séries ilimitados às suas listas.",
@@ -1135,7 +1139,7 @@
     "unableToShare": "Não foi possível compartilhar. Tente novamente."
   },
   "shareCard": {
-    "title": "Cartão de compartilhamento",
+    "title": "Tarjeta para compartir",
     "share": "Compartilhar para...",
     "save": "Salvar na galeria",
     "generating": "Gerando...",
@@ -1145,7 +1149,7 @@
     "last6Months": "Meus últimos 6 meses",
     "caption": "Confira isso no ShowSeek!",
     "captionCopied": "Legenda copiada para a área de transferência",
-    "dialogTitle": "Compartilhar",
+    "dialogTitle": "Compartir",
     "savedToGallery": "Salvo na galeria!",
     "permissionDenied": "Permissão para acessar a galeria foi negada",
     "failedToGenerate": "Falha ao gerar cartão de compartilhamento",
@@ -1154,10 +1158,10 @@
     "sharingNotAvailable": "O compartilhamento não está disponível neste dispositivo"
   },
   "shuffle": {
-    "noImage": "Sem imagem",
+    "noImage": "Sin imagen",
     "shuffling": "Embaralhando...",
     "spinAgain": "Girar novamente",
-    "title": "Embaralhar",
+    "title": "Aleatorio",
     "viewDetails": "Ver detalhes"
   },
   "sort": {
@@ -1169,12 +1173,12 @@
     "recentlyAdded": "Adicionados recentemente"
   },
   "stats": {
-    "activityPatterns": "Padrões de atividade",
+    "activityPatterns": "Patrones de actividad",
     "added": "Adicionados",
     "avgRating": "Média de avaliação",
-    "currentStreak": "Sequência atual",
+    "currentStreak": "Racha actual",
     "errorDescription": "Não conseguimos carregar suas estatísticas. Tente novamente.",
-    "errorTitle": "Estatísticas indisponíveis",
+    "errorTitle": "Estadísticas no disponibles",
     "last6MonthsOverview": "Visão geral dos últimos 6 meses",
     "loading": "Carregando estatísticas...",
     "longestStreak": "Maior sequência",
@@ -1190,7 +1194,7 @@
       "noDataTitle": "Sem dados"
     },
     "monthlyBreakdown": "Detalhamento mensal",
-    "mostActiveDay": "Dia mais ativo",
+    "mostActiveDay": "Día más activo",
     "noActivityDescription": "Assista, avalie ou adicione itens para ver suas estatísticas aqui.",
     "noActivityThisMonth": "Sem atividade neste mês",
     "noActivityTitle": "Ainda sem atividade",
@@ -1275,10 +1279,10 @@
     "widgetSizeLabel": "Tamanho: {{size}}"
   },
   "mood": {
-    "picker": "Seletor de humor",
+    "picker": "Selector de ánimo",
     "title": "Como você está se sentindo?",
     "subtitle": "Escolha um humor para descobrir conteúdo",
-    "surpriseMe": "Me surpreenda!",
+    "surpriseMe": "¡Sorpréndeme!",
     "results": "Seleções de {{mood}}",
     "noResults": "Nenhum resultado para este humor",
     "tryAnother": "Tente outro humor",

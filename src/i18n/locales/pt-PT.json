@@ -343,6 +343,8 @@
     "emptyWatchlistHint": "Adicione filmes e séries para ver mais tarde",
     "emptyFavorites": "Ainda sem favoritos",
     "emptyFavoritesHint": "Adicione os seus filmes e séries favoritos",
+    "emptyFavoriteEpisodes": "Ainda sem episódios favoritos",
+    "emptyFavoriteEpisodesHint": "Adicione os seus episódios favoritos para os ver aqui",
     "emptyWatched": "Sem itens vistos",
     "emptyWatchedHint": "Marque itens como vistos para acompanhar o seu histórico",
     "emptyLists": "Sem listas personalizadas",
@@ -396,6 +398,7 @@
     "tvShowRatings": "Avaliações de séries",
     "favoritesSection": "Favoritos",
     "favoriteContent": "Conteúdo favorito",
+    "favoriteEpisodes": "Episódios favoritos",
     "widgets": "Widgets",
     "homeScreenWidgets": "Widgets de ecrã inicial",
     "browseContent": "Explorar conteúdo",
@@ -490,7 +493,7 @@
     "removeReminder": "Remover lembrete",
     "reminderSet": "Lembrete definido para {{date}}",
     "reminderRemoved": "Lembrete removido",
-    "reminderTime": "Lembrar-me",
+    "reminderTime": "Me lembrar",
     "atRelease": "No lançamento",
     "oneDayBefore": "1 dia antes",
     "oneWeekBefore": "1 semana antes",
@@ -596,29 +599,7 @@
     "watchedYesterday": "Visto ontem",
     "chooseDate": "Escolher uma data",
     "selectWatchDate": "Selecionar data de visualização",
-    "whenDidYouWatch": "Quando é que viu isto?",
-    "chooseSpecificDate": "Escolher uma data específica",
-    "clearAllWatchHistory": "Limpar histórico de visualização",
-    "clearWatchHistoryMessage": "Isto irá remover todo o histórico de visualização deste filme. Esta ação não pode ser anulada.",
-    "clearWatchHistoryTitle": "Limpar histórico de visualização?",
-    "customDate": "Data personalizada",
-    "failedToClear": "Falha ao limpar histórico de visualização",
-    "markAll": "Marcar tudo",
-    "markAllAiredEpisodesConfirm": "Marcar {{count}} episódios exibidos em {{seasonName}} como vistos?",
-    "markAllEpisodesTitle": "Marcar tudo como visto?",
-    "releaseDate": "Data de lançamento",
-    "removeAllWatches": "Remover {{count}} visualizações",
-    "removeAllWatches_one": "Remover {{count}} visualização",
-    "removeAllWatches_other": "Remover {{count}} visualizações",
-    "rightNow": "Agora",
-    "unmarkAll": "Desmarcar tudo",
-    "unmarkAllAiredEpisodesConfirm": "Desmarcar {{count}} episódios exibidos em {{seasonName}}?",
-    "unmarkAllEpisodesTitle": "Desmarcar tudo?",
-    "useCurrentDateTime": "Usar a data e hora atuais",
-    "watchHistoryCleared": "Histórico de visualização limpo",
-    "watchedTimes": "Visto {{count}} vezes",
-    "watchedTimes_one": "Visto {{count}} vez",
-    "watchedTimes_other": "Visto {{count}} vezes"
+    "whenDidYouWatch": "Quando é que viu isto?"
   },
   "settings": {
     "title": "Definições",
@@ -743,7 +724,7 @@
   },
   "onboarding": {
     "welcome": "Bem-vindo ao ShowSeek",
-    "welcomeDescription": "Seu companheiro definitivo para filmes e séries",
+    "welcomeDescription": "O seu companheiro definitivo para filmes e séries",
     "discoverTitle": "Descobrir",
     "discoverDescription": "Encontre o seu próximo filme ou série favorita",
     "trackTitle": "Acompanhar",
@@ -787,72 +768,7 @@
     "importHistory": "Importar histórico",
     "exportHistory": "Exportar histórico",
     "autoSync": "Sincronização automática",
-    "autoSyncDescription": "Sincronizar alterações automaticamente com o Trakt",
-    "connectButton": "Conectar Trakt",
-    "connectHeader": "Conectar Trakt",
-    "connectHeroSubtitle": "Conecte o Trakt para importar o seu histórico e manter tudo sincronizado.",
-    "connectHeroTitle": "Sincronize com Trakt",
-    "connectedHeader": "Trakt conectado",
-    "connectedScreenHeader": "Trakt conectado",
-    "connectedSubtitle": "Tudo pronto. Importe o seu histórico para começar.",
-    "connectedTitle": "Conectado!",
-    "connectionFailedMessage": "Não foi possível conectar ao Trakt. Tente novamente.",
-    "connectionFailedTitle": "Falha na ligação",
-    "disconnectButton": "Desconectar",
-    "disconnectFailedMessage": "Não foi possível desconectar do Trakt. Tente novamente.",
-    "disconnectFailedTitle": "Falha ao desconectar",
-    "disconnectMessage": "Tem a certeza que quer desconectar o Trakt?",
-    "disconnectTitle": "Desconectar Trakt",
-    "disconnectTraktButton": "Desconectar Trakt",
-    "enriched": "Enriquecido {{time}}",
-    "enrichingEstimate": "Isto pode demorar alguns minutos...",
-    "enrichingHeader": "A enriquecer",
-    "enrichingSubtitle": "A corresponder os seus dados do Trakt ao TMDB para melhores estatísticas e recomendações.",
-    "enrichingTitle": "A enriquecer os seus dados",
-    "enrichment": {
-      "button": "Enriquecer agora",
-      "description": "Associe o seu histórico do Trakt ao TMDB para mais detalhes e melhores estatísticas.",
-      "devButton": "Reenriquecer",
-      "devDescription": "Executar o enriquecimento novamente para fins de depuração.",
-      "devNote": "MODO DEV: Isto pode sobrescrever resultados anteriores.",
-      "devTitle": "Reenriquecer dados",
-      "note": "Pode fazer isto a qualquer momento após sincronizar.",
-      "title": "Enriqueça os seus dados"
-    },
-    "enrichmentFailedMessage": "Não foi possível enriquecer os seus dados. Tente novamente.",
-    "enrichmentFailedTitle": "Falha no enriquecimento",
-    "howItWorks": {
-      "conflictsDescription": "Se detetarmos conflitos, mostraremos o que aconteceu e manteremos os seus dados consistentes.",
-      "conflictsTitle": "Resolver conflitos",
-      "connectDescription": "Autorize o ShowSeek a aceder à sua conta Trakt.",
-      "connectTitle": "Conectar a sua conta",
-      "enrichDescription": "Opcionalmente, enriqueça o seu histórico do Trakt com detalhes do TMDB para melhores insights.",
-      "enrichTitle": "Enriquecer os seus dados",
-      "importDescription": "Importe o seu histórico de visualização, avaliações e listas do Trakt.",
-      "importTitle": "Importar o seu histórico"
-    },
-    "howItWorksTitle": "Como funciona",
-    "importButton": "Importar histórico",
-    "lastSynced": "Última sincronização {{time}}",
-    "moreErrors": "e mais {{count}} erros",
-    "moreErrors_one": "e mais {{count}} erro",
-    "moreErrors_other": "e mais {{count}} erros",
-    "privacyNote": "Usamos o Trakt apenas para sincronizar o seu histórico de visualização. Pode desconectar a qualquer momento.",
-    "syncErrorsTitle": "Erros de sincronização",
-    "syncFailedMessage": "Não foi possível sincronizar com o Trakt. Tente novamente.",
-    "syncFailedTitle": "Falha na sincronização",
-    "syncNowButton": "Sincronizar agora",
-    "syncedItemsTitle": "Itens sincronizados",
-    "syncingEstimate": "Isto costuma demorar menos de um minuto...",
-    "syncingHeader": "A sincronizar",
-    "syncingSubtitle": "A importar o seu histórico do Trakt para o ShowSeek.",
-    "syncingTitle": "A sincronizar os seus dados",
-    "whatWillBeSyncedTitle": "O que será sincronizado",
-    "willSync": {
-      "customLists": "Listas personalizadas",
-      "episodeProgress": "Progresso de episódios",
-      "watchedMoviesAndShows": "Filmes e séries vistos"
-    }
+    "autoSyncDescription": "Sincronizar alterações automaticamente com o Trakt"
   },
   "homeCustomization": {
     "title": "Personalizar início",
@@ -860,18 +776,7 @@
     "enabledSections": "Secções ativas",
     "disabledSections": "Secções desativadas",
     "dragToReorder": "Arraste para reordenar",
-    "resetToDefault": "Repor predefinições",
-    "signInToCustomize": "Inicie sessão para personalizar o seu ecrã inicial",
-    "selectedCount": "{{selected}}/{{max}} selecionados",
-    "tmdbLists": "Listas do TMDB",
-    "watchStatus": "Estado de visualização",
-    "updatedToast": "Ecrã inicial atualizado",
-    "minSelected": "Selecione pelo menos {{count}} listas",
-    "minSelected_one": "Selecione pelo menos {{count}} lista",
-    "minSelected_other": "Selecione pelo menos {{count}} listas",
-    "maxSelected": "Selecione no máximo {{count}} listas",
-    "maxSelected_one": "Selecione no máximo {{count}} lista",
-    "maxSelected_other": "Selecione no máximo {{count}} listas"
+    "resetToDefault": "Repor predefinições"
   },
   "forYou": {
     "title": "Recomendações personalizadas",
@@ -897,15 +802,13 @@
     "seasonEpisode": "Temporada {{season}} Episódio {{episode}}",
     "signInRequired": "Inicie sessão para ver o seu calendário",
     "signInDescription": "Acompanhe os lançamentos da sua lista de pendentes num só lugar",
-    "premiumTitle": "Acompanhe o seu calendário de lançamentos",
-    "premiumDescription": "Não perca nenhuma estreia de temporada, episódio ou filme.\nVeja uma linha do tempo personalizada com todos os seus próximos filmes e séries.",
-    "updatingEpisodes": "A atualizar episódios de TV...",
     "upgradeForFullExperience": "Atualize para ter a experiência completa",
     "upgradeToPremium": "Atualizar para Premium"
   },
   "authGuards": {
-    "addFavoritePeople": "Inicie sessão para adicionar pessoas favoritas",
+    "addFavoritePeople": "Inicie sessão para adicionar pessoas aos favoritos",
     "addNotes": "Inicie sessão para adicionar notas",
+    "favoriteEpisodes": "Inicie sessão para adicionar episódios aos favoritos",
     "manageCollectionTracking": "Inicie sessão para gerir acompanhamento de coleções",
     "rateEpisodes": "Inicie sessão para avaliar episódios",
     "rateMoviesAndShows": "Inicie sessão para avaliar filmes e séries",
@@ -914,9 +817,42 @@
     "trackEpisodes": "Inicie sessão para acompanhar episódios",
     "trackWatchedMovies": "Inicie sessão para acompanhar filmes vistos"
   },
+  "mood": {
+    "picker": "Seletor de disposição",
+    "title": "Como se está a sentir?",
+    "subtitle": "Escolha uma disposição para descobrir conteúdo",
+    "surpriseMe": "Surpreenda-me!",
+    "results": "Seleções de {{mood}}",
+    "noResults": "Sem resultados para esta disposição",
+    "tryAnother": "Experimente outra disposição",
+    "cozy": {
+      "name": "Aconchegante",
+      "description": "Quentinho e reconfortante"
+    },
+    "mindBending": {
+      "name": "Intrigante",
+      "description": "Reviravoltas e mistérios"
+    },
+    "adrenaline": {
+      "name": "Adrenalina",
+      "description": "Ação e emoção"
+    },
+    "heartbreaking": {
+      "name": "Emocionante",
+      "description": "Jornadas emocionais"
+    },
+    "spooky": {
+      "name": "Assustador",
+      "description": "Arrepios sobrenaturais"
+    },
+    "whimsical": {
+      "name": "Fantástico",
+      "description": "Aventuras mágicas"
+    }
+  },
   "collection": {
     "failedToLoad": "Falha ao carregar coleção",
-    "freeLimitNotice": "Os utilizadores gratuitos podem acompanhar até {{count}} coleções. Atualize para Premium para acompanhamento ilimitado.",
+    "freeLimitNotice": "Utilizadores gratuitos podem acompanhar até {{count}} coleções. Atualize para Premium para acompanhamento ilimitado.",
     "moviesCount": "{{count}} filmes",
     "moviesCount_one": "{{count}} filme",
     "moviesCount_other": "{{count}} filmes",
@@ -939,7 +875,7 @@
   },
   "filters": {
     "anyRating": "Qualquer avaliação",
-    "mediaType": "Tipo de mídia",
+    "mediaType": "Tipo de média",
     "searchPlaceholder": "Pesquisar...",
     "selectLabel": "Selecionar",
     "selectPlaceholder": "Selecionar...",
@@ -956,10 +892,10 @@
     "budget": "Orçamento",
     "certification": "Classificação",
     "companies": "Empresas",
-    "originalLanguage": "Idioma original",
+    "originalLanguage": "Língua original",
     "originalTitle": "Título original",
     "productionCountries": "Países de produção",
-    "revenue": "Receita",
+    "revenue": "Receitas",
     "runtimeHours": "{{count}}h",
     "runtimeHoursMinutes": "{{hours}}h {{minutes}}min",
     "runtimeMinutes": "{{count}}min"
@@ -969,7 +905,7 @@
     "signInToAddItems": "Inicie sessão para adicionar itens às suas listas"
   },
   "notFound": {
-    "title": "Ups!",
+    "title": "Oops!",
     "message": "Este ecrã não existe.",
     "goHome": "Ir para o ecrã inicial!"
   },
@@ -982,7 +918,7 @@
     "permissionCheckFailedTitle": "Falha ao verificar permissões",
     "permissionCheckUnavailableMessage": "Não foi possível verificar permissões de notificação neste dispositivo.",
     "permissionCheckUnavailableTitle": "Permissão indisponível",
-    "permissionDeniedMessage": "As notificações estão desativadas. Ative-as em Definições para usar lembretes.",
+    "permissionDeniedMessage": "As notificações estão desativadas. Ative em Definições para usar lembretes.",
     "permissionDeniedTitle": "Permissão negada",
     "permissionRequestFailedMessage": "Não foi possível solicitar permissões de notificação. Tente novamente.",
     "permissionRequestFailedTitle": "Falha ao solicitar permissões",
@@ -991,9 +927,9 @@
   },
   "person": {
     "addToFavoritePeople": "Adicionar a Pessoas favoritas",
-    "ageAtDeath": "({{count}} anos à data da morte)",
-    "ageAtDeath_one": "({{count}} ano à data da morte)",
-    "ageAtDeath_other": "({{count}} anos à data da morte)",
+    "ageAtDeath": "({{count}} anos na data do falecimento)",
+    "ageAtDeath_one": "({{count}} ano na data do falecimento)",
+    "ageAtDeath_other": "({{count}} anos na data do falecimento)",
     "ageYearsOld": "({{count}} anos)",
     "ageYearsOld_one": "({{count}} ano)",
     "ageYearsOld_other": "({{count}} anos)",
@@ -1012,13 +948,13 @@
     "noTVCreditsDescription": "Nenhum crédito de TV para mostrar."
   },
   "premium": {
-    "resetCompleteTitle": "Reposição concluída",
+    "resetCompleteTitle": "Reset concluído",
     "resetCompleteMessage": "Compra consumida. Agora pode comprar novamente.",
     "noPurchaseFoundTitle": "Nenhuma compra encontrada",
     "noPurchaseFoundMessage": "Não foi possível encontrar uma compra para consumir.",
-    "resetFailedTitle": "Falha na reposição",
+    "resetFailedTitle": "Falha no reset",
     "alreadyPremiumDescription": "Obrigado por apoiar o ShowSeek. Premium já está ativo nesta conta.",
-    "alreadyPremiumTitle": "É Premium",
+    "alreadyPremiumTitle": "Já é Premium",
     "devResetButton": "Repor compra (Dev)",
     "devResetMessage": "Isto irá consumir a sua compra para que possa comprar novamente. Continuar?",
     "devResetTitle": "Repor compra (Dev)",
@@ -1030,7 +966,7 @@
     "restoreCompleteTitle": "Restauração concluída",
     "restoreFailedTitle": "Falha ao restaurar",
     "restorePurchase": "Restaurar compra",
-    "successMessage": "Obrigado por apoiar o ShowSeek! Premium agora está ativo.",
+    "successMessage": "Obrigado por apoiar o ShowSeek! Premium está agora ativo.",
     "successTitle": "Premium desbloqueado",
     "unlockButton": "Desbloquear Premium",
     "unlockSubtitle": "Tenha listas, lembretes, widgets ilimitados e mais.",
@@ -1075,7 +1011,7 @@
         "title": "Apoiar um programador indie"
       },
       "latest-trailers": {
-        "description": "Veja os últimos trailers a partir do ecrã inicial.",
+        "description": "Veja os últimos trailers no ecrã inicial.",
         "title": "Últimos trailers"
       },
       "personal-notes": {
@@ -1130,12 +1066,12 @@
     "tapToRevealSpoiler": "Toque para revelar spoiler"
   },
   "share": {
-    "message": "{{title}} - Veja isto no TMDB! {{url}}",
+    "message": "{{title}} - Confira isto no TMDB! {{url}}",
     "linkCopied": "Ligação copiada para a área de transferência",
     "unableToShare": "Não foi possível partilhar. Tente novamente."
   },
   "shareCard": {
-    "title": "Cartão de partilha",
+    "title": "Cartão para partilhar",
     "share": "Partilhar para...",
     "save": "Guardar na galeria",
     "generating": "A gerar...",
@@ -1143,11 +1079,11 @@
     "myRating": "A minha avaliação",
     "rateIt": "Avalie no ShowSeek!",
     "last6Months": "Os meus últimos 6 meses",
-    "caption": "Veja isto no ShowSeek!",
+    "caption": "Confira isto no ShowSeek!",
     "captionCopied": "Legenda copiada para a área de transferência",
     "dialogTitle": "Partilhar",
     "savedToGallery": "Guardado na galeria!",
-    "permissionDenied": "A permissão para aceder à galeria foi recusada",
+    "permissionDenied": "Permissão para aceder à galeria foi negada",
     "failedToGenerate": "Falha ao gerar cartão de partilha",
     "failedToShare": "Falha ao partilhar",
     "failedToSave": "Falha ao guardar na galeria",
@@ -1156,8 +1092,8 @@
   "shuffle": {
     "noImage": "Sem imagem",
     "shuffling": "A baralhar...",
-    "spinAgain": "Baralhar novamente",
-    "title": "Baralhar",
+    "spinAgain": "Girar novamente",
+    "title": "Aleatório",
     "viewDetails": "Ver detalhes"
   },
   "sort": {
@@ -1173,7 +1109,7 @@
     "added": "Adicionados",
     "avgRating": "Média de avaliação",
     "currentStreak": "Sequência atual",
-    "errorDescription": "Não foi possível carregar as suas estatísticas. Tente novamente.",
+    "errorDescription": "Não conseguimos carregar as suas estatísticas. Tente novamente.",
     "errorTitle": "Estatísticas indisponíveis",
     "last6MonthsOverview": "Visão geral dos últimos 6 meses",
     "loading": "A carregar estatísticas...",
@@ -1186,13 +1122,13 @@
       },
       "noActivityDescription": "Nenhuma atividade registada neste mês.",
       "noActivityTitle": "Sem atividade",
-      "noDataDescription": "Não foi possível encontrar dados para este mês.",
+      "noDataDescription": "Não conseguimos encontrar dados para este mês.",
       "noDataTitle": "Sem dados"
     },
-    "monthlyBreakdown": "Detalhamento mensal",
+    "monthlyBreakdown": "Detalhe mensal",
     "mostActiveDay": "Dia mais ativo",
     "noActivityDescription": "Veja, avalie ou adicione itens para ver as suas estatísticas aqui.",
-    "noActivityThisMonth": "Sem atividade este mês",
+    "noActivityThisMonth": "Sem atividade neste mês",
     "noActivityTitle": "Ainda sem atividade",
     "noChange": "Sem alteração {{label}}",
     "preferredTime": "Horário preferido",
@@ -1226,13 +1162,13 @@
     "openLinkErrorMessage": "Algo correu mal ao abrir a ligação.",
     "rent": "Alugar",
     "streaming": "Streaming",
-    "unableToOpenLinkMessage": "Não foi possível abrir esta ligação. Tente novamente.",
+    "unableToOpenLinkMessage": "Não conseguimos abrir esta ligação. Tente novamente.",
     "unableToOpenLinkTitle": "Não foi possível abrir a ligação",
     "whereToWatch": "Onde ver"
   },
   "watching": {
     "caughtUp": "Em dia",
-    "next": "Seguinte",
+    "next": "Próximo",
     "nextEpisode": "{{seasonEpisode}} · {{title}}",
     "timeRemainingHours": "{{count}}h restantes",
     "timeRemainingHoursMinutes": "{{hours}}h {{minutes}}min restantes",
@@ -1244,15 +1180,15 @@
     "previewDescription": "Descrição da pré-visualização",
     "newWidget": "Novo widget",
     "configureWidget": "Configurar widget",
-    "selectWatchlistError": "Selecione uma lista de pendentes para mostrar.",
-    "saveFailed": "Falha ao guardar a configuração do widget.",
+    "selectWatchlistError": "Selecione uma lista de pendentes para apresentar.",
+    "saveFailed": "Falha ao guardar configuração do widget.",
     "saveConfiguration": "Guardar configuração",
     "deleteWidgetTitle": "Eliminar widget",
-    "deleteWidgetMessage": "Tem a certeza que quer remover esta configuração do widget? Isto irá parar as atualizações deste widget.",
+    "deleteWidgetMessage": "Tem a certeza que quer remover esta configuração de widget? Isto irá interromper as atualizações para este widget.",
     "refreshed": "Widgets atualizados com sucesso",
-    "empty": "Ainda não há widgets configurados.",
+    "empty": "Nenhum widget configurado ainda.",
     "addNew": "Adicionar novo widget",
-    "info": "Configure widgets aqui e depois prima sem soltar no ecrã inicial do Android para adicionar o widget \"ShowSeek\".",
+    "info": "Configure widgets aqui, depois mantenha premido no ecrã inicial do Android para adicionar o widget \"ShowSeek\".",
     "size": {
       "small": "Pequeno",
       "medium": "Médio",
@@ -1273,38 +1209,5 @@
     },
     "unlockWidgets": "Desbloquear widgets",
     "widgetSizeLabel": "Tamanho: {{size}}"
-  },
-  "mood": {
-    "picker": "Seletor de disposição",
-    "title": "Como se está a sentir?",
-    "subtitle": "Escolha uma disposição para descobrir conteúdo",
-    "surpriseMe": "Surpreenda-me!",
-    "results": "Seleções de {{mood}}",
-    "noResults": "Sem resultados para esta disposição",
-    "tryAnother": "Experimente outra disposição",
-    "cozy": {
-      "name": "Aconchegante",
-      "description": "Quentinho e reconfortante"
-    },
-    "mindBending": {
-      "name": "Intrigante",
-      "description": "Reviravoltas e mistérios"
-    },
-    "adrenaline": {
-      "name": "Adrenalina",
-      "description": "Ação e emoção"
-    },
-    "heartbreaking": {
-      "name": "Emocionante",
-      "description": "Jornadas emocionais"
-    },
-    "spooky": {
-      "name": "Assustador",
-      "description": "Arrepios sobrenaturais"
-    },
-    "whimsical": {
-      "name": "Fantástico",
-      "description": "Aventuras mágicas"
-    }
   }
 }

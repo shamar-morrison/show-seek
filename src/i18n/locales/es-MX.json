@@ -343,6 +343,8 @@
     "emptyWatchlistHint": "Agrega películas y series para ver después",
     "emptyFavorites": "Aún no tienes favoritos",
     "emptyFavoritesHint": "Agrega tus películas y series favoritas",
+    "emptyFavoriteEpisodes": "No hay episodios favoritos todavía",
+    "emptyFavoriteEpisodesHint": "Agrega episodios a tus favoritos para verlos aquí",
     "emptyWatched": "Sin elementos vistos",
     "emptyWatchedHint": "Marca elementos como vistos para llevar tu historial",
     "emptyLists": "Sin listas personalizadas",
@@ -407,6 +409,7 @@
     "episodeRatings": "Puntuaciones de episodios",
     "failedToCreateList": "No se pudo crear la lista",
     "favoriteContent": "Contenido favorito",
+    "favoriteEpisodes": "Episodios favoritos",
     "favoritesSection": "Favoritos",
     "filterItems": "Filtrar elementos",
     "filterLists": "Filtrar listas",
@@ -595,7 +598,7 @@
     "watchedToday": "Vista hoy",
     "watchedYesterday": "Vista ayer",
     "chooseDate": "Elegir una fecha",
-    "selectWatchDate": "Seleccionar fecha de visualización",
+    "selectWatchDate": "Seleccionar fecha de visionado",
     "whenDidYouWatch": "¿Cuándo la viste?",
     "chooseSpecificDate": "Elegir una fecha específica",
     "clearAllWatchHistory": "Borrar historial de visionado",
@@ -879,7 +882,7 @@
     "hiddenGems": "Joyas ocultas para ti",
     "trendingThisWeek": "Tendencias de esta semana",
     "notEnoughData": "Aún no hay suficientes datos",
-    "notEnoughDataDescription": "¡Califica tus películas y series favoritas para ver recomendaciones personalizadas aquí!",
+    "notEnoughDataDescription": "¡Puntúa tus películas y series favoritas para ver recomendaciones personalizadas aquí!",
     "goToDiscover": "Ir a Descubrir",
     "signInRequired": "Inicia sesión para recomendaciones personalizadas",
     "signInDescription": "Crea una cuenta para obtener contenido adaptado a tus gustos",
@@ -906,6 +909,7 @@
   "authGuards": {
     "addFavoritePeople": "Inicia sesión para añadir personas a favoritos",
     "addNotes": "Inicia sesión para añadir notas",
+    "favoriteEpisodes": "Inicia sesión para agregar episodios a favoritos",
     "manageCollectionTracking": "Inicia sesión para gestionar el seguimiento de colecciones",
     "rateEpisodes": "Inicia sesión para puntuar episodios",
     "rateMoviesAndShows": "Inicia sesión para puntuar películas y series",
@@ -1054,61 +1058,61 @@
       "support": "Apoyo"
     },
     "features": {
-      "unlimited-lists": {
-        "title": "Listas ilimitadas",
-        "description": "Crea tantas listas personalizadas como quieras."
-      },
-      "unlimited-items": {
-        "title": "Elementos ilimitados por lista",
-        "description": "Añade películas y series ilimitadas a tus listas."
-      },
-      "personal-notes": {
-        "title": "Notas personales",
-        "description": "Añade notas personales a películas y series."
-      },
-      "release-reminders": {
-        "title": "Recordatorios de estrenos",
-        "description": "Recibe avisos cuando se estrenen películas y episodios."
-      },
-      "widgets": {
-        "title": "Widgets",
-        "description": "Añade widgets de ShowSeek a tu pantalla de inicio."
-      },
-      "latest-trailers": {
-        "title": "Últimos tráilers",
-        "description": "Ve los últimos tráilers desde la pantalla de inicio."
-      },
-      "release-calendar": {
-        "title": "Calendario de estrenos",
-        "description": "Sigue los próximos estrenos en tu calendario."
-      },
-      "streaming-filter": {
-        "title": "Filtro de streaming",
-        "description": "Filtra Descubrir por servicio de streaming."
-      },
       "blur-spoilers": {
-        "title": "Difuminar spoilers",
-        "description": "Oculta spoilers en las reseñas."
-      },
-      "hide-watched": {
-        "title": "Ocultar vistos",
-        "description": "Oculta elementos vistos en Descubrir."
-      },
-      "trakt-integration": {
-        "title": "Integración con Trakt",
-        "description": "Sincroniza tu historial con Trakt."
+        "description": "Oculta spoilers en las reseñas.",
+        "title": "Difuminar spoilers"
       },
       "export-data": {
-        "title": "Exportar datos",
-        "description": "Exporta tus listas, puntuaciones, notas y más."
+        "description": "Exporta tus listas, puntuaciones, notas y más.",
+        "title": "Exportar datos"
       },
       "future-features": {
-        "title": "Funciones futuras",
-        "description": "Ayuda a financiar el desarrollo futuro."
+        "description": "Ayuda a financiar el desarrollo futuro.",
+        "title": "Funciones futuras"
+      },
+      "hide-watched": {
+        "description": "Oculta elementos vistos en Descubrir.",
+        "title": "Ocultar vistos"
       },
       "indie-support": {
-        "title": "Apoya a un desarrollador indie",
-        "description": "Apoya el desarrollo continuo de ShowSeek."
+        "description": "Apoya el desarrollo continuo de ShowSeek.",
+        "title": "Apoya a un desarrollador indie"
+      },
+      "latest-trailers": {
+        "description": "Ve los últimos tráilers desde la pantalla de inicio.",
+        "title": "Últimos tráilers"
+      },
+      "personal-notes": {
+        "description": "Añade notas personales a películas y series.",
+        "title": "Notas personales"
+      },
+      "release-calendar": {
+        "description": "Sigue los próximos estrenos en tu calendario.",
+        "title": "Calendario de estrenos"
+      },
+      "release-reminders": {
+        "description": "Recibe avisos cuando se estrenen películas y episodios.",
+        "title": "Recordatorios de estrenos"
+      },
+      "streaming-filter": {
+        "description": "Filtra Descubrir por servicio de streaming.",
+        "title": "Filtro de streaming"
+      },
+      "trakt-integration": {
+        "description": "Sincroniza tu historial con Trakt.",
+        "title": "Integración con Trakt"
+      },
+      "unlimited-items": {
+        "description": "Añade ilimitados películas y series a tus listas.",
+        "title": "Ilimitados elementos por lista"
+      },
+      "unlimited-lists": {
+        "description": "Crea tantas listas personalizadas como quieras.",
+        "title": "Ilimitadas listas"
+      },
+      "widgets": {
+        "description": "Añade widgets de ShowSeek a tu pantalla de inicio.",
+        "title": "Widgets"
       }
     }
   },

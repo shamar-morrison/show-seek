@@ -61,6 +61,10 @@ export default function LibraryStackLayout() {
           options={{ title: t('library.favoriteContent'), headerShown: true }}
         />
         <Stack.Screen
+          name="favorite-episodes"
+          options={{ title: t('library.favoriteEpisodes'), headerShown: true }}
+        />
+        <Stack.Screen
           name="favorite-people"
           options={{ title: t('library.favoritePeople'), headerShown: true }}
         />
