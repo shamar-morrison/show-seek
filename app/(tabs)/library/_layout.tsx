@@ -79,9 +79,6 @@ export default function LibraryStackLayout() {
         {/* Widgets - has its own layout */}
         <Stack.Screen name="widgets" options={{ headerShown: false }} />
 
-        {/* Watch History */}
-        <Stack.Screen name="movie/[id]/watch-history" options={{ headerShown: true }} />
-
         {/* Existing detail screens */}
         <CommonDetailScreens />
       </Stack>

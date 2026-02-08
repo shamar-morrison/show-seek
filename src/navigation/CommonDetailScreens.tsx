@@ -17,6 +17,13 @@ export const CommonDetailScreens = () => (
       }}
     />
     <Stack.Screen
+      name="movie/[id]/watch-history"
+      options={{
+        title: 'Watch History',
+        headerShown: true,
+      }}
+    />
+    <Stack.Screen
       name="tv/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
