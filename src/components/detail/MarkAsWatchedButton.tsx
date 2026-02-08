@@ -11,6 +11,8 @@ interface MarkAsWatchedButtonProps {
   isLoading: boolean;
   /** Callback when button is pressed */
   onPress: () => void;
+  /** Callback when button is long-pressed (for watch history actions) */
+  onLongPress?: () => void;
   /** Whether the button is disabled (e.g., during save operation) */
   disabled?: boolean;
 }
@@ -25,6 +27,7 @@ export function MarkAsWatchedButton({
   watchCount,
   isLoading,
   onPress,
+  onLongPress,
   disabled = false,
 }: MarkAsWatchedButtonProps) {
   const { t } = useTranslation();
@@ -39,6 +42,7 @@ export function MarkAsWatchedButton({
         pressed && styles.pressedButton,
       ]}
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={disabled || isLoading}
     >
       {isLoading ? (

@@ -604,6 +604,7 @@
     "clearAllWatchHistory": "Clear watch history",
     "clearWatchHistoryMessage": "This will remove all watch history for this movie. This action cannot be undone.",
     "clearWatchHistoryTitle": "Clear watch history?",
+    "clearWatchHistoryDescription": "Remove all recorded watch times",
     "customDate": "Custom date",
     "failedToClear": "Failed to clear watch history",
     "markAll": "Mark all",
@@ -621,7 +622,12 @@
     "watchHistoryCleared": "Watch history cleared",
     "watchedTimes": "Watched {{count}} times",
     "watchedTimes_one": "Watched {{count}} time",
-    "watchedTimes_other": "Watched {{count}} times"
+    "watchedTimes_other": "Watched {{count}} times",
+    "viewWatchHistory": "View watch history",
+    "viewWatchHistoryDescription": "See all times you watched this",
+    "watchHistory": "Watch History",
+    "watchedAt": "{{time}}",
+    "noWatchHistory": "No watch history"
   },
   "settings": {
     "title": "Settings",

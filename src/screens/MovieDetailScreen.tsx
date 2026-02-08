@@ -34,6 +34,10 @@ import { ShareButton } from '@/src/components/ui/ShareButton';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
+import {
+  WatchHistoryActionsModal,
+  type WatchHistoryActionsModalRef,
+} from '@/src/components/WatchHistoryActionsModal';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -79,7 +83,15 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Clock, ExternalLink, Globe, Star } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Check if a movie can have a reminder (has a future release date)
@@ -157,6 +169,7 @@ export default function MovieDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const addToListModalRef = useRef<AddToListModalRef>(null);
   const noteSheetRef = useRef<NoteModalRef>(null);
+  const watchHistoryModalRef = useRef<WatchHistoryActionsModalRef>(null);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const [shouldLoadReviews, setShouldLoadReviews] = useState(false);
@@ -520,6 +533,42 @@ export default function MovieDetailScreen() {
     }, t('authGuards.trackWatchedMovies'));
   };
 
+  // Handle long-press on watched button to show history actions
+  const handleWatchedButtonLongPress = () => {
+    if (watchCount > 0) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      watchHistoryModalRef.current?.present();
+    }
+  };
+
+  // Handle view history action from modal
+  const handleViewWatchHistory = () => {
+    watchHistoryModalRef.current?.dismiss();
+    navigateTo(`/movie/${movieId}/watch-history?title=${encodeURIComponent(movie.title)}`);
+  };
+
+  // Handle clear history action from modal
+  const handleClearHistoryFromModal = () => {
+    watchHistoryModalRef.current?.dismiss();
+    Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.clearAll'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await handleClearWatches();
+            toastRef.current?.show(t('watched.watchHistoryCleared'));
+          } catch (error) {
+            toastRef.current?.show(
+              error instanceof Error ? error.message : t('watched.failedToClear')
+            );
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -685,6 +734,7 @@ export default function MovieDetailScreen() {
             watchCount={watchCount}
             isLoading={isLoadingWatched || isSavingWatch}
             onPress={handleWatchedButtonPress}
+            onLongPress={handleWatchedButtonLongPress}
             disabled={isSavingWatch}
           />
 
@@ -966,6 +1016,13 @@ export default function MovieDetailScreen() {
           onShowToast={(message) => toastRef.current?.show(message)}
         />
       )}
+
+      {/* Watch History Actions Modal - triggered by long-press on watched button */}
+      <WatchHistoryActionsModal
+        ref={watchHistoryModalRef}
+        onViewHistory={handleViewWatchHistory}
+        onClearHistory={handleClearHistoryFromModal}
+      />
     </View>
   );
 }
