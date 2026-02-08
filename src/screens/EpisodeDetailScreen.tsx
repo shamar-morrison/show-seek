@@ -6,6 +6,7 @@ import { PhotosSection } from '@/src/components/detail/PhotosSection';
 import { RelatedEpisodesSection } from '@/src/components/detail/RelatedEpisodesSection';
 import { VideosSection } from '@/src/components/detail/VideosSection';
 import ImageLightbox from '@/src/components/ImageLightbox';
+import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
@@ -28,7 +29,9 @@ import {
   useMarkEpisodeWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
+import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/useFavoriteEpisodes';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
+import { useMediaNote } from '@/src/hooks/useNotes';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -38,8 +41,18 @@ import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Calendar, Check, ChevronRight, Clock, Play, Star } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  Calendar,
+  Check,
+  ChevronRight,
+  Clock,
+  Heart,
+  Play,
+  Star,
+  StickyNote,
+} from 'lucide-react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -68,6 +81,7 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -89,6 +103,19 @@ export default function EpisodeDetailScreen() {
   const { membership: listMembership } = useMediaLists(tvId);
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
+
+  const { isFavorited, isLoading: isLoadingFavorite } = useIsEpisodeFavorited(
+    tvId,
+    seasonNumber,
+    episodeNumber
+  );
+  const toggleFavoriteMutation = useToggleFavoriteEpisode();
+
+  const {
+    note,
+    hasNote,
+    isLoading: isLoadingNote,
+  } = useMediaNote('episode', tvId, seasonNumber, episodeNumber);
 
   // Calculate current count for 'currently-watching' list
   const currentlyWatchingList = lists?.find((l) => l.id === 'currently-watching');
@@ -239,6 +266,40 @@ export default function EpisodeDetailScreen() {
     t,
     isPremium,
     currentListCount,
+  ]);
+
+  const handleToggleFavorite = useCallback(() => {
+    requireAuth(async () => {
+      if (!episode || !tvShow) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      try {
+        await toggleFavoriteMutation.mutateAsync({
+          isFavorited,
+          episodeData: {
+            id: `${tvId}-${seasonNumber}-${episodeNumber}`,
+            tvShowId: tvId,
+            seasonNumber,
+            episodeNumber,
+            episodeName: episode.name,
+            showName: tvShow.name,
+            posterPath: tvShow.poster_path,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to toggle favorite episode:', error);
+      }
+    }, t('authGuards.favoriteEpisodes'));
+  }, [
+    isFavorited,
+    toggleFavoriteMutation,
+    episode,
+    tvShow,
+    tvId,
+    seasonNumber,
+    episodeNumber,
+    requireAuth,
+    t,
   ]);
 
   const handleVideoPress = useCallback((video: Video) => {
@@ -410,11 +471,76 @@ export default function EpisodeDetailScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <View style={styles.primaryActionsContainer}>
+          <View style={styles.actionButtonsContainer}>
+            <View style={styles.secondaryActions}>
+              <View style={styles.actionButtonWrapper}>
+                <RatingButton
+                  onPress={() =>
+                    requireAuth(() => setRatingModalVisible(true), t('authGuards.rateEpisodes'))
+                  }
+                  isRated={userRating > 0}
+                  isLoading={isLoadingRating}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={handleToggleFavorite}
+                disabled={isLoadingFavorite}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <View style={styles.iconButton}>
+                  {isLoadingFavorite ? (
+                    <ActivityIndicator size="small" color={COLORS.text} />
+                  ) : (
+                    <Heart
+                      size={24}
+                      color={isFavorited ? accentColor : COLORS.text}
+                      fill={isFavorited ? accentColor : 'transparent'}
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionButtonWrapper}
+                onPress={() =>
+                  requireAuth(
+                    () =>
+                      noteSheetRef.current?.present({
+                        mediaType: 'episode',
+                        mediaId: tvId,
+                        seasonNumber,
+                        episodeNumber,
+                        posterPath: tvShow?.poster_path || null,
+                        mediaTitle: episode.name,
+                        initialNote: note?.content,
+                        showId: tvId,
+                      }),
+                    t('authGuards.addNotes')
+                  )
+                }
+                disabled={isLoadingNote}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <View style={styles.iconButton}>
+                  {isLoadingNote ? (
+                    <ActivityIndicator size="small" color={COLORS.text} />
+                  ) : (
+                    <StickyNote
+                      size={24}
+                      color={hasNote ? accentColor : COLORS.text}
+                      fill={hasNote ? accentColor : 'transparent'}
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.primaryActions}>
               <TouchableOpacity
                 style={[
-                  styles.watchButton,
+                  styles.watchButtonFull,
                   !isWatched && { backgroundColor: accentColor },
                   isWatched && styles.unwatchButton,
                   (!hasAired || isPending) && styles.disabledButton,
@@ -445,17 +571,6 @@ export default function EpisodeDetailScreen() {
                   <Text style={styles.trailerButtonText}>{t('media.watchTrailer')}</Text>
                 </TouchableOpacity>
               )}
-            </View>
-
-            {/* Rating Button */}
-            <View style={styles.ratingButtonContainer}>
-              <RatingButton
-                onPress={() =>
-                  requireAuth(() => setRatingModalVisible(true), t('authGuards.rateEpisodes'))
-                }
-                isRated={userRating > 0}
-                isLoading={isLoadingRating}
-              />
             </View>
           </View>
 
@@ -573,6 +688,7 @@ export default function EpisodeDetailScreen() {
           onShowToast={(message) => toastRef.current?.show(message)}
         />
       )}
+      <NoteModal ref={noteSheetRef} />
       <Toast ref={toastRef} />
       {AuthGuardModal}
     </SafeAreaView>
@@ -648,7 +764,35 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
-  watchButton: {
+  actionButtonsContainer: {
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.l,
+    gap: SPACING.s,
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: SPACING.s,
+    alignItems: 'center',
+  },
+  primaryActions: {
+    gap: SPACING.s,
+  },
+  actionButtonWrapper: {
+    flex: 1,
+    height: 49,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconButton: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  watchButtonFull: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
@@ -670,18 +814,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontWeight: '600',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: SPACING.m,
-    marginTop: SPACING.s,
-    marginBottom: SPACING.l,
-    alignItems: 'center',
-  },
-  primaryActionsContainer: {
-    flex: 1,
-    flexDirection: 'column',
-    gap: SPACING.s,
-  },
   trailerButton: {
     width: '100%',
     flexDirection: 'row',
@@ -697,15 +829,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
     fontWeight: '600',
-  },
-  ratingButtonContainer: {
-    width: 56,
-    height: 56,
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   overviewSection: {},
   sectionTitle: {

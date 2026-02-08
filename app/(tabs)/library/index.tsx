@@ -119,6 +119,12 @@ export default function LibraryScreen() {
             route: '/(tabs)/library/favorites',
           },
           {
+            id: 'favorite-episodes',
+            icon: Heart,
+            title: t('library.favoriteEpisodes'),
+            route: '/(tabs)/library/favorite-episodes',
+          },
+          {
             id: 'favorite-people',
             icon: User,
             title: t('library.favoritePeople'),

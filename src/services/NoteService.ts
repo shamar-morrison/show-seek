@@ -18,17 +18,20 @@ import { auth, db } from '../firebase/config';
 class NoteService {
   /**
    * Generate note document ID
-   * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396")
+   * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396", "episode-tvId-season-episode")
    */
-  private getNoteId(mediaType: 'movie' | 'tv', mediaId: number): string {
+  private getNoteId(mediaType: 'movie' | 'tv' | 'episode', mediaId: number, season?: number, episode?: number): string {
+    if (mediaType === 'episode' && season !== undefined && episode !== undefined) {
+      return `episode-${mediaId}-${season}-${episode}`;
+    }
     return `${mediaType}-${mediaId}`;
   }
 
   /**
    * Get reference to a specific note document
    */
-  private getNoteRef(userId: string, mediaType: 'movie' | 'tv', mediaId: number) {
-    const noteId = this.getNoteId(mediaType, mediaId);
+  private getNoteRef(userId: string, mediaType: 'movie' | 'tv' | 'episode', mediaId: number, season?: number, episode?: number) {
+    const noteId = this.getNoteId(mediaType, mediaId, season, episode);
     return doc(db, 'users', userId, 'notes', noteId);
   }
 
@@ -47,13 +50,16 @@ class NoteService {
     return {
       id: doc.id,
       userId: data.userId as string,
-      mediaType: data.mediaType as 'movie' | 'tv',
+      mediaType: data.mediaType as 'movie' | 'tv' | 'episode',
       mediaId: data.mediaId as number,
       content: data.content as string,
       posterPath: (data.posterPath as string | null) ?? null,
       mediaTitle: data.mediaTitle as string,
       createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
       updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+      seasonNumber: data.seasonNumber as number | undefined,
+      episodeNumber: data.episodeNumber as number | undefined,
+      showId: data.showId as number | undefined,
     };
   }
 
@@ -101,7 +107,13 @@ class NoteService {
         throw new Error('Please sign in to continue');
       }
 
-      const noteRef = this.getNoteRef(userId, noteData.mediaType, noteData.mediaId);
+      const noteRef = this.getNoteRef(
+        userId, 
+        noteData.mediaType, 
+        noteData.mediaId, 
+        noteData.seasonNumber, 
+        noteData.episodeNumber
+      );
       const existingNote = await Promise.race([getDoc(noteRef), createTimeout()]);
 
       const now = Timestamp.now();
@@ -114,6 +126,10 @@ class NoteService {
         mediaTitle: noteData.mediaTitle,
         createdAt: existingNote.exists() ? existingNote.data().createdAt : now,
         updatedAt: now,
+        // Optional episode fields
+        ...(noteData.seasonNumber !== undefined && { seasonNumber: noteData.seasonNumber }),
+        ...(noteData.episodeNumber !== undefined && { episodeNumber: noteData.episodeNumber }),
+        ...(noteData.showId !== undefined && { showId: noteData.showId }),
       };
 
       await Promise.race([setDoc(noteRef, noteDocument), createTimeout()]);
@@ -127,14 +143,20 @@ class NoteService {
   /**
    * Get a single note for a media item
    */
-  async getNote(userId: string, mediaType: 'movie' | 'tv', mediaId: number): Promise<Note | null> {
+  async getNote(
+    userId: string, 
+    mediaType: 'movie' | 'tv' | 'episode', 
+    mediaId: number,
+    season?: number,
+    episode?: number
+  ): Promise<Note | null> {
     try {
       const user = auth.currentUser;
       if (!user || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
-      const noteRef = this.getNoteRef(userId, mediaType, mediaId);
+      const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
 
       const docSnap = await Promise.race([getDoc(noteRef), createTimeout()]);
 
@@ -151,39 +173,22 @@ class NoteService {
   }
 
   /**
-   * Get all notes for a user, ordered by createdAt descending
-   */
-  async getNotes(userId: string): Promise<Note[]> {
-    try {
-      const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
-
-      const notesRef = this.getNotesCollection(userId);
-      const q = query(notesRef, orderBy('createdAt', 'desc'));
-
-      const snapshot = await Promise.race([getDocs(q), createTimeout()]);
-
-      return snapshot.docs.map((doc) => this.mapDocToNote(doc));
-    } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[NoteService] getNotes error:', error);
-      throw new Error(message);
-    }
-  }
-
-  /**
    * Delete a note for a media item
    */
-  async deleteNote(userId: string, mediaType: 'movie' | 'tv', mediaId: number): Promise<void> {
+  async deleteNote(
+    userId: string, 
+    mediaType: 'movie' | 'tv' | 'episode', 
+    mediaId: number,
+    season?: number,
+    episode?: number
+  ): Promise<void> {
     try {
       const user = auth.currentUser;
       if (!user || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
-      const noteRef = this.getNoteRef(userId, mediaType, mediaId);
+      const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
 
       await Promise.race([deleteDoc(noteRef), createTimeout()]);
     } catch (error) {
