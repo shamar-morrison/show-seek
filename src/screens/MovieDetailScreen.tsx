@@ -570,7 +570,6 @@ export default function MovieDetailScreen() {
       ]);
     }, t('authGuards.trackWatchedMovies'));
   };
-  };
 
   return (
     <View style={styles.container}>
