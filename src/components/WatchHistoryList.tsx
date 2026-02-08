@@ -1,7 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { format } from 'date-fns';
-import { Calendar, Clock, Trash2 } from 'lucide-react-native';
+import { Calendar, Trash2 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
@@ -16,7 +16,6 @@ function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
   const { t } = useTranslation();
 
   const formattedDate = format(instance.watchedAt, 'EEEE, MMMM d, yyyy');
-  const formattedTime = format(instance.watchedAt, 'h:mm a');
 
   const handleDelete = useCallback(() => {
     if (onDelete) {
@@ -37,10 +36,6 @@ function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
         <View style={styles.dateRow}>
           <Calendar size={16} color={COLORS.textSecondary} />
           <Text style={styles.dateText}>{formattedDate}</Text>
-        </View>
-        <View style={styles.timeRow}>
-          <Clock size={14} color={COLORS.textSecondary} />
-          <Text style={styles.timeText}>{formattedTime}</Text>
         </View>
       </View>
       {onDelete && (
@@ -119,16 +114,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '500',
     color: COLORS.text,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.s,
-    marginLeft: 1,
-  },
-  timeText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   deleteButton: {
     padding: SPACING.s,
