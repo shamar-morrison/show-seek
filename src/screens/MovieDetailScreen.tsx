@@ -550,23 +550,26 @@ export default function MovieDetailScreen() {
   // Handle clear history action from modal
   // Note: Modal already dismisses itself before calling this callback
   const handleClearHistoryFromModal = () => {
-    Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.clearAll'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await handleClearWatches();
-            toastRef.current?.show(t('watched.watchHistoryCleared'));
-          } catch (error) {
-            toastRef.current?.show(
-              error instanceof Error ? error.message : t('watched.failedToClear')
-            );
-          }
+    requireAuth(() => {
+      Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.clearAll'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await handleClearWatches();
+              toastRef.current?.show(t('watched.watchHistoryCleared'));
+            } catch (error) {
+              toastRef.current?.show(
+                error instanceof Error ? error.message : t('watched.failedToClear')
+              );
+            }
+          },
         },
-      },
-    ]);
+      ]);
+    }, t('authGuards.trackWatchedMovies'));
+  };
   };
 
   return (
