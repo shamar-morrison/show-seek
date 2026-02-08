@@ -4,6 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useDeferredExpansion } from '@/src/hooks/useDeferredExpansion';
 import type {
   MarkAllEpisodesWatchedParams,
   MarkEpisodeUnwatchedParams,
@@ -16,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import React, { memo, useCallback } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
 import { useSeasonScreenStyles } from './seasonScreenStyles';
 
@@ -87,6 +88,9 @@ export const SeasonItem = memo<SeasonItemProps>(
     const styles = useSeasonScreenStyles();
     const posterUrl = getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small);
     const { progress } = useSeasonProgress(tvId, season.season_number, season.episodes || []);
+
+    // Defer episode rendering to show loading indicator immediately on expand
+    const { shouldRenderContent, isLoading } = useDeferredExpansion(isExpanded);
 
     const handleMarkAllPress = useCallback(() => {
       if (!season.episodes || season.episodes.length === 0) return;
@@ -257,103 +261,110 @@ export const SeasonItem = memo<SeasonItemProps>(
           <View style={styles.episodesContainer}>
             {season.overview && <Text style={styles.seasonFullOverview}>{season.overview}</Text>}
 
-            {season.episodes.map((episode: Episode) => {
-              const episodeKey = `${season.season_number}_${episode.episode_number}`;
-              const isWatched = episodeTracking?.episodes?.[episodeKey];
-              const isPending =
-                (markWatchedPending &&
-                  markWatchedVariables?.episodeNumber === episode.episode_number &&
-                  markWatchedVariables?.seasonNumber === season.season_number) ||
-                (markUnwatchedPending &&
-                  markUnwatchedVariables?.episodeNumber === episode.episode_number &&
-                  markUnwatchedVariables?.seasonNumber === season.season_number);
+            {isLoading && (
+              <View style={styles.episodesLoadingContainer}>
+                <ActivityIndicator size="large" color={accentColor} />
+              </View>
+            )}
 
-              const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
+            {shouldRenderContent &&
+              season.episodes.map((episode: Episode) => {
+                const episodeKey = `${season.season_number}_${episode.episode_number}`;
+                const isWatched = episodeTracking?.episodes?.[episodeKey];
+                const isPending =
+                  (markWatchedPending &&
+                    markWatchedVariables?.episodeNumber === episode.episode_number &&
+                    markWatchedVariables?.seasonNumber === season.season_number) ||
+                  (markUnwatchedPending &&
+                    markUnwatchedVariables?.episodeNumber === episode.episode_number &&
+                    markUnwatchedVariables?.seasonNumber === season.season_number);
 
-              // Find user rating for this episode
-              const episodeDocId = `episode-${tvId}-${season.season_number}-${episode.episode_number}`;
-              const userRatingItem = ratings?.find(
-                (r) => r.id === episodeDocId && r.mediaType === 'episode'
-              );
-              const userRating = userRatingItem?.rating || 0;
+                const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
 
-              return (
-                <EpisodeItem
-                  key={episode.id}
-                  episode={episode}
-                  seasonNumber={season.season_number}
-                  tvId={tvId}
-                  showName={showName}
-                  showPosterPath={showPosterPath}
-                  isWatched={!!isWatched}
-                  isPending={isPending}
-                  hasAired={!!hasAired}
-                  userRating={userRating}
-                  formatDate={formatDate}
-                  onPress={() => onEpisodePress(episode, season.season_number)}
-                  onMarkWatched={() => {
-                    // Check if this will complete the season
-                    const willComplete =
-                      progress && progress.watchedCount + 1 === progress.totalAiredCount;
+                // Find user rating for this episode
+                const episodeDocId = `episode-${tvId}-${season.season_number}-${episode.episode_number}`;
+                const userRatingItem = ratings?.find(
+                  (r) => r.id === episodeDocId && r.mediaType === 'episode'
+                );
+                const userRating = userRatingItem?.rating || 0;
 
-                    onMarkWatched(
-                      {
+                return (
+                  <EpisodeItem
+                    key={episode.id}
+                    episode={episode}
+                    seasonNumber={season.season_number}
+                    tvId={tvId}
+                    showName={showName}
+                    showPosterPath={showPosterPath}
+                    isWatched={!!isWatched}
+                    isPending={isPending}
+                    hasAired={!!hasAired}
+                    userRating={userRating}
+                    formatDate={formatDate}
+                    onPress={() => onEpisodePress(episode, season.season_number)}
+                    onMarkWatched={() => {
+                      // Check if this will complete the season
+                      const willComplete =
+                        progress && progress.watchedCount + 1 === progress.totalAiredCount;
+
+                      onMarkWatched(
+                        {
+                          tvShowId: tvId,
+                          seasonNumber: season.season_number,
+                          episodeNumber: episode.episode_number,
+                          episodeData: {
+                            episodeId: episode.id,
+                            episodeName: episode.name,
+                            episodeAirDate: episode.air_date,
+                          },
+                          showMetadata: {
+                            tvShowName: showName,
+                            posterPath: showPosterPath,
+                          },
+                          autoAddOptions: {
+                            showStatus,
+                            shouldAutoAdd: autoAddToWatching,
+                            listMembership,
+                            firstAirDate,
+                            voteAverage,
+                            isPremium,
+                            currentListCount,
+                          },
+                          previousEpisodesOptions: {
+                            seasonEpisodes: season.episodes || [],
+                            shouldMarkPrevious: markPreviousEpisodesWatched,
+                          },
+                        },
+                        {
+                          onSuccess: () => {
+                            if (willComplete) {
+                              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                            }
+                          },
+                          onError: (error) => {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                            console.error('Error marking episode as watched:', error);
+                          },
+                        }
+                      );
+                    }}
+                    onMarkUnwatched={() => {
+                      onMarkUnwatched({
                         tvShowId: tvId,
                         seasonNumber: season.season_number,
                         episodeNumber: episode.episode_number,
-                        episodeData: {
-                          episodeId: episode.id,
-                          episodeName: episode.name,
-                          episodeAirDate: episode.air_date,
-                        },
-                        showMetadata: {
-                          tvShowName: showName,
-                          posterPath: showPosterPath,
-                        },
-                        autoAddOptions: {
-                          showStatus,
-                          shouldAutoAdd: autoAddToWatching,
-                          listMembership,
-                          firstAirDate,
-                          voteAverage,
-                          isPremium,
-                          currentListCount,
-                        },
-                        previousEpisodesOptions: {
-                          seasonEpisodes: season.episodes || [],
-                          shouldMarkPrevious: markPreviousEpisodesWatched,
-                        },
-                      },
-                      {
-                        onSuccess: () => {
-                          if (willComplete) {
-                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                          }
-                        },
-                        onError: (error) => {
-                          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-                          console.error('Error marking episode as watched:', error);
-                        },
-                      }
-                    );
-                  }}
-                  onMarkUnwatched={() => {
-                    onMarkUnwatched({
-                      tvShowId: tvId,
-                      seasonNumber: season.season_number,
-                      episodeNumber: episode.episode_number,
-                    });
-                  }}
-                  t={t}
-                  progress={progress ?? undefined}
-                  showStatus={showStatus}
-                  autoAddToWatching={autoAddToWatching}
-                  listMembership={listMembership}
-                  firstAirDate={firstAirDate}
-                  voteAverage={voteAverage}
-                />
-              );
-            })}
+                      });
+                    }}
+                    t={t}
+                    progress={progress ?? undefined}
+                    showStatus={showStatus}
+                    autoAddToWatching={autoAddToWatching}
+                    listMembership={listMembership}
+                    firstAirDate={firstAirDate}
+                    voteAverage={voteAverage}
+                  />
+                );
+              })}
           </View>
         )}
       </View>
