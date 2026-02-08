@@ -13,6 +13,7 @@ import {
   Layers,
   Layout,
   ListPlus,
+  MessageSquareHeart,
   Play,
   Settings2,
   StickyNote,
@@ -120,7 +121,7 @@ export default function LibraryScreen() {
           },
           {
             id: 'favorite-episodes',
-            icon: Heart,
+            icon: MessageSquareHeart,
             title: t('library.favoriteEpisodes'),
             route: '/(tabs)/library/favorite-episodes',
           },
