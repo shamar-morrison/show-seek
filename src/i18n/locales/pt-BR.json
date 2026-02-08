@@ -626,6 +626,7 @@
     "viewWatchHistory": "Ver histórico de exibição",
     "viewWatchHistoryDescription": "Ver todas as vezes que você assistiu",
     "watchHistory": "Histórico de exibição",
+    "watch": "exibição",
     "watchedAt": "{{time}}",
     "noWatchHistory": "Sem histórico de exibição",
     "deleteWatchConfirm": "Remover esta entrada?"

@@ -626,6 +626,7 @@
     "viewWatchHistory": "Ver historial de visionado",
     "viewWatchHistoryDescription": "Ver todas las veces que viste esto",
     "watchHistory": "Historial de visionado",
+    "watch": "visionado",
     "watchedAt": "{{time}}",
     "noWatchHistory": "Sin historial de visionado",
     "deleteWatchConfirm": "¿Eliminar esta entrada?"
