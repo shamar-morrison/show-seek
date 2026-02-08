@@ -1,5 +1,5 @@
-import { deleteDoc, doc, getDocs, setDoc, onSnapshot, query, orderBy, collection } from 'firebase/firestore';
 import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
+import { deleteDoc, doc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -43,7 +43,13 @@ describe('FavoriteEpisodeService', () => {
 
       await favoriteEpisodeService.addFavoriteEpisode('test-user-id', episodeData);
 
-      expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'test-user-id', 'favorite_episodes', '123-1-5');
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'favorite_episodes',
+        '123-1-5'
+      );
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
@@ -69,7 +75,13 @@ describe('FavoriteEpisodeService', () => {
 
       await favoriteEpisodeService.removeFavoriteEpisode('test-user-id', '123-1-5');
 
-      expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'test-user-id', 'favorite_episodes', '123-1-5');
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'favorite_episodes',
+        '123-1-5'
+      );
       expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
     });
   });
@@ -81,7 +93,7 @@ describe('FavoriteEpisodeService', () => {
         { id: '1-1-2', showName: 'Show 1', addedAt: 2000 },
       ];
       const mockSnapshot = {
-        docs: mockEpisodes.map(ep => ({ data: () => ep })),
+        docs: mockEpisodes.map((ep) => ({ data: () => ep })),
       };
       (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
 
@@ -98,10 +110,18 @@ describe('FavoriteEpisodeService', () => {
       const mockUnsubscribe = jest.fn();
       (onSnapshot as jest.Mock).mockReturnValue(mockUnsubscribe);
 
-      const unsubscribe = favoriteEpisodeService.subscribeToFavoriteEpisodes('test-user-id', callback);
+      const unsubscribe = favoriteEpisodeService.subscribeToFavoriteEpisodes(
+        'test-user-id',
+        callback
+      );
 
       expect(onSnapshot).toHaveBeenCalled();
-      expect(unsubscribe).toBe(mockUnsubscribe);
+      // unsubscribe is now a wrapper function that manages refcount
+      expect(unsubscribe).toBeInstanceOf(Function);
+
+      // When called, it should clean up since there's only one subscriber
+      unsubscribe();
+      expect(mockUnsubscribe).toHaveBeenCalled();
     });
 
     it('should return empty function if no userId', () => {

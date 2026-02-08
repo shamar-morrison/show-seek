@@ -329,6 +329,9 @@ export default function NotesScreen() {
       posterPath: note.posterPath,
       mediaTitle: note.mediaTitle,
       initialNote: note.content,
+      seasonNumber: note.seasonNumber,
+      episodeNumber: note.episodeNumber,
+      showId: note.showId,
     });
   }, []);
 
@@ -344,6 +347,8 @@ export default function NotesScreen() {
               await deleteNoteMutation.mutateAsync({
                 mediaType: note.mediaType,
                 mediaId: note.mediaId,
+                seasonNumber: note.seasonNumber,
+                episodeNumber: note.episodeNumber,
               });
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (error) {

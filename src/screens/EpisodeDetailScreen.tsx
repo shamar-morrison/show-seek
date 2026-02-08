@@ -40,6 +40,7 @@ import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/use
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -95,6 +96,9 @@ export default function EpisodeDetailScreen() {
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  // Progressive render: defer heavy component tree by one tick on cache hit
+  const { isReady } = useProgressiveRender();
 
   const { userRating, isLoading: isLoadingRating } = useEpisodeRating(
     tvId,
@@ -359,7 +363,7 @@ export default function EpisodeDetailScreen() {
     return new Date(episode.air_date) <= new Date();
   }, [episode]);
 
-  if (isLoading) {
+  if (!isReady || isLoading) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
