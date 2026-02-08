@@ -17,7 +17,14 @@ import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import {
+  ACTIVE_OPACITY,
+  BORDER_RADIUS,
+  BUTTON_HEIGHT,
+  COLORS,
+  FONT_SIZE,
+  SPACING,
+} from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
@@ -48,6 +55,7 @@ import {
   ChevronRight,
   Clock,
   Heart,
+  Pencil,
   Play,
   Star,
   StickyNote,
@@ -526,12 +534,10 @@ export default function EpisodeDetailScreen() {
                 <View style={styles.iconButton}>
                   {isLoadingNote ? (
                     <ActivityIndicator size="small" color={COLORS.text} />
+                  ) : hasNote ? (
+                    <Pencil size={24} color={COLORS.white} />
                   ) : (
-                    <StickyNote
-                      size={24}
-                      color={hasNote ? accentColor : COLORS.text}
-                      fill={hasNote ? accentColor : 'transparent'}
-                    />
+                    <StickyNote size={24} color={COLORS.text} />
                   )}
                 </View>
               </TouchableOpacity>
@@ -779,7 +785,7 @@ const styles = StyleSheet.create({
   },
   actionButtonWrapper: {
     flex: 1,
-    height: 49,
+    height: BUTTON_HEIGHT,
     backgroundColor: COLORS.surfaceLight,
     borderRadius: BORDER_RADIUS.m,
     overflow: 'hidden',
