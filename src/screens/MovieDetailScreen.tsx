@@ -542,14 +542,14 @@ export default function MovieDetailScreen() {
   };
 
   // Handle view history action from modal
+  // Note: Modal already dismisses itself before calling this callback
   const handleViewWatchHistory = () => {
-    watchHistoryModalRef.current?.dismiss();
     navigateTo(`/movie/${movieId}/watch-history?title=${encodeURIComponent(movie.title)}`);
   };
 
   // Handle clear history action from modal
+  // Note: Modal already dismisses itself before calling this callback
   const handleClearHistoryFromModal = () => {
-    watchHistoryModalRef.current?.dismiss();
     Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
       { text: t('common.cancel'), style: 'cancel' },
       {

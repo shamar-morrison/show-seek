@@ -627,7 +627,8 @@
     "viewWatchHistoryDescription": "Ver todas las veces que viste esto",
     "watchHistory": "Historial de visionado",
     "watchedAt": "{{time}}",
-    "noWatchHistory": "Sin historial de visionado"
+    "noWatchHistory": "Sin historial de visionado",
+    "deleteWatchConfirm": "¿Eliminar esta entrada?"
   },
   "settings": {
     "title": "Configuración",

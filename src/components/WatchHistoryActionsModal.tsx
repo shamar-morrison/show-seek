@@ -33,7 +33,6 @@ const WatchHistoryActionsModal = forwardRef<
 
   useImperativeHandle(ref, () => ({
     present: async () => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await sheetRef.current?.present();
     },
     dismiss: async () => {
@@ -41,15 +40,15 @@ const WatchHistoryActionsModal = forwardRef<
     },
   }));
 
-  const handleViewHistory = useCallback(() => {
+  const handleViewHistory = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sheetRef.current?.dismiss();
+    await sheetRef.current?.dismiss();
     onViewHistory();
   }, [onViewHistory]);
 
-  const handleClearHistory = useCallback(() => {
+  const handleClearHistory = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sheetRef.current?.dismiss();
+    await sheetRef.current?.dismiss();
     onClearHistory();
   }, [onClearHistory]);
 

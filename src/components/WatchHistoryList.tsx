@@ -1,10 +1,10 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { WatchInstance } from '@/src/types/watchedMovies';
-import { format } from 'date-fns';
+import { FlashList } from '@shopify/flash-list';
 import { Calendar, Trash2 } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 
 interface WatchHistoryItemProps {
@@ -13,9 +13,14 @@ interface WatchHistoryItemProps {
 }
 
 function WatchHistoryItem({ instance, onDelete }: WatchHistoryItemProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  const formattedDate = format(instance.watchedAt, 'EEEE, MMMM d, yyyy');
+  const formattedDate = instance.watchedAt.toLocaleDateString(i18n.language, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   const handleDelete = useCallback(() => {
     if (onDelete) {
@@ -80,7 +85,7 @@ export function WatchHistoryList({
   }
 
   return (
-    <FlatList
+    <FlashList
       data={instances}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}

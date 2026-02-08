@@ -439,7 +439,8 @@
     "viewWatchHistoryDescription": "Voir toutes les fois où vous avez regardé ceci",
     "watchHistory": "Historique de visionnage",
     "watchedAt": "{{time}}",
-    "noWatchHistory": "Aucun historique de visionnage"
+    "noWatchHistory": "Aucun historique de visionnage",
+    "deleteWatchConfirm": "Supprimer cette entrée de visionnage ?"
   },
   "settings": {
     "title": "Paramètres",

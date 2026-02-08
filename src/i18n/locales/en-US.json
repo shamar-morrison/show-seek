@@ -627,7 +627,8 @@
     "viewWatchHistoryDescription": "See all times you watched this",
     "watchHistory": "Watch History",
     "watchedAt": "{{time}}",
-    "noWatchHistory": "No watch history"
+    "noWatchHistory": "No watch history",
+    "deleteWatchConfirm": "Remove this watch entry?"
   },
   "settings": {
     "title": "Settings",

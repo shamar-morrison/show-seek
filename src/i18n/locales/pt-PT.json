@@ -627,7 +627,8 @@
     "viewWatchHistoryDescription": "Ver todas as vezes que viu isto",
     "watchHistory": "Histórico de visualização",
     "watchedAt": "{{time}}",
-    "noWatchHistory": "Sem histórico de visualização"
+    "noWatchHistory": "Sem histórico de visualização",
+    "deleteWatchConfirm": "Remover esta entrada?"
   },
   "settings": {
     "title": "Definições",
