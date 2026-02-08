@@ -300,6 +300,7 @@ export default function EpisodeDetailScreen() {
         });
       } catch (error) {
         console.error('Failed to toggle favorite episode:', error);
+        toastRef.current?.show(t('errors.generic'));
       }
     }, t('authGuards.favoriteEpisodes'));
   }, [

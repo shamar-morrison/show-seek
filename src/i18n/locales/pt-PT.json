@@ -275,8 +275,8 @@
     "deathday": "Falecimento",
     "placeOfBirth": "Local de nascimento",
     "alsoKnownAs": "Também conhecido como",
-    "actingCredits": "Filmographie (acteur)",
-    "crewCredits": "Filmographie (équipe)",
+    "actingCredits": "Filmografia (ator)",
+    "crewCredits": "Filmografia (equipa)",
     "externalLinks": "Ligações externas",
     "homepage": "Sítio oficial",
     "openWith": "Abrir com",
@@ -591,7 +591,7 @@
       "seasonPremieres": "Estreias de temporada"
     },
     "updateReminder": "Atualizar lembrete",
-    "warningSomeTimesPassed": "Algun horários de lembrete já passaram."
+    "warningSomeTimesPassed": "Alguns horários de lembrete já passaram."
   },
   "watched": {
     "title": "Marcar como visto",
@@ -708,7 +708,7 @@
     "showListIndicatorsDescription": "Mostrar um emblema nos cartões quando um item estiver em alguma das suas listas",
     "copyInsteadOfMove": "Copiar em vez de mover",
     "copyInsteadOfMoveDescription": "Ao adicionar em massa de uma lista, manter os itens na lista de origem",
-    "supportDevelopmentMessage": "Si gosta do ShowSeek e quer apoiar o desenvolvimento, pode doar usando um dos endereços abaixo. Obrigado!",
+    "supportDevelopmentMessage": "Se gosta do ShowSeek e quer apoiar o desenvolvimento, pode doar usando um dos endereços abaixo. Obrigado!",
     "unableToLoadPreferences": "Não foi possível carregar preferências",
     "unableToOpenFeedback": "Não foi possível abrir a página de feedback.",
     "unableToOpenPlayStore": "Não foi possível abrir a Play Store.",

@@ -1,9 +1,9 @@
+import { useAuth } from '@/src/context/auth';
+import { useRealtimeSubscription } from '@/src/hooks/useRealtimeSubscription';
+import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useRef, useEffect } from 'react';
-import { useAuth } from '../context/auth';
-import { favoriteEpisodeService } from '../services/FavoriteEpisodeService';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Hook to manage all favorite episodes for the current user.
@@ -46,10 +46,14 @@ export const useFavoriteEpisodes = () => {
 /**
  * Hook to check if a specific episode is favorited.
  */
-export const useIsEpisodeFavorited = (tvId: number, seasonNumber: number, episodeNumber: number) => {
+export const useIsEpisodeFavorited = (
+  tvId: number,
+  seasonNumber: number,
+  episodeNumber: number
+) => {
   const { data: favoriteEpisodes, isLoading } = useFavoriteEpisodes();
   const episodeId = `${tvId}-${seasonNumber}-${episodeNumber}`;
-  
+
   const isFavorited = favoriteEpisodes?.some((ep) => ep.id === episodeId) ?? false;
 
   return {

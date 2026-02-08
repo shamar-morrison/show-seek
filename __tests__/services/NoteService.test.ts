@@ -1,5 +1,5 @@
-import { deleteDoc, doc, getDoc, setDoc, getDocs, onSnapshot, Timestamp } from 'firebase/firestore';
 import { noteService } from '@/src/services/NoteService';
+import { deleteDoc, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -42,7 +42,13 @@ describe('NoteService', () => {
 
       await noteService.saveNote('test-user-id', noteData);
 
-      expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'test-user-id', 'notes', 'movie-123');
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'notes',
+        'movie-123'
+      );
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
@@ -72,7 +78,13 @@ describe('NoteService', () => {
 
       await noteService.saveNote('test-user-id', noteData);
 
-      expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'test-user-id', 'notes', 'episode-123-1-5');
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'notes',
+        'episode-123-1-5'
+      );
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
@@ -123,7 +135,13 @@ describe('NoteService', () => {
 
       await noteService.deleteNote('test-user-id', 'episode', 123, 1, 5);
 
-      expect(doc).toHaveBeenCalledWith(expect.anything(), 'users', 'test-user-id', 'notes', 'episode-123-1-5');
+      expect(doc).toHaveBeenCalledWith(
+        expect.anything(),
+        'users',
+        'test-user-id',
+        'notes',
+        'episode-123-1-5'
+      );
       expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
     });
   });

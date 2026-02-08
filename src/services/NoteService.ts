@@ -6,7 +6,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -20,8 +19,16 @@ class NoteService {
    * Generate note document ID
    * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396", "episode-tvId-season-episode")
    */
-  private getNoteId(mediaType: 'movie' | 'tv' | 'episode', mediaId: number, season?: number, episode?: number): string {
-    if (mediaType === 'episode' && season !== undefined && episode !== undefined) {
+  private getNoteId(
+    mediaType: 'movie' | 'tv' | 'episode',
+    mediaId: number,
+    season?: number,
+    episode?: number
+  ): string {
+    if (mediaType === 'episode') {
+      if (season === undefined || episode === undefined) {
+        throw new Error('Missing season/episode for episode mediaType');
+      }
       return `episode-${mediaId}-${season}-${episode}`;
     }
     return `${mediaType}-${mediaId}`;
@@ -30,7 +37,13 @@ class NoteService {
   /**
    * Get reference to a specific note document
    */
-  private getNoteRef(userId: string, mediaType: 'movie' | 'tv' | 'episode', mediaId: number, season?: number, episode?: number) {
+  private getNoteRef(
+    userId: string,
+    mediaType: 'movie' | 'tv' | 'episode',
+    mediaId: number,
+    season?: number,
+    episode?: number
+  ) {
     const noteId = this.getNoteId(mediaType, mediaId, season, episode);
     return doc(db, 'users', userId, 'notes', noteId);
   }
@@ -108,10 +121,10 @@ class NoteService {
       }
 
       const noteRef = this.getNoteRef(
-        userId, 
-        noteData.mediaType, 
-        noteData.mediaId, 
-        noteData.seasonNumber, 
+        userId,
+        noteData.mediaType,
+        noteData.mediaId,
+        noteData.seasonNumber,
         noteData.episodeNumber
       );
       const existingNote = await Promise.race([getDoc(noteRef), createTimeout()]);
@@ -144,8 +157,8 @@ class NoteService {
    * Get a single note for a media item
    */
   async getNote(
-    userId: string, 
-    mediaType: 'movie' | 'tv' | 'episode', 
+    userId: string,
+    mediaType: 'movie' | 'tv' | 'episode',
     mediaId: number,
     season?: number,
     episode?: number
@@ -176,8 +189,8 @@ class NoteService {
    * Delete a note for a media item
    */
   async deleteNote(
-    userId: string, 
-    mediaType: 'movie' | 'tv' | 'episode', 
+    userId: string,
+    mediaType: 'movie' | 'tv' | 'episode',
     mediaId: number,
     season?: number,
     episode?: number

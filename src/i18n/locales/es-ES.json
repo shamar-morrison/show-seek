@@ -827,7 +827,7 @@
     "howItWorks": {
       "conflictsDescription": "Si detectamos conflictos, te mostraremos qué ocurrió y mantendremos tus datos consistentes.",
       "conflictsTitle": "Resolver conflictos",
-      "connectDescription": "Authorize ShowSeek to access your Trakt account.",
+      "connectDescription": "Autoriza a ShowSeek para acceder a tu cuenta de Trakt.",
       "connectTitle": "Conecta tu cuenta",
       "enrichDescription": "Opcionalmente, enriquece tu historial con detalles de TMDB para mejores estadísticas.",
       "enrichTitle": "Enriquece tus datos",
@@ -1296,7 +1296,7 @@
     },
     "adrenaline": {
       "name": "Adrenalina",
-      "description": "Action y emoción"
+      "description": "Acción y emoción"
     },
     "heartbreaking": {
       "name": "Desgarrador",

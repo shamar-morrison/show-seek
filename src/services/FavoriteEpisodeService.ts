@@ -1,3 +1,4 @@
+import { auth, db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { createTimeout } from '@/src/utils/timeout';
@@ -11,7 +12,6 @@ import {
   query,
   setDoc,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
 
 /**
  * Subscription entry for a single userId
