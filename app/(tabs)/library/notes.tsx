@@ -282,6 +282,7 @@ export default function NotesScreen() {
 
     const movieNotes = displayNotes.filter((n) => n.mediaType === 'movie');
     const tvNotes = displayNotes.filter((n) => n.mediaType === 'tv');
+    const episodeNotes = displayNotes.filter((n) => n.mediaType === 'episode');
 
     const sections: NoteSection[] = [];
     if (movieNotes.length > 0) {
@@ -289,6 +290,9 @@ export default function NotesScreen() {
     }
     if (tvNotes.length > 0) {
       sections.push({ title: t('media.tvShows'), data: tvNotes });
+    }
+    if (episodeNotes.length > 0) {
+      sections.push({ title: t('media.episodes'), data: episodeNotes });
     }
 
     return sections;
@@ -303,9 +307,16 @@ export default function NotesScreen() {
         return;
       }
 
-      const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';
-      const path = `/(tabs)/${currentTab}/${mediaPath}/${note.mediaId}`;
-      router.push(path as any);
+      if (note.mediaType === 'episode') {
+        // Navigate to episode detail screen
+        const path = `/(tabs)/${currentTab}/tv/${note.showId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
+        router.push(path as any);
+      } else {
+        // Navigate to movie or TV show detail screen
+        const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';
+        const path = `/(tabs)/${currentTab}/${mediaPath}/${note.mediaId}`;
+        router.push(path as any);
+      }
     },
     [currentTab, router]
   );

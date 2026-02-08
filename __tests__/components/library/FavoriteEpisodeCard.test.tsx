@@ -1,5 +1,5 @@
-import { render, fireEvent } from '@testing-library/react-native';
 import { FavoriteEpisodeCard } from '@/src/components/library/FavoriteEpisodeCard';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 // Mock lucide-react-native
@@ -37,23 +37,7 @@ describe('FavoriteEpisodeCard', () => {
     addedAt: Date.now(),
   };
 
-  const mockNote = {
-    id: 'note-id',
-    userId: 'user-id',
-    mediaType: 'episode' as const,
-    mediaId: 123,
-    content: 'My test note content',
-    mediaTitle: 'Test Episode',
-    posterPath: '/path.jpg',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    seasonNumber: 1,
-    episodeNumber: 5,
-  };
-
   const mockOnPress = jest.fn();
-  const mockOnEditNote = jest.fn();
-  const mockOnDeleteNote = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -61,13 +45,7 @@ describe('FavoriteEpisodeCard', () => {
 
   it('should render episode information correctly', () => {
     const { getByText } = render(
-      <FavoriteEpisodeCard
-        episode={mockEpisode}
-        note={null}
-        onPress={mockOnPress}
-        onEditNote={mockOnEditNote}
-        onDeleteNote={mockOnDeleteNote}
-      />
+      <FavoriteEpisodeCard episode={mockEpisode} onPress={mockOnPress} />
     );
 
     expect(getByText('Test Show')).toBeTruthy();
@@ -75,29 +53,9 @@ describe('FavoriteEpisodeCard', () => {
     expect(getByText('S1E5')).toBeTruthy();
   });
 
-  it('should render note content when provided', () => {
-    const { getByText } = render(
-      <FavoriteEpisodeCard
-        episode={mockEpisode}
-        note={mockNote}
-        onPress={mockOnPress}
-        onEditNote={mockOnEditNote}
-        onDeleteNote={mockOnDeleteNote}
-      />
-    );
-
-    expect(getByText('My test note content')).toBeTruthy();
-  });
-
   it('should call onPress when card is pressed', () => {
     const { getByText } = render(
-      <FavoriteEpisodeCard
-        episode={mockEpisode}
-        note={null}
-        onPress={mockOnPress}
-        onEditNote={mockOnEditNote}
-        onDeleteNote={mockOnDeleteNote}
-      />
+      <FavoriteEpisodeCard episode={mockEpisode} onPress={mockOnPress} />
     );
 
     fireEvent.press(getByText('Test Episode'));

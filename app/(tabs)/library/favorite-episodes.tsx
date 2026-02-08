@@ -1,47 +1,32 @@
-import { FavoriteEpisodeCard } from '@/src/components/library/FavoriteEpisodeCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
+import { FavoriteEpisodeCard } from '@/src/components/library/FavoriteEpisodeCard';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
-import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import {
-  COLORS,
-  HEADER_CHROME_HEIGHT,
-  SPACING,
-} from '@/src/constants/theme';
+import { COLORS, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
-import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useFavoriteEpisodes } from '@/src/hooks/useFavoriteEpisodes';
-import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
-import { Note } from '@/src/types/note';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { Stack, useNavigation, useRouter } from 'expo-router';
 import { Heart, Search } from 'lucide-react-native';
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FavoriteEpisodesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
-  const { data: favoriteEpisodes, isLoading: isLoadingFavorites } = useFavoriteEpisodes();
-  const { data: notes, isLoading: isLoadingNotes } = useNotes();
-  const deleteNoteMutation = useDeleteNote();
-  const noteSheetRef = useRef<NoteModalRef>(null);
+  const { data: favoriteEpisodes, isLoading } = useFavoriteEpisodes();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { preferences } = usePreferences();
@@ -61,6 +46,7 @@ export default function FavoriteEpisodesScreen() {
     getSearchableText: (ep) => `${ep.episodeName} ${ep.showName}`,
   });
 
+  // Manage header manually - must reset header to undefined when closing search
   useLayoutEffect(() => {
     if (isSearchActive) {
       navigation.setOptions(
@@ -72,7 +58,10 @@ export default function FavoriteEpisodesScreen() {
         })
       );
     } else {
+      // Reset header to default and set custom headerRight
       navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
         headerRight: () => (
           <HeaderIconButton onPress={searchButton.onPress}>
             <Search size={22} color={COLORS.text} />
@@ -86,85 +75,29 @@ export default function FavoriteEpisodesScreen() {
     (episode: FavoriteEpisode) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (!currentTab) return;
-      
+
       const path = `/(tabs)/${currentTab}/tv/${episode.tvShowId}/season/${episode.seasonNumber}/episode/${episode.episodeNumber}`;
       router.push(path as any);
     },
     [currentTab, router]
   );
 
-  const handleEditNote = useCallback((note: Note) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    noteSheetRef.current?.present({
-      mediaType: 'episode',
-      mediaId: note.mediaId,
-      seasonNumber: note.seasonNumber,
-      episodeNumber: note.episodeNumber,
-      posterPath: note.posterPath,
-      mediaTitle: note.mediaTitle,
-      initialNote: note.content,
-      showId: note.showId,
-    });
-  }, []);
-
-  const handleDeleteNote = useCallback(
-    async (note: Note) => {
-      Alert.alert(t('notes.deleteNote'), t('notes.confirmDeleteNote'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteNoteMutation.mutateAsync({
-                mediaType: 'episode',
-                mediaId: note.mediaId,
-                seasonNumber: note.seasonNumber,
-                episodeNumber: note.episodeNumber,
-              });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch (error) {
-              Alert.alert(t('common.error'), t('errors.deleteFailed'));
-            }
-          },
-        },
-      ]);
-    },
-    [deleteNoteMutation, t]
-  );
-
   const renderItem = useCallback(
-    ({ item }: { item: FavoriteEpisode }) => {
-      const episodeNote = notes?.find(
-        (n) =>
-          n.mediaType === 'episode' &&
-          n.mediaId === item.tvShowId &&
-          n.seasonNumber === item.seasonNumber &&
-          n.episodeNumber === item.episodeNumber
-      );
-
-      return (
-        <FavoriteEpisodeCard
-          episode={item}
-          note={episodeNote || null}
-          onPress={handleEpisodePress}
-          onEditNote={handleEditNote}
-          onDeleteNote={handleDeleteNote}
-        />
-      );
-    },
-    [notes, handleEpisodePress, handleEditNote, handleDeleteNote]
+    ({ item }: { item: FavoriteEpisode }) => (
+      <FavoriteEpisodeCard episode={item} onPress={handleEpisodePress} />
+    ),
+    [handleEpisodePress]
   );
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
-  if (isLoadingFavorites || isLoadingNotes) {
+  if (isLoading) {
     return <FullScreenLoading />;
   }
 
   if (!favoriteEpisodes || favoriteEpisodes.length === 0) {
     return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+      <View style={screenStyles.container}>
         <Stack.Screen options={{ title: t('library.favoriteEpisodes') }} />
         <View style={libraryListStyles.divider} />
         <EmptyState
@@ -172,12 +105,12 @@ export default function FavoriteEpisodesScreen() {
           title={t('library.emptyFavoriteEpisodes')}
           description={t('library.emptyFavoriteEpisodesHint')}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ title: t('library.favoriteEpisodes') }} />
       <View style={libraryListStyles.divider} />
       <FlashList
@@ -187,7 +120,6 @@ export default function FavoriteEpisodesScreen() {
         contentContainerStyle={libraryListStyles.listContent}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={ItemSeparator}
-        estimatedItemSize={120}
         ListEmptyComponent={
           searchQuery ? (
             <SearchEmptyState
@@ -198,8 +130,7 @@ export default function FavoriteEpisodesScreen() {
           ) : null
         }
       />
-      <NoteModal ref={noteSheetRef} />
-    </SafeAreaView>
+    </View>
   );
 }
 
