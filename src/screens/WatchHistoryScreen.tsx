@@ -1,10 +1,11 @@
 import { WatchHistoryList } from '@/src/components/WatchHistoryList';
-import { COLORS } from '@/src/constants/theme';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { useWatchedMovies } from '@/src/hooks/useWatchedMovies';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 export default function WatchHistoryScreen() {
   const { t } = useTranslation();
@@ -18,34 +19,21 @@ export default function WatchHistoryScreen() {
     return [...instances].sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
   }, [instances]);
 
-  const headerTitle = title ? `${title} - ${t('watched.watchHistory')}` : t('watched.watchHistory');
+  const headerTitle = title || t('watched.watchHistory');
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={screenStyles.container}>
         <Stack.Screen options={{ title: headerTitle }} />
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <FullScreenLoading />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={screenStyles.container}>
       <Stack.Screen options={{ title: headerTitle }} />
       <WatchHistoryList instances={sortedInstances} isLoading={isLoading} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-});
