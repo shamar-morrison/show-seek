@@ -18,6 +18,7 @@ import {
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useRatings } from '@/src/hooks/useRatings';
 import { useSeasonScroll } from '@/src/hooks/useSeasonScroll';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -80,6 +81,9 @@ export default function TVSeasonsScreen() {
 
   const { data: ratings } = useRatings();
 
+  // Progressive render: defer heavy content until navigation animation completes
+  const { isReady } = useProgressiveRender();
+
   // Auto-scroll hook
   const { scrollViewRef, getSeasonLayoutHandler } = useSeasonScroll({
     targetSeason: season ? Number(season) : null,
@@ -130,7 +134,7 @@ export default function TVSeasonsScreen() {
     [requireAuth, markAllWatched, t]
   );
 
-  if (tvQuery.isLoading || seasonQueries.isLoading) {
+  if (!isReady || tvQuery.isLoading || seasonQueries.isLoading) {
     return <FullScreenLoading />;
   }
 
