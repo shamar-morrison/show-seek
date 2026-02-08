@@ -604,6 +604,7 @@
     "clearAllWatchHistory": "Limpar histórico de exibição",
     "clearWatchHistoryMessage": "Isso removerá todo o histórico de exibição deste filme. Esta ação não pode ser desfeita.",
     "clearWatchHistoryTitle": "Limpar histórico de exibição?",
+    "clearWatchHistoryDescription": "Remover todos os tempos de exibição registrados",
     "customDate": "Data personalizada",
     "failedToClear": "Falha ao limpar histórico de exibição",
     "markAll": "Marcar tudo",
@@ -621,7 +622,14 @@
     "watchHistoryCleared": "Histórico de exibição limpo",
     "watchedTimes": "Assistido {{count}} vezes",
     "watchedTimes_one": "Assistido {{count}} vez",
-    "watchedTimes_other": "Assistido {{count}} vezes"
+    "watchedTimes_other": "Assistido {{count}} vezes",
+    "viewWatchHistory": "Ver histórico de exibição",
+    "viewWatchHistoryDescription": "Ver todas as vezes que você assistiu",
+    "watchHistory": "Histórico de exibição",
+    "watch": "exibição",
+    "watchedAt": "{{time}}",
+    "noWatchHistory": "Sem histórico de exibição",
+    "deleteWatchConfirm": "Remover esta entrada?"
   },
   "settings": {
     "title": "Configurações",

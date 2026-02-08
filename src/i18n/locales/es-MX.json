@@ -604,6 +604,7 @@
     "clearAllWatchHistory": "Borrar historial de visionado",
     "clearWatchHistoryMessage": "Esto eliminará todo el historial de visionado de esta película. Esta acción no se puede deshacer.",
     "clearWatchHistoryTitle": "¿Borrar historial de visionado?",
+    "clearWatchHistoryDescription": "Eliminar todos los tiempos de visionado registrados",
     "customDate": "Fecha personalizada",
     "failedToClear": "No se pudo borrar el historial de visionado",
     "markAll": "Marcar todo",
@@ -621,7 +622,14 @@
     "watchHistoryCleared": "Historial de visionado borrado",
     "watchedTimes": "Vista {{count}} veces",
     "watchedTimes_one": "Vista {{count}} vez",
-    "watchedTimes_other": "Vista {{count}} veces"
+    "watchedTimes_other": "Vista {{count}} veces",
+    "viewWatchHistory": "Ver historial de visionado",
+    "viewWatchHistoryDescription": "Ver todas las veces que viste esto",
+    "watchHistory": "Historial de visionado",
+    "watch": "visionado",
+    "watchedAt": "{{time}}",
+    "noWatchHistory": "Sin historial de visionado",
+    "deleteWatchConfirm": "¿Eliminar esta entrada?"
   },
   "settings": {
     "title": "Configuración",

@@ -15,6 +15,10 @@ export default function HomeStackLayout() {
         <Stack.Screen name="calendar" options={{ title: t('calendar.title'), headerShown: true }} />
         <Stack.Screen name="mood-picker" options={{ title: t('mood.picker'), headerShown: true }} />
         <Stack.Screen name="mood-results" options={{ title: '', headerShown: true }} />
+        <Stack.Screen
+          name="movie/[id]/watch-history"
+          options={{ title: t('watched.watchHistory'), headerShown: true }}
+        />
         <CommonDetailScreens />
       </Stack>
     </TabProvider>
