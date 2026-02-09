@@ -1,10 +1,12 @@
+import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { FlashList } from '@shopify/flash-list';
-import { Calendar, Trash2 } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import * as Haptics from 'expo-haptics';
+import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 
 /**
@@ -20,9 +22,10 @@ interface WatchHistoryItemProps {
   instance: WatchInstance;
   watchNumber: number; // 1-based index (1st, 2nd, etc.)
   onDelete?: (instanceId: string) => void;
+  onEdit?: (instance: WatchInstance) => void;
 }
 
-function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemProps) {
+function WatchHistoryItem({ instance, watchNumber, onDelete, onEdit }: WatchHistoryItemProps) {
   const { t, i18n } = useTranslation();
 
   const formattedDate = instance.watchedAt.toLocaleDateString(i18n.language, {
@@ -36,6 +39,7 @@ function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemP
 
   const handleDelete = useCallback(() => {
     if (onDelete) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       Alert.alert(t('common.delete'), t('watched.deleteWatchConfirm'), [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -47,6 +51,13 @@ function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemP
     }
   }, [instance.id, onDelete, t]);
 
+  const handleEdit = useCallback(() => {
+    if (onEdit) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onEdit(instance);
+    }
+  }, [instance, onEdit]);
+
   return (
     <View style={styles.itemContainer}>
       <View style={styles.itemContent}>
@@ -56,15 +67,26 @@ function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemP
           <Text style={styles.dateText}>{formattedDate}</Text>
         </View>
       </View>
-      {onDelete && (
-        <Pressable
-          onPress={handleDelete}
-          style={styles.deleteButton}
-          accessibilityLabel={t('common.delete')}
-        >
-          <Trash2 size={20} color={COLORS.error} />
-        </Pressable>
-      )}
+      <View style={styles.actionButtons}>
+        {onEdit && (
+          <Pressable
+            onPress={handleEdit}
+            style={styles.actionButton}
+            accessibilityLabel={t('watched.editWatchDate')}
+          >
+            <Pencil size={20} color={COLORS.textSecondary} />
+          </Pressable>
+        )}
+        {onDelete && (
+          <Pressable
+            onPress={handleDelete}
+            style={styles.actionButton}
+            accessibilityLabel={t('common.delete')}
+          >
+            <Trash2 size={20} color={COLORS.error} />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -72,19 +94,42 @@ function WatchHistoryItem({ instance, watchNumber, onDelete }: WatchHistoryItemP
 interface WatchHistoryListProps {
   instances: WatchInstance[];
   onDeleteInstance?: (instanceId: string) => void;
+  onEditInstance?: (instanceId: string, newDate: Date) => void;
   isLoading?: boolean;
 }
 
 export function WatchHistoryList({
   instances,
   onDeleteInstance,
+  onEditInstance,
   isLoading,
 }: WatchHistoryListProps) {
   const { t } = useTranslation();
 
+  // State for the date picker modal
+  const [editingInstance, setEditingInstance] = useState<WatchInstance | null>(null);
+
   // Instances are sorted newest first, so we need to reverse the numbering
   // First watch is the oldest, last watch is the newest
   const totalCount = instances.length;
+
+  const handleEditPress = useCallback((instance: WatchInstance) => {
+    setEditingInstance(instance);
+  }, []);
+
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      if (editingInstance && onEditInstance) {
+        onEditInstance(editingInstance.id, date);
+      }
+      setEditingInstance(null);
+    },
+    [editingInstance, onEditInstance]
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingInstance(null);
+  }, []);
 
   const renderItem = useCallback(
     ({ item, index }: { item: WatchInstance; index: number }) => (
@@ -92,9 +137,10 @@ export function WatchHistoryList({
         instance={item}
         watchNumber={totalCount - index} // Reverse: newest shows highest number
         onDelete={onDeleteInstance}
+        onEdit={onEditInstance ? handleEditPress : undefined}
       />
     ),
-    [onDeleteInstance, totalCount]
+    [onDeleteInstance, onEditInstance, handleEditPress, totalCount]
   );
 
   if (instances.length === 0 && !isLoading) {
@@ -106,12 +152,37 @@ export function WatchHistoryList({
   }
 
   return (
-    <FlashList
-      data={instances}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.listContent}
-    />
+    <>
+      <FlashList
+        data={instances}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+      />
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={!!editingInstance}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEdit}
+      >
+        <TouchableWithoutFeedback onPress={handleCancelEdit}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{t('watched.editWatchedTime')}</Text>
+                <CustomDatePicker
+                  selectedDate={editingInstance?.watchedAt}
+                  onDateSelect={handleDateSelect}
+                  onCancel={handleCancelEdit}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </>
   );
 }
 
@@ -146,7 +217,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
   },
-  deleteButton: {
+  actionButtons: {
+    flexDirection: 'column',
+    gap: SPACING.s,
+  },
+  actionButton: {
     padding: SPACING.s,
   },
   emptyContainer: {
@@ -159,5 +234,28 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.m,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZE.l,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+    backgroundColor: COLORS.surface,
+    paddingTop: SPACING.m,
+    paddingBottom: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    borderTopLeftRadius: BORDER_RADIUS.l,
+    borderTopRightRadius: BORDER_RADIUS.l,
   },
 });

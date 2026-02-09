@@ -279,3 +279,58 @@ export const useDeleteWatch = (movieId: number) => {
     },
   });
 };
+
+/**
+ * Mutation hook for updating the watched date of a single watch instance
+ */
+export const useUpdateWatchDate = (movieId: number) => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
+  return useMutation({
+    mutationKey: ['updateWatchDate', movieId],
+    mutationFn: async ({ instanceId, newDate }: { instanceId: string; newDate: Date }) => {
+      const currentUserId = auth.currentUser?.uid;
+      if (!currentUserId) throw new Error('Please sign in to continue');
+
+      const watchRef = doc(
+        db,
+        `users/${currentUserId}/watched_movies/${movieId}/watches/${instanceId}`
+      );
+
+      const { updateDoc } = await import('firebase/firestore');
+      await updateDoc(watchRef, {
+        watchedAt: Timestamp.fromDate(newDate),
+      });
+
+      return { instanceId, newDate };
+    },
+    // Optimistic update for instant UI feedback
+    onMutate: async ({ instanceId, newDate }) => {
+      const queryKey = ['watchedMovies', userId, movieId];
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
+
+      // Optimistically update the watch instance date
+      queryClient.setQueryData<WatchInstance[]>(queryKey, (old) => {
+        const updated = (old ?? []).map((instance) =>
+          instance.id === instanceId ? { ...instance, watchedAt: newDate } : instance
+        );
+        // Re-sort by most recent first
+        return updated.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
+      });
+
+      return { previousData };
+    },
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+      }
+      const message = getFirestoreErrorMessage(error);
+      console.error('[useUpdateWatchDate] Error:', error);
+      throw new Error(message);
+    },
+  });
+};

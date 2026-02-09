@@ -1,6 +1,6 @@
 import { WatchHistoryList } from '@/src/components/WatchHistoryList';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { useDeleteWatch, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
+import { useDeleteWatch, useUpdateWatchDate, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback } from 'react';
@@ -15,6 +15,7 @@ export default function WatchHistoryScreen() {
   // Instances are already sorted descending by watchedAt in useWatchedMovies
   const { instances, isLoading } = useWatchedMovies(movieId);
   const deleteWatch = useDeleteWatch(movieId);
+  const updateWatchDate = useUpdateWatchDate(movieId);
 
   // Format title as "Movie Title • Watch History"
   const headerTitle = title ? `${title} • ${t('watched.watchHistory')}` : t('watched.watchHistory');
@@ -24,6 +25,13 @@ export default function WatchHistoryScreen() {
       deleteWatch.mutate(instanceId);
     },
     [deleteWatch]
+  );
+
+  const handleEditInstance = useCallback(
+    (instanceId: string, newDate: Date) => {
+      updateWatchDate.mutate({ instanceId, newDate });
+    },
+    [updateWatchDate]
   );
 
   if (isLoading) {
@@ -42,6 +50,7 @@ export default function WatchHistoryScreen() {
         instances={instances}
         isLoading={isLoading}
         onDeleteInstance={handleDeleteInstance}
+        onEditInstance={handleEditInstance}
       />
     </View>
   );

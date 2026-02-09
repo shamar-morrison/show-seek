@@ -629,7 +629,9 @@
     "watch": "visualização",
     "watchedAt": "{{time}}",
     "noWatchHistory": "Sem histórico de visualização",
-    "deleteWatchConfirm": "Remover esta entrada?"
+    "deleteWatchConfirm": "Remover esta entrada?",
+    "editWatchDate": "Editar data de visualização",
+    "editWatchedTime": "Editar hora de visualização"
   },
   "settings": {
     "title": "Definições",

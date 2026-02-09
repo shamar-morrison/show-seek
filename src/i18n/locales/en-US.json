@@ -629,7 +629,9 @@
     "watch": "watch",
     "watchedAt": "{{time}}",
     "noWatchHistory": "No watch history",
-    "deleteWatchConfirm": "Remove this watch entry?"
+    "deleteWatchConfirm": "Remove this watch entry?",
+    "editWatchDate": "Edit watch date",
+    "editWatchedTime": "Edit watched time"
   },
   "settings": {
     "title": "Settings",

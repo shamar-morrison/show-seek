@@ -441,7 +441,9 @@
     "watch": "visionnage",
     "watchedAt": "{{time}}",
     "noWatchHistory": "Aucun historique de visionnage",
-    "deleteWatchConfirm": "Supprimer cette entrée de visionnage ?"
+    "deleteWatchConfirm": "Supprimer cette entrée de visionnage ?",
+    "editWatchDate": "Modifier la date de visionnage",
+    "editWatchedTime": "Modifier l'heure de visionnage"
   },
   "settings": {
     "title": "Paramètres",
