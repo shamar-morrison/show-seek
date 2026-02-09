@@ -28,6 +28,7 @@ import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Note } from '@/src/types/note';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
+import { getSortableTitle } from '@/src/utils/sortUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -195,8 +196,8 @@ export default function NotesScreen() {
         case 'lastUpdated':
           return (a.updatedAt.getTime() - b.updatedAt.getTime()) * direction;
         case 'alphabetical': {
-          const titleA = a.mediaTitle.toLowerCase();
-          const titleB = b.mediaTitle.toLowerCase();
+          const titleA = getSortableTitle(a.mediaTitle);
+          const titleB = getSortableTitle(b.mediaTitle);
           return titleA.localeCompare(titleB) * direction;
         }
         default:
