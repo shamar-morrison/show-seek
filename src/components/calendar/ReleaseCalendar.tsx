@@ -215,7 +215,6 @@ export function ReleaseCalendar({
     </View>
   );
 }
-
 interface DateStripProps {
   dates: Date[];
   selectedDate: Date | null;

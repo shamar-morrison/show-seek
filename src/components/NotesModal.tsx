@@ -147,8 +147,8 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteNoteMutation.mutateAsync({ 
-              mediaType, 
+            await deleteNoteMutation.mutateAsync({
+              mediaType,
               mediaId,
               seasonNumber,
               episodeNumber,
@@ -184,7 +184,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       onDidDismiss={handleDismiss}
       grabber={false}
     >
-        <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+      <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         {/* Header */}
         <View style={modalHeaderStyles.header}>
           <View style={styles.headerLeft}>
@@ -197,7 +197,11 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
           </View>
           {isEditing && (
             <Pressable onPress={handleDelete} disabled={isLoading} hitSlop={HIT_SLOP.m}>
-              <Trash2 size={22} color={isLoading ? COLORS.textSecondary : COLORS.error} />
+              {deleteNoteMutation.isPending ? (
+                <ActivityIndicator size="small" color={COLORS.error} />
+              ) : (
+                <Trash2 size={22} color={COLORS.error} />
+              )}
             </Pressable>
           )}
         </View>
