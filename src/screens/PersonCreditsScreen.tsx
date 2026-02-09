@@ -34,6 +34,7 @@ import {
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { getSortableTitle } from '@/src/utils/sortUtils';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
@@ -208,8 +209,8 @@ export default function PersonCreditsScreen() {
         case 'rating':
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
         case 'alphabetical': {
-          const titleA = (a.title || '').toLowerCase();
-          const titleB = (b.title || '').toLowerCase();
+          const titleA = getSortableTitle(a.title || '');
+          const titleB = getSortableTitle(b.title || '');
           return titleA.localeCompare(titleB) * direction;
         }
         case 'popularity':

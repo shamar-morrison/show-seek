@@ -2,6 +2,7 @@ import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
+import { getSortableTitle } from '@/src/utils/sortUtils';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -52,8 +53,8 @@ export function createRatingSorter<T extends RatingItem>(
       case 'userRating':
         return (a.rating.rating - b.rating.rating) * direction;
       case 'alphabetical': {
-        const titleA = (mediaA?.title || mediaA?.name || '').toLowerCase();
-        const titleB = (mediaB?.title || mediaB?.name || '').toLowerCase();
+        const titleA = getSortableTitle(mediaA?.title || mediaA?.name || '');
+        const titleB = getSortableTitle(mediaB?.title || mediaB?.name || '');
         return titleA.localeCompare(titleB) * direction;
       }
       default:
