@@ -1,42 +1,100 @@
 import { auth, db, functions } from '@/src/firebase/config';
+import {
+  getProductIdForPlan,
+  getProductPriority,
+  inferPurchaseType,
+  isKnownPremiumProductId,
+  LEGACY_LIFETIME_PRODUCT_ID,
+  type PremiumPlan,
+  SUBSCRIPTION_PRODUCT_ID_LIST,
+  SUBSCRIPTION_PRODUCT_IDS as SUBSCRIPTION_ID_MAP,
+} from '@/src/context/premiumBilling';
+import i18n from '@/src/i18n';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import type { Purchase } from 'react-native-iap';
+import type { Product, ProductSubscription, Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
-import i18n from '@/src/i18n';
 
-// Product ID for the one-time premium purchase
-const PREMIUM_PRODUCT_ID = 'premium_unlock';
-const PRODUCT_IDS = Platform.select({
-  android: [PREMIUM_PRODUCT_ID],
+const AVAILABLE_SUBSCRIPTION_PRODUCT_IDS = Platform.select({
+  android: SUBSCRIPTION_PRODUCT_ID_LIST,
   default: [],
 });
+
+interface PremiumPrices {
+  monthly: string | null;
+  yearly: string | null;
+}
 
 interface PremiumState {
   isPremium: boolean;
   isLoading: boolean;
-  purchasePremium: () => Promise<boolean>;
+  purchasePremium: (plan: PremiumPlan) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
   resetTestPurchase: () => Promise<void>;
-  price: string | null;
+  prices: PremiumPrices;
   checkPremiumFeature: (featureName: string) => boolean;
 }
 
 interface ValidationResponse {
   success: boolean;
+  isPremium?: boolean;
   message?: string;
 }
 
-import { onAuthStateChanged, User } from 'firebase/auth';
+interface SyncPremiumStatusResponse {
+  success: boolean;
+  isPremium: boolean;
+}
+
+const getDisplayPrice = (product: Product | ProductSubscription | undefined): string | null => {
+  if (!product) {
+    return null;
+  }
+
+  if (product.platform === 'android' && product.type === 'subs') {
+    const offerDetails = product.subscriptionOfferDetailsAndroid;
+    if (Array.isArray(offerDetails) && offerDetails.length > 0) {
+      const formattedPrice = offerDetails[0]?.pricingPhases?.pricingPhaseList?.[0]?.formattedPrice;
+      if (formattedPrice) {
+        return formattedPrice;
+      }
+    }
+  }
+
+  return product.displayPrice || null;
+};
+
+const isCancelledPurchaseError = (error: unknown): boolean => {
+  const code = String((error as { code?: string })?.code || '').toLowerCase();
+  const message = String((error as { message?: string })?.message || '').toLowerCase();
+
+  return (
+    code === 'e_user_cancelled' ||
+    code === 'user-cancelled' ||
+    message === 'user canceled' ||
+    message.includes('user cancelled')
+  );
+};
+
+const isAlreadyOwnedError = (error: unknown): boolean => {
+  const code = String((error as { code?: string })?.code || '').toLowerCase();
+  const message = String((error as { message?: string })?.message || '').toLowerCase();
+
+  return code === 'e_already_owned' || code === 'already-owned' || message.includes('already own');
+};
 
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [price, setPrice] = useState<string | null>(null);
+  const [prices, setPrices] = useState<PremiumPrices>({
+    monthly: null,
+    yearly: null,
+  });
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
   useEffect(() => {
@@ -44,49 +102,84 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => unsubscribe();
   }, []);
 
-  // Process a purchase: validate with server and finish transaction
-  const processPurchase = async (purchase: Purchase) => {
-    try {
-      console.log('Processing purchase:', purchase.productId);
-
-      if (!purchase.purchaseToken) {
-        console.error('Purchase missing token', purchase);
-        return;
-      }
-
-      const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-      const validationResult = await validatePurchaseFn({
-        purchaseToken: purchase.purchaseToken,
-        productId: purchase.productId,
-      });
-      const data = validationResult.data as ValidationResponse;
-      console.log('Validation response:', data);
-
-      if (data?.success === true) {
-        setIsPremium(true);
-        try {
-          // Acknowledge/finish transaction
-          await RNIap.finishTransaction({
-            purchase: purchase,
-            isConsumable: false,
-          });
-          console.log('Transaction finished successfully');
-        } catch (finishErr) {
-          console.error('Error finishing transaction:', finishErr);
-        }
-      } else {
-        console.error('Validation failed:', data);
-        // Only throw if called directly? Listeners swallow errors usually.
-      }
-    } catch (err) {
-      console.error('Error processing purchase:', err);
+  const syncPremiumStatus = useCallback(async (): Promise<boolean> => {
+    if (!user) {
+      return false;
     }
-  };
+
+    try {
+      const syncPremiumStatusFn = httpsCallable(functions, 'syncPremiumStatus');
+      const syncResult = await syncPremiumStatusFn();
+      const data = syncResult.data as SyncPremiumStatusResponse;
+
+      if (typeof data?.isPremium === 'boolean') {
+        setIsPremium(data.isPremium);
+        return data.isPremium;
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Error syncing premium status:', err);
+      return false;
+    }
+  }, [user]);
+
+  // Process a purchase: validate with server and finish transaction
+  const processPurchase = useCallback(
+    async (purchase: Purchase, options?: { syncAfterSuccess?: boolean }): Promise<boolean> => {
+      const syncAfterSuccess = options?.syncAfterSuccess ?? true;
+
+      try {
+        console.log('Processing purchase:', purchase.productId);
+
+        if (!purchase.purchaseToken) {
+          console.error('Purchase missing token', purchase);
+          return false;
+        }
+
+        const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
+        const validationResult = await validatePurchaseFn({
+          purchaseToken: purchase.purchaseToken,
+          productId: purchase.productId,
+          purchaseType: inferPurchaseType(purchase.productId),
+        });
+        const data = validationResult.data as ValidationResponse;
+        console.log('Validation response:', data);
+
+        if (data?.success === true) {
+          setIsPremium(Boolean(data?.isPremium ?? true));
+          try {
+            // Acknowledge/finish transaction
+            await RNIap.finishTransaction({
+              purchase,
+              isConsumable: false,
+            });
+            console.log('Transaction finished successfully');
+          } catch (finishErr) {
+            console.error('Error finishing transaction:', finishErr);
+          }
+
+          if (syncAfterSuccess) {
+            await syncPremiumStatus();
+          }
+
+          return true;
+        }
+
+        console.error('Validation failed:', data);
+        return false;
+      } catch (err) {
+        console.error('Error processing purchase:', err);
+        return false;
+      }
+    },
+    [syncPremiumStatus]
+  );
 
   // Initialize IAP listeners
   useEffect(() => {
-    let purchaseUpdateSubscription: any;
-    let purchaseErrorSubscription: any;
+    let purchaseUpdateSubscription: { remove: () => void } | undefined;
+    let purchaseErrorSubscription: { remove: () => void } | undefined;
 
     const initListeners = async () => {
       try {
@@ -105,26 +198,32 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         });
 
         // Listen for purchase errors
-        purchaseErrorSubscription = RNIap.purchaseErrorListener((error: any) => {
+        purchaseErrorSubscription = RNIap.purchaseErrorListener((error: unknown) => {
           console.warn('Purchase notification error:', error);
           // We don't necessarily update state here as UI handles specific errors from requestPurchase
         });
 
-        if (PRODUCT_IDS && PRODUCT_IDS.length > 0) {
-          const products = await RNIap.fetchProducts({ skus: PRODUCT_IDS });
+        if (
+          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS &&
+          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0
+        ) {
+          const products = await RNIap.fetchProducts({
+            skus: AVAILABLE_SUBSCRIPTION_PRODUCT_IDS,
+            type: 'subs',
+          });
+
           if (products) {
-            const premiumProduct = products.find((p) => p.id === PREMIUM_PRODUCT_ID);
-            if (premiumProduct && premiumProduct.platform === 'android') {
-              const androidProduct = premiumProduct as RNIap.ProductAndroid;
-              setPrice(
-                androidProduct.oneTimePurchaseOfferDetailsAndroid?.formattedPrice ||
-                  androidProduct.displayPrice
-              );
-            }
+            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly);
+            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly);
+
+            setPrices({
+              monthly: getDisplayPrice(monthlyProduct),
+              yearly: getDisplayPrice(yearlyProduct),
+            });
           }
         }
       } catch (err) {
-        console.warn('IAP Initialization error:', err);
+        console.warn('IAP initialization error:', err);
       }
     };
 
@@ -139,7 +238,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
       RNIap.endConnection();
     };
-  }, []);
+  }, [processPurchase]);
 
   // Listen to user's premium status in Firestore
   useEffect(() => {
@@ -160,6 +259,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         console.warn('Failed to read premium cache:', err);
       }
     };
+
     checkLocalCache();
 
     const unsubscribe = onSnapshot(
@@ -186,65 +286,55 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => unsubscribe();
   }, [user]);
 
-  const purchasePremium = async () => {
-    try {
-      if (!PRODUCT_IDS || PRODUCT_IDS.length === 0) throw new Error('No products available');
-
-      // Note: We don't await the result's purchase object because waiting for it
-      // is unreliable. We rely on purchaseUpdatedListener instead.
-      await RNIap.requestPurchase({
-        type: 'in-app',
-        request: {
-          android: {
-            skus: [PREMIUM_PRODUCT_ID],
-          },
-        },
-      });
-
-      // We return true indicating the REQUEST was successful.
-      // Actual success (premium unlock) happens asynchronously via listener.
-      return true;
-    } catch (err: any) {
-      // User cancelled - silently return false without error
-      if (err.code === 'E_USER_CANCELLED') {
-        return false;
-      }
-      // User already owns item - try to restore and set premium
-      if (err.message?.includes('already own') || err.code === 'E_ALREADY_OWNED') {
-        try {
-          console.log('User already owns item, attempting restore...');
-          await restorePurchases();
-          console.log('Restore successful after already-owned error');
-          return true;
-        } catch (restoreErr: any) {
-          console.error('Failed to restore after already-owned:', restoreErr);
-          throw new Error(
-            'Restoration failed: ' + (restoreErr.message || JSON.stringify(restoreErr))
-          );
-        }
-      }
-      console.error('Purchase error:', err);
-      throw err;
+  useEffect(() => {
+    if (!user) {
+      return;
     }
-  };
 
-  const restorePurchases = async () => {
+    let isCancelled = false;
+
+    const syncOnAppOpen = async () => {
+      await syncPremiumStatus();
+
+      if (isCancelled) {
+        return;
+      }
+    };
+
+    syncOnAppOpen();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [syncPremiumStatus, user]);
+
+  const restorePurchases = useCallback(async (): Promise<boolean> => {
     try {
       console.log('Starting restorePurchases...');
       const purchases = await RNIap.getAvailablePurchases();
       console.log('Available purchases found:', purchases.length);
 
-      // Ensure we check arrays if purchases contain them
-      const premiumPurchase = purchases.find((p: Purchase) => p.productId === PREMIUM_PRODUCT_ID);
+      const knownPurchases = purchases
+        .filter((purchase) => isKnownPremiumProductId(purchase.productId))
+        .sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId));
 
-      if (premiumPurchase) {
-        // Reuse the same processing logic
-        await processPurchase(premiumPurchase);
-        return true;
-      } else {
-        console.log('No premium purchase found in history or missing token');
+      if (knownPurchases.length === 0) {
+        console.log('No known premium purchase found in history');
+        await syncPremiumStatus();
         return false;
       }
+
+      for (const purchase of knownPurchases) {
+        const restored = await processPurchase(purchase, { syncAfterSuccess: false });
+
+        if (restored) {
+          await syncPremiumStatus();
+          return true;
+        }
+      }
+
+      await syncPremiumStatus();
+      return false;
     } catch (err: any) {
       console.error('Restore error detail:', err);
       // Ensure we treat Cloud Function errors clearly
@@ -257,15 +347,73 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
       throw err;
     }
-  };
+  }, [processPurchase, syncPremiumStatus]);
 
-  const resetTestPurchase = async () => {
+  const purchasePremium = useCallback(
+    async (plan: PremiumPlan) => {
+      try {
+        if (Platform.OS !== 'android') {
+          throw new Error('Subscriptions are only configured on Android right now.');
+        }
+
+        if (
+          !AVAILABLE_SUBSCRIPTION_PRODUCT_IDS ||
+          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length === 0
+        ) {
+          throw new Error('No subscription products available');
+        }
+
+        const subscriptionProductId = getProductIdForPlan(plan);
+
+        // Note: We rely on purchaseUpdatedListener for final validation and unlock.
+        await RNIap.requestPurchase({
+          type: 'subs',
+          request: {
+            android: {
+              skus: [subscriptionProductId],
+            },
+          },
+        });
+
+        // We return true indicating the REQUEST was successful.
+        // Actual success (premium unlock) happens asynchronously via listener.
+        return true;
+      } catch (err: any) {
+        // User cancelled - silently return false without error
+        if (isCancelledPurchaseError(err)) {
+          return false;
+        }
+
+        // Already-owned subscription - attempt restore/sync
+        if (isAlreadyOwnedError(err)) {
+          try {
+            console.log('User already owns a subscription, attempting restore...');
+            await restorePurchases();
+            console.log('Restore successful after already-owned error');
+            return true;
+          } catch (restoreErr: any) {
+            console.error('Failed to restore after already-owned:', restoreErr);
+            throw new Error(
+              'Restoration failed: ' + (restoreErr.message || JSON.stringify(restoreErr))
+            );
+          }
+        }
+
+        console.error('Purchase error:', err);
+        throw err;
+      }
+    },
+    [restorePurchases]
+  );
+
+  const resetTestPurchase = useCallback(async () => {
     try {
       if (Platform.OS === 'android') {
         const purchases = await RNIap.getAvailablePurchases();
-        const premiumPurchase = purchases.find((p) => p.productId === PREMIUM_PRODUCT_ID);
-        if (premiumPurchase && premiumPurchase.purchaseToken) {
-          await RNIap.consumePurchaseAndroid(premiumPurchase.purchaseToken);
+        const legacyPurchase = purchases.find((p) => p.productId === LEGACY_LIFETIME_PRODUCT_ID);
+
+        if (legacyPurchase && legacyPurchase.purchaseToken) {
+          await RNIap.consumePurchaseAndroid(legacyPurchase.purchaseToken);
           setIsPremium(false);
           Alert.alert(i18n.t('premium.resetCompleteTitle'), i18n.t('premium.resetCompleteMessage'));
         } else {
@@ -279,7 +427,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       console.error('Reset error:', err);
       Alert.alert(i18n.t('premium.resetFailedTitle'), err.message);
     }
-  };
+  }, []);
 
   return {
     isPremium,
@@ -287,8 +435,8 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     purchasePremium,
     restorePurchases,
     resetTestPurchase,
-    price,
-    checkPremiumFeature: (featureName: string) => {
+    prices,
+    checkPremiumFeature: (_featureName: string) => {
       // For now, all premium features require isPremium to be true
       // We can add more granular logic here later if needed
       return isPremium;

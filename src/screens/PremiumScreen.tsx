@@ -4,6 +4,7 @@ import {
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -26,13 +27,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PremiumScreen() {
-  const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, price } =
+  const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, prices } =
     usePremium();
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [isRestoring, setIsRestoring] = React.useState(false);
+  const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const wasPremiumRef = React.useRef(isPremium);
+
+  const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
+  const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
 
   // Watch for premium status change to show success
   React.useEffect(() => {
@@ -46,11 +51,19 @@ export default function PremiumScreen() {
 
   const handlePurchase = async () => {
     try {
-      await purchasePremium();
+      await purchasePremium(selectedPlan);
       // Success is handled by the listener updating isPremium state
     } catch (error: any) {
       // Only show error for real errors, not cancellations
-      if (error.code !== 'E_USER_CANCELLED' && error.message !== 'User canceled') {
+      const code = String(error?.code || '').toLowerCase();
+      const message = String(error?.message || '').toLowerCase();
+      const isUserCanceled =
+        code === 'e_user_cancelled' ||
+        code === 'user-cancelled' ||
+        message === 'user canceled' ||
+        message.includes('user cancelled');
+
+      if (!isUserCanceled) {
         Alert.alert(t('premium.purchaseFailedTitle'), error.message || t('errors.generic'));
       }
     }
@@ -116,17 +129,36 @@ export default function PremiumScreen() {
           ))}
         </View>
 
-        <View style={styles.pricing}>
-          <Text style={[styles.price, { color: accentColor }]}>{price || 'US$30.00'}</Text>
-          <Text style={styles.paymentType}>{t('premium.oneTimePayment')}</Text>
+        <View style={styles.planList}>
+          <PlanOptionCard
+            testID="plan-monthly"
+            planName={t('premium.monthlyPlanName')}
+            planPrice={monthlyPrice}
+            planBilling={t('premium.monthlyPlanBilling')}
+            isSelected={selectedPlan === 'monthly'}
+            accentColor={accentColor}
+            onPress={() => setSelectedPlan('monthly')}
+          />
+
+          <PlanOptionCard
+            testID="plan-yearly"
+            planName={t('premium.yearlyPlanName')}
+            planPrice={yearlyPrice}
+            planBilling={t('premium.yearlyPlanBilling')}
+            badgeText={t('premium.bestValueBadge')}
+            isSelected={selectedPlan === 'yearly'}
+            accentColor={accentColor}
+            onPress={() => setSelectedPlan('yearly')}
+          />
         </View>
 
         <TouchableOpacity
+          testID="subscribe-button"
           style={[styles.button, { backgroundColor: accentColor }]}
           onPress={handlePurchase}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.buttonText}>{t('premium.unlockButton')}</Text>
+          <Text style={styles.buttonText}>{t('premium.subscribeButton')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -137,7 +169,7 @@ export default function PremiumScreen() {
           {isRestoring ? (
             <ActivityIndicator size="small" color={COLORS.text} />
           ) : (
-            <Text style={styles.restoreButtonText}>{t('premium.restorePurchase')}</Text>
+            <Text style={styles.restoreButtonText}>{t('premium.restorePurchases')}</Text>
           )}
         </TouchableOpacity>
 
@@ -203,6 +235,48 @@ function FeatureCategorySection({
   );
 }
 
+function PlanOptionCard({
+  accentColor,
+  badgeText,
+  isSelected,
+  onPress,
+  planBilling,
+  planName,
+  planPrice,
+  testID,
+}: {
+  accentColor: string;
+  badgeText?: string;
+  isSelected: boolean;
+  onPress: () => void;
+  planBilling: string;
+  planName: string;
+  planPrice: string;
+  testID: string;
+}) {
+  return (
+    <TouchableOpacity
+      testID={testID}
+      style={[
+        styles.planCard,
+        {
+          borderColor: isSelected ? accentColor : COLORS.surfaceLight,
+          backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : COLORS.surface,
+        },
+      ]}
+      activeOpacity={ACTIVE_OPACITY}
+      onPress={onPress}
+    >
+      <View style={styles.planHeaderRow}>
+        <Text style={styles.planName}>{planName}</Text>
+        {badgeText ? <Text style={[styles.badge, { color: accentColor }]}>{badgeText}</Text> : null}
+      </View>
+      <Text style={[styles.planPrice, { color: accentColor }]}>{planPrice}</Text>
+      <Text style={styles.planBilling}>{planBilling}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   scrollContent: {
     padding: 24,
@@ -241,20 +315,40 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: SPACING.xl,
   },
-  // Category styles
-  // Pricing & buttons
-  pricing: {
+  planList: {
+    width: '100%',
+    marginBottom: SPACING.l,
+    gap: SPACING.m,
+  },
+  planCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: SPACING.m,
+  },
+  planHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.s,
   },
-  price: {
-    fontSize: SPACING.xl,
-    fontWeight: 'bold',
+  planName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
   },
-  paymentType: {
+  badge: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  planPrice: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  planBilling: {
+    marginTop: SPACING.xs,
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   button: {
     width: '100%',
