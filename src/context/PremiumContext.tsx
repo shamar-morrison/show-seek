@@ -147,7 +147,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         console.log('Validation response:', data);
 
         if (data?.success === true) {
-          setIsPremium(Boolean(data?.isPremium ?? true));
+          setIsPremium(data?.isPremium === true);
           try {
             // Acknowledge/finish transaction
             await RNIap.finishTransaction({

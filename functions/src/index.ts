@@ -37,7 +37,6 @@ interface SubscriptionValidationResult {
 
 const getAndroidPublisherClient = (): androidpublisher_v3.Androidpublisher => {
   const auth = new google.auth.GoogleAuth({
-    keyFile: './service-account-key.json',
     scopes: ['https://www.googleapis.com/auth/androidpublisher'],
   });
 
@@ -87,6 +86,104 @@ const resolvePurchaseType = (purchaseType: unknown, productId: string): Purchase
   }
 
   return productId === LEGACY_LIFETIME_PRODUCT_ID ? 'in-app' : 'subs';
+};
+
+const getErrorStatusCode = (error: unknown): number | null => {
+  const errorRecord = error as {
+    code?: number | string;
+    response?: { status?: number };
+    status?: number;
+  };
+
+  if (typeof errorRecord?.response?.status === 'number') {
+    return errorRecord.response.status;
+  }
+
+  if (typeof errorRecord?.status === 'number') {
+    return errorRecord.status;
+  }
+
+  if (typeof errorRecord?.code === 'number') {
+    return errorRecord.code;
+  }
+
+  if (typeof errorRecord?.code === 'string') {
+    const parsedCode = Number(errorRecord.code);
+    if (!Number.isNaN(parsedCode)) {
+      return parsedCode;
+    }
+  }
+
+  return null;
+};
+
+const isDefinitiveSubscriptionError = (error: unknown): boolean => {
+  const statusCode = getErrorStatusCode(error);
+  if (statusCode === 404 || statusCode === 410) {
+    return true;
+  }
+
+  const errorRecord = error as { name?: string; message?: string };
+  const errorName = String(errorRecord?.name || '');
+  const errorMessage = String(errorRecord?.message || '').toLowerCase();
+
+  if (errorName === 'NotFoundError' || errorName === 'SubscriptionExpiredError') {
+    return true;
+  }
+
+  return errorMessage.includes('subscriptionexpired') || errorMessage.includes('subscription expired');
+};
+
+const isTransientSubscriptionError = (error: unknown): boolean => {
+  const errorRecord = error as {
+    code?: string | number;
+    isTransient?: boolean;
+    message?: string;
+    transient?: boolean;
+  };
+
+  if (errorRecord?.isTransient === true || errorRecord?.transient === true) {
+    return true;
+  }
+
+  const statusCode = getErrorStatusCode(error);
+  if (statusCode === 429 || (statusCode !== null && statusCode >= 500)) {
+    return true;
+  }
+
+  const errorCode = String(errorRecord?.code || '').toUpperCase();
+  const transientCodes = new Set([
+    'ECONNABORTED',
+    'ECONNRESET',
+    'ENETUNREACH',
+    'ENOTFOUND',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'DEADLINE_EXCEEDED',
+  ]);
+  if (transientCodes.has(errorCode)) {
+    return true;
+  }
+
+  const errorMessage = String(errorRecord?.message || '').toLowerCase();
+  return (
+    errorMessage.includes('network') ||
+    errorMessage.includes('timeout') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('temporarily unavailable')
+  );
+};
+
+const resolveExistingEntitlementType = (existingPremium: ExistingPremiumData): EntitlementType => {
+  if (existingPremium.entitlementType === 'lifetime') {
+    return 'lifetime';
+  }
+
+  if (existingPremium.entitlementType === 'subscription') {
+    return 'subscription';
+  }
+
+  return existingPremium.isPremium === true ? 'subscription' : 'none';
 };
 
 const persistPremiumStatus = async (
@@ -360,18 +457,35 @@ export const syncPremiumStatus = onCall(async (request) => {
           entitlementType,
         };
       } catch (subscriptionError) {
-        console.error('Subscription sync validation failed:', subscriptionError);
+        if (isDefinitiveSubscriptionError(subscriptionError)) {
+          console.warn('Definitive subscription sync failure, revoking entitlement:', subscriptionError);
 
-        await persistPremiumStatus(
-          userId,
-          buildNoneEntitlementPayload(existingPremium, {
-            subscriptionState: null,
-            expiresAt: null,
-            basePlanId: null,
-          })
-        );
+          await persistPremiumStatus(
+            userId,
+            buildNoneEntitlementPayload(existingPremium, {
+              subscriptionState: null,
+              expiresAt: null,
+              basePlanId: null,
+            })
+          );
 
-        return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
+          return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
+        }
+
+        if (isTransientSubscriptionError(subscriptionError)) {
+          console.error(
+            'Transient subscription sync failure, preserving existing entitlement:',
+            subscriptionError
+          );
+
+          return {
+            success: false,
+            isPremium: existingPremium.isPremium === true,
+            entitlementType: resolveExistingEntitlementType(existingPremium),
+          };
+        }
+
+        throw subscriptionError;
       }
     }
 
