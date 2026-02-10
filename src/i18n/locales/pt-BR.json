@@ -1038,6 +1038,8 @@
     "devResetTitle": "Resetar compra (Dev)",
     "noPurchasesMessage": "Não encontramos nenhuma compra para restaurar.",
     "noPurchasesTitle": "Nenhuma compra encontrada",
+    "perMonth": "/ Mês",
+    "perYear": "/ Ano",
     "oneTimePayment": "Pago único",
     "purchaseFailedTitle": "Falha na compra",
     "restoreCompleteMessage": "Sua compra foi restaurada.",

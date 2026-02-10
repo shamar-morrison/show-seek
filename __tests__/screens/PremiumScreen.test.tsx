@@ -23,7 +23,11 @@ jest.mock('@/src/context/PremiumContext', () => ({
 }));
 
 jest.mock('@expo/vector-icons', () => ({
-  Ionicons: 'Ionicons',
+  Ionicons: ({ name }: { name: string }) => name,
+}));
+
+jest.mock('expo-linear-gradient', () => ({
+  LinearGradient: 'LinearGradient',
 }));
 
 jest.mock('@/src/components/ui/CollapsibleCategory', () => ({
@@ -45,7 +49,11 @@ describe('PremiumScreen', () => {
   });
 
   it('defaults to yearly selection when subscribing', () => {
-    const { getByTestId } = render(<PremiumScreen />);
+    const { getByTestId, getByText, queryByText } = render(<PremiumScreen />);
+
+    expect(getByText('ShowSeek Premium')).toBeTruthy();
+    expect(queryByText('star')).toBeNull();
+    expect(getByTestId('plan-yearly-badge')).toBeTruthy();
 
     fireEvent.press(getByTestId('subscribe-button'));
 

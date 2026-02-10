@@ -4,19 +4,22 @@ import {
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { BadgeCheck } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  ImageBackground,
   Linking,
   ScrollView,
   StyleSheet,
@@ -111,100 +114,120 @@ export default function PremiumScreen() {
   }
 
   return (
-    <SafeAreaView style={screenStyles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Ionicons name="star" size={60} color={accentColor} />
-          <Text style={styles.title}>{t('premium.unlockTitle')}</Text>
-          <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
-        </View>
+    <View style={styles.screen}>
+      <ImageBackground
+        source={require('../../assets/images/movie_collage.png')}
+        style={styles.backdropImage}
+        imageStyle={styles.backdropImageInner}
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.68)', 'rgba(0,0,0,0.78)', 'rgba(0,0,0,1)', 'rgba(0,0,0,1)']}
+        locations={[0, 0.12, 0.2, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.backdropOverlay}
+      />
 
-        <View style={styles.features}>
-          {PREMIUM_CATEGORIES.map((category, index) => (
-            <FeatureCategorySection
-              key={category.id}
-              category={category}
-              defaultExpanded={index === 0}
+      <SafeAreaView style={styles.mainContent} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={[styles.premiumLabel, { color: accentColor }]}>ShowSeek Premium</Text>
+            <Text style={styles.title}>{t('premium.unlockTitle')}</Text>
+            <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
+          </View>
+
+          <View style={styles.planList}>
+            <PlanOptionCard
+              testID="plan-monthly"
+              planName={t('premium.monthlyPlanName')}
+              planPrice={monthlyPrice}
+              planPeriod={t('premium.perMonth')}
+              isSelected={selectedPlan === 'monthly'}
+              accentColor={accentColor}
+              onPress={() => setSelectedPlan('monthly')}
             />
-          ))}
-        </View>
 
-        <View style={styles.planList}>
-          <PlanOptionCard
-            testID="plan-monthly"
-            planName={t('premium.monthlyPlanName')}
-            planPrice={monthlyPrice}
-            planBilling={t('premium.monthlyPlanBilling')}
-            isSelected={selectedPlan === 'monthly'}
-            accentColor={accentColor}
-            onPress={() => setSelectedPlan('monthly')}
-          />
+            <PlanOptionCard
+              testID="plan-yearly"
+              planName={t('premium.yearlyPlanName')}
+              planPrice={yearlyPrice}
+              planPeriod={t('premium.perYear')}
+              badgeText={t('premium.bestValueBadge')}
+              isSelected={selectedPlan === 'yearly'}
+              accentColor={accentColor}
+              onPress={() => setSelectedPlan('yearly')}
+            />
+          </View>
 
-          <PlanOptionCard
-            testID="plan-yearly"
-            planName={t('premium.yearlyPlanName')}
-            planPrice={yearlyPrice}
-            planBilling={t('premium.yearlyPlanBilling')}
-            badgeText={t('premium.bestValueBadge')}
-            isSelected={selectedPlan === 'yearly'}
-            accentColor={accentColor}
-            onPress={() => setSelectedPlan('yearly')}
-          />
-        </View>
+          <Text style={styles.featuresTitle}>What's Included</Text>
+          <View style={styles.features}>
+            {PREMIUM_CATEGORIES.map((category, index) => (
+              <FeatureCategorySection
+                key={category.id}
+                category={category}
+                defaultExpanded={index === 0}
+              />
+            ))}
+          </View>
 
-        <TouchableOpacity
-          testID="subscribe-button"
-          style={[styles.button, { backgroundColor: accentColor }]}
-          onPress={handlePurchase}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={styles.buttonText}>{t('premium.subscribeButton')}</Text>
-        </TouchableOpacity>
+          <View style={styles.legalLinks}>
+            <TouchableOpacity onPress={() => Linking.openURL(legal.tos)}>
+              <Text style={styles.legalLinkText}>{t('settings.terms')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>•</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(legal.privacy)}>
+              <Text style={styles.legalLinkText}>{t('settings.privacy')}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
 
-        <TouchableOpacity
-          style={[styles.restoreButton, isRestoring && { opacity: ACTIVE_OPACITY }]}
-          onPress={handleRestore}
-          disabled={isRestoring}
-        >
-          {isRestoring ? (
-            <ActivityIndicator size="small" color={COLORS.text} />
-          ) : (
-            <Text style={styles.restoreButtonText}>{t('premium.restorePurchases')}</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* DEV ONLY: Reset purchase button for testing */}
-        {__DEV__ && (
+      <SafeAreaView style={styles.footerSafeArea} edges={['bottom']}>
+        <View style={styles.footerContent}>
           <TouchableOpacity
-            style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
-            onPress={async () => {
-              Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                  text: t('common.reset'),
-                  style: 'destructive',
-                  onPress: async () => {
-                    if (resetTestPurchase) await resetTestPurchase();
-                  },
-                },
-              ]);
-            }}
+            testID="subscribe-button"
+            style={[styles.button, { backgroundColor: accentColor }]}
+            onPress={handlePurchase}
+            activeOpacity={ACTIVE_OPACITY}
           >
-            <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
+            <Text style={styles.buttonText}>{t('premium.subscribeButton')}</Text>
           </TouchableOpacity>
-        )}
 
-        <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL(legal.tos)}>
-            <Text style={styles.legalLinkText}>{t('settings.terms')}</Text>
+          <TouchableOpacity
+            style={[styles.restoreButton, isRestoring && { opacity: ACTIVE_OPACITY }]}
+            onPress={handleRestore}
+            disabled={isRestoring}
+          >
+            {isRestoring ? (
+              <ActivityIndicator size="small" color={COLORS.text} />
+            ) : (
+              <Text style={styles.restoreButtonText}>{t('premium.restorePurchases')}</Text>
+            )}
           </TouchableOpacity>
-          <Text style={styles.legalDot}>•</Text>
-          <TouchableOpacity onPress={() => Linking.openURL(legal.privacy)}>
-            <Text style={styles.legalLinkText}>{t('settings.privacy')}</Text>
-          </TouchableOpacity>
+
+          {/* DEV ONLY: Reset purchase button for testing */}
+          {__DEV__ && (
+            <TouchableOpacity
+              style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
+              onPress={async () => {
+                Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('common.reset'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      if (resetTestPurchase) await resetTestPurchase();
+                    },
+                  },
+                ]);
+              }}
+            >
+              <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -240,7 +263,7 @@ function PlanOptionCard({
   badgeText,
   isSelected,
   onPress,
-  planBilling,
+  planPeriod,
   planName,
   planPrice,
   testID,
@@ -249,7 +272,7 @@ function PlanOptionCard({
   badgeText?: string;
   isSelected: boolean;
   onPress: () => void;
-  planBilling: string;
+  planPeriod: string;
   planName: string;
   planPrice: string;
   testID: string;
@@ -268,19 +291,55 @@ function PlanOptionCard({
       onPress={onPress}
     >
       <View style={styles.planHeaderRow}>
-        <Text style={styles.planName}>{planName}</Text>
-        {badgeText ? <Text style={[styles.badge, { color: accentColor }]}>{badgeText}</Text> : null}
+        <View style={styles.planNameRow}>
+          {isSelected ? (
+            <BadgeCheck size={18} color={accentColor} />
+          ) : (
+            <View style={styles.checkIconPlaceholder} />
+          )}
+          <Text style={styles.planName}>{planName}</Text>
+        </View>
+        <Text style={[styles.planPriceInline, { color: accentColor }]}>
+          {planPrice} {planPeriod}
+        </Text>
       </View>
-      <Text style={[styles.planPrice, { color: accentColor }]}>{planPrice}</Text>
-      <Text style={styles.planBilling}>{planBilling}</Text>
+      {badgeText ? (
+        <View style={[styles.badge, { backgroundColor: accentColor }]}>
+          <Text testID="plan-yearly-badge" style={styles.badgeText}>
+            {badgeText}
+          </Text>
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+  },
+  backdropImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+  },
+  backdropImageInner: {
+    opacity: 0.75,
+    transform: [{ scale: 1.22 }],
+  },
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mainContent: {
+    flex: 1,
+  },
   scrollContent: {
-    padding: 24,
-    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: SPACING.l,
+    paddingBottom: 50,
   },
   content: {
     flex: 1,
@@ -289,20 +348,26 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   header: {
-    alignItems: 'center',
+    width: '100%',
     marginBottom: SPACING.xl,
+  },
+  premiumLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: SPACING.s,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginTop: SPACING.m,
+    textAlign: 'left',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textSecondary,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   description: {
     fontSize: 18,
@@ -315,47 +380,68 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: SPACING.xl,
   },
+  featuresTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    color: COLORS.text,
+    marginBottom: SPACING.m,
+  },
   planList: {
     width: '100%',
     marginBottom: SPACING.l,
-    gap: SPACING.m,
+    gap: SPACING.l,
   },
   planCard: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: SPACING.m,
+    padding: SPACING.l,
+    overflow: 'visible',
   },
   planHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.s,
+  },
+  planNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    flexShrink: 1,
+  },
+  checkIconPlaceholder: {
+    width: 18,
+    height: 18,
   },
   planName: {
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
   },
-  badge: {
-    fontSize: 12,
+  planPriceInline: {
+    fontSize: 16,
     fontWeight: '700',
-    textTransform: 'uppercase',
+    textAlign: 'right',
   },
-  planPrice: {
-    fontSize: 24,
+  badge: {
+    position: 'absolute',
+    top: -10,
+    right: 12,
+    borderRadius: 999,
+    paddingHorizontal: SPACING.s,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontSize: 11,
     fontWeight: '800',
-  },
-  planBilling: {
-    marginTop: SPACING.xs,
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    color: COLORS.white,
   },
   button: {
     width: '100%',
     paddingVertical: SPACING.m,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: SPACING.m,
   },
   buttonText: {
     color: COLORS.black,
@@ -364,16 +450,26 @@ const styles = StyleSheet.create({
   },
   restoreButton: {
     paddingVertical: 12,
+    alignItems: 'center',
   },
   restoreButtonText: {
     color: COLORS.textSecondary,
     fontSize: 16,
   },
+  footerSafeArea: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    paddingHorizontal: 24,
+    paddingTop: SPACING.m,
+  },
+  footerContent: {
+    paddingBottom: SPACING.s,
+  },
   legalLinks: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xl,
-    marginTop: SPACING.m,
+    justifyContent: 'center',
   },
   legalLinkText: {
     color: COLORS.textSecondary,

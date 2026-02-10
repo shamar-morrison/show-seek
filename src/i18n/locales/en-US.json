@@ -938,6 +938,8 @@
     "noPurchasesMessage": "We couldn't find any purchases to restore.",
     "noPurchasesTitle": "No Purchases Found",
     "bestValueBadge": "Best value",
+    "perMonth": "/ Month",
+    "perYear": "/ Year",
     "monthlyPlanBilling": "Billed monthly",
     "monthlyPlanName": "Monthly",
     "monthlyPriceFallback": "$3.00",
@@ -953,7 +955,7 @@
     "successTitle": "Premium Unlocked",
     "unlockButton": "Unlock Premium",
     "unlockSubtitle": "Get unlimited lists, reminders, widgets, and more.",
-    "unlockTitle": "Unlock Premium",
+    "unlockTitle": "Get unlimited access.",
     "yearlyPlanBilling": "Billed yearly",
     "yearlyPlanName": "Yearly",
     "yearlyPriceFallback": "$12.00"
