@@ -387,9 +387,7 @@ export const validatePurchase = onCall(async (request) => {
     if (error instanceof HttpsError) {
       throw error;
     }
-    throw new HttpsError('internal', 'Failed to validate purchase', {
-      originalMessage: String(error),
-    });
+    throw new HttpsError('internal', 'Failed to validate purchase');
   }
 });
 
@@ -497,8 +495,6 @@ export const syncPremiumStatus = onCall(async (request) => {
     if (error instanceof HttpsError) {
       throw error;
     }
-    throw new HttpsError('internal', 'Failed to sync premium status', {
-      originalMessage: String(error),
-    });
+    throw new HttpsError('internal', 'Failed to sync premium status');
   }
 });

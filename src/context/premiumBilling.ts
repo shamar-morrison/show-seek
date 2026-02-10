@@ -5,7 +5,7 @@ export const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
 
 export const SUBSCRIPTION_PRODUCT_IDS: Record<PremiumPlan, string> = {
   monthly: 'monthly_showseek_sub',
-  yearly: 'yearly_showseek_sub',
+  yearly: 'showseek_yearly_sub',
 };
 
 export const SUBSCRIPTION_PRODUCT_ID_LIST: string[] = [

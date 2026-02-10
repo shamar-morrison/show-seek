@@ -388,7 +388,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         if (isAlreadyOwnedError(err)) {
           try {
             console.log('User already owns a subscription, attempting restore...');
-            await restorePurchases();
+            const restored = await restorePurchases();
+            if (!restored) {
+              throw new Error('restorePurchases() returned false after already-owned error');
+            }
             console.log('Restore successful after already-owned error');
             return true;
           } catch (restoreErr: any) {
