@@ -29,10 +29,11 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences'])
+          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor'])
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
+        && (!('accentColor' in request.resource.data) || request.resource.data.accentColor is string)
         // Preferences validation - must be a map with boolean autoAddToWatching
         && (!('preferences' in request.resource.data) || (
           request.resource.data.preferences is map
