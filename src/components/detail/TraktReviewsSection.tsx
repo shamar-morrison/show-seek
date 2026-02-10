@@ -41,7 +41,15 @@ function traktToReview(traktReview: TraktReview): Review {
  * A single review card with spoiler handling
  */
 const TraktReviewCard = memo(
-  ({ review, onPress, spoilerLabel }: { review: TraktReview; onPress: () => void; spoilerLabel: string }) => {
+  ({
+    review,
+    onPress,
+    spoilerLabel,
+  }: {
+    review: TraktReview;
+    onPress: () => void;
+    spoilerLabel: string;
+  }) => {
     const styles = useDetailStyles();
     const [revealed, setRevealed] = useState(false);
     const isSpoiler = review.spoiler && !revealed;
@@ -92,12 +100,7 @@ const TraktReviewCard = memo(
 
         {isSpoiler ? (
           <View style={localStyles.spoilerContainer}>
-            <View style={localStyles.spoilerOverlay}>
-              <Text style={localStyles.spoilerHint}>{spoilerLabel}</Text>
-            </View>
-            <Text style={[styles.reviewContent, localStyles.blurredText]} numberOfLines={4}>
-              {review.comment}
-            </Text>
+            <Text style={localStyles.spoilerHint}>{spoilerLabel}</Text>
           </View>
         ) : (
           <Text style={styles.reviewContent} numberOfLines={4}>
@@ -124,11 +127,7 @@ export const TraktReviewsSection = memo<TraktReviewsSectionProps>(
             <TraktLogo size={24} />
             <Text style={[styles.sectionTitle, { paddingBottom: 0 }]}>{t('trakt.reviews')}</Text>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.similarList}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.similarList}>
             {[1, 2, 3].map((i) => (
               <View key={i} style={styles.reviewCardSkeleton}>
                 <View style={styles.skeletonHeader}>
@@ -236,30 +235,16 @@ const localStyles = StyleSheet.create({
     fontWeight: '600',
   },
   spoilerContainer: {
-    position: 'relative',
-  },
-  spoilerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.m,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1,
+    paddingVertical: SPACING.xl,
+    marginTop: SPACING.xs,
   },
   spoilerHint: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.s,
     fontWeight: '600',
-    backgroundColor: COLORS.surfaceLight,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  blurredText: {
-    opacity: 0,
   },
 });
