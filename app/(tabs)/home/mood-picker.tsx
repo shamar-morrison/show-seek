@@ -98,7 +98,7 @@ export default function MoodPickerScreen() {
   }, [handleMoodSelect]);
 
   // Ref to store timeout ID for cleanup
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup timeout on unmount
   useEffect(() => {
