@@ -31,16 +31,16 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
     [preferences?.dataSaver]
   );
 
-  const handleTrailerPress = useCallback((trailer: TrailerItem) => {
-    const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
-    Linking.openURL(youtubeUrl).catch((error) => {
-      Alert.alert(
-        t('common.errorTitle'),
-        t('errors.unableToOpenVideo')
-      );
-      console.error('Error opening trailer:', error);
-    });
-  }, [t]);
+  const handleTrailerPress = useCallback(
+    (trailer: TrailerItem) => {
+      const youtubeUrl = `https://www.youtube.com/watch?v=${trailer.key}`;
+      Linking.openURL(youtubeUrl).catch((error) => {
+        Alert.alert(t('common.errorTitle'), t('errors.unableToOpenVideo'));
+        console.error('Error opening trailer:', error);
+      });
+    },
+    [t]
+  );
 
   const renderTrailerCard = useCallback(
     ({ item }: { item: TrailerItem }) => (
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   mediaTypeBadge: {
     position: 'absolute',
     top: SPACING.s,
-    left: SPACING.s,
+    right: SPACING.s,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.overlay,
