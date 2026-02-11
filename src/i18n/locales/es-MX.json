@@ -1063,7 +1063,16 @@
     "unlockButton": "Desbloquear Premium",
     "unlockSubtitle": "Consigue listas ilimitadas, recordatorios, widgets y más.",
     "unlockTitle": "Desbloquear Premium",
-    "whatsIncluded": "Qué incluye"
+    "whatsIncluded": "Qué incluye",
+    "bestValueBadge": "Mejor valor",
+    "monthlyPlanBilling": "Facturado mensualmente",
+    "monthlyPlanName": "Mensual",
+    "monthlyPriceFallback": "$3.00",
+    "restorePurchases": "Restaurar compras",
+    "subscribeButton": "Suscribirte a Premium",
+    "yearlyPlanBilling": "Facturado anualmente",
+    "yearlyPlanName": "Anual",
+    "yearlyPriceFallback": "$15.00"
   },
   "premiumFeatures": {
     "categories": {

@@ -49,7 +49,32 @@
     "years": "ans",
     "ago": "il y a",
     "in": "dans",
-    "move": "Déplacer"
+    "move": "Déplacer",
+    "success": "Succès",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois-ci",
+    "later": "Plus tard",
+    "other": "Autre",
+    "and": "et",
+    "appName": "ShowSeek",
+    "clearFilters": "Effacer les filtres",
+    "continue": "Continuer",
+    "copiedToClipboard": "Copié dans le presse-papiers",
+    "create": "Créer",
+    "errorTitle": "Erreur",
+    "goBack": "Retour",
+    "item": "éléments",
+    "item_one": "élément",
+    "item_other": "éléments",
+    "minutesShort": "{{count}}m",
+    "new": "Nouveau",
+    "notAvailable": "Indisponible",
+    "premium": "Premium",
+    "readLess": "Lire moins",
+    "readMore": "Lire plus",
+    "saveChanges": "Enregistrer les modifications",
+    "tba": "À confirmer",
+    "unknown": "Inconnu"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -83,7 +108,10 @@
     "upgradeAccount": "Passer à un compte complet",
     "featureRequiresAccount": "Cette fonctionnalité nécessite un compte",
     "bySigningIn": "En vous connectant, vous acceptez nos",
-    "agreeToTerms": "En vous inscrivant, vous acceptez nos"
+    "agreeToTerms": "En vous inscrivant, vous acceptez nos",
+    "signingOut": "Déconnexion...",
+    "notSignedIn": "Non connecté",
+    "signOutFailed": "La déconnexion a échoué. Veuillez réessayer."
   },
   "tabs": {
     "home": "Accueil",
@@ -115,7 +143,8 @@
     "upcomingTV": "Séries à venir",
     "customizeSections": "Personnaliser les sections",
     "emptyHome": "Votre écran d'accueil est vide",
-    "emptyHomeHint": "Ajoutez des sections pour commencer"
+    "emptyHomeHint": "Ajoutez des sections pour commencer",
+    "noTrailersAvailable": "Aucune bande-annonce disponible"
   },
   "discover": {
     "title": "Découvrir",
@@ -138,7 +167,17 @@
     "noFiltersApplied": "Aucun filtre appliqué",
     "resultsCount": "{{count}} résultats",
     "noResultsWithFilters": "Aucun résultat ne correspond à vos filtres",
-    "adjustFilters": "Essayez d'ajuster vos filtres"
+    "adjustFilters": "Essayez d'ajuster vos filtres",
+    "signInToAdd": "Connectez-vous pour ajouter des éléments à vos listes",
+    "language": "Langue",
+    "anyLanguage": "Toutes les langues",
+    "releaseYear": "Année de sortie",
+    "streamingService": "Service de streaming",
+    "anyStreamingService": "Tous les services de streaming",
+    "searchLanguages": "Rechercher des langues",
+    "searchStreamingServices": "Rechercher des services de streaming",
+    "topRated": "Les mieux notés",
+    "newest": "Les plus récents"
   },
   "search": {
     "title": "Recherche",
@@ -255,7 +294,21 @@
     "youtube": "YouTube",
     "wikipedia": "Wikipédia",
     "webSearch": "Recherche web",
-    "unableToOpenExternalLink": "Impossible d'ouvrir le lien"
+    "unableToOpenExternalLink": "Impossible d'ouvrir le lien",
+    "details": "Détails",
+    "guestStars": "Invités",
+    "moreEpisodes": "Plus d’épisodes",
+    "notYetAired": "Pas encore diffusé",
+    "photos": "Photos",
+    "seasonsAndEpisodes": "Saisons et épisodes",
+    "similarMovies": "Films similaires",
+    "similarShows": "Séries similaires",
+    "tapToRevealPlot": "Touchez pour afficher le synopsis",
+    "tapToViewAllMovies": "Touchez pour voir tous les films",
+    "tmdbReviews": "Avis TMDB",
+    "unknownShow": "Série inconnue",
+    "videos": "Vidéos",
+    "youMayAlsoLike": "Vous pourriez aussi aimer"
   },
   "library": {
     "title": "Bibliothèque",
@@ -364,7 +417,48 @@
     "removeItemsConfirm_other": "Retirer {{count}} éléments sélectionnés de {{listName}} ?",
     "itemsRemoved": "{{count}} éléments retirés",
     "itemsRemoved_one": "{{count}} élément retiré",
-    "itemsRemoved_other": "{{count}} éléments retirés"
+    "itemsRemoved_other": "{{count}} éléments retirés",
+    "collectionProgress": "Progression des collections",
+    "browseContent": "Parcourir le contenu",
+    "filterItems": "Filtrer les éléments",
+    "shufflePick": "Choix aléatoire",
+    "sortItems": "Trier les éléments",
+    "searchListPlaceholder": "Rechercher dans la liste...",
+    "searchFavoritesPlaceholder": "Rechercher des favoris...",
+    "searchMoviesPlaceholder": "Rechercher des films...",
+    "searchTVShowsPlaceholder": "Rechercher des séries TV...",
+    "searchEpisodesPlaceholder": "Rechercher des épisodes...",
+    "searchPeoplePlaceholder": "Rechercher des personnes...",
+    "searchCollectionsPlaceholder": "Rechercher des collections...",
+    "searchShowsPlaceholder": "Rechercher des séries...",
+    "loadingCollections": "Chargement de vos collections...",
+    "loadingWatchHistory": "Chargement de votre historique de visionnage...",
+    "emptyCollectionProgress": "Aucune collection suivie",
+    "emptyCollectionProgressHint": "Commencez à suivre une collection depuis la page de collection d'un film pour voir votre progression ici.",
+    "emptyWatchProgress": "Aucune série en cours",
+    "emptyWatchProgressHint": "Commencez à regarder une série pour suivre votre progression ici.",
+    "emptyFavoritePeople": "Aucune personne favorite",
+    "emptyFavoritePeopleHint": "Ajoutez des acteurs et réalisateurs en favoris pour les voir ici.",
+    "watchStatusEmptyDescription": "Ajoutez des films et séries à votre liste {{listName}} pour les voir ici.",
+    "unknownShow": "Série inconnue",
+    "signInToRenameList": "Connectez-vous pour modifier cette liste",
+    "signInToDeleteList": "Connectez-vous pour supprimer cette liste",
+    "cannotDeleteTitle": "Suppression impossible",
+    "cannotDeleteDefaultLists": "Impossible de supprimer les listes par défaut",
+    "defaultLists": "Listes par défaut",
+    "defaultListsDescription": "Ces listes ne peuvent pas être supprimées",
+    "defaultBadge": "Par défaut",
+    "customListsDescription": "Touchez les icônes pour modifier ou supprimer les listes",
+    "limitReachedTitle": "Limite atteinte",
+    "customListLimitReached": "Les utilisateurs gratuits peuvent créer seulement {{count}} listes personnalisées. Passez à Premium pour des listes illimitées !",
+    "changesFailedToSave": "Impossible d'enregistrer les modifications",
+    "createCustomList": "Créer une liste personnalisée",
+    "deleteListConfirmMessage": "Voulez-vous vraiment supprimer cette liste ? Cette action est irréversible.",
+    "failedToCreateList": "Échec de la création de la liste",
+    "filterLists": "Filtrer les listes",
+    "limitReachedMessage": "Les utilisateurs gratuits peuvent créer jusqu’à {{max}} listes personnalisées. Passez à Premium pour des listes illimitées !",
+    "limitReachedUpgradeMessage": "Passez à Premium pour des listes et éléments illimités.",
+    "listsUpdated": "Listes mises à jour"
   },
   "rating": {
     "title": "Noter",
@@ -374,7 +468,10 @@
     "rated": "Noté {{rating}}/10",
     "removeRating": "Supprimer la note",
     "ratingRemoved": "Note supprimée",
-    "ratingSaved": "Note enregistrée"
+    "ratingSaved": "Note enregistrée",
+    "confirmRating": "Confirmer la note",
+    "failedToDelete": "Échec de la suppression de la note",
+    "failedToSave": "Échec de l'enregistrement de la note"
   },
   "notes": {
     "title": "Notes",
@@ -385,7 +482,9 @@
     "noteSaved": "Note enregistrée",
     "noteDeleted": "Note supprimée",
     "confirmDeleteNote": "Supprimer cette note ?",
-    "privateNote": "Vous seul pouvez voir cette note"
+    "privateNote": "Vous seul pouvez voir cette note",
+    "premiumDescription": "Les notes sont une fonctionnalité Premium. Passez à Premium pour déverrouiller et ajouter des notes personnelles à vos films et séries.",
+    "searchPlaceholder": "Rechercher des notes..."
   },
   "reminder": {
     "title": "Rappel",
@@ -403,7 +502,96 @@
     "selectTime": "Sélectionner l'heure",
     "notificationsDisabled": "Les notifications sont désactivées",
     "enableNotifications": "Activer les notifications",
-    "alreadyReleased": "Déjà sorti"
+    "alreadyReleased": "Déjà sorti",
+    "timingUpdated": "Timing du rappel mis à jour avec succès",
+    "failedToUpdateTiming": "Échec de la mise à jour du rappel",
+    "confirmCancel": "Voulez-vous vraiment supprimer ce rappel ?",
+    "failedToCancel": "Échec de l'annulation du rappel",
+    "aired": "Diffusé",
+    "airs": "Diffuse",
+    "allTimesPassedEpisode": "Tous les horaires de rappel pour cet épisode sont passés.",
+    "allTimesPassedMovie": "Tous les horaires de rappel pour ce film sont passés.",
+    "allTimesPassedPremiere": "Tous les horaires de rappel pour cette première sont passés.",
+    "devBanner": "MODE DEV : les horaires de rappel sont accélérés pour les tests.",
+    "editTimingTitle": "Modifier le timing du rappel",
+    "failedToSet": "Échec de la définition du rappel",
+    "nextEpisode": "Prochain épisode : S{{season}}E{{episode}} · {{title}}",
+    "noReleaseDate": "Aucune date de sortie disponible",
+    "noUpcomingEpisodes": "Aucun épisode à venir",
+    "noUpcomingEpisodesOrSeasons": "Aucun épisode ni première de saison à venir",
+    "noUpcomingSeasonPremiere": "Aucune première de saison à venir",
+    "notificationTimePassed": "L’horaire de notification est passé",
+    "notify": "Notifier",
+    "notifyMe": "Me notifier",
+    "permissionRequired": "La permission des notifications est requise",
+    "releaseLabel": {
+      "nextEpisodeAirs": "Prochain épisode diffusé",
+      "releases": "Sorties",
+      "seasonPremieres": "Premières de saison"
+    },
+    "released": "Sorti",
+    "releasesOn": "Sortie le {{date}}",
+    "releasesTodayPastTimesMovie": "Sort aujourd'hui, mais tous les horaires de rappel sont passés.",
+    "remindMeFor": "Me rappeler pour",
+    "seasonPremieres": "La saison {{season}} débute le {{date}}",
+    "setSuccess": "Rappel défini",
+    "skipWarning": {
+      "episode": "Cela ignorera le rappel du prochain épisode.",
+      "release": "Cela ignorera le rappel planifié.",
+      "season": "Cela ignorera le rappel de la prochaine première de saison."
+    },
+    "subsequentEpisodeInfo": "L'épisode d'aujourd'hui (S{{originalSeason}}E{{originalEpisode}}) arrive bientôt. Nous vous rappellerons plutôt le suivant (S{{season}}E{{episode}}).",
+    "timingChangeInfo": "Changer le timing ignorera la notification initialement planifiée.",
+    "timingOptions": {
+      "devNotificationInSeconds": "Notification dans {{count}} secondes",
+      "devTestInSeconds": "Test dans {{count}} secondes",
+      "episode": {
+        "onAirDay": {
+          "label": "Le jour de diffusion",
+          "description": "Me notifier quand l'épisode est diffusé"
+        },
+        "oneDayBefore": {
+          "label": "1 jour avant",
+          "description": "Me notifier 1 jour avant sa diffusion"
+        }
+      },
+      "movie": {
+        "onReleaseDay": {
+          "label": "Le jour de sortie",
+          "description": "Me notifier à sa sortie"
+        },
+        "oneDayBefore": {
+          "label": "1 jour avant",
+          "description": "Me notifier 1 jour avant la sortie"
+        },
+        "oneWeekBefore": {
+          "label": "1 semaine avant",
+          "description": "Me notifier 1 semaine avant la sortie"
+        }
+      },
+      "season": {
+        "onPremiereDay": {
+          "label": "Le jour de la première",
+          "description": "Me notifier quand la saison débute"
+        },
+        "oneDayBefore": {
+          "label": "1 jour avant",
+          "description": "Me notifier 1 jour avant la première"
+        },
+        "oneWeekBefore": {
+          "label": "1 semaine avant",
+          "description": "Me notifier 1 semaine avant la première"
+        }
+      }
+    },
+    "todayEpisodePastTimes": "Diffuse aujourd'hui, mais tous les horaires de rappel sont passés.",
+    "todaySeasonPremierePastTimes": "Première aujourd'hui, mais tous les horaires de rappel sont passés.",
+    "tvFrequency": {
+      "everyEpisode": "Chaque épisode",
+      "seasonPremieres": "Premières de saison"
+    },
+    "updateReminder": "Mettre à jour le rappel",
+    "warningSomeTimesPassed": "Certains horaires de rappel sont déjà passés."
   },
   "watched": {
     "title": "Marquer comme vu",
@@ -473,7 +661,16 @@
     "regionDescription": "Affecte la disponibilité du contenu et les recommandations",
     "languageDescription": "Langue de l'application et du contenu",
     "accentColorDescription": "Choisissez la couleur de surbrillance utilisée dans l’app.",
-    "accentColorNote": "Cela modifie les boutons, surbrillances et autres éléments d’accent."
+    "accentColorNote": "Cela modifie les boutons, surbrillances et autres éléments d’accent.",
+    "launchScreenDescription": "Choisissez l'écran qui s'ouvre au lancement de l'application.",
+    "launchScreenNote": "Ce paramètre prendra effet lors de la prochaine ouverture de l’application.",
+    "updateLaunchScreenError": "Échec de la mise à jour de la préférence de lancement. Veuillez réessayer.",
+    "updateLanguageError": "Échec de la mise à jour de la langue. Veuillez réessayer.",
+    "languageScreenDescription": "Sélectionnez votre langue préférée pour les informations sur les films et séries.",
+    "languageScreenNote": "Cela affecte les titres, descriptions et autres textes de notre base de données. Certains contenus peuvent ne pas être disponibles dans toutes les langues.",
+    "updateRegionError": "Échec de la mise à jour de la région. Veuillez réessayer.",
+    "regionScreenDescription": "Sélectionnez votre région pour voir la disponibilité locale en streaming et les dates de sortie.",
+    "regionScreenNote": "Cela affecte les informations de disponibilité et les dates de sortie locales."
   },
   "profile": {
     "title": "Profil",
@@ -525,7 +722,37 @@
     "dataSaver": "Mode économie de données",
     "dataSaverDescription": "Charger des images de résolution inférieure pour économiser les données",
     "defaultBulkAction": "Action groupée par défaut : {{mode}}",
-    "defaultBulkActionDescription": "Choisissez ce qui se passe lorsque vous ajoutez des éléments en lot depuis une liste."
+    "defaultBulkActionDescription": "Choisissez ce qui se passe lorsque vous ajoutez des éléments en lot depuis une liste.",
+    "showListIndicators": "Afficher les indicateurs de liste",
+    "showListIndicatorsDescription": "Afficher un badge sur les cartes lorsqu’un élément est dans l’une de vos listes",
+    "blurPlotSpoilers": "Flouter les intrigues films et séries",
+    "blurPlotSpoilersDescription": "Masquez les résumés par défaut pour éviter les spoilers. Touchez pour afficher.",
+    "hideWatchedContent": "Masquer le contenu vu",
+    "hideWatchedContentDescription": "Retirer les films et séries vus de la recherche et de Découvrir",
+    "unableToLoadPreferences": "Impossible de charger les préférences",
+    "checkConnection": "Veuillez vérifier votre connexion et réessayer",
+    "hideUnreleased": "Masquer le contenu non sorti",
+    "hideUnreleasedDescription": "Masquer les films et séries qui ne sont pas encore sortis",
+    "updatePreferenceError": "Échec de la mise à jour de la préférence. Veuillez réessayer.",
+    "content": "Contenu",
+    "exportAsCsv": "Exporter en CSV",
+    "exportAsMarkdown": "Exporter en Markdown",
+    "exportDataMessage": "Choisissez un format d’export.",
+    "exportDataTitle": "Exporter les données",
+    "exportFailedFallbackMessage": "L’export a échoué. Veuillez réessayer.",
+    "exportFailedTitle": "Échec de l’export",
+    "guestAccountExportMessage": "L’export n’est pas disponible en mode invité. Connectez-vous pour exporter vos données.",
+    "guestAccountTitle": "Compte invité",
+    "noEmail": "Pas d’e-mail",
+    "supportDevelopmentMessage": "Si vous aimez ShowSeek et souhaitez soutenir son développement, vous pouvez faire un don en utilisant l’une des adresses ci-dessous. Merci !",
+    "unableToOpenFeedback": "Impossible d’ouvrir la page de retours.",
+    "unableToOpenPlayStore": "Impossible d’ouvrir le Play Store.",
+    "unableToOpenWebsite": "Impossible d’ouvrir le site web.",
+    "user": "Utilisateur",
+    "webAppModal": {
+      "description": "Continuer vers l’application web ShowSeek ?",
+      "title": "Ouvrir l’application web"
+    }
   },
   "onboarding": {
     "welcome": "Bienvenue sur ShowSeek",
@@ -554,7 +781,12 @@
     "saveFailed": "Échec de l'enregistrement",
     "deleteFailed": "Échec de la suppression",
     "tryAgain": "Réessayer",
-    "goBack": "Retour"
+    "goBack": "Retour",
+    "failedToLoadRecommendations": "Échec du chargement des recommandations",
+    "failedToLoadReviews": "Échec du chargement des avis",
+    "failedToLoadTraktReviews": "Échec du chargement des avis Trakt",
+    "unableToOpenVideo": "Impossible d'ouvrir la vidéo",
+    "unexpectedError": "Erreur inattendue"
   },
   "empty": {
     "noData": "Aucune donnée disponible",
@@ -569,7 +801,38 @@
     "perYear": "/ An",
     "subscriptionManageMessage": "Les abonnements ne peuvent pas être réinitialisés dans l'app. Ouvrez les abonnements du store pour annuler ou modifier votre offre.",
     "subscriptionManageTitle": "Gérer l'abonnement",
-    "whatsIncluded": "Ce qui est inclus"
+    "whatsIncluded": "Ce qui est inclus",
+    "resetCompleteTitle": "Réinitialisation terminée",
+    "resetCompleteMessage": "Achat consommé. Vous pouvez maintenant l’acheter à nouveau.",
+    "noPurchaseFoundTitle": "Aucun achat trouvé",
+    "noPurchaseFoundMessage": "Impossible de trouver un achat à consommer.",
+    "resetFailedTitle": "Échec de la réinitialisation",
+    "alreadyPremiumDescription": "Merci de soutenir ShowSeek. Premium est déjà actif sur ce compte.",
+    "alreadyPremiumTitle": "Vous êtes Premium",
+    "devResetButton": "Réinitialiser l’achat (Dev)",
+    "devResetTitle": "Réinitialiser l’achat (Dev)",
+    "noPurchasesMessage": "Nous n’avons trouvé aucun achat à restaurer.",
+    "noPurchasesTitle": "Aucun achat trouvé",
+    "bestValueBadge": "Meilleur rapport qualité-prix",
+    "monthlyPlanBilling": "Facturé mensuellement",
+    "monthlyPlanName": "Mensuel",
+    "monthlyPriceFallback": "$3.00",
+    "oneTimePayment": "Paiement unique",
+    "purchaseFailedTitle": "Échec de l’achat",
+    "restoreCompleteMessage": "Votre achat a été restauré.",
+    "restoreCompleteTitle": "Restauration terminée",
+    "restoreFailedTitle": "Échec de la restauration",
+    "restorePurchase": "Restaurer l’achat",
+    "restorePurchases": "Restaurer les achats",
+    "subscribeButton": "S’abonner à Premium",
+    "successMessage": "Merci de soutenir ShowSeek ! Premium est maintenant actif.",
+    "successTitle": "Premium déverrouillé",
+    "unlockButton": "Déverrouiller Premium",
+    "unlockSubtitle": "Obtenez des listes, rappels, widgets illimités et plus encore.",
+    "unlockTitle": "Obtenez un accès illimité.",
+    "yearlyPlanBilling": "Facturé annuellement",
+    "yearlyPlanName": "Annuel",
+    "yearlyPriceFallback": "$15.00"
   },
   "trakt": {
     "reviews": "Critiques Trakt",
@@ -577,7 +840,72 @@
     "importHistory": "Importer l'historique",
     "exportHistory": "Exporter l'historique",
     "autoSync": "Synchronisation automatique",
-    "autoSyncDescription": "Synchroniser automatiquement les modifications avec Trakt"
+    "autoSyncDescription": "Synchroniser automatiquement les modifications avec Trakt",
+    "connectButton": "Connecter Trakt",
+    "connectHeader": "Connecter Trakt",
+    "connectHeroSubtitle": "Connectez Trakt pour importer votre historique et tout garder synchronisé.",
+    "connectHeroTitle": "Synchroniser avec Trakt",
+    "connectedHeader": "Trakt connecté",
+    "connectedScreenHeader": "Trakt connecté",
+    "connectedSubtitle": "Tout est prêt. Importez votre historique pour commencer.",
+    "connectedTitle": "Connecté !",
+    "connectionFailedMessage": "Impossible de se connecter à Trakt. Veuillez réessayer.",
+    "connectionFailedTitle": "Échec de connexion",
+    "disconnectButton": "Déconnecter",
+    "disconnectFailedMessage": "Impossible de se déconnecter de Trakt. Veuillez réessayer.",
+    "disconnectFailedTitle": "Échec de déconnexion",
+    "disconnectMessage": "Voulez-vous vraiment déconnecter Trakt ?",
+    "disconnectTitle": "Déconnecter Trakt",
+    "disconnectTraktButton": "Déconnecter Trakt",
+    "enriched": "Enrichi {{time}}",
+    "enrichingEstimate": "Cela peut prendre quelques minutes...",
+    "enrichingHeader": "Enrichissement",
+    "enrichingSubtitle": "Association de vos données Trakt à TMDB pour de meilleures statistiques et recommandations.",
+    "enrichingTitle": "Enrichissement de vos données",
+    "enrichment": {
+      "button": "Enrichir maintenant",
+      "description": "Associez votre historique Trakt à TMDB pour plus de détails et de meilleures statistiques.",
+      "devButton": "Réenrichir",
+      "devDescription": "Relancer l’enrichissement à des fins de débogage.",
+      "devNote": "MODE DEV : cela peut écraser les résultats d’enrichissement précédents.",
+      "devTitle": "Réenrichir les données",
+      "note": "Vous pouvez le faire à tout moment après la synchronisation.",
+      "title": "Enrichissez vos données"
+    },
+    "enrichmentFailedMessage": "Impossible d’enrichir vos données. Veuillez réessayer.",
+    "enrichmentFailedTitle": "Échec de l’enrichissement",
+    "howItWorks": {
+      "conflictsDescription": "Si nous détectons des conflits, nous montrons ce qui s’est passé et gardons vos données cohérentes.",
+      "conflictsTitle": "Résoudre les conflits",
+      "connectDescription": "Autorisez ShowSeek à accéder à votre compte Trakt.",
+      "connectTitle": "Connectez votre compte",
+      "enrichDescription": "Enrichissez éventuellement votre historique Trakt avec les données TMDB pour de meilleurs insights.",
+      "enrichTitle": "Enrichir vos données",
+      "importDescription": "Importez votre historique de visionnage, vos notes et vos listes depuis Trakt.",
+      "importTitle": "Importer votre historique"
+    },
+    "howItWorksTitle": "Comment ça marche",
+    "importButton": "Importer l’historique",
+    "lastSynced": "Dernière synchronisation {{time}}",
+    "moreErrors": "et {{count}} erreurs supplémentaires",
+    "moreErrors_one": "et {{count}} erreur supplémentaire",
+    "moreErrors_other": "et {{count}} erreurs supplémentaires",
+    "privacyNote": "Nous utilisons Trakt uniquement pour synchroniser votre historique de visionnage. Vous pouvez vous déconnecter à tout moment.",
+    "syncErrorsTitle": "Erreurs de synchronisation",
+    "syncFailedMessage": "Impossible de synchroniser avec Trakt. Veuillez réessayer.",
+    "syncFailedTitle": "Échec de synchronisation",
+    "syncNowButton": "Synchroniser maintenant",
+    "syncedItemsTitle": "Éléments synchronisés",
+    "syncingEstimate": "Cela prend généralement moins d’une minute...",
+    "syncingHeader": "Synchronisation",
+    "syncingSubtitle": "Importation de votre historique Trakt dans ShowSeek.",
+    "syncingTitle": "Synchronisation de vos données",
+    "whatWillBeSyncedTitle": "Ce qui sera synchronisé",
+    "willSync": {
+      "customLists": "Listes personnalisées",
+      "episodeProgress": "Progression des épisodes",
+      "watchedMoviesAndShows": "Films et séries vus"
+    }
   },
   "homeCustomization": {
     "title": "Personnaliser l'accueil",
@@ -585,7 +913,18 @@
     "enabledSections": "Sections activées",
     "disabledSections": "Sections désactivées",
     "dragToReorder": "Glissez pour réorganiser",
-    "resetToDefault": "Réinitialiser par défaut"
+    "resetToDefault": "Réinitialiser par défaut",
+    "signInToCustomize": "Connectez-vous pour personnaliser votre écran d'accueil",
+    "selectedCount": "{{selected}}/{{max}} sélectionnées",
+    "tmdbLists": "Listes TMDB",
+    "watchStatus": "Statut de visionnage",
+    "updatedToast": "Écran d'accueil mis à jour",
+    "minSelected": "Sélectionnez au minimum {{count}} listes",
+    "minSelected_one": "Sélectionnez au minimum {{count}} liste",
+    "minSelected_other": "Sélectionnez au minimum {{count}} listes",
+    "maxSelected": "Sélectionnez au maximum {{count}} listes",
+    "maxSelected_one": "Sélectionnez au maximum {{count}} liste",
+    "maxSelected_other": "Sélectionnez au maximum {{count}} listes"
   },
   "forYou": {
     "title": "Recommandations personnalisées",
@@ -612,7 +951,10 @@
     "signInRequired": "Connectez-vous pour voir votre calendrier",
     "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit",
     "upgradeForFullExperience": "Passez à Premium pour l'expérience complète",
-    "upgradeToPremium": "Passer à Premium"
+    "upgradeToPremium": "Passer à Premium",
+    "premiumTitle": "Suivez votre calendrier de sorties",
+    "premiumDescription": "Ne manquez plus jamais la sortie d'une saison, d'un épisode ou d'un film. \n Obtenez une chronologie personnalisée de tous vos prochains films et séries.",
+    "updatingEpisodes": "Mise à jour des épisodes TV..."
   },
   "authGuards": {
     "addFavoritePeople": "Connectez-vous pour ajouter des personnes aux favoris",
@@ -658,5 +1000,340 @@
       "name": "Féerique",
       "description": "Aventures magiques"
     }
+  },
+  "shareCard": {
+    "title": "Carte de partage",
+    "share": "Partager vers...",
+    "save": "Enregistrer dans la galerie",
+    "generating": "Génération...",
+    "preview": "Aperçu",
+    "myRating": "Ma note",
+    "rateIt": "Notez-le sur ShowSeek !",
+    "last6Months": "Mes 6 derniers mois",
+    "caption": "Découvrez ceci sur ShowSeek !",
+    "captionCopied": "Légende copiée dans le presse-papiers",
+    "dialogTitle": "Partager",
+    "savedToGallery": "Enregistré dans la galerie !",
+    "permissionDenied": "L'autorisation d'accès à la galerie a été refusée",
+    "failedToGenerate": "Échec de génération de la carte de partage",
+    "failedToShare": "Échec du partage",
+    "failedToSave": "Échec de l'enregistrement dans la galerie",
+    "sharingNotAvailable": "Le partage n'est pas disponible sur cet appareil"
+  },
+  "share": {
+    "message": "{{title}} - Découvrez ceci sur TMDB ! {{url}}",
+    "linkCopied": "Lien copié dans le presse-papiers",
+    "unableToShare": "Impossible de partager. Veuillez réessayer."
+  },
+  "notFound": {
+    "title": "Oups !",
+    "message": "Cet écran n'existe pas.",
+    "goHome": "Aller à l'écran d'accueil !"
+  },
+  "premiumFeature": {
+    "title": "Fonctionnalité Premium",
+    "message": "{{featureName}} : disponible uniquement pour les membres Premium.",
+    "features": {
+      "collectionTracking": "Suivi des collections",
+      "notes": "Notes",
+      "reminders": "Rappels de sortie"
+    }
+  },
+  "relativeTime": {
+    "daysAgo": "il y a {{count}} jours",
+    "daysAgo_one": "il y a {{count}} jour",
+    "daysAgo_other": "il y a {{count}} jours",
+    "weeksAgo": "il y a {{count}} semaines",
+    "weeksAgo_one": "il y a {{count}} semaine",
+    "weeksAgo_other": "il y a {{count}} semaines",
+    "monthsAgo": "il y a {{count}} mois",
+    "monthsAgo_one": "il y a {{count}} mois",
+    "monthsAgo_other": "il y a {{count}} mois",
+    "yearsAgo": "il y a {{count}} ans",
+    "yearsAgo_one": "il y a {{count}} an",
+    "yearsAgo_other": "il y a {{count}} ans"
+  },
+  "widgets": {
+    "widgetType": "Type de widget",
+    "widgetSize": "Taille du widget",
+    "previewDescription": "Description de l'aperçu",
+    "newWidget": "Nouveau widget",
+    "configureWidget": "Configurer le widget",
+    "selectWatchlistError": "Veuillez sélectionner une liste à afficher.",
+    "saveFailed": "Échec de l’enregistrement de la configuration du widget.",
+    "saveConfiguration": "Enregistrer la configuration",
+    "deleteWidgetTitle": "Supprimer le widget",
+    "deleteWidgetMessage": "Voulez-vous vraiment supprimer cette configuration de widget ? Cela arrêtera les mises à jour pour ce widget.",
+    "refreshed": "Widgets actualisés avec succès",
+    "empty": "Aucun widget configuré pour le moment.",
+    "addNew": "Ajouter un widget",
+    "info": "Configurez vos widgets ici, puis appuyez longuement sur l’écran d’accueil Android pour ajouter le widget « ShowSeek ».",
+    "size": {
+      "small": "Petit",
+      "medium": "Moyen",
+      "large": "Grand"
+    },
+    "preview": {
+      "upcomingMovies": "Affiche jusqu’à {{count}} prochaines sorties de films.",
+      "upcomingTV": "Affiche jusqu’à {{count}} prochaines sorties de séries.",
+      "watchlist": "Affiche jusqu’à {{count}} éléments de votre liste sélectionnée."
+    },
+    "listIdLabel": "Liste : {{id}}",
+    "premiumGateDescription": "Les widgets sont réservés aux membres Premium.",
+    "selectWatchlist": "Sélectionner une liste",
+    "type": {
+      "upcomingMovies": "Films à venir",
+      "upcomingTV": "Séries à venir",
+      "watchlist": "Liste de visionnage"
+    },
+    "unlockWidgets": "Déverrouiller les widgets",
+    "widgetSizeLabel": "Taille : {{size}}"
+  },
+  "movieDetail": {
+    "signInToAddItems": "Connectez-vous pour ajouter des éléments à vos listes",
+    "failedToLoad": "Échec du chargement des détails du film"
+  },
+  "collection": {
+    "failedToLoad": "Échec du chargement de la collection",
+    "freeLimitNotice": "Les utilisateurs gratuits peuvent suivre jusqu'à {{count}} collections. Passez à Premium pour un suivi illimité.",
+    "moviesCount": "{{count}} films",
+    "moviesCount_one": "{{count}} film",
+    "moviesCount_other": "{{count}} films",
+    "moviesWatched": "Vu {{watchedCount}} sur {{totalMovies}}",
+    "startTracking": "Commencer le suivi",
+    "stopTracking": "Arrêter le suivi",
+    "stopTrackingConfirm": "Voulez-vous vraiment arrêter le suivi de {{name}} ?",
+    "stopTrackingTitle": "Arrêter le suivi ?"
+  },
+  "credits": {
+    "failedToLoad": "Échec du chargement des crédits"
+  },
+  "datePicker": {
+    "month": "Mois",
+    "selectMonthYear": "Sélectionner le mois et l'année",
+    "year": "Année"
+  },
+  "episodeDetail": {
+    "failedToLoad": "Échec du chargement des détails de l'épisode"
+  },
+  "filters": {
+    "anyRating": "Toute note",
+    "mediaType": "Type de média",
+    "searchPlaceholder": "Rechercher...",
+    "selectLabel": "Sélectionner",
+    "selectPlaceholder": "Sélectionner...",
+    "starsPlus": "{{count}}+ étoiles"
+  },
+  "lists": {
+    "alreadyWatched": "Déjà vus",
+    "dropped": "Abandonnés",
+    "favorites": "Favoris",
+    "shouldWatch": "À voir",
+    "watching": "En cours"
+  },
+  "mediaDetails": {
+    "budget": "Budget",
+    "certification": "Classification",
+    "companies": "Sociétés",
+    "originalLanguage": "Langue d'origine",
+    "originalTitle": "Titre d'origine",
+    "productionCountries": "Pays de production",
+    "revenue": "Recettes",
+    "runtimeHours": "{{count}} h",
+    "runtimeHoursMinutes": "{{hours}} h {{minutes}} min",
+    "runtimeMinutes": "{{count}} min"
+  },
+  "notifications": {
+    "channelName": "Rappels ShowSeek",
+    "notAvailableMessage": "Les notifications ne sont pas disponibles sur cet appareil.",
+    "notAvailableTitle": "Indisponible",
+    "openSettings": "Ouvrir les paramètres",
+    "permissionCheckFailedMessage": "Impossible de vérifier les permissions de notification. Veuillez réessayer.",
+    "permissionCheckFailedTitle": "Échec de la vérification des permissions",
+    "permissionCheckUnavailableMessage": "Impossible de vérifier les permissions de notification sur cet appareil.",
+    "permissionCheckUnavailableTitle": "Permission indisponible",
+    "permissionDeniedMessage": "Les notifications sont désactivées. Activez-les dans les paramètres pour utiliser les rappels.",
+    "permissionDeniedTitle": "Permission refusée",
+    "permissionRequestFailedMessage": "Impossible de demander les permissions de notification. Veuillez réessayer.",
+    "permissionRequestFailedTitle": "Échec de la demande de permissions",
+    "permissionRequiredMessage": "Veuillez activer les notifications dans les paramètres pour utiliser les rappels.",
+    "permissionRequiredTitle": "Notifications requises"
+  },
+  "person": {
+    "addToFavoritePeople": "Ajouter aux personnes favorites",
+    "ageAtDeath": "({{count}} ans au décès)",
+    "ageAtDeath_one": "({{count}} an au décès)",
+    "ageAtDeath_other": "({{count}} ans au décès)",
+    "ageYearsOld": "({{count}} ans)",
+    "ageYearsOld_one": "({{count}} an)",
+    "ageYearsOld_other": "({{count}} ans)",
+    "biography": "Biographie",
+    "directedWrittenMovies": "Réalisé/Écrit (Films)",
+    "directedWrittenTV": "Réalisé/Écrit (TV)",
+    "failedToLoadDetails": "Échec du chargement des détails de la personne",
+    "knownForLabel": "Connu pour :",
+    "knownForMovies": "Connu pour (Films)",
+    "knownForTV": "Connu pour (TV)",
+    "removeFromFavoritePeople": "Retirer des personnes favorites"
+  },
+  "personCredits": {
+    "noCreditsTitle": "Aucun crédit trouvé",
+    "noMovieCreditsDescription": "Aucun crédit de film à afficher.",
+    "noTVCreditsDescription": "Aucun crédit TV à afficher."
+  },
+  "premiumFeatures": {
+    "categories": {
+      "data": "Données",
+      "discover": "Découvrir",
+      "home-screen": "Écran d'accueil",
+      "lists": "Listes",
+      "support": "Soutien"
+    },
+    "features": {
+      "blur-spoilers": {
+        "description": "Masquez les spoilers dans les avis.",
+        "title": "Flouter les spoilers"
+      },
+      "export-data": {
+        "description": "Exportez vos listes, notes, évaluations et plus.",
+        "title": "Exporter les données"
+      },
+      "future-features": {
+        "description": "Aidez à financer les futures fonctionnalités.",
+        "title": "Futures fonctionnalités"
+      },
+      "hide-watched": {
+        "description": "Masquez les éléments vus dans Découvrir.",
+        "title": "Masquer les éléments vus"
+      },
+      "indie-support": {
+        "description": "Soutenez le développement continu de ShowSeek.",
+        "title": "Soutenir un développeur indépendant"
+      },
+      "latest-trailers": {
+        "description": "Regardez les dernières bandes-annonces depuis l’accueil.",
+        "title": "Dernières bandes-annonces"
+      },
+      "personal-notes": {
+        "description": "Ajoutez des notes personnelles à vos films et séries.",
+        "title": "Notes personnelles"
+      },
+      "release-calendar": {
+        "description": "Suivez les prochaines sorties dans votre calendrier.",
+        "title": "Calendrier des sorties"
+      },
+      "release-reminders": {
+        "description": "Recevez une notification à la sortie des films et épisodes.",
+        "title": "Rappels de sortie"
+      },
+      "streaming-filter": {
+        "description": "Filtrez Découvrir par service de streaming.",
+        "title": "Filtre de service de streaming"
+      },
+      "trakt-integration": {
+        "description": "Synchronisez votre historique de visionnage avec Trakt.",
+        "title": "Intégration Trakt"
+      },
+      "unlimited-items": {
+        "description": "Ajoutez un nombre illimité de films et séries à vos listes.",
+        "title": "Éléments illimités par liste"
+      },
+      "unlimited-lists": {
+        "description": "Créez autant de listes personnalisées que vous voulez.",
+        "title": "Listes illimitées"
+      },
+      "widgets": {
+        "description": "Ajoutez des widgets ShowSeek à votre écran d’accueil.",
+        "title": "Widgets"
+      }
+    }
+  },
+  "reviews": {
+    "tapToRevealSpoiler": "Touchez pour afficher le spoiler"
+  },
+  "shuffle": {
+    "noImage": "Pas d'image",
+    "shuffling": "Mélange...",
+    "spinAgain": "Relancer",
+    "title": "Mélanger",
+    "viewDetails": "Voir les détails"
+  },
+  "sort": {
+    "alphabetical": "Alphabétique",
+    "dateAdded": "Date d'ajout",
+    "lastUpdated": "Dernière mise à jour",
+    "lastWatched": "Dernier visionnage",
+    "progress": "Progression",
+    "recentlyAdded": "Ajoutés récemment"
+  },
+  "stats": {
+    "activityPatterns": "Habitudes d’activité",
+    "added": "Ajoutés",
+    "avgRating": "Note moy.",
+    "currentStreak": "Série actuelle",
+    "errorDescription": "Nous n’avons pas pu charger vos statistiques. Veuillez réessayer.",
+    "errorTitle": "Statistiques indisponibles",
+    "last6MonthsOverview": "Aperçu des 6 derniers mois",
+    "loading": "Chargement des statistiques...",
+    "longestStreak": "Plus longue série",
+    "monthDetail": {
+      "emptyTab": {
+        "added": "Rien ajouté ce mois-ci",
+        "rated": "Aucune note ce mois-ci",
+        "watched": "Rien regardé ce mois-ci"
+      },
+      "noActivityDescription": "Aucune activité enregistrée pour ce mois.",
+      "noActivityTitle": "Aucune activité",
+      "noDataDescription": "Nous n’avons trouvé aucune donnée pour ce mois.",
+      "noDataTitle": "Aucune donnée"
+    },
+    "monthlyBreakdown": "Répartition mensuelle",
+    "mostActiveDay": "Jour le plus actif",
+    "noActivityDescription": "Regardez, notez ou ajoutez des éléments pour voir vos statistiques ici.",
+    "noActivityThisMonth": "Aucune activité ce mois-ci",
+    "noActivityTitle": "Pas encore d’activité",
+    "noChange": "Aucun changement {{label}}",
+    "preferredTime": "Moment préféré",
+    "rated": "Notés",
+    "streakValue": "{{count}} jours",
+    "streakValue_one": "{{count}} jour",
+    "streakValue_other": "{{count}} jours",
+    "streaks": "Séries",
+    "timeOfDay": {
+      "afternoon": "Après-midi",
+      "evening": "Soir",
+      "morning": "Matin",
+      "night": "Nuit"
+    },
+    "topGenres": "Genres favoris",
+    "vsLastMonth": "vs le mois dernier",
+    "watched": "Regardés"
+  },
+  "tvDetail": {
+    "failedToLoad": "Échec du chargement des détails de la série"
+  },
+  "tvSeasons": {
+    "failedToLoadSeasons": "Échec du chargement des saisons"
+  },
+  "watchProviders": {
+    "accessibility": {
+      "watchOnProviderViaJustWatch": "Regarder sur {{provider}} via JustWatch"
+    },
+    "buy": "Acheter",
+    "byJustWatch": "via JustWatch",
+    "openLinkErrorMessage": "Une erreur est survenue lors de l’ouverture du lien.",
+    "rent": "Louer",
+    "streaming": "Diffusion en continu",
+    "unableToOpenLinkMessage": "Nous n’avons pas pu ouvrir ce lien. Veuillez réessayer.",
+    "unableToOpenLinkTitle": "Impossible d’ouvrir le lien",
+    "whereToWatch": "Où regarder"
+  },
+  "watching": {
+    "caughtUp": "À jour",
+    "next": "Suivant",
+    "nextEpisode": "{{seasonEpisode}} · {{title}}",
+    "timeRemainingHours": "{{count}} h restantes",
+    "timeRemainingHoursMinutes": "{{hours}} h {{minutes}} min restantes",
+    "timeRemainingMinutes": "{{count}} min restantes"
   }
 }
