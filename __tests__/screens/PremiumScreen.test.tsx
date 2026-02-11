@@ -30,6 +30,10 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: 'LinearGradient',
 }));
 
+jest.mock('expo-image', () => ({
+  Image: 'Image',
+}));
+
 jest.mock('@/src/components/ui/CollapsibleCategory', () => ({
   CollapsibleCategory: 'CollapsibleCategory',
   CollapsibleFeatureItem: 'CollapsibleFeatureItem',

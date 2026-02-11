@@ -564,7 +564,8 @@
   },
   "premium": {
     "perMonth": "/ Mois",
-    "perYear": "/ An"
+    "perYear": "/ An",
+    "whatsIncluded": "Ce qui est inclus"
   },
   "trakt": {
     "reviews": "Critiques Trakt",

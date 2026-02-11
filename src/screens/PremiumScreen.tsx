@@ -11,6 +11,7 @@ import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { BadgeCheck } from 'lucide-react-native';
@@ -19,7 +20,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
-  ImageBackground,
   Linking,
   ScrollView,
   StyleSheet,
@@ -115,10 +115,11 @@ export default function PremiumScreen() {
 
   return (
     <View style={styles.screen}>
-      <ImageBackground
-        source={require('../../assets/images/movie_collage.png')}
-        style={styles.backdropImage}
-        imageStyle={styles.backdropImageInner}
+      <Image
+        source={require('@/assets/images/movie_collage.png')}
+        style={[styles.backdropImage, styles.backdropImageInner]}
+        contentFit="cover"
+        cachePolicy="memory-disk"
       />
       <LinearGradient
         colors={['rgba(0,0,0,0.68)', 'rgba(0,0,0,0.78)', 'rgba(0,0,0,1)', 'rgba(0,0,0,1)']}
@@ -159,7 +160,7 @@ export default function PremiumScreen() {
             />
           </View>
 
-          <Text style={styles.featuresTitle}>What's Included</Text>
+          <Text style={styles.featuresTitle}>{t('premium.whatsIncluded')}</Text>
           <View style={styles.features}>
             {PREMIUM_CATEGORIES.map((category, index) => (
               <FeatureCategorySection
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '55%',
+    height: '35%',
   },
   backdropImageInner: {
     opacity: 0.75,
