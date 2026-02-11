@@ -1,4 +1,5 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -163,10 +164,8 @@ class ListService {
         addedAt: Date.now(),
       } as ListMediaItem;
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
       const now = Date.now();
+      const updateTimeout = createTimeoutWithCleanup(10000);
 
       // Fast path for existing lists: update without a read.
       try {
@@ -176,14 +175,20 @@ class ListService {
             [`items.${mediaItem.id}`]: itemToAdd,
             updatedAt: now,
           }),
-          timeoutPromise,
+          updateTimeout.promise,
         ]);
+        return;
       } catch (error) {
         if (!this.isNotFoundError(error)) {
-          throw error;
+          throw new Error(getFirestoreErrorMessage(error));
         }
+      } finally {
+        updateTimeout.cancel();
+      }
 
-        // Fallback for first write to a missing list doc.
+      // Fallback for first write to a missing list doc with a fresh timeout budget.
+      const createTimeout = createTimeoutWithCleanup(10000);
+      try {
         await Promise.race([
           setDoc(
             listRef,
@@ -197,8 +202,12 @@ class ListService {
             },
             { merge: true }
           ),
-          timeoutPromise,
+          createTimeout.promise,
         ]);
+      } catch (error) {
+        throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        createTimeout.cancel();
       }
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
