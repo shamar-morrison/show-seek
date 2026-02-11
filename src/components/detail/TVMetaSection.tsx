@@ -14,6 +14,8 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 export interface TVMetaSectionProps {
   /** The TV show details */
   show: TVShowDetails;
+  /** Display title based on preferences */
+  displayTitle: string;
   /** Handler for pressing the seasons link */
   onSeasonsPress: () => void;
   /** Handler for toast messages */
@@ -31,21 +33,22 @@ export interface TVMetaSectionProps {
  * - Status badge (Ended/Canceled)
  * - Genre tags
  */
-export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, onShowToast }) => {
+export const TVMetaSection = memo<TVMetaSectionProps>(
+  ({ show, displayTitle, onSeasonsPress, onShowToast }) => {
   const { t } = useTranslation();
   const styles = useDetailStyles();
   const { accentColor } = useAccentColor();
 
   const handleTitleLongPress = useCallback(async () => {
-    await Clipboard.setStringAsync(show.name);
+    await Clipboard.setStringAsync(displayTitle);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onShowToast(t('common.copiedToClipboard'));
-  }, [show.name, onShowToast, t]);
+  }, [displayTitle, onShowToast, t]);
 
   return (
     <>
       <TouchableOpacity activeOpacity={1} onLongPress={handleTitleLongPress}>
-        <Text style={styles.title}>{show.name}</Text>
+        <Text style={styles.title}>{displayTitle}</Text>
       </TouchableOpacity>
 
       <View style={styles.metaContainer}>
@@ -110,6 +113,7 @@ export const TVMetaSection = memo<TVMetaSectionProps>(({ show, onSeasonsPress, o
       </ScrollView>
     </>
   );
-});
+  }
+);
 
 TVMetaSection.displayName = 'TVMetaSection';

@@ -9,6 +9,7 @@ import { Film, Tv } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 interface LatestTrailersSectionProps {
   label: string;
@@ -43,38 +44,45 @@ export const LatestTrailersSection = memo<LatestTrailersSectionProps>(({ label }
   );
 
   const renderTrailerCard = useCallback(
-    ({ item }: { item: TrailerItem }) => (
-      <TouchableOpacity
-        style={styles.videoCard}
-        onPress={() => handleTrailerPress(item)}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <MediaImage
-          source={{
-            uri: `https://img.youtube.com/vi/${item.key}/${thumbnailQuality}.jpg`,
-          }}
-          style={styles.videoThumbnail}
-          contentFit="cover"
-        />
-        <View style={styles.mediaTypeBadge}>
-          {item.mediaType === 'movie' ? (
-            <Film size={12} color={COLORS.text} />
-          ) : (
-            <Tv size={12} color={COLORS.text} />
-          )}
-          <Text style={styles.mediaTypeText}>
-            {item.mediaType === 'movie' ? t('media.movie') : t('media.tvShow')}
+    ({ item }: { item: TrailerItem }) => {
+      const displayTitle = getDisplayMediaTitle(
+        { title: item.mediaTitle, original_title: item.mediaOriginalTitle },
+        !!preferences?.showOriginalTitles
+      );
+
+      return (
+        <TouchableOpacity
+          style={styles.videoCard}
+          onPress={() => handleTrailerPress(item)}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <MediaImage
+            source={{
+              uri: `https://img.youtube.com/vi/${item.key}/${thumbnailQuality}.jpg`,
+            }}
+            style={styles.videoThumbnail}
+            contentFit="cover"
+          />
+          <View style={styles.mediaTypeBadge}>
+            {item.mediaType === 'movie' ? (
+              <Film size={12} color={COLORS.text} />
+            ) : (
+              <Tv size={12} color={COLORS.text} />
+            )}
+            <Text style={styles.mediaTypeText}>
+              {item.mediaType === 'movie' ? t('media.movie') : t('media.tvShow')}
+            </Text>
+          </View>
+          <Text style={styles.videoTitle} numberOfLines={2}>
+            {displayTitle}
           </Text>
-        </View>
-        <Text style={styles.videoTitle} numberOfLines={2}>
-          {item.mediaTitle}
-        </Text>
-        <Text style={styles.videoType} numberOfLines={1}>
-          {item.name}
-        </Text>
-      </TouchableOpacity>
-    ),
-    [handleTrailerPress, thumbnailQuality]
+          <Text style={styles.videoType} numberOfLines={1}>
+            {item.name}
+          </Text>
+        </TouchableOpacity>
+      );
+    },
+    [handleTrailerPress, thumbnailQuality, preferences?.showOriginalTitles, t]
   );
 
   return (

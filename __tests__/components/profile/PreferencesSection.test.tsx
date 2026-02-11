@@ -68,4 +68,35 @@ describe('PreferencesSection', () => {
 
     expect(getByText('Default bulk action: Copy')).toBeTruthy();
   });
+
+  it('renders original titles preference and updates it', () => {
+    const onUpdate = jest.fn();
+    const { getByText, getAllByTestId } = renderWithProviders(
+      <PreferencesSection
+        preferences={DEFAULT_PREFERENCES}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Use original titles')).toBeTruthy();
+
+    const preferenceItems = getAllByTestId('preference-item');
+    const preferenceItem = preferenceItems.find((item) =>
+      within(item).queryByText('Use original titles')
+    );
+    expect(preferenceItem).toBeTruthy();
+    if (!preferenceItem) {
+      throw new Error('Use original titles preference row not found');
+    }
+    const originalTitleSwitch = within(preferenceItem).getByTestId('preference-switch');
+    fireEvent(originalTitleSwitch, 'valueChange', true);
+
+    expect(onUpdate).toHaveBeenCalledWith('showOriginalTitles', true);
+  });
 });

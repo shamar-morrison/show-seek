@@ -736,6 +736,8 @@
     "hideTabLabelsDescription": "Show only icons in the bottom navigation bar",
     "dataSaver": "Data Saver Mode",
     "dataSaverDescription": "Load lower resolution images to save data",
+    "showOriginalTitles": "Use original titles",
+    "showOriginalTitlesDescription": "Show movie and TV titles in their original language when available.",
     "updatePreferenceError": "Failed to update preference. Please try again.",
     "content": "Content",
     "exportAsCsv": "Export as CSV",

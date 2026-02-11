@@ -17,7 +17,8 @@ const SimilarMediaCard = memo<{
   onPress: (id: number) => void;
   onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
-}>(({ item, onPress, onLongPress, mediaType }) => {
+  preferOriginalTitles: boolean;
+}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles }) => {
   const styles = useDetailStyles();
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
@@ -25,6 +26,10 @@ const SimilarMediaCard = memo<{
   const year = useMemo(
     () => getMediaYear(item.release_date || item.first_air_date),
     [item.release_date, item.first_air_date]
+  );
+  const displayTitle = useMemo(
+    () => getMediaTitle(item, preferOriginalTitles),
+    [item, preferOriginalTitles]
   );
 
   const handlePress = useCallback(() => {
@@ -53,7 +58,7 @@ const SimilarMediaCard = memo<{
         {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
       </View>
       <Text style={styles.similarTitle} numberOfLines={2}>
-        {getMediaTitle(item)}
+        {displayTitle}
       </Text>
       <View style={styles.similarMeta}>
         {year && <Text style={styles.similarYear}>{year}</Text>}
@@ -72,7 +77,15 @@ const SimilarMediaCard = memo<{
 SimilarMediaCard.displayName = 'SimilarMediaCard';
 
 export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
-  ({ items, onMediaPress, onMediaLongPress, title, style, mediaType }) => {
+  ({
+    items,
+    onMediaPress,
+    onMediaLongPress,
+    title,
+    style,
+    mediaType,
+    preferOriginalTitles = false,
+  }) => {
     const styles = useDetailStyles();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
@@ -82,9 +95,10 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
           onPress={onMediaPress}
           onLongPress={onMediaLongPress}
           mediaType={mediaType}
+          preferOriginalTitles={preferOriginalTitles}
         />
       ),
-      [onMediaPress, onMediaLongPress, mediaType]
+      [onMediaPress, onMediaLongPress, mediaType, preferOriginalTitles]
     );
 
     if (items.length === 0) {
@@ -114,7 +128,8 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
       prevProps.items.length === nextProps.items.length &&
       (prevProps.items.length === 0 || prevProps.items[0]?.id === nextProps.items[0]?.id) &&
       prevProps.title === nextProps.title &&
-      prevProps.mediaType === nextProps.mediaType
+      prevProps.mediaType === nextProps.mediaType &&
+      prevProps.preferOriginalTitles === nextProps.preferOriginalTitles
     );
   }
 );

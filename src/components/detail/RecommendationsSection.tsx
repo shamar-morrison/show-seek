@@ -18,7 +18,8 @@ const RecommendationCard = memo<{
   onPress: (id: number) => void;
   onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
-}>(({ item, onPress, onLongPress, mediaType }) => {
+  preferOriginalTitles: boolean;
+}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles }) => {
   const styles = useDetailStyles();
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
@@ -26,6 +27,10 @@ const RecommendationCard = memo<{
   const year = useMemo(
     () => getMediaYear(item.release_date || item.first_air_date),
     [item.release_date, item.first_air_date]
+  );
+  const displayTitle = useMemo(
+    () => getMediaTitle(item, preferOriginalTitles),
+    [item, preferOriginalTitles]
   );
 
   const handlePress = useCallback(() => {
@@ -54,7 +59,7 @@ const RecommendationCard = memo<{
         {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
       </View>
       <Text style={styles.similarTitle} numberOfLines={2}>
-        {getMediaTitle(item)}
+        {displayTitle}
       </Text>
       <View style={styles.similarMeta}>
         {year && <Text style={styles.similarYear}>{year}</Text>}
@@ -83,6 +88,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     onLayout,
     style,
     mediaType,
+    preferOriginalTitles = false,
   }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
@@ -146,6 +152,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
                   onPress={onMediaPress}
                   onLongPress={onMediaLongPress}
                   mediaType={mediaType}
+                  preferOriginalTitles={preferOriginalTitles}
                 />
               )}
             />
@@ -170,7 +177,8 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
       prevProps.shouldLoad === nextProps.shouldLoad &&
       prevProps.items.length === nextProps.items.length &&
       (prevProps.items.length === 0 || prevProps.items[0]?.id === nextProps.items[0]?.id) &&
-      prevProps.mediaType === nextProps.mediaType
+      prevProps.mediaType === nextProps.mediaType &&
+      prevProps.preferOriginalTitles === nextProps.preferOriginalTitles
     );
   }
 );

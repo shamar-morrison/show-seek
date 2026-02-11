@@ -61,6 +61,7 @@ import {
   MULTIPLE_LISTS_COLOR,
   MultipleListsIcon,
 } from '@/src/utils/listIcons';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
@@ -264,6 +265,7 @@ export default function TVDetailScreen() {
   }
 
   const show = tvQuery.data;
+  const displayShowTitle = getDisplayMediaTitle(show, !!preferences?.showOriginalTitles);
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const creators = show.created_by || [];
   const videos = videosQuery.data || [];
@@ -310,7 +312,7 @@ export default function TVDetailScreen() {
   };
 
   const handleCastViewAll = () => {
-    navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(show.name)}`);
+    navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(displayShowTitle)}`);
   };
 
   const handleRefresh = async () => {
@@ -336,7 +338,7 @@ export default function TVDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
-        title={show.name}
+        title={displayShowTitle}
         onBackPress={() => router.back()}
         scrollY={scrollY}
         rightAction={
@@ -363,7 +365,7 @@ export default function TVDetailScreen() {
         <TVHeroSection
           backdropPath={show.backdrop_path}
           posterPath={show.poster_path}
-          showName={show.name}
+          showName={displayShowTitle}
           showId={tvId}
           onBackPress={() => router.back()}
           onOpenWithPress={() => setOpenWithDrawerVisible(true)}
@@ -374,6 +376,7 @@ export default function TVDetailScreen() {
         <View style={styles.content}>
           <TVMetaSection
             show={show}
+            displayTitle={displayShowTitle}
             onSeasonsPress={() => handleSeasonsPress()}
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
@@ -489,6 +492,7 @@ export default function TVDetailScreen() {
             onMediaPress={handleShowPress}
             onMediaLongPress={guardedHandleMediaLongPress}
             title={t('media.similarShows')}
+            preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
 
           {filteredSimilarShows.length > 0 && <SectionSeparator />}
@@ -526,6 +530,7 @@ export default function TVDetailScreen() {
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleShowPress}
             onMediaLongPress={guardedHandleMediaLongPress}
+            preferOriginalTitles={!!preferences?.showOriginalTitles}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
@@ -604,7 +609,7 @@ export default function TVDetailScreen() {
         onClose={() => setOpenWithDrawerVisible(false)}
         mediaId={tvId}
         mediaType="tv"
-        title={show.name}
+        title={displayShowTitle}
         year={show.first_air_date?.split('-')[0] || null}
         onShowToast={(message) => toastRef.current?.show(message)}
       />
@@ -645,7 +650,7 @@ export default function TVDetailScreen() {
           <TVReminderModal
             visible={reminderModalVisible}
             onClose={() => setReminderModalVisible(false)}
-            tvTitle={show.name}
+            tvTitle={displayShowTitle}
             nextEpisode={effectiveNextEpisode}
             originalNextEpisode={originalNextEpisode}
             isUsingSubsequentEpisode={isUsingSubsequent}
@@ -669,7 +674,7 @@ export default function TVDetailScreen() {
               mediaData={{
                 id: show.id,
                 type: 'tv',
-                title: show.name,
+                title: displayShowTitle,
                 posterPath: show.poster_path,
                 backdropPath: show.backdrop_path,
                 releaseYear: show.first_air_date?.split('-')[0] || '',

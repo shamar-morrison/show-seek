@@ -15,8 +15,10 @@ import {
   useStartCollectionTracking,
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -44,6 +46,7 @@ export default function CollectionScreen() {
   const { accentColor } = useAccentColor();
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { preferences } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isPremium } = usePremium();
 
@@ -316,7 +319,7 @@ export default function CollectionScreen() {
                 </View>
                 <View style={styles.movieInfo}>
                   <Text style={styles.movieTitle} numberOfLines={2}>
-                    {movie.title}
+                    {getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles)}
                   </Text>
                   <View style={styles.movieMeta}>
                     {year && <Text style={styles.movieYear}>{year}</Text>}

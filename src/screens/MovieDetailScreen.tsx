@@ -74,6 +74,7 @@ import {
   MULTIPLE_LISTS_COLOR,
   MultipleListsIcon,
 } from '@/src/utils/listIcons';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -337,6 +338,7 @@ export default function MovieDetailScreen() {
   }
 
   const movie = movieQuery.data;
+  const displayMovieTitle = getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles);
   // Get region-specific release date
   const displayReleaseDate = getRegionalReleaseDate(movie, region);
 
@@ -391,7 +393,7 @@ export default function MovieDetailScreen() {
   };
 
   const handleCastViewAll = () => {
-    navigateTo(`/movie/${movieId}/cast?title=${encodeURIComponent(movie.title)}`);
+    navigateTo(`/movie/${movieId}/cast?title=${encodeURIComponent(displayMovieTitle)}`);
   };
 
   const handleRefresh = async () => {
@@ -544,7 +546,7 @@ export default function MovieDetailScreen() {
   // Handle view history action from modal
   // Note: Modal already dismisses itself before calling this callback
   const handleViewWatchHistory = () => {
-    navigateTo(`/movie/${movieId}/watch-history?title=${encodeURIComponent(movie.title)}`);
+    navigateTo(`/movie/${movieId}/watch-history?title=${encodeURIComponent(displayMovieTitle)}`);
   };
 
   // Handle clear history action from modal
@@ -576,7 +578,7 @@ export default function MovieDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
-        title={movie.title}
+        title={displayMovieTitle}
         onBackPress={() => router.back()}
         scrollY={scrollY}
         rightAction={
@@ -616,7 +618,7 @@ export default function MovieDetailScreen() {
 
           <ShareButton
             id={movieId}
-            title={movie.title}
+            title={displayMovieTitle}
             mediaType="movie"
             onShowToast={(msg) => toastRef.current?.show(msg)}
           />
@@ -632,12 +634,12 @@ export default function MovieDetailScreen() {
           <TouchableOpacity
             activeOpacity={1}
             onLongPress={async () => {
-              await Clipboard.setStringAsync(movie.title);
+              await Clipboard.setStringAsync(displayMovieTitle);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               toastRef.current?.show(t('common.copiedToClipboard'));
             }}
           >
-            <Text style={styles.title}>{movie.title}</Text>
+            <Text style={styles.title}>{displayMovieTitle}</Text>
           </TouchableOpacity>
 
           <View style={styles.metaContainer}>
@@ -788,6 +790,7 @@ export default function MovieDetailScreen() {
             onMediaPress={handleMoviePress}
             onMediaLongPress={guardedHandleMediaLongPress}
             title={t('media.similarMovies')}
+            preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
 
           {filteredSimilarMovies.length > 0 && <SectionSeparator />}
@@ -825,6 +828,7 @@ export default function MovieDetailScreen() {
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleMoviePress}
             onMediaLongPress={guardedHandleMediaLongPress}
+            preferOriginalTitles={!!preferences?.showOriginalTitles}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
                 setShouldLoadRecommendations(true);
@@ -920,7 +924,7 @@ export default function MovieDetailScreen() {
         onClose={() => setOpenWithDrawerVisible(false)}
         mediaId={movieId}
         mediaType="movie"
-        title={movie.title}
+        title={displayMovieTitle}
         year={(displayReleaseDate || movie.release_date)?.split('-')[0] || null}
         onShowToast={(message) => toastRef.current?.show(message)}
       />
@@ -968,7 +972,7 @@ export default function MovieDetailScreen() {
           <ReminderModal
             visible={reminderModalVisible}
             onClose={() => setReminderModalVisible(false)}
-            movieTitle={movie.title}
+            movieTitle={displayMovieTitle}
             releaseDate={displayReleaseDate || movie.release_date || null}
             currentTiming={reminder?.reminderTiming}
             hasReminder={hasReminder}
@@ -980,7 +984,7 @@ export default function MovieDetailScreen() {
           <MarkAsWatchedModal
             visible={watchedModalVisible}
             onClose={() => setWatchedModalVisible(false)}
-            movieTitle={movie.title}
+            movieTitle={displayMovieTitle}
             releaseDate={displayReleaseDate || movie.release_date || null}
             watchCount={watchCount}
             onMarkAsWatched={handleMarkAsWatched}
@@ -995,7 +999,7 @@ export default function MovieDetailScreen() {
               mediaData={{
                 id: movie.id,
                 type: 'movie',
-                title: movie.title,
+                title: displayMovieTitle,
                 posterPath: movie.poster_path,
                 backdropPath: movie.backdrop_path,
                 releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',

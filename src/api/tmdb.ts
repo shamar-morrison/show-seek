@@ -196,6 +196,7 @@ export interface TrailerItem extends Video {
   mediaId: number;
   mediaType: 'movie' | 'tv';
   mediaTitle: string;
+  mediaOriginalTitle?: string;
   mediaPosterPath: string | null;
 }
 
@@ -820,6 +821,7 @@ export const tmdbApi = {
       id: number,
       type: 'movie' | 'tv',
       title: string,
+      originalTitle: string,
       posterPath: string | null
     ): Promise<TrailerItem | null> => {
       try {
@@ -836,6 +838,7 @@ export const tmdbApi = {
             mediaId: id,
             mediaType: type,
             mediaTitle: title,
+            mediaOriginalTitle: originalTitle,
             mediaPosterPath: posterPath,
           };
         }
@@ -847,14 +850,20 @@ export const tmdbApi = {
 
     // Process items sequentially with early termination to reduce API calls
     const collectTrailers = async (
-      items: Array<{ id: number; title: string; poster_path: string | null }>,
+      items: Array<{ id: number; title: string; originalTitle: string; poster_path: string | null }>,
       type: 'movie' | 'tv',
       targetCount: number
     ): Promise<TrailerItem[]> => {
       const trailers: TrailerItem[] = [];
       for (const item of items) {
         if (trailers.length >= targetCount) break;
-        const trailer = await getOfficialTrailer(item.id, type, item.title, item.poster_path);
+        const trailer = await getOfficialTrailer(
+          item.id,
+          type,
+          item.title,
+          item.originalTitle,
+          item.poster_path
+        );
         if (trailer) {
           trailers.push(trailer);
         }
@@ -866,12 +875,14 @@ export const tmdbApi = {
     const movieItems = moviesData.results.slice(0, 8).map((m) => ({
       id: m.id,
       title: m.title,
+      originalTitle: m.original_title,
       poster_path: m.poster_path,
     }));
 
     const tvItems = tvData.results.slice(0, 8).map((s) => ({
       id: s.id,
       title: s.name,
+      originalTitle: s.original_name,
       poster_path: s.poster_path,
     }));
 
