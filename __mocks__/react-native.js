@@ -42,6 +42,7 @@ module.exports = {
   Text: 'Text',
   TextInput: 'TextInput',
   Image: 'Image',
+  ImageBackground: 'ImageBackground',
   TouchableOpacity: createTouchable('TouchableOpacity'),
   TouchableHighlight: createTouchable('TouchableHighlight'),
   TouchableWithoutFeedback: createTouchable('TouchableWithoutFeedback'),

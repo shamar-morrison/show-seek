@@ -562,6 +562,11 @@
     "comingSoon": "Bientôt disponible",
     "checkBackLater": "Revenez plus tard pour les mises à jour"
   },
+  "premium": {
+    "perMonth": "/ Mois",
+    "perYear": "/ An",
+    "whatsIncluded": "Ce qui est inclus"
+  },
   "trakt": {
     "reviews": "Critiques Trakt",
     "connectToSync": "Connectez-vous à Trakt pour synchroniser votre historique",

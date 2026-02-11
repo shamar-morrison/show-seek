@@ -1047,6 +1047,8 @@
     "devResetTitle": "Restablecer compra (Dev)",
     "noPurchasesMessage": "No hemos encontrado compras para restaurar.",
     "noPurchasesTitle": "No se encontraron compras",
+    "perMonth": "/ Mes",
+    "perYear": "/ Año",
     "oneTimePayment": "Pago único",
     "purchaseFailedTitle": "Error de compra",
     "restoreCompleteMessage": "Tu compra se ha restaurado.",
@@ -1057,7 +1059,8 @@
     "successTitle": "Premium desbloqueado",
     "unlockButton": "Desbloquear Premium",
     "unlockSubtitle": "Consigue listas ilimitadas, recordatorios, widgets y más.",
-    "unlockTitle": "Desbloquear Premium"
+    "unlockTitle": "Desbloquear Premium",
+    "whatsIncluded": "Qué incluye"
   },
   "premiumFeatures": {
     "categories": {
