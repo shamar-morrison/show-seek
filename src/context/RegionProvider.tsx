@@ -2,15 +2,21 @@
  * RegionProvider - Global region state management
  *
  * This provider handles:
- * 1. Loading the user's preferred region on app launch from AsyncStorage
- * 2. Syncing region changes to the TMDB API client
- * 3. Providing a loading state for splash screen
+ * 1. Loading the user's preferred region on app launch from AsyncStorage (instant)
+ * 2. Syncing region changes to AsyncStorage + Firebase (fire-and-forget)
+ * 3. Restoring region from Firebase on login for cross-device sync
  *
  * Region affects: watch providers, release dates, and certifications
  */
 import { setApiRegion } from '@/src/api/tmdb';
-import { getStoredRegion, setStoredRegion } from '@/src/utils/regionStorage';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useAuth } from '@/src/context/auth';
+import {
+  fetchRegionFromFirebase,
+  getStoredRegion,
+  setStoredRegion,
+  syncRegionToFirebase,
+} from '@/src/utils/regionStorage';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 interface RegionContextValue {
   region: string;
@@ -74,30 +80,64 @@ export const SUPPORTED_REGIONS = [
 ] as const;
 
 export type SupportedRegionCode = (typeof SUPPORTED_REGIONS)[number]['code'];
+const DEFAULT_REGION: SupportedRegionCode = 'US';
+const SUPPORTED_REGION_CODES = new Set<string>(SUPPORTED_REGIONS.map((region) => region.code));
+
+function isSupportedRegionCode(region: string): region is SupportedRegionCode {
+  return SUPPORTED_REGION_CODES.has(region);
+}
 
 interface RegionProviderProps {
   children: React.ReactNode;
 }
 
 export function RegionProvider({ children }: RegionProviderProps) {
-  const [region, setRegionState] = useState<string>('US');
+  const { user } = useAuth();
+  const [region, setRegionState] = useState<string>(DEFAULT_REGION);
   const [isRegionReady, setIsRegionReady] = useState(false);
+  const hasSyncedFromFirebase = useRef(false);
 
-  // Initialize region on mount from AsyncStorage
+  // 1. Load from AsyncStorage on mount (instant)
   useEffect(() => {
     const initRegion = async () => {
       const storedRegion = await getStoredRegion();
-      setRegionState(storedRegion);
-      setApiRegion(storedRegion);
+      const safeRegion = isSupportedRegionCode(storedRegion) ? storedRegion : DEFAULT_REGION;
+      setRegionState(safeRegion);
+      setApiRegion(safeRegion);
       setIsRegionReady(true);
     };
 
     initRegion();
   }, []);
 
+  // 2. Sync from Firebase on login (cross-device restore)
+  useEffect(() => {
+    if (!user || user.isAnonymous) {
+      hasSyncedFromFirebase.current = false;
+      return;
+    }
+
+    // Only sync once per login session to avoid unnecessary reads.
+    if (hasSyncedFromFirebase.current) return;
+    hasSyncedFromFirebase.current = true;
+
+    const syncFromFirebase = async () => {
+      const firebaseRegion = await fetchRegionFromFirebase();
+      if (firebaseRegion && isSupportedRegionCode(firebaseRegion) && firebaseRegion !== region) {
+        setRegionState(firebaseRegion);
+        setApiRegion(firebaseRegion);
+        await setStoredRegion(firebaseRegion);
+      }
+    };
+
+    syncFromFirebase();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 3. Set region: state (instant) -> AsyncStorage -> Firebase (fire-and-forget)
   const setRegion = useCallback(
     async (newRegion: string) => {
       if (newRegion === region) return;
+      if (!isSupportedRegionCode(newRegion)) return;
 
       // Update state immediately for responsive UI
       setRegionState(newRegion);
@@ -105,6 +145,9 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
       // Persist to AsyncStorage
       await setStoredRegion(newRegion);
+
+      // Sync to Firebase in the background (non-blocking)
+      syncRegionToFirebase(newRegion);
     },
     [region]
   );
