@@ -29,11 +29,17 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor'])
+          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region'])
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
         && (!('accentColor' in request.resource.data) || request.resource.data.accentColor is string)
+        && (!('region' in request.resource.data) || request.resource.data.region in [
+          'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'FI', 'FR',
+          'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX',
+          'NL', 'NZ', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SG', 'ZA', 'KR',
+          'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'UA', 'GB', 'US', 'VN'
+        ])
         // Preferences validation - must be a map with boolean autoAddToWatching
         && (!('preferences' in request.resource.data) || (
           request.resource.data.preferences is map
