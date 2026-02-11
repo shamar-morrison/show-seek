@@ -15,7 +15,7 @@ jest.mock('@/src/hooks/usePreferences', () => ({
 }));
 
 jest.mock('@/src/hooks/useLists', () => ({
-  useLists: () => mockUseLists(),
+  useLists: (...args: any[]) => mockUseLists(...args),
 }));
 
 // Mock isReleased with actual implementation for predictable tests
@@ -64,6 +64,7 @@ describe('useContentFilter', () => {
 
       expect(result.current).toEqual(mockMovies);
       expect(result.current).toHaveLength(4);
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: false });
     });
   });
 
@@ -76,6 +77,16 @@ describe('useContentFilter', () => {
       const { result } = renderHook(() => useContentFilter(mockMovies));
 
       expect(result.current).toEqual(mockMovies);
+    });
+
+    it('disables list subscription when hideWatchedContent is false', () => {
+      mockUsePreferences.mockReturnValue({
+        preferences: { hideUnreleasedContent: false, hideWatchedContent: false },
+      });
+
+      renderHook(() => useContentFilter(mockMovies));
+
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: false });
     });
   });
 
@@ -116,6 +127,11 @@ describe('useContentFilter', () => {
       mockUsePreferences.mockReturnValue({
         preferences: { hideUnreleasedContent: false, hideWatchedContent: true },
       });
+    });
+
+    it('enables list subscription when hideWatchedContent is true', () => {
+      renderHook(() => useContentFilter(mockMovies));
+      expect(mockUseLists).toHaveBeenCalledWith({ enabled: true });
     });
 
     it('filters watched movies', () => {

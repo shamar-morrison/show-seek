@@ -10,10 +10,9 @@ import { usePreferences } from './usePreferences';
  * Respects the showListIndicators user preference.
  */
 export function useListMembership() {
-  const { data: lists } = useLists();
   const { preferences } = usePreferences();
-
   const showIndicators = preferences?.showListIndicators ?? false;
+  const { data: lists } = useLists({ enabled: showIndicators });
 
   // Build a Set of "mediaId-mediaType" strings for O(1) lookup
   const membershipSet = useMemo(() => {

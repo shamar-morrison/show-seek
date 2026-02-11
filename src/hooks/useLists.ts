@@ -12,7 +12,12 @@ import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 // Stale time for TV show details prefetch (same as useUpcomingReleases)
 const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
 
-export const useLists = () => {
+type UseListsOptions = {
+  enabled?: boolean;
+};
+
+export const useLists = (options: UseListsOptions = {}) => {
+  const { enabled = true } = options;
   const userId = auth.currentUser?.uid;
   const subscribe = useCallback(
     (onData: (data: UserList[]) => void, onError: (error: Error) => void) =>
@@ -22,7 +27,7 @@ export const useLists = () => {
 
   const query = useRealtimeSubscription<UserList[]>({
     queryKey: ['lists', userId],
-    enabled: !!userId,
+    enabled: !!userId && enabled,
     initialData: [],
     subscribe,
     logLabel: 'useLists',

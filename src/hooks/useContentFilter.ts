@@ -20,10 +20,11 @@ interface MediaItem {
  * @returns Filtered array with watched/unreleased items removed based on preferences
  */
 export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T[] => {
-  const { preferences } = usePreferences();
-  const { data: lists } = useLists();
   const { user } = useAuth();
+  const { preferences } = usePreferences();
   const isAuthenticated = !!user;
+  const shouldSubscribeToLists = isAuthenticated && !!preferences?.hideWatchedContent;
+  const { data: lists } = useLists({ enabled: shouldSubscribeToLists });
 
   return useMemo(() => {
     if (!items) return [];
@@ -54,6 +55,7 @@ export const useContentFilter = <T extends MediaItem>(items: T[] | undefined): T
     items,
     preferences?.hideWatchedContent,
     preferences?.hideUnreleasedContent,
+    shouldSubscribeToLists,
     lists,
     isAuthenticated,
   ]);
