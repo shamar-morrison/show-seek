@@ -1,6 +1,8 @@
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { exportUserData } from '@/src/services/DataExportService';
+import { clearAppCache } from '@/src/utils/appCache';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -20,10 +22,12 @@ export function useProfileLogic() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
   const [showWebAppModal, setShowWebAppModal] = useState(false);
 
   const isGuest = user?.isAnonymous === true;
@@ -126,6 +130,33 @@ export function useProfileLogic() {
     ]);
   }, [isGuest, isPremium, router, performExport, t]);
 
+  const handleClearCache = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    Alert.alert(t('profile.clearCacheTitle'), t('profile.clearCacheMessage'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('common.clearAll'),
+        style: 'destructive',
+        onPress: async () => {
+          setIsClearingCache(true);
+          try {
+            await clearAppCache(queryClient);
+            Alert.alert(t('common.success'), t('profile.cacheCleared'));
+          } catch (error) {
+            console.error('[profile] Failed to clear cache:', error);
+            Alert.alert(t('common.errorTitle'), t('profile.clearCacheFailed'));
+          } finally {
+            setIsClearingCache(false);
+          }
+        },
+      },
+    ]);
+  }, [queryClient, t]);
+
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsSigningOut(true);
@@ -175,6 +206,7 @@ export function useProfileLogic() {
     showSupportModal,
     isExporting,
     isSigningOut,
+    isClearingCache,
     showWebAppModal,
 
     // Handlers
@@ -186,6 +218,7 @@ export function useProfileLogic() {
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
     handleExportData,
+    handleClearCache,
     handleSignOut,
     handleUpgradePress,
     handleLanguagePress,
