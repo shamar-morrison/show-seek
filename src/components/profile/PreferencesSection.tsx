@@ -206,6 +206,15 @@ export function PreferencesSection({
         loading={isLoading || isItemUpdating('dataSaver')}
         disabled={isUpdating}
       />
+
+      <PreferenceItem
+        label={t('profile.showOriginalTitles')}
+        subtitle={t('profile.showOriginalTitlesDescription')}
+        value={!!preferences?.showOriginalTitles}
+        onValueChange={(value) => handleUpdate('showOriginalTitles', value)}
+        loading={isLoading || isItemUpdating('showOriginalTitles')}
+        disabled={isUpdating}
+      />
     </View>
   );
 }

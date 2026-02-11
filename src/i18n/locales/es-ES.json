@@ -719,6 +719,8 @@
     "hideTabLabelsDescription": "Mostrar solo los iconos en la barra de navegación inferior",
     "dataSaver": "Modo de ahorro de datos",
     "dataSaverDescription": "Cargar imágenes de menor resolución para ahorrar datos",
+    "showOriginalTitles": "Usar títulos originales",
+    "showOriginalTitlesDescription": "Mostrar títulos de películas y series en su idioma original cuando estén disponibles.",
     "blurPlotSpoilers": "Difuminar la trama",
     "blurPlotSpoilersDescription": "Oculta las sinopsis por defecto para evitar spoilers. Toca para revelar.",
     "checkConnection": "Comprueba tu conexión e inténtalo de nuevo",

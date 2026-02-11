@@ -45,6 +45,7 @@ import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -172,6 +173,9 @@ export default function EpisodeDetailScreen() {
   });
 
   const tvShow = tvShowQuery.data;
+  const displayShowTitle = tvShow
+    ? getDisplayMediaTitle(tvShow, !!preferences?.showOriginalTitles)
+    : '';
   const episode = episodeDetailsQuery.data;
   const season = seasonQuery.data;
   const credits = episodeCreditsQuery.data;
@@ -400,7 +404,7 @@ export default function EpisodeDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <AnimatedScrollHeader
-        title={tvShow?.name || t('common.loading')}
+        title={displayShowTitle || t('common.loading')}
         subtitle={headerSubtitle}
         onBackPress={handleBack}
         scrollY={scrollY}
@@ -440,7 +444,7 @@ export default function EpisodeDetailScreen() {
           {/* Breadcrumb Navigation */}
           <View style={detailStyles.episodeBreadcrumb}>
             <TouchableOpacity onPress={handleTVShowPress} activeOpacity={ACTIVE_OPACITY}>
-              <Text style={detailStyles.episodeBreadcrumbLink}>{tvShow?.name}</Text>
+              <Text style={detailStyles.episodeBreadcrumbLink}>{displayShowTitle}</Text>
             </TouchableOpacity>
             <ChevronRight size={14} color={COLORS.textSecondary} />
             <TouchableOpacity onPress={handleBack} activeOpacity={ACTIVE_OPACITY}>

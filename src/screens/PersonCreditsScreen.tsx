@@ -22,6 +22,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
 import { errorStyles } from '@/src/styles/errorStyles';
@@ -34,6 +35,7 @@ import {
   hasActiveFilters,
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getSortableTitle } from '@/src/utils/sortUtils';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
@@ -65,6 +67,7 @@ export default function PersonCreditsScreen() {
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { preferences } = usePreferences();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
@@ -182,7 +185,7 @@ export default function PersonCreditsScreen() {
     const items: CreditItem[] = Array.from(uniqueMap.values()).map(
       (credit): CreditItem => ({
         id: credit.id,
-        title: 'name' in credit ? credit.name : credit.title,
+        title: getDisplayMediaTitle(credit, !!preferences?.showOriginalTitles),
         poster_path: credit.poster_path,
         media_type: mediaType as 'movie' | 'tv',
         vote_average: credit.vote_average || 0,
@@ -219,7 +222,15 @@ export default function PersonCreditsScreen() {
           return ((a.vote_average ?? 0) - (b.vote_average ?? 0)) * direction;
       }
     });
-  }, [creditsQuery.data, isCrewCredits, isTVCredits, mediaType, filterState, sortState]);
+  }, [
+    creditsQuery.data,
+    isCrewCredits,
+    isTVCredits,
+    mediaType,
+    filterState,
+    sortState,
+    preferences?.showOriginalTitles,
+  ]);
 
   const handleItemPress = useCallback(
     (item: CreditItem) => {

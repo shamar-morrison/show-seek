@@ -40,6 +40,7 @@ export interface UserPreferences {
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
   dataSaver: boolean; // Load lower resolution images to save data
+  showOriginalTitles: boolean; // Show movie/TV titles in original language when available
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -55,4 +56,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
   hideTabLabels: false, // Off by default - show labels
   dataSaver: false, // Off by default - load full quality images
+  showOriginalTitles: false, // Off by default - show localized titles
 };

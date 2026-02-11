@@ -7,6 +7,7 @@ import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -27,6 +28,10 @@ export const MovieCard = memo<MovieCardProps>(({ movie, width = 140, showListBad
   const posterUrl = useMemo(
     () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
     [movie.poster_path, preferences?.dataSaver]
+  );
+  const displayTitle = useMemo(
+    () => getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles),
+    [movie, preferences?.showOriginalTitles]
   );
 
   const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
@@ -53,7 +58,7 @@ export const MovieCard = memo<MovieCardProps>(({ movie, width = 140, showListBad
       </View>
       <View style={mediaCardStyles.info}>
         <Text style={mediaCardStyles.title} numberOfLines={2}>
-          {movie.title}
+          {displayTitle}
         </Text>
         {movie.release_date && (
           <View style={mediaMetaStyles.yearRatingContainer}>

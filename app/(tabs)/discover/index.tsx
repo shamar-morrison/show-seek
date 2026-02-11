@@ -23,6 +23,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'movie' | 'tv';
 
@@ -163,7 +164,7 @@ export default function DiscoverScreen() {
   const filteredResults = useContentFilter(allResults);
 
   const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
-    const title = 'title' in item ? item.title : item.name;
+    const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
     const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
     const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
@@ -188,7 +189,7 @@ export default function DiscoverScreen() {
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
-            {title}
+            {displayTitle}
           </Text>
           <View style={styles.metaRow}>
             {releaseDate && (

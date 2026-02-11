@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 /**
  * Process review author avatar URL
@@ -20,8 +21,11 @@ export function getAvatarUrl(avatarPath: string | null): string | null {
  * Get the display title for similar media items
  * Handles both movie (title) and TV show (name) properties
  */
-export function getMediaTitle(item: { title?: string; name?: string }): string {
-  return item.title || item.name || 'Unknown';
+export function getMediaTitle(
+  item: { title?: string; name?: string; original_title?: string; original_name?: string },
+  preferOriginal = false
+): string {
+  return getDisplayMediaTitle(item, preferOriginal) || 'Unknown';
 }
 
 /**

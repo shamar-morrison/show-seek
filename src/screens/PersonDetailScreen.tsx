@@ -14,6 +14,7 @@ import {
   useIsPersonFavorited,
   useRemoveFavoritePerson,
 } from '@/src/hooks/useFavoritePersons';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -33,6 +34,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -43,6 +45,7 @@ export default function PersonDetailScreen() {
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const { preferences } = usePreferences();
   const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
   const addFavoriteMutation = useAddFavoritePerson();
@@ -391,7 +394,7 @@ export default function PersonDetailScreen() {
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>
-                    {movie.title}
+                    {getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles)}
                   </Text>
                   <View style={styles.creditMeta}>
                     {movie.release_date && (
@@ -454,7 +457,7 @@ export default function PersonDetailScreen() {
                     contentFit="cover"
                   />
                   <Text style={styles.creditTitle} numberOfLines={2}>
-                    {show.name}
+                    {getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)}
                   </Text>
                   <View style={styles.creditMeta}>
                     {show.first_air_date && (

@@ -719,6 +719,8 @@
     "hideTabLabelsDescription": "Mostrar apenas ícones na barra de navegação inferior",
     "dataSaver": "Modo de economia de dados",
     "dataSaverDescription": "Carregar imagens de menor resolução para economizar dados",
+    "showOriginalTitles": "Usar títulos originais",
+    "showOriginalTitlesDescription": "Mostrar títulos de filmes e séries no idioma original quando disponíveis.",
     "blurPlotSpoilers": "Desfocar enredo de filmes e séries",
     "blurPlotSpoilersDescription": "Oculte a sinopse por padrão para evitar spoilers. Toque para revelar.",
     "hideWatchedContent": "Ocultar conteúdo assistido",

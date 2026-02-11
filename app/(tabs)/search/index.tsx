@@ -20,6 +20,7 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'all' | 'movie' | 'tv';
 
@@ -47,6 +49,7 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
@@ -146,7 +149,9 @@ export default function SearchScreen() {
 
   const renderMediaItem = ({ item }: { item: any }) => {
     const isPerson = item.media_type === 'person';
-    const title = item.title || item.name;
+    const displayTitle = isPerson
+      ? item.name || item.title || ''
+      : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
     const releaseDate = item.release_date || item.first_air_date;
     const posterUrl = getImageUrl(
       item.poster_path || item.profile_path,
@@ -181,7 +186,7 @@ export default function SearchScreen() {
         </View>
         <View style={styles.resultInfo}>
           <Text style={styles.resultTitle} numberOfLines={2}>
-            {title}
+            {displayTitle}
           </Text>
           {isPerson && item.known_for_department && (
           <Text style={[styles.department, { color: accentColor }]}>

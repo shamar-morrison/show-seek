@@ -7,6 +7,7 @@ import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -27,6 +28,10 @@ export const TVShowCard = memo<TVShowCardProps>(({ show, width = 140, showListBa
   const posterUrl = useMemo(
     () => getOptimizedImageUrl(show.poster_path, 'poster', 'medium', preferences?.dataSaver),
     [show.poster_path, preferences?.dataSaver]
+  );
+  const displayTitle = useMemo(
+    () => getDisplayMediaTitle(show, !!preferences?.showOriginalTitles),
+    [show, preferences?.showOriginalTitles]
   );
 
   const listIds = showListBadge ? getListsForMedia(show.id, 'tv') : [];
@@ -53,7 +58,7 @@ export const TVShowCard = memo<TVShowCardProps>(({ show, width = 140, showListBa
       </View>
       <View style={mediaCardStyles.info}>
         <Text style={mediaCardStyles.title} numberOfLines={2}>
-          {show.name}
+          {displayTitle}
         </Text>
         {show.first_air_date && (
           <View style={mediaMetaStyles.yearRatingContainer}>

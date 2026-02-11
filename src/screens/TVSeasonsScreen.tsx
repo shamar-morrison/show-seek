@@ -24,6 +24,7 @@ import { useSeasonScroll } from '@/src/hooks/useSeasonScroll';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -154,6 +155,7 @@ export default function TVSeasonsScreen() {
   }
 
   const show = tvQuery.data;
+  const displayShowTitle = getDisplayMediaTitle(show, !!preferences?.showOriginalTitles);
   const seasons = seasonQueries.data || [];
 
   const toggleSeason = (seasonNumber: number) => {
@@ -179,7 +181,7 @@ export default function TVSeasonsScreen() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {show.name}
+            {displayShowTitle}
           </Text>
           <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
         </View>

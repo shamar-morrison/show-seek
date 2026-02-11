@@ -17,6 +17,8 @@ export interface SimilarMediaItem {
   id: number;
   title?: string; // For movies
   name?: string; // For TV shows
+  original_title?: string; // For movies
+  original_name?: string; // For TV shows
   poster_path: string | null;
   release_date?: string; // For movies
   first_air_date?: string; // For TV shows
@@ -62,6 +64,7 @@ export interface SimilarMediaSectionProps {
   onMediaPress: (id: number) => void;
   onMediaLongPress?: (item: SimilarMediaItem) => void;
   title: string;
+  preferOriginalTitles?: boolean;
   style?: ViewStyle;
 }
 
@@ -95,6 +98,7 @@ export interface RecommendationsSectionProps {
   shouldLoad: boolean;
   onMediaPress: (id: number) => void;
   onMediaLongPress?: (item: SimilarMediaItem) => void;
+  preferOriginalTitles?: boolean;
   onLayout?: () => void;
   style?: ViewStyle;
 }
