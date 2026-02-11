@@ -45,6 +45,7 @@ export default function ProfileScreen() {
     showSupportModal,
     isExporting,
     isSigningOut,
+    isClearingCache,
     showWebAppModal,
     handleCloseSupportModal,
     handleRateApp,
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
     handleExportData,
+    handleClearCache,
     handleSignOut,
     handleUpgradePress,
     handleLanguagePress,
@@ -151,9 +153,11 @@ export default function ProfileScreen() {
             isGuest={isGuest}
             isPremium={isPremium}
             isExporting={isExporting}
+            isClearingCache={isClearingCache}
             onRateApp={handleRateApp}
             onFeedback={handleSendFeedback}
             onExportData={handleExportData}
+            onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
             onSignOut={handleSignOut}
             showTitle={false}

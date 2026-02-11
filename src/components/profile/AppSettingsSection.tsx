@@ -1,6 +1,6 @@
 import { SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { Download, Globe, LogOut, MessageCircle, Star } from 'lucide-react-native';
+import { Download, Globe, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -13,12 +13,16 @@ export interface AppSettingsSectionProps {
   isPremium: boolean;
   /** Whether export is in progress */
   isExporting: boolean;
+  /** Whether cache clear is in progress */
+  isClearingCache: boolean;
   /** Handler for Rate App button */
   onRateApp: () => void;
   /** Handler for Send Feedback button */
   onFeedback: () => void;
   /** Handler for Export Data button */
   onExportData: () => void;
+  /** Handler for Clear Cache button */
+  onClearCache: () => void;
   /** Handler for Web App button */
   onWebApp: () => void;
   /** Handler for Sign Out button */
@@ -34,9 +38,11 @@ export function AppSettingsSection({
   isGuest,
   isPremium,
   isExporting,
+  isClearingCache,
   onRateApp,
   onFeedback,
   onExportData,
+  onClearCache,
   onWebApp,
   onSignOut,
   showTitle = true,
@@ -63,6 +69,12 @@ export function AppSettingsSection({
             isPremium={isPremium}
           />
         )}
+        <ActionButton
+          icon={Trash2}
+          label={t('profile.clearCache')}
+          onPress={onClearCache}
+          loading={isClearingCache}
+        />
         <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
         <ActionButton icon={LogOut} label={t('auth.signOut')} onPress={onSignOut} />
       </View>
