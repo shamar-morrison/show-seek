@@ -159,7 +159,7 @@ export function useCurrentlyWatching() {
 
     activeShowsWithInfo.forEach((showInfo, index) => {
       try {
-        const { trackingDoc, tvShowId, maxWatchedSeason } = showInfo;
+        const { trackingDoc, tvShowId } = showInfo;
         const episodesList = Object.values(trackingDoc.episodes);
         if (episodesList.length === 0) return;
 
