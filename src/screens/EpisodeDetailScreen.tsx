@@ -298,6 +298,9 @@ export default function EpisodeDetailScreen() {
             posterPath: tvShow.poster_path,
           },
         });
+        toastRef.current?.show(
+          isFavorited ? t('library.removedFromFavorites') : t('library.addedToFavorites')
+        );
       } catch (error) {
         console.error('Failed to toggle favorite episode:', error);
         toastRef.current?.show(t('errors.generic'));
