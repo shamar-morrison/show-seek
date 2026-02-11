@@ -2,7 +2,6 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { exportUserData } from '@/src/services/DataExportService';
 import { clearAppCache } from '@/src/utils/appCache';
-import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -22,7 +21,6 @@ export function useProfileLogic() {
   const { user, signOut } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -144,7 +142,7 @@ export function useProfileLogic() {
         onPress: async () => {
           setIsClearingCache(true);
           try {
-            await clearAppCache(queryClient);
+            await clearAppCache();
             Alert.alert(t('common.success'), t('profile.cacheCleared'));
           } catch (error) {
             console.error('[profile] Failed to clear cache:', error);
@@ -155,7 +153,7 @@ export function useProfileLogic() {
         },
       },
     ]);
-  }, [queryClient, t]);
+  }, [t]);
 
   const handleSignOut = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

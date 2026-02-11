@@ -27,14 +27,14 @@ describe('AppSettingsSection', () => {
     const props = createProps();
     const { getByText } = render(<AppSettingsSection {...props} />);
 
-    expect(getByText('Clear Cache')).toBeTruthy();
+    expect(getByText('Clear Image Cache')).toBeTruthy();
   });
 
   it('calls onClearCache when clear cache action is pressed', () => {
     const props = createProps();
     const { getByTestId } = render(<AppSettingsSection {...props} />);
 
-    fireEvent.press(getByTestId('action-button-clear-cache'));
+    fireEvent.press(getByTestId('action-button-clear-image-cache'));
 
     expect(props.onClearCache).toHaveBeenCalledTimes(1);
   });
@@ -45,7 +45,7 @@ describe('AppSettingsSection', () => {
 
     expect(getByTestId('action-button-spinner')).toBeTruthy();
 
-    fireEvent.press(getByTestId('action-button-clear-cache'));
+    fireEvent.press(getByTestId('action-button-clear-image-cache'));
 
     expect(props.onClearCache).not.toHaveBeenCalled();
   });
