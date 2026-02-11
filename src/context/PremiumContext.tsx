@@ -413,24 +413,63 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     try {
       if (Platform.OS === 'android') {
         const purchases = await RNIap.getAvailablePurchases();
-        const legacyPurchase = purchases.find((p) => p.productId === LEGACY_LIFETIME_PRODUCT_ID);
+        const legacyPurchases = purchases.filter(
+          (purchase) =>
+            purchase.productId === LEGACY_LIFETIME_PRODUCT_ID && !!purchase.purchaseToken
+        );
+        const subscriptionPurchase = purchases
+          .filter((purchase) => SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId))
+          .sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId))[0];
 
-        if (legacyPurchase && legacyPurchase.purchaseToken) {
-          await RNIap.consumePurchaseAndroid(legacyPurchase.purchaseToken);
+        let didConsumeLegacy = false;
+        for (const legacyPurchase of legacyPurchases) {
+          if (legacyPurchase.purchaseToken) {
+            await RNIap.consumePurchaseAndroid(legacyPurchase.purchaseToken);
+            didConsumeLegacy = true;
+          }
+        }
+
+        if (didConsumeLegacy) {
+          await syncPremiumStatus();
+        }
+
+        if (subscriptionPurchase) {
+          Alert.alert(
+            i18n.t('premium.subscriptionManageTitle'),
+            i18n.t('premium.subscriptionManageMessage'),
+            [
+              { text: i18n.t('common.cancel'), style: 'cancel' },
+              {
+                text: i18n.t('premium.openSubscriptions'),
+                onPress: async () => {
+                  try {
+                    await RNIap.deepLinkToSubscriptions({
+                      skuAndroid: subscriptionPurchase.productId,
+                    });
+                  } catch (linkErr: any) {
+                    console.error('Subscription management deep link error:', linkErr);
+                    Alert.alert(i18n.t('premium.resetFailedTitle'), linkErr.message);
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
+        if (didConsumeLegacy) {
           setIsPremium(false);
           Alert.alert(i18n.t('premium.resetCompleteTitle'), i18n.t('premium.resetCompleteMessage'));
-        } else {
-          Alert.alert(
-            i18n.t('premium.noPurchaseFoundTitle'),
-            i18n.t('premium.noPurchaseFoundMessage')
-          );
+          return;
         }
+
+        Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
       }
     } catch (err: any) {
       console.error('Reset error:', err);
       Alert.alert(i18n.t('premium.resetFailedTitle'), err.message);
     }
-  }, []);
+  }, [syncPremiumStatus]);
 
   return {
     isPremium,

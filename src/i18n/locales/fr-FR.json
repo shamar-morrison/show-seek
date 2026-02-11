@@ -563,8 +563,12 @@
     "checkBackLater": "Revenez plus tard pour les mises à jour"
   },
   "premium": {
+    "devResetMessage": "Cela réinitialisera les achats uniques ou ouvrira la gestion des abonnements. Continuer ?",
+    "openSubscriptions": "Ouvrir les abonnements",
     "perMonth": "/ Mois",
     "perYear": "/ An",
+    "subscriptionManageMessage": "Les abonnements ne peuvent pas être réinitialisés dans l'app. Ouvrez les abonnements du store pour annuler ou modifier votre offre.",
+    "subscriptionManageTitle": "Gérer l'abonnement",
     "whatsIncluded": "Ce qui est inclus"
   },
   "trakt": {
