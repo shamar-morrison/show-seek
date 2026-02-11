@@ -120,31 +120,24 @@ export default function TraktSettingsScreen() {
 
   const handleDisconnect = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      t('trakt.disconnectTitle'),
-      t('trakt.disconnectMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('trakt.disconnectButton'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsDisconnecting(true);
-            try {
-              await disconnectTrakt();
-            } catch (error) {
-              console.error('Failed to disconnect:', error);
-              Alert.alert(
-                t('trakt.disconnectFailedTitle'),
-                t('trakt.disconnectFailedMessage')
-              );
-            } finally {
-              setIsDisconnecting(false);
-            }
-          },
+    Alert.alert(t('trakt.disconnectTitle'), t('trakt.disconnectMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('trakt.disconnectButton'),
+        style: 'destructive',
+        onPress: async () => {
+          setIsDisconnecting(true);
+          try {
+            await disconnectTrakt();
+          } catch (error) {
+            console.error('Failed to disconnect:', error);
+            Alert.alert(t('trakt.disconnectFailedTitle'), t('trakt.disconnectFailedMessage'));
+          } finally {
+            setIsDisconnecting(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [disconnectTrakt, t]);
 
   const handleEnrich = useCallback(async () => {
@@ -180,9 +173,7 @@ export default function TraktSettingsScreen() {
             <RefreshCw size={48} color={TRAKT_COLOR} />
           </View>
           <Text style={styles.syncingTitle}>{t('trakt.syncingTitle')}</Text>
-          <Text style={styles.syncingSubtitle}>
-            {t('trakt.syncingSubtitle')}
-          </Text>
+          <Text style={styles.syncingSubtitle}>{t('trakt.syncingSubtitle')}</Text>
           <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
@@ -243,9 +234,7 @@ export default function TraktSettingsScreen() {
               </View>
             </View>
             <Text style={styles.heroTitle}>{t('trakt.connectHeroTitle')}</Text>
-            <Text style={styles.heroSubtitle}>
-              {t('trakt.connectHeroSubtitle')}
-            </Text>
+            <Text style={styles.heroSubtitle}>{t('trakt.connectHeroSubtitle')}</Text>
           </View>
 
           <TouchableOpacity
@@ -262,7 +251,7 @@ export default function TraktSettingsScreen() {
             disabled={isConnecting}
           >
             {isConnecting ? (
-                <ActivityIndicator color={COLORS.white} />
+              <ActivityIndicator color={COLORS.white} />
             ) : (
               <>
                 <Link2 size={20} color={COLORS.white} />
@@ -273,12 +262,21 @@ export default function TraktSettingsScreen() {
           </TouchableOpacity>
 
           <CollapsibleCategory title={t('trakt.whatWillBeSyncedTitle')} defaultExpanded>
-            <CollapsibleFeatureItem text={t('trakt.willSync.watchedMoviesAndShows')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem
+              text={t('trakt.willSync.watchedMoviesAndShows')}
+              icon="checkmark-circle"
+            />
             <CollapsibleFeatureItem text={t('library.ratings')} icon="checkmark-circle" />
-            <CollapsibleFeatureItem text={t('trakt.willSync.customLists')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem
+              text={t('trakt.willSync.customLists')}
+              icon="checkmark-circle"
+            />
             <CollapsibleFeatureItem text={t('library.watchlist')} icon="checkmark-circle" />
             <CollapsibleFeatureItem text={t('library.favorites')} icon="checkmark-circle" />
-            <CollapsibleFeatureItem text={t('trakt.willSync.episodeProgress')} icon="checkmark-circle" />
+            <CollapsibleFeatureItem
+              text={t('trakt.willSync.episodeProgress')}
+              icon="checkmark-circle"
+            />
           </CollapsibleCategory>
 
           <CollapsibleCategory title={t('trakt.howItWorksTitle')}>
@@ -306,9 +304,7 @@ export default function TraktSettingsScreen() {
 
           <View style={styles.privacyNote}>
             <AlertCircle size={16} color={COLORS.textSecondary} />
-            <Text style={styles.privacyNoteText}>
-              {t('trakt.privacyNote')}
-            </Text>
+            <Text style={styles.privacyNoteText}>{t('trakt.privacyNote')}</Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -331,9 +327,7 @@ export default function TraktSettingsScreen() {
               <Check size={32} color={COLORS.white} />
             </View>
             <Text style={styles.heroTitle}>{t('trakt.connectedTitle')}</Text>
-            <Text style={styles.heroSubtitle}>
-              {t('trakt.connectedSubtitle')}
-            </Text>
+            <Text style={styles.heroSubtitle}>{t('trakt.connectedSubtitle')}</Text>
           </View>
 
           <TouchableOpacity
@@ -392,13 +386,21 @@ export default function TraktSettingsScreen() {
           <View style={styles.statsContainer}>
             <Text style={styles.statsTitle}>{t('trakt.syncedItemsTitle')}</Text>
             <View style={styles.statsGrid}>
-              {itemsSynced.movies > 0 && <StatItem label={t('media.movies')} value={itemsSynced.movies} />}
-              {itemsSynced.shows > 0 && <StatItem label={t('media.tvShows')} value={itemsSynced.shows} />}
+              {itemsSynced.movies > 0 && (
+                <StatItem label={t('media.movies')} value={itemsSynced.movies} />
+              )}
+              {itemsSynced.shows > 0 && (
+                <StatItem label={t('media.tvShows')} value={itemsSynced.shows} />
+              )}
               {itemsSynced.episodes > 0 && (
                 <StatItem label={t('media.episodes')} value={itemsSynced.episodes} />
               )}
-              {itemsSynced.ratings > 0 && <StatItem label={t('library.ratings')} value={itemsSynced.ratings} />}
-              {itemsSynced.lists > 0 && <StatItem label={t('library.lists')} value={itemsSynced.lists} />}
+              {itemsSynced.ratings > 0 && (
+                <StatItem label={t('library.ratings')} value={itemsSynced.ratings} />
+              )}
+              {itemsSynced.lists > 0 && (
+                <StatItem label={t('library.lists')} value={itemsSynced.lists} />
+              )}
               {itemsSynced.favorites > 0 && (
                 <StatItem label={t('library.favorites')} value={itemsSynced.favorites} />
               )}
@@ -463,9 +465,7 @@ export default function TraktSettingsScreen() {
               </Text>
             </TouchableOpacity>
             <Text style={styles.enrichmentNote}>
-              {__DEV__
-                ? t('trakt.enrichment.devNote')
-                : t('trakt.enrichment.note')}
+              {__DEV__ ? t('trakt.enrichment.devNote') : t('trakt.enrichment.note')}
             </Text>
           </View>
         )}
@@ -476,7 +476,10 @@ export default function TraktSettingsScreen() {
             <Check size={16} color={COLORS.success} />
             <Text style={styles.enrichedText}>
               {t('trakt.enriched', {
-                time: formatDistanceToNow(lastEnrichedAt, { addSuffix: true, locale: distanceLocale }),
+                time: formatDistanceToNow(lastEnrichedAt, {
+                  addSuffix: true,
+                  locale: distanceLocale,
+                }),
               })}
             </Text>
           </View>
@@ -715,6 +718,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
     marginTop: 2,
+    textAlign: 'center',
   },
   errorsContainer: {
     borderRadius: BORDER_RADIUS.m,
