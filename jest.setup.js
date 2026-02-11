@@ -71,6 +71,12 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  AndroidNotificationPriority: {
+    HIGH: 'high',
+  },
+  SchedulableTriggerInputTypes: {
+    DATE: 'date',
+  },
 }));
 
 // Mock expo-haptics
@@ -148,6 +154,8 @@ jest.mock('firebase/firestore', () => ({
   updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
   deleteField: jest.fn(() => '__deleteField__'),
+  arrayUnion: jest.fn((value) => `__arrayUnion__${value}`),
+  arrayRemove: jest.fn((value) => `__arrayRemove__${value}`),
   onSnapshot: jest.fn(() => jest.fn()),
   query: jest.fn(),
   where: jest.fn(),

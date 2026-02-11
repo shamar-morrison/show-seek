@@ -40,6 +40,11 @@ class CollectionTrackingService {
     return collection(db, 'users', userId, 'collection_tracking');
   }
 
+  private isNotFoundError(error: unknown): boolean {
+    const code = (error as { code?: string })?.code;
+    return code === 'not-found' || code === 'firestore/not-found';
+  }
+
   /**
    * Subscribe to all tracked collections for the current user.
    * Returns empty array if no collections tracked.
@@ -328,33 +333,31 @@ class CollectionTrackingService {
    * Uses atomic arrayUnion to avoid read-modify-write race conditions.
    */
   async addWatchedMovie(collectionId: number, movieId: number): Promise<void> {
-    const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
-
-      // Check if collection is being tracked (short-circuit if not) - with timeout
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
-      getDocTimeoutHelper.cancel(); // Cancel immediately after success
-      if (!snapshot.exists()) {
-        return;
+      try {
+        // Use arrayUnion for atomic add (no duplicates, no race conditions)
+        await Promise.race([
+          updateDoc(trackingRef, {
+            watchedMovieIds: arrayUnion(movieId),
+            lastUpdated: Date.now(),
+          }),
+          updateTimeoutHelper.promise,
+        ]);
+      } catch (error) {
+        // If collection isn't tracked yet, preserve prior no-op behavior.
+        if (this.isNotFoundError(error)) {
+          return;
+        }
+        throw error;
       }
-
-      // Use arrayUnion for atomic add (no duplicates, no race conditions)
-      await Promise.race([
-        updateDoc(trackingRef, {
-          watchedMovieIds: arrayUnion(movieId),
-          lastUpdated: Date.now(),
-        }),
-        updateTimeoutHelper.promise,
-      ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     } finally {
-      getDocTimeoutHelper.cancel();
       updateTimeoutHelper.cancel();
     }
   }
@@ -364,33 +367,31 @@ class CollectionTrackingService {
    * Uses atomic arrayRemove to avoid read-modify-write race conditions.
    */
   async removeWatchedMovie(collectionId: number, movieId: number): Promise<void> {
-    const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
-
-      // Check if collection is being tracked (short-circuit if not) - with timeout
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
-      getDocTimeoutHelper.cancel(); // Cancel immediately after success
-      if (!snapshot.exists()) {
-        return;
+      try {
+        // Use arrayRemove for atomic removal (no race conditions)
+        await Promise.race([
+          updateDoc(trackingRef, {
+            watchedMovieIds: arrayRemove(movieId),
+            lastUpdated: Date.now(),
+          }),
+          updateTimeoutHelper.promise,
+        ]);
+      } catch (error) {
+        // If collection isn't tracked yet, preserve prior no-op behavior.
+        if (this.isNotFoundError(error)) {
+          return;
+        }
+        throw error;
       }
-
-      // Use arrayRemove for atomic removal (no race conditions)
-      await Promise.race([
-        updateDoc(trackingRef, {
-          watchedMovieIds: arrayRemove(movieId),
-          lastUpdated: Date.now(),
-        }),
-        updateTimeoutHelper.promise,
-      ]);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     } finally {
-      getDocTimeoutHelper.cancel();
       updateTimeoutHelper.cancel();
     }
   }

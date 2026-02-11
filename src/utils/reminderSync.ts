@@ -93,7 +93,9 @@ export async function syncReminders(): Promise<void> {
           // Case (a): No release date - cancel reminder and delete from Firestore
           if (!movieDetails.release_date) {
             console.log(`[reminderSync] No release date for movie ${reminder.mediaId}, cancelling`);
-            await reminderService.cancelReminder(reminder.id);
+            await reminderService.cancelReminder(reminder.id, {
+              localNotificationId: reminder.localNotificationId,
+            });
             continue;
           }
 
@@ -111,11 +113,14 @@ export async function syncReminders(): Promise<void> {
             });
 
             // Reschedule notification with updated release date
-            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming, {
+              ...reminder,
+              releaseDate: movieDetails.release_date,
+            });
           }
           // Case (c): No change - reschedule to ensure notification is in sync
           else {
-            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+            await reminderService.updateReminder(reminder.id, reminder.reminderTiming, reminder);
           }
         } else if (reminder.mediaType === 'tv') {
           const tvDetails = await tmdbApi.getTVShowDetails(reminder.mediaId);
@@ -127,7 +132,9 @@ export async function syncReminders(): Promise<void> {
             if (!nextEpisode?.air_date) {
               // No upcoming episode - cancel reminder
               console.log(`[reminderSync] No next episode for TV ${reminder.mediaId}, cancelling`);
-              await reminderService.cancelReminder(reminder.id);
+              await reminderService.cancelReminder(reminder.id, {
+                localNotificationId: reminder.localNotificationId,
+              });
               continue;
             }
 
@@ -154,9 +161,20 @@ export async function syncReminders(): Promise<void> {
                 },
                 updatedAt: Date.now(),
               });
-            }
 
-            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+              await reminderService.updateReminder(reminder.id, reminder.reminderTiming, {
+                ...reminder,
+                releaseDate: nextEpisode.air_date,
+                nextEpisode: {
+                  seasonNumber: nextEpisode.season_number,
+                  episodeNumber: nextEpisode.episode_number,
+                  episodeName: nextEpisode.name || 'TBA',
+                  airDate: nextEpisode.air_date,
+                },
+              });
+            } else {
+              await reminderService.updateReminder(reminder.id, reminder.reminderTiming, reminder);
+            }
           } else if (reminder.tvFrequency === 'season_premiere') {
             // Season premiere reminder: check seasons for next premiere
             const { nextSeasonAirDate: upcomingSeasonAirDate } = getNextUpcomingSeason(
@@ -168,7 +186,9 @@ export async function syncReminders(): Promise<void> {
               console.log(
                 `[reminderSync] No upcoming season for TV ${reminder.mediaId}, cancelling`
               );
-              await reminderService.cancelReminder(reminder.id);
+              await reminderService.cancelReminder(reminder.id, {
+                localNotificationId: reminder.localNotificationId,
+              });
               continue;
             }
 
@@ -182,9 +202,14 @@ export async function syncReminders(): Promise<void> {
                 releaseDate: upcomingSeasonAirDate,
                 updatedAt: Date.now(),
               });
-            }
 
-            await reminderService.updateReminder(reminder.id, reminder.reminderTiming);
+              await reminderService.updateReminder(reminder.id, reminder.reminderTiming, {
+                ...reminder,
+                releaseDate: upcomingSeasonAirDate,
+              });
+            } else {
+              await reminderService.updateReminder(reminder.id, reminder.reminderTiming, reminder);
+            }
           } else {
             // Unknown/missing tvFrequency - skip or log warning
             console.warn(`[reminderSync] Unknown tvFrequency for TV reminder ${reminder.id}`);

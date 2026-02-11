@@ -1,4 +1,5 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -65,6 +66,11 @@ class ListService {
     });
 
     return sanitized;
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    const code = (error as { code?: string })?.code;
+    return code === 'not-found' || code === 'firestore/not-found';
   }
 
   /**
@@ -158,29 +164,51 @@ class ListService {
         addedAt: Date.now(),
       } as ListMediaItem;
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const now = Date.now();
+      const updateTimeout = createTimeoutWithCleanup(10000);
 
-      // Check if document exists to avoid overwriting createdAt
-      // (which would cause custom lists to jump to the bottom since they're sorted by createdAt)
-      const docSnap = await getDoc(listRef);
-      const docExists = docSnap.exists();
-
-      const updateData: Record<string, any> = {
-        name: listName || listId, // Fallback name if creating new doc
-        items: {
-          [mediaItem.id]: itemToAdd,
-        },
-        updatedAt: Date.now(),
-      };
-
-      // Only set createdAt when creating a new document
-      if (!docExists) {
-        updateData.createdAt = Date.now();
+      // Fast path for existing lists: update without a read.
+      try {
+        await Promise.race([
+          updateDoc(listRef, {
+            name: listName || listId, // Keep behavior: ensure name exists for system lists
+            [`items.${mediaItem.id}`]: itemToAdd,
+            updatedAt: now,
+          }),
+          updateTimeout.promise,
+        ]);
+        return;
+      } catch (error) {
+        if (!this.isNotFoundError(error)) {
+          throw new Error(getFirestoreErrorMessage(error));
+        }
+      } finally {
+        updateTimeout.cancel();
       }
 
-      await Promise.race([setDoc(listRef, updateData, { merge: true }), timeoutPromise]);
+      // Fallback for first write to a missing list doc with a fresh timeout budget.
+      const createTimeout = createTimeoutWithCleanup(10000);
+      try {
+        await Promise.race([
+          setDoc(
+            listRef,
+            {
+              name: listName || listId,
+              items: {
+                [mediaItem.id]: itemToAdd,
+              },
+              updatedAt: now,
+              createdAt: now,
+            },
+            { merge: true }
+          ),
+          createTimeout.promise,
+        ]);
+      } catch (error) {
+        throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        createTimeout.cancel();
+      }
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] addToList error:', error);

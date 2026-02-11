@@ -28,11 +28,10 @@ describe('ListService', () => {
   });
 
   describe('addToList', () => {
-    it('should call setDoc with correct data structure', async () => {
+    it('should update existing list without an initial getDoc read', async () => {
       const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
-      (setDoc as jest.Mock).mockResolvedValue(undefined);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
       const mediaItem = {
         id: 123,
@@ -46,6 +45,41 @@ describe('ListService', () => {
       await listService.addToList('watchlist', mediaItem);
 
       expect(doc).toHaveBeenCalled();
+      expect(updateDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          name: 'watchlist',
+          'items.123': expect.objectContaining({
+            id: 123,
+            title: 'Test Movie',
+            media_type: 'movie',
+            addedAt: expect.any(Number),
+          }),
+          updatedAt: expect.any(Number),
+        })
+      );
+      expect(setDoc).not.toHaveBeenCalled();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to setDoc with createdAt when updateDoc fails with not-found', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockRejectedValue({ code: 'not-found', message: 'Not found' });
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const mediaItem = {
+        id: 123,
+        title: 'Test Movie',
+        poster_path: '/poster.jpg',
+        media_type: 'movie' as const,
+        vote_average: 8.5,
+        release_date: '2024-01-01',
+      };
+
+      await listService.addToList('watchlist', mediaItem);
+
+      expect(setDoc).toHaveBeenCalled();
       expect(setDoc).toHaveBeenCalledWith(
         mockDocRef,
         expect.objectContaining({
@@ -63,31 +97,7 @@ describe('ListService', () => {
         }),
         { merge: true }
       );
-    });
-
-    it('should not include createdAt when document already exists', async () => {
-      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
-      (doc as jest.Mock).mockReturnValue(mockDocRef);
-      (getDoc as jest.Mock).mockResolvedValue({ exists: () => true });
-      (setDoc as jest.Mock).mockResolvedValue(undefined);
-
-      const mediaItem = {
-        id: 123,
-        title: 'Test Movie',
-        poster_path: '/poster.jpg',
-        media_type: 'movie' as const,
-        vote_average: 8.5,
-        release_date: '2024-01-01',
-      };
-
-      await listService.addToList('watchlist', mediaItem);
-
-      // Verify setDoc was called
-      expect(setDoc).toHaveBeenCalled();
-      // Get the actual call arguments
-      const callArgs = (setDoc as jest.Mock).mock.calls[0][1];
-      // When document exists, createdAt should not be present
-      expect(callArgs.createdAt).toBeUndefined();
+      expect(getDoc).not.toHaveBeenCalled();
     });
 
     it('should throw error when user is not authenticated', async () => {

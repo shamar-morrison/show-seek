@@ -4,9 +4,10 @@ import {
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
 import { useAuth } from '@/src/context/auth';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { auth } from '../firebase/config';
+import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../types/preferences';
 
@@ -17,80 +18,56 @@ import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../typ
 export const usePreferences = () => {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
-  // Use user from useAuth context to ensure we have the correct reactive state
   const userId = user?.uid;
-  const [subscriptionData, setSubscriptionData] = useState<UserPreferences | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState(!!userId);
-  const [hasLoaded, setHasLoaded] = useState(false); // Track if data was actually fetched
   const [retryTrigger, setRetryTrigger] = useState(0);
 
-  // Refetch function to retry loading preferences after an error
-  const refetch = useCallback(() => {
-    setError(null);
-    setIsLoading(true);
-    setRetryTrigger((prev) => prev + 1);
-  }, []);
+  const subscribe = useCallback(
+    (onData: (preferences: UserPreferences) => void, onError: (error: Error) => void) =>
+      preferencesService.subscribeToPreferences(onData, onError),
+    [retryTrigger]
+  );
 
-  useEffect(() => {
-    // Reset subscriptionData unconditionally when userId changes
-    // to avoid leaking the previous user's preferences
-    setSubscriptionData(null);
-    setHasLoaded(false);
-
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
-
-    setError(null);
-    setIsLoading(true);
-
-    const unsubscribe = preferencesService.subscribeToPreferences(
-      (preferences) => {
-        setSubscriptionData(preferences);
-        setError(null);
-        setIsLoading(false);
-        setHasLoaded(true); // Mark as loaded when we get data
-      },
-      (err) => {
-        setError(err);
-        setIsLoading(false);
-        console.error('[usePreferences] Subscription error:', err);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId, retryTrigger]);
-
-  const { data: preferences } = useQuery({
+  const query = useRealtimeSubscription<UserPreferences>({
     queryKey: ['preferences', userId],
-    queryFn: () => subscriptionData ?? DEFAULT_PREFERENCES,
-    enabled: !!userId && subscriptionData !== null,
-    initialData: subscriptionData ?? DEFAULT_PREFERENCES,
-    staleTime: Infinity,
+    enabled: !!userId && !authLoading,
+    initialData: DEFAULT_PREFERENCES,
+    subscribe,
+    logLabel: 'usePreferences',
   });
 
-  // Sync subscription data to query cache when it changes
-  useEffect(() => {
-    if (userId && subscriptionData !== null) {
-      // Only update if not currently mutating
-      const isMutating = queryClient.isMutating({ mutationKey: ['updatePreference'] }) > 0;
-      if (!isMutating) {
-        queryClient.setQueryData(['preferences', userId], subscriptionData);
-      }
-    }
-  }, [subscriptionData, userId, queryClient]);
+  const hasLoaded = !!userId && query.hasReceivedData;
+  const isLoading = !!userId && !query.hasReceivedData;
 
-  // Derive effective home screen lists (with fallback to defaults)
-  const homeScreenLists = preferences?.homeScreenLists ?? DEFAULT_HOME_LISTS;
+  const preferences = useMemo(
+    () => (userId ? (query.data ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES),
+    [userId, query.data]
+  );
+
+  const homeScreenLists = preferences.homeScreenLists ?? DEFAULT_HOME_LISTS;
+
+  const refetch = useCallback(() => {
+    if (userId) {
+      queryClient.removeQueries({ queryKey: ['preferences', userId], exact: true });
+    }
+    setRetryTrigger((prev) => prev + 1);
+  }, [queryClient, userId]);
+
+  // Keep query cache in sync unless an optimistic mutation is in progress.
+  useEffect(() => {
+    if (!userId || !query.data) return;
+
+    const isMutating = queryClient.isMutating({ mutationKey: ['updatePreference'] }) > 0;
+    if (!isMutating) {
+      queryClient.setQueryData(['preferences', userId], query.data);
+    }
+  }, [userId, query.data, queryClient]);
 
   return {
-    preferences: userId ? (preferences ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES,
+    preferences,
     homeScreenLists,
     isLoading,
-    hasLoaded, // Export this for consumers that need to know if data was fetched
-    error,
+    hasLoaded,
+    error: query.error,
     refetch,
   };
 };

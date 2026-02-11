@@ -322,24 +322,33 @@ class ReminderService {
   /**
    * Cancel/delete a reminder
    */
-  async cancelReminder(reminderId: string): Promise<void> {
+  async cancelReminder(
+    reminderId: string,
+    opts?: { localNotificationId?: string | null }
+  ): Promise<void> {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
-      // Get reminder to cancel notification
-      const getDocTimeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      let localNotificationId = opts?.localNotificationId;
 
-      const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
-      if (reminderSnap.exists()) {
-        const reminder = reminderSnap.data() as Reminder;
-        if (reminder.localNotificationId) {
-          await Notifications.cancelScheduledNotificationAsync(reminder.localNotificationId);
+      // Fallback to fetching the reminder only when caller didn't provide local notification context.
+      if (localNotificationId === undefined) {
+        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), 10000);
+        });
+
+        const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
+        if (reminderSnap.exists()) {
+          const reminder = reminderSnap.data() as Reminder;
+          localNotificationId = reminder.localNotificationId;
         }
+      }
+
+      if (localNotificationId) {
+        await Notifications.cancelScheduledNotificationAsync(localNotificationId);
       }
 
       const timeoutPromise = new Promise((_, reject) => {
@@ -357,24 +366,31 @@ class ReminderService {
   /**
    * Update reminder timing
    */
-  async updateReminder(reminderId: string, timing: ReminderTiming): Promise<void> {
+  async updateReminder(
+    reminderId: string,
+    timing: ReminderTiming,
+    sourceReminder?: Reminder
+  ): Promise<void> {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
+      let currentReminder = sourceReminder;
 
-      const getDocTimeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      if (!currentReminder) {
+        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out')), 10000);
+        });
 
-      const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
+        const reminderSnap = await Promise.race([getDoc(reminderRef), getDocTimeoutPromise]);
 
-      if (!reminderSnap.exists()) {
-        throw new Error('Reminder not found');
+        if (!reminderSnap.exists()) {
+          throw new Error('Reminder not found');
+        }
+
+        currentReminder = reminderSnap.data() as Reminder;
       }
-
-      const currentReminder = reminderSnap.data() as Reminder;
 
       // Cancel old notification
       if (currentReminder.localNotificationId) {
