@@ -439,12 +439,8 @@ export default function MovieDetailScreen() {
     await cancelReminderMutation.mutateAsync(reminder.id);
   };
 
-  // Handle marking the movie as watched with a specific date
-  const handleMarkAsWatched = async (date: Date) => {
-    const isFirstWatch = watchCount === 0;
-    await addWatchMutation.mutateAsync(date);
-
-    // Update collection tracking if movie belongs to a tracked collection
+  const runPostWatchActions = async (isFirstWatch: boolean) => {
+    // Update collection tracking if movie belongs to a tracked collection.
     if (movie?.belongs_to_collection) {
       try {
         await collectionTrackingService.addWatchedMovie(movie.belongs_to_collection.id, movieId);
@@ -454,7 +450,7 @@ export default function MovieDetailScreen() {
       }
     }
 
-    // Auto-add to "Already Watched" list on first watch
+    // Auto-add to "Already Watched" list on first watch.
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
       await tryAutoAddToAlreadyWatched({
         movieId,
@@ -466,6 +462,13 @@ export default function MovieDetailScreen() {
         t,
       });
     }
+  };
+
+  // Handle marking the movie as watched with a specific date
+  const handleMarkAsWatched = async (date: Date) => {
+    const isFirstWatch = watchCount === 0;
+    await addWatchMutation.mutateAsync(date);
+    await runPostWatchActions(isFirstWatch);
   };
 
   // Handle clearing all watch history
@@ -482,29 +485,7 @@ export default function MovieDetailScreen() {
         try {
           const isFirstWatch = watchCount === 0;
           await addWatchMutation.mutateAsync(new Date());
-
-          // Update collection tracking if movie belongs to a tracked collection
-          if (movie?.belongs_to_collection) {
-            try {
-              await collectionTrackingService.addWatchedMovie(movie.belongs_to_collection.id, movieId);
-            } catch (collectionError) {
-              // Silent fail - collection might not be tracked
-              console.log('[MovieDetailScreen] Collection tracking update skipped:', collectionError);
-            }
-          }
-
-          // Auto-add to "Already Watched" list on first watch
-          if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-            await tryAutoAddToAlreadyWatched({
-              movieId,
-              movie,
-              releaseDate: displayReleaseDate || movie.release_date,
-              membership,
-              lists,
-              isPremium,
-              t,
-            });
-          }
+          await runPostWatchActions(isFirstWatch);
 
           toastRef.current?.show(t('library.markedAsWatched'));
         } catch (error) {

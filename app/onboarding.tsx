@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const NETFLIX_RED = '#E50914';
 const VIDEO_ASPECT_RATIO = 9 / 20; // Matches source videos (720x1600)
 
 type OnboardingSlideId = 'calendar' | 'shuffle' | 'mood';
@@ -285,7 +284,7 @@ export default function OnboardingScreen() {
                 styles.dot,
                 {
                   backgroundColor:
-                    index === currentIndex ? NETFLIX_RED : 'rgba(255, 255, 255, 0.35)',
+                    index === currentIndex ? COLORS.primary : 'rgba(255, 255, 255, 0.35)',
                   width: index === currentIndex ? 20 : 8,
                 },
               ]}
@@ -437,7 +436,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   nextButton: {
-    backgroundColor: NETFLIX_RED,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
