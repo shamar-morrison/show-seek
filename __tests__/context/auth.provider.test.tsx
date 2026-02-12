@@ -156,6 +156,52 @@ describe('AuthProvider', () => {
       expect(signOutGoogle).toHaveBeenCalledTimes(1);
       consoleSpy.mockRestore();
     });
+
+    it('should handle timeout without unhandled late firebase rejection', async () => {
+      jest.useFakeTimers();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      try {
+        (firebaseSignOut as jest.Mock).mockImplementation(
+          () =>
+            new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Late firebase rejection')), 12000);
+            })
+        );
+        (signOutGoogle as jest.Mock).mockResolvedValue(undefined);
+
+        const { result } = renderHook(() => useAuth(), { wrapper });
+
+        await act(async () => {
+          capturedAuthCallback?.(null);
+        });
+
+        // Attach catch immediately to avoid unhandled rejection warning during timer advance.
+        const signOutPromise = result.current.signOut().catch((error) => error);
+
+        await act(async () => {
+          jest.advanceTimersByTime(10000);
+        });
+
+        const timeoutError = await signOutPromise;
+        expect(timeoutError).toBeInstanceOf(Error);
+        expect(timeoutError.message).toBe('Sign out timed out');
+
+        await act(async () => {
+          jest.advanceTimersByTime(3000);
+        });
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Late firebase signOut rejection after timeout:',
+          expect.any(Error)
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
   });
 
   describe('onboarding status', () => {

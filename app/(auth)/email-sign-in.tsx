@@ -39,8 +39,12 @@ export default function EmailSignIn() {
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!email || !password) {
+    if (!email) {
       Alert.alert(t('common.error'), t('auth.emailRequired'));
+      return;
+    }
+    if (!password) {
+      Alert.alert(t('common.error'), t('auth.passwordRequired'));
       return;
     }
 
@@ -65,7 +69,7 @@ export default function EmailSignIn() {
             errorMessage = t('errors.forbidden');
             break;
           case 'auth/too-many-requests':
-            errorMessage = t('errors.timeout');
+            errorMessage = t('auth.tooManyAttempts');
             break;
           case 'auth/network-request-failed':
             errorMessage = t('errors.networkError');

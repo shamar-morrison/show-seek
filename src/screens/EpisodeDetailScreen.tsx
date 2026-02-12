@@ -248,7 +248,7 @@ export default function EpisodeDetailScreen() {
         },
         autoAddOptions: {
           showStatus: tvShow.status,
-          shouldAutoAdd: preferences.autoAddToWatching,
+          shouldAutoAdd: !!preferences?.autoAddToWatching,
           listMembership,
           firstAirDate: tvShow.first_air_date,
           voteAverage: tvShow.vote_average,
@@ -258,7 +258,7 @@ export default function EpisodeDetailScreen() {
         },
         previousEpisodesOptions: {
           seasonEpisodes: season?.episodes || [],
-          shouldMarkPrevious: !!preferences.markPreviousEpisodesWatched,
+          shouldMarkPrevious: !!preferences?.markPreviousEpisodesWatched,
         },
       });
     }

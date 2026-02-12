@@ -107,7 +107,8 @@
     "signUpFailed": "Error al registrarse. Inténtalo de nuevo.",
     "bySigningIn": "Al iniciar sesión, aceptas nuestros",
     "agreeToTerms": "Al registrarte, aceptas nuestros",
-    "signOutFailed": "No se pudo cerrar sesión. Inténtalo de nuevo."
+    "signOutFailed": "No se pudo cerrar sesión. Inténtalo de nuevo.",
+    "tooManyAttempts": "Demasiados intentos. Inténtalo de nuevo más tarde."
   },
   "tabs": {
     "home": "Inicio",
@@ -767,8 +768,7 @@
     "moodTitle": "Según tu estado de ánimo",
     "moodDescription": "Recibe recomendaciones según cómo te sientes.",
     "previewUnavailable": "Vista previa no disponible",
-    "getStarted": "Comenzar",
-    "continueWithGoogle": "Continuar con Google"
+    "getStarted": "Comenzar"
   },
   "errors": {
     "generic": "Algo salió mal",

@@ -118,8 +118,6 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
 
-    if (loading) return;
-
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
       router.replace('/onboarding');

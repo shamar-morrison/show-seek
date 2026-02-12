@@ -107,7 +107,8 @@
     "bySigningIn": "En vous connectant, vous acceptez nos",
     "agreeToTerms": "En vous inscrivant, vous acceptez nos",
     "signingOut": "Déconnexion...",
-    "signOutFailed": "La déconnexion a échoué. Veuillez réessayer."
+    "signOutFailed": "La déconnexion a échoué. Veuillez réessayer.",
+    "tooManyAttempts": "Trop de tentatives. Veuillez réessayer plus tard."
   },
   "tabs": {
     "home": "Accueil",
@@ -767,8 +768,7 @@
     "moodTitle": "Selon votre humeur",
     "moodDescription": "Recevez des suggestions selon votre ressenti.",
     "previewUnavailable": "Aperçu indisponible",
-    "getStarted": "Commencer",
-    "continueWithGoogle": "Continuer avec Google"
+    "getStarted": "Commencer"
   },
   "errors": {
     "generic": "Une erreur s'est produite",

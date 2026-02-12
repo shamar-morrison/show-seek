@@ -65,15 +65,26 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           reject(new Error('Sign out timed out'));
         }, 10000);
       });
+      let timedOut = false;
 
       let signOutError: unknown = null;
 
       try {
-        await Promise.race([firebaseSignOut(auth), timeoutPromise]);
+        const firebasePromise = firebaseSignOut(auth);
+        const guardedFirebasePromise = firebasePromise.catch((error) => {
+          if (timedOut) {
+            console.warn('Late firebase signOut rejection after timeout:', error);
+            return;
+          }
+          throw error;
+        });
+
+        await Promise.race([guardedFirebasePromise, timeoutPromise]);
         // Clear local state immediately after Firebase sign-out succeeds.
         setUser(null);
         setLoading(false);
       } catch (error) {
+        timedOut = error instanceof Error && error.message === 'Sign out timed out';
         signOutError = error;
         console.error('Error signing out:', error);
       } finally {

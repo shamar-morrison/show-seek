@@ -107,7 +107,8 @@
     "signUpFailed": "Sign up failed. Please try again.",
     "bySigningIn": "By signing in, you agree to our",
     "agreeToTerms": "By signing up, you agree to our",
-    "signOutFailed": "Sign out failed. Please try again."
+    "signOutFailed": "Sign out failed. Please try again.",
+    "tooManyAttempts": "Too many attempts. Please try again later."
   },
   "tabs": {
     "home": "Home",
@@ -772,8 +773,7 @@
     "moodTitle": "Match your mood",
     "moodDescription": "Get recommendations based on how you feel.",
     "previewUnavailable": "Preview unavailable",
-    "getStarted": "Get Started",
-    "continueWithGoogle": "Continue with Google"
+    "getStarted": "Get Started"
   },
   "errors": {
     "generic": "Something went wrong",

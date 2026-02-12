@@ -107,7 +107,8 @@
     "bySigningIn": "Ao iniciar sessão, concorda com os nossos",
     "agreeToTerms": "Ao registar-se, aceita os nossos",
     "signingOut": "A terminar sessão...",
-    "signOutFailed": "Falha ao terminar sessão. Tente novamente."
+    "signOutFailed": "Falha ao terminar sessão. Tente novamente.",
+    "tooManyAttempts": "Demasiadas tentativas. Tente novamente mais tarde."
   },
   "tabs": {
     "home": "Início",
@@ -767,8 +768,7 @@
     "moodTitle": "De acordo com o seu humor",
     "moodDescription": "Receba sugestões com base em como se sente.",
     "previewUnavailable": "Pré-visualização indisponível",
-    "getStarted": "Começar",
-    "continueWithGoogle": "Continuar com Google"
+    "getStarted": "Começar"
   },
   "errors": {
     "generic": "Algo correu mal",

@@ -108,7 +108,6 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
 
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
     setIsSigningOut(true);
     try {
       await signOut();
@@ -116,6 +115,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
       Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
     } finally {
       setIsSigningOut(false);
+      onClose();
     }
   };
 

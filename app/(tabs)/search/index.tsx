@@ -15,6 +15,7 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
@@ -29,6 +30,7 @@ import { Search as SearchIcon, Star, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   ActivityIndicator,
   StyleSheet,
   Text,
@@ -41,6 +43,25 @@ import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'all' | 'movie' | 'tv';
 
+function resolveSearchResultMediaType(
+  item: any,
+  selectedMediaType: MediaType
+): 'person' | 'movie' | 'tv' | null {
+  if (item.media_type === 'person') return 'person';
+  if (item.media_type === 'movie') return 'movie';
+  if (item.media_type === 'tv') return 'tv';
+
+  if (selectedMediaType === 'movie') return 'movie';
+  if (selectedMediaType === 'tv') return 'tv';
+
+  if ('first_air_date' in item && !('release_date' in item)) return 'tv';
+  if ('release_date' in item && !('first_air_date' in item)) return 'movie';
+  if ('name' in item && !('title' in item)) return 'tv';
+  if ('title' in item) return 'movie';
+
+  return null;
+}
+
 export default function SearchScreen() {
   const segments = useSegments();
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +69,7 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { user } = useAuth();
   const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
@@ -97,24 +119,30 @@ export default function SearchScreen() {
   const handleItemPress = (item: any) => {
     const currentTab = segments[1];
     const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
 
-    // Check media_type first to avoid ambiguity
-    if (item.media_type === 'person') {
+    if (resolvedMediaType === 'person') {
       router.push(`${basePath}/person/${item.id}` as any);
-    } else if (item.media_type === 'movie' || 'title' in item) {
+    } else if (resolvedMediaType === 'movie') {
       router.push(`${basePath}/movie/${item.id}` as any);
-    } else if (item.media_type === 'tv' || 'name' in item) {
+    } else if (resolvedMediaType === 'tv') {
       router.push(`${basePath}/tv/${item.id}` as any);
     }
   };
 
   const handleLongPress = (item: any) => {
+    if (!user) {
+      Alert.alert(t('common.error'), t('errors.unauthorized'));
+      return;
+    }
+
     // Skip for person results
     if (item.media_type === 'person') return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const itemMediaType =
-      item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
+    const itemMediaType = resolveSearchResultMediaType(item, mediaType);
+    if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;
+
     const title = item.title || item.name || '';
     const releaseDate = item.release_date || item.first_air_date || '';
     setSelectedMediaItem({
