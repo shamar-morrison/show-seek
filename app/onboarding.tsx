@@ -1,6 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -224,12 +225,22 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#090909', '#040404', '#000000']}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={StyleSheet.absoluteFillObject}
-      />
+      <View style={StyleSheet.absoluteFillObject}>
+        <Image
+          source={require('@/assets/images/movie_collage.png')}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+        />
+        <View
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'black', opacity: 0.86 }]}
+        />
+        <LinearGradient
+          colors={['transparent', '#000000']}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.5, y: 0.2 }}
+          end={{ x: 0.5, y: 0.8 }}
+        />
+      </View>
       <View style={styles.backgroundGlowTop} pointerEvents="none" />
       <View style={styles.backgroundGlowBottom} pointerEvents="none" />
 
