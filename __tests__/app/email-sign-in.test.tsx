@@ -1,7 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
-import React from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import React from 'react';
+import { Alert } from 'react-native';
 
 jest.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: jest.fn(),
@@ -38,6 +38,11 @@ import EmailSignIn from '@/app/(auth)/email-sign-in';
 describe('EmailSignIn', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   const pressPrimarySignIn = (getAllByText: (text: string) => any[]) => {
