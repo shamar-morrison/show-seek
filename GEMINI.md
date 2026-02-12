@@ -55,7 +55,7 @@ The project follows a standard Expo Router structure with source code separation
   - **`constants/`**: Theme colors, static lists, layout constants.
   - **`context/`**: React Context providers (`auth.ts`, `TraktContext.tsx`).
   - **`firebase/`**: Firebase SDK initialization and helper collections.
-  - **`hooks/`**: Custom React hooks (`useAuthGuard`, `useLists`, `useReminders`).
+  - **`hooks/`**: Custom React hooks (`useLists`, `useReminders`).
   - **`native-widgets/`**: Android widget XML configuration.
   - **`screens/`**: Detailed screen implementations (often imported by `app/` routes).
   - **`services/`**: Business logic classes (`TraktService`, `ListService`).
@@ -69,7 +69,7 @@ The project follows a standard Expo Router structure with source code separation
 
 - Handled via `src/context/auth.ts`.
 - Supports **Google Sign-In** (Native), **Email/Password**, and **Guest Mode**.
-- **`useAuthGuard`** hook protects routes/actions that require a full user account.
+- **Per-action auth checks**: Write operations (ratings, lists, etc.) use the `useAuth` hook and `Alert.alert()` within handlers to prompt guest users to sign in.
 - Session persistence handled by `AsyncStorage`.
 
 ### Data Fetching

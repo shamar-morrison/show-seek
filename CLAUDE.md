@@ -135,25 +135,44 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 - Auto-syncs with Firebase Auth state changes
 - Guest users are identified by `user.isAnonymous === true`
 
-#### Auth Guards for Protected Actions (`src/hooks/useAuthGuard.tsx`)
+#### Per-Action Authentication Pattern
 
-Protects write operations (ratings, lists, reminders, favorites) from guest users:
+Write operations (ratings, lists, reminders, favorites) must manually guard against guest users. Instead of a global guard or a specialized hook like `useAuthGuard`, use the `useAuth` hook and check the `user` state directly within action handlers.
+
+Example implementation:
 
 ```typescript
-const { requireAuth, AuthGuardModal } = useAuthGuard();
+import { useAuth } from '@/src/context/auth';
+import { Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
-// Wrap protected actions
-<Button onPress={() => requireAuth(() => saveRating(), 'Sign in to rate movies')} />
+const MyComponent = () => {
+  const { user } = useAuth();
+  const router = useRouter();
 
-// Render modal in component
-{AuthGuardModal}
+  const handleProtectedAction = () => {
+    if (!user) {
+      Alert.alert(
+        'Sign in required',
+        'Please sign in to perform this action.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => router.push('/(auth)/sign-in') }
+        ]
+      );
+      return;
+    }
+
+    // Proceed with write operation (rating, list update, etc.)
+    performWriteOperation();
+  };
+
+  return <Button onPress={handleProtectedAction} title="Save" />;
+};
 ```
 
-- `requireAuth(action, message?)` - executes action if authenticated, shows modal if guest
-- `isAuthenticated` - `user !== null && user.isAnonymous === false`
-- `AuthGuardModal` - prompts guest users to sign in, navigates to `/(auth)/sign-in`
-
-**Protected screens**: `MovieDetailScreen`, `TVDetailScreen`, `EpisodeDetailScreen`, `PersonDetailScreen`
+- **Checks Location**: Auth checks must be placed inside the action handlers (e.g., `onPress`).
+- **Guest Protection**: Write paths must guard against guest users rather than relying on a global guard. Guest users are identified when `user` is `null`.
 
 ### Styling System
 
