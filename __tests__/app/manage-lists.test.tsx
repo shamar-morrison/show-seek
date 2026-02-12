@@ -18,13 +18,6 @@ jest.mock('@/src/hooks/useLists', () => ({
   useDeleteList: () => ({ mutateAsync: jest.fn() }),
 }));
 
-jest.mock('@/src/hooks/useAuthGuard', () => ({
-  useAuthGuard: () => ({
-    requireAuth: (action: () => void) => action(),
-    AuthGuardModal: null,
-  }),
-}));
-
 jest.mock('@/src/components/RenameListModal', () => {
   const React = require('react');
   return {

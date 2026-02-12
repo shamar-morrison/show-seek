@@ -24,8 +24,6 @@ export interface ContentSettingsSectionProps {
   isTraktConnected: boolean;
   /** Whether Trakt status is loading */
   isTraktLoading: boolean;
-  /** Whether user is a guest */
-  isGuest: boolean;
   /** Handler for language button press */
   onLanguagePress: () => void;
   /** Handler for region button press */
@@ -49,7 +47,6 @@ export function ContentSettingsSection({
   preferences,
   isTraktConnected,
   isTraktLoading,
-  isGuest,
   onLanguagePress,
   onRegionPress,
   onColorPress,
@@ -127,39 +124,35 @@ export function ContentSettingsSection({
             </View>
           }
         />
-        {!isGuest && (
-          <ActionButton
-            icon={LayoutIcon}
-            label={t('settings.defaultLaunchScreen')}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onLaunchScreenPress();
-            }}
-            badge={
-              <View style={styles.languageBadge}>
-                <Text style={styles.languageBadgeText}>{getDefaultLaunchScreenLabel()}</Text>
+        <ActionButton
+          icon={LayoutIcon}
+          label={t('settings.defaultLaunchScreen')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onLaunchScreenPress();
+          }}
+          badge={
+            <View style={styles.languageBadge}>
+              <Text style={styles.languageBadgeText}>{getDefaultLaunchScreenLabel()}</Text>
+            </View>
+          }
+        />
+        <ActionButton
+          customIcon={<TraktLogo size={20} />}
+          label={t('profile.traktIntegration')}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onTraktPress();
+          }}
+          loading={isTraktLoading}
+          badge={
+            isTraktConnected ? (
+              <View style={styles.traktConnectedBadge}>
+                <Check size={12} color={COLORS.white} />
               </View>
-            }
-          />
-        )}
-        {!isGuest && (
-          <ActionButton
-            customIcon={<TraktLogo size={20} />}
-            label={t('profile.traktIntegration')}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onTraktPress();
-            }}
-            loading={isTraktLoading}
-            badge={
-              isTraktConnected ? (
-                <View style={styles.traktConnectedBadge}>
-                  <Check size={12} color={COLORS.white} />
-                </View>
-              ) : null
-            }
-          />
-        )}
+            ) : null
+          }
+        />
       </View>
     </View>
   );

@@ -85,7 +85,7 @@
     "confirmPassword": "Confirmer le mot de passe",
     "forgotPassword": "Mot de passe oublié ?",
     "resetPassword": "Réinitialiser le mot de passe",
-    "continueAsGuest": "Continuer en tant qu'invité",
+    "continueWithEmailPassword": "Continuer avec e-mail et mot de passe",
     "orContinueWith": "Ou continuer avec",
     "google": "Continuer avec Google",
     "createAccount": "Créer un compte",
@@ -94,6 +94,7 @@
     "welcomeBack": "Bon retour",
     "welcome": "Bienvenue",
     "signInToContinue": "Connectez-vous pour continuer",
+    "legacyEmailSignIn": "Connexion héritée pour les comptes e-mail/mot de passe existants",
     "signUpToGetStarted": "Inscrivez-vous pour commencer",
     "emailRequired": "L'e-mail est requis",
     "passwordRequired": "Le mot de passe est requis",
@@ -103,14 +104,9 @@
     "accountCreated": "Compte créé avec succès",
     "signInFailed": "Échec de la connexion. Veuillez réessayer.",
     "signUpFailed": "Échec de l'inscription. Veuillez réessayer.",
-    "guestMode": "Mode invité",
-    "guestModeDescription": "Certaines fonctionnalités sont limitées en mode invité",
-    "upgradeAccount": "Passer à un compte complet",
-    "featureRequiresAccount": "Cette fonctionnalité nécessite un compte",
     "bySigningIn": "En vous connectant, vous acceptez nos",
     "agreeToTerms": "En vous inscrivant, vous acceptez nos",
     "signingOut": "Déconnexion...",
-    "notSignedIn": "Non connecté",
     "signOutFailed": "La déconnexion a échoué. Veuillez réessayer."
   },
   "tabs": {
@@ -674,7 +670,6 @@
   },
   "profile": {
     "title": "Profil",
-    "guest": "Invité",
     "tabs": {
       "preferences": "Préférences",
       "content": "Contenu",
@@ -743,8 +738,6 @@
     "exportDataTitle": "Exporter les données",
     "exportFailedFallbackMessage": "L’export a échoué. Veuillez réessayer.",
     "exportFailedTitle": "Échec de l’export",
-    "guestAccountExportMessage": "L’export n’est pas disponible en mode invité. Connectez-vous pour exporter vos données.",
-    "guestAccountTitle": "Compte invité",
     "noEmail": "Pas d’e-mail",
     "supportDevelopmentMessage": "Si vous aimez ShowSeek et souhaitez soutenir son développement, vous pouvez faire un don en utilisant l’une des adresses ci-dessous. Merci !",
     "unableToOpenFeedback": "Impossible d’ouvrir la page de retours.",
@@ -775,8 +768,7 @@
     "moodDescription": "Recevez des suggestions selon votre ressenti.",
     "previewUnavailable": "Aperçu indisponible",
     "getStarted": "Commencer",
-    "continueWithGoogle": "Continuer avec Google",
-    "continueAsGuest": "Continuer en tant qu'invité"
+    "continueWithGoogle": "Continuer avec Google"
   },
   "errors": {
     "generic": "Une erreur s'est produite",
@@ -942,10 +934,7 @@
     "trendingThisWeek": "Tendances de la semaine",
     "notEnoughData": "Pas encore assez de données",
     "notEnoughDataDescription": "Notez vos films et séries préférés pour voir des recommandations personnalisées ici !",
-    "goToDiscover": "Aller à Découvrir",
-    "signInRequired": "Connectez-vous pour des recommandations personnalisées",
-    "signInDescription": "Créez un compte pour obtenir du contenu adapté à vos goûts",
-    "signIn": "Se connecter"
+    "goToDiscover": "Aller à Découvrir"
   },
   "calendar": {
     "title": "Calendrier des sorties",
@@ -957,8 +946,6 @@
     "inDays": "dans {{count}} jours",
     "comingSoon": "Bientôt disponible",
     "seasonEpisode": "Saison {{season}} Épisode {{episode}}",
-    "signInRequired": "Connectez-vous pour voir votre calendrier",
-    "signInDescription": "Suivez les sorties de votre liste de visionnage en un seul endroit",
     "upgradeForFullExperience": "Passez à Premium pour l'expérience complète",
     "upgradeToPremium": "Passer à Premium",
     "premiumTitle": "Suivez votre calendrier de sorties",

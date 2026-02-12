@@ -17,7 +17,6 @@ describe('regionStorage', () => {
     (auth as any).currentUser = {
       uid: 'test-user-id',
       email: 'test@example.com',
-      isAnonymous: false,
     };
   });
 
@@ -72,7 +71,7 @@ describe('regionStorage', () => {
   });
 
   describe('syncRegionToFirebase', () => {
-    it('should write region to Firebase for authenticated non-anonymous users', async () => {
+    it('should write region to Firebase for authenticated users', async () => {
       (setDoc as jest.Mock).mockResolvedValue(undefined);
 
       await syncRegionToFirebase('CA');
@@ -83,15 +82,6 @@ describe('regionStorage', () => {
 
     it('should no-op when user is not authenticated', async () => {
       (auth as any).currentUser = null;
-
-      await syncRegionToFirebase('CA');
-
-      expect(setDoc).not.toHaveBeenCalled();
-      expect(doc).not.toHaveBeenCalled();
-    });
-
-    it('should no-op when user is anonymous', async () => {
-      (auth as any).currentUser = { uid: 'anon-user', isAnonymous: true };
 
       await syncRegionToFirebase('CA');
 
@@ -137,15 +127,6 @@ describe('regionStorage', () => {
 
     it('should return null when user is not authenticated', async () => {
       (auth as any).currentUser = null;
-
-      const result = await fetchRegionFromFirebase();
-
-      expect(result).toBeNull();
-      expect(getDoc).not.toHaveBeenCalled();
-    });
-
-    it('should return null when user is anonymous', async () => {
-      (auth as any).currentUser = { uid: 'anon-user', isAnonymous: true };
 
       const result = await fetchRegionFromFirebase();
 

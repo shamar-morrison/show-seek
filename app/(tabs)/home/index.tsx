@@ -10,7 +10,6 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,7 +26,6 @@ export default function HomeScreen() {
   const toastRef = useRef<ToastRef>(null);
   const queryClient = useQueryClient();
   const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
@@ -38,7 +36,7 @@ export default function HomeScreen() {
     return !!user && isPremium;
   }, [user, isPremium]);
 
-  // Check if we need to show Top Rated at the end (for guests/non-premium with latest-trailers in their list)
+  // Check if we need to show Top Rated at the end for users without trailer access.
   const showTopRatedAtEnd = useMemo(() => {
     return !canAccessTrailers && homeScreenLists.some((config) => config.id === 'latest-trailers');
   }, [canAccessTrailers, homeScreenLists]);
@@ -60,9 +58,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleOpenCustomization = () => {
-    requireAuth(() => {
-      modalRef.current?.present();
-    }, t('homeCustomization.signInToCustomize'));
+    modalRef.current?.present();
   };
 
   const handleOpenDrawer = () => {
@@ -114,7 +110,7 @@ export default function HomeScreen() {
               <HomeListSection key={config.id} config={config} />
             ))}
 
-            {/* Show Top Rated at the end for guests and non-premium users */}
+            {/* Show Top Rated at the end when Latest Trailers is unavailable */}
             {showTopRatedAtEnd && (
               <HomeListSection
                 config={{ id: 'top-rated-movies', type: 'tmdb', label: t('home.topRated') }}
@@ -129,7 +125,6 @@ export default function HomeScreen() {
       <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
       <HomeDrawer visible={drawerVisible} onClose={handleCloseDrawer} />
       <Toast ref={toastRef} />
-      {AuthGuardModal}
     </SafeAreaView>
   );
 }

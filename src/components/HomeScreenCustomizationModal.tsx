@@ -91,9 +91,9 @@ const HomeScreenCustomizationModal = forwardRef<
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
 
-  // Guest and non-premium users can't access Latest Trailers
-  const isGuest = !user;
-  const canAccessTrailers = !isGuest && isPremium;
+  // Latest Trailers is premium-only.
+  const isAuthenticated = !!user;
+  const canAccessTrailers = isAuthenticated && isPremium;
 
   // Local state for pending selections (only persisted on Apply)
   const [pendingSelections, setPendingSelections] = useState<HomeScreenListItem[]>([]);
@@ -118,7 +118,7 @@ const HomeScreenCustomizationModal = forwardRef<
 
   const handleToggle = useCallback(
     (item: HomeScreenListItem) => {
-      // Check if this is a premium-locked item (guests and non-premium users)
+      // Check if this is a premium-locked item
       if (item.id === 'latest-trailers' && !canAccessTrailers) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         sheetRef.current?.dismiss();

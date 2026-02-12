@@ -64,9 +64,6 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
-  // Track last navigation to prevent race conditions
-  const lastNavigationRef = React.useRef<string | null>(null);
-
   // Handle deep links
   useDeepLinking();
   useQuickActions();
@@ -110,8 +107,7 @@ function RootLayoutNav() {
   }, [accentColor]);
 
   useEffect(() => {
-    // For non-anonymous users, wait for preferences to load before routing
-    const waitingForPreferences = user && !user.isAnonymous && preferencesLoading;
+    const waitingForPreferences = !!user && preferencesLoading;
     if (loading || !isLanguageReady || !isRegionReady || !isAccentReady || waitingForPreferences) {
       return;
     }
@@ -124,33 +120,16 @@ function RootLayoutNav() {
 
     if (loading) return;
 
-    // Helper to navigate with deduplication
-    const safeNavigate = (destination: string) => {
-      if (lastNavigationRef.current === destination) return;
-      lastNavigationRef.current = destination;
-      // Use requestAnimationFrame to defer navigation past any pending unmounts
-      requestAnimationFrame(() => {
-        router.replace(destination as any);
-      });
-    };
-
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
-      safeNavigate('/onboarding');
+      router.replace('/onboarding');
     } else if (hasCompletedOnboarding && !user && !inAuthGroup) {
       // If onboarded but not logged in, go to sign-in
-      safeNavigate('/(auth)/sign-in');
-    } else if (user && !user.isAnonymous && (inAuthGroup || isOnboarding)) {
-      // If logged in as a real user (not guest) and in auth/onboarding, go to preferred launch screen
-      // Guest users (anonymous) are allowed to access auth screens to upgrade their account
+      router.replace('/(auth)/sign-in');
+    } else if (user && (inAuthGroup || isOnboarding)) {
+      // If logged in and in auth/onboarding, go to preferred launch screen
       const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
-      safeNavigate(destination);
-    } else if (user && user.isAnonymous && inAuthGroup) {
-      // Guest user signing in — navigate to home
-      // Small delay to let auth state settle before navigation
-      setTimeout(() => {
-        safeNavigate('/(tabs)/home');
-      }, 50);
+      router.replace(destination as any);
     }
   }, [
     user,
@@ -173,7 +152,7 @@ function RootLayoutNav() {
     !isLanguageReady ||
     !isRegionReady ||
     !isAccentReady ||
-    (user && !user.isAnonymous && preferencesLoading);
+    (!!user && preferencesLoading);
   if (isInitializing) {
     return (
       <View

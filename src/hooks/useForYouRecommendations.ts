@@ -70,13 +70,13 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
   const { user } = useAuth();
   const { data: ratings, isLoading: isLoadingRatings } = useRatings();
 
-  const isGuest = !user || user.isAnonymous;
+  const isAuthenticated = !!user;
 
   // Extract preliminary seeds (may have null titles for legacy ratings)
   const preliminarySeeds = useMemo(() => {
-    if (isGuest) return [];
+    if (!isAuthenticated) return [];
     return extractPreliminarySeeds(ratings);
-  }, [ratings, isGuest]);
+  }, [ratings, isAuthenticated]);
 
   // Fetch titles from TMDB for seeds that don't have them stored
   const titleQueries = useQueries({
@@ -94,7 +94,7 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
           }
         },
         staleTime: Infinity, // titles don't change
-        enabled: !isGuest && preliminarySeeds.length > 0,
+        enabled: isAuthenticated && preliminarySeeds.length > 0,
       })),
   });
 
@@ -135,7 +135,7 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
         }
       },
       staleTime: 1000 * 60 * 30, // 30 minutes
-      enabled: !isGuest && seeds.length > 0,
+      enabled: isAuthenticated && seeds.length > 0,
     })),
   });
 
@@ -164,7 +164,7 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
       return response.results.filter((movie) => movie.popularity < HIDDEN_GEMS_MAX_POPULARITY);
     },
     staleTime: 1000 * 60 * 60, // 1 hour
-    enabled: !isGuest && hasEnoughData,
+    enabled: isAuthenticated && hasEnoughData,
   });
 
   // Fetch trending content as fallback for users with low data
@@ -172,14 +172,14 @@ export function useForYouRecommendations(): UseForYouRecommendationsResult {
     queryKey: ['trending', 'movies', 'week', 'for-you-fallback'],
     queryFn: () => tmdbApi.getTrendingMovies('week'),
     staleTime: 1000 * 60 * 15, // 15 minutes
-    enabled: !isGuest && needsFallback,
+    enabled: isAuthenticated && needsFallback,
   });
 
   const { data: trendingTVData, isLoading: isLoadingTrendingTV } = useQuery({
     queryKey: ['trending', 'tv', 'week', 'for-you-fallback'],
     queryFn: () => tmdbApi.getTrendingTV('week'),
     staleTime: 1000 * 60 * 15, // 15 minutes
-    enabled: !isGuest && needsFallback,
+    enabled: isAuthenticated && needsFallback,
   });
 
   const isLoadingRecommendations = recommendationQueries.some((q) => q.isLoading);

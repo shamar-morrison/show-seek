@@ -41,17 +41,17 @@ describe('getInitials', () => {
     });
   });
 
-  describe('guest user fallback', () => {
-    it('should return GU when both display name and email are null', () => {
-      expect(getInitials(null, null)).toBe('GU');
+  describe('default fallback', () => {
+    it('should return US when both display name and email are null', () => {
+      expect(getInitials(null, null)).toBe('US');
     });
 
-    it('should return GU when both are empty strings', () => {
-      expect(getInitials('', '')).toBe('GU');
+    it('should return US when both are empty strings', () => {
+      expect(getInitials('', '')).toBe('US');
     });
 
-    it('should return GU when display name is whitespace and email is empty', () => {
-      expect(getInitials('   ', '')).toBe('GU');
+    it('should return US when display name is whitespace and email is empty', () => {
+      expect(getInitials('   ', '')).toBe('US');
     });
   });
 });

@@ -9,7 +9,6 @@ import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
@@ -69,8 +68,6 @@ export default function CustomListsScreen() {
     });
   }, [lists, sortState]);
 
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
-
   // Only check limits when premium status is confirmed (not loading)
   const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
 
@@ -92,11 +89,9 @@ export default function CustomListsScreen() {
       return;
     }
 
-    requireAuth(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      createListModalRef.current?.present();
-    });
-  }, [requireAuth, isLimitReached, router]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    createListModalRef.current?.present();
+  }, [isLimitReached, router]);
 
   const handleCreateSuccess = useCallback(
     (listId: string) => {
@@ -206,7 +201,6 @@ export default function CustomListsScreen() {
         )}
       </SafeAreaView>
       <CreateListModal ref={createListModalRef} onSuccess={handleCreateSuccess} />
-      {AuthGuardModal}
 
       <LibrarySortModal
         visible={sortModalVisible}

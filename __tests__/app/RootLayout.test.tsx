@@ -5,7 +5,7 @@ let mockSegments: string[] = ['(tabs)'];
 const mockReplace = jest.fn();
 
 const mockAuthState = {
-  user: null as null | { isAnonymous?: boolean },
+  user: null as null | { uid?: string },
   loading: false,
   hasCompletedOnboarding: true as boolean | null,
 };
@@ -152,7 +152,7 @@ describe('RootLayout routing', () => {
 
   it('redirects authenticated users in auth flow to preferred launch screen', async () => {
     mockAuthState.hasCompletedOnboarding = true;
-    mockAuthState.user = { isAnonymous: false };
+    mockAuthState.user = { uid: 'user-1' };
     mockSegments = ['(auth)'];
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/stats' };
 
@@ -160,6 +160,23 @@ describe('RootLayout routing', () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/stats');
+    });
+  });
+
+  it('redirects to sign-in when auth transitions from authenticated to unauthenticated on tabs', async () => {
+    mockAuthState.hasCompletedOnboarding = true;
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)'];
+
+    const { rerender } = render(<RootLayout />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
     });
   });
 });

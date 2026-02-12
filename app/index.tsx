@@ -7,19 +7,17 @@ import { ActivityIndicator, View } from 'react-native';
 
 /**
  * Root index route that redirects to the appropriate tab.
- * For authenticated non-guest users, redirects to their preferred launch screen.
- * For guests and unauthenticated users, redirects to home.
+ * For authenticated users, redirects to their preferred launch screen.
+ * For unauthenticated users, redirects to sign-in.
  * Shows a spinner during the brief redirect for a smoother visual experience.
  */
 export default function Index() {
   const { user, loading: authLoading } = useAuth();
-  const { preferences, isLoading: preferencesLoading, hasLoaded } = usePreferences();
+  const { preferences, hasLoaded } = usePreferences();
   const { accentColor } = useAccentColor();
 
-  // For authenticated non-guest users, wait for preferences to actually load from Firestore
-  const isNonGuestUser = user && !user.isAnonymous;
-  // We need to wait until hasLoaded is true for non-guest users
-  const shouldWaitForPreferences = isNonGuestUser && !hasLoaded;
+  const isAuthenticated = !!user;
+  const shouldWaitForPreferences = isAuthenticated && !hasLoaded;
 
   // Show loading while waiting for auth or preferences
   if (authLoading || shouldWaitForPreferences) {
@@ -38,9 +36,9 @@ export default function Index() {
   }
 
   // Determine the destination based on user type and preferences
-  const destination = isNonGuestUser
+  const destination = isAuthenticated
     ? preferences?.defaultLaunchScreen || '/(tabs)/home'
-    : '/(tabs)/home';
+    : '/(auth)/sign-in';
 
   return (
     <View

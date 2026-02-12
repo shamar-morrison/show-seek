@@ -85,7 +85,7 @@
     "confirmPassword": "Confirmar palavra-passe",
     "forgotPassword": "Esqueceu-se da palavra-passe?",
     "resetPassword": "Repor palavra-passe",
-    "continueAsGuest": "Continuar como convidado",
+    "continueWithEmailPassword": "Continuar com e-mail e palavra-passe",
     "orContinueWith": "Ou continue com",
     "google": "Continuar com Google",
     "createAccount": "Criar conta",
@@ -94,6 +94,7 @@
     "welcomeBack": "Bem-vindo de volta",
     "welcome": "Bem-vindo",
     "signInToContinue": "Inicie sessão para continuar",
+    "legacyEmailSignIn": "Início de sessão legado para contas existentes de e-mail e palavra-passe",
     "signUpToGetStarted": "Registe-se para começar",
     "emailRequired": "O e-mail é obrigatório",
     "passwordRequired": "A palavra-passe é obrigatória",
@@ -103,14 +104,9 @@
     "accountCreated": "Conta criada com sucesso",
     "signInFailed": "Falha ao iniciar sessão. Tente novamente.",
     "signUpFailed": "Falha ao registar. Tente novamente.",
-    "guestMode": "Modo convidado",
-    "guestModeDescription": "Algumas funcionalidades estão limitadas no modo convidado",
-    "upgradeAccount": "Atualizar para conta completa",
-    "featureRequiresAccount": "Este recurso requer uma conta",
     "bySigningIn": "Ao iniciar sessão, concorda com os nossos",
     "agreeToTerms": "Ao registar-se, aceita os nossos",
     "signingOut": "A terminar sessão...",
-    "notSignedIn": "Sessão não iniciada",
     "signOutFailed": "Falha ao terminar sessão. Tente novamente."
   },
   "tabs": {
@@ -674,7 +670,6 @@
   },
   "profile": {
     "title": "Perfil",
-    "guest": "Convidado",
     "tabs": {
       "preferences": "Preferências",
       "content": "Conteúdo",
@@ -733,8 +728,6 @@
     "exportDataTitle": "Exportar dados",
     "exportFailedFallbackMessage": "A exportação falhou. Tente novamente.",
     "exportFailedTitle": "A exportação falhou",
-    "guestAccountExportMessage": "A exportação não está disponível no modo convidado. Inicie sessão para exportar os seus dados.",
-    "guestAccountTitle": "Conta de convidado",
     "hideUnreleased": "Ocultar conteúdo não lançado",
     "hideUnreleasedDescription": "Ocultar filmes e séries que ainda não foram lançados",
     "noEmail": "Sem e-mail",
@@ -775,8 +768,7 @@
     "moodDescription": "Receba sugestões com base em como se sente.",
     "previewUnavailable": "Pré-visualização indisponível",
     "getStarted": "Começar",
-    "continueWithGoogle": "Continuar com Google",
-    "continueAsGuest": "Continuar como convidado"
+    "continueWithGoogle": "Continuar com Google"
   },
   "errors": {
     "generic": "Algo correu mal",
@@ -902,10 +894,7 @@
     "trendingThisWeek": "Tendências desta semana",
     "notEnoughData": "Ainda não há dados suficientes",
     "notEnoughDataDescription": "Avalie os seus filmes e séries favoritos para ver recomendações personalizadas aqui!",
-    "goToDiscover": "Ir para Descobrir",
-    "signInRequired": "Inicie sessão para recomendações personalizadas",
-    "signInDescription": "Crie uma conta para obter conteúdo adaptado aos seus gostos",
-    "signIn": "Iniciar sessão"
+    "goToDiscover": "Ir para Descobrir"
   },
   "calendar": {
     "title": "Calendário de lançamentos",
@@ -917,8 +906,6 @@
     "inDays": "em {{count}} dias",
     "comingSoon": "Brevemente",
     "seasonEpisode": "Temporada {{season}} Episódio {{episode}}",
-    "signInRequired": "Inicie sessão para ver o seu calendário",
-    "signInDescription": "Acompanhe os lançamentos da sua lista de pendentes num só lugar",
     "upgradeForFullExperience": "Atualize para ter a experiência completa",
     "upgradeToPremium": "Atualizar para Premium",
     "premiumTitle": "Acompanhe o seu calendário de lançamentos",

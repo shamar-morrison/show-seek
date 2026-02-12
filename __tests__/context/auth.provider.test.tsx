@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import React from 'react';
+import { signOutGoogle } from '@/src/firebase/auth';
 
 // Capture the auth state callback so we can trigger it in tests
 let capturedAuthCallback: ((user: any) => void) | null = null;
@@ -14,6 +15,10 @@ jest.mock('firebase/auth', () => ({
     return mockUnsubscribe;
   }),
   signOut: jest.fn(),
+}));
+
+jest.mock('@/src/firebase/auth', () => ({
+  signOutGoogle: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the firebase config
@@ -79,6 +84,24 @@ describe('AuthProvider', () => {
       expect(result.current.user).toBeNull();
     });
 
+    it('should normalize anonymous auth state to signed-out and trigger cleanup sign-out', async () => {
+      const anonymousUser = { uid: 'anon-1', isAnonymous: true };
+      (firebaseSignOut as jest.Mock).mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(anonymousUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(firebaseSignOut).toHaveBeenCalledTimes(1);
+    });
+
     it('should set up onAuthStateChanged subscription on mount', () => {
       renderHook(() => useAuth(), { wrapper });
 
@@ -96,7 +119,7 @@ describe('AuthProvider', () => {
   });
 
   describe('signOut function', () => {
-    it('should call firebaseSignOut when signOut is invoked', async () => {
+    it('should call firebaseSignOut and signOutGoogle when signOut is invoked', async () => {
       (firebaseSignOut as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -111,11 +134,13 @@ describe('AuthProvider', () => {
       });
 
       expect(firebaseSignOut).toHaveBeenCalled();
+      expect(signOutGoogle).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle signOut errors gracefully', async () => {
+    it('should rethrow signOut errors while still cleaning up Google session', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       (firebaseSignOut as jest.Mock).mockRejectedValue(new Error('Sign out failed'));
+      (signOutGoogle as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -123,12 +148,12 @@ describe('AuthProvider', () => {
         capturedAuthCallback?.(null);
       });
 
-      // Should not throw
       await act(async () => {
-        await result.current.signOut();
+        await expect(result.current.signOut()).rejects.toThrow('Sign out failed');
       });
 
       expect(consoleSpy).toHaveBeenCalled();
+      expect(signOutGoogle).toHaveBeenCalledTimes(1);
       consoleSpy.mockRestore();
     });
   });

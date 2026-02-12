@@ -1,6 +1,6 @@
 /**
  * Language storage utility.
- * Stores language preference in AsyncStorage for all users (guests and logged-in).
+ * Stores language preference in AsyncStorage.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

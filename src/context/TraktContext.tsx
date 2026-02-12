@@ -155,8 +155,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   const connectTrakt = useCallback(async () => {
-    if (!user || user.isAnonymous) {
-      throw new Error('Must be logged in with a full account to connect Trakt');
+    if (!user) {
+      throw new Error('Must be logged in to connect Trakt');
     }
 
     try {
@@ -238,8 +238,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   const syncNow = useCallback(async () => {
-    if (!user || user.isAnonymous) {
-      throw new Error('Must be logged in with a full account to sync');
+    if (!user) {
+      throw new Error('Must be logged in to sync');
     }
 
     if (isSyncing) {
@@ -266,8 +266,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user, isSyncing, pollSyncStatus]);
 
   const disconnectTrakt = useCallback(async () => {
-    if (!user || user.isAnonymous) {
-      throw new Error('Must be logged in with a full account to disconnect');
+    if (!user) {
+      throw new Error('Must be logged in to disconnect');
     }
 
     try {
@@ -287,8 +287,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   const enrichData = useCallback(async () => {
-    if (!user || user.isAnonymous) {
-      throw new Error('Must be logged in with a full account to enrich data');
+    if (!user) {
+      throw new Error('Must be logged in to enrich data');
     }
 
     if (isEnriching) {

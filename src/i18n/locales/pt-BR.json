@@ -85,7 +85,7 @@
     "confirmPassword": "Confirmar senha",
     "forgotPassword": "Esqueceu a senha?",
     "resetPassword": "Redefinir senha",
-    "continueAsGuest": "Continuar como convidado",
+    "continueWithEmailPassword": "Continuar com e-mail e senha",
     "orContinueWith": "Ou continue com",
     "google": "Continuar com Google",
     "createAccount": "Criar conta",
@@ -94,6 +94,7 @@
     "welcomeBack": "Bem-vindo de volta",
     "welcome": "Bem-vindo",
     "signInToContinue": "Entre para continuar",
+    "legacyEmailSignIn": "Login legado para contas existentes de e-mail e senha",
     "signUpToGetStarted": "Cadastre-se para começar",
     "emailRequired": "O e-mail é obrigatório",
     "passwordRequired": "A senha é obrigatória",
@@ -103,14 +104,9 @@
     "accountCreated": "Conta criada com sucesso",
     "signInFailed": "Falha ao entrar. Tente novamente.",
     "signUpFailed": "Falha ao cadastrar. Tente novamente.",
-    "guestMode": "Modo convidado",
-    "guestModeDescription": "Alguns recursos são limitados no modo convidado",
-    "upgradeAccount": "Atualizar para conta completa",
-    "featureRequiresAccount": "Este recurso requer uma conta",
     "bySigningIn": "Ao entrar, você concorda com nossos",
     "agreeToTerms": "Ao se cadastrar, você concorda com nossos",
     "signingOut": "Saindo...",
-    "notSignedIn": "Não conectado",
     "signOutFailed": "Falha ao sair. Tente novamente."
   },
   "tabs": {
@@ -674,7 +670,6 @@
   },
   "profile": {
     "title": "Perfil",
-    "guest": "Convidado",
     "tabs": {
       "preferences": "Preferências",
       "content": "Conteúdo",
@@ -733,8 +728,6 @@
     "exportDataTitle": "Exportar dados",
     "exportFailedFallbackMessage": "Falha na exportação. Tente novamente.",
     "exportFailedTitle": "Falha na exportação",
-    "guestAccountExportMessage": "A exportação não está disponível no modo convidado. Entre para exportar seus dados.",
-    "guestAccountTitle": "Conta de convidado",
     "hideUnreleased": "Ocultar conteúdo não lançado",
     "hideUnreleasedDescription": "Ocultar filmes e séries que ainda não foram lançados",
     "noEmail": "Sem e-mail",
@@ -775,8 +768,7 @@
     "moodDescription": "Receba sugestões com base em como você está se sentindo.",
     "previewUnavailable": "Prévia indisponível",
     "getStarted": "Começar",
-    "continueWithGoogle": "Continuar com Google",
-    "continueAsGuest": "Continuar como convidado"
+    "continueWithGoogle": "Continuar com Google"
   },
   "errors": {
     "generic": "Algo deu errado",
@@ -902,10 +894,7 @@
     "trendingThisWeek": "Em alta esta semana",
     "notEnoughData": "Dados insuficientes ainda",
     "notEnoughDataDescription": "Avalie seus filmes e séries favoritos para ver recomendações personalizadas aqui!",
-    "goToDiscover": "Ir para Descobrir",
-    "signInRequired": "Entre para recomendações personalizadas",
-    "signInDescription": "Crie uma cuenta para obter conteúdo adaptado aos seus gostos",
-    "signIn": "Entrar"
+    "goToDiscover": "Ir para Descobrir"
   },
   "calendar": {
     "title": "Calendário de lançamentos",
@@ -917,8 +906,6 @@
     "inDays": "em {{count}} dias",
     "comingSoon": "Em breve",
     "seasonEpisode": "Temporada {{season}} Episódio {{episode}}",
-    "signInRequired": "Entre para ver seu calendário",
-    "signInDescription": "Acompanhe os lançamentos da sua lista de pendentes em um só lugar",
     "premiumTitle": "Acompanhe seu calendário de lançamentos",
     "premiumDescription": "Não perca nenhuma estreia de temporada, episódio ou filme.\nVeja uma linha do tempo personalizada com todos os seus próximos filmes e séries.",
     "updatingEpisodes": "Atualizando episódios de TV...",

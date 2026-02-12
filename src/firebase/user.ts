@@ -21,8 +21,8 @@ export interface UserDocument {
  * @param user - Firebase Auth User object
  */
 export async function createUserDocument(user: User): Promise<void> {
-  if (!user || user.isAnonymous) {
-    return; // Don't create documents for anonymous users
+  if (!user) {
+    return;
   }
 
   const userRef = doc(db, 'users', user.uid);

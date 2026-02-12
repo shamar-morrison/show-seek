@@ -36,7 +36,6 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
@@ -95,7 +94,6 @@ export default function TVDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isPremium } = usePremium();
 
   // Long-press handler for similar/recommended media
@@ -109,14 +107,6 @@ export default function TVDetailScreen() {
   const { ratings: externalRatings, isLoading: isLoadingExternalRatings } = useExternalRatings(
     'tv',
     tvId
-  );
-
-  // Wrap the long-press handler with auth guard
-  const guardedHandleMediaLongPress = useCallback(
-    (item: any) => {
-      requireAuth(() => handleMediaLongPress(item), t('discover.signInToAdd'));
-    },
-    [requireAuth, handleMediaLongPress, t]
   );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
@@ -383,39 +373,30 @@ export default function TVDetailScreen() {
 
           {/* Action buttons */}
           <MediaActionButtons
-            onAddToList={() =>
-              requireAuth(() => addToListModalRef.current?.present(), t('discover.signInToAdd'))
-            }
-            onRate={() =>
-              requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
-            }
+            onAddToList={() => addToListModalRef.current?.present()}
+            onRate={() => setRatingModalVisible(true)}
             onReminder={
               show.status === 'Returning Series' ||
               show.status === 'In Production' ||
               show.status === 'Planned' ||
               show.status === 'Pilot'
-                ? () =>
-                    requireAuth(() => {
-                      if (!isPremium) {
-                        showPremiumAlert('premiumFeature.features.reminders');
-                        return;
-                      }
-                      setReminderModalVisible(true);
-                    }, t('authGuards.setReleaseReminders'))
+                ? () => {
+                    if (!isPremium) {
+                      showPremiumAlert('premiumFeature.features.reminders');
+                      return;
+                    }
+                    setReminderModalVisible(true);
+                  }
                 : undefined
             }
             onNote={() =>
-              requireAuth(
-                () =>
-                  noteSheetRef.current?.present({
-                    mediaType: 'tv',
-                    mediaId: tvId,
-                    posterPath: show.poster_path,
-                    mediaTitle: show.name,
-                    initialNote: note?.content,
-                  }),
-                t('authGuards.addNotes')
-              )
+              noteSheetRef.current?.present({
+                mediaType: 'tv',
+                mediaId: tvId,
+                posterPath: show.poster_path,
+                mediaTitle: show.name,
+                initialNote: note?.content,
+              })
             }
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
@@ -490,7 +471,7 @@ export default function TVDetailScreen() {
             mediaType="tv"
             items={filteredSimilarShows}
             onMediaPress={handleShowPress}
-            onMediaLongPress={guardedHandleMediaLongPress}
+            onMediaLongPress={handleMediaLongPress}
             title={t('media.similarShows')}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
@@ -529,7 +510,7 @@ export default function TVDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleShowPress}
-            onMediaLongPress={guardedHandleMediaLongPress}
+            onMediaLongPress={handleMediaLongPress}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
@@ -687,7 +668,6 @@ export default function TVDetailScreen() {
         </>
       )}
       <Toast ref={toastRef} />
-      {AuthGuardModal}
 
       {/* AddToListModal for long-pressed similar/recommended media */}
       {selectedSimilarMediaItem && (

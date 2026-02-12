@@ -3,10 +3,6 @@ import { render } from '@testing-library/react-native';
 
 const mockReleaseCalendar = jest.fn();
 
-const mockAuthState = {
-  user: { uid: 'user-1', isAnonymous: false } as { uid?: string; isAnonymous?: boolean } | null,
-};
-
 const mockPremiumState = {
   isPremium: false,
   isLoading: false,
@@ -37,10 +33,6 @@ const mockUpcomingState = {
   error: null,
 };
 
-jest.mock('@/src/context/auth', () => ({
-  useAuth: () => mockAuthState,
-}));
-
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
 }));
@@ -69,7 +61,6 @@ import CalendarScreen from '@/app/(tabs)/home/calendar';
 describe('CalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockUpcomingState.sections = [
@@ -86,15 +77,6 @@ describe('CalendarScreen', () => {
     ];
     mockUpcomingState.isLoading = false;
     mockUpcomingState.isLoadingEnrichment = false;
-  });
-
-  it('shows sign-in prompt for guests', () => {
-    mockAuthState.user = null;
-
-    const { getByText } = render(<CalendarScreen />);
-
-    expect(getByText('Sign in to see your calendar')).toBeTruthy();
-    expect(mockReleaseCalendar).not.toHaveBeenCalled();
   });
 
   it('passes free-preview props for signed-in free users', () => {

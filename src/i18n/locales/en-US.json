@@ -86,7 +86,7 @@
     "confirmPassword": "Confirm Password",
     "forgotPassword": "Forgot Password?",
     "resetPassword": "Reset Password",
-    "continueAsGuest": "Continue as Guest",
+    "continueWithEmailPassword": "Continue with Email and Password",
     "orContinueWith": "Or continue with",
     "google": "Continue with Google",
     "createAccount": "Create Account",
@@ -95,6 +95,7 @@
     "welcomeBack": "Welcome Back",
     "welcome": "Welcome",
     "signInToContinue": "Sign in to continue",
+    "legacyEmailSignIn": "Legacy sign in for existing email/password accounts",
     "signUpToGetStarted": "Sign up to get started",
     "emailRequired": "Email is required",
     "passwordRequired": "Password is required",
@@ -104,13 +105,8 @@
     "accountCreated": "Account created successfully",
     "signInFailed": "Sign in failed. Please try again.",
     "signUpFailed": "Sign up failed. Please try again.",
-    "guestMode": "Guest Mode",
-    "guestModeDescription": "Some features are limited in guest mode",
-    "upgradeAccount": "Upgrade to Full Account",
-    "featureRequiresAccount": "This feature requires an account",
     "bySigningIn": "By signing in, you agree to our",
     "agreeToTerms": "By signing up, you agree to our",
-    "notSignedIn": "Not signed in",
     "signOutFailed": "Sign out failed. Please try again."
   },
   "tabs": {
@@ -674,7 +670,6 @@
   },
   "profile": {
     "title": "Profile",
-    "guest": "Guest",
     "tabs": {
       "preferences": "Preferences",
       "content": "Content",
@@ -746,8 +741,6 @@
     "exportDataTitle": "Export Data",
     "exportFailedFallbackMessage": "Export failed. Please try again.",
     "exportFailedTitle": "Export Failed",
-    "guestAccountExportMessage": "Exporting is not available in guest mode. Please sign in to export your data.",
-    "guestAccountTitle": "Guest Account",
     "noEmail": "No email",
     "supportDevelopmentMessage": "If you enjoy ShowSeek and want to support development, you can donate using one of the addresses below. Thank you!",
     "unableToOpenFeedback": "Unable to open feedback page.",
@@ -780,8 +773,7 @@
     "moodDescription": "Get recommendations based on how you feel.",
     "previewUnavailable": "Preview unavailable",
     "getStarted": "Get Started",
-    "continueWithGoogle": "Continue with Google",
-    "continueAsGuest": "Continue as Guest"
+    "continueWithGoogle": "Continue with Google"
   },
   "errors": {
     "generic": "Something went wrong",
@@ -999,10 +991,7 @@
     "trendingThisWeek": "Trending This Week",
     "notEnoughData": "Not enough data yet",
     "notEnoughDataDescription": "Rate your favorite movies and shows to see personalized recommendations here!",
-    "goToDiscover": "Go to Discover",
-    "signInRequired": "Sign in for personalized recommendations",
-    "signInDescription": "Create an account to get content tailored to your tastes",
-    "signIn": "Sign In"
+    "goToDiscover": "Go to Discover"
   },
   "calendar": {
     "title": "Release Calendar",
@@ -1014,8 +1003,6 @@
     "inDays": "in {{count}} days",
     "comingSoon": "Coming Soon",
     "seasonEpisode": "Season {{season}} Episode {{episode}}",
-    "signInRequired": "Sign in to see your calendar",
-    "signInDescription": "Track your watchlist releases all in one place",
     "premiumTitle": "Track Your Release Schedule",
     "premiumDescription": "Never miss a season, episode or movie release again. \n Get a personalized timeline of all your upcoming movies and TV shows.",
     "updatingEpisodes": "Updating TV episodes...",

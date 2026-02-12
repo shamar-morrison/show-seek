@@ -41,12 +41,12 @@ export async function setStoredAccentColor(color: string): Promise<void> {
 /**
  * Sync accent color to Firebase Firestore (fire-and-forget).
  * Writes to `users/{uid}.accentColor` using merge so other fields are preserved.
- * Silently fails for guest/anonymous or unauthenticated users.
+ * Silently fails for unauthenticated users.
  */
 export async function syncAccentColorToFirebase(color: string): Promise<void> {
   try {
     const user = auth.currentUser;
-    if (!user || user.isAnonymous) return;
+    if (!user) return;
 
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { accentColor: color }, { merge: true });
@@ -58,12 +58,12 @@ export async function syncAccentColorToFirebase(color: string): Promise<void> {
 
 /**
  * Fetch accent color from Firebase Firestore for cross-device sync.
- * Returns null if user is not authenticated, anonymous, or no color is stored.
+ * Returns null if user is not authenticated or no color is stored.
  */
 export async function fetchAccentColorFromFirebase(): Promise<string | null> {
   try {
     const user = auth.currentUser;
-    if (!user || user.isAnonymous) return null;
+    if (!user) return null;
 
     const userRef = doc(db, 'users', user.uid);
     const snapshot = await getDoc(userRef);

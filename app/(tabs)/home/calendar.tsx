@@ -2,13 +2,12 @@ import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, LogIn } from 'lucide-react-native';
+import { Calendar } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -21,45 +20,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  */
 export default function CalendarScreen() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
   const { accentColor } = useAccentColor();
 
   const { sections, allReleases, isLoading, isLoadingEnrichment } = useUpcomingReleases();
 
-  const isGuest = !user || user.isAnonymous;
-
   // Haptic feedback on mount
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
-  const handleSignIn = () => {
-    router.push({ pathname: '/(auth)/sign-in' });
-  };
-
   const handleGoToLibrary = () => {
     router.push({ pathname: '/(tabs)/library' });
   };
-
-  // Guest state - show sign in prompt
-  if (isGuest) {
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-        <View style={styles.emptyContainer}>
-          <View style={styles.iconContainer}>
-            <LogIn size={64} color={accentColor} />
-          </View>
-          <Text style={styles.emptyTitle}>{t('calendar.signInRequired')}</Text>
-          <Text style={styles.emptyDescription}>{t('calendar.signInDescription')}</Text>
-          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleSignIn}>
-            <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   // Loading state
   if (isPremiumLoading || isLoading) {

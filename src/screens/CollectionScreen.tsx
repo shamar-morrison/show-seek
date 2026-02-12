@@ -8,7 +8,6 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useCanTrackMoreCollections,
   useCollectionTracking,
@@ -47,7 +46,6 @@ export default function CollectionScreen() {
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isPremium } = usePremium();
 
   // Collection tracking state
@@ -89,17 +87,17 @@ export default function CollectionScreen() {
   );
 
   const handleStartTracking = useCallback(() => {
-    requireAuth(async () => {
-      if (!collectionQuery.data) return;
+    if (!collectionQuery.data) return;
 
-      // Guard: don't start tracking if already tracked
-      if (isTracked) return;
+    // Guard: don't start tracking if already tracked
+    if (isTracked) return;
 
-      if (!canTrackMore) {
-        showPremiumAlert('premiumFeature.features.collectionTracking');
-        return;
-      }
+    if (!canTrackMore) {
+      showPremiumAlert('premiumFeature.features.collectionTracking');
+      return;
+    }
 
+    (async () => {
       try {
         await startTrackingMutation.mutateAsync({
           collectionId,
@@ -110,32 +108,30 @@ export default function CollectionScreen() {
       } catch (error) {
         console.error('[CollectionScreen] Failed to start tracking:', error);
       }
-    }, t('authGuards.trackCollections'));
-  }, [requireAuth, collectionQuery.data, canTrackMore, startTrackingMutation, collectionId, t]);
+    })();
+  }, [collectionQuery.data, isTracked, canTrackMore, startTrackingMutation, collectionId]);
 
   const handleStopTracking = useCallback(() => {
     if (!collectionQuery.data) return;
 
-    requireAuth(() => {
-      stopTrackingMutation.mutate(
-        {
-          collectionId,
-          collectionName: collectionQuery.data.name,
+    stopTrackingMutation.mutate(
+      {
+        collectionId,
+        collectionName: collectionQuery.data.name,
+      },
+      {
+        onSuccess: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         },
-        {
-          onSuccess: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          },
-          onError: (error) => {
-            // Cancelled by user is not an error to log
-            if (error.message !== 'Cancelled') {
-              console.error('[CollectionScreen] Failed to stop tracking:', error);
-            }
-          },
-        }
-      );
-    }, t('authGuards.manageCollectionTracking'));
-  }, [requireAuth, collectionQuery.data, stopTrackingMutation, collectionId, t]);
+        onError: (error) => {
+          // Cancelled by user is not an error to log
+          if (error.message !== 'Cancelled') {
+            console.error('[CollectionScreen] Failed to stop tracking:', error);
+          }
+        },
+      }
+    );
+  }, [collectionQuery.data, stopTrackingMutation, collectionId]);
 
   if (collectionQuery.isLoading) {
     return <FullScreenLoading />;
@@ -344,8 +340,6 @@ export default function CollectionScreen() {
           })}
         </View>
       </Animated.ScrollView>
-
-      {AuthGuardModal}
     </View>
   );
 }

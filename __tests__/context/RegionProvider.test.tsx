@@ -8,7 +8,7 @@ const mockSetStoredRegion = jest.fn().mockResolvedValue(undefined);
 const mockFetchRegionFromFirebase = jest.fn().mockResolvedValue(null);
 const mockSyncRegionToFirebase = jest.fn().mockResolvedValue(undefined);
 const mockAuthState = {
-  user: null as null | { uid?: string; isAnonymous?: boolean },
+  user: null as null | { uid?: string },
 };
 
 jest.mock('@/src/api/tmdb', () => ({
@@ -84,7 +84,7 @@ describe('RegionProvider', () => {
     });
 
     it('should fetch region from Firebase for authenticated users and apply it', async () => {
-      mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+      mockAuthState.user = { uid: 'user-1' };
       mockGetStoredRegion.mockResolvedValue('US');
       mockFetchRegionFromFirebase.mockResolvedValue('GB');
 
@@ -100,7 +100,7 @@ describe('RegionProvider', () => {
     });
 
     it('should ignore unsupported Firebase regions', async () => {
-      mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+      mockAuthState.user = { uid: 'user-1' };
       mockGetStoredRegion.mockResolvedValue('US');
       mockFetchRegionFromFirebase.mockResolvedValue('ZZ');
 
@@ -113,18 +113,6 @@ describe('RegionProvider', () => {
       expect(result.current.region).toBe('US');
       expect(mockSetStoredRegion).not.toHaveBeenCalledWith('ZZ');
       expect(mockSetApiRegion).not.toHaveBeenCalledWith('ZZ');
-    });
-
-    it('should not fetch region from Firebase for anonymous users', async () => {
-      mockAuthState.user = { uid: 'guest-1', isAnonymous: true };
-
-      const { result } = renderHook(() => useRegion(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.isRegionReady).toBe(true);
-      });
-
-      expect(mockFetchRegionFromFirebase).not.toHaveBeenCalled();
     });
 
     it('should not fetch region from Firebase when unauthenticated', async () => {

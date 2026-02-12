@@ -15,7 +15,6 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
@@ -62,7 +61,6 @@ export default function SearchScreen() {
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -114,24 +112,22 @@ export default function SearchScreen() {
     // Skip for person results
     if (item.media_type === 'person') return;
 
-    requireAuth(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const itemMediaType =
-        item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
-      const title = item.title || item.name || '';
-      const releaseDate = item.release_date || item.first_air_date || '';
-      setSelectedMediaItem({
-        id: item.id,
-        media_type: itemMediaType,
-        title: title,
-        name: item.name,
-        poster_path: item.poster_path,
-        vote_average: item.vote_average || 0,
-        release_date: releaseDate,
-        first_air_date: item.first_air_date,
-      });
-      // Note: Modal is presented via useEffect below to ensure it's mounted first
-    }, t('discover.signInToAdd'));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const itemMediaType =
+      item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
+    const title = item.title || item.name || '';
+    const releaseDate = item.release_date || item.first_air_date || '';
+    setSelectedMediaItem({
+      id: item.id,
+      media_type: itemMediaType,
+      title: title,
+      name: item.name,
+      poster_path: item.poster_path,
+      vote_average: item.vote_average || 0,
+      release_date: releaseDate,
+      first_air_date: item.first_air_date,
+    });
+    // Note: Modal is presented via useEffect below to ensure it's mounted first
   };
 
   // Present the modal when an item is selected
@@ -334,7 +330,6 @@ export default function SearchScreen() {
         />
       )}
       <Toast ref={toastRef} />
-      {AuthGuardModal}
     </>
   );
 }

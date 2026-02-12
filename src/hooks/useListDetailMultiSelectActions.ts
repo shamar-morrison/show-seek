@@ -5,8 +5,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
-type RequireAuth = (action: () => void | Promise<void>, message?: string) => void;
-
 interface UseListDetailMultiSelectActionsParams {
   sourceListId?: string;
   sourceListName: string;
@@ -17,10 +15,6 @@ interface UseListDetailMultiSelectActionsParams {
   clearSelection: () => void;
   showToast: (message: string) => void;
   removeItemFromSource: (mediaId: number) => Promise<unknown>;
-  requireAuth: RequireAuth;
-  authPromptMessage: string;
-  isAuthenticated?: boolean;
-  guardBeforeConfirmation?: boolean;
   isSearchActive: boolean;
   deactivateSearch: () => void;
   dismissListActionsModal: () => void;
@@ -42,10 +36,6 @@ export function useListDetailMultiSelectActions({
   clearSelection,
   showToast,
   removeItemFromSource,
-  requireAuth,
-  authPromptMessage,
-  isAuthenticated,
-  guardBeforeConfirmation = false,
   isSearchActive,
   deactivateSearch,
   dismissListActionsModal,
@@ -84,11 +74,6 @@ export function useListDetailMultiSelectActions({
   const handleRemoveSelectedItems = useCallback(() => {
     if (!sourceListId || selectedMediaItems.length === 0 || isRemoving || isBulkRemoving) return;
 
-    if (guardBeforeConfirmation && !isAuthenticated) {
-      requireAuth(() => {}, authPromptMessage);
-      return;
-    }
-
     Alert.alert(
       t('library.removeItems'),
       t('library.removeItemsConfirm', { count: selectedCount, listName: sourceListName }),
@@ -100,54 +85,45 @@ export function useListDetailMultiSelectActions({
         {
           text: t('library.removeItems'),
           style: 'destructive',
-          onPress: () => {
-            requireAuth(
-              async () => {
-                const total = selectedMediaItems.length;
-                let failed = 0;
-                let processed = 0;
+          onPress: async () => {
+            const total = selectedMediaItems.length;
+            let failed = 0;
+            let processed = 0;
 
-                setIsBulkRemoving(true);
-                setBulkRemoveProgress({ processed: 0, total });
+            setIsBulkRemoving(true);
+            setBulkRemoveProgress({ processed: 0, total });
 
+            try {
+              for (const item of selectedMediaItems) {
                 try {
-                  for (const item of selectedMediaItems) {
-                    try {
-                      await removeItemFromSource(item.id);
-                    } catch {
-                      failed += 1;
-                    } finally {
-                      processed += 1;
-                      setBulkRemoveProgress({ processed, total });
-                    }
-                  }
-
-                  if (failed === 0) {
-                    showToast(t('library.itemsRemoved', { count: total }));
-                  } else {
-                    showToast(t('library.changesFailedToSave', { failed, total }));
-                  }
+                  await removeItemFromSource(item.id);
+                } catch {
+                  failed += 1;
                 } finally {
-                  clearSelection();
-                  setIsBulkRemoving(false);
-                  setBulkRemoveProgress(null);
+                  processed += 1;
+                  setBulkRemoveProgress({ processed, total });
                 }
-              },
-              authPromptMessage
-            );
+              }
+
+              if (failed === 0) {
+                showToast(t('library.itemsRemoved', { count: total }));
+              } else {
+                showToast(t('library.changesFailedToSave', { failed, total }));
+              }
+            } finally {
+              clearSelection();
+              setIsBulkRemoving(false);
+              setBulkRemoveProgress(null);
+            }
           },
         },
       ]
     );
   }, [
-    authPromptMessage,
     clearSelection,
-    guardBeforeConfirmation,
-    isAuthenticated,
     isBulkRemoving,
     isRemoving,
     removeItemFromSource,
-    requireAuth,
     selectedCount,
     selectedMediaItems,
     showToast,

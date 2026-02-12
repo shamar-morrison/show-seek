@@ -112,7 +112,7 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
   // 2. Sync from Firebase on login (cross-device restore)
   useEffect(() => {
-    if (!user || user.isAnonymous) {
+    if (!user) {
       hasSyncedFromFirebase.current = false;
       return;
     }

@@ -16,7 +16,6 @@ import Toast from '@/src/components/ui/Toast';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { DEFAULT_LIST_IDS } from '@/src/constants/lists';
 import { SPACING } from '@/src/constants/theme';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useListDetailMultiSelectActions } from '@/src/hooks/useListDetailMultiSelectActions';
@@ -47,7 +46,6 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const { data: lists, isLoading } = useLists();
   const removeMutation = useRemoveFromList();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
@@ -177,8 +175,6 @@ export default function FavoritesScreen() {
     clearSelection,
     showToast: handleShowToast,
     removeItemFromSource: removeSelectedItemFromList,
-    requireAuth,
-    authPromptMessage: t('library.signInToModifyList'),
     isSearchActive,
     deactivateSearch,
     dismissListActionsModal,
@@ -380,7 +376,6 @@ export default function FavoritesScreen() {
       />
 
       <Toast ref={toastRef} />
-      {AuthGuardModal}
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
 
       <BulkRemoveProgressModal
