@@ -132,47 +132,78 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
 - Provides: `user`, `loading`, `hasCompletedOnboarding`, `signOut()`, `completeOnboarding()`
 - Uses `@nkzw/create-context-hook` pattern for cleaner context creation
-- Auto-syncs with Firebase Auth state changes
-- Guest users are identified by `user.isAnonymous === true`
 
-#### Per-Action Authentication Pattern
+#### Authentication & Guest Protection
 
-Write operations (ratings, lists, reminders, favorites) must manually guard against guest users. Instead of a global guard or a specialized hook like `useAuthGuard`, use the `useAuth` hook and check the `user` state directly within action handlers.
+The app supports authenticated users (Google, Email/Password) and guest users. **Guest users are identified when `user === null`**.
 
-Example implementation:
+**Canonical Rule**: Features requiring a full user account or protecting entire routes MUST use `useAuthGuard`.
+
+##### 1. Route Protection & Full Features (`useAuthGuard`)
+
+Use the `useAuthGuard` hook for:
+
+- Protecting entire screens/routes (e.g., Profile, Manage Lists).
+- Wrapping complex features with multiple write actions.
+- Ensuring consistent "Sign In" modal experience.
+
+```typescript
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+
+const MyProtectedComponent = () => {
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
+
+  return (
+    <>
+      <Button onPress={() => requireAuth(() => navigation.navigate('EditProfile'))}>
+        Edit Profile
+      </Button>
+      {AuthGuardModal}
+    </>
+  );
+};
+```
+
+##### 2. Lightweight Action Checks (Per-Action Pattern)
+
+For small, isolated write actions inside mixed-access components (e.g., a "Favorite" button on a public movie detail screen), you MAY use a direct `useAuth` check if `useAuthGuard` is too heavy-handed.
 
 ```typescript
 import { useAuth } from '@/src/context/auth';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const MyComponent = () => {
-  const { user } = useAuth();
+const FavoriteButton = () => {
+  const { user } = useAuth(); // user === null means guest
   const router = useRouter();
 
-  const handleProtectedAction = () => {
+  const handlePress = () => {
     if (!user) {
       Alert.alert(
         'Sign in required',
-        'Please sign in to perform this action.',
+        'Please sign in to add favorites.',
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign In', onPress: () => router.push('/(auth)/sign-in') }
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => router.push('/(auth)/sign-in') }
         ]
       );
       return;
     }
-
-    // Proceed with write operation (rating, list update, etc.)
-    performWriteOperation();
+    toggleFavorite();
   };
 
-  return <Button onPress={handleProtectedAction} title="Save" />;
+  return <IconButton icon="heart" onPress={handlePress} />;
 };
 ```
 
-- **Checks Location**: Auth checks must be placed inside the action handlers (e.g., `onPress`).
-- **Guest Protection**: Write paths must guard against guest users rather than relying on a global guard. Guest users are identified when `user` is `null`.
+##### Decision Rule
+
+| Scenario                                  | Recommended Pattern           |
+| ----------------------------------------- | ----------------------------- |
+| Protecting a full screen / route          | **`useAuthGuard`**            |
+| Complex feature (multiple actions)        | **`useAuthGuard`**            |
+| Single, isolated button (e.g. Rate, Like) | `useAuth` + `Alert` (allowed) |
+| "Guest" check logic                       | Always use `user === null`    |
 
 ### Styling System
 
