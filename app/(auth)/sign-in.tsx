@@ -2,15 +2,11 @@ import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
 import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
-import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,20 +19,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SignIn() {
-  const { user } = useAuth();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // Configure Google Auth on mount
@@ -57,79 +47,10 @@ export default function SignIn() {
         Alert.alert(t('auth.signInFailed'), result.error);
       }
       // If cancelled, do nothing (user closed the picker)
-    } catch (error: any) {
+    } catch {
       Alert.alert(t('common.error'), t('errors.generic'));
     } finally {
       setGoogleLoading(false);
-    }
-  };
-
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert(t('common.error'), t('auth.emailRequired'));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Router will automatically redirect in _layout.tsx based on auth state
-    } catch (error: any) {
-      let errorMessage = t('errors.generic');
-
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/invalid-credential':
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            errorMessage = t('auth.signInFailed');
-            break;
-          case 'auth/invalid-email':
-            errorMessage = t('auth.invalidEmail');
-            break;
-          case 'auth/user-disabled':
-            errorMessage = t('errors.forbidden');
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = t('errors.timeout');
-            break;
-          case 'auth/network-request-failed':
-            errorMessage = t('errors.networkError');
-            break;
-          default:
-            errorMessage = t('auth.signInFailed');
-        }
-      }
-
-      Alert.alert(t('auth.signInFailed'), errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuestSignIn = async () => {
-    setLoading(true);
-    try {
-      await signInAnonymously(auth);
-      // Navigation is handled by _layout.tsx based on auth state change
-      // Do not call router.replace here to avoid race condition
-    } catch (error: any) {
-      let errorMessage = t('auth.signInFailed');
-
-      if (error.code) {
-        switch (error.code) {
-          case 'auth/operation-not-allowed':
-            errorMessage = t('errors.forbidden');
-            break;
-          case 'auth/network-request-failed':
-            errorMessage = t('errors.networkError');
-            break;
-        }
-      }
-
-      Alert.alert(t('auth.signInFailed'), errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -156,7 +77,7 @@ export default function SignIn() {
                 <TouchableOpacity
                   style={styles.googleButton}
                   onPress={handleGoogleSignIn}
-                  disabled={googleLoading || loading}
+                  disabled={googleLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {googleLoading ? (
@@ -172,78 +93,12 @@ export default function SignIn() {
                   )}
                 </TouchableOpacity>
 
-                {/* Separator */}
-                <View style={styles.separator}>
-                  <View style={styles.separatorLine} />
-                  <Text style={styles.separatorText}>{t('auth.orContinueWith').toLowerCase()}</Text>
-                  <View style={styles.separatorLine} />
-                </View>
-
-                <View style={styles.inputWithIcon}>
-                  <Mail size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder={t('auth.email')}
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
-
-                <View style={styles.inputWithIcon}>
-                  <Lock size={20} color={COLORS.textSecondary} style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.inputField}
-                    placeholder={t('auth.password')}
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeIcon}
-                    onPress={() => setShowPassword(!showPassword)}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    {showPassword ? (
-                      <EyeOff size={20} color={COLORS.textSecondary} />
-                    ) : (
-                      <Eye size={20} color={COLORS.textSecondary} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: accentColor }]}
-                  onPress={handleSignIn}
-                  disabled={loading || googleLoading}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={COLORS.white} />
-                  ) : (
-                    <Text style={styles.buttonText}>{t('auth.signIn')}</Text>
-                  )}
-                </TouchableOpacity>
-
-                {!user && (
-                  <TouchableOpacity
-                    style={[styles.button, styles.guestButton]}
-                    onPress={handleGuestSignIn}
-                    disabled={loading || googleLoading}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>{t('auth.dontHaveAccount')} </Text>
-                  <Link href="/(auth)/sign-up" asChild>
+                <View style={styles.legacyLinkContainer}>
+                  <Link href="/(auth)/email-sign-in" asChild>
                     <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                      <Text style={[styles.link, { color: accentColor }]}>{t('auth.signUp')}</Text>
+                      <Text style={[styles.link, { color: accentColor }]}>
+                        {t('auth.continueWithEmailPassword')}
+                      </Text>
                     </TouchableOpacity>
                   </Link>
                 </View>
@@ -328,43 +183,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    gap: SPACING.l,
-  },
-  inputContainer: {
-    gap: SPACING.s,
-  },
-  label: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-  },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.m,
-    paddingHorizontal: SPACING.m,
-  },
-  inputIcon: {
-    marginRight: SPACING.s,
-  },
-  inputField: {
-    flex: 1,
-    paddingVertical: SPACING.m,
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-  },
-  eyeIcon: {
-    padding: SPACING.s,
-  },
-  button: {
-    padding: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    marginTop: SPACING.m,
-  },
-  guestButton: {
-    backgroundColor: COLORS.surfaceLight,
-    marginTop: 0,
+    gap: SPACING.m,
   },
   googleButton: {
     flexDirection: 'row',
@@ -386,43 +205,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: FONT_SIZE.m,
   },
-  separator: {
-    flexDirection: 'row',
+  legacyLinkContainer: {
     alignItems: 'center',
-    marginVertical: SPACING.s,
-  },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.surfaceLight,
-  },
-  separatorText: {
-    color: COLORS.textSecondary,
-    marginHorizontal: SPACING.m,
-    fontSize: FONT_SIZE.s,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
-  },
-  guestButtonText: {
-    color: COLORS.white,
-    fontWeight: '600',
-    fontSize: FONT_SIZE.m,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: SPACING.m,
-  },
-  footerText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
   },
   link: {
-    fontWeight: 'bold',
-    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
   },
   termsText: {
     textAlign: 'center',

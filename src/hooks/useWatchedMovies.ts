@@ -1,15 +1,18 @@
 import { db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { createTimeout } from '@/src/utils/timeout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
+  deleteDoc,
   doc,
   getDocs,
   onSnapshot,
   setDoc,
   Timestamp,
+  updateDoc,
   writeBatch,
 } from 'firebase/firestore';
 import { useEffect } from 'react';
@@ -34,6 +37,41 @@ const fetchWatchInstances = async (userId: string, movieId: number): Promise<Wat
 
   // Sort by most recent first
   return watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
+};
+
+/**
+ * Best-effort sync to keep collection tracking consistent when a movie becomes unwatched.
+ * Never throws: watch removal remains the source of truth.
+ */
+const syncCollectionTrackingAfterUnwatch = async (movieId: number): Promise<void> => {
+  try {
+    const trackedCollections = await collectionTrackingService.getAllTrackedCollections();
+    const affectedCollections = trackedCollections.filter((collection) =>
+      collection.watchedMovieIds?.includes(movieId)
+    );
+
+    if (affectedCollections.length === 0) return;
+
+    const results = await Promise.allSettled(
+      affectedCollections.map((collection) =>
+        collectionTrackingService.removeWatchedMovie(collection.collectionId, movieId)
+      )
+    );
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(
+          `[useWatchedMovies] Failed to remove movie ${movieId} from tracked collection ${affectedCollections[index].collectionId}:`,
+          result.reason
+        );
+      }
+    });
+  } catch (error) {
+    console.error(
+      `[useWatchedMovies] Failed to sync collection tracking after unwatch for movie ${movieId}:`,
+      error
+    );
+  }
 };
 
 /**
@@ -206,6 +244,8 @@ export const useClearWatches = (movieId: number) => {
 
         await Promise.race([batch.commit(), createTimeout(10000)]);
       }
+
+      await syncCollectionTrackingAfterUnwatch(movieId);
     },
     // Optimistic update
     onMutate: async () => {
@@ -249,8 +289,17 @@ export const useDeleteWatch = (movieId: number) => {
         `users/${currentUserId}/watched_movies/${movieId}/watches/${instanceId}`
       );
 
-      const { deleteDoc } = await import('firebase/firestore');
       await deleteDoc(watchRef);
+
+      const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
+      const remainingSnapshot = (await Promise.race([
+        getDocs(watchesRef),
+        createTimeout(10000),
+      ])) as Awaited<ReturnType<typeof getDocs>>;
+
+      if (remainingSnapshot.empty) {
+        await syncCollectionTrackingAfterUnwatch(movieId);
+      }
 
       return instanceId;
     },
@@ -298,7 +347,6 @@ export const useUpdateWatchDate = (movieId: number) => {
         `users/${currentUserId}/watched_movies/${movieId}/watches/${instanceId}`
       );
 
-      const { updateDoc } = await import('firebase/firestore');
       await updateDoc(watchRef, {
         watchedAt: Timestamp.fromDate(newDate),
       });

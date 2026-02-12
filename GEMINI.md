@@ -69,7 +69,7 @@ The project follows a standard Expo Router structure with source code separation
 
 - Handled via `src/context/auth.ts`.
 - Supports **Google Sign-In** (Native), **Email/Password**, and **Guest Mode**.
-- **`useAuthGuard`** hook protects routes/actions that require a full user account.
+- **Writes & Protected Routes**: Features requiring a full user account (ratings, lists, favorites) MUST be protected using the **`useAuthGuard`** hook and wrapped with `requireAuth()`.
 - Session persistence handled by `AsyncStorage`.
 
 ### Data Fetching

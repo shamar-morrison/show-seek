@@ -21,7 +21,7 @@ export function getInitials(displayName: string | null, email: string | null): s
   } else if (email) {
     initials = email.substring(0, 2);
   } else {
-    return 'GU'; // Guest User
+    return 'US'; // User fallback
   }
 
   const result = initials.toUpperCase();

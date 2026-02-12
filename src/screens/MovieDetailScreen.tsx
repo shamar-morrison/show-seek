@@ -45,7 +45,6 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
@@ -184,7 +183,6 @@ export default function MovieDetailScreen() {
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   // Long-press handler for similar/recommended media
   const {
@@ -197,14 +195,6 @@ export default function MovieDetailScreen() {
   const { ratings: externalRatings, isLoading: isLoadingExternalRatings } = useExternalRatings(
     'movie',
     movieId
-  );
-
-  // Wrap the long-press handler with auth guard
-  const guardedHandleMediaLongPress = useCallback(
-    (item: any) => {
-      requireAuth(() => handleMediaLongPress(item), t('movieDetail.signInToAddItems'));
-    },
-    [requireAuth, handleMediaLongPress, t]
   );
 
   const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
@@ -449,12 +439,8 @@ export default function MovieDetailScreen() {
     await cancelReminderMutation.mutateAsync(reminder.id);
   };
 
-  // Handle marking the movie as watched with a specific date
-  const handleMarkAsWatched = async (date: Date) => {
-    const isFirstWatch = watchCount === 0;
-    await addWatchMutation.mutateAsync(date);
-
-    // Update collection tracking if movie belongs to a tracked collection
+  const runPostWatchActions = async (isFirstWatch: boolean) => {
+    // Update collection tracking if movie belongs to a tracked collection.
     if (movie?.belongs_to_collection) {
       try {
         await collectionTrackingService.addWatchedMovie(movie.belongs_to_collection.id, movieId);
@@ -464,7 +450,7 @@ export default function MovieDetailScreen() {
       }
     }
 
-    // Auto-add to "Already Watched" list on first watch
+    // Auto-add to "Already Watched" list on first watch.
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
       await tryAutoAddToAlreadyWatched({
         movieId,
@@ -478,6 +464,13 @@ export default function MovieDetailScreen() {
     }
   };
 
+  // Handle marking the movie as watched with a specific date
+  const handleMarkAsWatched = async (date: Date) => {
+    const isFirstWatch = watchCount === 0;
+    await addWatchMutation.mutateAsync(date);
+    await runPostWatchActions(isFirstWatch);
+  };
+
   // Handle clearing all watch history
   const handleClearWatches = async () => {
     await clearWatchesMutation.mutateAsync();
@@ -485,42 +478,14 @@ export default function MovieDetailScreen() {
 
   // Handle button press - either show modal or quick mark based on preference
   const handleWatchedButtonPress = () => {
-    requireAuth(async () => {
-      if (preferences?.quickMarkAsWatched) {
-        // Quick mark: save immediately with current time
-        setIsSavingWatch(true);
+    if (preferences?.quickMarkAsWatched) {
+      // Quick mark: save immediately with current time
+      setIsSavingWatch(true);
+      (async () => {
         try {
           const isFirstWatch = watchCount === 0;
           await addWatchMutation.mutateAsync(new Date());
-
-          // Update collection tracking if movie belongs to a tracked collection
-          if (movie?.belongs_to_collection) {
-            try {
-              await collectionTrackingService.addWatchedMovie(
-                movie.belongs_to_collection.id,
-                movieId
-              );
-            } catch (collectionError) {
-              // Silent fail - collection might not be tracked
-              console.log(
-                '[MovieDetailScreen] Collection tracking update skipped:',
-                collectionError
-              );
-            }
-          }
-
-          // Auto-add to "Already Watched" list on first watch
-          if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-            await tryAutoAddToAlreadyWatched({
-              movieId,
-              movie,
-              releaseDate: displayReleaseDate || movie.release_date,
-              membership,
-              lists,
-              isPremium,
-              t,
-            });
-          }
+          await runPostWatchActions(isFirstWatch);
 
           toastRef.current?.show(t('library.markedAsWatched'));
         } catch (error) {
@@ -528,11 +493,11 @@ export default function MovieDetailScreen() {
         } finally {
           setIsSavingWatch(false);
         }
-      } else {
-        // Show modal for date selection
-        setWatchedModalVisible(true);
-      }
-    }, t('authGuards.trackWatchedMovies'));
+      })();
+    } else {
+      // Show modal for date selection
+      setWatchedModalVisible(true);
+    }
   };
 
   // Handle long-press on watched button to show history actions
@@ -552,25 +517,21 @@ export default function MovieDetailScreen() {
   // Handle clear history action from modal
   // Note: Modal already dismisses itself before calling this callback
   const handleClearHistoryFromModal = () => {
-    requireAuth(() => {
-      Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.clearAll'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await handleClearWatches();
-              toastRef.current?.show(t('watched.watchHistoryCleared'));
-            } catch (error) {
-              toastRef.current?.show(
-                error instanceof Error ? error.message : t('watched.failedToClear')
-              );
-            }
-          },
+    Alert.alert(t('watched.clearWatchHistoryTitle'), t('watched.clearWatchHistoryMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.clearAll'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await handleClearWatches();
+            toastRef.current?.show(t('watched.watchHistoryCleared'));
+          } catch (error) {
+            toastRef.current?.show(error instanceof Error ? error.message : t('watched.failedToClear'));
+          }
         },
-      ]);
-    }, t('authGuards.trackWatchedMovies'));
+      },
+    ]);
   };
 
   return (
@@ -690,33 +651,21 @@ export default function MovieDetailScreen() {
 
           {/* Action Buttons */}
           <MediaActionButtons
-            onAddToList={() =>
-              requireAuth(() => addToListModalRef.current?.present(), t('discover.signInToAdd'))
-            }
-            onRate={() =>
-              requireAuth(() => setRatingModalVisible(true), t('authGuards.rateMoviesAndShows'))
-            }
+            onAddToList={() => addToListModalRef.current?.present()}
+            onRate={() => setRatingModalVisible(true)}
             onReminder={
               canShowReminder(displayReleaseDate)
-                ? () =>
-                    requireAuth(
-                      () => setReminderModalVisible(true),
-                      t('authGuards.setReleaseReminders')
-                    )
+                ? () => setReminderModalVisible(true)
                 : undefined
             }
             onNote={() =>
-              requireAuth(
-                () =>
-                  noteSheetRef.current?.present({
-                    mediaType: 'movie',
-                    mediaId: movieId,
-                    posterPath: movie.poster_path,
-                    mediaTitle: movie.title,
-                    initialNote: note?.content,
-                  }),
-                t('authGuards.addNotes')
-              )
+              noteSheetRef.current?.present({
+                mediaType: 'movie',
+                mediaId: movieId,
+                posterPath: movie.poster_path,
+                mediaTitle: movie.title,
+                initialNote: note?.content,
+              })
             }
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
@@ -788,7 +737,7 @@ export default function MovieDetailScreen() {
             mediaType="movie"
             items={filteredSimilarMovies}
             onMediaPress={handleMoviePress}
-            onMediaLongPress={guardedHandleMediaLongPress}
+            onMediaLongPress={handleMediaLongPress}
             title={t('media.similarMovies')}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
           />
@@ -827,7 +776,7 @@ export default function MovieDetailScreen() {
             isError={recommendationsQuery.isError}
             shouldLoad={shouldLoadRecommendations}
             onMediaPress={handleMoviePress}
-            onMediaLongPress={guardedHandleMediaLongPress}
+            onMediaLongPress={handleMediaLongPress}
             preferOriginalTitles={!!preferences?.showOriginalTitles}
             onLayout={() => {
               if (!shouldLoadRecommendations) {
@@ -1012,7 +961,6 @@ export default function MovieDetailScreen() {
         </>
       )}
       <Toast ref={toastRef} />
-      {AuthGuardModal}
 
       {/* AddToListModal for long-pressed similar/recommended media */}
       {selectedSimilarMediaItem && (

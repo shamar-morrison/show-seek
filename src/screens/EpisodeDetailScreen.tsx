@@ -29,7 +29,6 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useIsEpisodeWatched,
   useMarkEpisodeUnwatched,
@@ -96,7 +95,6 @@ export default function EpisodeDetailScreen() {
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   // Progressive render: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
@@ -224,48 +222,46 @@ export default function EpisodeDetailScreen() {
   );
 
   const handleMarkWatched = useCallback(() => {
-    requireAuth(() => {
-      if (!episode || !tvShow) return;
+    if (!episode || !tvShow) return;
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      if (isWatched) {
-        markUnwatched.mutate({
-          tvShowId: tvId,
-          seasonNumber,
-          episodeNumber,
-        });
-      } else {
-        markWatched.mutate({
-          tvShowId: tvId,
-          seasonNumber,
-          episodeNumber,
-          episodeData: {
-            episodeId: episode.id,
-            episodeName: episode.name,
-            episodeAirDate: episode.air_date,
-          },
-          showMetadata: {
-            tvShowName: tvShow.name,
-            posterPath: tvShow.poster_path,
-          },
-          autoAddOptions: {
-            showStatus: tvShow.status,
-            shouldAutoAdd: preferences.autoAddToWatching,
-            listMembership,
-            firstAirDate: tvShow.first_air_date,
-            voteAverage: tvShow.vote_average,
-            genreIds: tvShow.genres?.map((g) => g.id) || [],
-            isPremium,
-            currentListCount,
-          },
-          previousEpisodesOptions: {
-            seasonEpisodes: season?.episodes || [],
-            shouldMarkPrevious: !!preferences.markPreviousEpisodesWatched,
-          },
-        });
-      }
-    }, t('authGuards.trackEpisodes'));
+    if (isWatched) {
+      markUnwatched.mutate({
+        tvShowId: tvId,
+        seasonNumber,
+        episodeNumber,
+      });
+    } else {
+      markWatched.mutate({
+        tvShowId: tvId,
+        seasonNumber,
+        episodeNumber,
+        episodeData: {
+          episodeId: episode.id,
+          episodeName: episode.name,
+          episodeAirDate: episode.air_date,
+        },
+        showMetadata: {
+          tvShowName: tvShow.name,
+          posterPath: tvShow.poster_path,
+        },
+        autoAddOptions: {
+          showStatus: tvShow.status,
+          shouldAutoAdd: !!preferences?.autoAddToWatching,
+          listMembership,
+          firstAirDate: tvShow.first_air_date,
+          voteAverage: tvShow.vote_average,
+          genreIds: tvShow.genres?.map((g) => g.id) || [],
+          isPremium,
+          currentListCount,
+        },
+        previousEpisodesOptions: {
+          seasonEpisodes: season?.episodes || [],
+          shouldMarkPrevious: !!preferences?.markPreviousEpisodesWatched,
+        },
+      });
+    }
   }, [
     episode,
     tvShow,
@@ -275,20 +271,18 @@ export default function EpisodeDetailScreen() {
     tvId,
     seasonNumber,
     episodeNumber,
-    requireAuth,
     preferences,
     listMembership,
     season,
-    t,
     isPremium,
     currentListCount,
   ]);
 
   const handleToggleFavorite = useCallback(() => {
-    requireAuth(async () => {
-      if (!episode || !tvShow) return;
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!episode || !tvShow) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    (async () => {
       try {
         await toggleFavoriteMutation.mutateAsync({
           isFavorited,
@@ -309,7 +303,7 @@ export default function EpisodeDetailScreen() {
         console.error('Failed to toggle favorite episode:', error);
         toastRef.current?.show(t('errors.generic'));
       }
-    }, t('authGuards.favoriteEpisodes'));
+    })();
   }, [
     isFavorited,
     toggleFavoriteMutation,
@@ -318,7 +312,6 @@ export default function EpisodeDetailScreen() {
     tvId,
     seasonNumber,
     episodeNumber,
-    requireAuth,
     t,
   ]);
 
@@ -495,9 +488,7 @@ export default function EpisodeDetailScreen() {
             <View style={styles.secondaryActions}>
               <View style={styles.actionButtonWrapper}>
                 <RatingButton
-                  onPress={() =>
-                    requireAuth(() => setRatingModalVisible(true), t('authGuards.rateEpisodes'))
-                  }
+                  onPress={() => setRatingModalVisible(true)}
                   isRated={userRating > 0}
                   isLoading={isLoadingRating}
                 />
@@ -525,20 +516,16 @@ export default function EpisodeDetailScreen() {
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
                 onPress={() =>
-                  requireAuth(
-                    () =>
-                      noteSheetRef.current?.present({
-                        mediaType: 'episode',
-                        mediaId: tvId,
-                        seasonNumber,
-                        episodeNumber,
-                        posterPath: tvShow?.poster_path || null,
-                        mediaTitle: episode.name,
-                        initialNote: note?.content,
-                        showId: tvId,
-                      }),
-                    t('authGuards.addNotes')
-                  )
+                  noteSheetRef.current?.present({
+                    mediaType: 'episode',
+                    mediaId: tvId,
+                    seasonNumber,
+                    episodeNumber,
+                    posterPath: tvShow?.poster_path || null,
+                    mediaTitle: episode.name,
+                    initialNote: note?.content,
+                    showId: tvId,
+                  })
                 }
                 disabled={isLoadingNote}
                 activeOpacity={ACTIVE_OPACITY}
@@ -708,7 +695,6 @@ export default function EpisodeDetailScreen() {
       )}
       <NoteModal ref={noteSheetRef} />
       <Toast ref={toastRef} />
-      {AuthGuardModal}
     </SafeAreaView>
   );
 }

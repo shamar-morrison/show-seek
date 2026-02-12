@@ -8,7 +8,6 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useAddFavoritePerson,
   useIsPersonFavorited,
@@ -46,7 +45,6 @@ export default function PersonDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
   const addFavoriteMutation = useAddFavoritePerson();
   const removeFavoriteMutation = useRemoveFavoritePerson();
@@ -211,9 +209,9 @@ export default function PersonDetailScreen() {
   };
 
   const handleFavoriteToggle = () => {
-    requireAuth(async () => {
-      if (isLoadingFavorite) return;
+    if (isLoadingFavorite) return;
 
+    (async () => {
       try {
         if (isFavorited) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -235,7 +233,7 @@ export default function PersonDetailScreen() {
         console.error('Failed to toggle favorite:', error);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
-    }, t('authGuards.addFavoritePeople'));
+    })();
   };
 
   const age = calculateAge(person.birthday, person.deathday);
@@ -483,7 +481,6 @@ export default function PersonDetailScreen() {
           </View>
         )}
       </Animated.ScrollView>
-      {AuthGuardModal}
     </View>
   );
 }

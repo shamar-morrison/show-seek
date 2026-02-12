@@ -157,11 +157,11 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { data: lists, isLoading: isLoadingLists } = useLists();
   const { data: reminders, isLoading: isLoadingReminders } = useReminders();
 
-  const isGuest = !user || user.isAnonymous;
+  const isAuthenticated = !!user;
 
   // Extract items from watchlist, favorites, and watching lists
   const listItems = useMemo(() => {
-    if (!lists || isGuest) return [];
+    if (!lists || !isAuthenticated) return [];
     const items: (ListMediaItem & { sourceList: string })[] = [];
 
     // Include watchlist, favorites, and currently-watching (for ongoing series)
@@ -176,7 +176,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     });
 
     return items;
-  }, [lists, isGuest]);
+  }, [lists, isAuthenticated]);
 
   // Get IDs that need enrichment
   const tvShowIds = useMemo(() => extractTVShowIds(listItems), [listItems]);
@@ -188,7 +188,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
       queryKey: ['tv', id, 'calendar-enrichment'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getTVShowDetails(id)),
       staleTime: DETAILS_STALE_TIME,
-      enabled: !isGuest && tvShowIds.length > 0,
+      enabled: isAuthenticated && tvShowIds.length > 0,
     })),
   });
 
@@ -198,7 +198,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
       queryKey: ['movie', id, 'calendar-enrichment'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getMovieDetails(id)),
       staleTime: DETAILS_STALE_TIME,
-      enabled: !isGuest && movieIds.length > 0,
+      enabled: isAuthenticated && movieIds.length > 0,
     })),
   });
 
@@ -263,7 +263,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
       queryKey: ['tv', showId, 'season', seasonNumber, 'calendar'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getSeasonDetails(showId, seasonNumber)),
       staleTime: SEASON_DETAILS_STALE_TIME,
-      enabled: !isGuest && seasonFetchRequests.length > 0,
+      enabled: isAuthenticated && seasonFetchRequests.length > 0,
     })),
   });
 
@@ -288,7 +288,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
 
   // Build the unified releases list
   const allReleases = useMemo(() => {
-    if (isGuest) return [];
+    if (!isAuthenticated) return [];
 
     const today = getStartOfToday();
     const releases: UpcomingRelease[] = [];
@@ -448,7 +448,7 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     releases.sort((a, b) => a.releaseDate.getTime() - b.releaseDate.getTime());
 
     return releases;
-  }, [listItems, seasonDataMap, tvDetailsMap, movieDetailsMap, reminders, isGuest, region]);
+  }, [listItems, seasonDataMap, tvDetailsMap, movieDetailsMap, reminders, isAuthenticated, region]);
 
   // Group releases by month
   const sections = useMemo(() => {

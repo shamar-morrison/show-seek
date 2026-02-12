@@ -4,8 +4,6 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { metaTextStyles } from '@/src/styles/metaTextStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -15,13 +13,16 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
+import { useAuth } from '@/src/context/auth';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -31,6 +32,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -38,9 +40,27 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'all' | 'movie' | 'tv';
+
+function resolveSearchResultMediaType(
+  item: any,
+  selectedMediaType: MediaType
+): 'person' | 'movie' | 'tv' | null {
+  if (item.media_type === 'person') return 'person';
+  if (item.media_type === 'movie') return 'movie';
+  if (item.media_type === 'tv') return 'tv';
+
+  if (selectedMediaType === 'movie') return 'movie';
+  if (selectedMediaType === 'tv') return 'tv';
+
+  if ('first_air_date' in item && !('release_date' in item)) return 'tv';
+  if ('release_date' in item && !('first_air_date' in item)) return 'movie';
+  if ('name' in item && !('title' in item)) return 'tv';
+  if ('title' in item) return 'movie';
+
+  return null;
+}
 
 export default function SearchScreen() {
   const segments = useSegments();
@@ -49,6 +69,7 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { user } = useAuth();
   const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
@@ -62,7 +83,6 @@ export default function SearchScreen() {
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -99,39 +119,43 @@ export default function SearchScreen() {
   const handleItemPress = (item: any) => {
     const currentTab = segments[1];
     const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
 
-    // Check media_type first to avoid ambiguity
-    if (item.media_type === 'person') {
+    if (resolvedMediaType === 'person') {
       router.push(`${basePath}/person/${item.id}` as any);
-    } else if (item.media_type === 'movie' || 'title' in item) {
+    } else if (resolvedMediaType === 'movie') {
       router.push(`${basePath}/movie/${item.id}` as any);
-    } else if (item.media_type === 'tv' || 'name' in item) {
+    } else if (resolvedMediaType === 'tv') {
       router.push(`${basePath}/tv/${item.id}` as any);
     }
   };
 
   const handleLongPress = (item: any) => {
+    if (!user) {
+      Alert.alert(t('common.error'), t('errors.unauthorized'));
+      return;
+    }
+
     // Skip for person results
     if (item.media_type === 'person') return;
 
-    requireAuth(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const itemMediaType =
-        item.media_type || (mediaType !== 'all' ? mediaType : 'title' in item ? 'movie' : 'tv');
-      const title = item.title || item.name || '';
-      const releaseDate = item.release_date || item.first_air_date || '';
-      setSelectedMediaItem({
-        id: item.id,
-        media_type: itemMediaType,
-        title: title,
-        name: item.name,
-        poster_path: item.poster_path,
-        vote_average: item.vote_average || 0,
-        release_date: releaseDate,
-        first_air_date: item.first_air_date,
-      });
-      // Note: Modal is presented via useEffect below to ensure it's mounted first
-    }, t('discover.signInToAdd'));
+    const itemMediaType = resolveSearchResultMediaType(item, mediaType);
+    if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const title = item.title || item.name || '';
+    const releaseDate = item.release_date || item.first_air_date || '';
+    setSelectedMediaItem({
+      id: item.id,
+      media_type: itemMediaType,
+      title: title,
+      name: item.name,
+      poster_path: item.poster_path,
+      vote_average: item.vote_average || 0,
+      release_date: releaseDate,
+      first_air_date: item.first_air_date,
+    });
+    // Note: Modal is presented via useEffect below to ensure it's mounted first
   };
 
   // Present the modal when an item is selected
@@ -189,9 +213,9 @@ export default function SearchScreen() {
             {displayTitle}
           </Text>
           {isPerson && item.known_for_department && (
-          <Text style={[styles.department, { color: accentColor }]}>
-            {item.known_for_department}
-          </Text>
+            <Text style={[styles.department, { color: accentColor }]}>
+              {item.known_for_department}
+            </Text>
           )}
           {!isPerson && (
             <>
@@ -334,7 +358,6 @@ export default function SearchScreen() {
         />
       )}
       <Toast ref={toastRef} />
-      {AuthGuardModal}
     </>
   );
 }

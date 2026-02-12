@@ -85,7 +85,7 @@
     "confirmPassword": "Confirmar senha",
     "forgotPassword": "Esqueceu a senha?",
     "resetPassword": "Redefinir senha",
-    "continueAsGuest": "Continuar como convidado",
+    "continueWithEmailPassword": "Continuar com e-mail e senha",
     "orContinueWith": "Ou continue com",
     "google": "Continuar com Google",
     "createAccount": "Criar conta",
@@ -94,6 +94,7 @@
     "welcomeBack": "Bem-vindo de volta",
     "welcome": "Bem-vindo",
     "signInToContinue": "Entre para continuar",
+    "legacyEmailSignIn": "Login legado para contas existentes de e-mail e senha",
     "signUpToGetStarted": "Cadastre-se para começar",
     "emailRequired": "O e-mail é obrigatório",
     "passwordRequired": "A senha é obrigatória",
@@ -103,15 +104,11 @@
     "accountCreated": "Conta criada com sucesso",
     "signInFailed": "Falha ao entrar. Tente novamente.",
     "signUpFailed": "Falha ao cadastrar. Tente novamente.",
-    "guestMode": "Modo convidado",
-    "guestModeDescription": "Alguns recursos são limitados no modo convidado",
-    "upgradeAccount": "Atualizar para conta completa",
-    "featureRequiresAccount": "Este recurso requer uma conta",
     "bySigningIn": "Ao entrar, você concorda com nossos",
     "agreeToTerms": "Ao se cadastrar, você concorda com nossos",
     "signingOut": "Saindo...",
-    "notSignedIn": "Não conectado",
-    "signOutFailed": "Falha ao sair. Tente novamente."
+    "signOutFailed": "Falha ao sair. Tente novamente.",
+    "tooManyAttempts": "Muitas tentativas. Tente novamente mais tarde."
   },
   "tabs": {
     "home": "Início",
@@ -674,7 +671,6 @@
   },
   "profile": {
     "title": "Perfil",
-    "guest": "Convidado",
     "tabs": {
       "preferences": "Preferências",
       "content": "Conteúdo",
@@ -733,8 +729,6 @@
     "exportDataTitle": "Exportar dados",
     "exportFailedFallbackMessage": "Falha na exportação. Tente novamente.",
     "exportFailedTitle": "Falha na exportação",
-    "guestAccountExportMessage": "A exportação não está disponível no modo convidado. Entre para exportar seus dados.",
-    "guestAccountTitle": "Conta de convidado",
     "hideUnreleased": "Ocultar conteúdo não lançado",
     "hideUnreleasedDescription": "Ocultar filmes e séries que ainda não foram lançados",
     "noEmail": "Sem e-mail",
@@ -767,9 +761,14 @@
     "organizeDescription": "Crie listas e organize seu entretenimento",
     "remindTitle": "Não perca nada",
     "remindDescription": "Receba notificações de novos lançamentos",
-    "getStarted": "Começar",
-    "continueWithGoogle": "Continuar com Google",
-    "continueAsGuest": "Continuar como convidado"
+    "calendarTitle": "Não perca nenhum lançamento",
+    "calendarDescription": "Acompanhe próximos episódios e filmes com lembretes.",
+    "shuffleTitle": "Indeciso? Embaralhe.",
+    "shuffleDescription": "Escolha instantaneamente algo da sua lista.",
+    "moodTitle": "Combine com seu humor",
+    "moodDescription": "Receba sugestões com base em como você está se sentindo.",
+    "previewUnavailable": "Prévia indisponível",
+    "getStarted": "Começar"
   },
   "errors": {
     "generic": "Algo deu errado",
@@ -810,7 +809,7 @@
     "connectedHeader": "Trakt conectado",
     "connectedScreenHeader": "Trakt conectado",
     "connectedSubtitle": "Tudo pronto. Importe seu histórico para começar.",
-    "connectedTitle": "¡Conectado!",
+    "connectedTitle": "Conectado!",
     "connectionFailedMessage": "Não foi possível conectar ao Trakt. Tente novamente.",
     "connectionFailedTitle": "Falha na conexão",
     "disconnectButton": "Desconectar",
@@ -838,7 +837,7 @@
     "enrichmentFailedTitle": "Falha no enriquecimento",
     "howItWorks": {
       "conflictsDescription": "Se detectarmos conflitos, mostraremos o que aconteceu e manteremos seus dados consistentes.",
-      "conflictsTitle": "Resolver conflictos",
+      "conflictsTitle": "Resolver conflitos",
       "connectDescription": "Autorize o ShowSeek a acessar sua conta Trakt.",
       "connectTitle": "Conectar sua conta",
       "enrichDescription": "Opcionalmente, enriqueça seu histórico do Trakt com detalhes do TMDB para melhores insights.",
@@ -847,8 +846,8 @@
       "importTitle": "Importar seu histórico"
     },
     "howItWorksTitle": "Como funciona",
-    "importButton": "Importar historial",
-    "lastSynced": "Última sincronización {{time}}",
+    "importButton": "Importar histórico",
+    "lastSynced": "Última sincronização {{time}}",
     "moreErrors": "e mais {{count}} erros",
     "moreErrors_one": "e mais {{count}} erro",
     "moreErrors_other": "e mais {{count}} erros",
@@ -858,7 +857,7 @@
     "syncFailedTitle": "Falha na sincronização",
     "syncNowButton": "Sincronizar agora",
     "syncedItemsTitle": "Itens sincronizados",
-    "syncingEstimate": "Normalmente tarda menos de um minuto...",
+    "syncingEstimate": "Normalmente leva menos de um minuto...",
     "syncingHeader": "Sincronizando",
     "syncingSubtitle": "Importando seu histórico do Trakt para o ShowSeek.",
     "syncingTitle": "Sincronizando seus dados",
@@ -895,10 +894,7 @@
     "trendingThisWeek": "Em alta esta semana",
     "notEnoughData": "Dados insuficientes ainda",
     "notEnoughDataDescription": "Avalie seus filmes e séries favoritos para ver recomendações personalizadas aqui!",
-    "goToDiscover": "Ir para Descobrir",
-    "signInRequired": "Entre para recomendações personalizadas",
-    "signInDescription": "Crie uma cuenta para obter conteúdo adaptado aos seus gostos",
-    "signIn": "Entrar"
+    "goToDiscover": "Ir para Descobrir"
   },
   "calendar": {
     "title": "Calendário de lançamentos",
@@ -910,13 +906,11 @@
     "inDays": "em {{count}} dias",
     "comingSoon": "Em breve",
     "seasonEpisode": "Temporada {{season}} Episódio {{episode}}",
-    "signInRequired": "Entre para ver seu calendário",
-    "signInDescription": "Acompanhe os lançamentos da sua lista de pendentes em um só lugar",
     "premiumTitle": "Acompanhe seu calendário de lançamentos",
     "premiumDescription": "Não perca nenhuma estreia de temporada, episódio ou filme.\nVeja uma linha do tempo personalizada com todos os seus próximos filmes e séries.",
     "updatingEpisodes": "Atualizando episódios de TV...",
     "upgradeForFullExperience": "Atualize para ter a experiência completa",
-    "upgradeToPremium": "Actualizar a Premium"
+    "upgradeToPremium": "Atualizar para Premium"
   },
   "authGuards": {
     "addFavoritePeople": "Entre para adicionar pessoas favoritas",
@@ -932,7 +926,7 @@
   },
   "collection": {
     "failedToLoad": "Falha ao carregar coleção",
-    "freeLimitNotice": "Usuários gratuitos podem acompanhar hasta {{count}} colecciones. Actualize para Premium para acompanhamento ilimitado.",
+    "freeLimitNotice": "Usuários gratuitos podem acompanhar até {{count}} coleções. Atualize para Premium para acompanhamento ilimitado.",
     "moviesCount": "{{count}} filmes",
     "moviesCount_one": "{{count}} filme",
     "moviesCount_other": "{{count}} filmes",
@@ -946,9 +940,9 @@
     "failedToLoad": "Falha ao carregar créditos"
   },
   "datePicker": {
-    "month": "Mes",
+    "month": "Mês",
     "selectMonthYear": "Selecionar mês e ano",
-    "year": "Año"
+    "year": "Ano"
   },
   "episodeDetail": {
     "failedToLoad": "Falha ao carregar detalhes do episódio"
@@ -957,12 +951,12 @@
     "anyRating": "Qualquer avaliação",
     "mediaType": "Tipo de mídia",
     "searchPlaceholder": "Pesquisar...",
-    "selectLabel": "Seleccionar",
+    "selectLabel": "Selecionar",
     "selectPlaceholder": "Selecionar...",
     "starsPlus": "{{count}}+ estrelas"
   },
   "lists": {
-    "alreadyWatched": "Ya vistos",
+    "alreadyWatched": "Já vistos",
     "dropped": "Abandonados",
     "favorites": "Favoritos",
     "shouldWatch": "Pendentes",
@@ -985,7 +979,7 @@
     "signInToAddItems": "Entre para adicionar itens às suas listas"
   },
   "notFound": {
-    "title": "¡Vaya!",
+    "title": "Ops!",
     "message": "Esta tela não existe.",
     "goHome": "Ir para a tela inicial!"
   },
@@ -1103,7 +1097,7 @@
       },
       "indie-support": {
         "description": "Apoie o desenvolvimento contínuo do ShowSeek.",
-        "title": "Apoyar un desarrollador indie"
+        "title": "Apoiar um desenvolvedor indie"
       },
       "latest-trailers": {
         "description": "Assista aos últimos trailers na tela inicial.",
@@ -1127,7 +1121,7 @@
       },
       "trakt-integration": {
         "description": "Sincronize seu histórico de exibição com Trakt.",
-        "title": "Integración con Trakt"
+        "title": "Integração com Trakt"
       },
       "unlimited-items": {
         "description": "Adicione filmes e séries ilimitados às suas listas.",
@@ -1166,7 +1160,7 @@
     "unableToShare": "Não foi possível compartilhar. Tente novamente."
   },
   "shareCard": {
-    "title": "Tarjeta para compartir",
+    "title": "Cartão para compartilhar",
     "share": "Compartilhar para...",
     "save": "Salvar na galeria",
     "generating": "Gerando...",
@@ -1176,7 +1170,7 @@
     "last6Months": "Meus últimos 6 meses",
     "caption": "Confira isso no ShowSeek!",
     "captionCopied": "Legenda copiada para a área de transferência",
-    "dialogTitle": "Compartir",
+    "dialogTitle": "Compartilhar",
     "savedToGallery": "Salvo na galeria!",
     "permissionDenied": "Permissão para acessar a galeria foi negada",
     "failedToGenerate": "Falha ao gerar cartão de compartilhamento",
@@ -1185,10 +1179,10 @@
     "sharingNotAvailable": "O compartilhamento não está disponível neste dispositivo"
   },
   "shuffle": {
-    "noImage": "Sin imagen",
+    "noImage": "Sem imagem",
     "shuffling": "Embaralhando...",
     "spinAgain": "Girar novamente",
-    "title": "Aleatorio",
+    "title": "Aleatório",
     "viewDetails": "Ver detalhes"
   },
   "sort": {
@@ -1200,12 +1194,12 @@
     "recentlyAdded": "Adicionados recentemente"
   },
   "stats": {
-    "activityPatterns": "Patrones de actividad",
+    "activityPatterns": "Padrões de atividade",
     "added": "Adicionados",
     "avgRating": "Média de avaliação",
-    "currentStreak": "Racha actual",
+    "currentStreak": "Sequência atual",
     "errorDescription": "Não conseguimos carregar suas estatísticas. Tente novamente.",
-    "errorTitle": "Estadísticas no disponibles",
+    "errorTitle": "Estatísticas indisponíveis",
     "last6MonthsOverview": "Visão geral dos últimos 6 meses",
     "loading": "Carregando estatísticas...",
     "longestStreak": "Maior sequência",
@@ -1221,7 +1215,7 @@
       "noDataTitle": "Sem dados"
     },
     "monthlyBreakdown": "Detalhamento mensal",
-    "mostActiveDay": "Día más activo",
+    "mostActiveDay": "Dia mais ativo",
     "noActivityDescription": "Assista, avalie ou adicione itens para ver suas estatísticas aqui.",
     "noActivityThisMonth": "Sem atividade neste mês",
     "noActivityTitle": "Ainda sem atividade",
@@ -1309,7 +1303,7 @@
     "picker": "Selector de ánimo",
     "title": "Como você está se sentindo?",
     "subtitle": "Escolha um humor para descobrir conteúdo",
-    "surpriseMe": "¡Sorpréndeme!",
+    "surpriseMe": "Surpreenda-me!",
     "results": "Seleções de {{mood}}",
     "noResults": "Nenhum resultado para este humor",
     "tryAnother": "Tente outro humor",

@@ -6,10 +6,10 @@ describe('AppSettingsSection', () => {
   const createProps = (
     overrides: Partial<AppSettingsSectionProps> = {}
   ): AppSettingsSectionProps => ({
-    isGuest: false,
     isPremium: true,
     isExporting: false,
     isClearingCache: false,
+    isSigningOut: false,
     onRateApp: jest.fn(),
     onFeedback: jest.fn(),
     onExportData: jest.fn(),
@@ -48,5 +48,26 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-clear-image-cache'));
 
     expect(props.onClearCache).not.toHaveBeenCalled();
+  });
+
+  it('calls onSignOut when sign out action is pressed', () => {
+    const props = createProps();
+    const { getByTestId } = render(<AppSettingsSection {...props} />);
+
+    fireEvent.press(getByTestId('action-button-sign-out'));
+
+    expect(props.onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows signing out state and disables sign out action while signing out', () => {
+    const props = createProps({ isSigningOut: true });
+    const { getByText, getByTestId } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Signing Out...')).toBeTruthy();
+    expect(getByTestId('action-button-spinner')).toBeTruthy();
+
+    fireEvent.press(getByTestId('action-button-signing-out...'));
+
+    expect(props.onSignOut).not.toHaveBeenCalled();
   });
 });

@@ -262,11 +262,11 @@ export function HomeListSection({ config }: HomeListSectionProps) {
   // Get translated label, fallback to config label for custom lists
   const translatedLabel = LIST_LABEL_KEYS[config.id] ? t(LIST_LABEL_KEYS[config.id]) : config.label;
 
-  // Latest Trailers is premium-only - skip for guests and non-premium users
+  // Latest Trailers is premium-only.
   // (Top Rated will be added at the end by the Home screen)
   if (config.id === 'latest-trailers') {
-    const isGuest = !user;
-    const canAccessTrailers = !isGuest && isPremium;
+    const isAuthenticated = !!user;
+    const canAccessTrailers = isAuthenticated && isPremium;
 
     if (canAccessTrailers) {
       return <LatestTrailersSection label={translatedLabel} />;

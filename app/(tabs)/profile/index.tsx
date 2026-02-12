@@ -4,7 +4,6 @@ import { ContentSettingsSection } from '@/src/components/profile/ContentSettings
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
-import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useLanguage } from '@/src/context/LanguageProvider';
@@ -40,7 +39,6 @@ export default function ProfileScreen() {
   const { accentColor } = useAccentColor();
   const {
     user,
-    isGuest,
     isPremium,
     showSupportModal,
     isExporting,
@@ -78,25 +76,16 @@ export default function ProfileScreen() {
   const [updatingPreferenceKey, setUpdatingPreferenceKey] =
     useState<keyof UserPreferences | null>(null);
 
-  // Define available tabs based on user state
-  const tabs: TabConfig[] = useMemo(() => {
-    const baseTabs: TabConfig[] = [
+  const tabs: TabConfig[] = useMemo(
+    () => [
+      { id: 'preferences', label: t('profile.tabs.preferences') },
       { id: 'content', label: t('profile.tabs.content') },
       { id: 'settings', label: t('profile.tabs.settings') },
-    ];
-
-    // Add preferences tab for logged-in users (at the beginning)
-    if (!isGuest) {
-      return [{ id: 'preferences', label: t('profile.tabs.preferences') }, ...baseTabs];
-    }
-
-    return baseTabs;
-  }, [isGuest, t]);
-
-  // Default to first available tab
-  const [selectedTab, setSelectedTab] = useState<ProfileTab>(() =>
-    isGuest ? 'content' : 'preferences'
+    ],
+    [t]
   );
+
+  const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
     setUpdatingPreferenceKey(key);
@@ -138,7 +127,6 @@ export default function ProfileScreen() {
             preferences={preferences}
             isTraktConnected={isTraktConnected}
             isTraktLoading={isTraktLoading}
-            isGuest={isGuest}
             onLanguagePress={handleLanguagePress}
             onRegionPress={handleRegionPress}
             onColorPress={handleColorPress}
@@ -150,10 +138,10 @@ export default function ProfileScreen() {
       case 'settings':
         return (
           <AppSettingsSection
-            isGuest={isGuest}
             isPremium={isPremium}
             isExporting={isExporting}
             isClearingCache={isClearingCache}
+            isSigningOut={isSigningOut}
             onRateApp={handleRateApp}
             onFeedback={handleSendFeedback}
             onExportData={handleExportData}
@@ -184,7 +172,6 @@ export default function ProfileScreen() {
         <UserInfoSection
           user={user}
           isPremium={isPremium}
-          isGuest={isGuest}
           onUpgradePress={handleUpgradePress}
         />
 
@@ -229,9 +216,6 @@ export default function ProfileScreen() {
         onClose={handleCloseWebAppModal}
         onConfirm={handleConfirmOpenWebApp}
       />
-
-      {/* Signing Out Modal */}
-      <LoadingModal visible={isSigningOut} message={t('auth.signingOut')} />
     </SafeAreaView>
   );
 }

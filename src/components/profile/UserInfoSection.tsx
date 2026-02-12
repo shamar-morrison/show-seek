@@ -12,8 +12,6 @@ export interface UserInfoSectionProps {
   user: User | null;
   /** Whether the user has premium status */
   isPremium: boolean;
-  /** Whether the user is a guest (anonymous) */
-  isGuest: boolean;
   /** Handler for upgrade button press */
   onUpgradePress: () => void;
 }
@@ -25,13 +23,12 @@ export interface UserInfoSectionProps {
 export function UserInfoSection({
   user,
   isPremium,
-  isGuest,
   onUpgradePress,
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const displayName = user?.displayName || (isGuest ? t('profile.guest') : t('profile.user'));
-  const email = user?.email || (isGuest ? t('auth.notSignedIn') : t('profile.noEmail'));
+  const displayName = user?.displayName || t('profile.user');
+  const email = user?.email || t('profile.noEmail');
 
   return (
     <View style={styles.userSection}>
@@ -51,7 +48,7 @@ export function UserInfoSection({
         <Text style={styles.email} numberOfLines={1}>
           {email}
         </Text>
-        {!isPremium && !isGuest && (
+        {!isPremium && (
           <TouchableOpacity
             style={[styles.upgradeButton, { backgroundColor: accentColor }]}
             onPress={onUpgradePress}

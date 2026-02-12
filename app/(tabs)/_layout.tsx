@@ -1,19 +1,41 @@
 import { COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { usePreferences } from '@/src/hooks/usePreferences';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Bookmark, Compass, Home, Search, User } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { user, loading } = useAuth();
   const { preferences } = usePreferences();
   const { accentColor } = useAccentColor();
 
   const hideLabels = preferences?.hideTabLabels ?? false;
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: COLORS.background,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator size="large" color={accentColor} />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
 
   return (
     <Tabs

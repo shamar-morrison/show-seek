@@ -27,10 +27,6 @@ function createParams(overrides: Partial<HookParams> = {}): HookParams {
     clearSelection: jest.fn(),
     showToast: jest.fn(),
     removeItemFromSource: jest.fn(),
-    requireAuth: (action) => {
-      void action();
-    },
-    authPromptMessage: 'Sign in',
     isSearchActive: false,
     deactivateSearch: jest.fn(),
     dismissListActionsModal: jest.fn(),

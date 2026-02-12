@@ -16,7 +16,7 @@ export function useHistory(monthsBack = 6) {
   return useQuery<HistoryData>({
     queryKey: ['userHistory', user?.uid, monthsBack, i18n.language],
     queryFn: () => historyService.fetchUserHistory(genreMap, monthsBack),
-    enabled: !!user && !user.isAnonymous && Object.keys(genreMap).length > 0,
+    enabled: !!user && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
@@ -32,7 +32,7 @@ export function useMonthDetail(month: string | null) {
   return useQuery<MonthlyDetail | null>({
     queryKey: ['monthDetail', user?.uid, month, i18n.language],
     queryFn: () => (month ? historyService.fetchMonthDetail(month, genreMap) : null),
-    enabled: !!user && !user.isAnonymous && !!month && Object.keys(genreMap).length > 0,
+    enabled: !!user && !!month && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });

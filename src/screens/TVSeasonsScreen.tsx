@@ -5,7 +5,6 @@ import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
@@ -66,7 +65,6 @@ export default function TVSeasonsScreen() {
   const markWatched = useMarkEpisodeWatched();
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
   // Auto-add to Watching list hooks
   const { preferences } = usePreferences();
@@ -104,35 +102,28 @@ export default function TVSeasonsScreen() {
     [tvId, currentTab, router]
   );
 
-  // Auth-guarded callbacks for episode tracking
   const handleMarkWatched = useCallback(
     (
       params: MarkEpisodeWatchedParams,
       callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }
     ) => {
-      requireAuth(() => {
-        markWatched.mutate(params, callbacks);
-      }, t('authGuards.trackEpisodes'));
+      markWatched.mutate(params, callbacks);
     },
-    [requireAuth, markWatched, t]
+    [markWatched]
   );
 
   const handleMarkUnwatched = useCallback(
     (params: MarkEpisodeUnwatchedParams) => {
-      requireAuth(() => {
-        markUnwatched.mutate(params);
-      }, t('authGuards.trackEpisodes'));
+      markUnwatched.mutate(params);
     },
-    [requireAuth, markUnwatched, t]
+    [markUnwatched]
   );
 
   const handleMarkAllWatched = useCallback(
     (params: MarkAllEpisodesWatchedParams) => {
-      requireAuth(() => {
-        markAllWatched.mutate(params);
-      }, t('authGuards.trackEpisodes'));
+      markAllWatched.mutate(params);
     },
-    [requireAuth, markAllWatched, t]
+    [markAllWatched]
   );
 
   if (!isReady || tvQuery.isLoading || seasonQueries.isLoading) {
@@ -224,7 +215,6 @@ export default function TVSeasonsScreen() {
           </View>
         ))}
       </ScrollView>
-      {AuthGuardModal}
     </View>
   );
 }

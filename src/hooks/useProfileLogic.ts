@@ -28,8 +28,6 @@ export function useProfileLogic() {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [showWebAppModal, setShowWebAppModal] = useState(false);
 
-  const isGuest = user?.isAnonymous === true;
-
   const handleSupportDevelopment = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowSupportModal(true);
@@ -98,15 +96,6 @@ export function useProfileLogic() {
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (isGuest) {
-      Alert.alert(
-        t('profile.guestAccountTitle'),
-        t('profile.guestAccountExportMessage'),
-        [{ text: t('common.ok') }]
-      );
-      return;
-    }
-
     if (!isPremium) {
       router.push('/premium');
       return;
@@ -126,7 +115,7 @@ export function useProfileLogic() {
         onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isGuest, isPremium, router, performExport, t]);
+  }, [isPremium, router, performExport, t]);
 
   const handleClearCache = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -161,8 +150,9 @@ export function useProfileLogic() {
     try {
       await signOut();
     } catch {
-      setIsSigningOut(false);
       Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
+    } finally {
+      setIsSigningOut(false);
     }
   }, [signOut, t]);
 
@@ -197,7 +187,6 @@ export function useProfileLogic() {
   return {
     // User
     user,
-    isGuest,
     isPremium,
 
     // Modal states

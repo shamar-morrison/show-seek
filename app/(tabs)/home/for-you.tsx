@@ -4,13 +4,12 @@ import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { LogIn, Sparkles, Star, TrendingUp } from 'lucide-react-native';
+import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -22,14 +21,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  */
 export default function ForYouScreen() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const router = useRouter();
   const { accentColor } = useAccentColor();
 
   const {
     sections,
     hasEnoughData,
-    isLoading,
     isLoadingRatings,
     hiddenGems,
     isLoadingHiddenGems,
@@ -39,8 +36,6 @@ export default function ForYouScreen() {
     needsFallback,
   } = useForYouRecommendations();
 
-  const isGuest = !user || user.isAnonymous;
-
   // Haptic feedback on mount
   useEffect(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -49,28 +44,6 @@ export default function ForYouScreen() {
   const handleGoToDiscover = () => {
     router.push({ pathname: '/(tabs)/discover' });
   };
-
-  const handleSignIn = () => {
-    router.push({ pathname: '/(auth)/sign-in' });
-  };
-
-  // Guest state - show sign in prompt
-  if (isGuest) {
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-        <View style={styles.emptyContainer}>
-          <View style={styles.iconContainer}>
-            <LogIn size={64} color={accentColor} />
-          </View>
-          <Text style={styles.emptyTitle}>{t('forYou.signInRequired')}</Text>
-          <Text style={styles.emptyDescription}>{t('forYou.signInDescription')}</Text>
-          <Pressable style={[styles.primaryButton, { backgroundColor: accentColor }]} onPress={handleSignIn}>
-            <Text style={styles.primaryButtonText}>{t('forYou.signIn')}</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   // Loading state
   if (isLoadingRatings) {

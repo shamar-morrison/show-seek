@@ -132,28 +132,78 @@ Onboarding status is stored in AsyncStorage (`hasCompletedOnboarding` key).
 
 - Provides: `user`, `loading`, `hasCompletedOnboarding`, `signOut()`, `completeOnboarding()`
 - Uses `@nkzw/create-context-hook` pattern for cleaner context creation
-- Auto-syncs with Firebase Auth state changes
-- Guest users are identified by `user.isAnonymous === true`
 
-#### Auth Guards for Protected Actions (`src/hooks/useAuthGuard.tsx`)
+#### Authentication & Guest Protection
 
-Protects write operations (ratings, lists, reminders, favorites) from guest users:
+The app supports authenticated users (Google, Email/Password) and guest users. **Guest users are identified when `user === null`**.
+
+**Canonical Rule**: Features requiring a full user account or protecting entire routes MUST use `useAuthGuard`.
+
+##### 1. Route Protection & Full Features (`useAuthGuard`)
+
+Use the `useAuthGuard` hook for:
+
+- Protecting entire screens/routes (e.g., Profile, Manage Lists).
+- Wrapping complex features with multiple write actions.
+- Ensuring consistent "Sign In" modal experience.
 
 ```typescript
-const { requireAuth, AuthGuardModal } = useAuthGuard();
+import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 
-// Wrap protected actions
-<Button onPress={() => requireAuth(() => saveRating(), 'Sign in to rate movies')} />
+const MyProtectedComponent = () => {
+  const { requireAuth, AuthGuardModal } = useAuthGuard();
 
-// Render modal in component
-{AuthGuardModal}
+  return (
+    <>
+      <Button onPress={() => requireAuth(() => navigation.navigate('EditProfile'))}>
+        Edit Profile
+      </Button>
+      {AuthGuardModal}
+    </>
+  );
+};
 ```
 
-- `requireAuth(action, message?)` - executes action if authenticated, shows modal if guest
-- `isAuthenticated` - `user !== null && user.isAnonymous === false`
-- `AuthGuardModal` - prompts guest users to sign in, navigates to `/(auth)/sign-in`
+##### 2. Lightweight Action Checks (Per-Action Pattern)
 
-**Protected screens**: `MovieDetailScreen`, `TVDetailScreen`, `EpisodeDetailScreen`, `PersonDetailScreen`
+For small, isolated write actions inside mixed-access components (e.g., a "Favorite" button on a public movie detail screen), you MAY use a direct `useAuth` check if `useAuthGuard` is too heavy-handed.
+
+```typescript
+import { useAuth } from '@/src/context/auth';
+import { Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+
+const FavoriteButton = () => {
+  const { user } = useAuth(); // user === null means guest
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (!user) {
+      Alert.alert(
+        'Sign in required',
+        'Please sign in to add favorites.',
+        [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => router.push('/(auth)/sign-in') }
+        ]
+      );
+      return;
+    }
+    toggleFavorite();
+  };
+
+  return <IconButton icon="heart" onPress={handlePress} />;
+};
+```
+
+##### Decision Rule
+
+| Scenario                                  | Recommended Pattern           |
+| ----------------------------------------- | ----------------------------- |
+| Protecting a full screen / route          | **`useAuthGuard`**            |
+| Complex feature (multiple actions)        | **`useAuthGuard`**            |
+| Single, isolated button (e.g. Rate, Like) | `useAuth` + `Alert` (allowed) |
+| "Guest" check logic                       | Always use `user === null`    |
 
 ### Styling System
 

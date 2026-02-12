@@ -1,7 +1,6 @@
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAuthGuard } from '@/src/hooks/useAuthGuard';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
 import { screenStyles } from '@/src/styles/screenStyles';
 import * as Haptics from 'expo-haptics';
@@ -25,18 +24,15 @@ export default function ManageListsScreen() {
   const { data: lists, isLoading } = useLists();
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
-  const { requireAuth, AuthGuardModal } = useAuthGuard();
   const { t } = useTranslation();
 
   const handleRenameList = (listId: string, currentName: string, currentDescription?: string) => {
-    requireAuth(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      renameModalRef.current?.present({
-        listId,
-        currentName,
-        currentDescription,
-      });
-    }, t('library.signInToRenameList'));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    renameModalRef.current?.present({
+      listId,
+      currentName,
+      currentDescription,
+    });
   };
 
   const handleDeleteList = (listId: string, listName: string) => {
@@ -164,7 +160,6 @@ export default function ManageListsScreen() {
         )}
       </SafeAreaView>
       <RenameListModal ref={renameModalRef} />
-      {AuthGuardModal}
     </>
   );
 }

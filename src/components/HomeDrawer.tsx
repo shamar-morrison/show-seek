@@ -1,4 +1,3 @@
-import LoadingModal from '@/src/components/ui/LoadingModal';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -10,6 +9,7 @@ import { Calendar, ChevronRight, LogOut, Palette, Sparkles } from 'lucide-react-
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Alert,
   BackHandler,
   Dimensions,
@@ -50,9 +50,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const translateX = useSharedValue(-DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
-  const isGuest = !user || user.isAnonymous;
-  const displayName = user?.displayName || (isGuest ? t('profile.guest') : t('profile.user'));
-  const email = user?.email || (isGuest ? t('auth.notSignedIn') : t('profile.noEmail'));
+  const displayName = user?.displayName || t('profile.user');
+  const email = user?.email || t('profile.noEmail');
 
   useEffect(() => {
     if (visible) {
@@ -109,18 +108,15 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
 
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onClose();
-
-    // Small delay to allow drawer to start closing before showing loading
-    setTimeout(async () => {
-      setIsSigningOut(true);
-      try {
-        await signOut();
-      } catch {
-        setIsSigningOut(false);
-        Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
-      }
-    }, 300);
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
+    } finally {
+      setIsSigningOut(false);
+      onClose();
+    }
   };
 
   return (
@@ -212,17 +208,25 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
           <View style={styles.footerSection}>
             <Divider style={styles.divider} />
             <Pressable
-              style={({ pressed }) => [styles.signOutButton, pressed && styles.signOutPressed]}
+              style={({ pressed }) => [
+                styles.signOutButton,
+                !isSigningOut && pressed && styles.signOutPressed,
+              ]}
               onPress={handleSignOut}
+              disabled={isSigningOut}
             >
-              <LogOut size={24} color={COLORS.error} />
-              <Text style={styles.signOutText}>{t('auth.signOut')}</Text>
+              {isSigningOut ? (
+                <ActivityIndicator size="small" color={COLORS.error} />
+              ) : (
+                <LogOut size={24} color={COLORS.error} />
+              )}
+              <Text style={styles.signOutText}>
+                {isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
+              </Text>
             </Pressable>
           </View>
         </Animated.View>
       </Modal>
-
-      <LoadingModal visible={isSigningOut} message={t('auth.signingOut')} />
     </>
   );
 }
