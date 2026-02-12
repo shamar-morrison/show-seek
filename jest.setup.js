@@ -62,6 +62,42 @@ jest.mock('expo-router', () => ({
   },
 }));
 
+// Toggle this flag in tests to simulate a video load failure
+global.__EXPO_VIDEO_FORCE_ERROR = false;
+
+// Mock expo-video
+jest.mock('expo-video', () => {
+  const React = require('react');
+
+  const createMockPlayer = (source) => ({
+    source,
+    loop: false,
+    muted: false,
+    play: jest.fn(),
+    pause: jest.fn(),
+    addListener: jest.fn((eventName, callback) => {
+      if (eventName === 'statusChange' && global.__EXPO_VIDEO_FORCE_ERROR) {
+        callback({ status: 'error', error: { message: 'Mock video error' } });
+      }
+      return { remove: jest.fn() };
+    }),
+  });
+
+  return {
+    useVideoPlayer: (source, setup) => {
+      const playerRef = React.useRef(null);
+      if (!playerRef.current) {
+        playerRef.current = createMockPlayer(source);
+        if (setup) {
+          setup(playerRef.current);
+        }
+      }
+      return playerRef.current;
+    },
+    VideoView: ({ children, ...props }) => React.createElement('VideoView', props, children),
+  };
+});
+
 // Mock expo-notifications
 jest.mock('expo-notifications', () => ({
   getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),

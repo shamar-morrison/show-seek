@@ -767,6 +767,13 @@
     "organizeDescription": "Crea listas y organiza tu entretenimiento",
     "remindTitle": "No te pierdas nada",
     "remindDescription": "Recibe notificaciones de nuevos estrenos",
+    "calendarTitle": "No te pierdas ningún estreno",
+    "calendarDescription": "Sigue próximos episodios y películas con recordatorios.",
+    "shuffleTitle": "¿No puedes decidir? Mézclalo.",
+    "shuffleDescription": "Elige al instante algo de tu lista.",
+    "moodTitle": "Según tu estado de ánimo",
+    "moodDescription": "Recibe recomendaciones según cómo te sientes.",
+    "previewUnavailable": "Vista previa no disponible",
     "getStarted": "Comenzar",
     "continueWithGoogle": "Continuar con Google",
     "continueAsGuest": "Continuar como invitado"

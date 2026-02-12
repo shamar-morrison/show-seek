@@ -1,173 +1,158 @@
-import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { Film } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withTiming,
-} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const NETFLIX_RED = '#E50914';
+const VIDEO_ASPECT_RATIO = 9 / 20; // Matches source videos (720x1600)
+
+type OnboardingSlideId = 'calendar' | 'shuffle' | 'mood';
+
 interface OnboardingSlide {
-  id: string;
+  id: OnboardingSlideId;
   titleKey: string;
   descriptionKey: string;
-  image: string;
-  showTraktLogo?: boolean;
-  // Added by translation mapping
-  title?: string;
-  description?: string;
+  videoSource: number;
+}
+
+interface TranslatedOnboardingSlide extends OnboardingSlide {
+  title: string;
+  description: string;
 }
 
 const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
-    id: '1',
-    titleKey: 'onboarding.welcome',
-    descriptionKey: 'onboarding.welcomeDescription',
-    image:
-      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1000&auto=format&fit=crop',
+    id: 'calendar',
+    titleKey: 'onboarding.calendarTitle',
+    descriptionKey: 'onboarding.calendarDescription',
+    videoSource: require('@/assets/videos/calendar.mp4'),
   },
   {
-    id: '2',
-    titleKey: 'onboarding.discoverTitle',
-    descriptionKey: 'onboarding.discoverDescription',
-    image:
-      'https://images.unsplash.com/photo-1615986201152-7686a4867f30?q=80&w=1000&auto=format&fit=crop',
+    id: 'shuffle',
+    titleKey: 'onboarding.shuffleTitle',
+    descriptionKey: 'onboarding.shuffleDescription',
+    videoSource: require('@/assets/videos/shuffle.mp4'),
   },
   {
-    id: '3',
-    titleKey: 'onboarding.trackTitle',
-    descriptionKey: 'onboarding.trackDescription',
-    image:
-      'https://images.unsplash.com/photo-1584905066893-7d5c142ba4e1?q=80&w=1000&auto=format&fit=crop',
-  },
-  {
-    id: '4',
-    titleKey: 'profile.traktIntegration',
-    descriptionKey: 'trakt.connectToSync',
-    image:
-      'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?q=80&w=1000&auto=format&fit=crop',
-    showTraktLogo: true,
+    id: 'mood',
+    titleKey: 'onboarding.moodTitle',
+    descriptionKey: 'onboarding.moodDescription',
+    videoSource: require('@/assets/videos/mood.mp4'),
   },
 ];
 
-const IMAGE_FADE_DURATION = 450;
-const TEXT_IN_DURATION = 450;
-const TEXT_STAGGER_DELAY = 120;
-const TEXT_SLIDE_OFFSET = 24;
-const TEXT_EASING = Easing.out(Easing.cubic);
-const IMAGE_EASING = Easing.out(Easing.cubic);
-
 interface OnboardingSlideItemProps {
-  item: OnboardingSlide;
-  index: number;
+  item: TranslatedOnboardingSlide;
   width: number;
   height: number;
+  cardWidth: number;
+  cardHeight: number;
   isActive: boolean;
+  hasVideoError: boolean;
+  fallbackLabel: string;
+  onVideoError: (slideId: OnboardingSlideId) => void;
 }
 
-function OnboardingSlideItem({ item, index, width, height, isActive }: OnboardingSlideItemProps) {
-  const imageOpacity = useSharedValue(0);
-  const titleOpacity = useSharedValue(0);
-  const titleTranslateY = useSharedValue(TEXT_SLIDE_OFFSET);
-  const descriptionOpacity = useSharedValue(0);
-  const descriptionTranslateY = useSharedValue(TEXT_SLIDE_OFFSET);
+function OnboardingSlideItem({
+  item,
+  width,
+  height,
+  cardWidth,
+  cardHeight,
+  isActive,
+  hasVideoError,
+  fallbackLabel,
+  onVideoError,
+}: OnboardingSlideItemProps) {
+  const player = useVideoPlayer(item.videoSource, (videoPlayer) => {
+    videoPlayer.loop = true;
+    videoPlayer.muted = true;
+  });
 
   useEffect(() => {
-    if (isActive) {
-      imageOpacity.value = withTiming(1, {
-        duration: IMAGE_FADE_DURATION,
-        easing: IMAGE_EASING,
-      });
-      titleOpacity.value = withTiming(1, {
-        duration: TEXT_IN_DURATION,
-        easing: TEXT_EASING,
-      });
-      titleTranslateY.value = withTiming(0, {
-        duration: TEXT_IN_DURATION,
-        easing: TEXT_EASING,
-      });
-      descriptionOpacity.value = withDelay(
-        TEXT_STAGGER_DELAY,
-        withTiming(1, {
-          duration: TEXT_IN_DURATION,
-          easing: TEXT_EASING,
-        })
-      );
-      descriptionTranslateY.value = withDelay(
-        TEXT_STAGGER_DELAY,
-        withTiming(0, {
-          duration: TEXT_IN_DURATION,
-          easing: TEXT_EASING,
-        })
-      );
-    } else {
-      imageOpacity.value = 0;
-      titleOpacity.value = 0;
-      titleTranslateY.value = TEXT_SLIDE_OFFSET;
-      descriptionOpacity.value = 0;
-      descriptionTranslateY.value = TEXT_SLIDE_OFFSET;
+    const subscription = player.addListener('statusChange', ({ status }) => {
+      if (status === 'error') {
+        onVideoError(item.id);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [item.id, onVideoError, player]);
+
+  useEffect(() => {
+    if (hasVideoError) {
+      player.pause();
+      return;
     }
-  }, [
-    descriptionOpacity,
-    descriptionTranslateY,
-    imageOpacity,
-    isActive,
-    titleOpacity,
-    titleTranslateY,
-  ]);
 
-  const imageAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: imageOpacity.value,
-  }));
+    if (isActive) {
+      player.play();
+      return;
+    }
 
-  const titleAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
-    transform: [{ translateY: titleTranslateY.value }],
-  }));
-
-  const descriptionAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: descriptionOpacity.value,
-    transform: [{ translateY: descriptionTranslateY.value }],
-  }));
+    player.pause();
+  }, [hasVideoError, isActive, player]);
 
   return (
-    <View
-      style={[styles.slide, { width, height }]}
-      accessibilityLabel={`Onboarding slide ${index + 1}`}
-    >
-      <Animated.Image
-        source={{ uri: item.image }}
-        style={[StyleSheet.absoluteFillObject, imageAnimatedStyle]}
-        resizeMode="cover"
-      />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.8)', '#000000']}
-        style={StyleSheet.absoluteFillObject}
-      />
+    <View style={[styles.slide, { width, height }]} testID={`onboarding-slide-${item.id}`}>
       <SafeAreaView style={styles.contentContainer}>
+        <View style={styles.videoArea}>
+          <View style={[styles.videoFrameWrapper, !isActive && styles.inactiveFrame]}>
+            <View style={[styles.videoGlow, { width: cardWidth + 42, height: cardHeight + 42 }]} />
+            <LinearGradient
+              colors={['rgba(229,9,20,0.22)', 'rgba(0,0,0,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[
+                styles.videoFrameBorder,
+                {
+                  width: cardWidth + 2,
+                  height: cardHeight + 2,
+                  borderRadius: BORDER_RADIUS.xl + 10,
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.videoCard,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+              ]}
+            >
+              {hasVideoError ? (
+                <View style={styles.videoFallback} testID={`video-fallback-${item.id}`}>
+                  <Film color={COLORS.textSecondary} size={30} />
+                  <Text style={styles.fallbackText}>{fallbackLabel}</Text>
+                </View>
+              ) : (
+                <VideoView
+                  testID={`video-preview-${item.id}`}
+                  player={player}
+                  style={styles.video}
+                  contentFit="cover"
+                  nativeControls={false}
+                  allowsFullscreen={false}
+                  allowsPictureInPicture={false}
+                />
+              )}
+            </View>
+          </View>
+        </View>
+
         <View style={styles.textContainer}>
-          <Animated.View style={[styles.titleRow, titleAnimatedStyle]}>
-            <Text style={styles.title}>{item.title}</Text>
-            {item.showTraktLogo && (
-              <View style={styles.logoContainer}>
-                <TraktLogo size={32} />
-              </View>
-            )}
-          </Animated.View>
-          <Animated.Text style={[styles.description, descriptionAnimatedStyle]}>
-            {item.description}
-          </Animated.Text>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.description}>{item.description}</Text>
         </View>
       </SafeAreaView>
     </View>
@@ -176,14 +161,20 @@ function OnboardingSlideItem({ item, index, width, height, isActive }: Onboardin
 
 export default function OnboardingScreen() {
   const { width, height } = useWindowDimensions();
-  const flatListRef = useRef<FlashListRef<OnboardingSlide> | null>(null);
+  const flatListRef = useRef<FlashListRef<TranslatedOnboardingSlide> | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const isCompletingRef = useRef(false);
+  const [videoErrorMap, setVideoErrorMap] = useState<Record<string, boolean>>({});
   const { completeOnboarding } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
-  const { accentColor } = useAccentColor();
 
-  // Memoize translated data to avoid re-rendering on every frame
+  const maxCardWidth = Math.min(width * 0.74, 280);
+  const maxCardHeight = height * 0.52;
+  const cardWidth = Math.min(maxCardWidth, maxCardHeight * VIDEO_ASPECT_RATIO);
+  const cardHeight = cardWidth / VIDEO_ASPECT_RATIO;
+
   const onboardingData = useMemo(
     () =>
       ONBOARDING_SLIDES.map((slide) => ({
@@ -194,39 +185,79 @@ export default function OnboardingScreen() {
     [t]
   );
 
-  const handleNext = () => {
-    if (currentIndex < onboardingData.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-    } else {
-      finishOnboarding();
-    }
-  };
+  const markVideoAsFailed = useCallback((slideId: OnboardingSlideId) => {
+    setVideoErrorMap((prevState) => {
+      if (prevState[slideId]) {
+        return prevState;
+      }
+      return { ...prevState, [slideId]: true };
+    });
+  }, []);
 
-  const finishOnboarding = async () => {
-    await completeOnboarding();
-    router.replace('/(auth)/sign-in');
-  };
+  const finishOnboarding = useCallback(async () => {
+    if (isCompletingRef.current) {
+      return;
+    }
+
+    isCompletingRef.current = true;
+    setIsCompleting(true);
+
+    try {
+      await completeOnboarding();
+      router.replace('/(auth)/sign-in');
+    } catch (error) {
+      console.error('Failed to complete onboarding', error);
+      isCompletingRef.current = false;
+      setIsCompleting(false);
+    }
+  }, [completeOnboarding, router]);
+
+  const handleNext = useCallback(() => {
+    if (currentIndex < onboardingData.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      return;
+    }
+
+    finishOnboarding();
+  }, [currentIndex, finishOnboarding, onboardingData.length]);
 
   return (
-    <View style={screenStyles.container}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#090909', '#040404', '#000000']}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <View style={styles.backgroundGlowTop} pointerEvents="none" />
+      <View style={styles.backgroundGlowBottom} pointerEvents="none" />
+
       <FlashList
         ref={flatListRef}
         data={onboardingData}
         horizontal
         pagingEnabled
-        extraData={currentIndex}
-        showsHorizontalScrollIndicator={false}
         bounces={false}
+        extraData={[currentIndex, videoErrorMap]}
+        showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(event) => {
-          setCurrentIndex(Math.round(event.nativeEvent.contentOffset.x / width));
+          const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+          const clampedIndex = Math.max(0, Math.min(nextIndex, onboardingData.length - 1));
+          setCurrentIndex(clampedIndex);
         }}
         renderItem={({ item, index }) => (
           <OnboardingSlideItem
             item={item}
-            index={index}
             width={width}
             height={height}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
             isActive={currentIndex === index}
+            hasVideoError={Boolean(videoErrorMap[item.id])}
+            fallbackLabel={t('onboarding.previewUnavailable')}
+            onVideoError={markVideoAsFailed}
           />
         )}
         keyExtractor={(item) => item.id}
@@ -234,14 +265,15 @@ export default function OnboardingScreen() {
 
       <SafeAreaView style={styles.footer} pointerEvents="box-none">
         <View style={styles.pagination}>
-          {onboardingData.map((_, index) => (
+          {onboardingData.map((slide, index) => (
             <View
-              key={index}
+              key={slide.id}
+              testID={`pagination-dot-${index}`}
               style={[
                 styles.dot,
                 {
                   backgroundColor:
-                    index === currentIndex ? accentColor : COLORS.textSecondary,
+                    index === currentIndex ? NETFLIX_RED : 'rgba(255, 255, 255, 0.35)',
                   width: index === currentIndex ? 20 : 8,
                 },
               ]}
@@ -251,17 +283,21 @@ export default function OnboardingScreen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
+            testID="onboarding-skip-button"
             onPress={finishOnboarding}
             style={styles.skipButton}
             activeOpacity={ACTIVE_OPACITY}
+            disabled={isCompleting}
           >
             <Text style={styles.skipText}>{t('common.skip')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="onboarding-cta-button"
             onPress={handleNext}
-            style={[styles.nextButton, { backgroundColor: accentColor }]}
+            style={styles.nextButton}
             activeOpacity={ACTIVE_OPACITY}
+            disabled={isCompleting}
           >
             <Text style={styles.nextText}>
               {currentIndex === onboardingData.length - 1
@@ -276,39 +312,98 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+  },
   slide: {
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: 180, // Space for footer and pagination
     width: '100%',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: 10,
+    paddingTop: SPACING.xl,
+  },
+  videoArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.xl,
+  },
+  videoFrameWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inactiveFrame: {
+    opacity: 0.65,
+    transform: [{ scale: 0.97 }],
+  },
+  videoGlow: {
+    position: 'absolute',
+    borderRadius: 40,
+    backgroundColor: 'rgba(229, 9, 20, 0.2)',
+  },
+  videoFrameBorder: {
+    position: 'absolute',
+    borderWidth: 1,
+    borderColor: 'rgba(229, 9, 20, 0.35)',
+  },
+  videoCard: {
+    borderRadius: BORDER_RADIUS.xl + 8,
+    overflow: 'hidden',
+    backgroundColor: '#0A0A0A',
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 30,
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+  videoFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.s,
+    backgroundColor: '#0D0D0D',
+    paddingHorizontal: SPACING.l,
+  },
+  fallbackText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    textAlign: 'center',
   },
   textContainer: {
-    paddingHorizontal: SPACING.xl,
     alignItems: 'center',
+    gap: SPACING.xs,
   },
   title: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: 'bold',
+    fontSize: 30,
+    fontWeight: '800',
     color: COLORS.white,
     textAlign: 'center',
-    marginBottom: SPACING.m,
+    letterSpacing: -1.5,
   },
   description: {
     fontSize: FONT_SIZE.m,
-    color: COLORS.textSecondary,
+    color: 'rgba(255, 255, 255, 0.78)',
     textAlign: 'center',
     lineHeight: 24,
+    maxWidth: 320,
+    letterSpacing: -0.3,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: SPACING.l,
+    paddingHorizontal: SPACING.l,
+    paddingBottom: SPACING.m,
     justifyContent: 'flex-end',
   },
   pagination: {
@@ -318,7 +413,7 @@ const styles = StyleSheet.create({
   },
   dot: {
     height: 8,
-    borderRadius: 4,
+    borderRadius: BORDER_RADIUS.round,
     marginHorizontal: 4,
   },
   buttonContainer: {
@@ -327,31 +422,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skipButton: {
-    padding: SPACING.m,
+    paddingVertical: SPACING.m,
+    paddingHorizontal: SPACING.s,
   },
   skipText: {
-    color: COLORS.textSecondary,
+    color: 'rgba(255, 255, 255, 0.82)',
     fontSize: FONT_SIZE.m,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   nextButton: {
+    backgroundColor: NETFLIX_RED,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.round,
+    borderRadius: BORDER_RADIUS.m,
+    minWidth: 150,
+    alignItems: 'center',
   },
   nextText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.m,
+  backgroundGlowTop: {
+    position: 'absolute',
+    top: -120,
+    left: -70,
+    width: 240,
+    height: 240,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: 'rgba(229, 9, 20, 0.18)',
   },
-  logoContainer: {
-    marginLeft: SPACING.s,
-    top: -6,
+  backgroundGlowBottom: {
+    position: 'absolute',
+    bottom: -120,
+    right: -90,
+    width: 280,
+    height: 280,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: 'rgba(229, 9, 20, 0.14)',
   },
 });
