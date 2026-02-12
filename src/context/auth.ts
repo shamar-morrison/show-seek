@@ -12,6 +12,18 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const isCleaningAnonymousUser = useRef(false);
   const signOutInFlight = useRef<Promise<void> | null>(null);
 
+  const persistUserId = (userId: string) => {
+    AsyncStorage.setItem('userId', userId).catch((error) => {
+      console.error('Error persisting userId', error);
+    });
+  };
+
+  const clearPersistedUserId = () => {
+    AsyncStorage.removeItem('userId').catch((error) => {
+      console.error('Error clearing persisted userId', error);
+    });
+  };
+
   // Check onboarding status
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -26,11 +38,26 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     checkOnboarding();
   }, []);
 
+  // Hydrate persisted userId for diagnostics/metadata only.
+  // Firebase auth state listener remains the source of truth for `user`.
+  useEffect(() => {
+    const hydratePersistedUserId = async () => {
+      try {
+        await AsyncStorage.getItem('userId');
+      } catch (error) {
+        console.error('Error reading persisted userId', error);
+      }
+    };
+
+    hydratePersistedUserId();
+  }, []);
+
   // Monitor auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       // Guest mode has been removed. Treat anonymous users as signed out.
       if (currentUser?.isAnonymous) {
+        clearPersistedUserId();
         setUser(null);
         setLoading(false);
 
@@ -47,6 +74,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         return;
       }
 
+      if (!currentUser) {
+        clearPersistedUserId();
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      persistUserId(currentUser.uid);
       setUser(currentUser);
       setLoading(false);
     });

@@ -35,6 +35,7 @@ describe('AuthProvider', () => {
     capturedAuthCallback = null;
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
+    (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -60,6 +61,7 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toEqual(mockUser);
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('userId', mockUser.uid);
     });
 
     it('should update user state to null when user signs out', async () => {
@@ -82,6 +84,7 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.user).toBeNull();
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('userId');
     });
 
     it('should normalize anonymous auth state to signed-out and trigger cleanup sign-out', async () => {
@@ -100,6 +103,46 @@ describe('AuthProvider', () => {
 
       expect(result.current.user).toBeNull();
       expect(firebaseSignOut).toHaveBeenCalledTimes(1);
+      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('userId');
+    });
+
+    it('should keep auth state transition when persisting userId fails', async () => {
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('set failed'));
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(consoleSpy).toHaveBeenCalledWith('Error persisting userId', expect.any(Error));
+      consoleSpy.mockRestore();
+    });
+
+    it('should keep auth state transition when clearing userId fails', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (AsyncStorage.removeItem as jest.Mock).mockRejectedValueOnce(new Error('remove failed'));
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(null);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith('Error clearing persisted userId', expect.any(Error));
+      consoleSpy.mockRestore();
     });
 
     it('should set up onAuthStateChanged subscription on mount', () => {
@@ -205,6 +248,17 @@ describe('AuthProvider', () => {
   });
 
   describe('onboarding status', () => {
+    it('should read persisted userId metadata on mount', async () => {
+      const getItemSpy = AsyncStorage.getItem as jest.Mock;
+      getItemSpy.mockResolvedValue(null);
+
+      renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(getItemSpy).toHaveBeenCalledWith('userId');
+      });
+    });
+
     it('should read onboarding status from AsyncStorage on mount', async () => {
       (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
 
