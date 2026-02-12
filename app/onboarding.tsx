@@ -4,7 +4,7 @@ import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Film } from 'lucide-react-native';
+import { ChevronRight, Film } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
@@ -263,6 +263,18 @@ export default function OnboardingScreen() {
         keyExtractor={(item) => item.id}
       />
 
+      <SafeAreaView style={styles.topBar} pointerEvents="box-none">
+        <TouchableOpacity
+          testID="onboarding-skip-button"
+          onPress={finishOnboarding}
+          style={styles.skipButton}
+          activeOpacity={ACTIVE_OPACITY}
+          disabled={isCompleting}
+        >
+          <Text style={styles.skipText}>{t('common.skip')}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+
       <SafeAreaView style={styles.footer} pointerEvents="box-none">
         <View style={styles.pagination}>
           {onboardingData.map((slide, index) => (
@@ -281,31 +293,20 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            testID="onboarding-skip-button"
-            onPress={finishOnboarding}
-            style={styles.skipButton}
-            activeOpacity={ACTIVE_OPACITY}
-            disabled={isCompleting}
-          >
-            <Text style={styles.skipText}>{t('common.skip')}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            testID="onboarding-cta-button"
-            onPress={handleNext}
-            style={styles.nextButton}
-            activeOpacity={ACTIVE_OPACITY}
-            disabled={isCompleting}
-          >
-            <Text style={styles.nextText}>
-              {currentIndex === onboardingData.length - 1
-                ? t('onboarding.getStarted')
-                : t('common.next')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          testID="onboarding-cta-button"
+          onPress={handleNext}
+          style={styles.nextButton}
+          activeOpacity={ACTIVE_OPACITY}
+          disabled={isCompleting}
+        >
+          <Text style={styles.nextText}>
+            {currentIndex === onboardingData.length - 1
+              ? t('onboarding.getStarted')
+              : t('common.next')}
+          </Text>
+          <ChevronRight color={COLORS.white} size={20} />
+        </TouchableOpacity>
       </SafeAreaView>
     </View>
   );
@@ -416,10 +417,15 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.round,
     marginHorizontal: 4,
   },
-  buttonContainer: {
+  topBar: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    paddingHorizontal: SPACING.l,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+    zIndex: 10,
   },
   skipButton: {
     paddingVertical: SPACING.m,
@@ -435,8 +441,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
-    minWidth: 150,
+    width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: SPACING.s,
   },
   nextText: {
     color: COLORS.white,
