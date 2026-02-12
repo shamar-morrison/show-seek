@@ -4,8 +4,6 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { metaTextStyles } from '@/src/styles/metaTextStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -22,6 +20,9 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -30,8 +31,8 @@ import { Search as SearchIcon, Star, X } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -39,7 +40,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'all' | 'movie' | 'tv';
 
@@ -139,9 +139,9 @@ export default function SearchScreen() {
     // Skip for person results
     if (item.media_type === 'person') return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const itemMediaType = resolveSearchResultMediaType(item, mediaType);
     if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     const title = item.title || item.name || '';
     const releaseDate = item.release_date || item.first_air_date || '';
@@ -213,9 +213,9 @@ export default function SearchScreen() {
             {displayTitle}
           </Text>
           {isPerson && item.known_for_department && (
-          <Text style={[styles.department, { color: accentColor }]}>
-            {item.known_for_department}
-          </Text>
+            <Text style={[styles.department, { color: accentColor }]}>
+              {item.known_for_department}
+            </Text>
           )}
           {!isPerson && (
             <>

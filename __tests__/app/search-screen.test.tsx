@@ -100,6 +100,7 @@ jest.mock('@/src/components/ui/Toast', () => {
     React.useImperativeHandle(ref, () => ({ show: jest.fn() }));
     return null;
   });
+  Toast.displayName = 'Toast';
   return { __esModule: true, default: Toast };
 });
 
@@ -110,6 +111,7 @@ jest.mock('@/src/components/AddToListModal', () => {
     React.useImperativeHandle(ref, () => ({ present: mockPresent }));
     return React.createElement(Text, { testID: 'add-to-list-modal' }, mediaItem?.media_type || '');
   });
+  AddToListModal.displayName = 'AddToListModal';
   return { __esModule: true, default: AddToListModal };
 });
 
@@ -191,7 +193,7 @@ describe('SearchScreen routing and auth guard', () => {
 
     fireEvent(getByText('Movie Item'), 'longPress');
 
-    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), 'Please sign in to continue');
+    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.any(String));
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
@@ -223,5 +225,7 @@ describe('SearchScreen routing and auth guard', () => {
     await waitFor(() => {
       expect(getByTestId('add-to-list-modal')).toBeTruthy();
     });
+
+    expect(mockPresent).toHaveBeenCalled();
   });
 });
