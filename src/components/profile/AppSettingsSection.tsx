@@ -1,6 +1,6 @@
 import { SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { Download, Globe, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import { Download, Globe, Info, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -25,6 +25,8 @@ export interface AppSettingsSectionProps {
   onClearCache: () => void;
   /** Handler for Web App button */
   onWebApp: () => void;
+  /** Handler for About button */
+  onAbout: () => void;
   /** Handler for Sign Out button */
   onSignOut: () => void;
   /** Whether to show section title (default: true) */
@@ -44,6 +46,7 @@ export function AppSettingsSection({
   onExportData,
   onClearCache,
   onWebApp,
+  onAbout,
   onSignOut,
   showTitle = true,
 }: AppSettingsSectionProps) {
@@ -74,6 +77,7 @@ export function AppSettingsSection({
           loading={isClearingCache}
         />
         <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
+        <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
         <ActionButton
           icon={LogOut}
           label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}

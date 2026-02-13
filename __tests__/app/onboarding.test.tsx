@@ -31,6 +31,10 @@ jest.mock('expo-linear-gradient', () => {
   };
 });
 
+jest.mock('expo-image', () => ({
+  Image: 'Image',
+}));
+
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { View } = require('react-native');

@@ -180,6 +180,11 @@ export function useProfileLogic() {
     router.push('/(tabs)/profile/trakt-settings');
   }, [router]);
 
+  const handleAboutPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/about' as any);
+  }, [router]);
+
   const handlePremiumPress = useCallback(() => {
     router.push('/premium');
   }, [router]);
@@ -213,6 +218,7 @@ export function useProfileLogic() {
     handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
+    handleAboutPress,
     handlePremiumPress,
   };
 }

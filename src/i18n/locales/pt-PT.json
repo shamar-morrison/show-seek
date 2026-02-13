@@ -645,6 +645,8 @@
     "privacy": "Política de privacidade",
     "terms": "Termos de serviço",
     "version": "Versão",
+    "aboutCopyright": "Copyright 2026 Nome de marcador de posição",
+    "tmdbAttribution": "ShowSeek usa a API do TMDB, mas não é endossado nem certificado pelo TMDB",
     "logout": "Terminar sessão",
     "deleteAccount": "Eliminar conta",
     "confirmLogout": "Tem a certeza que quer terminar sessão?",

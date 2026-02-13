@@ -60,6 +60,7 @@ export default function ProfileScreen() {
     handleColorPress,
     handleLaunchScreenPress,
     handleTraktPress,
+    handleAboutPress,
     handlePremiumPress,
   } = useProfileLogic();
 
@@ -147,6 +148,7 @@ export default function ProfileScreen() {
             onExportData={handleExportData}
             onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
+            onAbout={handleAboutPress}
             onSignOut={handleSignOut}
             showTitle={false}
           />

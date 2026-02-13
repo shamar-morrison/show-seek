@@ -15,6 +15,7 @@ describe('AppSettingsSection', () => {
     onExportData: jest.fn(),
     onClearCache: jest.fn(),
     onWebApp: jest.fn(),
+    onAbout: jest.fn(),
     onSignOut: jest.fn(),
     ...overrides,
   });
@@ -57,6 +58,22 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-sign-out'));
 
     expect(props.onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders about action button', () => {
+    const props = createProps();
+    const { getByText } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('About')).toBeTruthy();
+  });
+
+  it('calls onAbout when about action is pressed', () => {
+    const props = createProps();
+    const { getByTestId } = render(<AppSettingsSection {...props} />);
+
+    fireEvent.press(getByTestId('action-button-about'));
+
+    expect(props.onAbout).toHaveBeenCalledTimes(1);
   });
 
   it('shows signing out state and disables sign out action while signing out', () => {
