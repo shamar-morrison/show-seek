@@ -14,6 +14,9 @@ import {
   useRemoveFavoritePerson,
 } from '@/src/hooks/useFavoritePersons';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { errorStyles } from '@/src/styles/errorStyles';
+import { screenStyles } from '@/src/styles/screenStyles';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -44,9 +47,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { errorStyles } from '@/src/styles/errorStyles';
-import { screenStyles } from '@/src/styles/screenStyles';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type SocialLink = {
   key: 'instagram' | 'twitter' | 'facebook' | 'tiktok' | 'youtube';
@@ -113,9 +113,7 @@ export default function PersonDetailScreen() {
           style={styles.backButton}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.backButtonText, { color: accentColor }]}>
-            {t('common.goBack')}
-          </Text>
+          <Text style={[styles.backButtonText, { color: accentColor }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -273,48 +271,50 @@ export default function PersonDetailScreen() {
     return normalized || null;
   })();
 
-  const socialLinks: SocialLink[] = [
-    instagramId
-      ? {
-          key: 'instagram',
-          label: t('media.instagram'),
-          url: `https://www.instagram.com/${instagramId}`,
-          icon: <Instagram size={20} color={COLORS.text} />,
-        }
-      : null,
-    twitterId
-      ? {
-          key: 'twitter',
-          label: t('media.twitter'),
-          url: `https://twitter.com/${twitterId}`,
-          icon: <Twitter size={20} color={COLORS.text} />,
-        }
-      : null,
-    facebookId
-      ? {
-          key: 'facebook',
-          label: t('media.facebook'),
-          url: `https://www.facebook.com/${facebookId}`,
-          icon: <Facebook size={20} color={COLORS.text} />,
-        }
-      : null,
-    tiktokId
-      ? {
-          key: 'tiktok',
-          label: t('media.tiktok'),
-          url: `https://www.tiktok.com/@${tiktokId}`,
-          icon: <Music2 size={20} color={COLORS.text} />,
-        }
-      : null,
-    youtubeId
-      ? {
-          key: 'youtube',
-          label: t('media.youtube'),
-          url: `https://www.youtube.com/${youtubeId}`,
-          icon: <Youtube size={20} color={COLORS.text} />,
-        }
-      : null,
-  ].filter((link): link is SocialLink => Boolean(link));
+  const socialLinks: SocialLink[] = (
+    [
+      instagramId
+        ? {
+            key: 'instagram',
+            label: t('media.instagram'),
+            url: `https://www.instagram.com/${instagramId}`,
+            icon: <Instagram size={20} color={COLORS.text} />,
+          }
+        : null,
+      twitterId
+        ? {
+            key: 'twitter',
+            label: t('media.twitter'),
+            url: `https://twitter.com/${twitterId}`,
+            icon: <Twitter size={20} color={COLORS.text} />,
+          }
+        : null,
+      facebookId
+        ? {
+            key: 'facebook',
+            label: t('media.facebook'),
+            url: `https://www.facebook.com/${facebookId}`,
+            icon: <Facebook size={20} color={COLORS.text} />,
+          }
+        : null,
+      tiktokId
+        ? {
+            key: 'tiktok',
+            label: t('media.tiktok'),
+            url: `https://www.tiktok.com/@${tiktokId}`,
+            icon: <Music2 size={20} color={COLORS.text} />,
+          }
+        : null,
+      youtubeId
+        ? {
+            key: 'youtube',
+            label: t('media.youtube'),
+            url: `https://www.youtube.com/${youtubeId}`,
+            icon: <Youtube size={20} color={COLORS.text} />,
+          }
+        : null,
+    ] as (SocialLink | null)[]
+  ).filter((link): link is SocialLink => Boolean(link));
 
   const handleSocialPress = async (url: string) => {
     try {
@@ -439,7 +439,9 @@ export default function PersonDetailScreen() {
                   fill={isFavorited ? COLORS.white : 'transparent'}
                 />
                 <Text style={styles.favoriteButtonText}>
-                  {isFavorited ? t('person.removeFromFavoritePeople') : t('person.addToFavoritePeople')}
+                  {isFavorited
+                    ? t('person.removeFromFavoritePeople')
+                    : t('person.addToFavoritePeople')}
                 </Text>
               </>
             )}
@@ -592,8 +594,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: SPACING.m,
   },
-  backButtonText: {
-  },
+  backButtonText: {},
   scrollView: {
     flex: 1,
   },
