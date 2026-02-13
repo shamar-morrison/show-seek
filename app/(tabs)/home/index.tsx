@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
+    letterSpacing: -1.5,
   },
   scrollView: {
     flex: 1,
