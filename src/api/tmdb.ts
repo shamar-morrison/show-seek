@@ -360,6 +360,13 @@ export interface PersonDetails extends Person {
   deathday: string | null;
   place_of_birth: string | null;
   also_known_as: string[];
+  external_ids?: {
+    facebook_id: string | null;
+    instagram_id: string | null;
+    twitter_id: string | null;
+    tiktok_id: string | null;
+    youtube_id: string | null;
+  };
 }
 export interface MovieCrewCredit extends Movie {
   job: string;
@@ -560,7 +567,11 @@ export const tmdbApi = {
   },
 
   getPersonDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<PersonDetails>(`/person/${id}`);
+    const { data } = await tmdbClient.get<PersonDetails>(`/person/${id}`, {
+      params: {
+        append_to_response: 'external_ids',
+      },
+    });
     return data;
   },
 

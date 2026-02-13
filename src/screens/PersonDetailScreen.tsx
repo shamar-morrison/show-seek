@@ -17,12 +17,25 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ArrowRight, Calendar, Heart, MapPin, Star } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  Facebook,
+  Heart,
+  Instagram,
+  MapPin,
+  Music2,
+  Star,
+  Twitter,
+  Youtube,
+} from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -34,6 +47,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+
+type SocialLink = {
+  key: 'instagram' | 'twitter' | 'facebook' | 'tiktok' | 'youtube';
+  label: string;
+  url: string;
+  icon: React.ReactNode;
+};
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -237,6 +257,72 @@ export default function PersonDetailScreen() {
   };
 
   const age = calculateAge(person.birthday, person.deathday);
+  const getTrimmedExternalId = (id: string | null | undefined) => {
+    const trimmed = id?.trim();
+    return trimmed ? trimmed : null;
+  };
+
+  const instagramId = getTrimmedExternalId(person.external_ids?.instagram_id);
+  const twitterId = getTrimmedExternalId(person.external_ids?.twitter_id);
+  const facebookId = getTrimmedExternalId(person.external_ids?.facebook_id);
+  const youtubeId = getTrimmedExternalId(person.external_ids?.youtube_id);
+  const tiktokId = (() => {
+    const id = getTrimmedExternalId(person.external_ids?.tiktok_id);
+    if (!id) return null;
+    const normalized = id.replace(/^@+/, '');
+    return normalized || null;
+  })();
+
+  const socialLinks: SocialLink[] = [
+    instagramId
+      ? {
+          key: 'instagram',
+          label: t('media.instagram'),
+          url: `https://www.instagram.com/${instagramId}`,
+          icon: <Instagram size={20} color={COLORS.text} />,
+        }
+      : null,
+    twitterId
+      ? {
+          key: 'twitter',
+          label: t('media.twitter'),
+          url: `https://twitter.com/${twitterId}`,
+          icon: <Twitter size={20} color={COLORS.text} />,
+        }
+      : null,
+    facebookId
+      ? {
+          key: 'facebook',
+          label: t('media.facebook'),
+          url: `https://www.facebook.com/${facebookId}`,
+          icon: <Facebook size={20} color={COLORS.text} />,
+        }
+      : null,
+    tiktokId
+      ? {
+          key: 'tiktok',
+          label: t('media.tiktok'),
+          url: `https://www.tiktok.com/@${tiktokId}`,
+          icon: <Music2 size={20} color={COLORS.text} />,
+        }
+      : null,
+    youtubeId
+      ? {
+          key: 'youtube',
+          label: t('media.youtube'),
+          url: `https://www.youtube.com/${youtubeId}`,
+          icon: <Youtube size={20} color={COLORS.text} />,
+        }
+      : null,
+  ].filter((link): link is SocialLink => Boolean(link));
+
+  const handleSocialPress = async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.error('Failed to open social link:', error);
+    }
+  };
 
   return (
     <View style={screenStyles.container}>
@@ -280,6 +366,23 @@ export default function PersonDetailScreen() {
             contentFit="cover"
             placeholderType="person"
           />
+
+          {socialLinks.length > 0 && (
+            <View style={styles.socialRow}>
+              {socialLinks.map((socialLink) => (
+                <TouchableOpacity
+                  key={socialLink.key}
+                  style={styles.socialButton}
+                  onPress={() => void handleSocialPress(socialLink.url)}
+                  activeOpacity={ACTIVE_OPACITY}
+                  accessibilityRole="link"
+                  accessibilityLabel={socialLink.label}
+                >
+                  {socialLink.icon}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
           <View style={styles.profileInfo}>
             <Text style={styles.name}>{person.name}</Text>
@@ -517,6 +620,21 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     alignItems: 'center',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.m,
+    marginBottom: SPACING.l,
+  },
+  socialButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: COLORS.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   name: {
     fontSize: FONT_SIZE.xxl,
