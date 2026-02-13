@@ -44,6 +44,7 @@ import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -76,13 +77,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EpisodeDetailScreen() {
   const detailStyles = useDetailStyles();
-  const { id: tvIdStr, seasonNum: seasonStr, episodeNum: episodeStr } = useLocalSearchParams();
+  const params = useLocalSearchParams();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { accentColor } = useAccentColor();
-  const tvId = Number(tvIdStr);
-  const seasonNumber = Number(seasonStr);
-  const episodeNumber = Number(episodeStr);
+  const {
+    tvId,
+    seasonNumber,
+    episodeNumber,
+    hasValidTvId,
+    hasValidSeasonNumber,
+    hasValidEpisodeRoute,
+  } = parseEpisodeRouteParams({
+    id: params.id,
+    seasonNum: params.seasonNum,
+    episodeNum: params.episodeNum,
+  });
 
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -137,37 +147,37 @@ export default function EpisodeDetailScreen() {
   const tvShowQuery = useQuery({
     queryKey: ['tv', tvId],
     queryFn: () => tmdbApi.getTVShowDetails(tvId),
-    enabled: !!tvId,
+    enabled: hasValidTvId,
   });
 
   const seasonQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber],
     queryFn: () => tmdbApi.getSeasonDetails(tvId, seasonNumber),
-    enabled: !!tvId && !!seasonNumber,
+    enabled: hasValidTvId && hasValidSeasonNumber,
   });
 
   const episodeDetailsQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'details'],
     queryFn: () => tmdbApi.getEpisodeDetails(tvId, seasonNumber, episodeNumber),
-    enabled: !!tvId && !!seasonNumber && !!episodeNumber,
+    enabled: hasValidEpisodeRoute,
   });
 
   const episodeCreditsQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'credits'],
     queryFn: () => tmdbApi.getEpisodeCredits(tvId, seasonNumber, episodeNumber),
-    enabled: !!tvId && !!seasonNumber && !!episodeNumber,
+    enabled: hasValidEpisodeRoute,
   });
 
   const episodeVideosQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'videos'],
     queryFn: () => tmdbApi.getEpisodeVideos(tvId, seasonNumber, episodeNumber),
-    enabled: !!tvId && !!seasonNumber && !!episodeNumber,
+    enabled: hasValidEpisodeRoute,
   });
 
   const episodeImagesQuery = useQuery({
     queryKey: ['tv', tvId, 'season', seasonNumber, 'episode', episodeNumber, 'images'],
     queryFn: () => tmdbApi.getEpisodeImages(tvId, seasonNumber, episodeNumber),
-    enabled: !!tvId && !!seasonNumber && !!episodeNumber,
+    enabled: hasValidEpisodeRoute,
   });
 
   const tvShow = tvShowQuery.data;
