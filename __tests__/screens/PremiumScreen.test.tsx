@@ -115,9 +115,11 @@ describe('PremiumScreen', () => {
     fireEvent(getByTestId('free-trial-toggle'), 'valueChange', true);
     fireEvent.press(getByTestId('subscribe-button'));
 
-    expect(getByText(
-      'After the 7-day trial period, you will automatically be charged the ongoing monthly subscription.'
-    )).toBeTruthy();
+    expect(
+      getByText(
+        'After the trial period, you will automatically be charged the ongoing monthly subscription.'
+      )
+    ).toBeTruthy();
     expect(mockPurchasePremium).toHaveBeenCalledWith('monthly', { useTrial: true });
   });
 
