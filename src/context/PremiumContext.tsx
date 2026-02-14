@@ -14,12 +14,12 @@ import {
   type PremiumPurchaseType,
 } from '@/src/context/premiumBilling';
 import {
-  MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION,
-  PENDING_VALIDATION_QUEUE_STORAGE_KEY,
   getPendingValidationMessageKey,
   getPendingValidationRetryDelayMs,
   getPurchaseValidationErrorDetails,
+  MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION,
   normalizePendingValidationQueue,
+  PENDING_VALIDATION_QUEUE_STORAGE_KEY,
   type PendingValidationPurchase,
   type PendingValidationQueue,
 } from '@/src/context/purchaseValidationRetry';
@@ -203,11 +203,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [hasUsedTrial, playMonthlyTrial]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
   const syncPremiumStatus = useCallback(async (): Promise<boolean> => {
     if (!user) {
       return false;
@@ -247,26 +242,48 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     pendingValidationRetryTimeoutsRef.current = {};
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (newUser) => {
+      // Reset pending validation queue state when user changes to prevent
+      // tokens from one user leaking into another user's session.
+      pendingValidationQueueRef.current = {};
+      pendingValidationQueueLoadedRef.current = false;
+      clearAllPendingValidationRetryTimeouts();
+      sessionRetryAttemptsRef.current = {};
+      inFlightValidationTokensRef.current.clear();
+      recentPurchasesRef.current = {};
+
+      setUser(newUser);
+    });
+    return () => unsubscribe();
+  }, [clearAllPendingValidationRetryTimeouts]);
+
   const persistPendingValidationQueue = useCallback(async () => {
+    if (!user) return;
     try {
       await AsyncStorage.setItem(
-        PENDING_VALIDATION_QUEUE_STORAGE_KEY,
+        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`,
         JSON.stringify(pendingValidationQueueRef.current)
       );
     } catch (err) {
       console.warn('Failed to persist pending purchase validation queue:', err);
     }
-  }, []);
+  }, [user]);
 
   const ensurePendingValidationQueueLoaded = useCallback(async () => {
     if (pendingValidationQueueLoadedRef.current) {
       return;
     }
+    if (!user) return;
 
     try {
-      const storedQueue = await AsyncStorage.getItem(PENDING_VALIDATION_QUEUE_STORAGE_KEY);
+      const storedQueue = await AsyncStorage.getItem(
+        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`
+      );
       if (storedQueue) {
-        pendingValidationQueueRef.current = normalizePendingValidationQueue(JSON.parse(storedQueue));
+        pendingValidationQueueRef.current = normalizePendingValidationQueue(
+          JSON.parse(storedQueue)
+        );
       }
     } catch (err) {
       console.warn('Failed to load pending purchase validation queue:', err);
@@ -274,7 +291,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     } finally {
       pendingValidationQueueLoadedRef.current = true;
     }
-  }, []);
+  }, [user]);
 
   const upsertPendingValidationPurchase = useCallback(
     async (
@@ -367,26 +384,31 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     []
   );
 
-  const findPurchaseByToken = useCallback(async (purchaseToken: string): Promise<Purchase | null> => {
-    const cachedPurchase = recentPurchasesRef.current[purchaseToken];
-    if (cachedPurchase) {
-      return cachedPurchase;
-    }
-
-    try {
-      const purchases = await RNIap.getAvailablePurchases();
-      const matchedPurchase = purchases.find((purchase) => purchase.purchaseToken === purchaseToken);
-      if (!matchedPurchase) {
-        return null;
+  const findPurchaseByToken = useCallback(
+    async (purchaseToken: string): Promise<Purchase | null> => {
+      const cachedPurchase = recentPurchasesRef.current[purchaseToken];
+      if (cachedPurchase) {
+        return cachedPurchase;
       }
 
-      recentPurchasesRef.current[purchaseToken] = matchedPurchase;
-      return matchedPurchase;
-    } catch (err) {
-      console.warn('Failed to fetch available purchases while finishing transaction:', err);
-      return null;
-    }
-  }, []);
+      try {
+        const purchases = await RNIap.getAvailablePurchases();
+        const matchedPurchase = purchases.find(
+          (purchase) => purchase.purchaseToken === purchaseToken
+        );
+        if (!matchedPurchase) {
+          return null;
+        }
+
+        recentPurchasesRef.current[purchaseToken] = matchedPurchase;
+        return matchedPurchase;
+      } catch (err) {
+        console.warn('Failed to fetch available purchases while finishing transaction:', err);
+        return null;
+      }
+    },
+    []
+  );
 
   const retryPendingValidationPurchases = useCallback(
     async (trigger: string) => {
