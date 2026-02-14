@@ -180,6 +180,12 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const retryPendingValidationPurchasesRef = useRef<((trigger: string) => Promise<void>) | null>(
     null
   );
+  const processPurchaseRef = useRef<
+    ((
+      purchase: Purchase,
+      options?: { syncAfterSuccess?: boolean }
+    ) => Promise<ProcessPurchaseResult>) | null
+  >(null);
   const lastPendingValidationAlertAtRef = useRef(0);
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
@@ -746,6 +752,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     ]
   );
 
+  useEffect(() => {
+    processPurchaseRef.current = processPurchase;
+  }, [processPurchase]);
+
   // Initialize IAP listeners
   useEffect(() => {
     let purchaseUpdateSubscription: { remove: () => void } | undefined;
@@ -761,8 +771,18 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
           if (purchase.purchaseToken || (purchase as any).transactionReceipt) {
             console.log('Receipt/Token found, processing...');
-            await processPurchase(purchase);
-            await retryPendingValidationPurchases('purchase-updated-listener');
+            const processPurchaseFn = processPurchaseRef.current;
+            const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
+
+            if (!processPurchaseFn || !retryPendingValidationPurchasesFn) {
+              console.warn(
+                'Purchase update handlers are unavailable; skipping purchase processing for this event.'
+              );
+              return;
+            }
+
+            await processPurchaseFn(purchase);
+            await retryPendingValidationPurchasesFn('purchase-updated-listener');
           } else {
             console.log('No transaction receipt/token in purchase object');
           }
@@ -808,7 +828,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           }
         }
 
-        await retryPendingValidationPurchases('iap-init');
+        const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
+        if (retryPendingValidationPurchasesFn) {
+          await retryPendingValidationPurchasesFn('iap-init');
+        }
       } catch (err) {
         console.warn('IAP initialization error:', err);
         setPlayMonthlyTrial({
@@ -832,7 +855,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       clearAllPendingValidationRetryTimeouts();
       RNIap.endConnection();
     };
-  }, [clearAllPendingValidationRetryTimeouts, processPurchase, retryPendingValidationPurchases]);
+  }, [clearAllPendingValidationRetryTimeouts]);
 
   // Listen to user's premium status in Firestore
   useEffect(() => {

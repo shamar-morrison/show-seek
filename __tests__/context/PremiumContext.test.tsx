@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { onAuthStateChanged } from 'firebase/auth';
 import React from 'react';
 import { Alert } from 'react-native';
 import type { Purchase } from 'react-native-iap';
@@ -52,10 +53,15 @@ const { PremiumProvider, usePremium } = require('@/src/context/PremiumContext');
 describe('PremiumContext', () => {
   const TEST_UID = 'test-user-id';
   const queueStorageKey = `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${TEST_UID}`;
+  const SECOND_UID = 'second-user-id';
+  const secondQueueStorageKey = `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${SECOND_UID}`;
 
-  const getQueuePayload = () => {
+  let mockAuthStateChangedCallback: ((nextUser: { uid: string; email?: string } | null) => void) | null =
+    null;
+
+  const getQueuePayload = (storageKey = queueStorageKey) => {
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
-      ([key]) => key === queueStorageKey
+      ([key]) => key === storageKey
     );
     if (queueWrites.length === 0) {
       return null;
@@ -99,6 +105,14 @@ describe('PremiumContext', () => {
     await waitFor(() => expect(mockPurchaseUpdatedCallback).toBeTruthy());
   };
 
+  const emitAuthStateChange = (nextUser: { uid: string; email?: string } | null) => {
+    const callback = mockAuthStateChangedCallback;
+    if (!callback) {
+      throw new Error('onAuthStateChanged callback was not registered.');
+    }
+    callback(nextUser);
+  };
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <PremiumProvider>{children}</PremiumProvider>
   );
@@ -108,8 +122,16 @@ describe('PremiumContext', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockPurchaseUpdatedCallback = null;
+    mockAuthStateChangedCallback = null;
     await AsyncStorage.clear();
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    (onAuthStateChanged as unknown as jest.Mock).mockImplementation(
+      (_auth: unknown, callback: (nextUser: { uid: string; email?: string } | null) => void) => {
+        mockAuthStateChangedCallback = callback;
+        callback({ uid: TEST_UID, email: 'test@example.com' });
+        return jest.fn();
+      }
+    );
 
     mockValidatePurchaseCallable.mockResolvedValue({
       data: { success: true, isPremium: true },
@@ -336,6 +358,53 @@ describe('PremiumContext', () => {
     });
     expect(result.current.monthlyTrial.reasonKey).toBe('premium.freeTrialUsedMessage');
     expect(alertSpy).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it('does not reinitialize IAP listeners when auth state changes', async () => {
+    const { unmount } = renderHook(() => usePremium(), { wrapper });
+    await waitForProviderInit();
+
+    expect(mockInitConnection).toHaveBeenCalledTimes(1);
+    expect(mockPurchaseUpdatedListener).toHaveBeenCalledTimes(1);
+    expect(mockEndConnection).not.toHaveBeenCalled();
+
+    await act(async () => {
+      emitAuthStateChange({ uid: SECOND_UID, email: 'second@example.com' });
+    });
+
+    await waitFor(() => {
+      expect(mockInitConnection).toHaveBeenCalledTimes(1);
+      expect(mockPurchaseUpdatedListener).toHaveBeenCalledTimes(1);
+    });
+    expect(mockEndConnection).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(mockEndConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses latest auth user queue key when purchase listener runs after auth change', async () => {
+    const purchaseToken = 'auth-change-ack-fail-token';
+    const { unmount } = renderHook(() => usePremium(), { wrapper });
+    await waitForProviderInit();
+
+    await act(async () => {
+      emitAuthStateChange({ uid: SECOND_UID, email: 'second@example.com' });
+    });
+
+    jest.clearAllMocks();
+    mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
+
+    await act(async () => {
+      await getPurchaseUpdatedCallback()(createSubscriptionPurchase({ purchaseToken }));
+    });
+
+    const secondQueuePayload = getQueuePayload(secondQueueStorageKey);
+    expect(secondQueuePayload?.[purchaseToken]).toBeDefined();
+    expect(secondQueuePayload?.[purchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
+    expect(getQueuePayload(queueStorageKey)?.[purchaseToken]).toBeUndefined();
 
     unmount();
   });
