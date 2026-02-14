@@ -1,9 +1,9 @@
 import * as admin from 'firebase-admin';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
+import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { androidpublisher_v3 } from 'googleapis';
-import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
 import { getAndroidPublisherClientFromServiceAccountSecret } from './shared/playAuth';
+import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
 import {
   isDefinitiveSubscriptionError,
   isIdempotentAcknowledgeError,
@@ -27,6 +27,70 @@ const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
   'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
   'SUBSCRIPTION_STATE_CANCELED',
 ]);
+
+/**
+ * Deep-clone an error object and strip fields that may contain tokens,
+ * credentials, or other sensitive data (e.g. axios/googleapis config).
+ */
+const sanitizeError = (err: unknown): unknown => {
+  if (err === null || err === undefined) {
+    return err;
+  }
+
+  try {
+    // Structured clone gives us a safe mutable copy.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clone: any =
+      err instanceof Error
+        ? {
+            name: (err as Error).name,
+            message: (err as Error).message,
+            stack: (err as Error).stack,
+            ...structuredClone(
+              Object.fromEntries(
+                Object.entries(err as unknown as Record<string, unknown>).filter(
+                  ([key]) => key !== 'request'
+                )
+              )
+            ),
+          }
+        : structuredClone(err);
+
+    // Scrub axios / googleapis config that may carry auth artefacts.
+    if (clone && typeof clone === 'object') {
+      if (clone.config && typeof clone.config === 'object') {
+        delete clone.config.headers;
+        delete clone.config.params;
+        delete clone.config.auth;
+        delete clone.config.data;
+      }
+
+      // Response objects may also carry config.
+      if (clone.response && typeof clone.response === 'object') {
+        if (clone.response.config && typeof clone.response.config === 'object') {
+          delete clone.response.config.headers;
+          delete clone.response.config.params;
+          delete clone.response.config.auth;
+          delete clone.response.config.data;
+        }
+        // Remove raw request reference if present.
+        delete clone.response.request;
+      }
+
+      // Top-level request object (socket/http reference).
+      delete clone.request;
+    }
+
+    return clone;
+  } catch {
+    // If cloning fails (circular refs, non-cloneable types, etc.),
+    // fall back to a minimal representation.
+    if (err instanceof Error) {
+      return { name: err.name, message: err.message, stack: err.stack };
+    }
+    return String(err);
+  }
+};
 
 type PurchaseType = 'in-app' | 'subs';
 type EntitlementType = 'lifetime' | 'subscription' | 'none';
@@ -97,10 +161,18 @@ const resolveSubscriptionType = (productId?: string | null): SubscriptionType | 
 
 const normalizeOfferIdentifier = (value?: string[] | string | null): string[] => {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item ?? '').trim().toLowerCase());
+    return value.map((item) =>
+      String(item ?? '')
+        .trim()
+        .toLowerCase()
+    );
   }
 
-  return [String(value ?? '').trim().toLowerCase()];
+  return [
+    String(value ?? '')
+      .trim()
+      .toLowerCase(),
+  ];
 };
 
 const isMonthlyTrialOffer = (
@@ -234,9 +306,7 @@ const buildNoneEntitlementPayload = (
     existingPremium.subscriptionType ??
     resolveSubscriptionType(existingPremium.productId ?? null);
   const resolvedExpiresAt =
-    overrides?.expiresAt !== undefined
-      ? overrides.expiresAt
-      : existingPremium.expiresAt ?? null;
+    overrides?.expiresAt !== undefined ? overrides.expiresAt : (existingPremium.expiresAt ?? null);
   const resolvedExpiredAt =
     overrides?.expiredAt ??
     overrides?.expireAt ??
@@ -494,9 +564,9 @@ export const validatePurchase = onCall(
 
       const hasUsedTrial = subscriptionValidation.isInTrial ? true : existingHasUsedTrial;
       const trialConsumedAt = subscriptionValidation.isInTrial
-        ? existingTrialConsumedAt ??
+        ? (existingTrialConsumedAt ??
           subscriptionValidation.trialStartAt ??
-          admin.firestore.FieldValue.serverTimestamp()
+          admin.firestore.FieldValue.serverTimestamp())
         : existingTrialConsumedAt;
 
       await persistPremiumStatus(userId, {
@@ -542,7 +612,7 @@ export const validatePurchase = onCall(
         tokenPrefix: maskedPurchaseTokenPrefix,
         userId,
       });
-      console.error('Purchase validation raw error:', error);
+      console.error('Purchase validation raw error:', sanitizeError(error));
 
       throw new HttpsError(mappedError.code, 'Failed to validate purchase', {
         reason: mappedError.reason,
@@ -574,7 +644,8 @@ export const syncPremiumStatus = onCall(
           productId: LEGACY_LIFETIME_PRODUCT_ID,
           purchaseToken: existingPremium.purchaseToken ?? null,
           orderId: existingPremium.orderId ?? null,
-          purchaseDate: existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
+          purchaseDate:
+            existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
           subscriptionState: null,
           expiresAt: null,
           basePlanId: null,
@@ -624,12 +695,11 @@ export const syncPremiumStatus = onCall(
             isInTrial: subscriptionValidation.isInTrial,
             trialStartAt: subscriptionValidation.trialStartAt,
             trialEndAt: subscriptionValidation.trialEndAt,
-            hasUsedTrial:
-              subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
+            hasUsedTrial: subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
             trialConsumedAt: subscriptionValidation.isInTrial
-              ? resolveTrialConsumedAt(existingPremium) ??
+              ? (resolveTrialConsumedAt(existingPremium) ??
                 subscriptionValidation.trialStartAt ??
-                admin.firestore.FieldValue.serverTimestamp()
+                admin.firestore.FieldValue.serverTimestamp())
               : resolveTrialConsumedAt(existingPremium),
             expiredAt: subscriptionValidation.expiredAt,
             expireAt: subscriptionValidation.expireAt,
@@ -645,7 +715,7 @@ export const syncPremiumStatus = onCall(
           if (isDefinitiveSubscriptionError(subscriptionError)) {
             console.warn(
               'Definitive subscription sync failure, revoking entitlement:',
-              subscriptionError
+              sanitizeError(subscriptionError)
             );
 
             await persistPremiumStatus(
@@ -663,7 +733,7 @@ export const syncPremiumStatus = onCall(
           if (isTransientSubscriptionError(subscriptionError)) {
             console.error(
               'Transient subscription sync failure, preserving existing entitlement:',
-              subscriptionError
+              sanitizeError(subscriptionError)
             );
 
             return {
@@ -681,7 +751,7 @@ export const syncPremiumStatus = onCall(
 
       return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
     } catch (error) {
-      console.error('Premium sync error:', error);
+      console.error('Premium sync error:', sanitizeError(error));
       if (error instanceof HttpsError) {
         throw error;
       }
