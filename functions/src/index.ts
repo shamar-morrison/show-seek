@@ -1,7 +1,17 @@
 import * as admin from 'firebase-admin';
+import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
-import { androidpublisher_v3, google } from 'googleapis';
+import { androidpublisher_v3 } from 'googleapis';
+import { getAndroidPublisherClientFromServiceAccountSecret } from './shared/playAuth';
 import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
+import {
+  isDefinitiveSubscriptionError,
+  isIdempotentAcknowledgeError,
+  isTransientSubscriptionError,
+  mapPurchaseValidationError,
+  resolveSubscriptionAcknowledgeId,
+  shouldAcknowledgeSubscription,
+} from './shared/purchaseValidation';
 
 admin.initializeApp();
 
@@ -10,12 +20,77 @@ const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
 const MONTHLY_SUBSCRIPTION_PRODUCT_ID = 'monthly_showseek_sub';
 const YEARLY_SUBSCRIPTION_PRODUCT_ID = 'showseek_yearly_sub';
 const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
+const PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON = defineSecret('PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON');
 
 const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
   'SUBSCRIPTION_STATE_ACTIVE',
   'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
   'SUBSCRIPTION_STATE_CANCELED',
 ]);
+
+/**
+ * Deep-clone an error object and strip fields that may contain tokens,
+ * credentials, or other sensitive data (e.g. axios/googleapis config).
+ */
+const sanitizeError = (err: unknown): unknown => {
+  if (err === null || err === undefined) {
+    return err;
+  }
+
+  try {
+    // Structured clone gives us a safe mutable copy.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clone: any =
+      err instanceof Error
+        ? {
+            name: (err as Error).name,
+            message: (err as Error).message,
+            stack: (err as Error).stack,
+            ...structuredClone(
+              Object.fromEntries(
+                Object.entries(err as unknown as Record<string, unknown>).filter(
+                  ([key]) => key !== 'request'
+                )
+              )
+            ),
+          }
+        : structuredClone(err);
+
+    // Scrub axios / googleapis config that may carry auth artefacts.
+    if (clone && typeof clone === 'object') {
+      if (clone.config && typeof clone.config === 'object') {
+        delete clone.config.headers;
+        delete clone.config.params;
+        delete clone.config.auth;
+        delete clone.config.data;
+      }
+
+      // Response objects may also carry config.
+      if (clone.response && typeof clone.response === 'object') {
+        if (clone.response.config && typeof clone.response.config === 'object') {
+          delete clone.response.config.headers;
+          delete clone.response.config.params;
+          delete clone.response.config.auth;
+          delete clone.response.config.data;
+        }
+        // Remove raw request reference if present.
+        delete clone.response.request;
+      }
+
+      // Top-level request object (socket/http reference).
+      delete clone.request;
+    }
+
+    return clone;
+  } catch {
+    // If cloning fails (circular refs, non-cloneable types, etc.),
+    // fall back to a minimal representation.
+    if (err instanceof Error) {
+      return { name: err.name, message: err.message, stack: err.stack };
+    }
+    return String(err);
+  }
+};
 
 type PurchaseType = 'in-app' | 'subs';
 type EntitlementType = 'lifetime' | 'subscription' | 'none';
@@ -55,17 +130,6 @@ interface SubscriptionValidationResult {
   trialStartAt: admin.firestore.Timestamp | null;
 }
 
-const getAndroidPublisherClient = (): androidpublisher_v3.Androidpublisher => {
-  const auth = new google.auth.GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/androidpublisher'],
-  });
-
-  return google.androidpublisher({
-    version: 'v3',
-    auth,
-  });
-};
-
 const parseDateTimeMillis = (dateTime?: string | null): number | null => {
   if (!dateTime) {
     return null;
@@ -97,10 +161,18 @@ const resolveSubscriptionType = (productId?: string | null): SubscriptionType | 
 
 const normalizeOfferIdentifier = (value?: string[] | string | null): string[] => {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item ?? '').trim().toLowerCase());
+    return value.map((item) =>
+      String(item ?? '')
+        .trim()
+        .toLowerCase()
+    );
   }
 
-  return [String(value ?? '').trim().toLowerCase()];
+  return [
+    String(value ?? '')
+      .trim()
+      .toLowerCase(),
+  ];
 };
 
 const isMonthlyTrialOffer = (
@@ -161,92 +233,6 @@ const resolvePurchaseType = (purchaseType: unknown, productId: string): Purchase
   }
 
   return productId === LEGACY_LIFETIME_PRODUCT_ID ? 'in-app' : 'subs';
-};
-
-const getErrorStatusCode = (error: unknown): number | null => {
-  const errorRecord = error as {
-    code?: number | string;
-    response?: { status?: number };
-    status?: number;
-  };
-
-  if (typeof errorRecord?.response?.status === 'number') {
-    return errorRecord.response.status;
-  }
-
-  if (typeof errorRecord?.status === 'number') {
-    return errorRecord.status;
-  }
-
-  if (typeof errorRecord?.code === 'number') {
-    return errorRecord.code;
-  }
-
-  if (typeof errorRecord?.code === 'string') {
-    const parsedCode = Number(errorRecord.code);
-    if (!Number.isNaN(parsedCode)) {
-      return parsedCode;
-    }
-  }
-
-  return null;
-};
-
-const isDefinitiveSubscriptionError = (error: unknown): boolean => {
-  const statusCode = getErrorStatusCode(error);
-  if (statusCode === 404 || statusCode === 410) {
-    return true;
-  }
-
-  const errorRecord = error as { name?: string; message?: string };
-  const errorName = String(errorRecord?.name || '');
-  const errorMessage = String(errorRecord?.message || '').toLowerCase();
-
-  if (errorName === 'NotFoundError' || errorName === 'SubscriptionExpiredError') {
-    return true;
-  }
-
-  return errorMessage.includes('subscriptionexpired') || errorMessage.includes('subscription expired');
-};
-
-const isTransientSubscriptionError = (error: unknown): boolean => {
-  const errorRecord = error as {
-    code?: string | number;
-    isTransient?: boolean;
-    message?: string;
-    transient?: boolean;
-  };
-
-  if (errorRecord?.isTransient === true || errorRecord?.transient === true) {
-    return true;
-  }
-
-  const statusCode = getErrorStatusCode(error);
-  if (statusCode === 429 || (statusCode !== null && statusCode >= 500)) {
-    return true;
-  }
-
-  const errorCode = String(errorRecord?.code || '').toUpperCase();
-  const transientCodes = new Set([
-    'ECONNABORTED',
-    'ECONNRESET',
-    'ENETUNREACH',
-    'ENOTFOUND',
-    'ETIMEDOUT',
-    'EAI_AGAIN',
-    'DEADLINE_EXCEEDED',
-  ]);
-  if (transientCodes.has(errorCode)) {
-    return true;
-  }
-
-  const errorMessage = String(errorRecord?.message || '').toLowerCase();
-  return (
-    errorMessage.includes('network') ||
-    errorMessage.includes('timeout') ||
-    errorMessage.includes('rate limit') ||
-    errorMessage.includes('temporarily unavailable')
-  );
 };
 
 const resolveExistingEntitlementType = (existingPremium: ExistingPremiumData): EntitlementType => {
@@ -320,9 +306,7 @@ const buildNoneEntitlementPayload = (
     existingPremium.subscriptionType ??
     resolveSubscriptionType(existingPremium.productId ?? null);
   const resolvedExpiresAt =
-    overrides?.expiresAt !== undefined
-      ? overrides.expiresAt
-      : existingPremium.expiresAt ?? null;
+    overrides?.expiresAt !== undefined ? overrides.expiresAt : (existingPremium.expiresAt ?? null);
   const resolvedExpiredAt =
     overrides?.expiredAt ??
     overrides?.expireAt ??
@@ -405,19 +389,40 @@ const validateSubscriptionWithGoogle = async (
   });
 
   const purchaseData = response.data;
+  const latestLineItem = getLatestLineItem(purchaseData.lineItems);
+  const acknowledgeSubscriptionId = resolveSubscriptionAcknowledgeId(
+    latestLineItem?.productId,
+    productId
+  );
 
-  if (purchaseData.acknowledgementState === 'ACKNOWLEDGEMENT_STATE_PENDING') {
-    await androidPublisher.purchases.subscriptions.acknowledge({
-      packageName: PACKAGE_NAME,
-      subscriptionId: productId,
-      token: purchaseToken,
-      requestBody: {
-        developerPayload: userId,
-      },
-    });
+  if (shouldAcknowledgeSubscription(purchaseData.acknowledgementState)) {
+    if (!acknowledgeSubscriptionId) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Unable to resolve subscription id for acknowledgment.',
+        {
+          reason: 'ACKNOWLEDGE_SUBSCRIPTION_ID_MISSING',
+          retryable: false,
+        }
+      );
+    }
+
+    try {
+      await androidPublisher.purchases.subscriptions.acknowledge({
+        packageName: PACKAGE_NAME,
+        subscriptionId: acknowledgeSubscriptionId,
+        token: purchaseToken,
+        requestBody: {
+          developerPayload: userId,
+        },
+      });
+    } catch (acknowledgeError) {
+      if (!isIdempotentAcknowledgeError(acknowledgeError)) {
+        throw acknowledgeError;
+      }
+    }
   }
 
-  const latestLineItem = getLatestLineItem(purchaseData.lineItems);
   const expiryMillis = parseDateTimeMillis(latestLineItem?.expiryTime);
   const startMillis = parseDateTimeMillis(purchaseData.startTime);
   const subscriptionState = purchaseData.subscriptionState ?? null;
@@ -451,274 +456,306 @@ const validateSubscriptionWithGoogle = async (
   };
 };
 
-export const validatePurchase = onCall(async (request) => {
-  // Verify user is authenticated
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
-  }
+export const validatePurchase = onCall(
+  { secrets: [PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON] },
+  async (request) => {
+    // Verify user is authenticated
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
 
-  const { purchaseToken, productId, purchaseType } = request.data as {
-    productId?: string;
-    purchaseToken?: string;
-    purchaseType?: PurchaseType;
-  };
-  const userId = request.auth.uid;
+    const { purchaseToken, productId, purchaseType } = request.data as {
+      productId?: string;
+      purchaseToken?: string;
+      purchaseType?: PurchaseType;
+    };
+    const userId = request.auth.uid;
 
-  if (!purchaseToken || !productId) {
-    throw new HttpsError('invalid-argument', 'Missing purchaseToken or productId');
-  }
+    if (!purchaseToken || !productId) {
+      throw new HttpsError('invalid-argument', 'Missing purchaseToken or productId');
+    }
 
-  try {
-    const androidPublisher = getAndroidPublisherClient();
     const resolvedPurchaseType = resolvePurchaseType(purchaseType, productId);
-    const userRef = admin.firestore().collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
+    const maskedPurchaseTokenPrefix = purchaseToken.slice(0, 8);
 
-    console.log(
-      'Validating purchase for user:',
-      userId,
-      'product:',
-      productId,
-      'type:',
-      resolvedPurchaseType,
-      'package:',
-      PACKAGE_NAME
-    );
+    try {
+      const androidPublisher = getAndroidPublisherClientFromServiceAccountSecret(
+        PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON.value()
+      );
+      const userRef = admin.firestore().collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
 
-    if (resolvedPurchaseType === 'in-app') {
-      if (productId !== LEGACY_LIFETIME_PRODUCT_ID) {
-        throw new HttpsError(
-          'invalid-argument',
-          'Only legacy lifetime product is allowed for in-app validation'
+      console.log(
+        'Validating purchase for user:',
+        userId,
+        'product:',
+        productId,
+        'type:',
+        resolvedPurchaseType,
+        'package:',
+        PACKAGE_NAME
+      );
+
+      if (resolvedPurchaseType === 'in-app') {
+        if (productId !== LEGACY_LIFETIME_PRODUCT_ID) {
+          throw new HttpsError(
+            'invalid-argument',
+            'Only legacy lifetime product is allowed for in-app validation'
+          );
+        }
+
+        const lifetimeValidation = await validateLifetimeWithGoogle(
+          androidPublisher,
+          userId,
+          productId,
+          purchaseToken
         );
+
+        await persistPremiumStatus(userId, {
+          isPremium: true,
+          entitlementType: 'lifetime',
+          purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+          purchaseToken,
+          productId,
+          orderId: lifetimeValidation.orderId,
+          subscriptionState: null,
+          expiresAt: null,
+          basePlanId: null,
+          subscriptionType: null,
+          isInTrial: false,
+          trialStartAt: null,
+          trialEndAt: null,
+          hasUsedTrial: resolveHasUsedTrial(existingPremium),
+          trialConsumedAt: resolveTrialConsumedAt(existingPremium),
+          expiredAt: null,
+          expireAt: null,
+          lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
       }
 
-      const lifetimeValidation = await validateLifetimeWithGoogle(
+      const subscriptionValidation = await validateSubscriptionWithGoogle(
         androidPublisher,
         userId,
         productId,
         purchaseToken
       );
+      const existingHasUsedTrial = resolveHasUsedTrial(existingPremium);
+      const existingTrialConsumedAt = resolveTrialConsumedAt(existingPremium);
+      const isTrialRestoreAttempt = isSameTrialRestoreAttempt(
+        existingPremium,
+        purchaseToken,
+        subscriptionValidation.orderId
+      );
+
+      if (subscriptionValidation.isInTrial && existingHasUsedTrial && !isTrialRestoreAttempt) {
+        throw new HttpsError(
+          'failed-precondition',
+          'Free trial has already been used for this account.',
+          {
+            code: TRIAL_ALREADY_USED_REASON,
+            reason: TRIAL_ALREADY_USED_REASON,
+            retryable: false,
+          }
+        );
+      }
+
+      const hasUsedTrial = subscriptionValidation.isInTrial ? true : existingHasUsedTrial;
+      const trialConsumedAt = subscriptionValidation.isInTrial
+        ? (existingTrialConsumedAt ??
+          subscriptionValidation.trialStartAt ??
+          admin.firestore.FieldValue.serverTimestamp())
+        : existingTrialConsumedAt;
 
       await persistPremiumStatus(userId, {
-        isPremium: true,
-        entitlementType: 'lifetime',
+        isPremium: subscriptionValidation.isPremium,
+        entitlementType: subscriptionValidation.isPremium ? 'subscription' : 'none',
         purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
         purchaseToken,
         productId,
-        orderId: lifetimeValidation.orderId,
-        subscriptionState: null,
-        expiresAt: null,
-        basePlanId: null,
-        subscriptionType: null,
-        isInTrial: false,
-        trialStartAt: null,
-        trialEndAt: null,
-        hasUsedTrial: resolveHasUsedTrial(existingPremium),
-        trialConsumedAt: resolveTrialConsumedAt(existingPremium),
-        expiredAt: null,
-        expireAt: null,
+        orderId: subscriptionValidation.orderId,
+        subscriptionState: subscriptionValidation.subscriptionState,
+        expiresAt: subscriptionValidation.expiresAt,
+        basePlanId: subscriptionValidation.basePlanId,
+        subscriptionType: subscriptionValidation.subscriptionType,
+        isInTrial: subscriptionValidation.isInTrial,
+        trialStartAt: subscriptionValidation.trialStartAt,
+        trialEndAt: subscriptionValidation.trialEndAt,
+        hasUsedTrial,
+        trialConsumedAt,
+        expiredAt: subscriptionValidation.expiredAt,
+        expireAt: subscriptionValidation.expireAt,
         lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
-    }
-
-    const subscriptionValidation = await validateSubscriptionWithGoogle(
-      androidPublisher,
-      userId,
-      productId,
-      purchaseToken
-    );
-    const existingHasUsedTrial = resolveHasUsedTrial(existingPremium);
-    const existingTrialConsumedAt = resolveTrialConsumedAt(existingPremium);
-    const isTrialRestoreAttempt = isSameTrialRestoreAttempt(
-      existingPremium,
-      purchaseToken,
-      subscriptionValidation.orderId
-    );
-
-    if (subscriptionValidation.isInTrial && existingHasUsedTrial && !isTrialRestoreAttempt) {
-      throw new HttpsError(
-        'failed-precondition',
-        'Free trial has already been used for this account.',
-        {
-          code: TRIAL_ALREADY_USED_REASON,
-          reason: TRIAL_ALREADY_USED_REASON,
-        }
-      );
-    }
-
-    const hasUsedTrial = subscriptionValidation.isInTrial ? true : existingHasUsedTrial;
-    const trialConsumedAt = subscriptionValidation.isInTrial
-      ? existingTrialConsumedAt ??
-        subscriptionValidation.trialStartAt ??
-        admin.firestore.FieldValue.serverTimestamp()
-      : existingTrialConsumedAt;
-
-    await persistPremiumStatus(userId, {
-      isPremium: subscriptionValidation.isPremium,
-      entitlementType: subscriptionValidation.isPremium ? 'subscription' : 'none',
-      purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
-      purchaseToken,
-      productId,
-      orderId: subscriptionValidation.orderId,
-      subscriptionState: subscriptionValidation.subscriptionState,
-      expiresAt: subscriptionValidation.expiresAt,
-      basePlanId: subscriptionValidation.basePlanId,
-      subscriptionType: subscriptionValidation.subscriptionType,
-      isInTrial: subscriptionValidation.isInTrial,
-      trialStartAt: subscriptionValidation.trialStartAt,
-      trialEndAt: subscriptionValidation.trialEndAt,
-      hasUsedTrial,
-      trialConsumedAt,
-      expiredAt: subscriptionValidation.expiredAt,
-      expireAt: subscriptionValidation.expireAt,
-      lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return {
-      success: true,
-      isPremium: subscriptionValidation.isPremium,
-      entitlementType: (subscriptionValidation.isPremium
-        ? 'subscription'
-        : 'none') as EntitlementType,
-    };
-  } catch (error) {
-    console.error('Purchase validation error:', error);
-    if (error instanceof HttpsError) {
-      throw error;
-    }
-    throw new HttpsError('internal', 'Failed to validate purchase');
-  }
-});
-
-export const syncPremiumStatus = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'User must be authenticated');
-  }
-
-  const userId = request.auth.uid;
-
-  try {
-    const userRef = admin.firestore().collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
-
-    if (existingPremium.productId === LEGACY_LIFETIME_PRODUCT_ID) {
-      await persistPremiumStatus(userId, {
-        isPremium: true,
-        entitlementType: 'lifetime',
-        productId: LEGACY_LIFETIME_PRODUCT_ID,
-        purchaseToken: existingPremium.purchaseToken ?? null,
-        orderId: existingPremium.orderId ?? null,
-        purchaseDate: existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
-        subscriptionState: null,
-        expiresAt: null,
-        basePlanId: null,
-        subscriptionType: null,
-        isInTrial: false,
-        trialStartAt: null,
-        trialEndAt: null,
-        hasUsedTrial: resolveHasUsedTrial(existingPremium),
-        trialConsumedAt: resolveTrialConsumedAt(existingPremium),
-        expiredAt: null,
-        expireAt: null,
-        lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-      return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
-    }
-
-    if (existingPremium.purchaseToken && existingPremium.productId) {
-      const androidPublisher = getAndroidPublisherClient();
-
-      try {
-        const subscriptionValidation = await validateSubscriptionWithGoogle(
-          androidPublisher,
-          userId,
-          existingPremium.productId,
-          existingPremium.purchaseToken
-        );
-
-        const entitlementType: EntitlementType = subscriptionValidation.isPremium
+      return {
+        success: true,
+        isPremium: subscriptionValidation.isPremium,
+        entitlementType: (subscriptionValidation.isPremium
           ? 'subscription'
-          : 'none';
+          : 'none') as EntitlementType,
+      };
+    } catch (error) {
+      if (error instanceof HttpsError) {
+        throw error;
+      }
 
+      const mappedError = mapPurchaseValidationError(error);
+      console.error('Purchase validation error:', {
+        productId,
+        purchaseType: resolvedPurchaseType,
+        reason: mappedError.reason,
+        retryable: mappedError.retryable,
+        statusCode: mappedError.statusCode,
+        tokenPrefix: maskedPurchaseTokenPrefix,
+        userId,
+      });
+      console.error('Purchase validation raw error:', sanitizeError(error));
+
+      throw new HttpsError(mappedError.code, 'Failed to validate purchase', {
+        reason: mappedError.reason,
+        retryable: mappedError.retryable,
+        statusCode: mappedError.statusCode,
+      });
+    }
+  }
+);
+
+export const syncPremiumStatus = onCall(
+  { secrets: [PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON] },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const userId = request.auth.uid;
+
+    try {
+      const userRef = admin.firestore().collection('users').doc(userId);
+      const userDoc = await userRef.get();
+      const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
+
+      if (existingPremium.productId === LEGACY_LIFETIME_PRODUCT_ID) {
         await persistPremiumStatus(userId, {
-          isPremium: subscriptionValidation.isPremium,
-          entitlementType,
-          purchaseToken: existingPremium.purchaseToken,
-          productId: existingPremium.productId,
-          orderId: subscriptionValidation.orderId ?? existingPremium.orderId ?? null,
+          isPremium: true,
+          entitlementType: 'lifetime',
+          productId: LEGACY_LIFETIME_PRODUCT_ID,
+          purchaseToken: existingPremium.purchaseToken ?? null,
+          orderId: existingPremium.orderId ?? null,
           purchaseDate:
             existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
-          subscriptionState: subscriptionValidation.subscriptionState,
-          expiresAt: subscriptionValidation.expiresAt,
-          basePlanId: subscriptionValidation.basePlanId,
-          subscriptionType: subscriptionValidation.subscriptionType,
-          isInTrial: subscriptionValidation.isInTrial,
-          trialStartAt: subscriptionValidation.trialStartAt,
-          trialEndAt: subscriptionValidation.trialEndAt,
-          hasUsedTrial:
-            subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
-          trialConsumedAt: subscriptionValidation.isInTrial
-            ? resolveTrialConsumedAt(existingPremium) ??
-              subscriptionValidation.trialStartAt ??
-              admin.firestore.FieldValue.serverTimestamp()
-            : resolveTrialConsumedAt(existingPremium),
-          expiredAt: subscriptionValidation.expiredAt,
-          expireAt: subscriptionValidation.expireAt,
+          subscriptionState: null,
+          expiresAt: null,
+          basePlanId: null,
+          subscriptionType: null,
+          isInTrial: false,
+          trialStartAt: null,
+          trialEndAt: null,
+          hasUsedTrial: resolveHasUsedTrial(existingPremium),
+          trialConsumedAt: resolveTrialConsumedAt(existingPremium),
+          expiredAt: null,
+          expireAt: null,
           lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        return {
-          success: true,
-          isPremium: subscriptionValidation.isPremium,
-          entitlementType,
-        };
-      } catch (subscriptionError) {
-        if (isDefinitiveSubscriptionError(subscriptionError)) {
-          console.warn('Definitive subscription sync failure, revoking entitlement:', subscriptionError);
+        return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
+      }
 
-          await persistPremiumStatus(
+      if (existingPremium.purchaseToken && existingPremium.productId) {
+        const androidPublisher = getAndroidPublisherClientFromServiceAccountSecret(
+          PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON.value()
+        );
+
+        try {
+          const subscriptionValidation = await validateSubscriptionWithGoogle(
+            androidPublisher,
             userId,
-            buildNoneEntitlementPayload(existingPremium, {
-              subscriptionState: null,
-              expiresAt: existingPremium.expiresAt ?? null,
-              basePlanId: null,
-            })
+            existingPremium.productId,
+            existingPremium.purchaseToken
           );
 
-          return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
-        }
+          const entitlementType: EntitlementType = subscriptionValidation.isPremium
+            ? 'subscription'
+            : 'none';
 
-        if (isTransientSubscriptionError(subscriptionError)) {
-          console.error(
-            'Transient subscription sync failure, preserving existing entitlement:',
-            subscriptionError
-          );
+          await persistPremiumStatus(userId, {
+            isPremium: subscriptionValidation.isPremium,
+            entitlementType,
+            purchaseToken: existingPremium.purchaseToken,
+            productId: existingPremium.productId,
+            orderId: subscriptionValidation.orderId ?? existingPremium.orderId ?? null,
+            purchaseDate:
+              existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
+            subscriptionState: subscriptionValidation.subscriptionState,
+            expiresAt: subscriptionValidation.expiresAt,
+            basePlanId: subscriptionValidation.basePlanId,
+            subscriptionType: subscriptionValidation.subscriptionType,
+            isInTrial: subscriptionValidation.isInTrial,
+            trialStartAt: subscriptionValidation.trialStartAt,
+            trialEndAt: subscriptionValidation.trialEndAt,
+            hasUsedTrial: subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
+            trialConsumedAt: subscriptionValidation.isInTrial
+              ? (resolveTrialConsumedAt(existingPremium) ??
+                subscriptionValidation.trialStartAt ??
+                admin.firestore.FieldValue.serverTimestamp())
+              : resolveTrialConsumedAt(existingPremium),
+            expiredAt: subscriptionValidation.expiredAt,
+            expireAt: subscriptionValidation.expireAt,
+            lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
 
           return {
-            success: false,
-            isPremium: existingPremium.isPremium === true,
-            entitlementType: resolveExistingEntitlementType(existingPremium),
+            success: true,
+            isPremium: subscriptionValidation.isPremium,
+            entitlementType,
           };
+        } catch (subscriptionError) {
+          if (isDefinitiveSubscriptionError(subscriptionError)) {
+            console.warn(
+              'Definitive subscription sync failure, revoking entitlement:',
+              sanitizeError(subscriptionError)
+            );
+
+            await persistPremiumStatus(
+              userId,
+              buildNoneEntitlementPayload(existingPremium, {
+                subscriptionState: null,
+                expiresAt: existingPremium.expiresAt ?? null,
+                basePlanId: null,
+              })
+            );
+
+            return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
+          }
+
+          if (isTransientSubscriptionError(subscriptionError)) {
+            console.error(
+              'Transient subscription sync failure, preserving existing entitlement:',
+              sanitizeError(subscriptionError)
+            );
+
+            return {
+              success: false,
+              isPremium: existingPremium.isPremium === true,
+              entitlementType: resolveExistingEntitlementType(existingPremium),
+            };
+          }
+
+          throw subscriptionError;
         }
-
-        throw subscriptionError;
       }
-    }
 
-    await persistPremiumStatus(userId, buildNoneEntitlementPayload(existingPremium));
+      await persistPremiumStatus(userId, buildNoneEntitlementPayload(existingPremium));
 
-    return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
-  } catch (error) {
-    console.error('Premium sync error:', error);
-    if (error instanceof HttpsError) {
-      throw error;
+      return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
+    } catch (error) {
+      console.error('Premium sync error:', sanitizeError(error));
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      throw new HttpsError('internal', 'Failed to sync premium status');
     }
-    throw new HttpsError('internal', 'Failed to sync premium status');
   }
-});
+);

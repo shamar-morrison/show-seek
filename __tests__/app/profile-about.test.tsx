@@ -10,7 +10,7 @@ jest.mock('react-native-safe-area-context', () => ({
 describe('AboutScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(Linking, 'openURL').mockResolvedValue();
+    jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   });
 
   afterEach(() => {

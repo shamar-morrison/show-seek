@@ -11,7 +11,21 @@ import {
   SUBSCRIPTION_PRODUCT_IDS as SUBSCRIPTION_ID_MAP,
   SUBSCRIPTION_PRODUCT_ID_LIST,
   type PremiumPlan,
+  type PremiumPurchaseType,
 } from '@/src/context/premiumBilling';
+import {
+  CLIENT_FINISH_TRANSACTION_FAILED,
+  getPendingValidationMessageKey,
+  getPendingValidationRetryDelayMs,
+  getPurchaseValidationErrorDetails,
+  MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION,
+  normalizePendingValidationQueue,
+  PENDING_VALIDATION_QUEUE_STORAGE_KEY,
+  PURCHASE_NOT_AVAILABLE_FOR_FINISH,
+  type PurchaseValidationErrorDetails,
+  type PendingValidationPurchase,
+  type PendingValidationQueue,
+} from '@/src/context/purchaseValidationRetry';
 import { auth, db, functions } from '@/src/firebase/config';
 import i18n from '@/src/i18n';
 import createContextHook from '@nkzw/create-context-hook';
@@ -19,7 +33,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
@@ -71,6 +85,7 @@ const TRIAL_INELIGIBLE_ERROR_CODE = 'TRIAL_INELIGIBLE';
 const TRIAL_UNAVAILABLE_REASON_KEY = 'premium.freeTrialUnavailableMessage';
 const TRIAL_USED_REASON_KEY = 'premium.freeTrialUsedMessage';
 const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
+const PENDING_VALIDATION_ALERT_COOLDOWN_MS = 12000;
 
 const isCancelledPurchaseError = (error: unknown): boolean => {
   const code = String((error as { code?: string })?.code || '').toLowerCase();
@@ -154,6 +169,24 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const [monthlyStandardOfferToken, setMonthlyStandardOfferToken] = useState<string | null>(null);
   const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+  const pendingValidationQueueRef = useRef<PendingValidationQueue>({});
+  const pendingValidationQueueLoadedRef = useRef(false);
+  const pendingValidationRetryTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
+  const inFlightValidationTokensRef = useRef<Set<string>>(new Set());
+  const sessionRetryAttemptsRef = useRef<Record<string, number>>({});
+  const recentPurchasesRef = useRef<Record<string, Purchase>>({});
+  const retryPendingValidationPurchasesRef = useRef<((trigger: string) => Promise<void>) | null>(
+    null
+  );
+  const processPurchaseRef = useRef<
+    ((
+      purchase: Purchase,
+      options?: { syncAfterSuccess?: boolean }
+    ) => Promise<ProcessPurchaseResult>) | null
+  >(null);
+  const lastPendingValidationAlertAtRef = useRef(0);
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
     if (hasUsedTrial) {
@@ -179,11 +212,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [hasUsedTrial, playMonthlyTrial]);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
   const syncPremiumStatus = useCallback(async (): Promise<boolean> => {
     if (!user) {
       return false;
@@ -206,6 +234,390 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
   }, [user]);
 
+  const clearPendingValidationRetryTimeout = useCallback((purchaseToken: string) => {
+    const existingTimeout = pendingValidationRetryTimeoutsRef.current[purchaseToken];
+    if (!existingTimeout) {
+      return;
+    }
+
+    clearTimeout(existingTimeout);
+    delete pendingValidationRetryTimeoutsRef.current[purchaseToken];
+  }, []);
+
+  const clearAllPendingValidationRetryTimeouts = useCallback(() => {
+    Object.values(pendingValidationRetryTimeoutsRef.current).forEach((timeoutId) => {
+      clearTimeout(timeoutId);
+    });
+    pendingValidationRetryTimeoutsRef.current = {};
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (newUser) => {
+      // Reset pending validation queue state when user changes to prevent
+      // tokens from one user leaking into another user's session.
+      pendingValidationQueueRef.current = {};
+      pendingValidationQueueLoadedRef.current = false;
+      clearAllPendingValidationRetryTimeouts();
+      sessionRetryAttemptsRef.current = {};
+      inFlightValidationTokensRef.current.clear();
+      recentPurchasesRef.current = {};
+
+      setUser(newUser);
+    });
+    return () => unsubscribe();
+  }, [clearAllPendingValidationRetryTimeouts]);
+
+  const persistPendingValidationQueue = useCallback(async () => {
+    if (!user) return;
+    try {
+      await AsyncStorage.setItem(
+        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`,
+        JSON.stringify(pendingValidationQueueRef.current)
+      );
+    } catch (err) {
+      console.warn('Failed to persist pending purchase validation queue:', err);
+    }
+  }, [user]);
+
+  const ensurePendingValidationQueueLoaded = useCallback(async () => {
+    if (pendingValidationQueueLoadedRef.current) {
+      return;
+    }
+    if (!user) return;
+
+    try {
+      const storedQueue = await AsyncStorage.getItem(
+        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`
+      );
+      if (storedQueue) {
+        pendingValidationQueueRef.current = normalizePendingValidationQueue(
+          JSON.parse(storedQueue)
+        );
+      }
+    } catch (err) {
+      console.warn('Failed to load pending purchase validation queue:', err);
+      pendingValidationQueueRef.current = {};
+    } finally {
+      pendingValidationQueueLoadedRef.current = true;
+    }
+  }, [user]);
+
+  const upsertPendingValidationPurchase = useCallback(
+    async (
+      purchase: Omit<PendingValidationPurchase, 'createdAt' | 'updatedAt'> & {
+        createdAt?: number;
+        updatedAt?: number;
+      }
+    ) => {
+      await ensurePendingValidationQueueLoaded();
+
+      const now = Date.now();
+      const existingPurchase = pendingValidationQueueRef.current[purchase.purchaseToken];
+      pendingValidationQueueRef.current[purchase.purchaseToken] = {
+        ...existingPurchase,
+        ...purchase,
+        createdAt: existingPurchase?.createdAt ?? purchase.createdAt ?? now,
+        updatedAt: purchase.updatedAt ?? now,
+      };
+
+      await persistPendingValidationQueue();
+    },
+    [ensurePendingValidationQueueLoaded, persistPendingValidationQueue]
+  );
+
+  const removePendingValidationPurchase = useCallback(
+    async (purchaseToken: string) => {
+      await ensurePendingValidationQueueLoaded();
+
+      if (pendingValidationQueueRef.current[purchaseToken]) {
+        delete pendingValidationQueueRef.current[purchaseToken];
+      }
+
+      delete sessionRetryAttemptsRef.current[purchaseToken];
+      delete recentPurchasesRef.current[purchaseToken];
+      inFlightValidationTokensRef.current.delete(purchaseToken);
+      clearPendingValidationRetryTimeout(purchaseToken);
+      await persistPendingValidationQueue();
+    },
+    [
+      clearPendingValidationRetryTimeout,
+      ensurePendingValidationQueueLoaded,
+      persistPendingValidationQueue,
+    ]
+  );
+
+  const showPendingValidationAlert = useCallback((messageKey: string) => {
+    const now = Date.now();
+    if (now - lastPendingValidationAlertAtRef.current < PENDING_VALIDATION_ALERT_COOLDOWN_MS) {
+      return;
+    }
+
+    lastPendingValidationAlertAtRef.current = now;
+    Alert.alert(
+      i18n.t('premium.purchasePendingVerificationTitle'),
+      i18n.t(messageKey || 'premium.purchasePendingVerificationNotice')
+    );
+  }, []);
+
+  const schedulePendingValidationRetry = useCallback(
+    (purchaseToken: string, nextRetryAt: number) => {
+      clearPendingValidationRetryTimeout(purchaseToken);
+
+      const delay = Math.max(nextRetryAt - Date.now(), 0);
+      pendingValidationRetryTimeoutsRef.current[purchaseToken] = setTimeout(() => {
+        delete pendingValidationRetryTimeoutsRef.current[purchaseToken];
+        const retryFn = retryPendingValidationPurchasesRef.current;
+        if (retryFn) {
+          void retryFn(`scheduled:${purchaseToken}`);
+        }
+      }, delay);
+    },
+    [clearPendingValidationRetryTimeout]
+  );
+
+  const enqueueRetryableValidationFailure = useCallback(
+    async ({
+      purchaseToken,
+      productId,
+      purchaseType,
+      errorDetails,
+    }: {
+      purchaseToken: string;
+      productId: string;
+      purchaseType: PremiumPurchaseType;
+      errorDetails: PurchaseValidationErrorDetails;
+    }) => {
+      const nextAttempt = (sessionRetryAttemptsRef.current[purchaseToken] ?? 0) + 1;
+      sessionRetryAttemptsRef.current[purchaseToken] = nextAttempt;
+      const nextRetryAt = Date.now() + getPendingValidationRetryDelayMs(nextAttempt);
+
+      await upsertPendingValidationPurchase({
+        purchaseToken,
+        productId,
+        purchaseType,
+        nextRetryAt,
+        lastReason: errorDetails.reason,
+      });
+
+      if (nextAttempt < MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
+        schedulePendingValidationRetry(purchaseToken, nextRetryAt);
+      }
+
+      showPendingValidationAlert(getPendingValidationMessageKey(errorDetails));
+    },
+    [schedulePendingValidationRetry, showPendingValidationAlert, upsertPendingValidationPurchase]
+  );
+
+  const validatePurchaseWithServer = useCallback(
+    async (purchase: {
+      productId: string;
+      purchaseToken: string;
+      purchaseType: PremiumPurchaseType;
+    }): Promise<ValidationResponse> => {
+      const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
+      const validationResult = await validatePurchaseFn({
+        purchaseToken: purchase.purchaseToken,
+        productId: purchase.productId,
+        purchaseType: purchase.purchaseType,
+      });
+
+      return validationResult.data as ValidationResponse;
+    },
+    []
+  );
+
+  const findPurchaseByToken = useCallback(
+    async (purchaseToken: string): Promise<Purchase | null> => {
+      const cachedPurchase = recentPurchasesRef.current[purchaseToken];
+      if (cachedPurchase) {
+        return cachedPurchase;
+      }
+
+      try {
+        const purchases = await RNIap.getAvailablePurchases();
+        const matchedPurchase = purchases.find(
+          (purchase) => purchase.purchaseToken === purchaseToken
+        );
+        if (!matchedPurchase) {
+          return null;
+        }
+
+        recentPurchasesRef.current[purchaseToken] = matchedPurchase;
+        return matchedPurchase;
+      } catch (err) {
+        console.warn('Failed to fetch available purchases while finishing transaction:', err);
+        return null;
+      }
+    },
+    []
+  );
+
+  const retryPendingValidationPurchases = useCallback(
+    async (trigger: string) => {
+      await ensurePendingValidationQueueLoaded();
+
+      const now = Date.now();
+      const queuedPurchases = Object.values(pendingValidationQueueRef.current);
+      if (queuedPurchases.length === 0) {
+        return;
+      }
+
+      const duePurchases = queuedPurchases.filter((purchase) => purchase.nextRetryAt <= now);
+      if (duePurchases.length === 0) {
+        const nextQueuedPurchase = queuedPurchases.reduce<PendingValidationPurchase | null>(
+          (earliestPurchase, purchase) => {
+            if (!earliestPurchase || purchase.nextRetryAt < earliestPurchase.nextRetryAt) {
+              return purchase;
+            }
+            return earliestPurchase;
+          },
+          null
+        );
+
+        if (nextQueuedPurchase) {
+          schedulePendingValidationRetry(
+            nextQueuedPurchase.purchaseToken,
+            nextQueuedPurchase.nextRetryAt
+          );
+        }
+        return;
+      }
+
+      for (const queuedPurchase of duePurchases) {
+        const { purchaseToken } = queuedPurchase;
+
+        if (inFlightValidationTokensRef.current.has(purchaseToken)) {
+          continue;
+        }
+
+        const sessionAttempts = sessionRetryAttemptsRef.current[purchaseToken] ?? 0;
+        if (sessionAttempts >= MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
+          console.warn(
+            'Skipping pending purchase validation retry for this app session; max attempts reached.',
+            { purchaseTokenPrefix: purchaseToken.slice(0, 8), trigger }
+          );
+          continue;
+        }
+
+        inFlightValidationTokensRef.current.add(purchaseToken);
+
+        try {
+          const validationResponse = await validatePurchaseWithServer({
+            productId: queuedPurchase.productId,
+            purchaseToken: queuedPurchase.purchaseToken,
+            purchaseType: queuedPurchase.purchaseType,
+          });
+
+          if (validationResponse?.success !== true) {
+            throw new Error('Purchase validation returned unsuccessful response.');
+          }
+
+          const isPremiumValidation = validationResponse?.isPremium === true;
+          setIsPremium(isPremiumValidation);
+          const purchaseForFinishing = await findPurchaseByToken(purchaseToken);
+          if (!purchaseForFinishing) {
+            const errorDetails: PurchaseValidationErrorDetails = {
+              reason: PURCHASE_NOT_AVAILABLE_FOR_FINISH,
+              retryable: true,
+            };
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
+            console.error('Pending purchase acknowledgment retry queued:', {
+              flow: 'retryPendingValidationPurchases',
+              error: new Error('Purchase unavailable for finishTransaction.'),
+              productId: queuedPurchase.productId,
+              purchaseTokenPrefix: purchaseToken.slice(0, 8),
+              reason: errorDetails.reason,
+              retryable: errorDetails.retryable,
+              trigger,
+            });
+            continue;
+          }
+
+          try {
+            await RNIap.finishTransaction({
+              purchase: purchaseForFinishing,
+              isConsumable: false,
+            });
+          } catch (finishError) {
+            const errorDetails: PurchaseValidationErrorDetails = {
+              reason: CLIENT_FINISH_TRANSACTION_FAILED,
+              retryable: true,
+            };
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
+            console.error('Pending purchase acknowledgment retry queued:', {
+              flow: 'retryPendingValidationPurchases',
+              error: finishError,
+              productId: queuedPurchase.productId,
+              purchaseTokenPrefix: purchaseToken.slice(0, 8),
+              reason: errorDetails.reason,
+              retryable: errorDetails.retryable,
+              trigger,
+            });
+            continue;
+          }
+
+          await removePendingValidationPurchase(purchaseToken);
+          await syncPremiumStatus();
+        } catch (retryError) {
+          if (isTrialAlreadyUsedValidationError(retryError)) {
+            setHasUsedTrial(true);
+          }
+
+          const errorDetails = getPurchaseValidationErrorDetails(retryError);
+          const messageKey = getPendingValidationMessageKey(errorDetails);
+
+          if (errorDetails.retryable) {
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
+          } else {
+            await removePendingValidationPurchase(purchaseToken);
+            showPendingValidationAlert(messageKey);
+          }
+
+          console.error('Pending purchase validation retry failed:', {
+            flow: 'retryPendingValidationPurchases',
+            error: retryError,
+            productId: queuedPurchase.productId,
+            purchaseTokenPrefix: purchaseToken.slice(0, 8),
+            reason: errorDetails.reason,
+            retryable: errorDetails.retryable,
+            trigger,
+          });
+        } finally {
+          inFlightValidationTokensRef.current.delete(purchaseToken);
+        }
+      }
+    },
+    [
+      enqueueRetryableValidationFailure,
+      ensurePendingValidationQueueLoaded,
+      findPurchaseByToken,
+      removePendingValidationPurchase,
+      schedulePendingValidationRetry,
+      showPendingValidationAlert,
+      syncPremiumStatus,
+      validatePurchaseWithServer,
+    ]
+  );
+
+  useEffect(() => {
+    retryPendingValidationPurchasesRef.current = retryPendingValidationPurchases;
+  }, [retryPendingValidationPurchases]);
+
   // Process a purchase: validate with server and finish transaction
   const processPurchase = useCallback(
     async (
@@ -217,7 +629,8 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       try {
         console.log('Processing purchase:', purchase.productId);
 
-        if (!purchase.purchaseToken) {
+        const purchaseToken = purchase.purchaseToken;
+        if (!purchaseToken) {
           console.error('Purchase missing token', purchase);
           return {
             isPremium: false,
@@ -225,28 +638,49 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           };
         }
 
-        const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-        const validationResult = await validatePurchaseFn({
-          purchaseToken: purchase.purchaseToken,
+        recentPurchasesRef.current[purchaseToken] = purchase;
+        const purchaseType = inferPurchaseType(purchase.productId);
+        const validationResponse = await validatePurchaseWithServer({
+          purchaseToken,
           productId: purchase.productId,
-          purchaseType: inferPurchaseType(purchase.productId),
+          purchaseType,
         });
-        const data = validationResult.data as ValidationResponse;
-        console.log('Validation response:', data);
+        console.log('Validation response:', validationResponse);
 
-        if (data?.success === true) {
-          const isPremiumValidation = data?.isPremium === true;
-          setIsPremium(isPremiumValidation);
-          try {
-            // Acknowledge/finish transaction
-            await RNIap.finishTransaction({
-              purchase,
-              isConsumable: false,
-            });
-            console.log('Transaction finished successfully');
-          } catch (finishErr) {
-            console.error('Error finishing transaction:', finishErr);
-          }
+        if (validationResponse?.success !== true) {
+          throw new Error('Purchase validation returned unsuccessful response.');
+        }
+
+        const isPremiumValidation = validationResponse?.isPremium === true;
+        setIsPremium(isPremiumValidation);
+        try {
+          // Acknowledge/finish transaction after successful validation.
+          await RNIap.finishTransaction({
+            purchase,
+            isConsumable: false,
+          });
+          console.log('Transaction finished successfully');
+        } catch (finishErr) {
+          const errorDetails: PurchaseValidationErrorDetails = {
+            reason: CLIENT_FINISH_TRANSACTION_FAILED,
+            retryable: true,
+          };
+
+          await enqueueRetryableValidationFailure({
+            purchaseToken,
+            productId: purchase.productId,
+            purchaseType,
+            errorDetails,
+          });
+
+          console.error('Error finishing transaction; queued for retry:', {
+            flow: 'processPurchase',
+            error: finishErr,
+            productId: purchase.productId,
+            purchaseTokenPrefix: purchaseToken.slice(0, 8),
+            reason: errorDetails.reason,
+            retryable: errorDetails.retryable,
+          });
 
           if (syncAfterSuccess) {
             await syncPremiumStatus();
@@ -258,25 +692,69 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           };
         }
 
-        console.error('Validation failed:', data);
+        await removePendingValidationPurchase(purchaseToken);
+        if (syncAfterSuccess) {
+          await syncPremiumStatus();
+        }
+
         return {
-          isPremium: false,
-          validationSucceeded: false,
+          isPremium: isPremiumValidation,
+          validationSucceeded: true,
         };
       } catch (err) {
         if (isTrialAlreadyUsedValidationError(err)) {
           setHasUsedTrial(true);
         }
 
-        console.error('Error processing purchase:', err);
+        const purchaseToken = purchase.purchaseToken;
+        if (purchaseToken) {
+          const errorDetails = getPurchaseValidationErrorDetails(err);
+          const inlineMessageKey = getPendingValidationMessageKey(errorDetails);
+
+          if (errorDetails.retryable) {
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: purchase.productId,
+              purchaseType: inferPurchaseType(purchase.productId),
+              errorDetails,
+            });
+          } else {
+            await removePendingValidationPurchase(purchaseToken);
+            if (!isTrialAlreadyUsedValidationError(err)) {
+              showPendingValidationAlert(inlineMessageKey);
+            }
+          }
+
+          console.error('Error processing purchase:', {
+            flow: 'processPurchase',
+            error: err,
+            productId: purchase.productId,
+            purchaseTokenPrefix: purchaseToken.slice(0, 8),
+            reason: errorDetails.reason,
+            retryable: errorDetails.retryable,
+          });
+        } else {
+          console.error('Error processing purchase:', err);
+        }
+
         return {
           isPremium: false,
           validationSucceeded: false,
         };
       }
     },
-    [syncPremiumStatus]
+    [
+      enqueueRetryableValidationFailure,
+      removePendingValidationPurchase,
+      showPendingValidationAlert,
+      syncPremiumStatus,
+      validatePurchaseWithServer,
+    ]
   );
+
+  useEffect(() => {
+    processPurchaseRef.current = processPurchase;
+  }, [processPurchase]);
 
   // Initialize IAP listeners
   useEffect(() => {
@@ -293,7 +771,18 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
           if (purchase.purchaseToken || (purchase as any).transactionReceipt) {
             console.log('Receipt/Token found, processing...');
-            await processPurchase(purchase);
+            const processPurchaseFn = processPurchaseRef.current;
+            const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
+
+            if (!processPurchaseFn || !retryPendingValidationPurchasesFn) {
+              console.warn(
+                'Purchase update handlers are unavailable; skipping purchase processing for this event.'
+              );
+              return;
+            }
+
+            await processPurchaseFn(purchase);
+            await retryPendingValidationPurchasesFn('purchase-updated-listener');
           } else {
             console.log('No transaction receipt/token in purchase object');
           }
@@ -338,6 +827,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             setMonthlyStandardOfferToken(monthlyStandardOffer.offerToken);
           }
         }
+
+        const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
+        if (retryPendingValidationPurchasesFn) {
+          await retryPendingValidationPurchasesFn('iap-init');
+        }
       } catch (err) {
         console.warn('IAP initialization error:', err);
         setPlayMonthlyTrial({
@@ -358,9 +852,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       if (purchaseErrorSubscription) {
         purchaseErrorSubscription.remove();
       }
+      clearAllPendingValidationRetryTimeouts();
       RNIap.endConnection();
     };
-  }, [processPurchase]);
+  }, [clearAllPendingValidationRetryTimeouts]);
 
   // Listen to user's premium status in Firestore
   useEffect(() => {
@@ -424,6 +919,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
     const syncOnAppOpen = async () => {
       await syncPremiumStatus();
+      await retryPendingValidationPurchases('app-open');
 
       if (isCancelled) {
         return;
@@ -435,11 +931,12 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       isCancelled = true;
     };
-  }, [syncPremiumStatus, user]);
+  }, [retryPendingValidationPurchases, syncPremiumStatus, user]);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     try {
       console.log('Starting restorePurchases...');
+      await retryPendingValidationPurchases('restore-start');
       const purchases = await RNIap.getAvailablePurchases();
       console.log('Available purchases found:', purchases.length);
 
@@ -457,11 +954,13 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         const restoreResult = await processPurchase(purchase, { syncAfterSuccess: false });
 
         if (shouldTreatRestoreAsSuccess(restoreResult)) {
+          await retryPendingValidationPurchases('restore-success');
           await syncPremiumStatus();
           return true;
         }
       }
 
+      await retryPendingValidationPurchases('restore-complete');
       await syncPremiumStatus();
       return false;
     } catch (err: any) {
@@ -476,7 +975,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
       throw err;
     }
-  }, [processPurchase, syncPremiumStatus]);
+  }, [processPurchase, retryPendingValidationPurchases, syncPremiumStatus]);
 
   const purchasePremium = useCallback(
     async (plan: PremiumPlan, options?: { useTrial?: boolean }) => {

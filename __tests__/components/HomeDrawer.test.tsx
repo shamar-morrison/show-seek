@@ -56,11 +56,11 @@ describe('HomeDrawer sign out flow', () => {
   });
 
   it('keeps drawer open while signing out and closes after signOut completes', async () => {
-    let resolveSignOut: (() => void) | null = null;
+    let resolveSignOut: () => void = () => {};
     mockSignOut.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
-          resolveSignOut = resolve;
+          resolveSignOut = () => resolve();
         })
     );
 
@@ -72,7 +72,7 @@ describe('HomeDrawer sign out flow', () => {
     expect(mockOnClose).not.toHaveBeenCalled();
     expect(getByText('Signing Out...')).toBeTruthy();
 
-    resolveSignOut?.();
+    resolveSignOut();
 
     await waitFor(() => {
       expect(mockOnClose).toHaveBeenCalledTimes(1);

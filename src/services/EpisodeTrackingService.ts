@@ -111,10 +111,7 @@ class EpisodeTrackingService {
         lastUpdated: Date.now(),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
+      const timeout = createTimeoutWithCleanup(10000);
       await Promise.race([
         setDoc(
           trackingRef,
@@ -126,8 +123,10 @@ class EpisodeTrackingService {
           },
           { merge: true }
         ),
-        timeoutPromise,
-      ]);
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -148,24 +147,27 @@ class EpisodeTrackingService {
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeout = createTimeoutWithCleanup(10000);
 
       // First check if the document exists to avoid "not-found" errors
-      const snapshot = await getDoc(trackingRef);
+      const snapshot = await Promise.race([getDoc(trackingRef), timeout.promise]).finally(() => {
+        timeout.cancel();
+      });
       if (!snapshot.exists()) {
         // No tracking data exists, nothing to unwatch - return early as no-op
         return;
       }
 
+      const updateTimeout = createTimeoutWithCleanup(10000);
       await Promise.race([
         updateDoc(trackingRef, {
           [`episodes.${episodeKey}`]: deleteField(),
           'metadata.lastUpdated': Date.now(),
         }),
-        timeoutPromise,
-      ]);
+        updateTimeout.promise,
+      ]).finally(() => {
+        updateTimeout.cancel();
+      });
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -211,9 +213,7 @@ class EpisodeTrackingService {
         lastUpdated: now,
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeout = createTimeoutWithCleanup(10000);
 
       // Use setDoc with merge to update all episodes at once
       await Promise.race([
@@ -225,8 +225,10 @@ class EpisodeTrackingService {
           },
           { merge: true }
         ),
-        timeoutPromise,
-      ]);
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
