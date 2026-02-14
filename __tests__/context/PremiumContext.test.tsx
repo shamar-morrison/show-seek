@@ -287,7 +287,7 @@ describe('PremiumContext', () => {
     ]);
     mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
 
-    const { unmount } = renderHook(() => usePremium(), { wrapper });
+    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
     await waitForProviderInit();
 
     await waitFor(() => {
@@ -302,6 +302,7 @@ describe('PremiumContext', () => {
     expect(queuePayload?.[queuedPurchaseToken]).toBeDefined();
     expect(queuePayload?.[queuedPurchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
     expect(queuePayload?.[queuedPurchaseToken]?.nextRetryAt).toBeGreaterThan(Date.now());
+    expect(result.current.isPremium).toBe(true);
     expect(alertSpy).toHaveBeenCalled();
 
     unmount();

@@ -513,6 +513,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           }
 
           const isPremiumValidation = validationResponse?.isPremium === true;
+          setIsPremium(isPremiumValidation);
           const purchaseForFinishing = await findPurchaseByToken(purchaseToken);
           if (!purchaseForFinishing) {
             const errorDetails: PurchaseValidationErrorDetails = {
@@ -565,7 +566,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             continue;
           }
 
-          setIsPremium(isPremiumValidation);
           await removePendingValidationPurchase(purchaseToken);
           await syncPremiumStatus();
         } catch (retryError) {
