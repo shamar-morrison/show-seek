@@ -23,6 +23,7 @@ import {
   Linking,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -30,17 +31,31 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PremiumScreen() {
-  const { isPremium, isLoading, purchasePremium, restorePurchases, resetTestPurchase, prices } =
-    usePremium();
+  const {
+    isPremium,
+    isLoading,
+    purchasePremium,
+    restorePurchases,
+    resetTestPurchase,
+    prices,
+    monthlyTrial,
+  } = usePremium();
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
+  const [useFreeTrial, setUseFreeTrial] = React.useState(false);
+  const [trialInlineMessageKey, setTrialInlineMessageKey] = React.useState<string | null>(null);
   const wasPremiumRef = React.useRef(isPremium);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
+  const isMonthlySelected = selectedPlan === 'monthly';
+  const isTrialToggleEnabled = isMonthlySelected && monthlyTrial.isEligible;
+  const trialStatusMessageKey =
+    trialInlineMessageKey ??
+    (isMonthlySelected ? monthlyTrial.reasonKey : 'premium.freeTrialMonthlyOnlyMessage');
 
   // Watch for premium status change to show success
   React.useEffect(() => {
@@ -52,23 +67,57 @@ export default function PremiumScreen() {
     wasPremiumRef.current = isPremium;
   }, [isPremium, router, t]);
 
+  React.useEffect(() => {
+    if (!isMonthlySelected && useFreeTrial) {
+      setUseFreeTrial(false);
+    }
+  }, [isMonthlySelected, useFreeTrial]);
+
+  React.useEffect(() => {
+    if (!monthlyTrial.isEligible && useFreeTrial) {
+      setUseFreeTrial(false);
+    }
+  }, [monthlyTrial.isEligible, useFreeTrial]);
+
   const handlePurchase = async () => {
     try {
-      await purchasePremium(selectedPlan);
+      setTrialInlineMessageKey(null);
+      await purchasePremium(selectedPlan, {
+        useTrial: selectedPlan === 'monthly' && useFreeTrial,
+      });
       // Success is handled by the listener updating isPremium state
     } catch (error: any) {
       // Only show error for real errors, not cancellations
       const code = String(error?.code || '').toLowerCase();
       const message = String(error?.message || '').toLowerCase();
+      const isTrialIneligible = code === 'trial_ineligible';
       const isUserCanceled =
         code === 'e_user_cancelled' ||
         code === 'user-cancelled' ||
         message === 'user canceled' ||
         message.includes('user cancelled');
 
+      if (isTrialIneligible) {
+        setUseFreeTrial(false);
+        setTrialInlineMessageKey('premium.freeTrialRejectedMessage');
+        return;
+      }
+
       if (!isUserCanceled) {
         Alert.alert(t('premium.purchaseFailedTitle'), error.message || t('errors.generic'));
       }
+    }
+  };
+
+  const handleTrialToggle = (nextValue: boolean) => {
+    if (!isTrialToggleEnabled) {
+      setUseFreeTrial(false);
+      return;
+    }
+
+    setUseFreeTrial(nextValue);
+    if (!nextValue) {
+      setTrialInlineMessageKey(null);
     }
   };
 
@@ -158,6 +207,35 @@ export default function PremiumScreen() {
               accentColor={accentColor}
               onPress={() => setSelectedPlan('yearly')}
             />
+          </View>
+
+          <View style={styles.trialContainer}>
+            <View style={styles.trialRow}>
+              <Text style={styles.trialLabel}>{t('premium.freeTrialToggleLabel')}</Text>
+              <Switch
+                testID="free-trial-toggle"
+                value={useFreeTrial && isTrialToggleEnabled}
+                onValueChange={handleTrialToggle}
+                disabled={!isTrialToggleEnabled}
+                trackColor={{
+                  false: COLORS.surfaceLight,
+                  true: accentColor,
+                }}
+                thumbColor={COLORS.white}
+              />
+            </View>
+
+            {useFreeTrial && isTrialToggleEnabled ? (
+              <Text testID="free-trial-helper-text" style={styles.trialHelperText}>
+                {t('premium.freeTrialHelperText')}
+              </Text>
+            ) : null}
+
+            {trialStatusMessageKey ? (
+              <Text testID="free-trial-inline-message" style={styles.trialInlineMessage}>
+                {t(trialStatusMessageKey)}
+              </Text>
+            ) : null}
           </View>
 
           <Text style={styles.featuresTitle}>{t('premium.whatsIncluded')}</Text>
@@ -392,6 +470,38 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: SPACING.l,
     gap: SPACING.l,
+  },
+  trialContainer: {
+    width: '100%',
+    marginBottom: SPACING.l,
+    padding: SPACING.m,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.surfaceLight,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    gap: SPACING.s,
+  },
+  trialRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.s,
+  },
+  trialLabel: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  trialHelperText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  trialInlineMessage: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   planCard: {
     borderWidth: 1,

@@ -6,6 +6,9 @@ admin.initializeApp();
 
 const PACKAGE_NAME = 'app.horizon.showseek';
 const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
+const MONTHLY_SUBSCRIPTION_PRODUCT_ID = 'monthly_showseek_sub';
+const YEARLY_SUBSCRIPTION_PRODUCT_ID = 'showseek_yearly_sub';
+const MONTHLY_TRIAL_OFFER_ID = 'one-week-trial';
 
 const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
   'SUBSCRIPTION_STATE_ACTIVE',
@@ -15,24 +18,38 @@ const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
 
 type PurchaseType = 'in-app' | 'subs';
 type EntitlementType = 'lifetime' | 'subscription' | 'none';
+type SubscriptionType = 'monthly' | 'yearly';
 
 interface ExistingPremiumData {
   basePlanId?: string | null;
   entitlementType?: EntitlementType;
+  expireAt?: admin.firestore.Timestamp | null;
+  expiredAt?: admin.firestore.Timestamp | null;
+  expiresAt?: admin.firestore.Timestamp | null;
   isPremium?: boolean;
+  isInTrial?: boolean;
   orderId?: string | null;
   productId?: string | null;
   purchaseDate?: admin.firestore.Timestamp;
   purchaseToken?: string | null;
+  subscriptionType?: SubscriptionType | null;
   subscriptionState?: string | null;
+  trialEndAt?: admin.firestore.Timestamp | null;
+  trialStartAt?: admin.firestore.Timestamp | null;
 }
 
 interface SubscriptionValidationResult {
   basePlanId: string | null;
+  expireAt: admin.firestore.Timestamp | null;
+  expiredAt: admin.firestore.Timestamp | null;
   expiresAt: admin.firestore.Timestamp | null;
   isPremium: boolean;
+  isInTrial: boolean;
   orderId: string | null;
+  subscriptionType: SubscriptionType | null;
   subscriptionState: string | null;
+  trialEndAt: admin.firestore.Timestamp | null;
+  trialStartAt: admin.firestore.Timestamp | null;
 }
 
 const getAndroidPublisherClient = (): androidpublisher_v3.Androidpublisher => {
@@ -46,13 +63,68 @@ const getAndroidPublisherClient = (): androidpublisher_v3.Androidpublisher => {
   });
 };
 
-const parseExpiryMillis = (expiryTime?: string | null): number | null => {
-  if (!expiryTime) {
+const parseDateTimeMillis = (dateTime?: string | null): number | null => {
+  if (!dateTime) {
     return null;
   }
 
-  const parsed = Date.parse(expiryTime);
+  const parsed = Date.parse(dateTime);
   return Number.isNaN(parsed) ? null : parsed;
+};
+
+const toTimestamp = (millis: number | null): admin.firestore.Timestamp | null => {
+  if (millis === null) {
+    return null;
+  }
+
+  return admin.firestore.Timestamp.fromMillis(millis);
+};
+
+const resolveSubscriptionType = (productId?: string | null): SubscriptionType | null => {
+  if (productId === MONTHLY_SUBSCRIPTION_PRODUCT_ID) {
+    return 'monthly';
+  }
+
+  if (productId === YEARLY_SUBSCRIPTION_PRODUCT_ID) {
+    return 'yearly';
+  }
+
+  return null;
+};
+
+const normalizeOfferIdentifier = (value?: string[] | string | null): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item ?? '').trim().toLowerCase());
+  }
+
+  return [String(value ?? '').trim().toLowerCase()];
+};
+
+const isMonthlyTrialOffer = (
+  offerDetails?: androidpublisher_v3.Schema$OfferDetails | null
+): boolean => {
+  if (!offerDetails) {
+    return false;
+  }
+
+  const normalizedTrialId = MONTHLY_TRIAL_OFFER_ID.toLowerCase();
+  const offerIds = normalizeOfferIdentifier(offerDetails.offerId);
+  if (offerIds.includes(normalizedTrialId)) {
+    return true;
+  }
+
+  const offerTags = normalizeOfferIdentifier(offerDetails.offerTags);
+  return offerTags.includes(normalizedTrialId);
+};
+
+const resolveExpiredAt = (
+  expiresAt: admin.firestore.Timestamp | null
+): admin.firestore.Timestamp | null => {
+  if (!expiresAt) {
+    return null;
+  }
+
+  return expiresAt.toMillis() <= Date.now() ? expiresAt : null;
 };
 
 const getLatestLineItem = (
@@ -66,7 +138,7 @@ const getLatestLineItem = (
   let latestExpiry = 0;
 
   for (const lineItem of lineItems) {
-    const expiryMillis = parseExpiryMillis(lineItem.expiryTime);
+    const expiryMillis = parseDateTimeMillis(lineItem.expiryTime);
     if (expiryMillis === null) {
       continue;
     }
@@ -198,21 +270,57 @@ const persistPremiumStatus = async (
   );
 };
 
+interface NoneEntitlementOverrides {
+  basePlanId?: string | null;
+  expireAt?: admin.firestore.Timestamp | null;
+  expiredAt?: admin.firestore.Timestamp | null;
+  expiresAt?: admin.firestore.Timestamp | null;
+  subscriptionState?: string | null;
+  subscriptionType?: SubscriptionType | null;
+}
+
 const buildNoneEntitlementPayload = (
   existingPremium: ExistingPremiumData,
-  overrides?: Partial<Record<'subscriptionState' | 'expiresAt' | 'basePlanId', unknown>>
-): Record<string, unknown> => ({
-  isPremium: false,
-  entitlementType: 'none',
-  purchaseToken: existingPremium.purchaseToken ?? null,
-  productId: existingPremium.productId ?? null,
-  orderId: existingPremium.orderId ?? null,
-  purchaseDate: existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
-  subscriptionState: (overrides?.subscriptionState as string | null | undefined) ?? null,
-  expiresAt: (overrides?.expiresAt as admin.firestore.Timestamp | null | undefined) ?? null,
-  basePlanId: (overrides?.basePlanId as string | null | undefined) ?? null,
-  lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-});
+  overrides?: NoneEntitlementOverrides
+): Record<string, unknown> => {
+  const resolvedSubscriptionType =
+    overrides?.subscriptionType ??
+    existingPremium.subscriptionType ??
+    resolveSubscriptionType(existingPremium.productId ?? null);
+  const resolvedExpiresAt =
+    overrides?.expiresAt !== undefined
+      ? overrides.expiresAt
+      : existingPremium.expiresAt ?? null;
+  const resolvedExpiredAt =
+    overrides?.expiredAt ??
+    overrides?.expireAt ??
+    existingPremium.expiredAt ??
+    existingPremium.expireAt ??
+    resolveExpiredAt(resolvedExpiresAt);
+  const normalizedExpiredAt =
+    resolvedExpiredAt && resolvedExpiredAt.toMillis() <= Date.now()
+      ? resolvedExpiredAt
+      : resolveExpiredAt(resolvedExpiresAt);
+
+  return {
+    isPremium: false,
+    entitlementType: 'none',
+    purchaseToken: existingPremium.purchaseToken ?? null,
+    productId: existingPremium.productId ?? null,
+    orderId: existingPremium.orderId ?? null,
+    purchaseDate: existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
+    subscriptionState: overrides?.subscriptionState ?? existingPremium.subscriptionState ?? null,
+    expiresAt: resolvedExpiresAt,
+    basePlanId: overrides?.basePlanId ?? existingPremium.basePlanId ?? null,
+    subscriptionType: resolvedSubscriptionType,
+    isInTrial: false,
+    trialStartAt: null,
+    trialEndAt: null,
+    expiredAt: normalizedExpiredAt,
+    expireAt: normalizedExpiredAt,
+    lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+};
 
 const validateLifetimeWithGoogle = async (
   androidPublisher: androidpublisher_v3.Androidpublisher,
@@ -275,20 +383,36 @@ const validateSubscriptionWithGoogle = async (
   }
 
   const latestLineItem = getLatestLineItem(purchaseData.lineItems);
-  const expiryMillis = parseExpiryMillis(latestLineItem?.expiryTime);
+  const expiryMillis = parseDateTimeMillis(latestLineItem?.expiryTime);
+  const startMillis = parseDateTimeMillis(purchaseData.startTime);
   const subscriptionState = purchaseData.subscriptionState ?? null;
+  const subscriptionType = resolveSubscriptionType(productId);
+  const isMonthlyTrialMatched =
+    subscriptionType === 'monthly' && isMonthlyTrialOffer(latestLineItem?.offerDetails);
 
   const hasEntitledState = subscriptionState
     ? ENTITLED_SUBSCRIPTION_STATES.has(subscriptionState)
     : false;
   const isNotExpired = expiryMillis !== null && expiryMillis > Date.now();
+  const isPremium = hasEntitledState && isNotExpired;
+  const expiresAt = toTimestamp(expiryMillis);
+  const isInTrial = isPremium && isMonthlyTrialMatched;
+  const trialStartAt = isInTrial ? toTimestamp(startMillis) : null;
+  const trialEndAt = isInTrial ? expiresAt : null;
+  const expiredAt = resolveExpiredAt(expiresAt);
 
   return {
-    isPremium: hasEntitledState && isNotExpired,
+    isPremium,
     subscriptionState,
-    expiresAt: expiryMillis ? admin.firestore.Timestamp.fromMillis(expiryMillis) : null,
+    expiresAt,
     basePlanId: latestLineItem?.offerDetails?.basePlanId ?? null,
     orderId: purchaseData.latestOrderId ?? null,
+    subscriptionType,
+    isInTrial,
+    trialStartAt,
+    trialEndAt,
+    expiredAt,
+    expireAt: expiredAt,
   };
 };
 
@@ -349,6 +473,12 @@ export const validatePurchase = onCall(async (request) => {
         subscriptionState: null,
         expiresAt: null,
         basePlanId: null,
+        subscriptionType: null,
+        isInTrial: false,
+        trialStartAt: null,
+        trialEndAt: null,
+        expiredAt: null,
+        expireAt: null,
         lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -372,6 +502,12 @@ export const validatePurchase = onCall(async (request) => {
       subscriptionState: subscriptionValidation.subscriptionState,
       expiresAt: subscriptionValidation.expiresAt,
       basePlanId: subscriptionValidation.basePlanId,
+      subscriptionType: subscriptionValidation.subscriptionType,
+      isInTrial: subscriptionValidation.isInTrial,
+      trialStartAt: subscriptionValidation.trialStartAt,
+      trialEndAt: subscriptionValidation.trialEndAt,
+      expiredAt: subscriptionValidation.expiredAt,
+      expireAt: subscriptionValidation.expireAt,
       lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -414,6 +550,12 @@ export const syncPremiumStatus = onCall(async (request) => {
         subscriptionState: null,
         expiresAt: null,
         basePlanId: null,
+        subscriptionType: null,
+        isInTrial: false,
+        trialStartAt: null,
+        trialEndAt: null,
+        expiredAt: null,
+        expireAt: null,
         lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -446,6 +588,12 @@ export const syncPremiumStatus = onCall(async (request) => {
           subscriptionState: subscriptionValidation.subscriptionState,
           expiresAt: subscriptionValidation.expiresAt,
           basePlanId: subscriptionValidation.basePlanId,
+          subscriptionType: subscriptionValidation.subscriptionType,
+          isInTrial: subscriptionValidation.isInTrial,
+          trialStartAt: subscriptionValidation.trialStartAt,
+          trialEndAt: subscriptionValidation.trialEndAt,
+          expiredAt: subscriptionValidation.expiredAt,
+          expireAt: subscriptionValidation.expireAt,
           lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
@@ -462,7 +610,7 @@ export const syncPremiumStatus = onCall(async (request) => {
             userId,
             buildNoneEntitlementPayload(existingPremium, {
               subscriptionState: null,
-              expiresAt: null,
+              expiresAt: existingPremium.expiresAt ?? null,
               basePlanId: null,
             })
           );

@@ -1,10 +1,16 @@
 import {
+  getDisplayPriceForSubscriptionProduct,
   getPlanForProductId,
   getProductIdForPlan,
   getProductPriority,
   inferPurchaseType,
   isKnownPremiumProductId,
+  isMonthlyTrialOffer,
   LEGACY_LIFETIME_PRODUCT_ID,
+  MONTHLY_TRIAL_OFFER_ID,
+  resolveMonthlyTrialOffer,
+  shouldTreatRestoreAsSuccess,
+  sortPurchasesByPremiumPriority,
   SUBSCRIPTION_PRODUCT_IDS,
 } from '@/src/context/premiumBilling';
 
@@ -43,5 +49,121 @@ describe('premiumBilling helpers', () => {
     expect(lifetimePriority).toBeLessThan(yearlyPriority);
     expect(yearlyPriority).toBeLessThan(monthlyPriority);
     expect(monthlyPriority).toBeLessThan(unknownPriority);
+  });
+
+  it('resolves monthly trial offers by offerId', () => {
+    const trialOffer = {
+      basePlanId: 'monthly',
+      offerId: MONTHLY_TRIAL_OFFER_ID,
+      offerTags: [],
+      offerToken: 'trial-token-by-id',
+      pricingPhases: { pricingPhaseList: [] },
+    } as any;
+
+    expect(isMonthlyTrialOffer(trialOffer)).toBe(true);
+    expect(resolveMonthlyTrialOffer([trialOffer])).toEqual({
+      isEligible: true,
+      offerToken: 'trial-token-by-id',
+    });
+  });
+
+  it('resolves monthly trial offers by offerTags fallback', () => {
+    const trialOffer = {
+      basePlanId: 'monthly',
+      offerId: null,
+      offerTags: ['starter', MONTHLY_TRIAL_OFFER_ID],
+      offerToken: 'trial-token-by-tag',
+      pricingPhases: { pricingPhaseList: [] },
+    } as any;
+
+    expect(isMonthlyTrialOffer(trialOffer)).toBe(true);
+    expect(resolveMonthlyTrialOffer([trialOffer])).toEqual({
+      isEligible: true,
+      offerToken: 'trial-token-by-tag',
+    });
+  });
+
+  it('marks trial as unavailable when no matching offer is found', () => {
+    const nonTrialOffer = {
+      basePlanId: 'monthly',
+      offerId: 'standard-offer',
+      offerTags: ['regular'],
+      offerToken: 'regular-token',
+      pricingPhases: { pricingPhaseList: [] },
+    } as any;
+
+    expect(resolveMonthlyTrialOffer([nonTrialOffer])).toEqual({
+      isEligible: false,
+      offerToken: null,
+    });
+  });
+
+  it('selects a paid recurring price even when first phase is free trial', () => {
+    const monthlyProduct = {
+      displayPrice: '$3.00',
+      id: SUBSCRIPTION_PRODUCT_IDS.monthly,
+      platform: 'android',
+      subscriptionOfferDetailsAndroid: [
+        {
+          basePlanId: 'monthly',
+          offerId: MONTHLY_TRIAL_OFFER_ID,
+          offerTags: [MONTHLY_TRIAL_OFFER_ID],
+          offerToken: 'trial-token',
+          pricingPhases: {
+            pricingPhaseList: [
+              {
+                billingCycleCount: 1,
+                billingPeriod: 'P7D',
+                formattedPrice: 'Free',
+                priceAmountMicros: '0',
+                priceCurrencyCode: 'USD',
+                recurrenceMode: 2,
+              },
+              {
+                billingCycleCount: 0,
+                billingPeriod: 'P1M',
+                formattedPrice: '$3.00',
+                priceAmountMicros: '3000000',
+                priceCurrencyCode: 'USD',
+                recurrenceMode: 1,
+              },
+            ],
+          },
+        },
+      ],
+      type: 'subs',
+    } as any;
+
+    expect(getDisplayPriceForSubscriptionProduct(monthlyProduct)).toBe('$3.00');
+  });
+
+  it('keeps restore scan running for non-entitled validation results', () => {
+    expect(
+      shouldTreatRestoreAsSuccess({
+        validationSucceeded: true,
+        isPremium: false,
+      })
+    ).toBe(false);
+
+    expect(
+      shouldTreatRestoreAsSuccess({
+        validationSucceeded: true,
+        isPremium: true,
+      })
+    ).toBe(true);
+  });
+
+  it('sorts purchases deterministically by existing premium priority', () => {
+    const sorted = sortPurchasesByPremiumPriority([
+      { productId: SUBSCRIPTION_PRODUCT_IDS.monthly },
+      { productId: SUBSCRIPTION_PRODUCT_IDS.yearly },
+      { productId: LEGACY_LIFETIME_PRODUCT_ID },
+    ]);
+
+    expect(sorted.map((purchase) => purchase.productId)).toEqual([
+      LEGACY_LIFETIME_PRODUCT_ID,
+      SUBSCRIPTION_PRODUCT_IDS.yearly,
+      SUBSCRIPTION_PRODUCT_IDS.monthly,
+    ]);
   });
 });
