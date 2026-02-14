@@ -1,3 +1,4 @@
+import { MONTHLY_TRIAL_OFFER_ID } from '@/functions/src/shared/premiumOfferConstants';
 import type {
   PricingPhaseAndroid,
   Product,
@@ -9,7 +10,7 @@ export type PremiumPlan = 'monthly' | 'yearly';
 export type PremiumPurchaseType = 'in-app' | 'subs';
 
 export const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
-export const MONTHLY_TRIAL_OFFER_ID = 'one-week-trial';
+export { MONTHLY_TRIAL_OFFER_ID };
 
 export const SUBSCRIPTION_PRODUCT_IDS: Record<PremiumPlan, string> = {
   monthly: 'monthly_showseek_sub',

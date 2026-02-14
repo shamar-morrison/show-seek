@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { androidpublisher_v3, google } from 'googleapis';
+import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
 
 admin.initializeApp();
 
@@ -8,7 +9,6 @@ const PACKAGE_NAME = 'app.horizon.showseek';
 const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
 const MONTHLY_SUBSCRIPTION_PRODUCT_ID = 'monthly_showseek_sub';
 const YEARLY_SUBSCRIPTION_PRODUCT_ID = 'showseek_yearly_sub';
-const MONTHLY_TRIAL_OFFER_ID = 'one-week-trial';
 const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
 
 const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
@@ -350,6 +350,7 @@ const buildNoneEntitlementPayload = (
     trialEndAt: null,
     hasUsedTrial,
     trialConsumedAt,
+    // Keep both keys for backward compatibility across historical schema variants.
     expiredAt: normalizedExpiredAt,
     expireAt: normalizedExpiredAt,
     lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
