@@ -39,7 +39,7 @@ jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const FlashList = React.forwardRef((props: any, ref) => {
+  const FlashList = React.forwardRef((props: any, ref: React.ForwardedRef<unknown>) => {
     const { data, renderItem, onMomentumScrollEnd } = props;
     const [index, setIndex] = React.useState(0);
     const screenWidth = 375;

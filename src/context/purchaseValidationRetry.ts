@@ -4,6 +4,8 @@ export const PENDING_VALIDATION_QUEUE_STORAGE_KEY = 'premium_pending_validation_
 export const MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION = 5;
 export const PENDING_VALIDATION_RETRY_BASE_MS = 5000;
 export const PENDING_VALIDATION_RETRY_MAX_MS = 5 * 60 * 1000;
+export const CLIENT_FINISH_TRANSACTION_FAILED = 'CLIENT_FINISH_TRANSACTION_FAILED';
+export const PURCHASE_NOT_AVAILABLE_FOR_FINISH = 'PURCHASE_NOT_AVAILABLE_FOR_FINISH';
 
 export interface PurchaseValidationErrorDetails {
   reason: string | null;

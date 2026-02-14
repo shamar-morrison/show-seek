@@ -14,12 +14,15 @@ import {
   type PremiumPurchaseType,
 } from '@/src/context/premiumBilling';
 import {
+  CLIENT_FINISH_TRANSACTION_FAILED,
   getPendingValidationMessageKey,
   getPendingValidationRetryDelayMs,
   getPurchaseValidationErrorDetails,
   MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION,
   normalizePendingValidationQueue,
   PENDING_VALIDATION_QUEUE_STORAGE_KEY,
+  PURCHASE_NOT_AVAILABLE_FOR_FINISH,
+  type PurchaseValidationErrorDetails,
   type PendingValidationPurchase,
   type PendingValidationQueue,
 } from '@/src/context/purchaseValidationRetry';
@@ -366,6 +369,39 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     [clearPendingValidationRetryTimeout]
   );
 
+  const enqueueRetryableValidationFailure = useCallback(
+    async ({
+      purchaseToken,
+      productId,
+      purchaseType,
+      errorDetails,
+    }: {
+      purchaseToken: string;
+      productId: string;
+      purchaseType: PremiumPurchaseType;
+      errorDetails: PurchaseValidationErrorDetails;
+    }) => {
+      const nextAttempt = (sessionRetryAttemptsRef.current[purchaseToken] ?? 0) + 1;
+      sessionRetryAttemptsRef.current[purchaseToken] = nextAttempt;
+      const nextRetryAt = Date.now() + getPendingValidationRetryDelayMs(nextAttempt);
+
+      await upsertPendingValidationPurchase({
+        purchaseToken,
+        productId,
+        purchaseType,
+        nextRetryAt,
+        lastReason: errorDetails.reason,
+      });
+
+      if (nextAttempt < MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
+        schedulePendingValidationRetry(purchaseToken, nextRetryAt);
+      }
+
+      showPendingValidationAlert(getPendingValidationMessageKey(errorDetails));
+    },
+    [schedulePendingValidationRetry, showPendingValidationAlert, upsertPendingValidationPurchase]
+  );
+
   const validatePurchaseWithServer = useCallback(
     async (purchase: {
       productId: string;
@@ -470,17 +506,60 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             throw new Error('Purchase validation returned unsuccessful response.');
           }
 
+          const isPremiumValidation = validationResponse?.isPremium === true;
           const purchaseForFinishing = await findPurchaseByToken(purchaseToken);
           if (!purchaseForFinishing) {
-            throw new Error('Purchase found for validation but unavailable for finishTransaction.');
+            const errorDetails: PurchaseValidationErrorDetails = {
+              reason: PURCHASE_NOT_AVAILABLE_FOR_FINISH,
+              retryable: true,
+            };
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
+            console.error('Pending purchase acknowledgment retry queued:', {
+              flow: 'retryPendingValidationPurchases',
+              error: new Error('Purchase unavailable for finishTransaction.'),
+              productId: queuedPurchase.productId,
+              purchaseTokenPrefix: purchaseToken.slice(0, 8),
+              reason: errorDetails.reason,
+              retryable: errorDetails.retryable,
+              trigger,
+            });
+            continue;
           }
 
-          await RNIap.finishTransaction({
-            purchase: purchaseForFinishing,
-            isConsumable: false,
-          });
+          try {
+            await RNIap.finishTransaction({
+              purchase: purchaseForFinishing,
+              isConsumable: false,
+            });
+          } catch (finishError) {
+            const errorDetails: PurchaseValidationErrorDetails = {
+              reason: CLIENT_FINISH_TRANSACTION_FAILED,
+              retryable: true,
+            };
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
+            console.error('Pending purchase acknowledgment retry queued:', {
+              flow: 'retryPendingValidationPurchases',
+              error: finishError,
+              productId: queuedPurchase.productId,
+              purchaseTokenPrefix: purchaseToken.slice(0, 8),
+              reason: errorDetails.reason,
+              retryable: errorDetails.retryable,
+              trigger,
+            });
+            continue;
+          }
 
-          setIsPremium(validationResponse?.isPremium === true);
+          setIsPremium(isPremiumValidation);
           await removePendingValidationPurchase(purchaseToken);
           await syncPremiumStatus();
         } catch (retryError) {
@@ -492,27 +571,19 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           const messageKey = getPendingValidationMessageKey(errorDetails);
 
           if (errorDetails.retryable) {
-            const nextAttempt = sessionAttempts + 1;
-            sessionRetryAttemptsRef.current[purchaseToken] = nextAttempt;
-
-            const nextRetryAt = Date.now() + getPendingValidationRetryDelayMs(nextAttempt);
-            pendingValidationQueueRef.current[purchaseToken] = {
-              ...queuedPurchase,
-              nextRetryAt,
-              updatedAt: Date.now(),
-              lastReason: errorDetails.reason,
-            };
-            await persistPendingValidationQueue();
-            if (nextAttempt < MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
-              schedulePendingValidationRetry(purchaseToken, nextRetryAt);
-            }
-            showPendingValidationAlert(messageKey);
+            await enqueueRetryableValidationFailure({
+              purchaseToken,
+              productId: queuedPurchase.productId,
+              purchaseType: queuedPurchase.purchaseType,
+              errorDetails,
+            });
           } else {
             await removePendingValidationPurchase(purchaseToken);
             showPendingValidationAlert(messageKey);
           }
 
           console.error('Pending purchase validation retry failed:', {
+            flow: 'retryPendingValidationPurchases',
             error: retryError,
             productId: queuedPurchase.productId,
             purchaseTokenPrefix: purchaseToken.slice(0, 8),
@@ -526,9 +597,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
     },
     [
+      enqueueRetryableValidationFailure,
       ensurePendingValidationQueueLoaded,
       findPurchaseByToken,
-      persistPendingValidationQueue,
       removePendingValidationPurchase,
       schedulePendingValidationRetry,
       showPendingValidationAlert,
@@ -584,7 +655,35 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           });
           console.log('Transaction finished successfully');
         } catch (finishErr) {
-          console.error('Error finishing transaction:', finishErr);
+          const errorDetails: PurchaseValidationErrorDetails = {
+            reason: CLIENT_FINISH_TRANSACTION_FAILED,
+            retryable: true,
+          };
+
+          await enqueueRetryableValidationFailure({
+            purchaseToken,
+            productId: purchase.productId,
+            purchaseType,
+            errorDetails,
+          });
+
+          console.error('Error finishing transaction; queued for retry:', {
+            flow: 'processPurchase',
+            error: finishErr,
+            productId: purchase.productId,
+            purchaseTokenPrefix: purchaseToken.slice(0, 8),
+            reason: errorDetails.reason,
+            retryable: errorDetails.retryable,
+          });
+
+          if (syncAfterSuccess) {
+            await syncPremiumStatus();
+          }
+
+          return {
+            isPremium: isPremiumValidation,
+            validationSucceeded: true,
+          };
         }
 
         await removePendingValidationPurchase(purchaseToken);
@@ -607,21 +706,12 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           const inlineMessageKey = getPendingValidationMessageKey(errorDetails);
 
           if (errorDetails.retryable) {
-            const nextAttempt = (sessionRetryAttemptsRef.current[purchaseToken] ?? 0) + 1;
-            sessionRetryAttemptsRef.current[purchaseToken] = nextAttempt;
-            const nextRetryAt = Date.now() + getPendingValidationRetryDelayMs(nextAttempt);
-
-            await upsertPendingValidationPurchase({
+            await enqueueRetryableValidationFailure({
               purchaseToken,
               productId: purchase.productId,
               purchaseType: inferPurchaseType(purchase.productId),
-              nextRetryAt,
-              lastReason: errorDetails.reason,
+              errorDetails,
             });
-            if (nextAttempt < MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
-              schedulePendingValidationRetry(purchaseToken, nextRetryAt);
-            }
-            showPendingValidationAlert(inlineMessageKey);
           } else {
             await removePendingValidationPurchase(purchaseToken);
             if (!isTrialAlreadyUsedValidationError(err)) {
@@ -630,6 +720,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           }
 
           console.error('Error processing purchase:', {
+            flow: 'processPurchase',
             error: err,
             productId: purchase.productId,
             purchaseTokenPrefix: purchaseToken.slice(0, 8),
@@ -647,11 +738,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
     },
     [
+      enqueueRetryableValidationFailure,
       removePendingValidationPurchase,
-      schedulePendingValidationRetry,
       showPendingValidationAlert,
       syncPremiumStatus,
-      upsertPendingValidationPurchase,
       validatePurchaseWithServer,
     ]
   );
