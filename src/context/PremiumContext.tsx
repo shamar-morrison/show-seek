@@ -27,6 +27,7 @@ import {
   type PendingValidationQueue,
 } from '@/src/context/purchaseValidationRetry';
 import { auth, db, functions } from '@/src/firebase/config';
+import { createUserDocument } from '@/src/firebase/user';
 import i18n from '@/src/i18n';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -918,6 +919,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     let isCancelled = false;
 
     const syncOnAppOpen = async () => {
+      await createUserDocument(user);
       await syncPremiumStatus();
       await retryPendingValidationPurchases('app-open');
 

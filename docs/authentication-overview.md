@@ -9,6 +9,7 @@ This document describes the current authentication model used in Show Seek.
 - Primary entry is Google sign-in at `/(auth)/sign-in`.
 - Legacy email/password sign-in remains at `/(auth)/email-sign-in`.
 - The `/(auth)/sign-up` route has been removed.
+- User profile bootstrap normalizes required `users/{uid}` fields (`uid`, `displayName`, `email`, `photoURL`, `createdAt`) with safe fallbacks.
 
 ## Auth Routes
 
@@ -26,8 +27,12 @@ This document describes the current authentication model used in Show Seek.
 
 1. User taps **Continue with Google**.
 2. App authenticates via Firebase credential sign-in.
-3. On success, `createUserDocument(user)` creates/updates `users/{uid}` in Firestore.
-4. Root layout redirects authenticated users into tabs.
+3. On success, `createUserDocument(user)` creates/updates `users/{uid}` in Firestore using normalized values:
+   - `email`: `user.email ?? ''`
+   - `displayName`: trimmed `user.displayName`, else email prefix, else `'User'`
+   - `photoURL`: `user.photoURL ?? null`
+4. Premium bootstrap also calls `createUserDocument(user)` before `syncPremiumStatus()` so profile fields exist before premium writes.
+5. Root layout redirects authenticated users into tabs.
 
 ### Email/Password Sign-In (Legacy)
 

@@ -14,6 +14,28 @@ export interface UserDocument {
   createdAt: any; // Firebase Timestamp
 }
 
+function normalizeEmail(email: string | null): string {
+  return email ?? '';
+}
+
+function normalizeDisplayName(displayName: string | null, email: string): string {
+  const trimmedDisplayName = displayName?.trim() ?? '';
+  if (trimmedDisplayName) {
+    return trimmedDisplayName;
+  }
+
+  const emailPrefix = email.split('@')[0]?.trim() ?? '';
+  if (emailPrefix) {
+    return emailPrefix;
+  }
+
+  return 'User';
+}
+
+function normalizePhotoURL(photoURL: string | null): string | null {
+  return photoURL ?? null;
+}
+
 /**
  * Create or update a user document in Firestore
  * Idempotent - safe to call on every sign-in
@@ -26,23 +48,26 @@ export async function createUserDocument(user: User): Promise<void> {
   }
 
   const userRef = doc(db, 'users', user.uid);
+  const normalizedEmail = normalizeEmail(user.email);
+  const normalizedDisplayName = normalizeDisplayName(user.displayName, normalizedEmail);
+  const normalizedPhotoURL = normalizePhotoURL(user.photoURL);
 
   try {
     const existingDoc = await getDoc(userRef);
 
     if (existingDoc.exists()) {
       // Update only fields that might have changed (e.g., photoURL from Google)
-      const existingData = existingDoc.data() as UserDocument;
+      const existingData = existingDoc.data() as Partial<UserDocument>;
       const updates: Partial<UserDocument> = {};
 
       // Update photoURL if it changed (e.g., user updated their Google profile pic)
-      if (user.photoURL && user.photoURL !== existingData.photoURL) {
-        updates.photoURL = user.photoURL;
+      if (normalizedPhotoURL !== (existingData.photoURL ?? null)) {
+        updates.photoURL = normalizedPhotoURL;
       }
 
-      // Update displayName if it changed and we have a new one
-      if (user.displayName && user.displayName !== existingData.displayName) {
-        updates.displayName = user.displayName;
+      // Update displayName if it changed (or if it was missing)
+      if (normalizedDisplayName !== existingData.displayName) {
+        updates.displayName = normalizedDisplayName;
       }
 
       // Only write if there are updates
@@ -53,9 +78,9 @@ export async function createUserDocument(user: User): Promise<void> {
       // Create new document
       const userData: UserDocument = {
         uid: user.uid,
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
+        displayName: normalizedDisplayName,
+        email: normalizedEmail,
+        photoURL: normalizedPhotoURL,
         createdAt: serverTimestamp(),
       };
 
