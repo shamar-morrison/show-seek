@@ -52,10 +52,8 @@ export default function PremiumScreen() {
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
   const isMonthlySelected = selectedPlan === 'monthly';
-  const isTrialToggleEnabled = isMonthlySelected && monthlyTrial.isEligible;
-  const trialStatusMessageKey =
-    trialInlineMessageKey ??
-    (isMonthlySelected ? monthlyTrial.reasonKey : 'premium.freeTrialMonthlyOnlyMessage');
+  const isTrialToggleEnabled = monthlyTrial.isEligible;
+  const trialStatusMessageKey = trialInlineMessageKey ?? monthlyTrial.reasonKey;
 
   // Watch for premium status change to show success
   React.useEffect(() => {
@@ -66,12 +64,6 @@ export default function PremiumScreen() {
     }
     wasPremiumRef.current = isPremium;
   }, [isPremium, router, t]);
-
-  React.useEffect(() => {
-    if (!isMonthlySelected && useFreeTrial) {
-      setUseFreeTrial(false);
-    }
-  }, [isMonthlySelected, useFreeTrial]);
 
   React.useEffect(() => {
     if (!monthlyTrial.isEligible && useFreeTrial) {
@@ -98,8 +90,12 @@ export default function PremiumScreen() {
         message.includes('user cancelled');
 
       if (isTrialIneligible) {
+        const reasonKey =
+          typeof error?.reasonKey === 'string'
+            ? error.reasonKey
+            : 'premium.freeTrialRejectedMessage';
         setUseFreeTrial(false);
-        setTrialInlineMessageKey('premium.freeTrialRejectedMessage');
+        setTrialInlineMessageKey(reasonKey);
         return;
       }
 
@@ -115,7 +111,12 @@ export default function PremiumScreen() {
       return;
     }
 
+    if (nextValue && !isMonthlySelected) {
+      setSelectedPlan('monthly');
+    }
+
     setUseFreeTrial(nextValue);
+
     if (!nextValue) {
       setTrialInlineMessageKey(null);
     }
@@ -186,29 +187,6 @@ export default function PremiumScreen() {
             <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
           </View>
 
-          <View style={styles.planList}>
-            <PlanOptionCard
-              testID="plan-monthly"
-              planName={t('premium.monthlyPlanName')}
-              planPrice={monthlyPrice}
-              planPeriod={t('premium.perMonth')}
-              isSelected={selectedPlan === 'monthly'}
-              accentColor={accentColor}
-              onPress={() => setSelectedPlan('monthly')}
-            />
-
-            <PlanOptionCard
-              testID="plan-yearly"
-              planName={t('premium.yearlyPlanName')}
-              planPrice={yearlyPrice}
-              planPeriod={t('premium.perYear')}
-              badgeText={t('premium.bestValueBadge')}
-              isSelected={selectedPlan === 'yearly'}
-              accentColor={accentColor}
-              onPress={() => setSelectedPlan('yearly')}
-            />
-          </View>
-
           <View style={styles.trialContainer}>
             <View style={styles.trialRow}>
               <Text style={styles.trialLabel}>{t('premium.freeTrialToggleLabel')}</Text>
@@ -236,6 +214,29 @@ export default function PremiumScreen() {
                 {t(trialStatusMessageKey)}
               </Text>
             ) : null}
+          </View>
+
+          <View style={styles.planList}>
+            <PlanOptionCard
+              testID="plan-monthly"
+              planName={t('premium.monthlyPlanName')}
+              planPrice={monthlyPrice}
+              planPeriod={t('premium.perMonth')}
+              isSelected={selectedPlan === 'monthly'}
+              accentColor={accentColor}
+              onPress={() => setSelectedPlan('monthly')}
+            />
+
+            <PlanOptionCard
+              testID="plan-yearly"
+              planName={t('premium.yearlyPlanName')}
+              planPrice={yearlyPrice}
+              planPeriod={t('premium.perYear')}
+              badgeText={t('premium.bestValueBadge')}
+              isSelected={selectedPlan === 'yearly'}
+              accentColor={accentColor}
+              onPress={() => setSelectedPlan('yearly')}
+            />
           </View>
 
           <Text style={styles.featuresTitle}>{t('premium.whatsIncluded')}</Text>

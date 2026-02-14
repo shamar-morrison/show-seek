@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
@@ -68,6 +68,8 @@ interface ProcessPurchaseResult {
 
 const TRIAL_INELIGIBLE_ERROR_CODE = 'TRIAL_INELIGIBLE';
 const TRIAL_UNAVAILABLE_REASON_KEY = 'premium.freeTrialUnavailableMessage';
+const TRIAL_USED_REASON_KEY = 'premium.freeTrialUsedMessage';
+const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
 
 const isCancelledPurchaseError = (error: unknown): boolean => {
   const code = String((error as { code?: string })?.code || '').toLowerCase();
@@ -108,13 +110,31 @@ const isTrialIneligiblePurchaseError = (error: unknown): boolean => {
   );
 };
 
-const createTrialIneligibleError = (cause: unknown): Error => {
-  const trialError = new Error(i18n.t('premium.freeTrialRejectedMessage')) as Error & {
+const isTrialAlreadyUsedValidationError = (error: unknown): boolean => {
+  const code = String((error as { code?: string })?.code || '').toLowerCase();
+  const message = String((error as { message?: string })?.message || '').toLowerCase();
+  const details = (error as { details?: { code?: string; reason?: string } })?.details;
+  const reason = String(details?.reason || details?.code || '').toUpperCase();
+
+  if (reason === TRIAL_ALREADY_USED_REASON) {
+    return true;
+  }
+
+  return code === 'functions/failed-precondition' && message.includes('trial');
+};
+
+const createTrialIneligibleError = (
+  cause: unknown,
+  messageKey = 'premium.freeTrialRejectedMessage'
+): Error => {
+  const trialError = new Error(i18n.t(messageKey)) as Error & {
     cause?: unknown;
     code?: string;
+    reasonKey?: string;
   };
   trialError.code = TRIAL_INELIGIBLE_ERROR_CODE;
   trialError.cause = cause;
+  trialError.reasonKey = messageKey;
   return trialError;
 };
 
@@ -125,12 +145,37 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     monthly: null,
     yearly: null,
   });
-  const [monthlyTrial, setMonthlyTrial] = useState<MonthlyTrialAvailability>({
+  const [playMonthlyTrial, setPlayMonthlyTrial] = useState<MonthlyTrialAvailability>({
     isEligible: false,
     offerToken: null,
     reasonKey: null,
   });
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+
+  const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
+    if (hasUsedTrial) {
+      return {
+        isEligible: false,
+        offerToken: null,
+        reasonKey: TRIAL_USED_REASON_KEY,
+      };
+    }
+
+    if (playMonthlyTrial.isEligible) {
+      return {
+        isEligible: true,
+        offerToken: playMonthlyTrial.offerToken,
+        reasonKey: null,
+      };
+    }
+
+    return {
+      isEligible: false,
+      offerToken: null,
+      reasonKey: playMonthlyTrial.reasonKey ?? TRIAL_UNAVAILABLE_REASON_KEY,
+    };
+  }, [hasUsedTrial, playMonthlyTrial]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -217,6 +262,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           validationSucceeded: false,
         };
       } catch (err) {
+        if (isTrialAlreadyUsedValidationError(err)) {
+          setHasUsedTrial(true);
+        }
+
         console.error('Error processing purchase:', err);
         return {
           isPremium: false,
@@ -276,7 +325,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
               yearly: getDisplayPriceForSubscriptionProduct(yearlyProduct),
             });
 
-            setMonthlyTrial({
+            setPlayMonthlyTrial({
               isEligible: monthlyTrialOffer.isEligible,
               offerToken: monthlyTrialOffer.offerToken,
               reasonKey: monthlyTrialOffer.isEligible ? null : TRIAL_UNAVAILABLE_REASON_KEY,
@@ -285,7 +334,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
       } catch (err) {
         console.warn('IAP initialization error:', err);
-        setMonthlyTrial({
+        setPlayMonthlyTrial({
           isEligible: false,
           offerToken: null,
           reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
@@ -310,6 +359,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   useEffect(() => {
     if (!user) {
       setIsPremium(false);
+      setHasUsedTrial(false);
       setIsLoading(false);
       return;
     }
@@ -332,8 +382,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       doc(db, 'users', user.uid),
       async (docSync) => {
         const data = docSync.data();
-        const premiumStatus = data?.premium?.isPremium === true;
+        const premiumData = data?.premium;
+        const premiumStatus = premiumData?.isPremium === true;
+        const hasTrialHistory =
+          premiumData?.hasUsedTrial === true ||
+          premiumData?.trialConsumedAt != null ||
+          premiumData?.trialStartAt != null;
         setIsPremium(premiumStatus);
+        setHasUsedTrial(hasTrialHistory);
         setIsLoading(false);
 
         // Update local cache
@@ -432,14 +488,22 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         const subscriptionProductId = getProductIdForPlan(plan);
         const shouldUseTrial = plan === 'monthly' && options?.useTrial === true;
 
+        if (shouldUseTrial && hasUsedTrial) {
+          throw createTrialIneligibleError(
+            new Error('Monthly trial already used for this account.'),
+            TRIAL_USED_REASON_KEY
+          );
+        }
+
         if (shouldUseTrial && !monthlyTrial.offerToken) {
-          setMonthlyTrial({
+          setPlayMonthlyTrial({
             isEligible: false,
             offerToken: null,
             reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
           });
           throw createTrialIneligibleError(
-            new Error('Monthly trial offer token is unavailable for this account.')
+            new Error('Monthly trial offer token is unavailable for this account.'),
+            TRIAL_UNAVAILABLE_REASON_KEY
           );
         }
 
@@ -474,7 +538,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         if (options?.useTrial === true && isTrialIneligiblePurchaseError(err)) {
-          setMonthlyTrial({
+          setPlayMonthlyTrial({
             isEligible: false,
             offerToken: null,
             reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
@@ -504,7 +568,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         throw err;
       }
     },
-    [monthlyTrial.offerToken, restorePurchases]
+    [hasUsedTrial, monthlyTrial.offerToken, restorePurchases]
   );
 
   const resetTestPurchase = useCallback(async () => {

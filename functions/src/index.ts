@@ -9,6 +9,7 @@ const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
 const MONTHLY_SUBSCRIPTION_PRODUCT_ID = 'monthly_showseek_sub';
 const YEARLY_SUBSCRIPTION_PRODUCT_ID = 'showseek_yearly_sub';
 const MONTHLY_TRIAL_OFFER_ID = 'one-week-trial';
+const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
 
 const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
   'SUBSCRIPTION_STATE_ACTIVE',
@@ -26,6 +27,7 @@ interface ExistingPremiumData {
   expireAt?: admin.firestore.Timestamp | null;
   expiredAt?: admin.firestore.Timestamp | null;
   expiresAt?: admin.firestore.Timestamp | null;
+  hasUsedTrial?: boolean;
   isPremium?: boolean;
   isInTrial?: boolean;
   orderId?: string | null;
@@ -34,6 +36,7 @@ interface ExistingPremiumData {
   purchaseToken?: string | null;
   subscriptionType?: SubscriptionType | null;
   subscriptionState?: string | null;
+  trialConsumedAt?: admin.firestore.Timestamp | null;
   trialEndAt?: admin.firestore.Timestamp | null;
   trialStartAt?: admin.firestore.Timestamp | null;
 }
@@ -258,6 +261,33 @@ const resolveExistingEntitlementType = (existingPremium: ExistingPremiumData): E
   return existingPremium.isPremium === true ? 'subscription' : 'none';
 };
 
+const resolveTrialConsumedAt = (
+  existingPremium: ExistingPremiumData
+): admin.firestore.Timestamp | null =>
+  existingPremium.trialConsumedAt ?? existingPremium.trialStartAt ?? null;
+
+const resolveHasUsedTrial = (existingPremium: ExistingPremiumData): boolean =>
+  existingPremium.hasUsedTrial === true || resolveTrialConsumedAt(existingPremium) !== null;
+
+const isSameTrialRestoreAttempt = (
+  existingPremium: ExistingPremiumData,
+  purchaseToken: string,
+  orderId: string | null
+): boolean => {
+  const sameToken =
+    typeof existingPremium.purchaseToken === 'string' &&
+    existingPremium.purchaseToken.length > 0 &&
+    existingPremium.purchaseToken === purchaseToken;
+  const sameOrderId =
+    typeof existingPremium.orderId === 'string' &&
+    existingPremium.orderId.length > 0 &&
+    typeof orderId === 'string' &&
+    orderId.length > 0 &&
+    existingPremium.orderId === orderId;
+
+  return sameToken || sameOrderId;
+};
+
 const persistPremiumStatus = async (
   userId: string,
   premiumPayload: Record<string, unknown>
@@ -283,6 +313,8 @@ const buildNoneEntitlementPayload = (
   existingPremium: ExistingPremiumData,
   overrides?: NoneEntitlementOverrides
 ): Record<string, unknown> => {
+  const trialConsumedAt = resolveTrialConsumedAt(existingPremium);
+  const hasUsedTrial = resolveHasUsedTrial(existingPremium);
   const resolvedSubscriptionType =
     overrides?.subscriptionType ??
     existingPremium.subscriptionType ??
@@ -316,6 +348,8 @@ const buildNoneEntitlementPayload = (
     isInTrial: false,
     trialStartAt: null,
     trialEndAt: null,
+    hasUsedTrial,
+    trialConsumedAt,
     expiredAt: normalizedExpiredAt,
     expireAt: normalizedExpiredAt,
     lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -436,6 +470,9 @@ export const validatePurchase = onCall(async (request) => {
   try {
     const androidPublisher = getAndroidPublisherClient();
     const resolvedPurchaseType = resolvePurchaseType(purchaseType, productId);
+    const userRef = admin.firestore().collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
 
     console.log(
       'Validating purchase for user:',
@@ -477,6 +514,8 @@ export const validatePurchase = onCall(async (request) => {
         isInTrial: false,
         trialStartAt: null,
         trialEndAt: null,
+        hasUsedTrial: resolveHasUsedTrial(existingPremium),
+        trialConsumedAt: resolveTrialConsumedAt(existingPremium),
         expiredAt: null,
         expireAt: null,
         lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -491,6 +530,31 @@ export const validatePurchase = onCall(async (request) => {
       productId,
       purchaseToken
     );
+    const existingHasUsedTrial = resolveHasUsedTrial(existingPremium);
+    const existingTrialConsumedAt = resolveTrialConsumedAt(existingPremium);
+    const isTrialRestoreAttempt = isSameTrialRestoreAttempt(
+      existingPremium,
+      purchaseToken,
+      subscriptionValidation.orderId
+    );
+
+    if (subscriptionValidation.isInTrial && existingHasUsedTrial && !isTrialRestoreAttempt) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Free trial has already been used for this account.',
+        {
+          code: TRIAL_ALREADY_USED_REASON,
+          reason: TRIAL_ALREADY_USED_REASON,
+        }
+      );
+    }
+
+    const hasUsedTrial = subscriptionValidation.isInTrial ? true : existingHasUsedTrial;
+    const trialConsumedAt = subscriptionValidation.isInTrial
+      ? existingTrialConsumedAt ??
+        subscriptionValidation.trialStartAt ??
+        admin.firestore.FieldValue.serverTimestamp()
+      : existingTrialConsumedAt;
 
     await persistPremiumStatus(userId, {
       isPremium: subscriptionValidation.isPremium,
@@ -506,6 +570,8 @@ export const validatePurchase = onCall(async (request) => {
       isInTrial: subscriptionValidation.isInTrial,
       trialStartAt: subscriptionValidation.trialStartAt,
       trialEndAt: subscriptionValidation.trialEndAt,
+      hasUsedTrial,
+      trialConsumedAt,
       expiredAt: subscriptionValidation.expiredAt,
       expireAt: subscriptionValidation.expireAt,
       lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -554,6 +620,8 @@ export const syncPremiumStatus = onCall(async (request) => {
         isInTrial: false,
         trialStartAt: null,
         trialEndAt: null,
+        hasUsedTrial: resolveHasUsedTrial(existingPremium),
+        trialConsumedAt: resolveTrialConsumedAt(existingPremium),
         expiredAt: null,
         expireAt: null,
         lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -592,6 +660,13 @@ export const syncPremiumStatus = onCall(async (request) => {
           isInTrial: subscriptionValidation.isInTrial,
           trialStartAt: subscriptionValidation.trialStartAt,
           trialEndAt: subscriptionValidation.trialEndAt,
+          hasUsedTrial:
+            subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
+          trialConsumedAt: subscriptionValidation.isInTrial
+            ? resolveTrialConsumedAt(existingPremium) ??
+              subscriptionValidation.trialStartAt ??
+              admin.firestore.FieldValue.serverTimestamp()
+            : resolveTrialConsumedAt(existingPremium),
           expiredAt: subscriptionValidation.expiredAt,
           expireAt: subscriptionValidation.expireAt,
           lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),

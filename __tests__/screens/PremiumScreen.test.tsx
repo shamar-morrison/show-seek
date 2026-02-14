@@ -93,11 +93,19 @@ describe('PremiumScreen', () => {
     expect(mockPurchasePremium).toHaveBeenCalledWith('yearly', { useTrial: false });
   });
 
-  it('shows disabled trial toggle message for yearly selection', () => {
-    const { getByTestId, getByText } = render(<PremiumScreen />);
+  it('keeps trial toggle enabled when yearly is selected and trial is eligible', () => {
+    const { getByTestId } = render(<PremiumScreen />);
 
-    expect(getByTestId('free-trial-toggle').props.disabled).toBe(true);
-    expect(getByText('Free trial applies to the monthly plan only.')).toBeTruthy();
+    expect(getByTestId('free-trial-toggle').props.disabled).toBe(false);
+  });
+
+  it('auto-switches to monthly when enabling trial from yearly selection', () => {
+    const { getByTestId } = render(<PremiumScreen />);
+
+    fireEvent(getByTestId('free-trial-toggle'), 'valueChange', true);
+    fireEvent.press(getByTestId('subscribe-button'));
+
+    expect(mockPurchasePremium).toHaveBeenCalledWith('monthly', { useTrial: true });
   });
 
   it('enables trial for monthly and shows helper text when toggled on', () => {
@@ -126,6 +134,21 @@ describe('PremiumScreen', () => {
 
     expect(getByTestId('free-trial-toggle').props.disabled).toBe(true);
     expect(getByText('Free trial not available for this account.')).toBeTruthy();
+  });
+
+  it('disables trial and shows used message when trial was already consumed on account', () => {
+    mockPremiumState.monthlyTrial = {
+      isEligible: false,
+      offerToken: null,
+      reasonKey: 'premium.freeTrialUsedMessage',
+    };
+
+    const { getByTestId, getByText } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByTestId('free-trial-toggle').props.disabled).toBe(true);
+    expect(getByText('Free trial already used on this account.')).toBeTruthy();
   });
 
   it('turns off trial and shows inline rejection message when trial purchase is rejected', async () => {

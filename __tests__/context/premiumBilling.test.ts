@@ -98,6 +98,76 @@ describe('premiumBilling helpers', () => {
     });
   });
 
+  it('resolves monthly trial offers by pricing phase fallback', () => {
+    const trialOfferWithoutIdOrTag = {
+      basePlanId: 'monthly',
+      offerId: null,
+      offerTags: [],
+      offerToken: 'trial-token-by-phase',
+      pricingPhases: {
+        pricingPhaseList: [
+          {
+            billingCycleCount: 1,
+            billingPeriod: 'P7D',
+            formattedPrice: 'Free',
+            priceAmountMicros: '0',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 2,
+          },
+          {
+            billingCycleCount: 0,
+            billingPeriod: 'P1M',
+            formattedPrice: '$3.00',
+            priceAmountMicros: '3000000',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 1,
+          },
+        ],
+      },
+    } as any;
+
+    expect(isMonthlyTrialOffer(trialOfferWithoutIdOrTag)).toBe(true);
+    expect(resolveMonthlyTrialOffer([trialOfferWithoutIdOrTag])).toEqual({
+      isEligible: true,
+      offerToken: 'trial-token-by-phase',
+    });
+  });
+
+  it('does not mark non-monthly free-intro offers as trial fallback matches', () => {
+    const nonMonthlyIntroOffer = {
+      basePlanId: 'monthly',
+      offerId: null,
+      offerTags: [],
+      offerToken: 'non-trial-token',
+      pricingPhases: {
+        pricingPhaseList: [
+          {
+            billingCycleCount: 1,
+            billingPeriod: 'P7D',
+            formattedPrice: 'Free',
+            priceAmountMicros: '0',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 2,
+          },
+          {
+            billingCycleCount: 0,
+            billingPeriod: 'P1Y',
+            formattedPrice: '$30.00',
+            priceAmountMicros: '30000000',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 1,
+          },
+        ],
+      },
+    } as any;
+
+    expect(isMonthlyTrialOffer(nonMonthlyIntroOffer)).toBe(false);
+    expect(resolveMonthlyTrialOffer([nonMonthlyIntroOffer])).toEqual({
+      isEligible: false,
+      offerToken: null,
+    });
+  });
+
   it('selects a paid recurring price even when first phase is free trial', () => {
     const monthlyProduct = {
       displayPrice: '$3.00',

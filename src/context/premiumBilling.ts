@@ -63,6 +63,53 @@ const hasPositivePrice = (phase?: PricingPhaseAndroid | null): boolean => {
   return Number.isFinite(amountMicros) && amountMicros > 0;
 };
 
+const hasZeroPrice = (phase?: PricingPhaseAndroid | null): boolean => {
+  if (!phase) {
+    return false;
+  }
+
+  const amountMicros = Number(phase.priceAmountMicros ?? '0');
+  return Number.isFinite(amountMicros) && amountMicros === 0;
+};
+
+const normalizeBillingPeriod = (billingPeriod?: string | null): string =>
+  String(billingPeriod ?? '')
+    .trim()
+    .toUpperCase();
+
+const isSevenDayBillingPeriod = (billingPeriod: string): boolean =>
+  billingPeriod === 'P7D' || billingPeriod === 'P1W';
+
+const isMonthlyBillingPeriod = (billingPeriod: string): boolean => billingPeriod === 'P1M';
+
+const hasTrialPricingPattern = (
+  offerDetails?: ProductSubscriptionAndroidOfferDetails | null
+): boolean => {
+  if (!offerDetails) {
+    return false;
+  }
+
+  const pricingPhases = offerDetails.pricingPhases?.pricingPhaseList ?? [];
+  if (pricingPhases.length === 0) {
+    return false;
+  }
+
+  const hasSevenDayFreePhase = pricingPhases.some(
+    (phase) =>
+      hasZeroPrice(phase) && isSevenDayBillingPeriod(normalizeBillingPeriod(phase.billingPeriod))
+  );
+  if (!hasSevenDayFreePhase) {
+    return false;
+  }
+
+  return pricingPhases.some(
+    (phase) =>
+      hasPositivePrice(phase) &&
+      phase.recurrenceMode === 1 &&
+      isMonthlyBillingPeriod(normalizeBillingPeriod(phase.billingPeriod))
+  );
+};
+
 const getPreferredAndroidSubscriptionPrice = (
   offerDetails?: ProductSubscriptionAndroidOfferDetails[] | null
 ): string | null => {
@@ -104,7 +151,12 @@ export const isMonthlyTrialOffer = (
     return true;
   }
 
-  return offerDetails.offerTags.some((tag) => normalizeOfferIdentifier(tag) === normalizedTrialId);
+  const offerTags = Array.isArray(offerDetails.offerTags) ? offerDetails.offerTags : [];
+  if (offerTags.some((tag) => normalizeOfferIdentifier(tag) === normalizedTrialId)) {
+    return true;
+  }
+
+  return hasTrialPricingPattern(offerDetails);
 };
 
 export const resolveMonthlyTrialOffer = (
