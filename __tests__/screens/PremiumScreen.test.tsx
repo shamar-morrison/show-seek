@@ -17,8 +17,8 @@ const mockPremiumState = {
   },
   monthlyTrial: {
     isEligible: true,
-    offerToken: 'trial-offer-token',
-    reasonKey: null,
+    offerToken: 'trial-offer-token' as string | null,
+    reasonKey: null as string | null,
   },
   checkPremiumFeature: () => true,
 };
