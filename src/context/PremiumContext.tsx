@@ -1,23 +1,26 @@
-import { auth, db, functions } from '@/src/firebase/config';
 import {
+  getDisplayPriceForSubscriptionProduct,
   getProductIdForPlan,
-  getProductPriority,
   inferPurchaseType,
   isKnownPremiumProductId,
   LEGACY_LIFETIME_PRODUCT_ID,
-  type PremiumPlan,
-  SUBSCRIPTION_PRODUCT_ID_LIST,
+  resolveMonthlyTrialOffer,
+  shouldTreatRestoreAsSuccess,
+  sortPurchasesByPremiumPriority,
   SUBSCRIPTION_PRODUCT_IDS as SUBSCRIPTION_ID_MAP,
+  SUBSCRIPTION_PRODUCT_ID_LIST,
+  type PremiumPlan,
 } from '@/src/context/premiumBilling';
+import { auth, db, functions } from '@/src/firebase/config';
 import i18n from '@/src/i18n';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import type { Product, ProductSubscription, Purchase } from 'react-native-iap';
+import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
 
 const AVAILABLE_SUBSCRIPTION_PRODUCT_IDS = Platform.select({
@@ -33,11 +36,18 @@ interface PremiumPrices {
 interface PremiumState {
   isPremium: boolean;
   isLoading: boolean;
-  purchasePremium: (plan: PremiumPlan) => Promise<boolean>;
+  purchasePremium: (plan: PremiumPlan, options?: { useTrial?: boolean }) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
   resetTestPurchase: () => Promise<void>;
   prices: PremiumPrices;
+  monthlyTrial: MonthlyTrialAvailability;
   checkPremiumFeature: (featureName: string) => boolean;
+}
+
+interface MonthlyTrialAvailability {
+  isEligible: boolean;
+  offerToken: string | null;
+  reasonKey: string | null;
 }
 
 interface ValidationResponse {
@@ -51,23 +61,15 @@ interface SyncPremiumStatusResponse {
   isPremium: boolean;
 }
 
-const getDisplayPrice = (product: Product | ProductSubscription | undefined): string | null => {
-  if (!product) {
-    return null;
-  }
+interface ProcessPurchaseResult {
+  isPremium: boolean;
+  validationSucceeded: boolean;
+}
 
-  if (product.platform === 'android' && product.type === 'subs') {
-    const offerDetails = product.subscriptionOfferDetailsAndroid;
-    if (Array.isArray(offerDetails) && offerDetails.length > 0) {
-      const formattedPrice = offerDetails[0]?.pricingPhases?.pricingPhaseList?.[0]?.formattedPrice;
-      if (formattedPrice) {
-        return formattedPrice;
-      }
-    }
-  }
-
-  return product.displayPrice || null;
-};
+const TRIAL_INELIGIBLE_ERROR_CODE = 'TRIAL_INELIGIBLE';
+const TRIAL_UNAVAILABLE_REASON_KEY = 'premium.freeTrialUnavailableMessage';
+const TRIAL_USED_REASON_KEY = 'premium.freeTrialUsedMessage';
+const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
 
 const isCancelledPurchaseError = (error: unknown): boolean => {
   const code = String((error as { code?: string })?.code || '').toLowerCase();
@@ -88,6 +90,54 @@ const isAlreadyOwnedError = (error: unknown): boolean => {
   return code === 'e_already_owned' || code === 'already-owned' || message.includes('already own');
 };
 
+const isTrialIneligiblePurchaseError = (error: unknown): boolean => {
+  const code = String((error as { code?: string })?.code || '').toLowerCase();
+  const message = String((error as { message?: string })?.message || '').toLowerCase();
+
+  if (code === 'e_item_unavailable' || code === 'item_unavailable') {
+    return true;
+  }
+
+  return (
+    (message.includes('trial') &&
+      (message.includes('ineligible') ||
+        message.includes('not eligible') ||
+        message.includes('unavailable'))) ||
+    (message.includes('offer') &&
+      (message.includes('token') ||
+        message.includes('ineligible') ||
+        message.includes('not eligible')))
+  );
+};
+
+const isTrialAlreadyUsedValidationError = (error: unknown): boolean => {
+  const code = String((error as { code?: string })?.code || '').toLowerCase();
+  const message = String((error as { message?: string })?.message || '').toLowerCase();
+  const details = (error as { details?: { code?: string; reason?: string } })?.details;
+  const reason = String(details?.reason || details?.code || '').toUpperCase();
+
+  if (reason === TRIAL_ALREADY_USED_REASON) {
+    return true;
+  }
+
+  return code === 'functions/failed-precondition' && message.includes('trial');
+};
+
+const createTrialIneligibleError = (
+  cause: unknown,
+  messageKey = 'premium.freeTrialRejectedMessage'
+): Error => {
+  const trialError = new Error(i18n.t(messageKey)) as Error & {
+    cause?: unknown;
+    code?: string;
+    reasonKey?: string;
+  };
+  trialError.code = TRIAL_INELIGIBLE_ERROR_CODE;
+  trialError.cause = cause;
+  trialError.reasonKey = messageKey;
+  return trialError;
+};
+
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
   const [isPremium, setIsPremium] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,7 +145,37 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     monthly: null,
     yearly: null,
   });
+  const [playMonthlyTrial, setPlayMonthlyTrial] = useState<MonthlyTrialAvailability>({
+    isEligible: false,
+    offerToken: null,
+    reasonKey: null,
+  });
+  const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [user, setUser] = useState<User | null>(auth.currentUser);
+
+  const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
+    if (hasUsedTrial) {
+      return {
+        isEligible: false,
+        offerToken: null,
+        reasonKey: TRIAL_USED_REASON_KEY,
+      };
+    }
+
+    if (playMonthlyTrial.isEligible) {
+      return {
+        isEligible: true,
+        offerToken: playMonthlyTrial.offerToken,
+        reasonKey: null,
+      };
+    }
+
+    return {
+      isEligible: false,
+      offerToken: null,
+      reasonKey: playMonthlyTrial.reasonKey ?? TRIAL_UNAVAILABLE_REASON_KEY,
+    };
+  }, [hasUsedTrial, playMonthlyTrial]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -126,7 +206,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   // Process a purchase: validate with server and finish transaction
   const processPurchase = useCallback(
-    async (purchase: Purchase, options?: { syncAfterSuccess?: boolean }): Promise<boolean> => {
+    async (
+      purchase: Purchase,
+      options?: { syncAfterSuccess?: boolean }
+    ): Promise<ProcessPurchaseResult> => {
       const syncAfterSuccess = options?.syncAfterSuccess ?? true;
 
       try {
@@ -134,7 +217,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         if (!purchase.purchaseToken) {
           console.error('Purchase missing token', purchase);
-          return false;
+          return {
+            isPremium: false,
+            validationSucceeded: false,
+          };
         }
 
         const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
@@ -147,7 +233,8 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         console.log('Validation response:', data);
 
         if (data?.success === true) {
-          setIsPremium(data?.isPremium === true);
+          const isPremiumValidation = data?.isPremium === true;
+          setIsPremium(isPremiumValidation);
           try {
             // Acknowledge/finish transaction
             await RNIap.finishTransaction({
@@ -163,14 +250,27 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             await syncPremiumStatus();
           }
 
-          return true;
+          return {
+            isPremium: isPremiumValidation,
+            validationSucceeded: true,
+          };
         }
 
         console.error('Validation failed:', data);
-        return false;
+        return {
+          isPremium: false,
+          validationSucceeded: false,
+        };
       } catch (err) {
+        if (isTrialAlreadyUsedValidationError(err)) {
+          setHasUsedTrial(true);
+        }
+
         console.error('Error processing purchase:', err);
-        return false;
+        return {
+          isPremium: false,
+          validationSucceeded: false,
+        };
       }
     },
     [syncPremiumStatus]
@@ -203,27 +303,42 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           // We don't necessarily update state here as UI handles specific errors from requestPurchase
         });
 
-        if (
-          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS &&
-          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0
-        ) {
+        if (AVAILABLE_SUBSCRIPTION_PRODUCT_IDS && AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0) {
           const products = await RNIap.fetchProducts({
             skus: AVAILABLE_SUBSCRIPTION_PRODUCT_IDS,
             type: 'subs',
           });
 
           if (products) {
-            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly);
-            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly);
+            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly) as
+              | RNIap.ProductSubscriptionAndroid
+              | undefined;
+            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly) as
+              | RNIap.ProductSubscriptionAndroid
+              | undefined;
+            const monthlyTrialOffer = resolveMonthlyTrialOffer(
+              monthlyProduct?.subscriptionOfferDetailsAndroid
+            );
 
             setPrices({
-              monthly: getDisplayPrice(monthlyProduct),
-              yearly: getDisplayPrice(yearlyProduct),
+              monthly: getDisplayPriceForSubscriptionProduct(monthlyProduct),
+              yearly: getDisplayPriceForSubscriptionProduct(yearlyProduct),
+            });
+
+            setPlayMonthlyTrial({
+              isEligible: monthlyTrialOffer.isEligible,
+              offerToken: monthlyTrialOffer.offerToken,
+              reasonKey: monthlyTrialOffer.isEligible ? null : TRIAL_UNAVAILABLE_REASON_KEY,
             });
           }
         }
       } catch (err) {
         console.warn('IAP initialization error:', err);
+        setPlayMonthlyTrial({
+          isEligible: false,
+          offerToken: null,
+          reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
+        });
       }
     };
 
@@ -244,6 +359,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   useEffect(() => {
     if (!user) {
       setIsPremium(false);
+      setHasUsedTrial(false);
       setIsLoading(false);
       return;
     }
@@ -266,8 +382,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       doc(db, 'users', user.uid),
       async (docSync) => {
         const data = docSync.data();
-        const premiumStatus = data?.premium?.isPremium === true;
+        const premiumData = data?.premium;
+        const premiumStatus = premiumData?.isPremium === true;
+        const hasTrialHistory =
+          premiumData?.hasUsedTrial === true ||
+          premiumData?.trialConsumedAt != null ||
+          premiumData?.trialStartAt != null;
         setIsPremium(premiumStatus);
+        setHasUsedTrial(hasTrialHistory);
         setIsLoading(false);
 
         // Update local cache
@@ -314,9 +436,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       const purchases = await RNIap.getAvailablePurchases();
       console.log('Available purchases found:', purchases.length);
 
-      const knownPurchases = purchases
-        .filter((purchase) => isKnownPremiumProductId(purchase.productId))
-        .sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId));
+      const knownPurchases = sortPurchasesByPremiumPriority(
+        purchases.filter((purchase) => isKnownPremiumProductId(purchase.productId))
+      );
 
       if (knownPurchases.length === 0) {
         console.log('No known premium purchase found in history');
@@ -325,9 +447,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
 
       for (const purchase of knownPurchases) {
-        const restored = await processPurchase(purchase, { syncAfterSuccess: false });
+        const restoreResult = await processPurchase(purchase, { syncAfterSuccess: false });
 
-        if (restored) {
+        if (shouldTreatRestoreAsSuccess(restoreResult)) {
           await syncPremiumStatus();
           return true;
         }
@@ -350,7 +472,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   }, [processPurchase, syncPremiumStatus]);
 
   const purchasePremium = useCallback(
-    async (plan: PremiumPlan) => {
+    async (plan: PremiumPlan, options?: { useTrial?: boolean }) => {
       try {
         if (Platform.OS !== 'android') {
           throw new Error('Subscriptions are only configured on Android right now.');
@@ -364,14 +486,45 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         const subscriptionProductId = getProductIdForPlan(plan);
+        const shouldUseTrial = plan === 'monthly' && options?.useTrial === true;
+
+        if (shouldUseTrial && hasUsedTrial) {
+          throw createTrialIneligibleError(
+            new Error('Monthly trial already used for this account.'),
+            TRIAL_USED_REASON_KEY
+          );
+        }
+
+        if (shouldUseTrial && !monthlyTrial.offerToken) {
+          setPlayMonthlyTrial({
+            isEligible: false,
+            offerToken: null,
+            reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
+          });
+          throw createTrialIneligibleError(
+            new Error('Monthly trial offer token is unavailable for this account.'),
+            TRIAL_UNAVAILABLE_REASON_KEY
+          );
+        }
+
+        const androidPurchaseRequest: RNIap.RequestSubscriptionAndroidProps = {
+          skus: [subscriptionProductId],
+        };
+
+        if (shouldUseTrial && monthlyTrial.offerToken) {
+          androidPurchaseRequest.subscriptionOffers = [
+            {
+              sku: subscriptionProductId,
+              offerToken: monthlyTrial.offerToken,
+            },
+          ];
+        }
 
         // Note: We rely on purchaseUpdatedListener for final validation and unlock.
         await RNIap.requestPurchase({
           type: 'subs',
           request: {
-            android: {
-              skus: [subscriptionProductId],
-            },
+            android: androidPurchaseRequest,
           },
         });
 
@@ -382,6 +535,15 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         // User cancelled - silently return false without error
         if (isCancelledPurchaseError(err)) {
           return false;
+        }
+
+        if (options?.useTrial === true && isTrialIneligiblePurchaseError(err)) {
+          setPlayMonthlyTrial({
+            isEligible: false,
+            offerToken: null,
+            reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
+          });
+          throw createTrialIneligibleError(err);
         }
 
         // Already-owned subscription - attempt restore/sync
@@ -406,7 +568,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         throw err;
       }
     },
-    [restorePurchases]
+    [hasUsedTrial, monthlyTrial.offerToken, restorePurchases]
   );
 
   const resetTestPurchase = useCallback(async () => {
@@ -417,9 +579,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           (purchase) =>
             purchase.productId === LEGACY_LIFETIME_PRODUCT_ID && !!purchase.purchaseToken
         );
-        const subscriptionPurchase = purchases
-          .filter((purchase) => SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId))
-          .sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId))[0];
+        const subscriptionPurchase = purchases.filter((purchase) =>
+          SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId)
+        );
+        const prioritizedSubscriptions = sortPurchasesByPremiumPriority(subscriptionPurchase);
+        const topSubscriptionPurchase = prioritizedSubscriptions[0];
 
         let didConsumeLegacy = false;
         for (const legacyPurchase of legacyPurchases) {
@@ -433,7 +597,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           await syncPremiumStatus();
         }
 
-        if (subscriptionPurchase) {
+        if (topSubscriptionPurchase) {
           Alert.alert(
             i18n.t('premium.subscriptionManageTitle'),
             i18n.t('premium.subscriptionManageMessage'),
@@ -444,7 +608,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
                 onPress: async () => {
                   try {
                     await RNIap.deepLinkToSubscriptions({
-                      skuAndroid: subscriptionPurchase.productId,
+                      skuAndroid: topSubscriptionPurchase.productId,
                     });
                   } catch (linkErr: any) {
                     console.error('Subscription management deep link error:', linkErr);
@@ -463,7 +627,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return;
         }
 
-        Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
+        Alert.alert(
+          i18n.t('premium.noPurchaseFoundTitle'),
+          i18n.t('premium.noPurchaseFoundMessage')
+        );
       }
     } catch (err: any) {
       console.error('Reset error:', err);
@@ -478,6 +645,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     restorePurchases,
     resetTestPurchase,
     prices,
+    monthlyTrial,
     checkPremiumFeature: (_featureName: string) => {
       // For now, all premium features require isPremium to be true
       // We can add more granular logic here later if needed
