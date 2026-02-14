@@ -187,7 +187,12 @@ export default function PremiumScreen() {
             <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
           </View>
 
-          <View style={styles.trialContainer}>
+          <TouchableOpacity
+            activeOpacity={ACTIVE_OPACITY}
+            style={styles.trialContainer}
+            onPress={() => handleTrialToggle(!(useFreeTrial && isTrialToggleEnabled))}
+            disabled={!isTrialToggleEnabled}
+          >
             <View style={styles.trialRow}>
               <Text style={styles.trialLabel}>{t('premium.freeTrialToggleLabel')}</Text>
               <Switch
@@ -214,7 +219,7 @@ export default function PremiumScreen() {
                 {t(trialStatusMessageKey)}
               </Text>
             ) : null}
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.planList}>
             <PlanOptionCard
@@ -236,6 +241,7 @@ export default function PremiumScreen() {
               isSelected={selectedPlan === 'yearly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('yearly')}
+              disabled={useFreeTrial && isTrialToggleEnabled}
             />
           </View>
 
@@ -341,6 +347,7 @@ function FeatureCategorySection({
 function PlanOptionCard({
   accentColor,
   badgeText,
+  disabled,
   isSelected,
   onPress,
   planPeriod,
@@ -350,6 +357,7 @@ function PlanOptionCard({
 }: {
   accentColor: string;
   badgeText?: string;
+  disabled?: boolean;
   isSelected: boolean;
   onPress: () => void;
   planPeriod: string;
@@ -366,9 +374,11 @@ function PlanOptionCard({
           borderColor: isSelected ? accentColor : COLORS.surfaceLight,
           backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : COLORS.surface,
         },
+        disabled && { opacity: 0.4 },
       ]}
       activeOpacity={ACTIVE_OPACITY}
       onPress={onPress}
+      disabled={disabled}
     >
       <View style={styles.planHeaderRow}>
         <View style={styles.planNameRow}>

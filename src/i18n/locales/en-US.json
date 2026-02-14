@@ -953,7 +953,7 @@
     "monthlyPlanName": "Monthly",
     "monthlyPriceFallback": "$3.00",
     "freeTrialToggleLabel": "Enable 7-day free trial",
-    "freeTrialHelperText": "After the 7-day trial period, you will automatically be charged the ongoing monthly subscription.",
+    "freeTrialHelperText": "After the trial period, you will automatically be charged the ongoing monthly subscription.",
     "freeTrialUnavailableMessage": "Free trial not available for this account.",
     "freeTrialUsedMessage": "Free trial already used on this account.",
     "freeTrialMonthlyOnlyMessage": "Free trial applies to the monthly plan only.",

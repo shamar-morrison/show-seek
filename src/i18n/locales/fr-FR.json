@@ -821,7 +821,7 @@
     "monthlyPlanName": "Mensuel",
     "monthlyPriceFallback": "$3.00",
     "freeTrialToggleLabel": "Activer l'essai gratuit de 7 jours",
-    "freeTrialHelperText": "Après la période d'essai de 7 jours, vous serez automatiquement facturé pour l'abonnement mensuel en cours.",
+    "freeTrialHelperText": "Après la période d'essai, vous serez automatiquement facturé pour l'abonnement mensuel en cours.",
     "freeTrialUnavailableMessage": "L'essai gratuit n'est pas disponible pour ce compte.",
     "freeTrialUsedMessage": "L'essai gratuit a déjà été utilisé sur ce compte.",
     "freeTrialMonthlyOnlyMessage": "L'essai gratuit s'applique uniquement à l'offre mensuelle.",

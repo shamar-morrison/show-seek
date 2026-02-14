@@ -1091,7 +1091,7 @@
     "monthlyPlanName": "Mensal",
     "monthlyPriceFallback": "$3.00",
     "freeTrialToggleLabel": "Ativar teste grátis de 7 dias",
-    "freeTrialHelperText": "Após o período de teste de 7 dias, será cobrado automaticamente pela subscrição mensal em vigor.",
+    "freeTrialHelperText": "Após o período de teste, será cobrado automaticamente pela subscrição mensal em vigor.",
     "freeTrialUnavailableMessage": "O teste grátis não está disponível para esta conta.",
     "freeTrialUsedMessage": "O teste grátis já foi utilizado nesta conta.",
     "freeTrialMonthlyOnlyMessage": "O teste grátis aplica-se apenas ao plano mensal.",
