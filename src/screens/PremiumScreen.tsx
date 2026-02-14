@@ -53,6 +53,12 @@ export default function PremiumScreen() {
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
   const isMonthlySelected = selectedPlan === 'monthly';
   const isTrialToggleEnabled = monthlyTrial.isEligible;
+  const isMonthlyTrialDisplayActive = useFreeTrial && isTrialToggleEnabled;
+  const monthlyPlanHeadline = isMonthlyTrialDisplayActive ? 'One Week Free' : monthlyPrice;
+  const monthlyPlanPeriod = isMonthlyTrialDisplayActive ? undefined : t('premium.perMonth');
+  const monthlyPlanSecondaryPrice = isMonthlyTrialDisplayActive
+    ? `then ${monthlyPrice} ${t('premium.perMonth')}`
+    : undefined;
   const trialStatusMessageKey = trialInlineMessageKey ?? monthlyTrial.reasonKey;
 
   // Watch for premium status change to show success
@@ -225,8 +231,9 @@ export default function PremiumScreen() {
             <PlanOptionCard
               testID="plan-monthly"
               planName={t('premium.monthlyPlanName')}
-              planPrice={monthlyPrice}
-              planPeriod={t('premium.perMonth')}
+              planPrice={monthlyPlanHeadline}
+              planPeriod={monthlyPlanPeriod}
+              secondaryPriceText={monthlyPlanSecondaryPrice}
               isSelected={selectedPlan === 'monthly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('monthly')}
@@ -353,6 +360,7 @@ function PlanOptionCard({
   planPeriod,
   planName,
   planPrice,
+  secondaryPriceText,
   testID,
 }: {
   accentColor: string;
@@ -360,9 +368,10 @@ function PlanOptionCard({
   disabled?: boolean;
   isSelected: boolean;
   onPress: () => void;
-  planPeriod: string;
+  planPeriod?: string;
   planName: string;
   planPrice: string;
+  secondaryPriceText?: string;
   testID: string;
 }) {
   return (
@@ -389,9 +398,16 @@ function PlanOptionCard({
           )}
           <Text style={styles.planName}>{planName}</Text>
         </View>
-        <Text style={[styles.planPriceInline, { color: accentColor }]}>
-          {planPrice} {planPeriod}
-        </Text>
+        {secondaryPriceText ? (
+          <View style={styles.planPriceContainer}>
+            <Text style={[styles.planPriceInline, { color: accentColor }]}>{planPrice}</Text>
+            <Text style={styles.planPriceSecondary}>{secondaryPriceText}</Text>
+          </View>
+        ) : (
+          <Text style={[styles.planPriceInline, { color: accentColor }]}>
+            {planPrice} {planPeriod}
+          </Text>
+        )}
       </View>
       {badgeText ? (
         <View style={[styles.badge, { backgroundColor: accentColor }]}>
@@ -544,6 +560,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'right',
+  },
+  planPriceContainer: {
+    alignItems: 'flex-end',
+  },
+  planPriceSecondary: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    marginTop: 2,
   },
   badge: {
     position: 'absolute',

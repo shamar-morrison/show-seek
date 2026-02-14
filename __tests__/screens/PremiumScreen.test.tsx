@@ -115,6 +115,8 @@ describe('PremiumScreen', () => {
     fireEvent(getByTestId('free-trial-toggle'), 'valueChange', true);
     fireEvent.press(getByTestId('subscribe-button'));
 
+    expect(getByText('One Week Free')).toBeTruthy();
+    expect(getByText('then $3.00 / Month')).toBeTruthy();
     expect(
       getByText(
         'After the trial period, you will automatically be charged the ongoing monthly subscription.'
