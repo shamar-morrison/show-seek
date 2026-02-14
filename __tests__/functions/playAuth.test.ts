@@ -3,10 +3,13 @@ import {
   PLAY_VALIDATOR_CREDENTIALS_MISSING_REASON,
   getAndroidPublisherClientFromServiceAccountSecret,
   parsePlayValidatorServiceAccountJson,
-} from '@/functions/src/shared/playAuth';
+} from '../../functions/src/shared/playAuth';
 
 const expectHttpsErrorDetails = (error: unknown, expectedReason: string) => {
-  const normalizedError = error as { code?: string; details?: { reason?: string; retryable?: boolean } };
+  const normalizedError = error as {
+    code?: string;
+    details?: { reason?: string; retryable?: boolean };
+  };
   expect(normalizedError.code).toBe('failed-precondition');
   const details = normalizedError.details as { reason?: string; retryable?: boolean };
   expect(details?.reason).toBe(expectedReason);
