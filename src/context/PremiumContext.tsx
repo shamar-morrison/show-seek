@@ -4,6 +4,7 @@ import {
   inferPurchaseType,
   isKnownPremiumProductId,
   LEGACY_LIFETIME_PRODUCT_ID,
+  resolveMonthlyStandardOffer,
   resolveMonthlyTrialOffer,
   shouldTreatRestoreAsSuccess,
   sortPurchasesByPremiumPriority,
@@ -150,6 +151,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     offerToken: null,
     reasonKey: null,
   });
+  const [monthlyStandardOfferToken, setMonthlyStandardOfferToken] = useState<string | null>(null);
   const [hasUsedTrial, setHasUsedTrial] = useState(false);
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
@@ -319,6 +321,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             const monthlyTrialOffer = resolveMonthlyTrialOffer(
               monthlyProduct?.subscriptionOfferDetailsAndroid
             );
+            const monthlyStandardOffer = resolveMonthlyStandardOffer(
+              monthlyProduct?.subscriptionOfferDetailsAndroid
+            );
 
             setPrices({
               monthly: getDisplayPriceForSubscriptionProduct(monthlyProduct),
@@ -330,6 +335,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
               offerToken: monthlyTrialOffer.offerToken,
               reasonKey: monthlyTrialOffer.isEligible ? null : TRIAL_UNAVAILABLE_REASON_KEY,
             });
+            setMonthlyStandardOfferToken(monthlyStandardOffer.offerToken);
           }
         }
       } catch (err) {
@@ -339,6 +345,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           offerToken: null,
           reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
         });
+        setMonthlyStandardOfferToken(null);
       }
     };
 
@@ -487,6 +494,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         const subscriptionProductId = getProductIdForPlan(plan);
         const shouldUseTrial = plan === 'monthly' && options?.useTrial === true;
+        const shouldUseStandardMonthlyOffer = plan === 'monthly' && !shouldUseTrial;
 
         if (shouldUseTrial && hasUsedTrial) {
           throw createTrialIneligibleError(
@@ -518,6 +526,19 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
               offerToken: monthlyTrial.offerToken,
             },
           ];
+        } else if (shouldUseStandardMonthlyOffer) {
+          if (monthlyStandardOfferToken) {
+            androidPurchaseRequest.subscriptionOffers = [
+              {
+                sku: subscriptionProductId,
+                offerToken: monthlyStandardOfferToken,
+              },
+            ];
+          } else {
+            console.warn(
+              'No standard monthly offer token found; falling back to skus-only monthly purchase request.'
+            );
+          }
         }
 
         // Note: We rely on purchaseUpdatedListener for final validation and unlock.
@@ -568,7 +589,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         throw err;
       }
     },
-    [hasUsedTrial, monthlyTrial.offerToken, restorePurchases]
+    [hasUsedTrial, monthlyStandardOfferToken, monthlyTrial.offerToken, restorePurchases]
   );
 
   const resetTestPurchase = useCallback(async () => {

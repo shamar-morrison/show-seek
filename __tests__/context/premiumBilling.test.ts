@@ -8,6 +8,7 @@ import {
   isMonthlyTrialOffer,
   LEGACY_LIFETIME_PRODUCT_ID,
   MONTHLY_TRIAL_OFFER_ID,
+  resolveMonthlyStandardOffer,
   resolveMonthlyTrialOffer,
   shouldTreatRestoreAsSuccess,
   sortPurchasesByPremiumPriority,
@@ -164,6 +165,105 @@ describe('premiumBilling helpers', () => {
     expect(isMonthlyTrialOffer(nonMonthlyIntroOffer)).toBe(false);
     expect(resolveMonthlyTrialOffer([nonMonthlyIntroOffer])).toEqual({
       isEligible: false,
+      offerToken: null,
+    });
+  });
+
+  it('resolves standard monthly offer token when trial and non-trial offers are present', () => {
+    const trialOffer = {
+      basePlanId: 'monthly',
+      offerId: MONTHLY_TRIAL_OFFER_ID,
+      offerTags: [MONTHLY_TRIAL_OFFER_ID],
+      offerToken: 'trial-token',
+      pricingPhases: {
+        pricingPhaseList: [
+          {
+            billingCycleCount: 1,
+            billingPeriod: 'P7D',
+            formattedPrice: 'Free',
+            priceAmountMicros: '0',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 2,
+          },
+          {
+            billingCycleCount: 0,
+            billingPeriod: 'P1M',
+            formattedPrice: '$3.00',
+            priceAmountMicros: '3000000',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 1,
+          },
+        ],
+      },
+    } as any;
+
+    const standardOffer = {
+      basePlanId: 'monthly',
+      offerId: 'standard-monthly',
+      offerTags: ['standard'],
+      offerToken: 'standard-token',
+      pricingPhases: {
+        pricingPhaseList: [
+          {
+            billingCycleCount: 0,
+            billingPeriod: 'P1M',
+            formattedPrice: '$3.00',
+            priceAmountMicros: '3000000',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 1,
+          },
+        ],
+      },
+    } as any;
+
+    expect(resolveMonthlyStandardOffer([trialOffer, standardOffer])).toEqual({
+      offerToken: 'standard-token',
+    });
+  });
+
+  it('returns null standard token when only trial offer exists', () => {
+    const trialOffer = {
+      basePlanId: 'monthly',
+      offerId: MONTHLY_TRIAL_OFFER_ID,
+      offerTags: [MONTHLY_TRIAL_OFFER_ID],
+      offerToken: 'trial-token',
+      pricingPhases: { pricingPhaseList: [] },
+    } as any;
+
+    expect(resolveMonthlyStandardOffer([trialOffer])).toEqual({
+      offerToken: null,
+    });
+  });
+
+  it('does not classify trial-pattern monthly offers as standard monthly offers', () => {
+    const trialPatternOffer = {
+      basePlanId: 'monthly',
+      offerId: null,
+      offerTags: [],
+      offerToken: 'trial-pattern-token',
+      pricingPhases: {
+        pricingPhaseList: [
+          {
+            billingCycleCount: 1,
+            billingPeriod: 'P7D',
+            formattedPrice: 'Free',
+            priceAmountMicros: '0',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 2,
+          },
+          {
+            billingCycleCount: 0,
+            billingPeriod: 'P1M',
+            formattedPrice: '$3.00',
+            priceAmountMicros: '3000000',
+            priceCurrencyCode: 'USD',
+            recurrenceMode: 1,
+          },
+        ],
+      },
+    } as any;
+
+    expect(resolveMonthlyStandardOffer([trialPatternOffer])).toEqual({
       offerToken: null,
     });
   });

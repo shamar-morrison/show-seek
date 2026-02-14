@@ -139,6 +139,22 @@ const normalizeOfferIdentifier = (value?: string | null): string =>
     .trim()
     .toLowerCase();
 
+const hasRecurringMonthlyPaidPhase = (
+  offerDetails?: ProductSubscriptionAndroidOfferDetails | null
+): boolean => {
+  if (!offerDetails) {
+    return false;
+  }
+
+  const pricingPhases = offerDetails.pricingPhases?.pricingPhaseList ?? [];
+  return pricingPhases.some(
+    (phase) =>
+      hasPositivePrice(phase) &&
+      phase.recurrenceMode === 1 &&
+      isMonthlyBillingPeriod(normalizeBillingPeriod(phase.billingPeriod))
+  );
+};
+
 export const isMonthlyTrialOffer = (
   offerDetails?: ProductSubscriptionAndroidOfferDetails | null
 ): boolean => {
@@ -184,6 +200,35 @@ export const resolveMonthlyTrialOffer = (
   return {
     isEligible: true,
     offerToken: matchingOffer.offerToken,
+  };
+};
+
+export const resolveMonthlyStandardOffer = (
+  offerDetails?: ProductSubscriptionAndroidOfferDetails[] | null
+): {
+  offerToken: string | null;
+} => {
+  if (!Array.isArray(offerDetails) || offerDetails.length === 0) {
+    return {
+      offerToken: null,
+    };
+  }
+
+  const standardOffers = offerDetails.filter(
+    (offer) => !isMonthlyTrialOffer(offer) && !!offer.offerToken
+  );
+
+  if (standardOffers.length === 0) {
+    return {
+      offerToken: null,
+    };
+  }
+
+  const preferredStandardOffer =
+    standardOffers.find((offer) => hasRecurringMonthlyPaidPhase(offer)) ?? standardOffers[0];
+
+  return {
+    offerToken: preferredStandardOffer.offerToken ?? null,
   };
 };
 
