@@ -1,4 +1,3 @@
-import { auth, db, functions } from '@/src/firebase/config';
 import {
   getDisplayPriceForSubscriptionProduct,
   getProductIdForPlan,
@@ -8,10 +7,11 @@ import {
   resolveMonthlyTrialOffer,
   shouldTreatRestoreAsSuccess,
   sortPurchasesByPremiumPriority,
-  type PremiumPlan,
-  SUBSCRIPTION_PRODUCT_ID_LIST,
   SUBSCRIPTION_PRODUCT_IDS as SUBSCRIPTION_ID_MAP,
+  SUBSCRIPTION_PRODUCT_ID_LIST,
+  type PremiumPlan,
 } from '@/src/context/premiumBilling';
+import { auth, db, functions } from '@/src/firebase/config';
 import i18n from '@/src/i18n';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -102,7 +102,9 @@ const isTrialIneligiblePurchaseError = (error: unknown): boolean => {
         message.includes('not eligible') ||
         message.includes('unavailable'))) ||
     (message.includes('offer') &&
-      (message.includes('token') || message.includes('ineligible') || message.includes('not eligible')))
+      (message.includes('token') ||
+        message.includes('ineligible') ||
+        message.includes('not eligible')))
   );
 };
 
@@ -252,18 +254,19 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           // We don't necessarily update state here as UI handles specific errors from requestPurchase
         });
 
-        if (
-          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS &&
-          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0
-        ) {
+        if (AVAILABLE_SUBSCRIPTION_PRODUCT_IDS && AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0) {
           const products = await RNIap.fetchProducts({
             skus: AVAILABLE_SUBSCRIPTION_PRODUCT_IDS,
             type: 'subs',
           });
 
           if (products) {
-            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly);
-            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly);
+            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly) as
+              | RNIap.ProductSubscriptionAndroid
+              | undefined;
+            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly) as
+              | RNIap.ProductSubscriptionAndroid
+              | undefined;
             const monthlyTrialOffer = resolveMonthlyTrialOffer(
               monthlyProduct?.subscriptionOfferDetailsAndroid
             );
@@ -440,9 +443,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           );
         }
 
-        const androidPurchaseRequest: NonNullable<
-          NonNullable<Parameters<typeof RNIap.requestPurchase>[0]['request']>['android']
-        > = {
+        const androidPurchaseRequest: RNIap.RequestSubscriptionAndroidProps = {
           skus: [subscriptionProductId],
         };
 
@@ -514,8 +515,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           (purchase) =>
             purchase.productId === LEGACY_LIFETIME_PRODUCT_ID && !!purchase.purchaseToken
         );
-        const subscriptionPurchase = purchases
-          .filter((purchase) => SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId));
+        const subscriptionPurchase = purchases.filter((purchase) =>
+          SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId)
+        );
         const prioritizedSubscriptions = sortPurchasesByPremiumPriority(subscriptionPurchase);
         const topSubscriptionPurchase = prioritizedSubscriptions[0];
 
@@ -561,7 +563,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return;
         }
 
-        Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
+        Alert.alert(
+          i18n.t('premium.noPurchaseFoundTitle'),
+          i18n.t('premium.noPurchaseFoundMessage')
+        );
       }
     } catch (err: any) {
       console.error('Reset error:', err);
