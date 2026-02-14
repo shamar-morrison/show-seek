@@ -8,7 +8,9 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "backfill:user-profiles:dry": "node scripts/backfill-user-profiles.js",
+    "backfill:user-profiles:apply": "node scripts/backfill-user-profiles.js --apply"
   },
   "engines": {
     "node": "22"
