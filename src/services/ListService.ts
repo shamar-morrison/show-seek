@@ -1,12 +1,15 @@
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
   deleteField,
   doc,
-  getDoc,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -34,6 +37,8 @@ export interface UserList {
   createdAt: number;
   updatedAt?: number;
 }
+
+export type ListMembershipIndex = Record<string, string[]>;
 
 export const DEFAULT_LISTS = [
   { id: 'watchlist', name: 'Should Watch' },
@@ -73,77 +78,151 @@ class ListService {
     return code === 'not-found' || code === 'firestore/not-found';
   }
 
-  /**
-   * Subscribe to all lists for the current user
-   */
-  subscribeToUserLists(callback: (lists: UserList[]) => void, onError?: (error: Error) => void) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
+  async getUserLists(userId: string): Promise<UserList[]> {
+    const listsRef = this.getUserListsCollection(userId);
+    const timeout = createTimeoutWithCleanup(10000);
+    const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
 
-    const listsRef = this.getUserListsCollection(user.uid);
-
-    return onSnapshot(
-      listsRef,
-      (snapshot) => {
-        const lists: UserList[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as UserList[];
-
-        // Ensure default lists exist in the output even if not in DB yet
-        const mergedLists = [...lists];
-
-        DEFAULT_LISTS.forEach((defaultList) => {
-          if (!mergedLists.find((l) => l.id === defaultList.id)) {
-            mergedLists.push({
-              id: defaultList.id,
-              name: defaultList.name,
-              items: {},
-              createdAt: Date.now(),
-            });
-          }
+    try {
+      if (debugLogsEnabled) {
+        console.log('[ListService.getUserLists:start]', {
+          userId,
+          path: `users/${userId}/lists`,
         });
+      }
 
-        // Sort lists: default lists first (in defined order), then custom lists by creation date
-        const defaultListIds = DEFAULT_LISTS.map((l) => l.id);
-        mergedLists.sort((a, b) => {
-          const aDefaultIndex = defaultListIds.indexOf(a.id);
-          const bDefaultIndex = defaultListIds.indexOf(b.id);
+      const snapshot = await Promise.race([
+        auditedGetDocs(listsRef, {
+          path: `users/${userId}/lists`,
+          queryKey: 'lists',
+          callsite: 'ListService.getUserLists',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
 
-          // Both are default lists - sort by defined order
-          if (aDefaultIndex !== -1 && bDefaultIndex !== -1) {
-            return aDefaultIndex - bDefaultIndex;
-          }
+      const lists: UserList[] = snapshot.docs.map((listDoc) => ({
+        id: listDoc.id,
+        ...listDoc.data(),
+      })) as UserList[];
 
-          // Only a is a default list - it comes first
-          if (aDefaultIndex !== -1) return -1;
+      const mergedLists = [...lists];
 
-          // Only b is a default list - it comes first
-          if (bDefaultIndex !== -1) return 1;
-
-          // Both are custom lists - sort by creation date (oldest first)
-          return (a.createdAt || 0) - (b.createdAt || 0);
-        });
-
-        callback(mergedLists);
-      },
-      (error) => {
-        console.error('[ListService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        // Graceful degradation: show default lists
-        callback(
-          DEFAULT_LISTS.map((defaultList) => ({
+      DEFAULT_LISTS.forEach((defaultList) => {
+        if (!mergedLists.find((list) => list.id === defaultList.id)) {
+          mergedLists.push({
             id: defaultList.id,
             name: defaultList.name,
             items: {},
             createdAt: Date.now(),
-          }))
-        );
+          });
+        }
+      });
+
+      const defaultListIds = DEFAULT_LISTS.map((list) => list.id);
+      mergedLists.sort((a, b) => {
+        const aDefaultIndex = defaultListIds.indexOf(a.id);
+        const bDefaultIndex = defaultListIds.indexOf(b.id);
+
+        if (aDefaultIndex !== -1 && bDefaultIndex !== -1) {
+          return aDefaultIndex - bDefaultIndex;
+        }
+
+        if (aDefaultIndex !== -1) return -1;
+        if (bDefaultIndex !== -1) return 1;
+
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+
+      if (debugLogsEnabled) {
+        console.log('[ListService.getUserLists:result]', {
+          userId,
+          rawDocCount: snapshot.size,
+          mergedListCount: mergedLists.length,
+          defaultListCount: DEFAULT_LISTS.length,
+        });
       }
-    );
+
+      return mergedLists;
+    } catch (error) {
+      if (debugLogsEnabled) {
+        console.error('[ListService.getUserLists:error]', {
+          userId,
+          error,
+        });
+      }
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Build a cached membership index for list indicators.
+   * Key format: "${mediaId}-${mediaType}" => array of list IDs containing the media item.
+   */
+  async getListMembershipIndex(userId: string): Promise<ListMembershipIndex> {
+    const listsRef = this.getUserListsCollection(userId);
+    const timeout = createTimeoutWithCleanup(10000);
+    const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+
+    try {
+      if (debugLogsEnabled) {
+        console.log('[ListService.getListMembershipIndex:start]', {
+          userId,
+          path: `users/${userId}/lists`,
+        });
+      }
+
+      const snapshot = await Promise.race([
+        auditedGetDocs(listsRef, {
+          path: `users/${userId}/lists`,
+          queryKey: 'list-membership-index',
+          callsite: 'ListService.getListMembershipIndex',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      const index: ListMembershipIndex = {};
+
+      snapshot.docs.forEach((listDoc) => {
+        const listId = listDoc.id;
+        const listData = listDoc.data() as Partial<UserList>;
+        const listItems = listData.items || {};
+
+        Object.values(listItems).forEach((item) => {
+          if (!item || typeof item.id !== 'number' || !item.media_type) {
+            return;
+          }
+
+          const key = `${item.id}-${item.media_type}`;
+          const existingListIds = index[key] || [];
+          if (!existingListIds.includes(listId)) {
+            existingListIds.push(listId);
+            index[key] = existingListIds;
+          }
+        });
+      });
+
+      if (debugLogsEnabled) {
+        console.log('[ListService.getListMembershipIndex:result]', {
+          userId,
+          rawDocCount: snapshot.size,
+          indexedMediaCount: Object.keys(index).length,
+        });
+      }
+
+      return index;
+    } catch (error) {
+      if (debugLogsEnabled) {
+        console.error('[ListService.getListMembershipIndex:error]', {
+          userId,
+          error,
+        });
+      }
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**
@@ -220,27 +299,27 @@ class ListService {
    * Remove a media item from a specific list
    */
   async removeFromList(listId: string, mediaId: number) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
       await Promise.race([
         updateDoc(listRef, {
           [`items.${mediaId}`]: deleteField(),
           updatedAt: Date.now(),
         }),
-        timeoutPromise,
+        timeout.promise,
       ]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] removeFromList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -257,40 +336,58 @@ class ListService {
       let listId = baseId;
       let attempts = 0;
       const maxAttempts = 5;
+      const collisionCheckTimeoutMessage = 'List creation collision check timed out';
+      const collisionCheckTimeout = createTimeoutWithCleanup(10000, collisionCheckTimeoutMessage);
 
-      // Check for collisions and generate unique ID
-      while (attempts < maxAttempts) {
-        const listRef = this.getUserListRef(user.uid, listId);
-        const docSnap = await getDoc(listRef);
+      try {
+        // Check for collisions and generate unique ID
+        while (attempts < maxAttempts) {
+          const listRef = this.getUserListRef(user.uid, listId);
+          const docSnap = await Promise.race([
+            auditedGetDoc(listRef, {
+              path: `users/${user.uid}/lists/${listId}`,
+              queryKey: 'listById',
+              callsite: 'ListService.createList',
+            }),
+            collisionCheckTimeout.promise,
+          ]);
 
-        if (!docSnap.exists()) {
-          // ID is unique, proceed with creation
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Request timed out')), 10000);
-          });
+          if (!docSnap.exists()) {
+            // ID is unique, proceed with creation
+            const timeout = createTimeoutWithCleanup(10000);
 
-          const trimmedDescription = description?.trim();
-          const listData = this.sanitizeForFirestore({
-            name: listName,
-            description: trimmedDescription ? trimmedDescription : undefined,
-            items: {},
-            createdAt: Date.now(),
-            isCustom: true,
-          });
+            const trimmedDescription = description?.trim();
+            const listData = this.sanitizeForFirestore({
+              name: listName,
+              description: trimmedDescription ? trimmedDescription : undefined,
+              items: {},
+              createdAt: Date.now(),
+              isCustom: true,
+            });
 
-          await Promise.race([setDoc(listRef, listData), timeoutPromise]);
+            try {
+              await Promise.race([setDoc(listRef, listData), timeout.promise]);
+            } finally {
+              timeout.cancel();
+            }
 
-          return listId;
+            return listId;
+          }
+
+          // ID collision, append random suffix and try again
+          attempts++;
+          const suffix = Math.random().toString(36).substring(2, 6);
+          listId = `${baseId}-${suffix}`;
         }
-
-        // ID collision, append random suffix and try again
-        attempts++;
-        const suffix = Math.random().toString(36).substring(2, 6);
-        listId = `${baseId}-${suffix}`;
+      } finally {
+        collisionCheckTimeout.cancel();
       }
 
       throw new Error('Could not generate a unique list ID after multiple attempts');
     } catch (error) {
+      if (error instanceof Error && error.message === 'List creation collision check timed out') {
+        throw new Error('Unable to create list right now, please try again');
+      }
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] createList error:', error);
       throw new Error(message);
@@ -301,6 +398,8 @@ class ListService {
    * Delete a custom list
    */
   async deleteList(listId: string) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -312,15 +411,13 @@ class ListService {
 
       const listRef = this.getUserListRef(user.uid, listId);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(listRef), timeoutPromise]);
+      await Promise.race([deleteDoc(listRef), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] deleteList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -328,6 +425,8 @@ class ListService {
    * Rename a custom list
    */
   async renameList(listId: string, newName: string, newDescription?: string) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -345,14 +444,17 @@ class ListService {
       const listRef = this.getUserListRef(user.uid, listId);
 
       // Verify the list exists
-      const docSnap = await getDoc(listRef);
+      const docSnap = await Promise.race([
+        auditedGetDoc(listRef, {
+          path: `users/${user.uid}/lists/${listId}`,
+          queryKey: 'listById',
+          callsite: 'ListService.renameList',
+        }),
+        timeout.promise,
+      ]);
       if (!docSnap.exists()) {
         throw new Error('List not found');
       }
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
 
       const trimmedDescription = newDescription?.trim();
       const updateData: Record<string, any> = {
@@ -366,11 +468,13 @@ class ListService {
         updateData.description = deleteField();
       }
 
-      await Promise.race([updateDoc(listRef, updateData), timeoutPromise]);
+      await Promise.race([updateDoc(listRef, updateData), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] renameList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 }

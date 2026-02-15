@@ -1,5 +1,7 @@
 import { db } from '@/src/firebase/config';
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { createTimeout } from '@/src/utils/timeout';
@@ -9,13 +11,11 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  onSnapshot,
   setDoc,
   Timestamp,
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { useEffect } from 'react';
 import { auth } from '../firebase/config';
 
 /**
@@ -23,7 +23,11 @@ import { auth } from '../firebase/config';
  */
 const fetchWatchInstances = async (userId: string, movieId: number): Promise<WatchInstance[]> => {
   const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
-  const snapshot = await getDocs(watchesRef);
+  const snapshot = await auditedGetDocs(watchesRef, {
+    path: `users/${userId}/watched_movies/${movieId}/watches`,
+    queryKey: 'watchedMoviesByMovie',
+    callsite: 'useWatchedMovies.fetchWatchInstances',
+  });
 
   const watchInstances: WatchInstance[] = [];
   snapshot.forEach((doc) => {
@@ -75,9 +79,8 @@ const syncCollectionTrackingAfterUnwatch = async (movieId: number): Promise<void
 };
 
 /**
- * Hook to get a movie's watch history with React Query caching + real-time updates
- * - Uses React Query for caching (no loading on repeated visits)
- * - Sets up Firestore listener for real-time updates when data changes
+ * Hook to get a movie's watch history with React Query caching.
+ * Uses explicit invalidation/optimistic updates from mutations instead of realtime listeners.
  */
 export const useWatchedMovies = (movieId: number) => {
   const userId = auth.currentUser?.uid;
@@ -89,53 +92,12 @@ export const useWatchedMovies = (movieId: number) => {
     queryKey,
     queryFn: () => fetchWatchInstances(userId!, movieId),
     enabled: !!userId && !!movieId,
-    staleTime: Infinity, // Never consider stale - we update via listener
-    gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
-
-  // Set up real-time listener for updates (but data loads from cache first)
-  // Deferred by one tick to avoid blocking the initial render
-  useEffect(() => {
-    if (!userId || !movieId) return;
-
-    let unsubscribe: (() => void) | null = null;
-
-    // Defer listener setup to after the current render tick completes
-    const timeoutId = setTimeout(() => {
-      const watchesRef = collection(db, `users/${userId}/watched_movies/${movieId}/watches`);
-
-      unsubscribe = onSnapshot(
-        watchesRef,
-        (snapshot) => {
-          const watchInstances: WatchInstance[] = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            watchInstances.push({
-              id: doc.id,
-              watchedAt: data.watchedAt instanceof Timestamp ? data.watchedAt.toDate() : new Date(),
-              movieId: typeof data.movieId === 'number' ? data.movieId : Number(data.movieId),
-            });
-          });
-
-          // Sort by most recent first
-          watchInstances.sort((a, b) => b.watchedAt.getTime() - a.watchedAt.getTime());
-
-          // Update cache directly (no refetch needed)
-          queryClient.setQueryData(queryKey, watchInstances);
-        },
-        (error) => {
-          console.error('[useWatchedMovies] Subscription error:', error);
-        }
-      );
-    }, 0);
-
-    return () => {
-      clearTimeout(timeoutId);
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [userId, movieId, queryClient]);
 
   const instances = query.data ?? [];
   const count = instances.length;
@@ -224,7 +186,14 @@ export const useClearWatches = (movieId: number) => {
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
 
-      const snapshot = (await Promise.race([getDocs(watchesRef), createTimeout(10000)])) as Awaited<
+      const snapshot = (await Promise.race([
+        auditedGetDocs(watchesRef, {
+          path: `users/${currentUserId}/watched_movies/${movieId}/watches`,
+          queryKey: 'watchedMoviesByMovie',
+          callsite: 'useWatchedMovies.useClearWatches',
+        }),
+        createTimeout(10000),
+      ])) as Awaited<
         ReturnType<typeof getDocs>
       >;
 
@@ -268,6 +237,9 @@ export const useClearWatches = (movieId: number) => {
       console.error('[useClearWatches] Error:', error);
       throw new Error(message);
     },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
+    },
   });
 };
 
@@ -293,7 +265,11 @@ export const useDeleteWatch = (movieId: number) => {
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
       const remainingSnapshot = (await Promise.race([
-        getDocs(watchesRef),
+        auditedGetDocs(watchesRef, {
+          path: `users/${currentUserId}/watched_movies/${movieId}/watches`,
+          queryKey: 'watchedMoviesByMovie',
+          callsite: 'useWatchedMovies.useDeleteWatch',
+        }),
         createTimeout(10000),
       ])) as Awaited<ReturnType<typeof getDocs>>;
 
@@ -325,6 +301,9 @@ export const useDeleteWatch = (movieId: number) => {
       const message = getFirestoreErrorMessage(error);
       console.error('[useDeleteWatch] Error:', error);
       throw new Error(message);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
     },
   });
 };

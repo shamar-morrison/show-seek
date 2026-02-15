@@ -77,6 +77,7 @@ describe('useWatchedMovies collection tracking sync', () => {
 
   it('syncs tracked collections after clearing non-empty watch history', async () => {
     const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
     (getDocs as jest.Mock).mockResolvedValueOnce(
       createSnapshot([{ ref: { id: 'watch-1' } }, { ref: { id: 'watch-2' } }])
     );
@@ -110,6 +111,7 @@ describe('useWatchedMovies collection tracking sync', () => {
     expect(collectionTrackingService.removeWatchedMovie).toHaveBeenCalledTimes(2);
     expect(collectionTrackingService.removeWatchedMovie).toHaveBeenCalledWith(1, 999);
     expect(collectionTrackingService.removeWatchedMovie).toHaveBeenCalledWith(2, 999);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['collectionTracking'] });
   });
 
   it('does not sync collections when clearing already-empty watch history', async () => {
@@ -131,6 +133,7 @@ describe('useWatchedMovies collection tracking sync', () => {
 
   it('syncs tracked collections when deleting the final watch instance', async () => {
     const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
     (getDocs as jest.Mock).mockResolvedValueOnce(createSnapshot([]));
     (collectionTrackingService.getAllTrackedCollections as jest.Mock).mockResolvedValue([
       {
@@ -152,6 +155,7 @@ describe('useWatchedMovies collection tracking sync', () => {
     expect(getDocs).toHaveBeenCalledTimes(1);
     expect(collectionTrackingService.getAllTrackedCollections).toHaveBeenCalledTimes(1);
     expect(collectionTrackingService.removeWatchedMovie).toHaveBeenCalledWith(77, 999);
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['collectionTracking'] });
   });
 
   it('does not sync tracked collections when deleting a non-final watch instance', async () => {

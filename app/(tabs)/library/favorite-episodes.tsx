@@ -1,5 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { FavoriteEpisodeCard } from '@/src/components/library/FavoriteEpisodeCard';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
@@ -26,7 +27,7 @@ export default function FavoriteEpisodesScreen() {
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
-  const { data: favoriteEpisodes, isLoading } = useFavoriteEpisodes();
+  const { data: favoriteEpisodes, isLoading, error, refetch } = useFavoriteEpisodes();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { preferences } = usePreferences();
@@ -93,6 +94,21 @@ export default function FavoriteEpisodesScreen() {
 
   if (isLoading) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <View style={screenStyles.container}>
+        <Stack.Screen options={{ title: t('library.favoriteEpisodes') }} />
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </View>
+    );
   }
 
   if (!favoriteEpisodes || favoriteEpisodes.length === 0) {

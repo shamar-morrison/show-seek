@@ -1,11 +1,41 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 class PreferencesService {
   private getUserDocRef(userId: string) {
     return doc(db, 'users', userId);
+  }
+
+  private mapPreferencesFromUserDoc(data?: Record<string, any>): UserPreferences {
+    return {
+      autoAddToWatching:
+        data?.preferences?.autoAddToWatching ?? DEFAULT_PREFERENCES.autoAddToWatching,
+      autoAddToAlreadyWatched:
+        data?.preferences?.autoAddToAlreadyWatched ?? DEFAULT_PREFERENCES.autoAddToAlreadyWatched,
+      blurPlotSpoilers: data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
+      showListIndicators:
+        data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
+      copyInsteadOfMove: data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
+      homeScreenLists: data?.preferences?.homeScreenLists,
+      quickMarkAsWatched:
+        data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
+      defaultLaunchScreen:
+        data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
+      hideWatchedContent:
+        data?.preferences?.hideWatchedContent ?? DEFAULT_PREFERENCES.hideWatchedContent,
+      hideUnreleasedContent:
+        data?.preferences?.hideUnreleasedContent ?? DEFAULT_PREFERENCES.hideUnreleasedContent,
+      markPreviousEpisodesWatched:
+        data?.preferences?.markPreviousEpisodesWatched ??
+        DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
+      hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
+      dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
+      showOriginalTitles:
+        data?.preferences?.showOriginalTitles ?? DEFAULT_PREFERENCES.showOriginalTitles,
+    };
   }
 
   /**
@@ -24,42 +54,11 @@ class PreferencesService {
 
     const userRef = this.getUserDocRef(user.uid);
 
-    return onSnapshot(
+    return auditedOnSnapshot(
       userRef,
       (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.data();
-          const preferences: UserPreferences = {
-            autoAddToWatching:
-              data?.preferences?.autoAddToWatching ?? DEFAULT_PREFERENCES.autoAddToWatching,
-            autoAddToAlreadyWatched:
-              data?.preferences?.autoAddToAlreadyWatched ??
-              DEFAULT_PREFERENCES.autoAddToAlreadyWatched,
-            blurPlotSpoilers:
-              data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
-            showListIndicators:
-              data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
-            copyInsteadOfMove:
-              data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
-            homeScreenLists: data?.preferences?.homeScreenLists,
-            quickMarkAsWatched:
-              data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
-            defaultLaunchScreen:
-              data?.preferences?.defaultLaunchScreen ?? DEFAULT_PREFERENCES.defaultLaunchScreen,
-            hideWatchedContent:
-              data?.preferences?.hideWatchedContent ?? DEFAULT_PREFERENCES.hideWatchedContent,
-            hideUnreleasedContent:
-              data?.preferences?.hideUnreleasedContent ?? DEFAULT_PREFERENCES.hideUnreleasedContent,
-            markPreviousEpisodesWatched:
-              data?.preferences?.markPreviousEpisodesWatched ??
-              DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
-            hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
-            dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
-            showOriginalTitles:
-              data?.preferences?.showOriginalTitles ?? DEFAULT_PREFERENCES.showOriginalTitles,
-          };
-
-          callback(preferences);
+          callback(this.mapPreferencesFromUserDoc(snapshot.data()));
         } else {
           // User document doesn't exist yet, use defaults
           callback(DEFAULT_PREFERENCES);
@@ -73,8 +72,40 @@ class PreferencesService {
         }
         // Graceful degradation: return defaults on error
         callback(DEFAULT_PREFERENCES);
+      },
+      {
+        path: `users/${user.uid}`,
+        queryKey: 'preferences',
+        callsite: 'PreferencesService.subscribeToPreferences',
       }
     );
+  }
+
+  async fetchPreferences(userId: string): Promise<UserPreferences> {
+    const userRef = this.getUserDocRef(userId);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out')), 10000);
+    });
+
+    try {
+      const snapshot = await Promise.race([
+        auditedGetDoc(userRef, {
+          path: `users/${userId}`,
+          queryKey: 'preferences',
+          callsite: 'PreferencesService.fetchPreferences',
+        }),
+        timeoutPromise,
+      ]);
+
+      if (!snapshot.exists()) {
+        return DEFAULT_PREFERENCES;
+      }
+
+      return this.mapPreferencesFromUserDoc(snapshot.data());
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      throw new Error(message);
+    }
   }
 
   /**
@@ -119,16 +150,12 @@ class PreferencesService {
    * Returns defaults if not available
    */
   async getPreferences(): Promise<UserPreferences> {
-    return new Promise((resolve) => {
-      const unsubscribe = this.subscribeToPreferences((prefs) => {
-        // Use microtask to ensure unsubscribe is defined before calling it
-        // (handles case where subscribeToPreferences calls callback synchronously)
-        Promise.resolve().then(() => {
-          unsubscribe();
-          resolve(prefs);
-        });
-      });
-    });
+    const user = auth.currentUser;
+    if (!user) {
+      return DEFAULT_PREFERENCES;
+    }
+
+    return this.fetchPreferences(user.uid);
   }
 }
 

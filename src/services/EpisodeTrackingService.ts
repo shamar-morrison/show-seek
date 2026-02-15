@@ -1,12 +1,13 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteField,
   doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -35,40 +36,33 @@ class EpisodeTrackingService {
     return `${seasonNumber}_${episodeNumber}`;
   }
 
-  /**
-   * Subscribe to episode tracking data for a specific TV show
-   */
-  subscribeToShowTracking(
-    tvShowId: number,
-    callback: (tracking: TVShowEpisodeTracking | null) => void,
-    onError?: (error: Error) => void
-  ) {
+  async getShowTracking(tvShowId: number): Promise<TVShowEpisodeTracking | null> {
     const user = auth.currentUser;
-    if (!user) return () => {};
+    if (!user) return null;
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+    const timeout = createTimeoutWithCleanup(10000);
 
-    return onSnapshot(
-      trackingRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as TVShowEpisodeTracking;
-          callback(data);
-        } else {
-          // No tracking data yet - return empty structure
-          callback(null);
-        }
-      },
-      (error) => {
-        console.error('[EpisodeTrackingService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        // Graceful degradation
-        callback(null);
+    try {
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+          queryKey: 'episodeTrackingByShow',
+          callsite: 'EpisodeTrackingService.getShowTracking',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      if (!snapshot.exists()) {
+        return null;
       }
-    );
+
+      return snapshot.data() as TVShowEpisodeTracking;
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**
@@ -150,7 +144,14 @@ class EpisodeTrackingService {
       const timeout = createTimeoutWithCleanup(10000);
 
       // First check if the document exists to avoid "not-found" errors
-      const snapshot = await Promise.race([getDoc(trackingRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+          queryKey: 'episodeTrackingByShow',
+          callsite: 'EpisodeTrackingService.markEpisodeUnwatched',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
       if (!snapshot.exists()) {
@@ -320,7 +321,11 @@ class EpisodeTrackingService {
 
       const timeout = createTimeoutWithCleanup(10000);
       const snapshot = await Promise.race([
-        getDocs(trackingCollectionRef),
+        auditedGetDocs(trackingCollectionRef, {
+          path: `users/${userId}/episode_tracking`,
+          queryKey: 'episodeTrackingAllShows',
+          callsite: 'EpisodeTrackingService.getAllWatchedShows',
+        }),
         timeout.promise,
       ]).finally(() => {
         timeout.cancel();

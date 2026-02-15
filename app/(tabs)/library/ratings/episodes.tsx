@@ -1,5 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
@@ -40,7 +41,7 @@ export default function EpisodeRatingsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
-  const { data: ratings, isLoading } = useRatings();
+  const { data: ratings, isLoading, error, refetch } = useRatings();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -216,6 +217,20 @@ export default function EpisodeRatingsScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   if (episodeRatings.length === 0) {

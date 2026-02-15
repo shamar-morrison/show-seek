@@ -1,4 +1,8 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   arrayRemove,
@@ -6,9 +10,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -45,190 +46,41 @@ class CollectionTrackingService {
     return code === 'not-found' || code === 'firestore/not-found';
   }
 
-  /**
-   * Subscribe to all tracked collections for the current user.
-   * Returns empty array if no collections tracked.
-   * Includes 10-second first-event timeout for slow/stalled connections.
-   */
-  subscribeToTrackedCollections(
-    callback: (collections: TrackedCollection[]) => void,
-    onError?: (error: Error) => void
-  ) {
+  async getCollectionTracking(collectionId: number): Promise<TrackedCollection | null> {
     const user = auth.currentUser;
-    if (!user) {
-      callback([]);
-      return () => {};
-    }
-
-    const collectionRef = this.getCollectionTrackingCollectionRef(user.uid);
-    let firstEventReceived = false;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let unsubscribeSnapshot: (() => void) | null = null;
-
-    // Set up 10-second first-event timeout
-    timeoutId = setTimeout(() => {
-      if (!firstEventReceived) {
-        console.error('[CollectionTrackingService] First event timeout - no response in 10s');
-        // Clean up the listener
-        if (unsubscribeSnapshot) {
-          unsubscribeSnapshot();
-          unsubscribeSnapshot = null;
-        }
-        // Notify error
-        if (onError) {
-          onError(new Error('Connection timed out. Please check your network.'));
-        }
-        // Fallback to empty state
-        callback([]);
-      }
-    }, 10000);
-
-    unsubscribeSnapshot = onSnapshot(
-      collectionRef,
-      (snapshot) => {
-        // Clear timeout on first event
-        if (!firstEventReceived) {
-          firstEventReceived = true;
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-        }
-
-        const collections: TrackedCollection[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          collections.push({
-            collectionId: data.collectionId,
-            name: data.name,
-            totalMovies: data.totalMovies,
-            watchedMovieIds: data.watchedMovieIds || [],
-            startedAt: data.startedAt,
-            lastUpdated: data.lastUpdated,
-          });
-        });
-        callback(collections);
-      },
-      (error) => {
-        // Clear timeout on error
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        console.error('[CollectionTrackingService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        // Graceful degradation
-        callback([]);
-      }
-    );
-
-    // Return unsubscribe function that cleans up both listener and timeout
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-      }
-    };
-  }
-
-  /**
-   * Subscribe to a single collection's tracking data.
-   * Returns null if collection is not tracked.
-   * Includes 10-second first-event timeout for slow/stalled connections.
-   */
-  subscribeToCollection(
-    collectionId: number,
-    callback: (collection: TrackedCollection | null) => void,
-    onError?: (error: Error) => void
-  ) {
-    const user = auth.currentUser;
-    if (!user) {
-      callback(null);
-      return () => {};
-    }
+    if (!user) return null;
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
-    let firstEventReceived = false;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let unsubscribeSnapshot: (() => void) | null = null;
+    const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
 
-    // Set up 10-second first-event timeout
-    timeoutId = setTimeout(() => {
-      if (!firstEventReceived) {
-        console.error('[CollectionTrackingService] First event timeout - no response in 10s');
-        // Clean up the listener
-        if (unsubscribeSnapshot) {
-          unsubscribeSnapshot();
-          unsubscribeSnapshot = null;
-        }
-        // Notify error
-        if (onError) {
-          onError(new Error('Connection timed out. Please check your network.'));
-        }
-        // Fallback to null state
-        callback(null);
-      }
-    }, 10000);
+    try {
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/collection_tracking/${collectionId}`,
+          queryKey: 'collectionTrackingById',
+          callsite: 'CollectionTrackingService.getCollectionTracking',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
 
-    unsubscribeSnapshot = onSnapshot(
-      trackingRef,
-      (snapshot) => {
-        // Clear timeout on first event
-        if (!firstEventReceived) {
-          firstEventReceived = true;
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-        }
+      if (!snapshot.exists()) {
+        return null;
+      }
 
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          callback({
-            collectionId: data.collectionId,
-            name: data.name,
-            totalMovies: data.totalMovies,
-            watchedMovieIds: data.watchedMovieIds || [],
-            startedAt: data.startedAt,
-            lastUpdated: data.lastUpdated,
-          });
-        } else {
-          callback(null);
-        }
-      },
-      (error) => {
-        // Clear timeout on error
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-          timeoutId = null;
-        }
-        console.error('[CollectionTrackingService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        callback(null);
-      }
-    );
-
-    // Return unsubscribe function that cleans up both listener and timeout
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-      }
-    };
+      const data = snapshot.data();
+      return {
+        collectionId: data.collectionId,
+        name: data.name,
+        totalMovies: data.totalMovies,
+        watchedMovieIds: data.watchedMovieIds || [],
+        startedAt: data.startedAt,
+        lastUpdated: data.lastUpdated,
+      };
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**
@@ -239,7 +91,11 @@ class CollectionTrackingService {
     if (!user) return false;
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
-    const snapshot = await getDoc(trackingRef);
+    const snapshot = await auditedGetDoc(trackingRef, {
+      path: `users/${user.uid}/collection_tracking/${collectionId}`,
+      queryKey: 'collectionTrackingById',
+      callsite: 'CollectionTrackingService.isCollectionTracked',
+    });
     return snapshot.exists();
   }
 
@@ -254,7 +110,14 @@ class CollectionTrackingService {
     const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
 
     try {
-      const snapshot = await Promise.race([getDocs(collectionRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDocs(collectionRef, {
+          path: `users/${user.uid}/collection_tracking`,
+          queryKey: 'collectionTrackingAll',
+          callsite: 'CollectionTrackingService.getTrackedCollectionCount',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
       return snapshot.docs.length;
@@ -311,7 +174,14 @@ class CollectionTrackingService {
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
       // First, get the watched movie IDs to return (with timeout)
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/collection_tracking/${collectionId}`,
+          queryKey: 'collectionTrackingById',
+          callsite: 'CollectionTrackingService.stopTracking',
+        }),
+        getDocTimeoutHelper.promise,
+      ]);
       getDocTimeoutHelper.cancel(); // Cancel immediately after success
       const watchedMovieIds: number[] = snapshot.exists()
         ? snapshot.data()?.watchedMovieIds || []
@@ -407,7 +277,14 @@ class CollectionTrackingService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const snapshot = await Promise.race([getDocs(collectionRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDocs(collectionRef, {
+          path: `users/${user.uid}/collection_tracking`,
+          queryKey: 'collectionTrackingAll',
+          callsite: 'CollectionTrackingService.getAllTrackedCollections',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
 

@@ -5,6 +5,7 @@ import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -44,7 +45,7 @@ const VIEW_MODE_STORAGE_KEY = 'favoritesViewMode';
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const { data: lists, isLoading } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists();
   const removeMutation = useRemoveFromList();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
@@ -255,6 +256,21 @@ export default function FavoritesScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          title={t('library.favoritesSection')}
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   if (listItems.length === 0 && !hasActiveFilterState) {

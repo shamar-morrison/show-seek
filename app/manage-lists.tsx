@@ -1,4 +1,5 @@
 import RenameListModal, { RenameListModalRef } from '@/src/components/RenameListModal';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useDeleteList, useLists } from '@/src/hooks/useLists';
@@ -21,7 +22,7 @@ const DEFAULT_LIST_IDS = [
 
 export default function ManageListsScreen() {
   const router = useRouter();
-  const { data: lists, isLoading } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists();
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
   const { t } = useTranslation();
@@ -90,6 +91,14 @@ export default function ManageListsScreen() {
 
         {isLoading ? (
           <FullScreenLoading />
+        ) : isError ? (
+          <QueryErrorState
+            title={t('library.manageLists')}
+            error={error}
+            onRetry={() => {
+              void refetch();
+            }}
+          />
         ) : (
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
             <View style={styles.section}>

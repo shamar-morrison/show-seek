@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { NOTES_SCREEN_SORT_OPTIONS, SortState } from '@/src/components/MediaSortModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
@@ -120,7 +121,7 @@ export default function NotesScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
-  const { data: notes, isLoading } = useNotes();
+  const { data: notes, isLoading, error, refetch } = useNotes();
   const deleteNoteMutation = useDeleteNote();
   const noteSheetRef = useRef<NoteModalRef>(null);
   const { height: windowHeight } = useWindowDimensions();
@@ -449,6 +450,20 @@ export default function NotesScreen() {
   // Loading state
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   // Empty state

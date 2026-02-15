@@ -80,7 +80,12 @@ async function fetchTVShowsInBatches(tvIds: number[]): Promise<Map<number, TVSho
  */
 export function useEnrichedMovieRatings() {
   const { user } = useAuth();
-  const { data: ratings, isLoading: isLoadingRatings, error: ratingsError } = useRatings();
+  const {
+    data: ratings,
+    isLoading: isLoadingRatings,
+    error: ratingsError,
+    refetch: ratingsRefetch,
+  } = useRatings();
 
   const movieRatings = useMemo(
     () => ratings?.filter((r) => r.mediaType === 'movie') || [],
@@ -114,6 +119,11 @@ export function useEnrichedMovieRatings() {
     ...query,
     data: !isLoadingRatings && movieRatings.length === 0 ? [] : query.data,
     isLoading: isLoadingRatings || query.isLoading,
+    error: ratingsError || query.error,
+    refetch: async () => {
+      await ratingsRefetch();
+      return query.refetch();
+    },
   };
 }
 
@@ -122,7 +132,12 @@ export function useEnrichedMovieRatings() {
  */
 export function useEnrichedTVRatings() {
   const { user } = useAuth();
-  const { data: ratings, isLoading: isLoadingRatings, error: ratingsError } = useRatings();
+  const {
+    data: ratings,
+    isLoading: isLoadingRatings,
+    error: ratingsError,
+    refetch: ratingsRefetch,
+  } = useRatings();
 
   const tvRatings = useMemo(() => ratings?.filter((r) => r.mediaType === 'tv') || [], [ratings]);
 
@@ -153,5 +168,10 @@ export function useEnrichedTVRatings() {
     ...query,
     data: !isLoadingRatings && tvRatings.length === 0 ? [] : query.data,
     isLoading: isLoadingRatings || query.isLoading,
+    error: ratingsError || query.error,
+    refetch: async () => {
+      await ratingsRefetch();
+      return query.refetch();
+    },
   };
 }

@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
 
@@ -136,5 +136,25 @@ describe('ReminderService', () => {
       }),
       { merge: true }
     );
+  });
+
+  describe('getActiveReminders', () => {
+    it('rejects when user is not authenticated', async () => {
+      mockUserId = null;
+
+      await expect(reminderService.getActiveReminders('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('rejects when user does not match requested userId', async () => {
+      mockUserId = 'another-user-id';
+
+      await expect(reminderService.getActiveReminders('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
+    });
   });
 });

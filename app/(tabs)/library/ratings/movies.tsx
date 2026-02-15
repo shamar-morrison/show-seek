@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MovieRatingListCard } from '@/src/components/library/MovieRatingListCard';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { RatingsEmptyState } from '@/src/components/library/RatingsEmptyState';
 import ListActionsModal from '@/src/components/ListActionsModal';
@@ -37,7 +38,12 @@ const getMovieFromItem = (item: EnrichedMovieRating) => item.movie;
 export default function MovieRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
-  const { data: enrichedRatings, isLoading } = useEnrichedMovieRatings();
+  const {
+    data: enrichedRatings,
+    isLoading,
+    error,
+    refetch,
+  } = useEnrichedMovieRatings();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -176,6 +182,20 @@ export default function MovieRatingsScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   if (sortedData.length === 0 && !hasActiveFilterState) {

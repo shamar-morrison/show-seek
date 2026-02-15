@@ -36,13 +36,28 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
 
   // 1. Load from AsyncStorage on mount (instant)
   useEffect(() => {
+    let isMounted = true;
+
     const initAccentColor = async () => {
-      const storedAccent = await getStoredAccentColor();
-      setAccentColorState(storedAccent);
-      setIsAccentReady(true);
+      try {
+        const storedAccent = await getStoredAccentColor();
+        if (isMounted) {
+          setAccentColorState(storedAccent);
+        }
+      } catch (error) {
+        console.error('[AccentColorProvider] Init failed, using default accent color:', error);
+      } finally {
+        if (isMounted) {
+          setIsAccentReady(true);
+        }
+      }
     };
 
-    initAccentColor();
+    void initAccentColor();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 2. Sync from Firebase on login (cross-device restore)

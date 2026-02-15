@@ -1,11 +1,18 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
-import { ratingService } from '@/src/services/RatingService';
+import { useAuth } from '@/src/context/auth';
+import {
+  useDeleteEpisodeRating,
+  useDeleteRating,
+  useRateEpisode,
+  useRateMedia,
+} from '@/src/hooks/useRatings';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -156,10 +163,15 @@ export default function RatingModal({
 }: RatingModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Episode rating mutations
+  const rateMediaMutation = useRateMedia();
+  const deleteMediaMutation = useDeleteRating();
   const rateEpisodeMutation = useRateEpisode();
   const deleteEpisodeMutation = useDeleteEpisodeRating();
 
@@ -198,18 +210,18 @@ export default function RatingModal({
       } else if (mediaId !== undefined && mediaType) {
         // Movie/TV rating - pass metadata if available
         const metadata = autoAddOptions?.mediaMetadata;
-        await ratingService.saveRating(
+        await rateMediaMutation.mutateAsync({
           mediaId,
           mediaType,
           rating,
-          metadata
+          metadata: metadata
             ? {
                 title: metadata.title,
                 posterPath: metadata.poster_path,
                 releaseDate: metadata.release_date || null,
               }
-            : undefined
-        );
+            : undefined,
+        });
 
         // Auto-add to "Already Watched" list for first-time movie ratings
         // Only applies when: mediaType is 'movie', initialRating is 0 (first-time),
@@ -250,6 +262,16 @@ export default function RatingModal({
                 t('lists.alreadyWatched')
               );
 
+              if (userId) {
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+                  queryClient.invalidateQueries({
+                    queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+                    refetchType: 'active',
+                  }),
+                ]);
+              }
+
               console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
             } catch (autoAddError) {
               // Log but don't throw - auto-add is non-critical
@@ -285,7 +307,7 @@ export default function RatingModal({
         });
       } else if (mediaId !== undefined && mediaType) {
         // Delete movie/TV rating
-        await ratingService.deleteRating(mediaId, mediaType);
+        await deleteMediaMutation.mutateAsync({ mediaId, mediaType });
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

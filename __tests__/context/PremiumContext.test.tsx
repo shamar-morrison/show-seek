@@ -23,6 +23,8 @@ const mockConsumePurchaseAndroid = jest.fn();
 const mockDeepLinkToSubscriptions = jest.fn();
 let mockPurchaseUpdatedCallback: ((purchase: Purchase) => Promise<void>) | null = null;
 
+process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'false';
+
 jest.mock('react-native-iap', () => ({
   initConnection: mockInitConnection,
   endConnection: mockEndConnection,
@@ -225,11 +227,14 @@ describe('PremiumContext', () => {
       );
     });
 
-    expect(mockValidatePurchaseCallable).toHaveBeenCalledWith({
-      purchaseToken: 'success-token',
-      productId: 'monthly_showseek_sub',
-      purchaseType: 'subs',
-    });
+    expect(mockValidatePurchaseCallable).toHaveBeenCalledWith(
+      expect.objectContaining({
+        purchaseToken: 'success-token',
+        productId: 'monthly_showseek_sub',
+        purchaseType: 'subs',
+        source: 'purchase_success',
+      })
+    );
     expect(mockFinishTransaction).toHaveBeenCalled();
     expect(getQueuePayload()).toEqual({});
     expect(mockSyncPremiumStatusCallable).toHaveBeenCalled();
@@ -288,24 +293,29 @@ describe('PremiumContext', () => {
     mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
 
     const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
+    try {
+      await waitForProviderInit();
 
-    await waitFor(() => {
-      expect(mockValidatePurchaseCallable).toHaveBeenCalledWith({
-        purchaseToken: queuedPurchaseToken,
-        productId: 'monthly_showseek_sub',
-        purchaseType: 'subs',
+      await waitFor(() => {
+        expect(mockValidatePurchaseCallable).toHaveBeenCalledWith(
+          expect.objectContaining({
+            purchaseToken: queuedPurchaseToken,
+            productId: 'monthly_showseek_sub',
+            purchaseType: 'subs',
+            source: 'retry_success',
+          })
+        );
       });
-    });
 
-    const queuePayload = getQueuePayload();
-    expect(queuePayload?.[queuedPurchaseToken]).toBeDefined();
-    expect(queuePayload?.[queuedPurchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
-    expect(queuePayload?.[queuedPurchaseToken]?.nextRetryAt).toBeGreaterThan(Date.now());
-    expect(result.current.isPremium).toBe(true);
-    expect(alertSpy).toHaveBeenCalled();
-
-    unmount();
+      const queuePayload = getQueuePayload();
+      expect(queuePayload?.[queuedPurchaseToken]).toBeDefined();
+      expect(queuePayload?.[queuedPurchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
+      expect(queuePayload?.[queuedPurchaseToken]?.nextRetryAt).toBeGreaterThan(Date.now());
+      expect(result.current.isPremium).toBe(true);
+      expect(alertSpy).toHaveBeenCalled();
+    } finally {
+      unmount();
+    }
   });
 
   it('removes pending entry on non-retryable validation error', async () => {

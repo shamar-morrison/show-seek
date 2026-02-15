@@ -1,16 +1,67 @@
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
+import { useAuth } from '../context/auth';
 import { usePremium } from '../context/PremiumContext';
-import { auth } from '../firebase/config';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
-import { DEFAULT_LISTS, ListMediaItem, listService, UserList } from '../services/ListService';
+import {
+  DEFAULT_LISTS,
+  ListMediaItem,
+  ListMembershipIndex,
+  listService,
+  UserList,
+} from '../services/ListService';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 // Stale time for TV show details prefetch (same as useUpcomingReleases)
 const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
+
+const getMediaMembershipKey = (mediaItem: Pick<ListMediaItem, 'id' | 'media_type'>) =>
+  `${mediaItem.id}-${mediaItem.media_type}`;
+
+const addListIdToMembershipIndex = (
+  index: ListMembershipIndex,
+  mediaKey: string,
+  listId: string
+): ListMembershipIndex => {
+  const existingListIds = index[mediaKey] || [];
+  if (existingListIds.includes(listId)) {
+    return index;
+  }
+
+  return {
+    ...index,
+    [mediaKey]: [...existingListIds, listId],
+  };
+};
+
+const removeListIdFromMembershipIndex = (
+  index: ListMembershipIndex,
+  mediaKey: string,
+  listId: string
+): ListMembershipIndex => {
+  const existingListIds = index[mediaKey] || [];
+  if (!existingListIds.length) {
+    return index;
+  }
+
+  const remainingListIds = existingListIds.filter((id) => id !== listId);
+  if (remainingListIds.length === existingListIds.length) {
+    return index;
+  }
+
+  if (remainingListIds.length === 0) {
+    const { [mediaKey]: _removed, ...rest } = index;
+    return rest;
+  }
+
+  return {
+    ...index,
+    [mediaKey]: remainingListIds,
+  };
+};
 
 type UseListsOptions = {
   enabled?: boolean;
@@ -18,27 +69,25 @@ type UseListsOptions = {
 
 export const useLists = (options: UseListsOptions = {}) => {
   const { enabled = true } = options;
-  const userId = auth.currentUser?.uid;
-  const subscribe = useCallback(
-    (onData: (data: UserList[]) => void, onError: (error: Error) => void) =>
-      listService.subscribeToUserLists(onData, onError),
-    []
-  );
-
-  const query = useRealtimeSubscription<UserList[]>({
+  const { user } = useAuth();
+  const userId = user?.uid;
+  const query = useQuery({
     queryKey: ['lists', userId],
+    queryFn: () => listService.getUserLists(userId!),
     enabled: !!userId && enabled,
-    initialData: [],
-    subscribe,
-    logLabel: 'useLists',
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
     ...query,
+    data: query.data ?? [],
   };
 };
 
 export const useMediaLists = (mediaId: number) => {
+  // Detail-screen add-to-list state depends on this membership data.
+  // Keep this active for signed-in users even when optional list indicator optimizations are disabled.
   const { data: lists, isLoading } = useLists();
 
   if (!lists) {
@@ -57,7 +106,8 @@ export const useMediaLists = (mediaId: number) => {
 
 export const useAddToList = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const userId = user?.uid;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -91,61 +141,82 @@ export const useAddToList = () => {
 
       // Cancel any outgoing refetches so they don't overwrite our optimistic update
       await queryClient.cancelQueries({ queryKey: ['lists', userId] });
+      await queryClient.cancelQueries({ queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId] });
 
       // Snapshot the previous value
       const previousLists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+      const previousMembershipIndex = queryClient.getQueryData<ListMembershipIndex>([
+        LIST_MEMBERSHIP_INDEX_QUERY_KEY,
+        userId,
+      ]);
+      const listQueryState = queryClient.getQueryState<UserList[]>(['lists', userId]);
+      const hasHydratedListCache =
+        listQueryState?.status === 'success' && previousLists !== undefined;
+      const membershipQueryState = queryClient.getQueryState<ListMembershipIndex>([
+        LIST_MEMBERSHIP_INDEX_QUERY_KEY,
+        userId,
+      ]);
+      const hasHydratedMembershipCache =
+        membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
 
-      // Optimistically update the cache
       const newItem: ListMediaItem = {
         ...mediaItem,
         addedAt: Date.now(),
       } as ListMediaItem;
 
-      queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
-        if (!oldLists) {
-          // No lists in cache yet - create array with new list
-          return [
-            {
-              id: listId,
-              name: listName || listId,
-              items: { [mediaItem.id]: newItem },
-              createdAt: Date.now(),
-            },
-          ];
-        }
+      let appliedListOptimisticUpdate = false;
+      let appliedMembershipOptimisticUpdate = false;
 
-        // Check if the list exists in the cache
-        const listExists = oldLists.some((list) => list.id === listId);
+      if (hasHydratedListCache) {
+        queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
+          if (!oldLists) {
+            return oldLists;
+          }
 
-        if (listExists) {
-          // Update existing list
+          const listExists = oldLists.some((list) => list.id === listId);
+          if (!listExists) {
+            return oldLists;
+          }
+
+          appliedListOptimisticUpdate = true;
           return oldLists.map((list) => {
-            if (list.id === listId) {
-              return {
-                ...list,
-                items: {
-                  ...list.items,
-                  [mediaItem.id]: newItem,
-                },
-              };
+            if (list.id !== listId) {
+              return list;
             }
-            return list;
-          });
-        } else {
-          // List doesn't exist - append new list
-          return [
-            ...oldLists,
-            {
-              id: listId,
-              name: listName || listId,
-              items: { [mediaItem.id]: newItem },
-              createdAt: Date.now(),
-            },
-          ];
-        }
-      });
 
-      return { previousLists };
+            return {
+              ...list,
+              name: listName || list.name,
+              items: {
+                ...list.items,
+                [mediaItem.id]: newItem,
+              },
+              updatedAt: Date.now(),
+            };
+          });
+        });
+      }
+
+      if (hasHydratedMembershipCache) {
+        queryClient.setQueryData<ListMembershipIndex>(
+          [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          (oldIndex) => {
+            if (!oldIndex) {
+              return oldIndex;
+            }
+
+            appliedMembershipOptimisticUpdate = true;
+            return addListIdToMembershipIndex(oldIndex, getMediaMembershipKey(newItem), listId);
+          }
+        );
+      }
+
+      return {
+        previousLists,
+        previousMembershipIndex,
+        skippedListOptimisticUpdate: !appliedListOptimisticUpdate,
+        skippedMembershipOptimisticUpdate: !appliedMembershipOptimisticUpdate,
+      };
     },
 
     // If mutation fails, rollback to the previous value
@@ -153,10 +224,16 @@ export const useAddToList = () => {
       if (context?.previousLists) {
         queryClient.setQueryData(['lists', userId], context.previousLists);
       }
+      if (context?.previousMembershipIndex) {
+        queryClient.setQueryData(
+          [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          context.previousMembershipIndex
+        );
+      }
     },
 
     // Prefetch TV show details for the Calendar feature
-    onSuccess: (_data, { mediaItem }) => {
+    onSuccess: async (_data, { mediaItem }, context) => {
       // Only prefetch for TV shows - movies already have release_date in the list item
       if (mediaItem.media_type === 'tv') {
         queryClient.prefetchQuery({
@@ -165,13 +242,28 @@ export const useAddToList = () => {
           staleTime: TV_DETAILS_STALE_TIME,
         });
       }
+
+      if (userId && context?.skippedListOptimisticUpdate) {
+        await queryClient.invalidateQueries({
+          queryKey: ['lists', userId],
+          refetchType: 'active',
+        });
+      }
+
+      if (userId && context?.skippedMembershipOptimisticUpdate) {
+        await queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        });
+      }
     },
   });
 };
 
 export const useRemoveFromList = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const userId = user?.uid;
 
   return useMutation({
     mutationFn: ({ listId, mediaId }: { listId: string; mediaId: number }) =>
@@ -184,12 +276,33 @@ export const useRemoveFromList = () => {
       }
 
       await queryClient.cancelQueries({ queryKey: ['lists', userId] });
+      await queryClient.cancelQueries({ queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId] });
 
       const previousLists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+      const previousMembershipIndex = queryClient.getQueryData<ListMembershipIndex>([
+        LIST_MEMBERSHIP_INDEX_QUERY_KEY,
+        userId,
+      ]);
+      const listQueryState = queryClient.getQueryState<UserList[]>(['lists', userId]);
+      const hasHydratedListCache =
+        listQueryState?.status === 'success' && previousLists !== undefined;
+      const membershipQueryState = queryClient.getQueryState<ListMembershipIndex>([
+        LIST_MEMBERSHIP_INDEX_QUERY_KEY,
+        userId,
+      ]);
+      const hasHydratedMembershipCache =
+        membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
+      const targetItem = previousLists?.find((list) => list.id === listId)?.items?.[mediaId] as
+        | ListMediaItem
+        | undefined;
 
-      if (previousLists) {
+      let appliedListOptimisticUpdate = false;
+      let appliedMembershipOptimisticUpdate = false;
+
+      if (hasHydratedListCache) {
         queryClient.setQueryData<UserList[]>(['lists', userId], (oldLists) => {
           if (!oldLists) return oldLists;
+          appliedListOptimisticUpdate = true;
           return oldLists.map((list) => {
             if (list.id === listId) {
               const { [mediaId]: _, ...remainingItems } = list.items || {};
@@ -203,12 +316,57 @@ export const useRemoveFromList = () => {
         });
       }
 
-      return { previousLists };
+      if (hasHydratedMembershipCache && targetItem?.media_type) {
+        queryClient.setQueryData<ListMembershipIndex>(
+          [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          (oldIndex) => {
+            if (!oldIndex) {
+              return oldIndex;
+            }
+
+            appliedMembershipOptimisticUpdate = true;
+            return removeListIdFromMembershipIndex(
+              oldIndex,
+              getMediaMembershipKey({ id: mediaId, media_type: targetItem.media_type }),
+              listId
+            );
+          }
+        );
+      }
+
+      return {
+        previousLists,
+        previousMembershipIndex,
+        skippedListOptimisticUpdate: !appliedListOptimisticUpdate,
+        skippedMembershipOptimisticUpdate: !appliedMembershipOptimisticUpdate,
+      };
     },
 
     onError: (_err, _variables, context) => {
       if (context?.previousLists) {
         queryClient.setQueryData(['lists', userId], context.previousLists);
+      }
+      if (context?.previousMembershipIndex) {
+        queryClient.setQueryData(
+          [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          context.previousMembershipIndex
+        );
+      }
+    },
+
+    onSuccess: async (_data, _variables, context) => {
+      if (userId && context?.skippedListOptimisticUpdate) {
+        await queryClient.invalidateQueries({
+          queryKey: ['lists', userId],
+          refetchType: 'active',
+        });
+      }
+
+      if (userId && context?.skippedMembershipOptimisticUpdate) {
+        await queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        });
       }
     },
   });
@@ -225,17 +383,12 @@ export class PremiumLimitError extends Error {
 
 export const useCreateList = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { user } = useAuth();
+  const userId = user?.uid;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: async ({
-      name,
-      description,
-    }: {
-      name: string;
-      description?: string;
-    }) => {
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       // Check limits only when premium status is confirmed (not loading)
       if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
@@ -250,17 +403,23 @@ export const useCreateList = () => {
       }
       return listService.createList(name, description);
     },
+    onSuccess: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+      }
+    },
   });
 };
 
 export const useDeleteList = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
 
   return useMutation({
     mutationFn: (listId: string) => listService.deleteList(listId),
     onSuccess: async (_data, listId) => {
       // Clean up home screen preferences to remove the deleted custom list
-      const userId = auth.currentUser?.uid;
       if (!userId) return;
 
       const preferences = queryClient.getQueryData<UserPreferences>(['preferences', userId]);
@@ -286,11 +445,21 @@ export const useDeleteList = () => {
           }
         }
       }
+
+      await queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+      await queryClient.invalidateQueries({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+        refetchType: 'active',
+      });
     },
   });
 };
 
 export const useRenameList = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
+
   return useMutation({
     mutationFn: ({
       listId,
@@ -301,5 +470,10 @@ export const useRenameList = () => {
       newName: string;
       newDescription?: string;
     }) => listService.renameList(listId, newName, newDescription),
+    onSuccess: () => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+      }
+    },
   });
 };

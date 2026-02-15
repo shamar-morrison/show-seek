@@ -19,8 +19,22 @@ jest.mock('@/src/services/RatingService', () => ({
 }));
 
 jest.mock('@/src/hooks/useRatings', () => ({
+  useRateMedia: () => ({ mutateAsync: jest.fn() }),
+  useDeleteRating: () => ({ mutateAsync: jest.fn() }),
   useRateEpisode: () => ({ mutateAsync: jest.fn() }),
   useDeleteEpisodeRating: () => ({ mutateAsync: jest.fn() }),
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'test-user-123' },
+  }),
 }));
 
 jest.mock('@/src/components/ui/ModalBackground', () => ({

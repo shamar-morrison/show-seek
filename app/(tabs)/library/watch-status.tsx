@@ -1,5 +1,6 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -22,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function WatchStatusScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { data: lists, isLoading } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
   const iconBadgeStyles = useIconBadgeStyles();
   const listRef = useRef<any>(null);
@@ -139,6 +140,21 @@ export default function WatchStatusScreen() {
 
   if (isLoading) {
     return <FullScreenLoading />;
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          title={t('library.watchStatus')}
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   return (

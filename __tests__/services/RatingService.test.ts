@@ -18,6 +18,16 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
+const mockTimeoutCancel = jest.fn();
+const mockCreateTimeoutWithCleanup = jest.fn(() => ({
+  promise: new Promise<never>(() => {}),
+  cancel: mockTimeoutCancel,
+}));
+
+jest.mock('@/src/utils/timeout', () => ({
+  createTimeoutWithCleanup: () => mockCreateTimeoutWithCleanup(),
+}));
+
 import { ratingService } from '@/src/services/RatingService';
 
 describe('RatingService', () => {
@@ -223,6 +233,32 @@ describe('RatingService', () => {
       await ratingService.deleteEpisodeRating(100, 1, 5);
 
       expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
+    });
+  });
+
+  describe('timeout cleanup', () => {
+    it('cancels write timeout after saveRating resolves', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/movie-321' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await ratingService.saveRating(321, 'movie', 8);
+
+      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
+      expect(mockTimeoutCancel).toHaveBeenCalled();
+    });
+
+    it('cancels read timeout after getRating resolves', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/movie-654' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => false,
+      });
+
+      await ratingService.getRating(654, 'movie');
+
+      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
+      expect(mockTimeoutCancel).toHaveBeenCalled();
     });
   });
 });

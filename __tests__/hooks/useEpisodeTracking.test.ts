@@ -1,16 +1,17 @@
 import type { Episode } from '@/src/api/tmdb';
-import type { MarkEpisodeWatchedParams } from '@/src/hooks/useEpisodeTracking';
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
+import { useQuery } from '@tanstack/react-query';
+
+const mockInvalidateQueries = jest.fn();
 
 // Mock dependencies
 jest.mock('@/src/services/EpisodeTrackingService', () => ({
   episodeTrackingService: {
     markEpisodeWatched: jest.fn().mockResolvedValue(undefined),
+    markEpisodeUnwatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesWatched: jest.fn().mockResolvedValue(undefined),
-    subscribeToShowTracking: jest.fn((tvShowId, callback) => {
-      callback(null);
-      return jest.fn();
-    }),
+    getShowTracking: jest.fn().mockResolvedValue(null),
     isEpisodeWatched: jest.fn().mockReturnValue(false),
     calculateSeasonProgress: jest.fn().mockReturnValue({ watched: 0, total: 10, percentage: 0 }),
     calculateShowProgress: jest.fn().mockReturnValue({ watched: 0, total: 50, percentage: 0 }),
@@ -34,7 +35,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(() => ({
     getQueryData: jest.fn(),
     setQueryData: jest.fn(),
-    invalidateQueries: jest.fn(),
+    invalidateQueries: mockInvalidateQueries,
   })),
   useQuery: jest.fn(() => ({
     data: null,
@@ -42,13 +43,22 @@ jest.mock('@tanstack/react-query', () => ({
     error: null,
   })),
   useMutation: jest.fn((config) => {
-    let mutationPromise: Promise<void> | null = null;
     return {
-      mutate: (params: MarkEpisodeWatchedParams) => {
-        // Store promise so tests can await it
-        mutationPromise = config.mutationFn(params);
+      mutate: (params: any) => {
+        Promise.resolve(config.mutationFn(params)).then((data) => {
+          if (config.onSuccess) {
+            return config.onSuccess(data, params, undefined);
+          }
+          return undefined;
+        });
       },
-      mutateAsync: config.mutationFn,
+      mutateAsync: async (params: any) => {
+        const data = await config.mutationFn(params);
+        if (config.onSuccess) {
+          await config.onSuccess(data, params, undefined);
+        }
+        return data;
+      },
       isPending: false,
       isError: false,
     };
@@ -56,7 +66,12 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 // Dynamically import after mocks are set up
-import { useMarkEpisodeWatched } from '@/src/hooks/useEpisodeTracking';
+import {
+  useMarkAllEpisodesWatched,
+  useMarkEpisodeUnwatched,
+  useMarkEpisodeWatched,
+  useShowEpisodeTracking,
+} from '@/src/hooks/useEpisodeTracking';
 import { act, renderHook } from '@testing-library/react-native';
 
 describe('useMarkEpisodeWatched', () => {
@@ -125,6 +140,7 @@ describe('useMarkEpisodeWatched', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockInvalidateQueries.mockClear();
   });
 
   it('should only mark current episode when shouldMarkPrevious is false', async () => {
@@ -308,5 +324,110 @@ describe('useMarkEpisodeWatched', () => {
     );
 
     consoleSpy.mockRestore();
+  });
+
+  it('invalidates show and all-shows queries after marking episode watched', async () => {
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 5,
+        episodeData: {
+          episodeId: 5,
+          episodeName: 'Episode 5',
+          episodeAirDate: '2024-01-29',
+        },
+        showMetadata: mockShowMetadata,
+      });
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-123'],
+      refetchType: 'active',
+    });
+  });
+
+  it('invalidates tracking and list queries after marking episode unwatched', async () => {
+    const { result } = renderHook(() => useMarkEpisodeUnwatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 5,
+      });
+    });
+
+    expect(episodeTrackingService.markEpisodeUnwatched).toHaveBeenCalledWith(123, 1, 5);
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-123'],
+      refetchType: 'active',
+    });
+  });
+
+  it('invalidates tracking and list queries after marking all season episodes watched', async () => {
+    const { result } = renderHook(() => useMarkAllEpisodesWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodes: mockSeasonEpisodes,
+        showMetadata: mockShowMetadata,
+      });
+    });
+
+    expect(episodeTrackingService.markAllEpisodesWatched).toHaveBeenCalledWith(
+      123,
+      1,
+      mockSeasonEpisodes,
+      mockShowMetadata
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-123'],
+      refetchType: 'active',
+    });
+  });
+
+  it('uses shared cache windows for show episode tracking query', () => {
+    renderHook(() => useShowEpisodeTracking(123));
+
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['episodeTracking', 'test-user-123', 123],
+        enabled: true,
+        staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+        gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+      })
+    );
   });
 });

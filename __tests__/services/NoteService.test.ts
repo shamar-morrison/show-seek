@@ -1,5 +1,5 @@
 import { noteService } from '@/src/services/NoteService';
-import { deleteDoc, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, setDoc, Timestamp } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -124,6 +124,26 @@ describe('NoteService', () => {
         seasonNumber: 1,
         episodeNumber: 1,
       });
+    });
+  });
+
+  describe('getUserNotes', () => {
+    it('rejects when user is not authenticated', async () => {
+      mockUserId = null;
+
+      await expect(noteService.getUserNotes('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('rejects when user does not match requested userId', async () => {
+      mockUserId = 'another-user-id';
+
+      await expect(noteService.getUserNotes('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
     });
   });
 

@@ -1,12 +1,15 @@
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+} from '@/src/services/firestoreReadAudit';
 import { Note, NoteInput } from '@/src/types/note';
 import { createTimeout } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -15,6 +18,18 @@ import {
 import { auth, db } from '../firebase/config';
 
 class NoteService {
+  private isDebugLoggingEnabled() {
+    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+  }
+
+  private logDebug(event: string, payload: Record<string, unknown>) {
+    if (!this.isDebugLoggingEnabled()) {
+      return;
+    }
+
+    console.log(`[NoteService.${event}]`, payload);
+  }
+
   /**
    * Generate note document ID
    * Format: "{mediaType}-{mediaId}" (e.g., "movie-550", "tv-1396", "episode-tvId-season-episode")
@@ -76,38 +91,45 @@ class NoteService {
     };
   }
 
-  /**
-   * Subscribe to all notes for a user (real-time updates)
-   * @param userId - The user's ID to subscribe for
-   * @param callback - Called with notes array on each update
-   * @param onError - Optional error handler
-   */
-  subscribeToUserNotes(
-    userId: string,
-    callback: (notes: Note[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    if (!userId) return () => {};
-
-    const notesRef = this.getNotesCollection(userId);
-    const q = query(notesRef, orderBy('createdAt', 'desc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const notes: Note[] = snapshot.docs.map((doc) => this.mapDocToNote(doc));
-        callback(notes);
-      },
-      (error) => {
-        console.error('[NoteService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        // Don't call callback([]) here - preserve existing notes on transient errors
-        // Let the consumer decide whether to clear the cache via onError
-        if (onError) {
-          onError(new Error(message));
-        }
+  async getUserNotes(userId: string): Promise<Note[]> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
       }
-    );
+
+      this.logDebug('getUserNotes:start', {
+        userId,
+        path: `users/${userId}/notes`,
+      });
+
+      const notesRef = this.getNotesCollection(userId);
+      const q = query(notesRef, orderBy('createdAt', 'desc'));
+      const snapshot = await Promise.race([
+        auditedGetDocs(q, {
+          path: `users/${userId}/notes`,
+          queryKey: 'notes',
+          callsite: 'NoteService.getUserNotes',
+        }),
+        createTimeout(),
+      ]);
+
+      const notes = snapshot.docs.map((noteDoc) => this.mapDocToNote(noteDoc));
+      this.logDebug('getUserNotes:result', {
+        userId,
+        docCount: snapshot.size,
+        resultCount: notes.length,
+      });
+      return notes;
+    } catch (error) {
+      this.logDebug('getUserNotes:error', {
+        userId,
+        error,
+      });
+      const message = getFirestoreErrorMessage(error);
+      console.error('[NoteService] getUserNotes error:', error);
+      throw new Error(message);
+    }
   }
 
   /**
@@ -127,7 +149,14 @@ class NoteService {
         noteData.seasonNumber,
         noteData.episodeNumber
       );
-      const existingNote = await Promise.race([getDoc(noteRef), createTimeout()]);
+      const existingNote = await Promise.race([
+        auditedGetDoc(noteRef, {
+          path: `users/${userId}/notes/${noteRef.id}`,
+          queryKey: 'noteById',
+          callsite: 'NoteService.saveNote',
+        }),
+        createTimeout(),
+      ]);
 
       const now = Timestamp.now();
       const noteDocument = {
@@ -170,15 +199,52 @@ class NoteService {
       }
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
+      this.logDebug('getNote:start', {
+        userId,
+        mediaType,
+        mediaId,
+        season: season ?? null,
+        episode: episode ?? null,
+        path: `users/${userId}/notes/${noteRef.id}`,
+      });
 
-      const docSnap = await Promise.race([getDoc(noteRef), createTimeout()]);
+      const docSnap = await Promise.race([
+        auditedGetDoc(noteRef, {
+          path: `users/${userId}/notes/${noteRef.id}`,
+          queryKey: 'noteById',
+          callsite: 'NoteService.getNote',
+        }),
+        createTimeout(),
+      ]);
 
       if (docSnap.exists()) {
-        return this.mapDocToNote(docSnap);
+        const note = this.mapDocToNote(docSnap);
+        this.logDebug('getNote:result', {
+          userId,
+          mediaType,
+          mediaId,
+          exists: true,
+        });
+        return note;
       }
+
+      this.logDebug('getNote:result', {
+        userId,
+        mediaType,
+        mediaId,
+        exists: false,
+      });
 
       return null;
     } catch (error) {
+      this.logDebug('getNote:error', {
+        userId,
+        mediaType,
+        mediaId,
+        season: season ?? null,
+        episode: episode ?? null,
+        error,
+      });
       const message = getFirestoreErrorMessage(error);
       console.error('[NoteService] getNote error:', error);
       throw new Error(message);

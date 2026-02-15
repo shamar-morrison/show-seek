@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { RatingsEmptyState } from '@/src/components/library/RatingsEmptyState';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
@@ -46,7 +47,12 @@ const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
 export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
-  const { data: enrichedRatings, isLoading } = useEnrichedTVRatings();
+  const {
+    data: enrichedRatings,
+    isLoading,
+    error,
+    refetch,
+  } = useEnrichedTVRatings();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -176,6 +182,20 @@ export default function TVShowRatingsScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   if (sortedData.length === 0 && !hasActiveFilterState) {

@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
@@ -19,6 +21,7 @@ const CreatorCard = memo<{
   label: string;
 }>(({ creator, onPress, label }) => {
   const styles = useDetailStyles();
+  const { isFavorited } = useIsPersonFavorited(creator.id);
 
   const handlePress = useCallback(() => {
     onPress(creator.id);
@@ -30,14 +33,17 @@ const CreatorCard = memo<{
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <MediaImage
-        source={{
-          uri: getImageUrl(creator.profile_path, TMDB_IMAGE_SIZES.profile.medium),
-        }}
-        style={styles.castImage}
-        contentFit="cover"
-        placeholderType="person"
-      />
+      <View style={styles.castImageContainer}>
+        <MediaImage
+          source={{
+            uri: getImageUrl(creator.profile_path, TMDB_IMAGE_SIZES.profile.medium),
+          }}
+          style={styles.castImage}
+          contentFit="cover"
+          placeholderType="person"
+        />
+        {isFavorited && <FavoritePersonBadge />}
+      </View>
       <Text style={styles.castName} numberOfLines={2}>
         {creator.name}
       </Text>

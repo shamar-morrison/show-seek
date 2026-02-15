@@ -1,9 +1,24 @@
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { createTimeout } from '@/src/utils/timeout';
+import { collection, deleteDoc, doc, orderBy, query, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { FavoritePerson } from '../types/favoritePerson';
 
 class FavoritePersonsService {
+  private isDebugLoggingEnabled() {
+    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+  }
+
+  private logDebug(event: string, payload: Record<string, unknown>) {
+    if (!this.isDebugLoggingEnabled()) {
+      return;
+    }
+
+    console.log(`[FavoritePersonsService.${event}]`, payload);
+  }
+
   private getUserFavoritePersonRef(userId: string, personId: string) {
     return doc(db, 'users', userId, 'favorite_persons', personId);
   }
@@ -12,38 +27,84 @@ class FavoritePersonsService {
     return collection(db, 'users', userId, 'favorite_persons');
   }
 
-  /**
-   * Subscribe to all favorite persons for the current user
-   */
-  subscribeToFavoritePersons(
-    callback: (persons: FavoritePerson[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
-
-    const personsRef = this.getUserFavoritePersonsCollection(user.uid);
-    const q = query(personsRef, orderBy('addedAt', 'desc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const persons: FavoritePerson[] = snapshot.docs.map((doc) => ({
-          id: Number(doc.id),
-          ...doc.data(),
-        })) as FavoritePerson[];
-
-        callback(persons);
-      },
-      (error) => {
-        console.error('[FavoritePersonsService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        callback([]);
+  async getFavoritePersons(userId: string): Promise<FavoritePerson[]> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
       }
-    );
+
+      this.logDebug('getFavoritePersons:start', {
+        userId,
+        path: `users/${userId}/favorite_persons`,
+      });
+
+      const personsRef = this.getUserFavoritePersonsCollection(userId);
+      const q = query(personsRef, orderBy('addedAt', 'desc'));
+      const timeoutPromise = createTimeout();
+
+      const snapshot = await Promise.race([
+        auditedGetDocs(q, {
+          path: `users/${userId}/favorite_persons`,
+          queryKey: 'favoritePersons',
+          callsite: 'FavoritePersonsService.getFavoritePersons',
+        }),
+        timeoutPromise,
+      ]);
+
+      const persons = snapshot.docs.map((personDoc) => ({
+        id: Number(personDoc.id),
+        ...personDoc.data(),
+      })) as FavoritePerson[];
+      this.logDebug('getFavoritePersons:result', {
+        userId,
+        docCount: snapshot.size,
+        resultCount: persons.length,
+      });
+      return persons;
+    } catch (error) {
+      this.logDebug('getFavoritePersons:error', {
+        userId,
+        error,
+      });
+      const message = getFirestoreErrorMessage(error);
+      console.error('[FavoritePersonsService] getFavoritePersons error:', error);
+      throw new Error(message);
+    }
+  }
+
+  async getFavoritePerson(userId: string, personId: number): Promise<FavoritePerson | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const personRef = this.getUserFavoritePersonRef(userId, personId.toString());
+      const timeoutPromise = createTimeout();
+
+      const snapshot = await Promise.race([
+        auditedGetDoc(personRef, {
+          path: `users/${userId}/favorite_persons/${personId}`,
+          queryKey: 'favoritePersonById',
+          callsite: 'FavoritePersonsService.getFavoritePerson',
+        }),
+        timeoutPromise,
+      ]);
+
+      if (!snapshot.exists()) {
+        return null;
+      }
+
+      return {
+        id: Number(snapshot.id),
+        ...snapshot.data(),
+      } as FavoritePerson;
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[FavoritePersonsService] getFavoritePerson error:', error);
+      throw new Error(message);
+    }
   }
 
   /**
@@ -61,9 +122,7 @@ class FavoritePersonsService {
         addedAt: Date.now(),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       await Promise.race([setDoc(personRef, favoriteData), timeoutPromise]);
     } catch (error) {
@@ -83,9 +142,7 @@ class FavoritePersonsService {
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personId.toString());
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       await Promise.race([deleteDoc(personRef), timeoutPromise]);
     } catch (error) {

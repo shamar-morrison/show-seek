@@ -6,8 +6,9 @@
  */
 import { DEFAULT_ACCENT_COLOR, isAccentColor } from '@/src/constants/accentColors';
 import { auth, db } from '@/src/firebase/config';
+import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 const ACCENT_COLOR_KEY = 'showseek_accent_color';
 
@@ -50,6 +51,7 @@ export async function syncAccentColorToFirebase(color: string): Promise<void> {
 
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { accentColor: color }, { merge: true });
+    mergeUserDocumentCache(user.uid, { accentColor: color });
   } catch (error) {
     // Non-critical — local cache is the source of truth for speed
     console.error('[accentColorStorage] Firebase sync error:', error);
@@ -65,12 +67,13 @@ export async function fetchAccentColorFromFirebase(): Promise<string | null> {
     const user = auth.currentUser;
     if (!user) return null;
 
-    const userRef = doc(db, 'users', user.uid);
-    const snapshot = await getDoc(userRef);
+    const userData = await getCachedUserDocument(user.uid, {
+      callsite: 'accentColorStorage.fetchAccentColorFromFirebase',
+    });
 
-    if (snapshot.exists()) {
-      const color = snapshot.data()?.accentColor;
-      if (color && isAccentColor(color)) return color;
+    if (userData) {
+      const color = userData.accentColor;
+      if (typeof color === 'string' && isAccentColor(color)) return color;
     }
     return null;
   } catch (error) {

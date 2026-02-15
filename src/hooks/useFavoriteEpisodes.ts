@@ -1,13 +1,10 @@
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
-import { useRealtimeSubscription } from '@/src/hooks/useRealtimeSubscription';
 import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 
-/**
- * Hook to manage all favorite episodes for the current user.
- */
 export const useFavoriteEpisodes = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -22,24 +19,17 @@ export const useFavoriteEpisodes = () => {
     previousUserIdRef.current = userId;
   }, [userId, queryClient]);
 
-  const subscribe = useCallback(
-    (onData: (data: FavoriteEpisode[]) => void, onError: (error: Error) => void) => {
-      if (!userId) return () => {};
-      return favoriteEpisodeService.subscribeToFavoriteEpisodes(userId, onData, onError);
-    },
-    [userId]
-  );
-
-  const query = useRealtimeSubscription<FavoriteEpisode[]>({
+  const query = useQuery({
     queryKey: ['favoriteEpisodes', userId],
+    queryFn: () => favoriteEpisodeService.getFavoriteEpisodes(userId!),
     enabled: !!userId,
-    initialData: [],
-    subscribe,
-    logLabel: 'useFavoriteEpisodes',
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
     ...query,
+    data: query.data ?? [],
   };
 };
 
@@ -54,10 +44,8 @@ export const useIsEpisodeFavorited = (
   const { data: favoriteEpisodes, isLoading } = useFavoriteEpisodes();
   const episodeId = `${tvId}-${seasonNumber}-${episodeNumber}`;
 
-  const isFavorited = favoriteEpisodes?.some((ep) => ep.id === episodeId) ?? false;
-
   return {
-    isFavorited,
+    isFavorited: favoriteEpisodes?.some((episode) => episode.id === episodeId) ?? false,
     isLoading,
   };
 };
@@ -86,10 +74,15 @@ export const useToggleFavoriteEpisode = () => {
         await favoriteEpisodeService.addFavoriteEpisode(userId, episodeData);
       }
     },
-    onSuccess: () => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['favoriteEpisodes', userId] });
-      }
+    onSuccess: async (_data, variables) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['favoriteEpisodes', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['favoriteEpisode', userId, variables.episodeData.id],
+        }),
+      ]);
     },
   });
 };

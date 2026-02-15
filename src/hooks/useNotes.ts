@@ -1,9 +1,46 @@
+import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { Note, NoteInput } from '@/src/types/note';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { noteService } from '../services/NoteService';
+
+const getStatusReadsEnabled = () =>
+  !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
+const getNotesQueryKey = (userId: string | undefined) => ['notes', userId] as const;
+
+const getMediaNoteQueryKey = (
+  userId: string | undefined,
+  mediaType: 'movie' | 'tv' | 'episode',
+  mediaId: number,
+  seasonNumber?: number,
+  episodeNumber?: number
+) =>
+  ['note', userId, mediaType, mediaId, seasonNumber ?? null, episodeNumber ?? null] as const;
+
+const getNoteId = (
+  mediaType: 'movie' | 'tv' | 'episode',
+  mediaId: number,
+  seasonNumber?: number,
+  episodeNumber?: number
+) => {
+  if (mediaType === 'episode') {
+    if (seasonNumber === undefined || episodeNumber === undefined) {
+      throw new Error('Missing season/episode for episode note');
+    }
+    return `episode-${mediaId}-${seasonNumber}-${episodeNumber}`;
+  }
+
+  return `${mediaType}-${mediaId}`;
+};
+
+const upsertNoteInList = (notes: Note[], nextNote: Note): Note[] => {
+  const withoutExisting = notes.filter((note) => note.id !== nextNote.id);
+  return [nextNote, ...withoutExisting].sort(
+    (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
+  );
+};
 
 /**
  * Hook to manage all notes for the current user.
@@ -25,30 +62,22 @@ export const useNotes = () => {
     previousUserIdRef.current = userId;
   }, [userId, queryClient]);
 
-  const subscribe = useCallback(
-    (onData: (data: Note[]) => void, onError: (error: Error) => void) => {
-      if (!userId) return () => {};
-      return noteService.subscribeToUserNotes(userId, onData, onError);
-    },
-    [userId]
-  );
-
-  const query = useRealtimeSubscription<Note[]>({
-    queryKey: ['notes', userId],
+  const query = useQuery({
+    queryKey: getNotesQueryKey(userId),
+    queryFn: () => noteService.getUserNotes(userId!),
     enabled: !!userId,
-    initialData: [],
-    subscribe,
-    logLabel: 'useNotes',
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
     ...query,
+    data: query.data ?? [],
   };
 };
 
 /**
  * Hook to get a specific note for a media item.
- * Filters from the global notes cache.
  */
 export const useMediaNote = (
   mediaType: 'movie' | 'tv' | 'episode',
@@ -56,20 +85,21 @@ export const useMediaNote = (
   seasonNumber?: number,
   episodeNumber?: number
 ) => {
-  const { data: notes, isLoading } = useNotes();
+  const { user } = useAuth();
+  const userId = user?.uid;
 
-  const note = notes?.find((n) => {
-    if (n.mediaType !== mediaType || n.mediaId !== mediaId) return false;
-    if (mediaType === 'episode') {
-      return n.seasonNumber === seasonNumber && n.episodeNumber === episodeNumber;
-    }
-    return true;
+  const query = useQuery({
+    queryKey: getMediaNoteQueryKey(userId, mediaType, mediaId, seasonNumber, episodeNumber),
+    queryFn: () => noteService.getNote(userId!, mediaType, mediaId, seasonNumber, episodeNumber),
+    enabled: !!userId && !!mediaId && getStatusReadsEnabled(),
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
-    note: note || null,
-    hasNote: !!note,
-    isLoading,
+    note: query.data || null,
+    hasNote: !!query.data,
+    isLoading: query.isLoading,
   };
 };
 
@@ -77,6 +107,7 @@ export const useMediaNote = (
  * Mutation hook to save a note (separate export like useRateMedia)
  */
 export const useSaveNote = () => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
 
@@ -85,6 +116,92 @@ export const useSaveNote = () => {
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.saveNote(userId, noteData);
     },
+    onMutate: async (noteData) => {
+      if (!userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const detailKey = getMediaNoteQueryKey(
+        userId,
+        noteData.mediaType,
+        noteData.mediaId,
+        noteData.seasonNumber,
+        noteData.episodeNumber
+      );
+      const listKey = getNotesQueryKey(userId);
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: detailKey }),
+        queryClient.cancelQueries({ queryKey: listKey }),
+      ]);
+
+      const previousDetailNote = queryClient.getQueryData<Note | null>(detailKey);
+      const previousNotes = queryClient.getQueryData<Note[]>(listKey);
+      const now = new Date();
+      const optimisticNote: Note = {
+        id: getNoteId(
+          noteData.mediaType,
+          noteData.mediaId,
+          noteData.seasonNumber,
+          noteData.episodeNumber
+        ),
+        userId,
+        mediaType: noteData.mediaType,
+        mediaId: noteData.mediaId,
+        content: noteData.content,
+        posterPath: noteData.posterPath ?? null,
+        mediaTitle: noteData.mediaTitle,
+        createdAt: previousDetailNote?.createdAt ?? now,
+        updatedAt: now,
+        ...(noteData.seasonNumber !== undefined && { seasonNumber: noteData.seasonNumber }),
+        ...(noteData.episodeNumber !== undefined && { episodeNumber: noteData.episodeNumber }),
+        ...(noteData.showId !== undefined && { showId: noteData.showId }),
+      };
+
+      queryClient.setQueryData<Note | null>(detailKey, optimisticNote);
+
+      if (previousNotes) {
+        queryClient.setQueryData<Note[]>(listKey, (current) =>
+          upsertNoteInList(current ?? [], optimisticNote)
+        );
+      }
+
+      return { previousDetailNote, previousNotes };
+    },
+    onError: (_error, noteData, context) => {
+      if (!userId) return;
+
+      const detailKey = getMediaNoteQueryKey(
+        userId,
+        noteData.mediaType,
+        noteData.mediaId,
+        noteData.seasonNumber,
+        noteData.episodeNumber
+      );
+      const listKey = getNotesQueryKey(userId);
+
+      queryClient.setQueryData<Note | null>(detailKey, context?.previousDetailNote ?? null);
+
+      if (context?.previousNotes) {
+        queryClient.setQueryData<Note[]>(listKey, context.previousNotes);
+      }
+    },
+    onSuccess: async (_data, noteData) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getNotesQueryKey(userId) }),
+        queryClient.invalidateQueries({
+          queryKey: getMediaNoteQueryKey(
+            userId,
+            noteData.mediaType,
+            noteData.mediaId,
+            noteData.seasonNumber,
+            noteData.episodeNumber
+          ),
+        }),
+      ]);
+    },
   });
 };
 
@@ -92,6 +209,7 @@ export const useSaveNote = () => {
  * Mutation hook to delete a note (separate export like useDeleteRating)
  */
 export const useDeleteNote = () => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
 
@@ -109,6 +227,78 @@ export const useDeleteNote = () => {
     }) => {
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.deleteNote(userId, mediaType, mediaId, seasonNumber, episodeNumber);
+    },
+    onMutate: async (variables) => {
+      if (!userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const detailKey = getMediaNoteQueryKey(
+        userId,
+        variables.mediaType,
+        variables.mediaId,
+        variables.seasonNumber,
+        variables.episodeNumber
+      );
+      const listKey = getNotesQueryKey(userId);
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: detailKey }),
+        queryClient.cancelQueries({ queryKey: listKey }),
+      ]);
+
+      const previousDetailNote = queryClient.getQueryData<Note | null>(detailKey);
+      const previousNotes = queryClient.getQueryData<Note[]>(listKey);
+
+      queryClient.setQueryData<Note | null>(detailKey, null);
+
+      if (previousNotes) {
+        const noteId = getNoteId(
+          variables.mediaType,
+          variables.mediaId,
+          variables.seasonNumber,
+          variables.episodeNumber
+        );
+        queryClient.setQueryData<Note[]>(listKey, (current) =>
+          (current ?? []).filter((note) => note.id !== noteId)
+        );
+      }
+
+      return { previousDetailNote, previousNotes };
+    },
+    onError: (_error, variables, context) => {
+      if (!userId) return;
+
+      const detailKey = getMediaNoteQueryKey(
+        userId,
+        variables.mediaType,
+        variables.mediaId,
+        variables.seasonNumber,
+        variables.episodeNumber
+      );
+      const listKey = getNotesQueryKey(userId);
+
+      queryClient.setQueryData<Note | null>(detailKey, context?.previousDetailNote ?? null);
+
+      if (context?.previousNotes) {
+        queryClient.setQueryData<Note[]>(listKey, context.previousNotes);
+      }
+    },
+    onSuccess: async (_data, variables) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getNotesQueryKey(userId) }),
+        queryClient.invalidateQueries({
+          queryKey: getMediaNoteQueryKey(
+            userId,
+            variables.mediaType,
+            variables.mediaId,
+            variables.seasonNumber,
+            variables.episodeNumber
+          ),
+        }),
+      ]);
     },
   });
 };

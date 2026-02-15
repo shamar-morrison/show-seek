@@ -1,7 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
-import { tmdbApi } from '../api/tmdb';
+import { tmdbApi } from '@/src/api/tmdb';
+import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { auth } from '../firebase/config';
+import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { reminderService } from '../services/ReminderService';
 import {
   CreateReminderInput,
@@ -9,25 +11,43 @@ import {
   ReminderMediaType,
   ReminderTiming,
 } from '../types/reminder';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
+
+const getStatusReadsEnabled = () =>
+  !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
+
+const parseReminderId = (reminderId: string): { mediaType: ReminderMediaType; mediaId: number } | null => {
+  const [rawType, rawMediaId] = reminderId.split('-');
+  if ((rawType !== 'movie' && rawType !== 'tv') || !rawMediaId) {
+    return null;
+  }
+
+  const mediaId = Number(rawMediaId);
+  if (!Number.isFinite(mediaId)) {
+    return null;
+  }
+
+  return {
+    mediaType: rawType,
+    mediaId,
+  };
+};
 
 /**
  * Hook to get all active reminders for current user
  */
 export const useReminders = () => {
   const userId = auth.currentUser?.uid;
-  const subscribe = useCallback(
-    (onData: (data: Reminder[]) => void, onError: (error: Error) => void) =>
-      reminderService.subscribeToUserReminders(onData, onError),
-    []
-  );
 
-  const query = useRealtimeSubscription<Reminder[]>({
+  const query = useQuery({
     queryKey: ['reminders', userId],
+    queryFn: () => reminderService.getActiveReminders(userId!),
     enabled: !!userId,
-    initialData: [],
-    subscribe,
-    logLabel: 'useReminders',
+    initialData: [] as Reminder[],
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   /*
@@ -37,6 +57,7 @@ export const useReminders = () => {
 
   return {
     ...query,
+    data: query.data ?? [],
     isLoading: query.isLoading,
   };
 };
@@ -171,13 +192,16 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
  */
 export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) => {
   const { data: reminders, isLoading } = useReminders();
-
-  if (!reminders) {
-    return { reminder: null, hasReminder: false, isLoading };
+  if (!getStatusReadsEnabled()) {
+    return {
+      reminder: null,
+      hasReminder: false,
+      isLoading: false,
+    };
   }
 
   const reminderId = `${mediaType}-${mediaId}`;
-  const reminder = reminders.find((r) => r.id === reminderId);
+  const reminder = reminders.find((candidate) => candidate.id === reminderId);
 
   return {
     reminder: reminder || null,
@@ -190,8 +214,21 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
  * Mutation hook to create a reminder
  */
 export const useCreateReminder = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
   return useMutation({
     mutationFn: (input: CreateReminderInput) => reminderService.createReminder(input),
+    onSuccess: async (_data, variables) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reminders', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['reminder', userId, variables.mediaType, variables.mediaId],
+        }),
+      ]);
+    },
   });
 };
 
@@ -199,8 +236,22 @@ export const useCreateReminder = () => {
  * Mutation hook to cancel a reminder
  */
 export const useCancelReminder = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
   return useMutation({
     mutationFn: (reminderId: string) => reminderService.cancelReminder(reminderId),
+    onSuccess: async (_data, reminderId) => {
+      if (!userId) return;
+
+      await queryClient.invalidateQueries({ queryKey: ['reminders', userId] });
+      const parsed = parseReminderId(reminderId);
+      if (parsed) {
+        await queryClient.invalidateQueries({
+          queryKey: ['reminder', userId, parsed.mediaType, parsed.mediaId],
+        });
+      }
+    },
   });
 };
 
@@ -208,8 +259,22 @@ export const useCancelReminder = () => {
  * Mutation hook to update reminder timing
  */
 export const useUpdateReminder = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+
   return useMutation({
     mutationFn: ({ reminderId, timing }: { reminderId: string; timing: ReminderTiming }) =>
       reminderService.updateReminder(reminderId, timing),
+    onSuccess: async (_data, variables) => {
+      if (!userId) return;
+
+      await queryClient.invalidateQueries({ queryKey: ['reminders', userId] });
+      const parsed = parseReminderId(variables.reminderId);
+      if (parsed) {
+        await queryClient.invalidateQueries({
+          queryKey: ['reminder', userId, parsed.mediaType, parsed.mediaId],
+        });
+      }
+    },
   });
 };
