@@ -4,6 +4,7 @@ import {
   auditedGetDoc,
   auditedGetDocs,
 } from '@/src/services/firestoreReadAudit';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -57,10 +58,7 @@ class RatingService {
   async getUserRatings(userId: string): Promise<RatingItem[]> {
     const ratingsRef = this.getUserRatingsCollection(userId);
     const q = query(ratingsRef, orderBy('ratedAt', 'desc'));
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 10000);
-    });
+    const timeout = createTimeoutWithCleanup();
 
     try {
       this.logDebug('getUserRatings:start', {
@@ -74,7 +72,7 @@ class RatingService {
           queryKey: 'ratings',
           callsite: 'RatingService.getUserRatings',
         }),
-        timeoutPromise,
+        timeout.promise,
       ]);
 
       const ratings = snapshot.docs.map((ratingDoc) => ({
@@ -96,6 +94,8 @@ class RatingService {
       });
       const message = getFirestoreErrorMessage(error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -112,6 +112,8 @@ class RatingService {
       releaseDate: string | null;
     }
   ): Promise<RatingItem> {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -130,16 +132,14 @@ class RatingService {
         }),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(ratingRef, ratingData), timeoutPromise]);
+      await Promise.race([setDoc(ratingRef, ratingData), timeout.promise]);
       return ratingData;
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[RatingService] saveRating error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -147,21 +147,21 @@ class RatingService {
    * Delete a rating for a media item
    */
   async deleteRating(mediaId: number, mediaType: 'movie' | 'tv') {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(ratingRef), timeoutPromise]);
+      await Promise.race([deleteDoc(ratingRef), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[RatingService] deleteRating error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -169,6 +169,8 @@ class RatingService {
    * Get a single rating for a media item
    */
   async getRating(mediaId: number, mediaType: 'movie' | 'tv'): Promise<RatingItem | null> {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) return null;
@@ -181,17 +183,13 @@ class RatingService {
         path: `users/${user.uid}/ratings/${mediaType}-${mediaId}`,
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
       const docSnap = await Promise.race([
         auditedGetDoc(ratingRef, {
           path: `users/${user.uid}/ratings/${mediaType}-${mediaId}`,
           queryKey: 'ratingByMedia',
           callsite: 'RatingService.getRating',
         }),
-        timeoutPromise,
+        timeout.promise,
       ]);
 
       if (docSnap.exists()) {
@@ -224,6 +222,8 @@ class RatingService {
       });
       console.error('[RatingService] getRating error:', error);
       return null;
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -265,6 +265,8 @@ class RatingService {
       posterPath: string | null;
     }
   ): Promise<RatingItem> {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -291,16 +293,14 @@ class RatingService {
         posterPath: episodeMetadata.posterPath,
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(ratingRef, ratingData), timeoutPromise]);
+      await Promise.race([setDoc(ratingRef, ratingData), timeout.promise]);
       return ratingData;
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[RatingService] saveEpisodeRating error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -308,6 +308,8 @@ class RatingService {
    * Delete a rating for an episode
    */
   async deleteEpisodeRating(tvShowId: number, seasonNumber: number, episodeNumber: number) {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -319,15 +321,13 @@ class RatingService {
         episodeNumber
       );
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(ratingRef), timeoutPromise]);
+      await Promise.race([deleteDoc(ratingRef), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[RatingService] deleteEpisodeRating error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -339,6 +339,8 @@ class RatingService {
     seasonNumber: number,
     episodeNumber: number
   ): Promise<RatingItem | null> {
+    const timeout = createTimeoutWithCleanup();
+
     try {
       const user = auth.currentUser;
       if (!user) return null;
@@ -357,17 +359,13 @@ class RatingService {
         path: `users/${user.uid}/ratings/episode-${tvShowId}-${seasonNumber}-${episodeNumber}`,
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
       const docSnap = await Promise.race([
         auditedGetDoc(ratingRef, {
           path: `users/${user.uid}/ratings/episode-${tvShowId}-${seasonNumber}-${episodeNumber}`,
           queryKey: 'ratingByEpisode',
           callsite: 'RatingService.getEpisodeRating',
         }),
-        timeoutPromise,
+        timeout.promise,
       ]);
 
       if (docSnap.exists()) {
@@ -403,6 +401,8 @@ class RatingService {
       });
       console.error('[RatingService] getEpisodeRating error:', error);
       return null;
+    } finally {
+      timeout.cancel();
     }
   }
 }

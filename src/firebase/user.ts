@@ -94,6 +94,7 @@ export async function createUserDocument(user: User): Promise<void> {
         displayName: normalizedDisplayName,
         email: normalizedEmail,
         photoURL: normalizedPhotoURL,
+        createdAt: userData.createdAt ?? new Date(),
       });
     }
   } catch (error) {

@@ -1,9 +1,7 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { createTimeout } from '@/src/utils/timeout';
 import { collection, deleteDoc, doc, orderBy, query, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { FavoritePerson } from '../types/favoritePerson';
@@ -43,9 +41,7 @@ class FavoritePersonsService {
 
       const personsRef = this.getUserFavoritePersonsCollection(userId);
       const q = query(personsRef, orderBy('addedAt', 'desc'));
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       const snapshot = await Promise.race([
         auditedGetDocs(q, {
@@ -85,9 +81,7 @@ class FavoritePersonsService {
       }
 
       const personRef = this.getUserFavoritePersonRef(userId, personId.toString());
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       const snapshot = await Promise.race([
         auditedGetDoc(personRef, {
@@ -128,9 +122,7 @@ class FavoritePersonsService {
         addedAt: Date.now(),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       await Promise.race([setDoc(personRef, favoriteData), timeoutPromise]);
     } catch (error) {
@@ -150,9 +142,7 @@ class FavoritePersonsService {
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personId.toString());
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
+      const timeoutPromise = createTimeout();
 
       await Promise.race([deleteDoc(personRef), timeoutPromise]);
     } catch (error) {

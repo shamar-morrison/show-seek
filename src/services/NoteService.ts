@@ -93,6 +93,11 @@ class NoteService {
 
   async getUserNotes(userId: string): Promise<Note[]> {
     try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
       this.logDebug('getUserNotes:start', {
         userId,
         path: `users/${userId}/notes`,

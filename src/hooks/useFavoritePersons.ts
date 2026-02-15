@@ -4,12 +4,14 @@ import { useAuth } from '../context/auth';
 import { favoritePersonsService } from '../services/FavoritePersonsService';
 import { FavoritePerson } from '../types/favoritePerson';
 
+const getFavoritePersonsQueryKey = (userId?: string) => ['favoritePersons', userId] as const;
+
 export const useFavoritePersons = () => {
   const { user } = useAuth();
   const userId = user?.uid;
 
   const query = useQuery({
-    queryKey: ['favoritePersons', userId],
+    queryKey: getFavoritePersonsQueryKey(userId),
     queryFn: () => favoritePersonsService.getFavoritePersons(userId!),
     enabled: !!userId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
@@ -39,15 +41,41 @@ export const useAddFavoritePerson = () => {
   return useMutation({
     mutationFn: ({ personData }: { personData: Omit<FavoritePerson, 'addedAt'> }) =>
       favoritePersonsService.addFavoritePerson(personData),
-    onSuccess: async (_data, variables) => {
+    onMutate: async (variables) => {
+      if (!userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const queryKey = getFavoritePersonsQueryKey(userId);
+      await queryClient.cancelQueries({ queryKey });
+      const previousFavorites = queryClient.getQueryData<FavoritePerson[]>(queryKey);
+      const optimisticFavorite: FavoritePerson = {
+        ...variables.personData,
+        addedAt: Date.now(),
+      };
+
+      queryClient.setQueryData<FavoritePerson[]>(queryKey, (current) => {
+        if (!current) {
+          return [optimisticFavorite];
+        }
+
+        const withoutExisting = current.filter((person) => person.id !== optimisticFavorite.id);
+        return [...withoutExisting, optimisticFavorite];
+      });
+
+      return { previousFavorites };
+    },
+    onError: (_error, _variables, context) => {
       if (!userId) return;
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['favoritePersons', userId] }),
-        queryClient.invalidateQueries({
-          queryKey: ['favoritePerson', userId, variables.personData.id],
-        }),
-      ]);
+      queryClient.setQueryData(
+        getFavoritePersonsQueryKey(userId),
+        context?.previousFavorites ?? []
+      );
+    },
+    onSettled: async () => {
+      if (!userId) return;
+      await queryClient.invalidateQueries({ queryKey: getFavoritePersonsQueryKey(userId) });
     },
   });
 };
@@ -60,13 +88,36 @@ export const useRemoveFavoritePerson = () => {
   return useMutation({
     mutationFn: ({ personId }: { personId: number }) =>
       favoritePersonsService.removeFavoritePerson(personId),
-    onSuccess: async (_data, variables) => {
+    onMutate: async (variables) => {
+      if (!userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const queryKey = getFavoritePersonsQueryKey(userId);
+      await queryClient.cancelQueries({ queryKey });
+      const previousFavorites = queryClient.getQueryData<FavoritePerson[]>(queryKey);
+
+      queryClient.setQueryData<FavoritePerson[]>(queryKey, (current) => {
+        if (!current) {
+          return [];
+        }
+
+        return current.filter((person) => person.id !== variables.personId);
+      });
+
+      return { previousFavorites };
+    },
+    onError: (_error, _variables, context) => {
       if (!userId) return;
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['favoritePersons', userId] }),
-        queryClient.invalidateQueries({ queryKey: ['favoritePerson', userId, variables.personId] }),
-      ]);
+      queryClient.setQueryData(
+        getFavoritePersonsQueryKey(userId),
+        context?.previousFavorites ?? []
+      );
+    },
+    onSettled: async () => {
+      if (!userId) return;
+      await queryClient.invalidateQueries({ queryKey: getFavoritePersonsQueryKey(userId) });
     },
   });
 };

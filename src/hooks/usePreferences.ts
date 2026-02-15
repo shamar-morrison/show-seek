@@ -1,9 +1,9 @@
+import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import {
   DEFAULT_HOME_LISTS,
   MAX_HOME_LISTS,
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
-import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
@@ -33,7 +33,8 @@ export const usePreferences = () => {
     refetchOnReconnect: false,
   });
 
-  const isHydratingInitial = !!userId && query.fetchStatus === 'fetching' && query.dataUpdatedAt === 0;
+  const isHydratingInitial =
+    !!userId && query.fetchStatus === 'fetching' && query.dataUpdatedAt === 0;
   const hasLoaded =
     !userId || query.dataUpdatedAt > 0 || (!!query.error && query.fetchStatus !== 'fetching');
   const isLoading = isHydratingInitial;
@@ -147,6 +148,9 @@ export const useUpdatePreference = () => {
     // On success, allow query to refresh from server source
     onSettled: (_data, _error, _variables, context) => {
       if (context?.userId) {
+        // Brief delay before cache invalidation to allow the Firestore write to
+        // propagate server-side so the subsequent re-fetch returns the updated
+        // value. The optimistic update above keeps the UI instant regardless.
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });
         }, 500);
@@ -204,6 +208,9 @@ export const useUpdateHomeScreenLists = () => {
     // On success, refresh server value in cache
     onSettled: (_data, _error, _variables, context) => {
       if (context?.userId) {
+        // Brief delay before cache invalidation to allow the Firestore write to
+        // propagate server-side so the subsequent re-fetch returns the updated
+        // value. The optimistic update above keeps the UI instant regardless.
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });
         }, 500);

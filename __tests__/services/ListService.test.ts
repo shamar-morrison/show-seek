@@ -18,6 +18,16 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
+const mockTimeoutCancel = jest.fn();
+const mockCreateTimeoutWithCleanup = jest.fn(() => ({
+  promise: new Promise<never>(() => {}),
+  cancel: mockTimeoutCancel,
+}));
+
+jest.mock('@/src/utils/timeout', () => ({
+  createTimeoutWithCleanup: () => mockCreateTimeoutWithCleanup(),
+}));
+
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
 import {
   clearFirestoreReadAuditEvents,
@@ -198,6 +208,58 @@ describe('ListService', () => {
         'Cannot delete default lists'
       );
       expect(deleteDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('renameList', () => {
+    it('updates list name and description for custom lists', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => true });
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.renameList('my-custom-list', 'Renamed List', 'Updated description');
+
+      expect(updateDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          name: 'Renamed List',
+          description: 'Updated description',
+          updatedAt: expect.any(Number),
+        })
+      );
+    });
+
+    it('throws when list does not exist', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/missing-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
+
+      await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow('List not found');
+      expect(updateDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('timeout cleanup', () => {
+    it('cancels timeout after removeFromList resolves', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await listService.removeFromList('watchlist', 123);
+
+      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
+      expect(mockTimeoutCancel).toHaveBeenCalled();
+    });
+
+    it('cancels timeout when deleteList throws', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/my-custom-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (deleteDoc as jest.Mock).mockRejectedValueOnce(new Error('delete failed'));
+
+      await expect(listService.deleteList('my-custom-list')).rejects.toThrow('delete failed');
+      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
+      expect(mockTimeoutCancel).toHaveBeenCalled();
     });
   });
 

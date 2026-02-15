@@ -299,27 +299,27 @@ class ListService {
    * Remove a media item from a specific list
    */
   async removeFromList(listId: string, mediaId: number) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
       await Promise.race([
         updateDoc(listRef, {
           [`items.${mediaId}`]: deleteField(),
           updatedAt: Date.now(),
         }),
-        timeoutPromise,
+        timeout.promise,
       ]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] removeFromList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -348,9 +348,7 @@ class ListService {
 
         if (!docSnap.exists()) {
           // ID is unique, proceed with creation
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Request timed out')), 10000);
-          });
+          const timeout = createTimeoutWithCleanup(10000);
 
           const trimmedDescription = description?.trim();
           const listData = this.sanitizeForFirestore({
@@ -361,7 +359,11 @@ class ListService {
             isCustom: true,
           });
 
-          await Promise.race([setDoc(listRef, listData), timeoutPromise]);
+          try {
+            await Promise.race([setDoc(listRef, listData), timeout.promise]);
+          } finally {
+            timeout.cancel();
+          }
 
           return listId;
         }
@@ -384,6 +386,8 @@ class ListService {
    * Delete a custom list
    */
   async deleteList(listId: string) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -395,15 +399,13 @@ class ListService {
 
       const listRef = this.getUserListRef(user.uid, listId);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(listRef), timeoutPromise]);
+      await Promise.race([deleteDoc(listRef), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] deleteList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 
@@ -411,6 +413,8 @@ class ListService {
    * Rename a custom list
    */
   async renameList(listId: string, newName: string, newDescription?: string) {
+    const timeout = createTimeoutWithCleanup(10000);
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -437,10 +441,6 @@ class ListService {
         throw new Error('List not found');
       }
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
       const trimmedDescription = newDescription?.trim();
       const updateData: Record<string, any> = {
         name: trimmedName,
@@ -453,11 +453,13 @@ class ListService {
         updateData.description = deleteField();
       }
 
-      await Promise.race([updateDoc(listRef, updateData), timeoutPromise]);
+      await Promise.race([updateDoc(listRef, updateData), timeout.promise]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] renameList error:', error);
       throw new Error(message);
+    } finally {
+      timeout.cancel();
     }
   }
 }

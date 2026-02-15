@@ -101,11 +101,16 @@ export async function auditedGetDoc<T = DocumentData>(
   meta: FirestoreReadAuditMeta
 ): Promise<DocumentSnapshot<T>> {
   const snapshot = (await getDoc(ref)) as DocumentSnapshot<T> | undefined;
+  if (!snapshot) {
+    throw new Error(
+      `[FirestoreReadAudit] auditedGetDoc returned undefined snapshot (${meta.callsite} @ ${meta.path})`
+    );
+  }
   const exists = snapshot && typeof snapshot.exists === 'function' ? snapshot.exists() : false;
 
   addAuditEvent(createAuditEvent('getDoc', exists ? 1 : 0, meta));
 
-  return snapshot as DocumentSnapshot<T>;
+  return snapshot;
 }
 
 export async function auditedGetDocs<T = DocumentData>(
@@ -113,10 +118,15 @@ export async function auditedGetDocs<T = DocumentData>(
   meta: FirestoreReadAuditMeta
 ): Promise<QuerySnapshot<T>> {
   const snapshot = (await getDocs(source)) as QuerySnapshot<T> | undefined;
+  if (!snapshot) {
+    throw new Error(
+      `[FirestoreReadAudit] auditedGetDocs returned undefined snapshot (${meta.callsite} @ ${meta.path})`
+    );
+  }
 
   addAuditEvent(createAuditEvent('getDocs', snapshot?.size || 0, meta));
 
-  return snapshot as QuerySnapshot<T>;
+  return snapshot;
 }
 
 export function auditedOnSnapshot<T = DocumentData>(

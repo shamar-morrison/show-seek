@@ -1,4 +1,5 @@
 import { auth, db } from '@/src/firebase/config';
+import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc } from '@/src/services/firestoreReadAudit';
 import { doc } from 'firebase/firestore';
 
@@ -7,7 +8,7 @@ const USER_DOC_CACHE_TTL_MS = 5 * 60 * 1000;
 let cachedUserId: string | null = null;
 let cachedData: Record<string, unknown> | null = null;
 let cachedAt = 0;
-let inflightFetch: Promise<Record<string, unknown> | null> | null = null;
+const inflightFetchByUser = new Map<string, Promise<Record<string, unknown> | null>>();
 
 const isCacheValid = (userId: string, forceRefresh: boolean): boolean => {
   if (forceRefresh) return false;
@@ -28,13 +29,14 @@ export async function getCachedUserDocument(
     return cachedData;
   }
 
+  const inflightFetch = inflightFetchByUser.get(userId);
   if (inflightFetch) {
     return inflightFetch;
   }
 
   const userRef = doc(db, 'users', userId);
 
-  inflightFetch = auditedGetDoc(userRef, {
+  const nextFetch = auditedGetDoc(userRef, {
     path: `users/${userId}`,
     queryKey: 'userDoc',
     callsite,
@@ -54,11 +56,20 @@ export async function getCachedUserDocument(
       cachedAt = Date.now();
       return data;
     })
+    .catch((error) => {
+      const message = getFirestoreErrorMessage(error);
+      cachedUserId = userId;
+      cachedData = null;
+      cachedAt = Date.now();
+      throw new Error(message);
+    })
     .finally(() => {
-      inflightFetch = null;
+      inflightFetchByUser.delete(userId);
     });
 
-  return inflightFetch;
+  inflightFetchByUser.set(userId, nextFetch);
+
+  return nextFetch;
 }
 
 export function mergeUserDocumentCache(userId: string, partial: Record<string, unknown>): void {
@@ -74,11 +85,20 @@ export function mergeUserDocumentCache(userId: string, partial: Record<string, u
 }
 
 export function clearUserDocumentCache(userId?: string): void {
-  if (!userId || userId === cachedUserId) {
+  if (!userId) {
     cachedUserId = null;
     cachedData = null;
     cachedAt = 0;
-    inflightFetch = null;
+    inflightFetchByUser.clear();
+    return;
+  }
+
+  inflightFetchByUser.delete(userId);
+
+  if (userId === cachedUserId) {
+    cachedUserId = null;
+    cachedData = null;
+    cachedAt = 0;
   }
 }
 

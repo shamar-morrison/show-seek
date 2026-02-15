@@ -50,14 +50,18 @@ class ReminderService {
   }
 
   async getActiveReminders(userId: string): Promise<Reminder[]> {
-    const remindersRef = this.getRemindersCollection(userId);
-    const q = query(remindersRef, where('status', '==', 'active'));
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 10000);
-    });
-
     try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const remindersRef = this.getRemindersCollection(userId);
+      const q = query(remindersRef, where('status', '==', 'active'));
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out')), 10000);
+      });
+
       const snapshot = await Promise.race([
         auditedGetDocs(q, {
           path: `users/${userId}/reminders`,
