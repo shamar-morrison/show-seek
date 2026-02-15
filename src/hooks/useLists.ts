@@ -1,5 +1,5 @@
 import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
 import { useAuth } from '../context/auth';
@@ -86,14 +86,9 @@ export const useLists = (options: UseListsOptions = {}) => {
 };
 
 export const useMediaLists = (mediaId: number) => {
-  const shouldLoadIndicators =
-    !READ_OPTIMIZATION_FLAGS.liteModeEnabled ||
-    READ_OPTIMIZATION_FLAGS.enableListIndicatorsInLiteMode;
-  const { data: lists, isLoading } = useLists({ enabled: shouldLoadIndicators });
-
-  if (!shouldLoadIndicators) {
-    return { membership: {}, isLoading: false };
-  }
+  // Detail-screen add-to-list state depends on this membership data.
+  // Keep this active for signed-in users even when optional list indicator optimizations are disabled.
+  const { data: lists, isLoading } = useLists();
 
   if (!lists) {
     return { membership: {}, isLoading: true };
