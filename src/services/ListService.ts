@@ -336,46 +336,58 @@ class ListService {
       let listId = baseId;
       let attempts = 0;
       const maxAttempts = 5;
+      const collisionCheckTimeoutMessage = 'List creation collision check timed out';
+      const collisionCheckTimeout = createTimeoutWithCleanup(10000, collisionCheckTimeoutMessage);
 
-      // Check for collisions and generate unique ID
-      while (attempts < maxAttempts) {
-        const listRef = this.getUserListRef(user.uid, listId);
-        const docSnap = await auditedGetDoc(listRef, {
-          path: `users/${user.uid}/lists/${listId}`,
-          queryKey: 'listById',
-          callsite: 'ListService.createList',
-        });
+      try {
+        // Check for collisions and generate unique ID
+        while (attempts < maxAttempts) {
+          const listRef = this.getUserListRef(user.uid, listId);
+          const docSnap = await Promise.race([
+            auditedGetDoc(listRef, {
+              path: `users/${user.uid}/lists/${listId}`,
+              queryKey: 'listById',
+              callsite: 'ListService.createList',
+            }),
+            collisionCheckTimeout.promise,
+          ]);
 
-        if (!docSnap.exists()) {
-          // ID is unique, proceed with creation
-          const timeout = createTimeoutWithCleanup(10000);
+          if (!docSnap.exists()) {
+            // ID is unique, proceed with creation
+            const timeout = createTimeoutWithCleanup(10000);
 
-          const trimmedDescription = description?.trim();
-          const listData = this.sanitizeForFirestore({
-            name: listName,
-            description: trimmedDescription ? trimmedDescription : undefined,
-            items: {},
-            createdAt: Date.now(),
-            isCustom: true,
-          });
+            const trimmedDescription = description?.trim();
+            const listData = this.sanitizeForFirestore({
+              name: listName,
+              description: trimmedDescription ? trimmedDescription : undefined,
+              items: {},
+              createdAt: Date.now(),
+              isCustom: true,
+            });
 
-          try {
-            await Promise.race([setDoc(listRef, listData), timeout.promise]);
-          } finally {
-            timeout.cancel();
+            try {
+              await Promise.race([setDoc(listRef, listData), timeout.promise]);
+            } finally {
+              timeout.cancel();
+            }
+
+            return listId;
           }
 
-          return listId;
+          // ID collision, append random suffix and try again
+          attempts++;
+          const suffix = Math.random().toString(36).substring(2, 6);
+          listId = `${baseId}-${suffix}`;
         }
-
-        // ID collision, append random suffix and try again
-        attempts++;
-        const suffix = Math.random().toString(36).substring(2, 6);
-        listId = `${baseId}-${suffix}`;
+      } finally {
+        collisionCheckTimeout.cancel();
       }
 
       throw new Error('Could not generate a unique list ID after multiple attempts');
     } catch (error) {
+      if (error instanceof Error && error.message === 'List creation collision check timed out') {
+        throw new Error('Unable to create list right now, please try again');
+      }
       const message = getFirestoreErrorMessage(error);
       console.error('[ListService] createList error:', error);
       throw new Error(message);

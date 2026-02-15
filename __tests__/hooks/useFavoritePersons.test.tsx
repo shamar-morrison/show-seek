@@ -132,6 +132,7 @@ describe('useFavoritePersons optimistic mutations', () => {
     };
 
     client.setQueryData(getFavoritePersonsKey(), [existing]);
+    mockGetFavoritePersons.mockResolvedValueOnce([existing]);
     mockAddFavoritePerson.mockRejectedValueOnce(new Error('add failed'));
 
     const { result } = renderHook(() => useAddFavoritePerson(), {

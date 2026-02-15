@@ -1,5 +1,7 @@
 import type { Episode } from '@/src/api/tmdb';
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
+import { useQuery } from '@tanstack/react-query';
 
 const mockInvalidateQueries = jest.fn();
 
@@ -68,6 +70,7 @@ import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { act, renderHook } from '@testing-library/react-native';
 
@@ -413,5 +416,18 @@ describe('useMarkEpisodeWatched', () => {
       queryKey: ['list-membership-index', 'test-user-123'],
       refetchType: 'active',
     });
+  });
+
+  it('uses shared cache windows for show episode tracking query', () => {
+    renderHook(() => useShowEpisodeTracking(123));
+
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['episodeTracking', 'test-user-123', 123],
+        enabled: true,
+        staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+        gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+      })
+    );
   });
 });

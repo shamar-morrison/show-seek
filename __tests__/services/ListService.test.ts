@@ -19,13 +19,14 @@ jest.mock('@/src/firebase/firestore', () => ({
 }));
 
 const mockTimeoutCancel = jest.fn();
-const mockCreateTimeoutWithCleanup = jest.fn(() => ({
+const mockCreateTimeoutWithCleanup = jest.fn((_ms?: number, _message?: string) => ({
   promise: new Promise<never>(() => {}),
   cancel: mockTimeoutCancel,
 }));
 
 jest.mock('@/src/utils/timeout', () => ({
-  createTimeoutWithCleanup: () => mockCreateTimeoutWithCleanup(),
+  createTimeoutWithCleanup: (ms?: number, message?: string) =>
+    mockCreateTimeoutWithCleanup(ms, message),
 }));
 
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
@@ -189,6 +190,25 @@ describe('ListService', () => {
 
       // Should have appended a suffix
       expect(listId).toMatch(/^test-list-[a-z0-9]+$/);
+    });
+
+    it('returns a friendly error when collision checks time out', async () => {
+      const collisionTimeoutCancel = jest.fn();
+      (doc as jest.Mock).mockReturnValue({ path: 'users/test-user-id/lists/timeout-list' });
+      (getDoc as jest.Mock).mockReturnValue(new Promise(() => {}));
+      mockCreateTimeoutWithCleanup.mockImplementationOnce(() => ({
+        promise: Promise.reject(new Error('List creation collision check timed out')),
+        cancel: collisionTimeoutCancel,
+      }));
+
+      await expect(listService.createList('Timeout List')).rejects.toThrow(
+        'Unable to create list right now, please try again'
+      );
+      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalledWith(
+        10000,
+        'List creation collision check timed out'
+      );
+      expect(collisionTimeoutCancel).toHaveBeenCalledTimes(1);
     });
   });
 

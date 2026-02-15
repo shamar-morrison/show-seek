@@ -1,5 +1,6 @@
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
@@ -108,6 +109,8 @@ export const useShowEpisodeTracking = (tvShowId: number) => {
     queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
     queryFn: () => episodeTrackingService.getShowTracking(tvShowId),
     enabled: !!userId && tvShowId > 0,
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
