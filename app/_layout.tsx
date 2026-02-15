@@ -17,6 +17,7 @@ import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
 import { resetReadBudgetForSession } from '@/src/services/ReadBudgetGuard';
+import { configureRevenueCat } from '@/src/services/revenueCat';
 import {
   clearFirestoreReadAuditEvents,
   getFirestoreReadAuditReport,
@@ -547,6 +548,12 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    void configureRevenueCat().catch((error) => {
+      console.error('[RootLayout] RevenueCat configuration failed', error);
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

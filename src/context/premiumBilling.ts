@@ -1,10 +1,27 @@
 import { MONTHLY_TRIAL_OFFER_ID } from '@/functions/src/shared/premiumOfferConstants';
-import type {
-  PricingPhaseAndroid,
-  Product,
-  ProductSubscription,
-  ProductSubscriptionAndroidOfferDetails,
-} from 'react-native-iap';
+
+export interface PricingPhaseAndroid {
+  billingPeriod?: string | null;
+  formattedPrice?: string | null;
+  priceAmountMicros?: string | null;
+  recurrenceMode?: number | null;
+}
+
+export interface ProductSubscriptionAndroidOfferDetails {
+  offerId?: string | null;
+  offerTags?: string[] | null;
+  offerToken?: string | null;
+  pricingPhases?: {
+    pricingPhaseList?: PricingPhaseAndroid[] | null;
+  } | null;
+}
+
+type BillingProduct = {
+  displayPrice?: string | null;
+  platform?: string | null;
+  subscriptionOfferDetailsAndroid?: ProductSubscriptionAndroidOfferDetails[] | null;
+  type?: string | null;
+};
 
 export type PremiumPlan = 'monthly' | 'yearly';
 export type PremiumPurchaseType = 'in-app' | 'subs';
@@ -199,7 +216,7 @@ export const resolveMonthlyTrialOffer = (
 
   return {
     isEligible: true,
-    offerToken: matchingOffer.offerToken,
+    offerToken: matchingOffer.offerToken ?? null,
   };
 };
 
@@ -233,7 +250,7 @@ export const resolveMonthlyStandardOffer = (
 };
 
 export const getDisplayPriceForSubscriptionProduct = (
-  product: Product | ProductSubscription | undefined
+  product: BillingProduct | undefined
 ): string | null => {
   if (!product) {
     return null;

@@ -28,3 +28,23 @@ After updating the secret, redeploy affected functions:
 ```bash
 firebase deploy --only functions:validatePurchase,functions:syncPremiumStatus --project showseek-app-2025
 ```
+
+## RevenueCat Webhook Secrets
+
+RevenueCat webhook integration uses these Firebase Functions secrets:
+
+- `REVENUECAT_WEBHOOK_AUTH`: shared auth token expected in webhook `Authorization` header.
+- `REVENUECAT_API_KEY`: RevenueCat secret API key (used by migration scripts, not webhook processing).
+
+Set them with:
+
+```bash
+firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH --project showseek-app-2025
+firebase functions:secrets:set REVENUECAT_API_KEY --project showseek-app-2025
+```
+
+Deploy the webhook function:
+
+```bash
+firebase deploy --only functions:revenuecatWebhook --project showseek-app-2025
+```

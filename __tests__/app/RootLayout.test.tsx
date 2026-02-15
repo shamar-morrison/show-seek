@@ -98,6 +98,10 @@ jest.mock('@/src/utils/reminderSync', () => ({
   initializeReminderSync: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('@/src/services/revenueCat', () => ({
+  configureRevenueCat: jest.fn(() => Promise.resolve(false)),
+}));
+
 jest.mock('@/src/i18n', () => ({
   t: jest.fn(() => 'Notifications'),
 }));

@@ -1,498 +1,229 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { onAuthStateChanged } from 'firebase/auth';
 import React from 'react';
-import { Alert } from 'react-native';
-import type { Purchase } from 'react-native-iap';
-import {
-  CLIENT_FINISH_TRANSACTION_FAILED,
-  PENDING_VALIDATION_QUEUE_STORAGE_KEY,
-} from '@/src/context/purchaseValidationRetry';
+import { Platform } from 'react-native';
 
-const mockValidatePurchaseCallable = jest.fn();
-const mockSyncPremiumStatusCallable = jest.fn();
-const mockInitConnection = jest.fn();
-const mockEndConnection = jest.fn();
-const mockPurchaseUpdatedListener = jest.fn();
-const mockPurchaseErrorListener = jest.fn();
-const mockFetchProducts = jest.fn();
-const mockGetAvailablePurchases = jest.fn();
-const mockFinishTransaction = jest.fn();
-const mockRequestPurchase = jest.fn();
-const mockConsumePurchaseAndroid = jest.fn();
-const mockDeepLinkToSubscriptions = jest.fn();
-let mockPurchaseUpdatedCallback: ((purchase: Purchase) => Promise<void>) | null = null;
+const mockConfigureRevenueCat = jest.fn();
+const mockCreateUserDocument = jest.fn();
+const mockGetOfferings = jest.fn();
+const mockGetCustomerInfo = jest.fn();
+const mockLogIn = jest.fn();
+const mockLogOut = jest.fn();
+const mockPurchasePackage = jest.fn();
+const mockRestorePurchases = jest.fn();
+const mockAddCustomerInfoUpdateListener = jest.fn();
+const mockRemoveCustomerInfoUpdateListener = jest.fn();
+const mockAuditedOnSnapshot = jest.fn();
+const mockOnAuthStateChanged = jest.fn();
 
-process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'false';
+process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'true';
 
-jest.mock('react-native-iap', () => ({
-  initConnection: mockInitConnection,
-  endConnection: mockEndConnection,
-  purchaseUpdatedListener: mockPurchaseUpdatedListener,
-  purchaseErrorListener: mockPurchaseErrorListener,
-  fetchProducts: mockFetchProducts,
-  getAvailablePurchases: mockGetAvailablePurchases,
-  finishTransaction: mockFinishTransaction,
-  requestPurchase: mockRequestPurchase,
-  consumePurchaseAndroid: mockConsumePurchaseAndroid,
-  deepLinkToSubscriptions: mockDeepLinkToSubscriptions,
+jest.mock('@/src/config/readOptimization', () => ({
+  READ_OPTIMIZATION_FLAGS: {
+    enablePremiumRealtimeListener: true,
+  },
 }));
 
-jest.mock('firebase/functions', () => ({
-  httpsCallable: jest.fn((_functions: unknown, callableName: string) => {
-    if (callableName === 'validatePurchase') {
-      return mockValidatePurchaseCallable;
-    }
-    if (callableName === 'syncPremiumStatus') {
-      return mockSyncPremiumStatusCallable;
-    }
-    return jest.fn();
-  }),
+jest.mock('@/src/firebase/config', () => ({
+  auth: {
+    currentUser: { uid: 'test-user-id', email: 'test@example.com' },
+  },
+  db: {},
 }));
 
-const { PremiumProvider, usePremium } = require('@/src/context/PremiumContext');
+jest.mock('@/src/firebase/user', () => ({
+  createUserDocument: (...args: unknown[]) => mockCreateUserDocument(...args),
+}));
+
+jest.mock('@/src/services/firestoreReadAudit', () => ({
+  auditedOnSnapshot: (...args: unknown[]) => mockAuditedOnSnapshot(...args),
+}));
+
+jest.mock('@/src/services/revenueCat', () => ({
+  configureRevenueCat: (...args: unknown[]) => mockConfigureRevenueCat(...args),
+}));
+
+jest.mock('firebase/auth', () => ({
+  onAuthStateChanged: (...args: unknown[]) => mockOnAuthStateChanged(...args),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  doc: jest.fn(() => 'users/test-user-id'),
+}));
+
+jest.mock('react-native-purchases', () => {
+  const defaultExport = {
+    addCustomerInfoUpdateListener: (...args: unknown[]) =>
+      mockAddCustomerInfoUpdateListener(...args),
+    getCustomerInfo: (...args: unknown[]) => mockGetCustomerInfo(...args),
+    getOfferings: (...args: unknown[]) => mockGetOfferings(...args),
+    logIn: (...args: unknown[]) => mockLogIn(...args),
+    logOut: (...args: unknown[]) => mockLogOut(...args),
+    purchasePackage: (...args: unknown[]) => mockPurchasePackage(...args),
+    removeCustomerInfoUpdateListener: (...args: unknown[]) =>
+      mockRemoveCustomerInfoUpdateListener(...args),
+    restorePurchases: (...args: unknown[]) => mockRestorePurchases(...args),
+  };
+
+  return {
+    __esModule: true,
+    default: defaultExport,
+    PURCHASES_ERROR_CODE: {
+      PURCHASE_CANCELLED_ERROR: '1',
+    },
+  };
+});
+
+const baseOfferings = {
+  all: {
+    Premium: {
+      availablePackages: [
+        {
+          identifier: '$rc_monthly',
+          product: {
+            identifier: 'monthly_showseek_sub',
+            priceString: '$3.00',
+          },
+        },
+        {
+          identifier: '$rc_annual',
+          product: {
+            identifier: 'showseek_yearly_sub',
+            priceString: '$12.00',
+          },
+        },
+      ],
+    },
+  },
+  current: null,
+};
+
+const makeCustomerInfo = (isPremium: boolean) => ({
+  entitlements: {
+    active: isPremium
+      ? {
+          premium: {
+            periodType: 'NORMAL',
+            productIdentifier: 'monthly_showseek_sub',
+          },
+        }
+      : {},
+    all: isPremium
+      ? {
+          premium: {
+            periodType: 'NORMAL',
+            productIdentifier: 'monthly_showseek_sub',
+          },
+        }
+      : {},
+  },
+  subscriptionsByProductIdentifier: {},
+});
+
+const createSnapshot = (premium: Record<string, unknown> = {}) => ({
+  data: () => ({ premium }),
+  exists: () => true,
+});
 
 describe('PremiumContext', () => {
-  const TEST_UID = 'test-user-id';
-  const queueStorageKey = `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${TEST_UID}`;
-  const SECOND_UID = 'second-user-id';
-  const secondQueueStorageKey = `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${SECOND_UID}`;
-
-  let mockAuthStateChangedCallback: ((nextUser: { uid: string; email?: string } | null) => void) | null =
-    null;
-
-  const getQueuePayload = (storageKey = queueStorageKey) => {
-    const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
-      ([key]) => key === storageKey
-    );
-    if (queueWrites.length === 0) {
-      return null;
-    }
-    return JSON.parse(queueWrites[queueWrites.length - 1][1] as string) as Record<
-      string,
-      {
-        lastReason: string | null;
-        nextRetryAt: number;
-        productId: string;
-        purchaseToken: string;
-        purchaseType: 'in-app' | 'subs';
-      }
-    >;
-  };
-
-  const createSubscriptionPurchase = (overrides: Partial<Purchase> = {}): Purchase => ({
-    id: 'purchase-id',
-    isAutoRenewing: true,
-    platform: 'android',
-    productId: 'monthly_showseek_sub',
-    purchaseState: 'purchased',
-    purchaseToken: 'monthly-token',
-    quantity: 1,
-    store: 'google',
-    transactionDate: Date.now(),
-    ...overrides,
-  });
-
-  const getPurchaseUpdatedCallback = () => {
-    const callback = mockPurchaseUpdatedCallback;
-    if (!callback) {
-      throw new Error('purchaseUpdatedListener callback was not registered.');
-    }
-    return callback;
-  };
-
-  const waitForProviderInit = async () => {
-    await waitFor(() => expect(mockInitConnection).toHaveBeenCalled());
-    await waitFor(() => expect(mockPurchaseUpdatedListener).toHaveBeenCalled());
-    await waitFor(() => expect(mockPurchaseUpdatedCallback).toBeTruthy());
-  };
-
-  const emitAuthStateChange = (nextUser: { uid: string; email?: string } | null) => {
-    const callback = mockAuthStateChangedCallback;
-    if (!callback) {
-      throw new Error('onAuthStateChanged callback was not registered.');
-    }
-    callback(nextUser);
-  };
+  const { PremiumProvider, usePremium } = require('@/src/context/PremiumContext');
+  const originalPlatform = Platform.OS;
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <PremiumProvider>{children}</PremiumProvider>
   );
 
-  let alertSpy: jest.SpyInstance;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
-    mockPurchaseUpdatedCallback = null;
-    mockAuthStateChangedCallback = null;
-    await AsyncStorage.clear();
-    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    (onAuthStateChanged as unknown as jest.Mock).mockImplementation(
-      (_auth: unknown, callback: (nextUser: { uid: string; email?: string } | null) => void) => {
-        mockAuthStateChangedCallback = callback;
-        callback({ uid: TEST_UID, email: 'test@example.com' });
-        return jest.fn();
-      }
-    );
+    (Platform as { OS: string }).OS = 'android';
 
-    mockValidatePurchaseCallable.mockResolvedValue({
-      data: { success: true, isPremium: true },
+    mockConfigureRevenueCat.mockResolvedValue(true);
+    mockCreateUserDocument.mockResolvedValue(undefined);
+    mockGetOfferings.mockResolvedValue(baseOfferings);
+    mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(true));
+    mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(true), created: false });
+    mockLogOut.mockResolvedValue(makeCustomerInfo(false));
+    mockPurchasePackage.mockResolvedValue({
+      customerInfo: makeCustomerInfo(true),
+      productIdentifier: 'monthly_showseek_sub',
     });
-    mockSyncPremiumStatusCallable.mockResolvedValue({
-      data: { success: true, isPremium: true },
+    mockRestorePurchases.mockResolvedValue(makeCustomerInfo(true));
+
+    mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
+      callback({ uid: 'test-user-id', email: 'test@example.com' });
+      return jest.fn();
     });
 
-    mockInitConnection.mockResolvedValue(undefined);
-    mockEndConnection.mockResolvedValue(undefined);
-    mockFetchProducts.mockResolvedValue([
-      {
-        id: 'monthly_showseek_sub',
-        platform: 'android',
-        type: 'subs',
-        displayPrice: '$3.00',
-        subscriptionOfferDetailsAndroid: [
-          {
-            offerId: 'one-week-trial',
-            offerToken: 'trial-token',
-            offerTags: ['one-week-trial'],
-            pricingPhases: {
-              pricingPhaseList: [
-                {
-                  priceAmountMicros: '0',
-                  billingPeriod: 'P1W',
-                  recurrenceMode: 2,
-                  formattedPrice: '$0.00',
-                },
-                {
-                  priceAmountMicros: '3000000',
-                  billingPeriod: 'P1M',
-                  recurrenceMode: 1,
-                  formattedPrice: '$3.00',
-                },
-              ],
-            },
-          },
-          {
-            offerId: 'standard-monthly',
-            offerToken: 'standard-token',
-            offerTags: ['standard'],
-            pricingPhases: {
-              pricingPhaseList: [
-                {
-                  priceAmountMicros: '3000000',
-                  billingPeriod: 'P1M',
-                  recurrenceMode: 1,
-                  formattedPrice: '$3.00',
-                },
-              ],
-            },
-          },
-        ],
-      },
-      {
-        id: 'showseek_yearly_sub',
-        platform: 'android',
-        type: 'subs',
-        displayPrice: '$12.00',
-      },
-    ]);
-    mockGetAvailablePurchases.mockResolvedValue([]);
-    mockFinishTransaction.mockResolvedValue(undefined);
-    mockPurchaseUpdatedListener.mockImplementation((listener) => {
-      mockPurchaseUpdatedCallback = listener;
-      return {
-        remove: jest.fn(),
-        listener,
-      };
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext(createSnapshot({ hasUsedTrial: false, isPremium: false }));
+      return jest.fn();
     });
-    mockPurchaseErrorListener.mockImplementation(() => ({
-      remove: jest.fn(),
-    }));
-    mockRequestPurchase.mockResolvedValue(undefined);
   });
 
-  afterEach(() => {
-    alertSpy.mockRestore();
+  afterAll(() => {
+    (Platform as { OS: string }).OS = originalPlatform;
   });
 
-  it('handles validation + finish success by removing pending queue entry and syncing', async () => {
-    const { unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
+  it('initializes RevenueCat, logs in user, and loads package pricing', async () => {
+    const { result } = renderHook(() => usePremium(), { wrapper });
 
-    jest.clearAllMocks();
-
-    await act(async () => {
-      await getPurchaseUpdatedCallback()(
-        createSubscriptionPurchase({ purchaseToken: 'success-token' })
-      );
-    });
-
-    expect(mockValidatePurchaseCallable).toHaveBeenCalledWith(
-      expect.objectContaining({
-        purchaseToken: 'success-token',
-        productId: 'monthly_showseek_sub',
-        purchaseType: 'subs',
-        source: 'purchase_success',
-      })
-    );
-    expect(mockFinishTransaction).toHaveBeenCalled();
-    expect(getQueuePayload()).toEqual({});
-    expect(mockSyncPremiumStatusCallable).toHaveBeenCalled();
-    expect(alertSpy).not.toHaveBeenCalled();
-
-    unmount();
-  });
-
-  it('queues retryable ack failures in processPurchase and keeps validation success', async () => {
-    mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
-    mockSyncPremiumStatusCallable.mockResolvedValue({
-      data: { success: true, isPremium: true },
-    });
-
-    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
-
-    jest.clearAllMocks();
-
-    await act(async () => {
-      await getPurchaseUpdatedCallback()(
-        createSubscriptionPurchase({ purchaseToken: 'ack-fail-token' })
-      );
-    });
-
-    const queuePayload = getQueuePayload();
-    expect(queuePayload?.['ack-fail-token']).toBeDefined();
-    expect(queuePayload?.['ack-fail-token']?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
-    expect(queuePayload?.['ack-fail-token']?.nextRetryAt).toBeGreaterThan(Date.now());
-    expect(result.current.isPremium).toBe(true);
-    expect(mockSyncPremiumStatusCallable).toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalled();
-
-    unmount();
-  });
-
-  it('keeps queued purchase when retry worker validation succeeds but finishTransaction fails', async () => {
-    const queuedPurchaseToken = 'queued-ack-fail-token';
-    await AsyncStorage.setItem(
-      queueStorageKey,
-      JSON.stringify({
-        [queuedPurchaseToken]: {
-          purchaseToken: queuedPurchaseToken,
-          productId: 'monthly_showseek_sub',
-          purchaseType: 'subs',
-          createdAt: Date.now() - 1000,
-          updatedAt: Date.now() - 1000,
-          nextRetryAt: Date.now() - 500,
-          lastReason: null,
-        },
-      })
-    );
-    mockGetAvailablePurchases.mockResolvedValue([
-      createSubscriptionPurchase({ purchaseToken: queuedPurchaseToken }),
-    ]);
-    mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
-
-    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    try {
-      await waitForProviderInit();
-
-      await waitFor(() => {
-        expect(mockValidatePurchaseCallable).toHaveBeenCalledWith(
-          expect.objectContaining({
-            purchaseToken: queuedPurchaseToken,
-            productId: 'monthly_showseek_sub',
-            purchaseType: 'subs',
-            source: 'retry_success',
-          })
-        );
-      });
-
-      const queuePayload = getQueuePayload();
-      expect(queuePayload?.[queuedPurchaseToken]).toBeDefined();
-      expect(queuePayload?.[queuedPurchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
-      expect(queuePayload?.[queuedPurchaseToken]?.nextRetryAt).toBeGreaterThan(Date.now());
+    await waitFor(() => {
+      expect(mockConfigureRevenueCat).toHaveBeenCalled();
+      expect(mockLogIn).toHaveBeenCalledWith('test-user-id');
+      expect(result.current.prices.monthly).toBe('$3.00');
+      expect(result.current.prices.yearly).toBe('$12.00');
       expect(result.current.isPremium).toBe(true);
-      expect(alertSpy).toHaveBeenCalled();
-    } finally {
-      unmount();
-    }
+    });
   });
 
-  it('removes pending entry on non-retryable validation error', async () => {
-    mockValidatePurchaseCallable.mockRejectedValueOnce({
-      code: 'functions/failed-precondition',
-      details: {
-        reason: 'PURCHASE_NOT_FOUND_OR_EXPIRED',
-        retryable: false,
-      },
-    });
+  it('purchases a selected package by plan and returns premium success', async () => {
+    const { result } = renderHook(() => usePremium(), { wrapper });
 
-    const { unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
+    await waitFor(() => expect(result.current.prices.monthly).toBe('$3.00'));
 
-    jest.clearAllMocks();
-
+    let purchaseResult = false;
     await act(async () => {
-      await getPurchaseUpdatedCallback()(
-        createSubscriptionPurchase({ purchaseToken: 'terminal-validation-token' })
-      );
+      purchaseResult = await result.current.purchasePremium('monthly');
     });
 
-    expect(getQueuePayload()).toEqual({});
-    expect(alertSpy).toHaveBeenCalled();
-
-    unmount();
-  });
-
-  it('keeps trial lock behavior for TRIAL_ALREADY_USED validation errors', async () => {
-    mockValidatePurchaseCallable.mockRejectedValueOnce({
-      code: 'functions/failed-precondition',
-      details: {
-        reason: 'TRIAL_ALREADY_USED',
-        retryable: false,
-      },
-    });
-
-    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
-
-    jest.clearAllMocks();
-
-    await act(async () => {
-      await getPurchaseUpdatedCallback()(
-        createSubscriptionPurchase({ purchaseToken: 'trial-used-token' })
-      );
-    });
-
-    await waitFor(() => {
-      expect(result.current.monthlyTrial.isEligible).toBe(false);
-    });
-    expect(result.current.monthlyTrial.reasonKey).toBe('premium.freeTrialUsedMessage');
-    expect(alertSpy).not.toHaveBeenCalled();
-
-    unmount();
-  });
-
-  it('does not reinitialize IAP listeners when auth state changes', async () => {
-    const { unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
-
-    expect(mockInitConnection).toHaveBeenCalledTimes(1);
-    expect(mockPurchaseUpdatedListener).toHaveBeenCalledTimes(1);
-    expect(mockEndConnection).not.toHaveBeenCalled();
-
-    await act(async () => {
-      emitAuthStateChange({ uid: SECOND_UID, email: 'second@example.com' });
-    });
-
-    await waitFor(() => {
-      expect(mockInitConnection).toHaveBeenCalledTimes(1);
-      expect(mockPurchaseUpdatedListener).toHaveBeenCalledTimes(1);
-    });
-    expect(mockEndConnection).not.toHaveBeenCalled();
-
-    unmount();
-
-    expect(mockEndConnection).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses latest auth user queue key when purchase listener runs after auth change', async () => {
-    const purchaseToken = 'auth-change-ack-fail-token';
-    const { unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
-
-    await act(async () => {
-      emitAuthStateChange({ uid: SECOND_UID, email: 'second@example.com' });
-    });
-
-    jest.clearAllMocks();
-    mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
-
-    await act(async () => {
-      await getPurchaseUpdatedCallback()(createSubscriptionPurchase({ purchaseToken }));
-    });
-
-    const secondQueuePayload = getQueuePayload(secondQueueStorageKey);
-    expect(secondQueuePayload?.[purchaseToken]).toBeDefined();
-    expect(secondQueuePayload?.[purchaseToken]?.lastReason).toBe(CLIENT_FINISH_TRANSACTION_FAILED);
-    expect(getQueuePayload(queueStorageKey)?.[purchaseToken]).toBeUndefined();
-
-    unmount();
-  });
-
-  it('restores using prioritized purchase order and succeeds on entitled validation', async () => {
-    mockGetAvailablePurchases.mockResolvedValue([
-      createSubscriptionPurchase({
-        purchaseToken: 'monthly-restore-token',
-        productId: 'monthly_showseek_sub',
-      }),
-      createSubscriptionPurchase({
-        purchaseToken: 'yearly-restore-token',
-        productId: 'showseek_yearly_sub',
-      }),
-    ]);
-    mockValidatePurchaseCallable.mockImplementation(({ productId }: { productId: string }) =>
-      Promise.resolve({
-        data: {
-          success: true,
-          isPremium: productId === 'showseek_yearly_sub',
-        },
+    expect(mockPurchasePackage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identifier: '$rc_monthly',
       })
     );
-
-    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
-
-    jest.clearAllMocks();
-
-    let restoreResult = false;
-    await act(async () => {
-      restoreResult = await result.current.restorePurchases();
-    });
-
-    expect(restoreResult).toBe(true);
-    expect(mockValidatePurchaseCallable).toHaveBeenCalled();
-    expect(mockValidatePurchaseCallable.mock.calls[0][0]).toMatchObject({
-      productId: 'showseek_yearly_sub',
-      purchaseToken: 'yearly-restore-token',
-    });
-
-    unmount();
+    expect(purchaseResult).toBe(true);
   });
 
-  it('keeps restore successful when acknowledgment fails and queues retry', async () => {
-    mockGetAvailablePurchases.mockResolvedValue([
-      createSubscriptionPurchase({
-        purchaseToken: 'restore-ack-fail-token',
-        productId: 'showseek_yearly_sub',
-      }),
-    ]);
-    mockFinishTransaction.mockRejectedValueOnce(new Error('finish failed'));
-    mockValidatePurchaseCallable.mockResolvedValue({
-      data: { success: true, isPremium: true },
-    });
-    mockSyncPremiumStatusCallable.mockResolvedValue({
-      data: { success: true, isPremium: true },
+  it('returns false for canceled purchases', async () => {
+    mockPurchasePackage.mockRejectedValueOnce({
+      code: '1',
+      userCancelled: true,
     });
 
-    const { result, unmount } = renderHook(() => usePremium(), { wrapper });
-    await waitForProviderInit();
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(result.current.prices.monthly).toBe('$3.00'));
 
-    jest.clearAllMocks();
-
-    let restoreResult = false;
+    let purchaseResult = true;
     await act(async () => {
-      restoreResult = await result.current.restorePurchases();
+      purchaseResult = await result.current.purchasePremium('monthly');
     });
 
-    expect(restoreResult).toBe(true);
-    const queuePayload = getQueuePayload();
-    expect(queuePayload?.['restore-ack-fail-token']).toBeDefined();
-    expect(queuePayload?.['restore-ack-fail-token']?.lastReason).toBe(
-      CLIENT_FINISH_TRANSACTION_FAILED
-    );
-    expect(alertSpy).toHaveBeenCalled();
+    expect(purchaseResult).toBe(false);
+  });
 
-    unmount();
+  it('keeps premium true from Firestore fallback when RevenueCat is non-premium', async () => {
+    mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(false));
+    mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(false), created: false });
+
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      onNext(createSnapshot({ hasUsedTrial: true, isPremium: true }));
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.monthlyTrial.reasonKey).toBe('premium.freeTrialUsedMessage');
+    });
   });
 });
