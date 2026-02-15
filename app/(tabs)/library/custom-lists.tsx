@@ -2,6 +2,7 @@ import CreateListModal, { CreateListModalRef } from '@/src/components/CreateList
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
+import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -9,20 +10,22 @@ import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, ChevronRight, FolderPlus, Plus } from 'lucide-react-native';
+import { ArrowUpDown, ChevronRight, FolderPlus, Plus, Search } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CustomListsScreen() {
   const router = useRouter();
@@ -31,6 +34,8 @@ export default function CustomListsScreen() {
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const iconBadgeStyles = useIconBadgeStyles();
   const createListModalRef = useRef<CreateListModalRef>(null);
   const listRef = useRef<any>(null);
@@ -68,6 +73,18 @@ export default function CustomListsScreen() {
       }
     });
   }, [lists, sortState]);
+
+  const {
+    searchQuery,
+    isSearchActive,
+    filteredItems: displayLists,
+    deactivateSearch,
+    setSearchQuery,
+    searchButton,
+  } = useHeaderSearch({
+    items: customLists,
+    getSearchableText: (item) => `${item.name} ${item.description ?? ''}`,
+  });
 
   // Only check limits when premium status is confirmed (not loading)
   const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
@@ -110,9 +127,26 @@ export default function CustomListsScreen() {
   };
 
   useLayoutEffect(() => {
+    if (isSearchActive) {
+      navigation.setOptions(
+        getSearchHeaderOptions({
+          searchQuery,
+          onSearchChange: setSearchQuery,
+          onClose: deactivateSearch,
+          placeholder: t('library.searchListPlaceholder'),
+        })
+      );
+      return;
+    }
+
     navigation.setOptions({
+      header: undefined,
+      headerTitle: undefined,
       headerRight: () => (
         <View style={styles.headerButtons}>
+          <HeaderIconButton onPress={searchButton.onPress}>
+            <Search size={22} color={COLORS.text} />
+          </HeaderIconButton>
           <HeaderIconButton onPress={() => setSortModalVisible(true)}>
             <View style={iconBadgeStyles.wrapper}>
               <ArrowUpDown size={22} color={COLORS.text} />
@@ -125,7 +159,18 @@ export default function CustomListsScreen() {
         </View>
       ),
     });
-  }, [navigation, handleCreateList, hasActiveSort]);
+  }, [
+    navigation,
+    handleCreateList,
+    hasActiveSort,
+    isSearchActive,
+    searchQuery,
+    setSearchQuery,
+    deactivateSearch,
+    searchButton,
+    t,
+    iconBadgeStyles,
+  ]);
 
   const handleListPress = useCallback(
     (listId: string) => {
@@ -207,12 +252,17 @@ export default function CustomListsScreen() {
         ) : (
           <FlashList
             ref={listRef}
-            data={customLists}
+            data={displayLists}
             renderItem={renderItem}
             keyExtractor={keyExtractor}
             contentContainerStyle={libraryListStyles.listContent}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={ItemSeparator}
+            ListEmptyComponent={
+              searchQuery ? (
+                <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
+              ) : null
+            }
           />
         )}
       </SafeAreaView>
