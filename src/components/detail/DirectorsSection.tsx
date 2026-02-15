@@ -1,6 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, type CrewMember } from '@/src/api/tmdb';
+import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, SPACING } from '@/src/constants/theme';
+import { useIsPersonFavorited } from '@/src/hooks/useFavoritePersons';
 import React, { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
@@ -12,6 +14,7 @@ const DirectorCard = memo<{
   label: string;
 }>(({ director, onPress, label }) => {
   const styles = useDetailStyles();
+  const { isFavorited } = useIsPersonFavorited(director.id);
   const handlePress = useCallback(() => {
     onPress(director.id);
   }, [director.id, onPress]);
@@ -22,14 +25,17 @@ const DirectorCard = memo<{
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
-      <MediaImage
-        source={{
-          uri: getImageUrl(director.profile_path, TMDB_IMAGE_SIZES.profile.medium),
-        }}
-        style={styles.castImage}
-        contentFit="cover"
-        placeholderType="person"
-      />
+      <View style={styles.castImageContainer}>
+        <MediaImage
+          source={{
+            uri: getImageUrl(director.profile_path, TMDB_IMAGE_SIZES.profile.medium),
+          }}
+          style={styles.castImage}
+          contentFit="cover"
+          placeholderType="person"
+        />
+        {isFavorited && <FavoritePersonBadge />}
+      </View>
       <Text style={styles.castName} numberOfLines={2}>
         {director.name}
       </Text>
