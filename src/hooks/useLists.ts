@@ -1,5 +1,6 @@
-import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
 import { useAuth } from '../context/auth';
@@ -16,7 +17,6 @@ import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 // Stale time for TV show details prefetch (same as useUpcomingReleases)
 const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
-const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
 
 const getMediaMembershipKey = (mediaItem: Pick<ListMediaItem, 'id' | 'media_type'>) =>
   `${mediaItem.id}-${mediaItem.media_type}`;
@@ -150,7 +150,8 @@ export const useAddToList = () => {
         userId,
       ]);
       const listQueryState = queryClient.getQueryState<UserList[]>(['lists', userId]);
-      const hasHydratedListCache = listQueryState?.status === 'success' && previousLists !== undefined;
+      const hasHydratedListCache =
+        listQueryState?.status === 'success' && previousLists !== undefined;
       const membershipQueryState = queryClient.getQueryState<ListMembershipIndex>([
         LIST_MEMBERSHIP_INDEX_QUERY_KEY,
         userId,
@@ -283,16 +284,17 @@ export const useRemoveFromList = () => {
         userId,
       ]);
       const listQueryState = queryClient.getQueryState<UserList[]>(['lists', userId]);
-      const hasHydratedListCache = listQueryState?.status === 'success' && previousLists !== undefined;
+      const hasHydratedListCache =
+        listQueryState?.status === 'success' && previousLists !== undefined;
       const membershipQueryState = queryClient.getQueryState<ListMembershipIndex>([
         LIST_MEMBERSHIP_INDEX_QUERY_KEY,
         userId,
       ]);
       const hasHydratedMembershipCache =
         membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
-      const targetItem = previousLists
-        ?.find((list) => list.id === listId)
-        ?.items?.[mediaId] as ListMediaItem | undefined;
+      const targetItem = previousLists?.find((list) => list.id === listId)?.items?.[mediaId] as
+        | ListMediaItem
+        | undefined;
 
       let appliedListOptimisticUpdate = false;
       let appliedMembershipOptimisticUpdate = false;
@@ -386,13 +388,7 @@ export const useCreateList = () => {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: async ({
-      name,
-      description,
-    }: {
-      name: string;
-      description?: string;
-    }) => {
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       // Check limits only when premium status is confirmed (not loading)
       if (!isPremium && !isPremiumLoading) {
         const lists = queryClient.getQueryData<UserList[]>(['lists', userId]);

@@ -39,6 +39,7 @@ import {
   type WatchHistoryActionsModalRef,
 } from '@/src/components/WatchHistoryActionsModal';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -104,8 +105,6 @@ const canShowReminder = (releaseDate: string | null | undefined): boolean => {
   today.setHours(0, 0, 0, 0);
   return release >= today;
 };
-
-const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
 
 // Helper to auto-add movie to "Already Watched" list
 const tryAutoAddToAlreadyWatched = async (params: {
@@ -550,7 +549,9 @@ export default function MovieDetailScreen() {
             await handleClearWatches();
             toastRef.current?.show(t('watched.watchHistoryCleared'));
           } catch (error) {
-            toastRef.current?.show(error instanceof Error ? error.message : t('watched.failedToClear'));
+            toastRef.current?.show(
+              error instanceof Error ? error.message : t('watched.failedToClear')
+            );
           }
         },
       },
@@ -677,9 +678,7 @@ export default function MovieDetailScreen() {
             onAddToList={() => addToListModalRef.current?.present()}
             onRate={() => setRatingModalVisible(true)}
             onReminder={
-              canShowReminder(displayReleaseDate)
-                ? () => setReminderModalVisible(true)
-                : undefined
+              canShowReminder(displayReleaseDate) ? () => setReminderModalVisible(true) : undefined
             }
             onNote={() =>
               noteSheetRef.current?.present({

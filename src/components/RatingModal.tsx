@@ -1,5 +1,6 @@
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -102,8 +103,6 @@ const starStyles = StyleSheet.create({
     height: '100%',
   },
 });
-
-const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
 
 interface RatingModalProps {
   visible: boolean;

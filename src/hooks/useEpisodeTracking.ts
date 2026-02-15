@@ -1,4 +1,5 @@
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
@@ -9,7 +10,6 @@ import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 const getUserId = () => auth.currentUser?.uid;
 const getShowEpisodeTrackingQueryKey = (userId: string | undefined, tvShowId: number) =>
   ['episodeTracking', userId, tvShowId] as const;
-const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
 
 const invalidateEpisodeTrackingQueries = (
   queryClient: ReturnType<typeof useQueryClient>,
@@ -23,10 +23,7 @@ const invalidateEpisodeTrackingQueries = (
     queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] }),
   ]);
 
-const invalidateListQueries = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  userId: string
-) =>
+const invalidateListQueries = (queryClient: ReturnType<typeof useQueryClient>, userId: string) =>
   Promise.all([
     queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
     queryClient.invalidateQueries({
