@@ -1,18 +1,26 @@
 import { useMediaRating } from '@/src/hooks/useRatings';
 import { renderHook } from '@testing-library/react-native';
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'test-user-id' },
+  }),
+}));
+
 // Mock the rating service
 jest.mock('@/src/services/RatingService', () => ({
   ratingService: {
-    subscribeToUserRatings: jest.fn((onData) => {
-      // Call onData with mock ratings
-      onData([
-        { id: '123', mediaType: 'movie', rating: 8 },
-        { id: '456', mediaType: 'tv', rating: 7 },
-      ]);
-      // Return unsubscribe function
-      return jest.fn();
+    getRating: jest.fn((mediaId: number, mediaType: 'movie' | 'tv') => {
+      if (mediaId === 123 && mediaType === 'movie') {
+        return Promise.resolve({ id: '123', mediaType: 'movie', rating: 8, ratedAt: Date.now() });
+      }
+      if (mediaId === 456 && mediaType === 'tv') {
+        return Promise.resolve({ id: '456', mediaType: 'tv', rating: 7, ratedAt: Date.now() });
+      }
+      return Promise.resolve(null);
     }),
+    getEpisodeRating: jest.fn(),
+    getUserRatings: jest.fn(),
     saveRating: jest.fn(),
     deleteRating: jest.fn(),
     saveEpisodeRating: jest.fn(),
@@ -43,9 +51,40 @@ jest.mock('@tanstack/react-query', () => ({
         ],
         isLoading: false,
         error: null,
+        refetch: jest.fn(),
       };
     }
-    return { data: undefined, isLoading: true, error: null };
+    if (queryKey[0] === 'rating') {
+      const mediaType = queryKey[2];
+      const mediaId = queryKey[3];
+
+      if (mediaType === 'movie' && mediaId === 123) {
+        return {
+          data: { id: '123', mediaType: 'movie', rating: 8, ratedAt: Date.now() },
+          isLoading: false,
+          error: null,
+          refetch: jest.fn(),
+        };
+      }
+
+      if (mediaType === 'tv' && mediaId === 456) {
+        return {
+          data: { id: '456', mediaType: 'tv', rating: 7, ratedAt: Date.now() },
+          isLoading: false,
+          error: null,
+          refetch: jest.fn(),
+        };
+      }
+
+      return {
+        data: null,
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    return { data: undefined, isLoading: true, error: null, refetch: jest.fn() };
   }),
   useMutation: jest.fn(() => ({
     mutate: jest.fn(),

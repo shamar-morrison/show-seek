@@ -1,4 +1,5 @@
-import { collection, DocumentData, getDocs, QuerySnapshot } from 'firebase/firestore';
+import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { collection, DocumentData, QuerySnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { getFirestoreErrorMessage } from '../firebase/firestore';
 import { createTimeoutWithCleanup } from '../utils/timeout';
@@ -43,7 +44,14 @@ export async function fetchUserCollection<T>(
 
   try {
     const ref = collection(db, 'users', user.uid, ...subcollectionPath);
-    const snapshot = await Promise.race([getDocs(ref), timeout.promise]);
+    const snapshot = await Promise.race([
+      auditedGetDocs(ref, {
+        path: `users/${user.uid}/${subcollectionPath.join('/')}`,
+        queryKey: subcollectionPath.join(':') || 'root',
+        callsite: 'firestoreHelpers.fetchUserCollection',
+      }),
+      timeout.promise,
+    ]);
     return mapFn(snapshot);
   } catch (error) {
     const message = getFirestoreErrorMessage(error);

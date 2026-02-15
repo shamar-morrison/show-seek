@@ -3,40 +3,73 @@ import {
   MAX_HOME_LISTS,
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
+import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
 import { auth } from '../firebase/config';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../types/preferences';
 
 /**
- * Hook to subscribe to user preferences with real-time updates
- * Uses useAuth to get the user reactively instead of reading auth.currentUser directly
+ * Hook to read user preferences via query-based caching.
  */
 export const usePreferences = () => {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.uid;
-  const [retryTrigger, setRetryTrigger] = useState(0);
+  const queryEnabled = !!userId && !authLoading;
 
-  const subscribe = useCallback(
-    (onData: (preferences: UserPreferences) => void, onError: (error: Error) => void) =>
-      preferencesService.subscribeToPreferences(onData, onError),
-    [retryTrigger]
-  );
-
-  const query = useRealtimeSubscription<UserPreferences>({
+  const query = useQuery({
     queryKey: ['preferences', userId],
-    enabled: !!userId && !authLoading,
+    queryFn: () => preferencesService.fetchPreferences(userId!),
+    enabled: queryEnabled,
     initialData: DEFAULT_PREFERENCES,
-    subscribe,
-    logLabel: 'usePreferences',
+    initialDataUpdatedAt: 0,
+    staleTime: READ_QUERY_CACHE_WINDOWS.preferencesStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.preferencesGcTimeMs,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const hasLoaded = !!userId && query.hasReceivedData;
-  const isLoading = !!userId && !query.hasReceivedData;
+  const isHydratingInitial = !!userId && query.fetchStatus === 'fetching' && query.dataUpdatedAt === 0;
+  const hasLoaded =
+    !userId || query.dataUpdatedAt > 0 || (!!query.error && query.fetchStatus !== 'fetching');
+  const isLoading = isHydratingInitial;
+
+  useEffect(() => {
+    if (!__DEV__ || !READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
+      return;
+    }
+
+    console.log('[usePreferences] Query lifecycle', {
+      userId: userId ?? null,
+      authLoading,
+      enabled: queryEnabled,
+      status: query.status,
+      fetchStatus: query.fetchStatus,
+      isLoading: query.isLoading,
+      isHydratingInitial,
+      isFetched: query.isFetched,
+      dataUpdatedAt: query.dataUpdatedAt,
+      hasLoaded,
+      error: query.error ? String(query.error) : null,
+      timestamp: Date.now(),
+    });
+  }, [
+    authLoading,
+    queryEnabled,
+    query.status,
+    query.fetchStatus,
+    query.isLoading,
+    query.isFetched,
+    query.dataUpdatedAt,
+    query.error,
+    isHydratingInitial,
+    hasLoaded,
+    userId,
+  ]);
 
   const preferences = useMemo(
     () => (userId ? (query.data ?? DEFAULT_PREFERENCES) : DEFAULT_PREFERENCES),
@@ -45,22 +78,11 @@ export const usePreferences = () => {
 
   const homeScreenLists = preferences.homeScreenLists ?? DEFAULT_HOME_LISTS;
 
-  const refetch = useCallback(() => {
+  const refetch = () => {
     if (userId) {
-      queryClient.removeQueries({ queryKey: ['preferences', userId], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['preferences', userId], exact: true });
     }
-    setRetryTrigger((prev) => prev + 1);
-  }, [queryClient, userId]);
-
-  // Keep query cache in sync unless an optimistic mutation is in progress.
-  useEffect(() => {
-    if (!userId || !query.data) return;
-
-    const isMutating = queryClient.isMutating({ mutationKey: ['updatePreference'] }) > 0;
-    if (!isMutating) {
-      queryClient.setQueryData(['preferences', userId], query.data);
-    }
-  }, [userId, query.data, queryClient]);
+  };
 
   return {
     preferences,
@@ -122,9 +144,8 @@ export const useUpdatePreference = () => {
       }
     },
 
-    // On success, allow subscription to update cache again
+    // On success, allow query to refresh from server source
     onSettled: (_data, _error, _variables, context) => {
-      // Small delay to let Firestore subscription catch up with the correct value
       if (context?.userId) {
         setTimeout(() => {
           queryClient.invalidateQueries({ queryKey: ['preferences', context.userId] });
@@ -180,7 +201,7 @@ export const useUpdateHomeScreenLists = () => {
       }
     },
 
-    // On success, allow subscription to update cache again
+    // On success, refresh server value in cache
     onSettled: (_data, _error, _variables, context) => {
       if (context?.userId) {
         setTimeout(() => {

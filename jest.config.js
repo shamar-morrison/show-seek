@@ -53,7 +53,11 @@ module.exports = {
       transform: {
         '^.+\\.ts$': [
           'ts-jest',
-          { tsconfig: '<rootDir>/functions/tsconfig.json', diagnostics: false },
+          {
+            tsconfig: '<rootDir>/functions/tsconfig.json',
+            diagnostics: false,
+            isolatedModules: true,
+          },
         ],
       },
       clearMocks: true,

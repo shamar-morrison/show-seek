@@ -114,6 +114,7 @@ export function useEnrichedMovieRatings() {
     ...query,
     data: !isLoadingRatings && movieRatings.length === 0 ? [] : query.data,
     isLoading: isLoadingRatings || query.isLoading,
+    error: ratingsError || query.error,
   };
 }
 
@@ -153,5 +154,6 @@ export function useEnrichedTVRatings() {
     ...query,
     data: !isLoadingRatings && tvRatings.length === 0 ? [] : query.data,
     isLoading: isLoadingRatings || query.isLoading,
+    error: ratingsError || query.error,
   };
 }

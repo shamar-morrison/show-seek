@@ -26,16 +26,19 @@ import {
   type PendingValidationPurchase,
   type PendingValidationQueue,
 } from '@/src/context/purchaseValidationRetry';
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { auth, db, functions } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import i18n from '@/src/i18n';
+import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, AppState, Platform } from 'react-native';
 import type { Purchase } from 'react-native-iap';
 import * as RNIap from 'react-native-iap';
 
@@ -80,6 +83,19 @@ interface SyncPremiumStatusResponse {
 interface ProcessPurchaseResult {
   isPremium: boolean;
   validationSucceeded: boolean;
+}
+
+type PremiumWriteSource =
+  | 'purchase_success'
+  | 'restore'
+  | 'retry_success'
+  | 'manual'
+  | 'app_open'
+  | 'unknown';
+
+interface SyncPremiumStatusOptions {
+  source?: PremiumWriteSource;
+  allowDowngrade?: boolean;
 }
 
 const TRIAL_INELIGIBLE_ERROR_CODE = 'TRIAL_INELIGIBLE';
@@ -213,18 +229,48 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [hasUsedTrial, playMonthlyTrial]);
 
-  const syncPremiumStatus = useCallback(async (): Promise<boolean> => {
+  const logPremiumWriteDetected = useCallback(
+    (source: PremiumWriteSource, callsite: string, extra?: Record<string, unknown>) => {
+      if (process.env.NODE_ENV === 'test') {
+        return;
+      }
+
+      console.error('[PREMIUM WRITE DETECTED][CLIENT_CALL]', {
+        source,
+        callsite,
+        userId: user?.uid ?? null,
+        timestamp: Date.now(),
+        stack: new Error().stack,
+        ...(extra || {}),
+      });
+    },
+    [user?.uid]
+  );
+
+  const syncPremiumStatus = useCallback(async (options?: SyncPremiumStatusOptions): Promise<boolean> => {
     if (!user) {
       return false;
     }
 
+    const source = options?.source ?? 'unknown';
+    const allowDowngrade = options?.allowDowngrade === true;
+
     try {
+      logPremiumWriteDetected(source, 'PremiumContext.syncPremiumStatus', {
+        allowDowngrade,
+      });
+
       const syncPremiumStatusFn = httpsCallable(functions, 'syncPremiumStatus');
-      const syncResult = await syncPremiumStatusFn();
+      const syncResult = await syncPremiumStatusFn({
+        source,
+        allowDowngrade,
+      });
       const data = syncResult.data as SyncPremiumStatusResponse;
 
       if (typeof data?.isPremium === 'boolean') {
-        setIsPremium(data.isPremium);
+        if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
+          setIsPremium(data.isPremium);
+        }
         return data.isPremium;
       }
 
@@ -233,7 +279,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       console.error('Error syncing premium status:', err);
       return false;
     }
-  }, [user]);
+  }, [logPremiumWriteDetected, user]);
 
   const clearPendingValidationRetryTimeout = useCallback((purchaseToken: string) => {
     const existingTimeout = pendingValidationRetryTimeoutsRef.current[purchaseToken];
@@ -410,21 +456,31 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   );
 
   const validatePurchaseWithServer = useCallback(
-    async (purchase: {
-      productId: string;
-      purchaseToken: string;
-      purchaseType: PremiumPurchaseType;
-    }): Promise<ValidationResponse> => {
+    async (
+      purchase: {
+        productId: string;
+        purchaseToken: string;
+        purchaseType: PremiumPurchaseType;
+      },
+      source: PremiumWriteSource
+    ): Promise<ValidationResponse> => {
+      logPremiumWriteDetected(source, 'PremiumContext.validatePurchaseWithServer', {
+        productId: purchase.productId,
+        purchaseType: purchase.purchaseType,
+        purchaseTokenPrefix: purchase.purchaseToken.slice(0, 8),
+      });
+
       const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
       const validationResult = await validatePurchaseFn({
         purchaseToken: purchase.purchaseToken,
         productId: purchase.productId,
         purchaseType: purchase.purchaseType,
+        source,
       });
 
       return validationResult.data as ValidationResponse;
     },
-    []
+    [logPremiumWriteDetected]
   );
 
   const findPurchaseByToken = useCallback(
@@ -507,14 +563,16 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             productId: queuedPurchase.productId,
             purchaseToken: queuedPurchase.purchaseToken,
             purchaseType: queuedPurchase.purchaseType,
-          });
+          }, 'retry_success');
 
           if (validationResponse?.success !== true) {
             throw new Error('Purchase validation returned unsuccessful response.');
           }
 
           const isPremiumValidation = validationResponse?.isPremium === true;
-          setIsPremium(isPremiumValidation);
+          if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
+            setIsPremium(isPremiumValidation);
+          }
           const purchaseForFinishing = await findPurchaseByToken(purchaseToken);
           if (!purchaseForFinishing) {
             const errorDetails: PurchaseValidationErrorDetails = {
@@ -568,7 +626,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           }
 
           await removePendingValidationPurchase(purchaseToken);
-          await syncPremiumStatus();
+          await syncPremiumStatus({ source: 'retry_success' });
         } catch (retryError) {
           if (isTrialAlreadyUsedValidationError(retryError)) {
             setHasUsedTrial(true);
@@ -623,9 +681,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const processPurchase = useCallback(
     async (
       purchase: Purchase,
-      options?: { syncAfterSuccess?: boolean }
+      options?: { syncAfterSuccess?: boolean; source?: PremiumWriteSource }
     ): Promise<ProcessPurchaseResult> => {
       const syncAfterSuccess = options?.syncAfterSuccess ?? true;
+      const source = options?.source ?? 'purchase_success';
 
       try {
         console.log('Processing purchase:', purchase.productId);
@@ -645,7 +704,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           purchaseToken,
           productId: purchase.productId,
           purchaseType,
-        });
+        }, source);
         console.log('Validation response:', validationResponse);
 
         if (validationResponse?.success !== true) {
@@ -653,7 +712,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         const isPremiumValidation = validationResponse?.isPremium === true;
-        setIsPremium(isPremiumValidation);
+        if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
+          setIsPremium(isPremiumValidation);
+        }
         try {
           // Acknowledge/finish transaction after successful validation.
           await RNIap.finishTransaction({
@@ -684,7 +745,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           });
 
           if (syncAfterSuccess) {
-            await syncPremiumStatus();
+            await syncPremiumStatus({ source });
           }
 
           return {
@@ -695,7 +756,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         await removePendingValidationPurchase(purchaseToken);
         if (syncAfterSuccess) {
-          await syncPremiumStatus();
+          await syncPremiumStatus({ source });
         }
 
         return {
@@ -858,18 +919,97 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [clearAllPendingValidationRetryTimeouts]);
 
-  // Listen to user's premium status in Firestore
+  // Read premium status from Firestore with strict single-path branching:
+  // - Realtime listener path (default)
+  // - Fetch-based fallback path (when listener is explicitly disabled)
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       setIsPremium(false);
       setHasUsedTrial(false);
       setIsLoading(false);
       return;
     }
 
+    const userId = user.uid;
+
+    if (READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
+      if (__DEV__) {
+        console.log('[PremiumContext] Starting premium listener for:', userId);
+      }
+      setIsLoading(true);
+
+      const unsubscribe = auditedOnSnapshot(
+        doc(db, 'users', userId),
+        async (snapshot) => {
+          // IMPORTANT: Listener is the source of truth.
+          // Any writes from syncPremiumStatus/validatePurchase are reflected here.
+          // Never set premium state directly from API calls in listener mode.
+          if (!snapshot.exists()) {
+            setIsPremium(false);
+            setHasUsedTrial(false);
+            setIsLoading(false);
+            return;
+          }
+
+          const data = snapshot.data() as Record<string, unknown> | undefined;
+          const premiumData = data?.premium as Record<string, unknown> | undefined;
+          const premiumStatus = premiumData?.isPremium === true;
+          const hasTrialHistory =
+            premiumData?.hasUsedTrial === true ||
+            premiumData?.trialConsumedAt != null ||
+            premiumData?.trialStartAt != null;
+
+          if (__DEV__) {
+            console.log('[PremiumContext] Listener update (SOURCE OF TRUTH):', {
+              isPremium: premiumStatus,
+              hasUsedTrial: hasTrialHistory,
+              source: 'firestore_listener',
+            });
+          }
+
+          setIsPremium(premiumStatus);
+          setHasUsedTrial(hasTrialHistory);
+          setIsLoading(false);
+
+          try {
+            await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
+          } catch (cacheError) {
+            console.warn('[PremiumContext] Cache write failed:', cacheError);
+          }
+        },
+        (error) => {
+          console.error('[PremiumContext] Premium listener error:', error);
+          // Fail closed for entitlement security.
+          setIsPremium(false);
+          setHasUsedTrial(false);
+          setIsLoading(false);
+        },
+        {
+          path: `users/${userId}`,
+          queryKey: 'premium-status',
+          callsite: 'PremiumContext.premiumListener',
+        }
+      );
+
+      return () => {
+        if (__DEV__) {
+          console.log('[PremiumContext] Cleaning up premium listener');
+        }
+        unsubscribe();
+      };
+    }
+
+    if (__DEV__) {
+      console.log('[PremiumContext] Using fetch-based premium check (listener disabled)');
+    }
+
+    let isCancelled = false;
+    let lastForegroundRefresh = 0;
+    const FOREGROUND_REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+
     const checkLocalCache = async () => {
       try {
-        const cached = await AsyncStorage.getItem(`isPremium_${user.uid}`);
+        const cached = await AsyncStorage.getItem(`isPremium_${userId}`);
         if (cached === 'true') {
           setIsPremium(true);
           setIsLoading(false);
@@ -879,37 +1019,69 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
     };
 
-    checkLocalCache();
+    const applyPremiumData = async (userData: Record<string, unknown> | null) => {
+      if (isCancelled) return;
 
-    const unsubscribe = onSnapshot(
-      doc(db, 'users', user.uid),
-      async (docSync) => {
-        const data = docSync.data();
-        const premiumData = data?.premium;
-        const premiumStatus = premiumData?.isPremium === true;
-        const hasTrialHistory =
-          premiumData?.hasUsedTrial === true ||
-          premiumData?.trialConsumedAt != null ||
-          premiumData?.trialStartAt != null;
-        setIsPremium(premiumStatus);
-        setHasUsedTrial(hasTrialHistory);
+      // Null payload means "no fresh user document data"; do not treat it as
+      // a definitive entitlement revoke in fallback mode.
+      if (!userData) {
         setIsLoading(false);
+        return;
+      }
 
-        // Update local cache
-        try {
-          await AsyncStorage.setItem(`isPremium_${user.uid}`, String(premiumStatus));
-        } catch (err) {
-          console.warn('Failed to write premium cache:', err);
-        }
-      },
-      (err) => {
+      const premiumData = userData?.premium as Record<string, unknown> | undefined;
+      const premiumStatus = premiumData?.isPremium === true;
+      const hasTrialHistory =
+        premiumData?.hasUsedTrial === true ||
+        premiumData?.trialConsumedAt != null ||
+        premiumData?.trialStartAt != null;
+
+      setIsPremium(premiumStatus);
+      setHasUsedTrial(hasTrialHistory);
+      setIsLoading(false);
+
+      try {
+        await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
+      } catch (err) {
+        console.warn('Failed to write premium cache:', err);
+      }
+    };
+
+    const refreshPremiumFromFirestore = async (forceRefresh = false) => {
+      if (isCancelled) return;
+
+      const now = Date.now();
+      if (!forceRefresh && now - lastForegroundRefresh < FOREGROUND_REFRESH_COOLDOWN_MS) {
+        return;
+      }
+      lastForegroundRefresh = now;
+
+      try {
+        const userData = await getCachedUserDocument(userId, {
+          forceRefresh,
+          callsite: 'PremiumContext.refreshPremiumFromFirestore',
+        });
+        await applyPremiumData(userData);
+      } catch (err) {
         console.error('Error fetching premium status:', err);
         setIsLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [user]);
+    checkLocalCache();
+    refreshPremiumFromFirestore(true);
+
+    const appStateSubscription = AppState?.addEventListener?.('change', (nextState) => {
+      if (nextState === 'active') {
+        refreshPremiumFromFirestore();
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+      appStateSubscription?.remove?.();
+    };
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user) {
@@ -920,7 +1092,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
     const syncOnAppOpen = async () => {
       await createUserDocument(user);
-      await syncPremiumStatus();
       await retryPendingValidationPurchases('app-open');
 
       if (isCancelled) {
@@ -933,7 +1104,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       isCancelled = true;
     };
-  }, [retryPendingValidationPurchases, syncPremiumStatus, user]);
+  }, [retryPendingValidationPurchases, user]);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     try {
@@ -948,22 +1119,23 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
       if (knownPurchases.length === 0) {
         console.log('No known premium purchase found in history');
-        await syncPremiumStatus();
         return false;
       }
 
       for (const purchase of knownPurchases) {
-        const restoreResult = await processPurchase(purchase, { syncAfterSuccess: false });
+        const restoreResult = await processPurchase(purchase, {
+          syncAfterSuccess: false,
+          source: 'restore',
+        });
 
         if (shouldTreatRestoreAsSuccess(restoreResult)) {
           await retryPendingValidationPurchases('restore-success');
-          await syncPremiumStatus();
+          await syncPremiumStatus({ source: 'restore' });
           return true;
         }
       }
 
       await retryPendingValidationPurchases('restore-complete');
-      await syncPremiumStatus();
       return false;
     } catch (err: any) {
       console.error('Restore error detail:', err);
@@ -1116,7 +1288,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         if (didConsumeLegacy) {
-          await syncPremiumStatus();
+          await syncPremiumStatus({ source: 'manual', allowDowngrade: true });
         }
 
         if (topSubscriptionPurchase) {

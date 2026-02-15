@@ -1,4 +1,9 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+  auditedOnSnapshot,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   arrayRemove,
@@ -6,9 +11,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -83,7 +85,7 @@ class CollectionTrackingService {
       }
     }, 10000);
 
-    unsubscribeSnapshot = onSnapshot(
+    unsubscribeSnapshot = auditedOnSnapshot(
       collectionRef,
       (snapshot) => {
         // Clear timeout on first event
@@ -122,6 +124,11 @@ class CollectionTrackingService {
         }
         // Graceful degradation
         callback([]);
+      },
+      {
+        path: `users/${user.uid}/collection_tracking`,
+        queryKey: 'collectionTrackingAll',
+        callsite: 'CollectionTrackingService.subscribeToTrackedCollections',
       }
     );
 
@@ -177,7 +184,7 @@ class CollectionTrackingService {
       }
     }, 10000);
 
-    unsubscribeSnapshot = onSnapshot(
+    unsubscribeSnapshot = auditedOnSnapshot(
       trackingRef,
       (snapshot) => {
         // Clear timeout on first event
@@ -215,6 +222,11 @@ class CollectionTrackingService {
           onError(new Error(message));
         }
         callback(null);
+      },
+      {
+        path: `users/${user.uid}/collection_tracking/${collectionId}`,
+        queryKey: 'collectionTrackingById',
+        callsite: 'CollectionTrackingService.subscribeToCollection',
       }
     );
 
@@ -239,7 +251,11 @@ class CollectionTrackingService {
     if (!user) return false;
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
-    const snapshot = await getDoc(trackingRef);
+    const snapshot = await auditedGetDoc(trackingRef, {
+      path: `users/${user.uid}/collection_tracking/${collectionId}`,
+      queryKey: 'collectionTrackingById',
+      callsite: 'CollectionTrackingService.isCollectionTracked',
+    });
     return snapshot.exists();
   }
 
@@ -254,7 +270,14 @@ class CollectionTrackingService {
     const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
 
     try {
-      const snapshot = await Promise.race([getDocs(collectionRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDocs(collectionRef, {
+          path: `users/${user.uid}/collection_tracking`,
+          queryKey: 'collectionTrackingAll',
+          callsite: 'CollectionTrackingService.getTrackedCollectionCount',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
       return snapshot.docs.length;
@@ -311,7 +334,14 @@ class CollectionTrackingService {
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
       // First, get the watched movie IDs to return (with timeout)
-      const snapshot = await Promise.race([getDoc(trackingRef), getDocTimeoutHelper.promise]);
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/collection_tracking/${collectionId}`,
+          queryKey: 'collectionTrackingById',
+          callsite: 'CollectionTrackingService.stopTracking',
+        }),
+        getDocTimeoutHelper.promise,
+      ]);
       getDocTimeoutHelper.cancel(); // Cancel immediately after success
       const watchedMovieIds: number[] = snapshot.exists()
         ? snapshot.data()?.watchedMovieIds || []
@@ -407,7 +437,14 @@ class CollectionTrackingService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const snapshot = await Promise.race([getDocs(collectionRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDocs(collectionRef, {
+          path: `users/${user.uid}/collection_tracking`,
+          queryKey: 'collectionTrackingAll',
+          callsite: 'CollectionTrackingService.getAllTrackedCollections',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
 

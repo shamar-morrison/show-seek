@@ -1,6 +1,7 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -27,7 +28,7 @@ export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
-  const { data: lists, isLoading } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
@@ -174,6 +175,21 @@ export default function CustomListsScreen() {
 
   if (isLoading) {
     return <FullScreenLoading />;
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          title={t('library.customLists')}
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   return (

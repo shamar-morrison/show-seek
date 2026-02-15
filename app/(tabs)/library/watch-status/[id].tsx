@@ -5,6 +5,7 @@ import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaGrid, MediaGridRef } from '@/src/components/library/MediaGrid';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import ListActionsModal, {
   ListActionsIcon,
@@ -47,7 +48,7 @@ const HEADER_FOOTER_CHROME_HEIGHT = 150;
 export default function WatchStatusDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: lists, isLoading } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists();
   const removeMutation = useRemoveFromList();
   const { t } = useTranslation();
   const movieLabel = t('media.movie');
@@ -311,6 +312,22 @@ export default function WatchStatusDetailScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (isError) {
+    return (
+      <View style={screenStyles.container}>
+        <Stack.Screen options={{ title: listTitle }} />
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          title={t('library.watchStatus')}
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </View>
+    );
   }
 
   if (!listConfig) {

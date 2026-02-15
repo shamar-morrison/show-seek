@@ -3,8 +3,9 @@
  */
 
 import { db } from '@/src/firebase/config';
+import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
 import { User } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 export interface UserDocument {
   uid: string;
@@ -53,26 +54,29 @@ export async function createUserDocument(user: User): Promise<void> {
   const normalizedPhotoURL = normalizePhotoURL(user.photoURL);
 
   try {
-    const existingDoc = await getDoc(userRef);
+    const existingData = await getCachedUserDocument(user.uid, {
+      callsite: 'createUserDocument',
+    });
 
-    if (existingDoc.exists()) {
+    if (existingData) {
+      const existingUserData = existingData as Partial<UserDocument>;
       // Update only fields that might have changed (e.g., photoURL from Google)
-      const existingData = existingDoc.data() as Partial<UserDocument>;
       const updates: Partial<UserDocument> = {};
 
       // Update photoURL if it changed (e.g., user updated their Google profile pic)
-      if (normalizedPhotoURL !== (existingData.photoURL ?? null)) {
+      if (normalizedPhotoURL !== (existingUserData.photoURL ?? null)) {
         updates.photoURL = normalizedPhotoURL;
       }
 
       // Update displayName if it changed (or if it was missing)
-      if (normalizedDisplayName !== existingData.displayName) {
+      if (normalizedDisplayName !== existingUserData.displayName) {
         updates.displayName = normalizedDisplayName;
       }
 
       // Only write if there are updates
       if (Object.keys(updates).length > 0) {
         await setDoc(userRef, updates, { merge: true });
+        mergeUserDocumentCache(user.uid, updates as Record<string, unknown>);
       }
     } else {
       // Create new document
@@ -85,6 +89,12 @@ export async function createUserDocument(user: User): Promise<void> {
       };
 
       await setDoc(userRef, userData);
+      mergeUserDocumentCache(user.uid, {
+        uid: user.uid,
+        displayName: normalizedDisplayName,
+        email: normalizedEmail,
+        photoURL: normalizedPhotoURL,
+      });
     }
   } catch (error) {
     console.warn('Failed to create/update user document:', error);

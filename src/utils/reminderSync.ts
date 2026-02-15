@@ -1,13 +1,14 @@
 import { tmdbApi } from '@/src/api/tmdb';
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { auth, db } from '@/src/firebase/config';
 import { reminderService } from '@/src/services/ReminderService';
+import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { Reminder } from '@/src/types/reminder';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   collection,
   doc,
   DocumentReference,
-  getDocs,
   query,
   setDoc,
   where,
@@ -75,7 +76,11 @@ export async function syncReminders(): Promise<void> {
 
     const remindersRef = collection(db, 'users', user.uid, 'reminders');
     const q = query(remindersRef, where('status', '==', 'active'));
-    const snapshot = await getDocs(q);
+    const snapshot = await auditedGetDocs(q, {
+      path: `users/${user.uid}/reminders`,
+      queryKey: 'activeReminders',
+      callsite: 'reminderSync.syncReminders',
+    });
 
     const reminders: Reminder[] = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -235,6 +240,11 @@ export async function syncReminders(): Promise<void> {
  * Call this from app/_layout.tsx
  */
 export async function initializeReminderSync(): Promise<void> {
+  if (!READ_OPTIMIZATION_FLAGS.enableStartupReminderSync) {
+    console.log('[reminderSync] Startup sync disabled by read optimization flag');
+    return;
+  }
+
   const needsSync = await shouldSync();
 
   if (needsSync) {

@@ -1,12 +1,14 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+  auditedOnSnapshot,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteField,
   doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -48,7 +50,7 @@ class EpisodeTrackingService {
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
 
-    return onSnapshot(
+    return auditedOnSnapshot(
       trackingRef,
       (snapshot) => {
         if (snapshot.exists()) {
@@ -67,6 +69,11 @@ class EpisodeTrackingService {
         }
         // Graceful degradation
         callback(null);
+      },
+      {
+        path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+        queryKey: 'episodeTrackingByShow',
+        callsite: 'EpisodeTrackingService.subscribeToShowTracking',
       }
     );
   }
@@ -150,7 +157,14 @@ class EpisodeTrackingService {
       const timeout = createTimeoutWithCleanup(10000);
 
       // First check if the document exists to avoid "not-found" errors
-      const snapshot = await Promise.race([getDoc(trackingRef), timeout.promise]).finally(() => {
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+          queryKey: 'episodeTrackingByShow',
+          callsite: 'EpisodeTrackingService.markEpisodeUnwatched',
+        }),
+        timeout.promise,
+      ]).finally(() => {
         timeout.cancel();
       });
       if (!snapshot.exists()) {
@@ -320,7 +334,11 @@ class EpisodeTrackingService {
 
       const timeout = createTimeoutWithCleanup(10000);
       const snapshot = await Promise.race([
-        getDocs(trackingCollectionRef),
+        auditedGetDocs(trackingCollectionRef, {
+          path: `users/${userId}/episode_tracking`,
+          queryKey: 'episodeTrackingAllShows',
+          callsite: 'EpisodeTrackingService.getAllWatchedShows',
+        }),
         timeout.promise,
       ]).finally(() => {
         timeout.cancel();

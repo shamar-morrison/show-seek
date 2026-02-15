@@ -1,9 +1,13 @@
+import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { Note, NoteInput } from '@/src/types/note';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
+import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { noteService } from '../services/NoteService';
+
+const getStatusReadsEnabled = () =>
+  !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
 
 /**
  * Hook to manage all notes for the current user.
@@ -25,30 +29,22 @@ export const useNotes = () => {
     previousUserIdRef.current = userId;
   }, [userId, queryClient]);
 
-  const subscribe = useCallback(
-    (onData: (data: Note[]) => void, onError: (error: Error) => void) => {
-      if (!userId) return () => {};
-      return noteService.subscribeToUserNotes(userId, onData, onError);
-    },
-    [userId]
-  );
-
-  const query = useRealtimeSubscription<Note[]>({
+  const query = useQuery({
     queryKey: ['notes', userId],
+    queryFn: () => noteService.getUserNotes(userId!),
     enabled: !!userId,
-    initialData: [],
-    subscribe,
-    logLabel: 'useNotes',
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
     ...query,
+    data: query.data ?? [],
   };
 };
 
 /**
  * Hook to get a specific note for a media item.
- * Filters from the global notes cache.
  */
 export const useMediaNote = (
   mediaType: 'movie' | 'tv' | 'episode',
@@ -56,20 +52,21 @@ export const useMediaNote = (
   seasonNumber?: number,
   episodeNumber?: number
 ) => {
-  const { data: notes, isLoading } = useNotes();
+  const { user } = useAuth();
+  const userId = user?.uid;
 
-  const note = notes?.find((n) => {
-    if (n.mediaType !== mediaType || n.mediaId !== mediaId) return false;
-    if (mediaType === 'episode') {
-      return n.seasonNumber === seasonNumber && n.episodeNumber === episodeNumber;
-    }
-    return true;
+  const query = useQuery({
+    queryKey: ['note', userId, mediaType, mediaId, seasonNumber ?? null, episodeNumber ?? null],
+    queryFn: () => noteService.getNote(userId!, mediaType, mediaId, seasonNumber, episodeNumber),
+    enabled: !!userId && !!mediaId && getStatusReadsEnabled(),
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
   return {
-    note: note || null,
-    hasNote: !!note,
-    isLoading,
+    note: query.data || null,
+    hasNote: !!query.data,
+    isLoading: query.isLoading,
   };
 };
 
@@ -77,6 +74,7 @@ export const useMediaNote = (
  * Mutation hook to save a note (separate export like useRateMedia)
  */
 export const useSaveNote = () => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
 
@@ -85,6 +83,23 @@ export const useSaveNote = () => {
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.saveNote(userId, noteData);
     },
+    onSuccess: async (_data, noteData) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notes', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: [
+            'note',
+            userId,
+            noteData.mediaType,
+            noteData.mediaId,
+            noteData.seasonNumber ?? null,
+            noteData.episodeNumber ?? null,
+          ],
+        }),
+      ]);
+    },
   });
 };
 
@@ -92,6 +107,7 @@ export const useSaveNote = () => {
  * Mutation hook to delete a note (separate export like useDeleteRating)
  */
 export const useDeleteNote = () => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
 
@@ -109,6 +125,23 @@ export const useDeleteNote = () => {
     }) => {
       if (!userId) throw new Error('Please sign in to continue');
       return noteService.deleteNote(userId, mediaType, mediaId, seasonNumber, episodeNumber);
+    },
+    onSuccess: async (_data, variables) => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['notes', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: [
+            'note',
+            userId,
+            variables.mediaType,
+            variables.mediaId,
+            variables.seasonNumber ?? null,
+            variables.episodeNumber ?? null,
+          ],
+        }),
+      ]);
     },
   });
 };

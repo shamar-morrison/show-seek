@@ -1,4 +1,8 @@
-import { DEFAULT_LIST_IDS, LIST_INDICATOR_CONFIG } from '@/src/constants/listIndicators';
+import {
+  CUSTOM_LIST_INDICATOR_ID,
+  DEFAULT_LIST_IDS,
+  LIST_INDICATOR_CONFIG,
+} from '@/src/constants/listIndicators';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -16,8 +20,13 @@ interface ListMembershipBadgeProps {
  */
 export const ListMembershipBadge = memo<ListMembershipBadgeProps>(
   ({ listIds = [], size = 'small' }) => {
-    // Filter to only show default lists that this item is in
-    const visibleLists = DEFAULT_LIST_IDS.filter((id) => listIds.includes(id));
+    const defaultVisibleLists = DEFAULT_LIST_IDS.filter((id) => listIds.includes(id));
+    const hasCustomList = listIds.some(
+      (listId) => !DEFAULT_LIST_IDS.includes(listId as (typeof DEFAULT_LIST_IDS)[number])
+    );
+    const visibleLists = hasCustomList
+      ? [...defaultVisibleLists, CUSTOM_LIST_INDICATOR_ID]
+      : defaultVisibleLists;
 
     if (visibleLists.length === 0) {
       return null;
@@ -97,8 +106,13 @@ interface InlineListIndicatorsProps {
  */
 export const InlineListIndicators = memo<InlineListIndicatorsProps>(
   ({ listIds, size = 'small' }) => {
-    // Filter to only show default lists that this item is in
-    const visibleLists = DEFAULT_LIST_IDS.filter((id) => listIds.includes(id));
+    const defaultVisibleLists = DEFAULT_LIST_IDS.filter((id) => listIds.includes(id));
+    const hasCustomList = listIds.some(
+      (listId) => !DEFAULT_LIST_IDS.includes(listId as (typeof DEFAULT_LIST_IDS)[number])
+    );
+    const visibleLists = hasCustomList
+      ? [...defaultVisibleLists, CUSTOM_LIST_INDICATOR_ID]
+      : defaultVisibleLists;
 
     if (visibleLists.length === 0) {
       return null;

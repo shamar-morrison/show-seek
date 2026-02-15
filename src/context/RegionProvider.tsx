@@ -99,15 +99,32 @@ export function RegionProvider({ children }: RegionProviderProps) {
 
   // 1. Load from AsyncStorage on mount (instant)
   useEffect(() => {
+    let isMounted = true;
+
     const initRegion = async () => {
-      const storedRegion = await getStoredRegion();
-      const safeRegion = isSupportedRegionCode(storedRegion) ? storedRegion : DEFAULT_REGION;
-      setRegionState(safeRegion);
-      setApiRegion(safeRegion);
-      setIsRegionReady(true);
+      try {
+        const storedRegion = await getStoredRegion();
+        const safeRegion = isSupportedRegionCode(storedRegion) ? storedRegion : DEFAULT_REGION;
+
+        if (isMounted) {
+          setRegionState(safeRegion);
+        }
+        setApiRegion(safeRegion);
+      } catch (error) {
+        console.error('[RegionProvider] Init failed, using default region:', error);
+        setApiRegion(DEFAULT_REGION);
+      } finally {
+        if (isMounted) {
+          setIsRegionReady(true);
+        }
+      }
     };
 
-    initRegion();
+    void initRegion();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 2. Sync from Firebase on login (cross-device restore)

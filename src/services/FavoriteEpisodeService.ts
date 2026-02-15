@@ -1,13 +1,17 @@
 import { auth, db } from '@/src/firebase/config';
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+  auditedOnSnapshot,
+} from '@/src/services/firestoreReadAudit';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { createTimeout } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
-  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -28,6 +32,18 @@ interface SubscriptionEntry {
 }
 
 class FavoriteEpisodeService {
+  private isDebugLoggingEnabled() {
+    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+  }
+
+  private logDebug(event: string, payload: Record<string, unknown>) {
+    if (!this.isDebugLoggingEnabled()) {
+      return;
+    }
+
+    console.log(`[FavoriteEpisodeService.${event}]`, payload);
+  }
+
   /**
    * Subscription registry: maps userId to active subscription entry
    * This ensures only one Firestore listener per userId, shared by all hook instances
@@ -97,7 +113,7 @@ class FavoriteEpisodeService {
     const episodesRef = this.getFavoriteEpisodesCollection(userId);
     const q = query(episodesRef, orderBy('addedAt', 'desc'));
 
-    const unsubscribe = onSnapshot(
+    const unsubscribe = auditedOnSnapshot(
       q,
       (snapshot) => {
         const episodes = snapshot.docs.map((doc) => doc.data() as FavoriteEpisode);
@@ -116,6 +132,11 @@ class FavoriteEpisodeService {
         if (entry) {
           entry.errorCallbacks.forEach((cb) => cb(new Error(message)));
         }
+      },
+      {
+        path: `users/${userId}/favorite_episodes`,
+        queryKey: 'favoriteEpisodes',
+        callsite: 'FavoriteEpisodeService.subscribeToFavoriteEpisodes',
       }
     );
 
@@ -195,14 +216,65 @@ class FavoriteEpisodeService {
         throw new Error('Please sign in to continue');
       }
 
+      this.logDebug('getFavoriteEpisodes:start', {
+        userId,
+        path: `users/${userId}/favorite_episodes`,
+      });
+
       const episodesRef = this.getFavoriteEpisodesCollection(userId);
       const q = query(episodesRef, orderBy('addedAt', 'desc'));
-      const snapshot = await Promise.race([getDocs(q), createTimeout()]);
+      const snapshot = await Promise.race([
+        auditedGetDocs(q, {
+          path: `users/${userId}/favorite_episodes`,
+          queryKey: 'favoriteEpisodes',
+          callsite: 'FavoriteEpisodeService.getFavoriteEpisodes',
+        }),
+        createTimeout(),
+      ]);
 
-      return snapshot.docs.map((doc) => doc.data() as FavoriteEpisode);
+      const episodes = snapshot.docs.map((doc) => doc.data() as FavoriteEpisode);
+      this.logDebug('getFavoriteEpisodes:result', {
+        userId,
+        docCount: snapshot.size,
+        resultCount: episodes.length,
+      });
+      return episodes;
     } catch (error) {
+      this.logDebug('getFavoriteEpisodes:error', {
+        userId,
+        error,
+      });
       const message = getFirestoreErrorMessage(error);
       console.error('[FavoriteEpisodeService] getFavoriteEpisodes error:', error);
+      throw new Error(message);
+    }
+  }
+
+  async getFavoriteEpisode(userId: string, episodeId: string): Promise<FavoriteEpisode | null> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.uid !== userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const episodeRef = this.getFavoriteEpisodeRef(userId, episodeId);
+      const snapshot = await Promise.race([
+        auditedGetDoc(episodeRef, {
+          path: `users/${userId}/favorite_episodes/${episodeId}`,
+          queryKey: 'favoriteEpisodeById',
+          callsite: 'FavoriteEpisodeService.getFavoriteEpisode',
+        }),
+        createTimeout(),
+      ]);
+
+      if (!snapshot.exists()) {
+        return null;
+      }
+
+      return snapshot.data() as FavoriteEpisode;
+    } catch (error) {
+      const message = getFirestoreErrorMessage(error);
+      console.error('[FavoriteEpisodeService] getFavoriteEpisode error:', error);
       throw new Error(message);
     }
   }

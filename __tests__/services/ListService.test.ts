@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -19,6 +19,10 @@ jest.mock('@/src/firebase/firestore', () => ({
 }));
 
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
+import {
+  clearFirestoreReadAuditEvents,
+  getFirestoreReadAuditReport,
+} from '@/src/services/firestoreReadAudit';
 
 describe('ListService', () => {
   beforeEach(() => {
@@ -207,6 +211,70 @@ describe('ListService', () => {
         'favorites',
         'dropped',
       ]);
+    });
+  });
+
+  describe('getListMembershipIndex', () => {
+    it('builds a complete membership index and records a single audited fetch', async () => {
+      const mockCollectionRef = { path: 'users/test-user-id/lists' };
+      (collection as jest.Mock).mockReturnValue(mockCollectionRef);
+
+      const mockSnapshot = {
+        size: 6,
+        docs: [
+          {
+            id: 'watchlist',
+            data: () => ({
+              items: {
+                101: { id: 101, media_type: 'movie' },
+                202: { id: 202, media_type: 'tv' },
+              },
+            }),
+          },
+          {
+            id: 'favorites',
+            data: () => ({
+              items: {
+                101: { id: 101, media_type: 'movie' },
+              },
+            }),
+          },
+          {
+            id: 'custom-1',
+            data: () => ({
+              items: {
+                303: { id: 303, media_type: 'movie' },
+              },
+            }),
+          },
+          { id: 'currently-watching', data: () => ({ items: {} }) },
+          { id: 'already-watched', data: () => ({ items: {} }) },
+          { id: 'dropped', data: () => ({ items: {} }) },
+        ],
+      };
+
+      (getDocs as jest.Mock).mockResolvedValue(mockSnapshot);
+      clearFirestoreReadAuditEvents();
+
+      const membership = await listService.getListMembershipIndex('test-user-id');
+
+      expect(membership).toEqual({
+        '101-movie': ['watchlist', 'favorites'],
+        '202-tv': ['watchlist'],
+        '303-movie': ['custom-1'],
+      });
+      expect(getDocs).toHaveBeenCalledTimes(1);
+
+      const report = getFirestoreReadAuditReport();
+      const membershipCallsite = report.byCallsite.find(
+        (entry) => entry.name === 'ListService.getListMembershipIndex'
+      );
+
+      expect(membershipCallsite?.reads).toBe(6);
+      expect(report.byOperation.find((entry) => entry.name === 'getDocs')?.reads).toBe(6);
+      expect(report.byPath.find((entry) => entry.name === 'users/test-user-id/lists')?.reads).toBe(
+        6
+      );
     });
   });
 });

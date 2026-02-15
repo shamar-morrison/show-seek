@@ -1,6 +1,7 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
+import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
@@ -41,7 +42,7 @@ export default function FavoritePeopleScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
-  const { data: favoritePersons, isLoading } = useFavoritePersons();
+  const { data: favoritePersons, isLoading, error, refetch } = useFavoritePersons();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -202,6 +203,20 @@ export default function FavoritePeopleScreen() {
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <View style={libraryListStyles.divider} />
+        <QueryErrorState
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      </SafeAreaView>
+    );
   }
 
   if (sortedPersons.length === 0) {

@@ -19,6 +19,8 @@ jest.mock('@/src/services/RatingService', () => ({
 }));
 
 jest.mock('@/src/hooks/useRatings', () => ({
+  useRateMedia: () => ({ mutateAsync: jest.fn() }),
+  useDeleteRating: () => ({ mutateAsync: jest.fn() }),
   useRateEpisode: () => ({ mutateAsync: jest.fn() }),
   useDeleteEpisodeRating: () => ({ mutateAsync: jest.fn() }),
 }));

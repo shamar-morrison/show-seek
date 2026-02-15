@@ -1,17 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useIsEpisodeFavorited } from '@/src/hooks/useFavoriteEpisodes';
 
-// Mock useRealtimeSubscription
-jest.mock('@/src/hooks/useRealtimeSubscription', () => ({
-  useRealtimeSubscription: jest.fn(() => ({
-    data: [
-      { id: '123-1-5', tvShowId: 123, seasonNumber: 1, episodeNumber: 5 },
-      { id: '456-2-10', tvShowId: 456, seasonNumber: 2, episodeNumber: 10 },
-    ],
-    isLoading: false,
-  })),
-}));
-
 // Mock useAuth
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({ user: { uid: 'test-user-id' } }),
@@ -19,7 +8,18 @@ jest.mock('@/src/context/auth', () => ({
 
 // Mock React Query
 jest.mock('@tanstack/react-query', () => ({
-  useQueryClient: jest.fn(),
+  useQueryClient: jest.fn(() => ({
+    removeQueries: jest.fn(),
+  })),
+  useQuery: jest.fn(() => ({
+    data: [
+      { id: '123-1-5', tvShowId: 123, seasonNumber: 1, episodeNumber: 5 },
+      { id: '456-2-10', tvShowId: 456, seasonNumber: 2, episodeNumber: 10 },
+    ],
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
   useMutation: jest.fn(() => ({
     mutate: jest.fn(),
     mutateAsync: jest.fn(),

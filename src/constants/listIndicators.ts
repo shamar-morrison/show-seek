@@ -1,4 +1,4 @@
-import { Bookmark, Circle, Heart, Play, X } from 'lucide-react-native';
+import { Bookmark, Circle, Folder, Heart, Play, X } from 'lucide-react-native';
 
 /**
  * Centralized configuration for list indicator icons and colors.
@@ -24,6 +24,7 @@ export const LIST_INDICATOR_CONFIG: Record<string, ListIndicatorConfig> = {
   'already-watched': { icon: Circle, color: '#22C55E' }, // Green - Dot/Circle icon
   favorites: { icon: Heart, color: '#EF4444' }, // Red
   dropped: { icon: X, color: '#6B7280' }, // Gray
+  custom: { icon: Folder, color: '#8B5CF6' }, // Purple - user-defined custom list
 };
 
 // Individual color exports for direct use
@@ -43,6 +44,8 @@ export const DEFAULT_LIST_IDS = [
   'favorites',
   'dropped',
 ] as const;
+
+export const CUSTOM_LIST_INDICATOR_ID = 'custom' as const;
 
 /**
  * Get the icon configuration for a list ID

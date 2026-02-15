@@ -6,8 +6,9 @@
  * Used for watch providers, release dates, and certifications.
  */
 import { auth, db } from '@/src/firebase/config';
+import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 const REGION_KEY = 'showseek_region';
 const DEFAULT_REGION = 'US';
@@ -50,6 +51,7 @@ export async function syncRegionToFirebase(region: string): Promise<void> {
 
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { region }, { merge: true });
+    mergeUserDocumentCache(user.uid, { region });
   } catch (error) {
     // Non-critical — local cache is the source of truth for speed.
     console.error('[regionStorage] Firebase sync error:', error);
@@ -65,11 +67,12 @@ export async function fetchRegionFromFirebase(): Promise<string | null> {
     const user = auth.currentUser;
     if (!user) return null;
 
-    const userRef = doc(db, 'users', user.uid);
-    const snapshot = await getDoc(userRef);
+    const userData = await getCachedUserDocument(user.uid, {
+      callsite: 'regionStorage.fetchRegionFromFirebase',
+    });
 
-    if (snapshot.exists()) {
-      const region = snapshot.data()?.region;
+    if (userData) {
+      const region = userData.region;
       if (typeof region === 'string') return region;
     }
     return null;

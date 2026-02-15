@@ -13,6 +13,12 @@ jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
 }));
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'test-user-id' },
+  }),
+}));
+
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     currentUser: { uid: 'test-user-id' },

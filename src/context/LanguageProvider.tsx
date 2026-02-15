@@ -72,16 +72,31 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
 
   // Initialize language on mount from AsyncStorage
   useEffect(() => {
+    let isMounted = true;
+
     const initLanguage = async () => {
-      const storedLanguage = await getStoredLanguage();
-      setLanguageState(storedLanguage);
-      setApiLanguage(storedLanguage);
-      // Sync i18next with stored language
-      await i18n.changeLanguage(storedLanguage);
-      setIsLanguageReady(true);
+      try {
+        const storedLanguage = await getStoredLanguage();
+        if (!isMounted) return;
+
+        setLanguageState(storedLanguage);
+        setApiLanguage(storedLanguage);
+        // Sync i18next with stored language
+        await i18n.changeLanguage(storedLanguage);
+      } catch (error) {
+        console.error('[LanguageProvider] Init failed, using default language:', error);
+      } finally {
+        if (isMounted) {
+          setIsLanguageReady(true);
+        }
+      }
     };
 
-    initLanguage();
+    void initLanguage();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Reset all TMDB-related queries to refetch in new language

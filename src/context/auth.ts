@@ -1,5 +1,6 @@
 import { auth } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
@@ -26,16 +27,45 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Check onboarding status
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const checkOnboarding = async () => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Onboarding status check timed out'));
+        }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+      });
+
       try {
-        const value = await AsyncStorage.getItem('hasCompletedOnboarding');
+        const value = (await Promise.race([
+          AsyncStorage.getItem('hasCompletedOnboarding'),
+          timeoutPromise,
+        ])) as string | null;
+
+        if (!isMounted) return;
         setHasCompletedOnboarding(value === 'true');
       } catch (e) {
-        console.error('Error reading onboarding status', e);
-        setHasCompletedOnboarding(false);
+        console.error('[Auth] Onboarding check failed, defaulting to false:', e);
+        if (isMounted) {
+          setHasCompletedOnboarding(false);
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
       }
     };
-    checkOnboarding();
+
+    void checkOnboarding();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   // Hydrate persisted userId for diagnostics/metadata only.

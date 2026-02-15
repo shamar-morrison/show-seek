@@ -12,6 +12,7 @@ import {
   resolveSubscriptionAcknowledgeId,
   shouldAcknowledgeSubscription,
 } from './shared/purchaseValidation';
+import { shouldBlockNoTokenPremiumDowngrade } from './shared/premiumSyncGuard';
 
 admin.initializeApp();
 
@@ -95,6 +96,13 @@ const sanitizeError = (err: unknown): unknown => {
 type PurchaseType = 'in-app' | 'subs';
 type EntitlementType = 'lifetime' | 'subscription' | 'none';
 type SubscriptionType = 'monthly' | 'yearly';
+type PremiumWriteSource =
+  | 'purchase_success'
+  | 'restore'
+  | 'retry_success'
+  | 'manual'
+  | 'app_open'
+  | 'unknown';
 
 interface ExistingPremiumData {
   basePlanId?: string | null;
@@ -129,6 +137,26 @@ interface SubscriptionValidationResult {
   trialEndAt: admin.firestore.Timestamp | null;
   trialStartAt: admin.firestore.Timestamp | null;
 }
+
+const normalizePremiumWriteSource = (value: unknown): PremiumWriteSource => {
+  if (typeof value !== 'string') {
+    return 'unknown';
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (
+    normalized === 'purchase_success' ||
+    normalized === 'restore' ||
+    normalized === 'retry_success' ||
+    normalized === 'manual' ||
+    normalized === 'app_open' ||
+    normalized === 'unknown'
+  ) {
+    return normalized as PremiumWriteSource;
+  }
+
+  return 'unknown';
+};
 
 const parseDateTimeMillis = (dateTime?: string | null): number | null => {
   if (!dateTime) {
@@ -276,8 +304,22 @@ const isSameTrialRestoreAttempt = (
 
 const persistPremiumStatus = async (
   userId: string,
-  premiumPayload: Record<string, unknown>
+  premiumPayload: Record<string, unknown>,
+  options?: {
+    source?: PremiumWriteSource;
+    reason?: string;
+    previousIsPremium?: boolean | null;
+  }
 ): Promise<void> => {
+  console.error('[PREMIUM WRITE DETECTED][SERVER_WRITE]', {
+    userId,
+    source: options?.source ?? 'unknown',
+    reason: options?.reason ?? 'unspecified',
+    previousIsPremium: options?.previousIsPremium ?? null,
+    nextIsPremium: typeof premiumPayload.isPremium === 'boolean' ? premiumPayload.isPremium : null,
+    timestamp: Date.now(),
+  });
+
   await admin.firestore().collection('users').doc(userId).set(
     {
       premium: premiumPayload,
@@ -464,11 +506,18 @@ export const validatePurchase = onCall(
       throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
-    const { purchaseToken, productId, purchaseType } = request.data as {
+    const {
+      purchaseToken,
+      productId,
+      purchaseType,
+      source: sourceRaw,
+    } = request.data as {
       productId?: string;
       purchaseToken?: string;
       purchaseType?: PurchaseType;
+      source?: string;
     };
+    const source = normalizePremiumWriteSource(sourceRaw);
     const userId = request.auth.uid;
 
     if (!purchaseToken || !productId) {
@@ -512,26 +561,34 @@ export const validatePurchase = onCall(
           purchaseToken
         );
 
-        await persistPremiumStatus(userId, {
-          isPremium: true,
-          entitlementType: 'lifetime',
-          purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
-          purchaseToken,
-          productId,
-          orderId: lifetimeValidation.orderId,
-          subscriptionState: null,
-          expiresAt: null,
-          basePlanId: null,
-          subscriptionType: null,
-          isInTrial: false,
-          trialStartAt: null,
-          trialEndAt: null,
-          hasUsedTrial: resolveHasUsedTrial(existingPremium),
-          trialConsumedAt: resolveTrialConsumedAt(existingPremium),
-          expiredAt: null,
-          expireAt: null,
-          lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        await persistPremiumStatus(
+          userId,
+          {
+            isPremium: true,
+            entitlementType: 'lifetime',
+            purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+            purchaseToken,
+            productId,
+            orderId: lifetimeValidation.orderId,
+            subscriptionState: null,
+            expiresAt: null,
+            basePlanId: null,
+            subscriptionType: null,
+            isInTrial: false,
+            trialStartAt: null,
+            trialEndAt: null,
+            hasUsedTrial: resolveHasUsedTrial(existingPremium),
+            trialConsumedAt: resolveTrialConsumedAt(existingPremium),
+            expiredAt: null,
+            expireAt: null,
+            lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          {
+            source,
+            reason: 'validatePurchase:lifetime',
+            previousIsPremium: existingPremium.isPremium ?? null,
+          }
+        );
 
         return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
       }
@@ -569,26 +626,34 @@ export const validatePurchase = onCall(
           admin.firestore.FieldValue.serverTimestamp())
         : existingTrialConsumedAt;
 
-      await persistPremiumStatus(userId, {
-        isPremium: subscriptionValidation.isPremium,
-        entitlementType: subscriptionValidation.isPremium ? 'subscription' : 'none',
-        purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
-        purchaseToken,
-        productId,
-        orderId: subscriptionValidation.orderId,
-        subscriptionState: subscriptionValidation.subscriptionState,
-        expiresAt: subscriptionValidation.expiresAt,
-        basePlanId: subscriptionValidation.basePlanId,
-        subscriptionType: subscriptionValidation.subscriptionType,
-        isInTrial: subscriptionValidation.isInTrial,
-        trialStartAt: subscriptionValidation.trialStartAt,
-        trialEndAt: subscriptionValidation.trialEndAt,
-        hasUsedTrial,
-        trialConsumedAt,
-        expiredAt: subscriptionValidation.expiredAt,
-        expireAt: subscriptionValidation.expireAt,
-        lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      await persistPremiumStatus(
+        userId,
+        {
+          isPremium: subscriptionValidation.isPremium,
+          entitlementType: subscriptionValidation.isPremium ? 'subscription' : 'none',
+          purchaseDate: admin.firestore.FieldValue.serverTimestamp(),
+          purchaseToken,
+          productId,
+          orderId: subscriptionValidation.orderId,
+          subscriptionState: subscriptionValidation.subscriptionState,
+          expiresAt: subscriptionValidation.expiresAt,
+          basePlanId: subscriptionValidation.basePlanId,
+          subscriptionType: subscriptionValidation.subscriptionType,
+          isInTrial: subscriptionValidation.isInTrial,
+          trialStartAt: subscriptionValidation.trialStartAt,
+          trialEndAt: subscriptionValidation.trialEndAt,
+          hasUsedTrial,
+          trialConsumedAt,
+          expiredAt: subscriptionValidation.expiredAt,
+          expireAt: subscriptionValidation.expireAt,
+          lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {
+          source,
+          reason: 'validatePurchase:subscription',
+          previousIsPremium: existingPremium.isPremium ?? null,
+        }
+      );
 
       return {
         success: true,
@@ -631,6 +696,12 @@ export const syncPremiumStatus = onCall(
     }
 
     const userId = request.auth.uid;
+    const { source: sourceRaw, allowDowngrade } = (request.data ?? {}) as {
+      source?: string;
+      allowDowngrade?: boolean;
+    };
+    const source = normalizePremiumWriteSource(sourceRaw);
+    const canDowngrade = allowDowngrade === true;
 
     try {
       const userRef = admin.firestore().collection('users').doc(userId);
@@ -638,27 +709,35 @@ export const syncPremiumStatus = onCall(
       const existingPremium = (userDoc.data()?.premium ?? {}) as ExistingPremiumData;
 
       if (existingPremium.productId === LEGACY_LIFETIME_PRODUCT_ID) {
-        await persistPremiumStatus(userId, {
-          isPremium: true,
-          entitlementType: 'lifetime',
-          productId: LEGACY_LIFETIME_PRODUCT_ID,
-          purchaseToken: existingPremium.purchaseToken ?? null,
-          orderId: existingPremium.orderId ?? null,
-          purchaseDate:
-            existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
-          subscriptionState: null,
-          expiresAt: null,
-          basePlanId: null,
-          subscriptionType: null,
-          isInTrial: false,
-          trialStartAt: null,
-          trialEndAt: null,
-          hasUsedTrial: resolveHasUsedTrial(existingPremium),
-          trialConsumedAt: resolveTrialConsumedAt(existingPremium),
-          expiredAt: null,
-          expireAt: null,
-          lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
+        await persistPremiumStatus(
+          userId,
+          {
+            isPremium: true,
+            entitlementType: 'lifetime',
+            productId: LEGACY_LIFETIME_PRODUCT_ID,
+            purchaseToken: existingPremium.purchaseToken ?? null,
+            orderId: existingPremium.orderId ?? null,
+            purchaseDate:
+              existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
+            subscriptionState: null,
+            expiresAt: null,
+            basePlanId: null,
+            subscriptionType: null,
+            isInTrial: false,
+            trialStartAt: null,
+            trialEndAt: null,
+            hasUsedTrial: resolveHasUsedTrial(existingPremium),
+            trialConsumedAt: resolveTrialConsumedAt(existingPremium),
+            expiredAt: null,
+            expireAt: null,
+            lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          {
+            source,
+            reason: 'syncPremiumStatus:legacy-lifetime',
+            previousIsPremium: existingPremium.isPremium ?? null,
+          }
+        );
 
         return { success: true, isPremium: true, entitlementType: 'lifetime' as EntitlementType };
       }
@@ -680,31 +759,40 @@ export const syncPremiumStatus = onCall(
             ? 'subscription'
             : 'none';
 
-          await persistPremiumStatus(userId, {
-            isPremium: subscriptionValidation.isPremium,
-            entitlementType,
-            purchaseToken: existingPremium.purchaseToken,
-            productId: existingPremium.productId,
-            orderId: subscriptionValidation.orderId ?? existingPremium.orderId ?? null,
-            purchaseDate:
-              existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
-            subscriptionState: subscriptionValidation.subscriptionState,
-            expiresAt: subscriptionValidation.expiresAt,
-            basePlanId: subscriptionValidation.basePlanId,
-            subscriptionType: subscriptionValidation.subscriptionType,
-            isInTrial: subscriptionValidation.isInTrial,
-            trialStartAt: subscriptionValidation.trialStartAt,
-            trialEndAt: subscriptionValidation.trialEndAt,
-            hasUsedTrial: subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
-            trialConsumedAt: subscriptionValidation.isInTrial
-              ? (resolveTrialConsumedAt(existingPremium) ??
-                subscriptionValidation.trialStartAt ??
-                admin.firestore.FieldValue.serverTimestamp())
-              : resolveTrialConsumedAt(existingPremium),
-            expiredAt: subscriptionValidation.expiredAt,
-            expireAt: subscriptionValidation.expireAt,
-            lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
+          await persistPremiumStatus(
+            userId,
+            {
+              isPremium: subscriptionValidation.isPremium,
+              entitlementType,
+              purchaseToken: existingPremium.purchaseToken,
+              productId: existingPremium.productId,
+              orderId: subscriptionValidation.orderId ?? existingPremium.orderId ?? null,
+              purchaseDate:
+                existingPremium.purchaseDate ?? admin.firestore.FieldValue.serverTimestamp(),
+              subscriptionState: subscriptionValidation.subscriptionState,
+              expiresAt: subscriptionValidation.expiresAt,
+              basePlanId: subscriptionValidation.basePlanId,
+              subscriptionType: subscriptionValidation.subscriptionType,
+              isInTrial: subscriptionValidation.isInTrial,
+              trialStartAt: subscriptionValidation.trialStartAt,
+              trialEndAt: subscriptionValidation.trialEndAt,
+              hasUsedTrial:
+                subscriptionValidation.isInTrial || resolveHasUsedTrial(existingPremium),
+              trialConsumedAt: subscriptionValidation.isInTrial
+                ? (resolveTrialConsumedAt(existingPremium) ??
+                  subscriptionValidation.trialStartAt ??
+                  admin.firestore.FieldValue.serverTimestamp())
+                : resolveTrialConsumedAt(existingPremium),
+              expiredAt: subscriptionValidation.expiredAt,
+              expireAt: subscriptionValidation.expireAt,
+              lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            },
+            {
+              source,
+              reason: 'syncPremiumStatus:subscription-validation',
+              previousIsPremium: existingPremium.isPremium ?? null,
+            }
+          );
 
           return {
             success: true,
@@ -724,7 +812,12 @@ export const syncPremiumStatus = onCall(
                 subscriptionState: null,
                 expiresAt: existingPremium.expiresAt ?? null,
                 basePlanId: null,
-              })
+              }),
+              {
+                source,
+                reason: 'syncPremiumStatus:definitive-revocation',
+                previousIsPremium: existingPremium.isPremium ?? null,
+              }
             );
 
             return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
@@ -747,7 +840,34 @@ export const syncPremiumStatus = onCall(
         }
       }
 
-      await persistPremiumStatus(userId, buildNoneEntitlementPayload(existingPremium));
+      if (
+        shouldBlockNoTokenPremiumDowngrade({
+          existingIsPremium: existingPremium.isPremium,
+          allowDowngrade: canDowngrade,
+        })
+      ) {
+        console.warn('[PREMIUM WRITE BLOCKED][SERVER_GUARD]', {
+          userId,
+          source,
+          reason: 'syncPremiumStatus:no-token-no-product',
+          previousIsPremium: existingPremium.isPremium ?? null,
+          requestedDowngrade: true,
+          allowDowngrade: canDowngrade,
+          timestamp: Date.now(),
+        });
+
+        return {
+          success: true,
+          isPremium: existingPremium.isPremium === true,
+          entitlementType: resolveExistingEntitlementType(existingPremium),
+        };
+      }
+
+      await persistPremiumStatus(userId, buildNoneEntitlementPayload(existingPremium), {
+        source,
+        reason: 'syncPremiumStatus:no-token-no-product',
+        previousIsPremium: existingPremium.isPremium ?? null,
+      });
 
       return { success: true, isPremium: false, entitlementType: 'none' as EntitlementType };
     } catch (error) {

@@ -1,12 +1,16 @@
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import {
+  auditedGetDoc,
+  auditedGetDocs,
+  auditedOnSnapshot,
+} from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
   deleteField,
   doc,
-  getDoc,
-  onSnapshot,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -34,6 +38,8 @@ export interface UserList {
   createdAt: number;
   updatedAt?: number;
 }
+
+export type ListMembershipIndex = Record<string, string[]>;
 
 export const DEFAULT_LISTS = [
   { id: 'watchlist', name: 'Should Watch' },
@@ -82,7 +88,7 @@ class ListService {
 
     const listsRef = this.getUserListsCollection(user.uid);
 
-    return onSnapshot(
+    return auditedOnSnapshot(
       listsRef,
       (snapshot) => {
         const lists: UserList[] = snapshot.docs.map((doc) => ({
@@ -142,8 +148,160 @@ class ListService {
             createdAt: Date.now(),
           }))
         );
+      },
+      {
+        path: `users/${user.uid}/lists`,
+        queryKey: 'lists',
+        callsite: 'ListService.subscribeToUserLists',
       }
     );
+  }
+
+  async getUserLists(userId: string): Promise<UserList[]> {
+    const listsRef = this.getUserListsCollection(userId);
+    const timeout = createTimeoutWithCleanup(10000);
+    const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+
+    try {
+      if (debugLogsEnabled) {
+        console.log('[ListService.getUserLists:start]', {
+          userId,
+          path: `users/${userId}/lists`,
+        });
+      }
+
+      const snapshot = await Promise.race([
+        auditedGetDocs(listsRef, {
+          path: `users/${userId}/lists`,
+          queryKey: 'lists',
+          callsite: 'ListService.getUserLists',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      const lists: UserList[] = snapshot.docs.map((listDoc) => ({
+        id: listDoc.id,
+        ...listDoc.data(),
+      })) as UserList[];
+
+      const mergedLists = [...lists];
+
+      DEFAULT_LISTS.forEach((defaultList) => {
+        if (!mergedLists.find((list) => list.id === defaultList.id)) {
+          mergedLists.push({
+            id: defaultList.id,
+            name: defaultList.name,
+            items: {},
+            createdAt: Date.now(),
+          });
+        }
+      });
+
+      const defaultListIds = DEFAULT_LISTS.map((list) => list.id);
+      mergedLists.sort((a, b) => {
+        const aDefaultIndex = defaultListIds.indexOf(a.id);
+        const bDefaultIndex = defaultListIds.indexOf(b.id);
+
+        if (aDefaultIndex !== -1 && bDefaultIndex !== -1) {
+          return aDefaultIndex - bDefaultIndex;
+        }
+
+        if (aDefaultIndex !== -1) return -1;
+        if (bDefaultIndex !== -1) return 1;
+
+        return (a.createdAt || 0) - (b.createdAt || 0);
+      });
+
+      if (debugLogsEnabled) {
+        console.log('[ListService.getUserLists:result]', {
+          userId,
+          rawDocCount: snapshot.size,
+          mergedListCount: mergedLists.length,
+          defaultListCount: DEFAULT_LISTS.length,
+        });
+      }
+
+      return mergedLists;
+    } catch (error) {
+      if (debugLogsEnabled) {
+        console.error('[ListService.getUserLists:error]', {
+          userId,
+          error,
+        });
+      }
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Build a cached membership index for list indicators.
+   * Key format: "${mediaId}-${mediaType}" => array of list IDs containing the media item.
+   */
+  async getListMembershipIndex(userId: string): Promise<ListMembershipIndex> {
+    const listsRef = this.getUserListsCollection(userId);
+    const timeout = createTimeoutWithCleanup(10000);
+    const debugLogsEnabled = __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
+
+    try {
+      if (debugLogsEnabled) {
+        console.log('[ListService.getListMembershipIndex:start]', {
+          userId,
+          path: `users/${userId}/lists`,
+        });
+      }
+
+      const snapshot = await Promise.race([
+        auditedGetDocs(listsRef, {
+          path: `users/${userId}/lists`,
+          queryKey: 'list-membership-index',
+          callsite: 'ListService.getListMembershipIndex',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      const index: ListMembershipIndex = {};
+
+      snapshot.docs.forEach((listDoc) => {
+        const listId = listDoc.id;
+        const listData = listDoc.data() as Partial<UserList>;
+        const listItems = listData.items || {};
+
+        Object.values(listItems).forEach((item) => {
+          if (!item || typeof item.id !== 'number' || !item.media_type) {
+            return;
+          }
+
+          const key = `${item.id}-${item.media_type}`;
+          const existingListIds = index[key] || [];
+          if (!existingListIds.includes(listId)) {
+            existingListIds.push(listId);
+            index[key] = existingListIds;
+          }
+        });
+      });
+
+      if (debugLogsEnabled) {
+        console.log('[ListService.getListMembershipIndex:result]', {
+          userId,
+          rawDocCount: snapshot.size,
+          indexedMediaCount: Object.keys(index).length,
+        });
+      }
+
+      return index;
+    } catch (error) {
+      if (debugLogsEnabled) {
+        console.error('[ListService.getListMembershipIndex:error]', {
+          userId,
+          error,
+        });
+      }
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**
@@ -261,7 +419,11 @@ class ListService {
       // Check for collisions and generate unique ID
       while (attempts < maxAttempts) {
         const listRef = this.getUserListRef(user.uid, listId);
-        const docSnap = await getDoc(listRef);
+        const docSnap = await auditedGetDoc(listRef, {
+          path: `users/${user.uid}/lists/${listId}`,
+          queryKey: 'listById',
+          callsite: 'ListService.createList',
+        });
 
         if (!docSnap.exists()) {
           // ID is unique, proceed with creation
@@ -345,7 +507,11 @@ class ListService {
       const listRef = this.getUserListRef(user.uid, listId);
 
       // Verify the list exists
-      const docSnap = await getDoc(listRef);
+      const docSnap = await auditedGetDoc(listRef, {
+        path: `users/${user.uid}/lists/${listId}`,
+        queryKey: 'listById',
+        callsite: 'ListService.renameList',
+      });
       if (!docSnap.exists()) {
         throw new Error('List not found');
       }

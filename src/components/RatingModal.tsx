@@ -2,8 +2,12 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useDeleteEpisodeRating, useRateEpisode } from '@/src/hooks/useRatings';
-import { ratingService } from '@/src/services/RatingService';
+import {
+  useDeleteEpisodeRating,
+  useDeleteRating,
+  useRateEpisode,
+  useRateMedia,
+} from '@/src/hooks/useRatings';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
 import * as Haptics from 'expo-haptics';
@@ -160,6 +164,8 @@ export default function RatingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Episode rating mutations
+  const rateMediaMutation = useRateMedia();
+  const deleteMediaMutation = useDeleteRating();
   const rateEpisodeMutation = useRateEpisode();
   const deleteEpisodeMutation = useDeleteEpisodeRating();
 
@@ -198,18 +204,18 @@ export default function RatingModal({
       } else if (mediaId !== undefined && mediaType) {
         // Movie/TV rating - pass metadata if available
         const metadata = autoAddOptions?.mediaMetadata;
-        await ratingService.saveRating(
+        await rateMediaMutation.mutateAsync({
           mediaId,
           mediaType,
           rating,
-          metadata
+          metadata: metadata
             ? {
                 title: metadata.title,
                 posterPath: metadata.poster_path,
                 releaseDate: metadata.release_date || null,
               }
-            : undefined
-        );
+            : undefined,
+        });
 
         // Auto-add to "Already Watched" list for first-time movie ratings
         // Only applies when: mediaType is 'movie', initialRating is 0 (first-time),
@@ -285,7 +291,7 @@ export default function RatingModal({
         });
       } else if (mediaId !== undefined && mediaType) {
         // Delete movie/TV rating
-        await ratingService.deleteRating(mediaId, mediaType);
+        await deleteMediaMutation.mutateAsync({ mediaId, mediaType });
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

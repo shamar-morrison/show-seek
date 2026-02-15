@@ -1,5 +1,8 @@
+import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { useAuth } from '@/src/context/auth';
+import { ListMembershipIndex, listService } from '@/src/services/ListService';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { useLists } from './useLists';
 import { usePreferences } from './usePreferences';
 
 /**
@@ -11,37 +14,44 @@ import { usePreferences } from './usePreferences';
  */
 export function useListMembership() {
   const { preferences } = usePreferences();
+  const { user } = useAuth();
+  const userId = user?.uid;
   const showIndicators = preferences?.showListIndicators ?? false;
-  const { data: lists } = useLists({ enabled: showIndicators });
+  const cacheWindows = READ_QUERY_CACHE_WINDOWS as typeof READ_QUERY_CACHE_WINDOWS & {
+    listIndicatorsStaleTimeMs?: number;
+    listIndicatorsGcTimeMs?: number;
+  };
+  const listIndicatorsStaleTimeMs =
+    cacheWindows.listIndicatorsStaleTimeMs ?? READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs;
+  const listIndicatorsGcTimeMs =
+    cacheWindows.listIndicatorsGcTimeMs ?? READ_QUERY_CACHE_WINDOWS.statusGcTimeMs;
+
+  const membershipIndexQuery = useQuery<ListMembershipIndex>({
+    queryKey: ['list-membership-index', userId],
+    queryFn: () => listService.getListMembershipIndex(userId!),
+    enabled: !!userId && showIndicators,
+    staleTime: listIndicatorsStaleTimeMs,
+    gcTime: listIndicatorsGcTimeMs,
+  });
+  const membershipIndex = membershipIndexQuery.data;
 
   // Build a Set of "mediaId-mediaType" strings for O(1) lookup
   const membershipSet = useMemo(() => {
     const set = new Set<string>();
-    if (!lists) return set;
-
-    lists.forEach((list) => {
-      Object.values(list.items || {}).forEach((item) => {
-        set.add(`${item.id}-${item.media_type}`);
-      });
-    });
+    if (!membershipIndex) return set;
+    Object.keys(membershipIndex).forEach((key) => set.add(key));
     return set;
-  }, [lists]);
+  }, [membershipIndex]);
 
   // Build a Map of "mediaId-mediaType" -> list IDs for per-list icons
   const membershipMap = useMemo(() => {
     const map = new Map<string, string[]>();
-    if (!lists) return map;
-
-    lists.forEach((list) => {
-      Object.values(list.items || {}).forEach((item) => {
-        const key = `${item.id}-${item.media_type}`;
-        const existing = map.get(key) || [];
-        existing.push(list.id);
-        map.set(key, existing);
-      });
+    if (!membershipIndex) return map;
+    Object.entries(membershipIndex).forEach(([key, listIds]) => {
+      map.set(key, listIds);
     });
     return map;
-  }, [lists]);
+  }, [membershipIndex]);
 
   // Check if a specific media item is in any list (only if preference is enabled)
   const isInAnyList = useCallback(
