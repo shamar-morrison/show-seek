@@ -258,6 +258,23 @@ describe('ListService', () => {
       await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow('List not found');
       expect(updateDoc).not.toHaveBeenCalled();
     });
+
+    it('times out if list existence read hangs', async () => {
+      const timeoutCancel = jest.fn();
+      const mockDocRef = { path: 'users/test-user-id/lists/hanging-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockReturnValue(new Promise(() => {}));
+      mockCreateTimeoutWithCleanup.mockImplementationOnce(() => ({
+        promise: Promise.reject(new Error('Request timed out')),
+        cancel: timeoutCancel,
+      }));
+
+      await expect(listService.renameList('hanging-list', 'Renamed')).rejects.toThrow(
+        'Request timed out'
+      );
+      expect(updateDoc).not.toHaveBeenCalled();
+      expect(timeoutCancel).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('timeout cleanup', () => {

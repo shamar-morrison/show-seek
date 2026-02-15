@@ -444,11 +444,14 @@ class ListService {
       const listRef = this.getUserListRef(user.uid, listId);
 
       // Verify the list exists
-      const docSnap = await auditedGetDoc(listRef, {
-        path: `users/${user.uid}/lists/${listId}`,
-        queryKey: 'listById',
-        callsite: 'ListService.renameList',
-      });
+      const docSnap = await Promise.race([
+        auditedGetDoc(listRef, {
+          path: `users/${user.uid}/lists/${listId}`,
+          queryKey: 'listById',
+          callsite: 'ListService.renameList',
+        }),
+        timeout.promise,
+      ]);
       if (!docSnap.exists()) {
         throw new Error('List not found');
       }
