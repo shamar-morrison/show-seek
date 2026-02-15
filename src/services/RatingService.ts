@@ -3,7 +3,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import {
   collection,
@@ -53,45 +52,6 @@ class RatingService {
 
   private getUserRatingsCollection(userId: string) {
     return collection(db, 'users', userId, 'ratings');
-  }
-
-  /**
-   * Subscribe to all ratings for the current user
-   */
-  subscribeToUserRatings(
-    callback: (ratings: RatingItem[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
-
-    const ratingsRef = this.getUserRatingsCollection(user.uid);
-    const q = query(ratingsRef, orderBy('ratedAt', 'desc'));
-
-    return auditedOnSnapshot(
-      q,
-      (snapshot) => {
-        const ratings: RatingItem[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as RatingItem[];
-
-        callback(ratings);
-      },
-      (error) => {
-        console.error('[RatingService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        callback([]);
-      },
-      {
-        path: `users/${user.uid}/ratings`,
-        queryKey: 'ratings',
-        callsite: 'RatingService.subscribeToUserRatings',
-      }
-    );
   }
 
   async getUserRatings(userId: string): Promise<RatingItem[]> {

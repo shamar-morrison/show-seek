@@ -237,6 +237,9 @@ export const useClearWatches = (movieId: number) => {
       console.error('[useClearWatches] Error:', error);
       throw new Error(message);
     },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
+    },
   });
 };
 
@@ -298,6 +301,9 @@ export const useDeleteWatch = (movieId: number) => {
       const message = getFirestoreErrorMessage(error);
       console.error('[useDeleteWatch] Error:', error);
       throw new Error(message);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
     },
   });
 };

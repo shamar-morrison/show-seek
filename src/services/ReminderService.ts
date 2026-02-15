@@ -2,7 +2,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import * as Notifications from 'expo-notifications';
 import {
@@ -48,45 +47,6 @@ class ReminderService {
    */
   private getReminderId(mediaType: ReminderMediaType, mediaId: number): string {
     return `${mediaType}-${mediaId}`;
-  }
-
-  /**
-   * Subscribe to all active reminders for current user
-   */
-  subscribeToUserReminders(
-    callback: (reminders: Reminder[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
-
-    const remindersRef = this.getRemindersCollection(user.uid);
-    const q = query(remindersRef, where('status', '==', 'active'));
-
-    return auditedOnSnapshot(
-      q,
-      (snapshot) => {
-        const reminders: Reminder[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Reminder[];
-
-        callback(reminders);
-      },
-      (error) => {
-        console.error('[ReminderService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        callback([]);
-      },
-      {
-        path: `users/${user.uid}/reminders`,
-        queryKey: 'activeReminders',
-        callsite: 'ReminderService.subscribeToUserReminders',
-      }
-    );
   }
 
   async getActiveReminders(userId: string): Promise<Reminder[]> {

@@ -4,37 +4,25 @@ import {
   collectionTrackingService,
   MAX_FREE_COLLECTIONS,
 } from '@/src/services/CollectionTrackingService';
-import type { CollectionProgressItem, TrackedCollection } from '@/src/types/collectionTracking';
+import type { CollectionProgressItem } from '@/src/types/collectionTracking';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 import { auth } from '../firebase/config';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 // Aggressive cache time for collection data since it rarely changes
 const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
 const COLLECTION_GC_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
- * Hook to subscribe to all tracked collections with real-time updates.
- * Pattern matches useShowEpisodeTracking for consistency.
+ * Hook to fetch all tracked collections using cached query reads.
  */
 export const useTrackedCollections = () => {
   const userId = auth.currentUser?.uid;
-  const queryKey = ['collectionTracking', 'all', userId];
-  const subscribe = useCallback(
-    (onData: (data: TrackedCollection[]) => void, onError: (error: Error) => void) =>
-      collectionTrackingService.subscribeToTrackedCollections(onData, onError),
-    []
-  );
-
-  const query = useRealtimeSubscription<TrackedCollection[]>({
-    queryKey,
+  const query = useQuery({
+    queryKey: ['collectionTracking', 'all', userId],
+    queryFn: () => collectionTrackingService.getAllTrackedCollections(),
     enabled: !!userId,
-    initialData: [],
-    subscribe,
-    logLabel: 'useTrackedCollections',
   });
 
   return {
@@ -45,25 +33,15 @@ export const useTrackedCollections = () => {
 };
 
 /**
- * Hook to subscribe to a single collection's tracking data.
+ * Hook to fetch a single collection's tracking data.
  * Returns null if not tracked.
- * Pattern matches useShowEpisodeTracking for consistency.
  */
 export const useCollectionTracking = (collectionId: number) => {
   const userId = auth.currentUser?.uid;
-  const queryKey = ['collectionTracking', userId, collectionId];
-  const subscribe = useCallback(
-    (onData: (data: TrackedCollection | null) => void, onError: (error: Error) => void) =>
-      collectionTrackingService.subscribeToCollection(collectionId, onData, onError),
-    [collectionId]
-  );
-
-  const query = useRealtimeSubscription<TrackedCollection | null>({
-    queryKey,
-    enabled: !!userId && !!collectionId,
-    initialData: null,
-    subscribe,
-    logLabel: 'useCollectionTracking',
+  const query = useQuery({
+    queryKey: ['collectionTracking', userId, collectionId],
+    queryFn: () => collectionTrackingService.getCollectionTracking(collectionId),
+    enabled: !!userId && collectionId > 0,
   });
 
   const tracking = query.data ?? null;
@@ -113,7 +91,6 @@ export const useCanTrackMoreCollections = () => {
  */
 export const useStartCollectionTracking = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
 
   return useMutation({
     mutationKey: ['startCollectionTracking'],

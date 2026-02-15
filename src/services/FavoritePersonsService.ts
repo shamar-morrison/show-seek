@@ -3,7 +3,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import { collection, deleteDoc, doc, orderBy, query, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -28,45 +27,6 @@ class FavoritePersonsService {
 
   private getUserFavoritePersonsCollection(userId: string) {
     return collection(db, 'users', userId, 'favorite_persons');
-  }
-
-  /**
-   * Subscribe to all favorite persons for the current user
-   */
-  subscribeToFavoritePersons(
-    callback: (persons: FavoritePerson[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
-
-    const personsRef = this.getUserFavoritePersonsCollection(user.uid);
-    const q = query(personsRef, orderBy('addedAt', 'desc'));
-
-    return auditedOnSnapshot(
-      q,
-      (snapshot) => {
-        const persons: FavoritePerson[] = snapshot.docs.map((doc) => ({
-          id: Number(doc.id),
-          ...doc.data(),
-        })) as FavoritePerson[];
-
-        callback(persons);
-      },
-      (error) => {
-        console.error('[FavoritePersonsService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        callback([]);
-      },
-      {
-        path: `users/${user.uid}/favorite_persons`,
-        queryKey: 'favoritePersons',
-        callsite: 'FavoritePersonsService.subscribeToFavoritePersons',
-      }
-    );
   }
 
   async getFavoritePersons(userId: string): Promise<FavoritePerson[]> {

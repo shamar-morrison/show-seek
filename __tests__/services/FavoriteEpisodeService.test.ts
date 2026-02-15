@@ -1,5 +1,5 @@
 import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
-import { deleteDoc, doc, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -104,30 +104,4 @@ describe('FavoriteEpisodeService', () => {
     });
   });
 
-  describe('subscribeToFavoriteEpisodes', () => {
-    it('should setup a snapshot listener', () => {
-      const callback = jest.fn();
-      const mockUnsubscribe = jest.fn();
-      (onSnapshot as jest.Mock).mockReturnValue(mockUnsubscribe);
-
-      const unsubscribe = favoriteEpisodeService.subscribeToFavoriteEpisodes(
-        'test-user-id',
-        callback
-      );
-
-      expect(onSnapshot).toHaveBeenCalled();
-      // unsubscribe is now a wrapper function that manages refcount
-      expect(unsubscribe).toBeInstanceOf(Function);
-
-      // When called, it should clean up since there's only one subscriber
-      unsubscribe();
-      expect(mockUnsubscribe).toHaveBeenCalled();
-    });
-
-    it('should return empty function if no userId', () => {
-      const unsubscribe = favoriteEpisodeService.subscribeToFavoriteEpisodes('', jest.fn());
-      expect(unsubscribe).toBeInstanceOf(Function);
-      expect(onSnapshot).not.toHaveBeenCalled();
-    });
-  });
 });

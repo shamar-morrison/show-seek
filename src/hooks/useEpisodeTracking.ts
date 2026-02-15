@@ -1,13 +1,39 @@
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
-import { useRealtimeSubscription } from './useRealtimeSubscription';
 
 const getUserId = () => auth.currentUser?.uid;
+const getShowEpisodeTrackingQueryKey = (userId: string | undefined, tvShowId: number) =>
+  ['episodeTracking', userId, tvShowId] as const;
+const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
+
+const invalidateEpisodeTrackingQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string,
+  tvShowId: number
+) =>
+  Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
+    }),
+    queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] }),
+  ]);
+
+const invalidateListQueries = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string
+) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+    queryClient.invalidateQueries({
+      queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+      refetchType: 'active',
+    }),
+  ]);
 
 export interface MarkEpisodeWatchedParams {
   tvShowId: number;
@@ -77,22 +103,14 @@ export interface MarkAllEpisodesWatchedParams {
 }
 
 /**
- * Subscribe to episode tracking data for a specific TV show
+ * Fetch episode tracking data for a specific TV show.
  */
 export const useShowEpisodeTracking = (tvShowId: number) => {
   const userId = auth.currentUser?.uid;
-  const subscribe = useCallback(
-    (onData: (data: TVShowEpisodeTracking | null) => void, onError: (error: Error) => void) =>
-      episodeTrackingService.subscribeToShowTracking(tvShowId, onData, onError),
-    [tvShowId]
-  );
-
-  const query = useRealtimeSubscription<TVShowEpisodeTracking | null>({
-    queryKey: ['episodeTracking', userId, tvShowId],
-    enabled: !!userId,
-    initialData: null,
-    subscribe,
-    logLabel: 'useShowEpisodeTracking',
+  const query = useQuery<TVShowEpisodeTracking | null>({
+    queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
+    queryFn: () => episodeTrackingService.getShowTracking(tvShowId),
+    enabled: !!userId && tvShowId > 0,
   });
 
   return {
@@ -253,10 +271,13 @@ export const useMarkEpisodeWatched = () => {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
       }
     },
   });
@@ -275,10 +296,13 @@ export const useMarkEpisodeUnwatched = () => {
         params.seasonNumber,
         params.episodeNumber
       ),
-    onSuccess: () => {
+    onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
       }
     },
   });
@@ -298,10 +322,13 @@ export const useMarkAllEpisodesWatched = () => {
         params.episodes,
         params.showMetadata
       ),
-    onSuccess: () => {
+    onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['episodeTracking', 'allShows', userId] });
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
       }
     },
   });

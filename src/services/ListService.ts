@@ -3,7 +3,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
@@ -77,84 +76,6 @@ class ListService {
   private isNotFoundError(error: unknown): boolean {
     const code = (error as { code?: string })?.code;
     return code === 'not-found' || code === 'firestore/not-found';
-  }
-
-  /**
-   * Subscribe to all lists for the current user
-   */
-  subscribeToUserLists(callback: (lists: UserList[]) => void, onError?: (error: Error) => void) {
-    const user = auth.currentUser;
-    if (!user) return () => {};
-
-    const listsRef = this.getUserListsCollection(user.uid);
-
-    return auditedOnSnapshot(
-      listsRef,
-      (snapshot) => {
-        const lists: UserList[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as UserList[];
-
-        // Ensure default lists exist in the output even if not in DB yet
-        const mergedLists = [...lists];
-
-        DEFAULT_LISTS.forEach((defaultList) => {
-          if (!mergedLists.find((l) => l.id === defaultList.id)) {
-            mergedLists.push({
-              id: defaultList.id,
-              name: defaultList.name,
-              items: {},
-              createdAt: Date.now(),
-            });
-          }
-        });
-
-        // Sort lists: default lists first (in defined order), then custom lists by creation date
-        const defaultListIds = DEFAULT_LISTS.map((l) => l.id);
-        mergedLists.sort((a, b) => {
-          const aDefaultIndex = defaultListIds.indexOf(a.id);
-          const bDefaultIndex = defaultListIds.indexOf(b.id);
-
-          // Both are default lists - sort by defined order
-          if (aDefaultIndex !== -1 && bDefaultIndex !== -1) {
-            return aDefaultIndex - bDefaultIndex;
-          }
-
-          // Only a is a default list - it comes first
-          if (aDefaultIndex !== -1) return -1;
-
-          // Only b is a default list - it comes first
-          if (bDefaultIndex !== -1) return 1;
-
-          // Both are custom lists - sort by creation date (oldest first)
-          return (a.createdAt || 0) - (b.createdAt || 0);
-        });
-
-        callback(mergedLists);
-      },
-      (error) => {
-        console.error('[ListService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        // Graceful degradation: show default lists
-        callback(
-          DEFAULT_LISTS.map((defaultList) => ({
-            id: defaultList.id,
-            name: defaultList.name,
-            items: {},
-            createdAt: Date.now(),
-          }))
-        );
-      },
-      {
-        path: `users/${user.uid}/lists`,
-        queryKey: 'lists',
-        callsite: 'ListService.subscribeToUserLists',
-      }
-    );
   }
 
   async getUserLists(userId: string): Promise<UserList[]> {

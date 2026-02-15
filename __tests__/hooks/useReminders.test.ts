@@ -4,29 +4,7 @@ import { renderHook } from '@testing-library/react-native';
 // Mock the reminder service
 jest.mock('@/src/services/ReminderService', () => ({
   reminderService: {
-    subscribeToUserReminders: jest.fn((onData) => {
-      // Call onData with mock reminders
-      onData([
-        {
-          id: 'tv-100',
-          mediaId: 100,
-          mediaType: 'tv',
-          title: 'Breaking Bad',
-          status: 'active',
-          notificationScheduledFor: Date.now() + 86400000,
-        },
-        {
-          id: 'movie-200',
-          mediaId: 200,
-          mediaType: 'movie',
-          title: 'Dune',
-          status: 'active',
-          notificationScheduledFor: Date.now() + 86400000,
-        },
-      ]);
-      // Return unsubscribe function
-      return jest.fn();
-    }),
+    getActiveReminders: jest.fn(),
     createReminder: jest.fn(),
     cancelReminder: jest.fn(),
     updateReminder: jest.fn(),

@@ -6,6 +6,7 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const TARGET_DIRS = ['src', 'app'];
 const FILE_EXTENSIONS = new Set(['.ts', '.tsx']);
+const EXCLUDED_FILES = new Set(['src/services/firestoreReadAudit.ts']);
 
 const OP_PATTERNS = [
   { op: 'onSnapshot', regex: /\bonSnapshot\s*\(/g, weight: 12 },
@@ -58,6 +59,11 @@ for (const targetDir of TARGET_DIRS) {
   }
 
   for (const filePath of collectFiles(absoluteDir)) {
+    const relativePath = toRelative(filePath);
+    if (EXCLUDED_FILES.has(relativePath)) {
+      continue;
+    }
+
     const source = fs.readFileSync(filePath, 'utf8');
 
     for (const pattern of OP_PATTERNS) {
@@ -65,7 +71,7 @@ for (const targetDir of TARGET_DIRS) {
         const line = getLineNumber(source, match.index || 0);
         findings.push({
           op: pattern.op,
-          file: toRelative(filePath),
+          file: relativePath,
           line,
           weight: pattern.weight,
         });

@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
 
@@ -21,28 +21,40 @@ describe('CollectionTrackingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
-    jest.useFakeTimers();
     (doc as jest.Mock).mockReturnValue({ path: 'users/test-user-id/collection_tracking/123' });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
+  it('returns tracked collection when document exists', async () => {
+    (getDoc as jest.Mock).mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        collectionId: 123,
+        name: 'Test Collection',
+        totalMovies: 4,
+        watchedMovieIds: [11, 22],
+        startedAt: 100,
+        lastUpdated: 200,
+      }),
+    });
+
+    await expect(collectionTrackingService.getCollectionTracking(123)).resolves.toEqual({
+      collectionId: 123,
+      name: 'Test Collection',
+      totalMovies: 4,
+      watchedMovieIds: [11, 22],
+      startedAt: 100,
+      lastUpdated: 200,
+    });
+    expect(getDoc).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back on timeout when no snapshot event arrives', () => {
-    const callback = jest.fn();
-    const onError = jest.fn();
-    const unsubscribe = jest.fn();
+  it('returns null when tracked collection document does not exist', async () => {
+    (getDoc as jest.Mock).mockResolvedValue({
+      exists: () => false,
+    });
 
-    (onSnapshot as jest.Mock).mockReturnValue(unsubscribe);
-
-    collectionTrackingService.subscribeToTrackedCollections(callback, onError);
-
-    jest.advanceTimersByTime(10000);
-
-    expect(onError).toHaveBeenCalledWith(expect.any(Error));
-    expect(callback).toHaveBeenCalledWith([]);
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    await expect(collectionTrackingService.getCollectionTracking(123)).resolves.toBeNull();
+    expect(getDoc).toHaveBeenCalledTimes(1);
   });
 
   it('updates tracked collection directly when adding watched movies (no getDoc)', async () => {

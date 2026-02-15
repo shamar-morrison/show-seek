@@ -1,7 +1,7 @@
 import { Movie, TVShow } from '@/src/api/tmdb';
 import { db } from '@/src/firebase/config';
 import { FirebaseError } from 'firebase/app';
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 export interface FavoriteItem {
   id: string;
@@ -104,44 +104,5 @@ export const firestoreHelpers = {
     };
 
     await setDoc(ratingRef, ratingData);
-  },
-
-  subscribeFavorites: (userId: string, callback: (favorites: FavoriteItem[]) => void) => {
-    const favoritesRef = collection(db, `users/${userId}/favorites`);
-    const q = query(favoritesRef, orderBy('addedAt', 'desc'));
-
-    return onSnapshot(q, (snapshot) => {
-      const favorites: FavoriteItem[] = [];
-      snapshot.forEach((doc) => {
-        favorites.push(doc.data() as FavoriteItem);
-      });
-      callback(favorites);
-    });
-  },
-
-  subscribeWatchlist: (userId: string, callback: (watchlist: WatchlistItem[]) => void) => {
-    const watchlistRef = collection(db, `users/${userId}/watchlist`);
-    const q = query(watchlistRef, orderBy('addedAt', 'desc'));
-
-    return onSnapshot(q, (snapshot) => {
-      const watchlist: WatchlistItem[] = [];
-      snapshot.forEach((doc) => {
-        watchlist.push(doc.data() as WatchlistItem);
-      });
-      callback(watchlist);
-    });
-  },
-
-  subscribeRatings: (userId: string, callback: (ratings: RatingItem[]) => void) => {
-    const ratingsRef = collection(db, `users/${userId}/ratings`);
-    const q = query(ratingsRef, orderBy('ratedAt', 'desc'));
-
-    return onSnapshot(q, (snapshot) => {
-      const ratings: RatingItem[] = [];
-      snapshot.forEach((doc) => {
-        ratings.push(doc.data() as RatingItem);
-      });
-      callback(ratings);
-    });
   },
 };

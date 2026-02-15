@@ -41,6 +41,7 @@ import {
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
@@ -75,7 +76,7 @@ import {
 } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
-import { useQuery } from '@tanstack/react-query';
+import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -104,6 +105,8 @@ const canShowReminder = (releaseDate: string | null | undefined): boolean => {
   return release >= today;
 };
 
+const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
+
 // Helper to auto-add movie to "Already Watched" list
 const tryAutoAddToAlreadyWatched = async (params: {
   movieId: number;
@@ -117,9 +120,12 @@ const tryAutoAddToAlreadyWatched = async (params: {
   membership: Record<string, boolean>;
   lists: { id: string; items?: Record<string, unknown> }[] | undefined;
   isPremium: boolean;
+  userId?: string;
+  queryClient: QueryClient;
   t: (key: string) => string;
 }) => {
-  const { movieId, movie, releaseDate, membership, lists, isPremium, t } = params;
+  const { movieId, movie, releaseDate, membership, lists, isPremium, userId, queryClient, t } =
+    params;
   const isNotInAlreadyWatched = !membership['already-watched'];
 
   if (!isNotInAlreadyWatched) return;
@@ -148,6 +154,17 @@ const tryAutoAddToAlreadyWatched = async (params: {
       },
       t('lists.alreadyWatched')
     );
+
+    if (userId) {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        }),
+      ]);
+    }
+
     console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
   } catch (autoAddError) {
     console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
@@ -156,6 +173,9 @@ const tryAutoAddToAlreadyWatched = async (params: {
 
 export default function MovieDetailScreen() {
   const styles = useDetailStyles();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const currentTab = useCurrentTab();
@@ -444,6 +464,7 @@ export default function MovieDetailScreen() {
     if (movie?.belongs_to_collection) {
       try {
         await collectionTrackingService.addWatchedMovie(movie.belongs_to_collection.id, movieId);
+        await queryClient.invalidateQueries({ queryKey: ['collectionTracking'] });
       } catch (collectionError) {
         // Silent fail - collection might not be tracked
         console.log('[MovieDetailScreen] Collection tracking update skipped:', collectionError);
@@ -459,6 +480,8 @@ export default function MovieDetailScreen() {
         membership,
         lists,
         isPremium,
+        userId,
+        queryClient,
         t,
       });
     }

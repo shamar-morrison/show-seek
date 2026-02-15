@@ -3,7 +3,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import { Note, NoteInput } from '@/src/types/note';
 import { createTimeout } from '@/src/utils/timeout';
@@ -90,45 +89,6 @@ class NoteService {
       episodeNumber: data.episodeNumber as number | undefined,
       showId: data.showId as number | undefined,
     };
-  }
-
-  /**
-   * Subscribe to all notes for a user (real-time updates)
-   * @param userId - The user's ID to subscribe for
-   * @param callback - Called with notes array on each update
-   * @param onError - Optional error handler
-   */
-  subscribeToUserNotes(
-    userId: string,
-    callback: (notes: Note[]) => void,
-    onError?: (error: Error) => void
-  ) {
-    if (!userId) return () => {};
-
-    const notesRef = this.getNotesCollection(userId);
-    const q = query(notesRef, orderBy('createdAt', 'desc'));
-
-    return auditedOnSnapshot(
-      q,
-      (snapshot) => {
-        const notes: Note[] = snapshot.docs.map((doc) => this.mapDocToNote(doc));
-        callback(notes);
-      },
-      (error) => {
-        console.error('[NoteService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        // Don't call callback([]) here - preserve existing notes on transient errors
-        // Let the consumer decide whether to clear the cache via onError
-        if (onError) {
-          onError(new Error(message));
-        }
-      },
-      {
-        path: `users/${userId}/notes`,
-        queryKey: 'notes',
-        callsite: 'NoteService.subscribeToUserNotes',
-      }
-    );
   }
 
   async getUserNotes(userId: string): Promise<Note[]> {

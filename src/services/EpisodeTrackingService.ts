@@ -2,7 +2,6 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
-  auditedOnSnapshot,
 } from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
@@ -37,45 +36,33 @@ class EpisodeTrackingService {
     return `${seasonNumber}_${episodeNumber}`;
   }
 
-  /**
-   * Subscribe to episode tracking data for a specific TV show
-   */
-  subscribeToShowTracking(
-    tvShowId: number,
-    callback: (tracking: TVShowEpisodeTracking | null) => void,
-    onError?: (error: Error) => void
-  ) {
+  async getShowTracking(tvShowId: number): Promise<TVShowEpisodeTracking | null> {
     const user = auth.currentUser;
-    if (!user) return () => {};
+    if (!user) return null;
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+    const timeout = createTimeoutWithCleanup(10000);
 
-    return auditedOnSnapshot(
-      trackingRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as TVShowEpisodeTracking;
-          callback(data);
-        } else {
-          // No tracking data yet - return empty structure
-          callback(null);
-        }
-      },
-      (error) => {
-        console.error('[EpisodeTrackingService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
-        if (onError) {
-          onError(new Error(message));
-        }
-        // Graceful degradation
-        callback(null);
-      },
-      {
-        path: `users/${user.uid}/episode_tracking/${tvShowId}`,
-        queryKey: 'episodeTrackingByShow',
-        callsite: 'EpisodeTrackingService.subscribeToShowTracking',
+    try {
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+          queryKey: 'episodeTrackingByShow',
+          callsite: 'EpisodeTrackingService.getShowTracking',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      if (!snapshot.exists()) {
+        return null;
       }
-    );
+
+      return snapshot.data() as TVShowEpisodeTracking;
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
   }
 
   /**

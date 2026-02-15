@@ -2,6 +2,7 @@ import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import {
   useDeleteEpisodeRating,
   useDeleteRating,
@@ -10,6 +11,7 @@ import {
 } from '@/src/hooks/useRatings';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -101,6 +103,8 @@ const starStyles = StyleSheet.create({
   },
 });
 
+const LIST_MEMBERSHIP_INDEX_QUERY_KEY = 'list-membership-index';
+
 interface RatingModalProps {
   visible: boolean;
   onClose: () => void;
@@ -160,6 +164,9 @@ export default function RatingModal({
 }: RatingModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -255,6 +262,16 @@ export default function RatingModal({
                 },
                 t('lists.alreadyWatched')
               );
+
+              if (userId) {
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+                  queryClient.invalidateQueries({
+                    queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+                    refetchType: 'active',
+                  }),
+                ]);
+              }
 
               console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
             } catch (autoAddError) {
