@@ -9,9 +9,8 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
@@ -33,7 +32,6 @@ export default function CustomListsScreen() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
-  const { accentColor } = useAccentColor();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const iconBadgeStyles = useIconBadgeStyles();
