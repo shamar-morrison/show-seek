@@ -197,4 +197,16 @@ describe('PremiumScreen', () => {
       );
     });
   });
+
+  it('shows generic restore error message when restore fails without an error message', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    mockRestorePurchases.mockRejectedValueOnce({});
+    const { getByText } = render(<PremiumScreen />);
+
+    fireEvent.press(getByText('Restore Purchases'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('Restore Failed', 'Something went wrong');
+    });
+  });
 });

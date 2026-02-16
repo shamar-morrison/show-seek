@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
+import * as crypto from 'node:crypto';
 
 export const REVENUECAT_WEBHOOK_AUTH = defineSecret('REVENUECAT_WEBHOOK_AUTH');
 export const REVENUECAT_API_KEY = defineSecret('REVENUECAT_API_KEY');
@@ -267,7 +268,17 @@ export const revenuecatWebhook = onRequest(
     const providedToken = resolveWebhookAuthToken(req.header('authorization'));
     const expectedToken = REVENUECAT_WEBHOOK_AUTH.value();
 
-    if (!providedToken || providedToken !== expectedToken) {
+    if (!providedToken || !expectedToken) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const providedTokenBuffer = Buffer.from(providedToken, 'utf8');
+    const expectedTokenBuffer = Buffer.from(expectedToken, 'utf8');
+    if (
+      providedTokenBuffer.length !== expectedTokenBuffer.length ||
+      !crypto.timingSafeEqual(providedTokenBuffer, expectedTokenBuffer)
+    ) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
@@ -306,7 +317,7 @@ export const revenuecatWebhook = onRequest(
         const eventTimestampMs = resolveRevenueCatEventTimestampMs(event, nowMs);
         const existingTimestampMs = Number(existingPremium.rcLastEventTimestampMs ?? 0);
 
-        if (existingTimestampMs > 0 && eventTimestampMs <= existingTimestampMs) {
+        if (existingTimestampMs > 0 && eventTimestampMs < existingTimestampMs) {
           transaction.set(eventRef, {
             appUserId,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),

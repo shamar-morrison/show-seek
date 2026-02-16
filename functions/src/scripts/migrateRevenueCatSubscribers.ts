@@ -17,6 +17,8 @@ interface ActiveSubscriber {
   productId: string;
 }
 
+type MigrationPlatform = 'android' | 'ios';
+
 interface MigrationReport {
   failed: Array<{ reason: string; userId: string }>;
   skipped: Array<{ reason: string; userId: string }>;
@@ -29,6 +31,7 @@ interface ScriptOptions {
   force: boolean;
   limit: number | null;
   outputFile: string;
+  platform: MigrationPlatform;
 }
 
 const parseArgs = (): ScriptOptions => {
@@ -40,6 +43,7 @@ const parseArgs = (): ScriptOptions => {
     force: false,
     limit: null,
     outputFile: '/tmp/revenuecat-migration-report.json',
+    platform: 'android',
   };
 
   for (const arg of args) {
@@ -73,6 +77,16 @@ const parseArgs = (): ScriptOptions => {
       const value = arg.split('=')[1];
       if (value) {
         options.outputFile = value;
+      }
+      continue;
+    }
+
+    if (arg.startsWith('--platform=')) {
+      const value = String(arg.split('=')[1] ?? '')
+        .trim()
+        .toLowerCase();
+      if (value === 'android' || value === 'ios') {
+        options.platform = value;
       }
       continue;
     }
@@ -160,7 +174,8 @@ const exportActiveSubscribers = async (limit: number | null): Promise<ActiveSubs
 
 const postReceiptToRevenueCat = async (
   apiKey: string,
-  subscriber: ActiveSubscriber
+  subscriber: ActiveSubscriber,
+  platform: MigrationPlatform
 ): Promise<{ body: string; statusCode: number }> => {
   const body = JSON.stringify({
     app_user_id: subscriber.userId,
@@ -177,7 +192,7 @@ const postReceiptToRevenueCat = async (
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(body),
-          'X-Platform': 'android',
+          'X-Platform': platform,
         },
       },
       (response) => {
@@ -201,13 +216,14 @@ const postReceiptToRevenueCat = async (
 
 const importSubscriberWithRetry = async (
   apiKey: string,
-  subscriber: ActiveSubscriber
+  subscriber: ActiveSubscriber,
+  platform: MigrationPlatform
 ): Promise<void> => {
   const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await postReceiptToRevenueCat(apiKey, subscriber);
+      const response = await postReceiptToRevenueCat(apiKey, subscriber, platform);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return;
       }
@@ -249,6 +265,7 @@ const run = async (): Promise<void> => {
   if (options.force) {
     console.log('Force mode enabled: will reprocess users even if already in checkpoint.');
   }
+  console.log(`Using RevenueCat platform header: ${options.platform}`);
 
   for (const subscriber of subscribers) {
     if (!options.force && processedUserIds.has(subscriber.userId)) {
@@ -267,7 +284,7 @@ const run = async (): Promise<void> => {
     }
 
     try {
-      await importSubscriberWithRetry(apiKey, subscriber);
+      await importSubscriberWithRetry(apiKey, subscriber, options.platform);
       console.log(`Migrated ${subscriber.userId}`);
       report.succeeded.push(subscriber.userId);
       processedUserIds.add(subscriber.userId);
@@ -277,8 +294,9 @@ const run = async (): Promise<void> => {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`Failed ${subscriber.userId}: ${message}`);
       report.failed.push({ reason: message, userId: subscriber.userId });
-      processedUserIds.add(subscriber.userId);
-      await writeProcessedUserIds(options.checkpointFile, processedUserIds);
+      console.warn(
+        `Will retry ${subscriber.userId} on next run because failures are not checkpointed. Use --force only to ignore checkpoint skips intentionally.`
+      );
     }
   }
 

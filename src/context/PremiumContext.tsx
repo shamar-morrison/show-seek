@@ -141,7 +141,14 @@ const extractRevenueCatPurchaseToken = (error: unknown): string | null => {
   return null;
 };
 
-const getLegacyRestoreReason = (error: unknown): string | null => {
+interface LegacyRestoreReasonContext {
+  hasLegacyLifetimeEvidence?: boolean;
+}
+
+const getLegacyRestoreReason = (
+  error: unknown,
+  context: LegacyRestoreReasonContext = {}
+): string | null => {
   const errorRecord = error as { details?: unknown; message?: unknown; reason?: unknown };
   if (typeof errorRecord?.reason === 'string') {
     return errorRecord.reason;
@@ -157,6 +164,9 @@ const getLegacyRestoreReason = (error: unknown): string | null => {
 
   const message = String(errorRecord?.message ?? '').toLowerCase();
   if (message.includes('pending')) {
+    if (!context.hasLegacyLifetimeEvidence) {
+      return null;
+    }
     return 'LIFETIME_PURCHASE_PENDING';
   }
 
@@ -167,8 +177,11 @@ const getLegacyRestoreReason = (error: unknown): string | null => {
   return null;
 };
 
-const isRecoverableLegacyRestoreError = (error: unknown): boolean => {
-  const reason = getLegacyRestoreReason(error);
+const isRecoverableLegacyRestoreError = (
+  error: unknown,
+  context: LegacyRestoreReasonContext = {}
+): boolean => {
+  const reason = getLegacyRestoreReason(error, context);
   if (reason) {
     return LEGACY_RESTORE_NON_FATAL_REASONS.has(reason);
   }
@@ -238,6 +251,16 @@ const logOfferingsDebug = (
     productId: pkg.product.identifier,
     productType: (pkg.product as { productType?: unknown }).productType ?? null,
   }));
+  console.debug('=== OFFERINGS DEBUG ===');
+  console.debug('[RevenueCat Debug] Offerings summary:', {
+    allOfferingKeys: Object.keys(offerings.all),
+    context,
+    currentOfferingIdentifier: offerings.current?.identifier ?? null,
+    premiumOfferingFound: premiumOffering != null,
+    premiumPackageCount: packageSummaries.length,
+    premiumPackages: packageSummaries,
+  });
+  console.debug('==================');
 };
 
 const resolvePackagesByPlan = (
@@ -431,8 +454,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             };
           }
         } catch (error) {
-          if (isRecoverableLegacyRestoreError(error)) {
-            const reason = getLegacyRestoreReason(error);
+          if (
+            isRecoverableLegacyRestoreError(error, {
+              hasLegacyLifetimeEvidence: true,
+            })
+          ) {
+            const reason = getLegacyRestoreReason(error, {
+              hasLegacyLifetimeEvidence: true,
+            });
             hadPendingLegacyFailure =
               hadPendingLegacyFailure || reason === 'LIFETIME_PURCHASE_PENDING';
             hadNotPurchasedLegacyFailure =
@@ -509,8 +538,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           };
         }
       } catch (restoreError) {
-        if (isRecoverableLegacyRestoreError(restoreError)) {
-          const reason = getLegacyRestoreReason(restoreError);
+        if (
+          isRecoverableLegacyRestoreError(restoreError, {
+            hasLegacyLifetimeEvidence: true,
+          })
+        ) {
+          const reason = getLegacyRestoreReason(restoreError, {
+            hasLegacyLifetimeEvidence: true,
+          });
           console.warn(
             '[PremiumContext] RevenueCat-derived legacy token failed validation with recoverable reason.',
             {
@@ -590,6 +625,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             forceRefresh: true,
             callsite: 'PremiumContext.initializeForUser.preflight',
           });
+          if (isCancelled) {
+            return;
+          }
           const premiumData = userData?.premium as Record<string, unknown> | undefined;
 
           if (isLegacyLifetimePremium(premiumData)) {
@@ -612,6 +650,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
                 user.uid,
                 'startup-preflight'
               );
+              if (isCancelled) {
+                return;
+              }
               if (legacyRestoreResult.restored) {
                 console.log(
                   '[PremiumContext] Startup preflight: restored legacy lifetime, enabling RevenueCat bypass.'
@@ -632,6 +673,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
                 );
               }
             } catch (preflightError) {
+              if (isCancelled) {
+                return;
+              }
               console.warn(
                 '[PremiumContext] Startup preflight failed; continuing with RevenueCat sync:',
                 preflightError
@@ -643,6 +687,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
             );
           }
         } catch (preflightLoadError) {
+          if (isCancelled) {
+            return;
+          }
           console.warn(
             '[PremiumContext] Startup preflight data load failed; continuing with RevenueCat sync:',
             preflightLoadError
@@ -650,6 +697,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
       }
 
+      if (isCancelled) {
+        return;
+      }
       await syncRevenueCatForUser(user);
       if (isCancelled) {
         return;
@@ -936,7 +986,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         return true;
       }
 
-      const revenueCatRestoreReason = getLegacyRestoreReason(error);
+      const revenueCatRestoreReason = getLegacyRestoreReason(error, {
+        hasLegacyLifetimeEvidence: revenueCatFallbackResult.hadAnyLegacyCandidate,
+      });
       hadPendingLegacyFailure =
         hadPendingLegacyFailure ||
         revenueCatFallbackResult.hadPendingLegacyFailure ||
@@ -992,7 +1044,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const isPremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
   const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
   const isLoading = user
-    ? isRevenueCatLoading && isFirestoreLoading
+    ? isRevenueCatLoading || isFirestoreLoading
     : isRevenueCatLoading || isFirestoreLoading;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {

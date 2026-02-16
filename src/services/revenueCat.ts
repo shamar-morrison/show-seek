@@ -25,11 +25,11 @@ export const configureRevenueCat = async (): Promise<boolean> => {
     return true;
   }
 
+  await Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO);
   Purchases.configure({
     apiKey: REVENUECAT_ANDROID_PUBLIC_KEY,
   });
 
-  await Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.INFO);
   isConfigured = true;
   console.log('[RevenueCat] SDK configured successfully.');
   return true;

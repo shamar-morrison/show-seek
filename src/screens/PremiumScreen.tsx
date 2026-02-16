@@ -101,7 +101,7 @@ export default function PremiumScreen() {
       if (error?.code === 'LEGACY_RESTORE_PENDING') {
         Alert.alert(t('premium.purchasePendingVerificationTitle'), t('premium.restorePendingMessage'));
       } else {
-        Alert.alert(t('premium.restoreFailedTitle'), error.message);
+        Alert.alert(t('premium.restoreFailedTitle'), error?.message || t('errors.generic'));
       }
     } finally {
       setIsRestoring(false);

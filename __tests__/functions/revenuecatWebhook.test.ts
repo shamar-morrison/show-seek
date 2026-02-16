@@ -247,4 +247,57 @@ describe('revenuecatWebhook handler', () => {
     expect(setTargets).toContain('revenuecatWebhookEvents/evt_stale');
     expect(setTargets).not.toContain('users/user-1');
   });
+
+  it('processes events that share the same timestamp when event id is new', async () => {
+    const transactionSet = jest.fn();
+
+    mockRunTransaction.mockImplementationOnce(async (transactionCallback: any) => {
+      const transaction = {
+        get: jest.fn(async (ref: { path: string }) => {
+          if (ref.path.startsWith('revenuecatWebhookEvents/')) {
+            return { exists: false };
+          }
+
+          return {
+            data: () => ({
+              premium: {
+                rcLastEventTimestampMs: 1000,
+              },
+            }),
+            exists: true,
+          };
+        }),
+        set: transactionSet,
+      };
+
+      return await transactionCallback(transaction);
+    });
+
+    const response = createResponse();
+
+    await revenuecatWebhook(
+      {
+        body: {
+          event: {
+            app_user_id: 'user-1',
+            event_timestamp_ms: 1000,
+            expiration_at_ms: 2000,
+            id: 'evt_same_ts',
+            product_id: 'monthly_showseek_sub',
+            type: 'RENEWAL',
+          },
+        },
+        header: jest.fn(() => 'hook-secret'),
+        method: 'POST',
+      } as any,
+      response as any
+    );
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith({ ok: true, status: 'processed' });
+
+    const setTargets = transactionSet.mock.calls.map((call) => call[0].path);
+    expect(setTargets).toContain('users/user-1');
+    expect(setTargets).toContain('revenuecatWebhookEvents/evt_same_ts');
+  });
 });

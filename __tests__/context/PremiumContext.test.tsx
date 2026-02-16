@@ -383,6 +383,27 @@ describe('PremiumContext', () => {
     expect(mockGetCustomerInfo).not.toHaveBeenCalled();
   });
 
+  it('keeps loading true while either RevenueCat or Firestore is still loading', async () => {
+    let resolveConfigure: ((value: boolean) => void) | null = null;
+    mockConfigureRevenueCat.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveConfigure = resolve;
+        })
+    );
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockAuditedOnSnapshot).toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    await act(async () => {
+      resolveConfigure?.(true);
+    });
+  });
+
   it('purchases a selected package by plan and returns premium success', async () => {
     const { result } = renderHook(() => usePremium(), { wrapper });
 
@@ -574,7 +595,7 @@ describe('PremiumContext', () => {
     expect(mockRestorePurchases).not.toHaveBeenCalled();
   });
 
-  it('throws LEGACY_RESTORE_PENDING when RevenueCat restore is pending and no legacy token can be validated', async () => {
+  it('returns false when RevenueCat restore is pending and there is no legacy lifetime signal', async () => {
     mockRestorePurchases.mockRejectedValue(new Error('Payment is pending'));
     mockGetAvailablePurchases.mockResolvedValue([
       {
@@ -587,20 +608,12 @@ describe('PremiumContext', () => {
     const { result } = renderHook(() => usePremium(), { wrapper });
     await waitFor(() => expect(mockConfigureRevenueCat).toHaveBeenCalled());
 
-    let thrownError: unknown = null;
+    let restored = true;
     await act(async () => {
-      try {
-        await result.current.restorePurchases();
-      } catch (error) {
-        thrownError = error;
-      }
+      restored = await result.current.restorePurchases();
     });
 
-    expect(thrownError).toEqual(
-      expect.objectContaining({
-        code: 'LEGACY_RESTORE_PENDING',
-      })
-    );
+    expect(restored).toBe(false);
     expect(mockRestorePurchases).toHaveBeenCalled();
     expect(mockInitConnection).toHaveBeenCalled();
     expect(mockGetAvailablePurchases).toHaveBeenCalled();
