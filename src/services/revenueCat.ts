@@ -10,18 +10,12 @@ export const configureRevenueCat = async (): Promise<boolean> => {
     return false;
   }
 
-  console.log('[RevenueCat] configureRevenueCat called', {
-    hasAndroidPublicKey: Boolean(REVENUECAT_ANDROID_PUBLIC_KEY),
-    isConfigured,
-  });
-
   if (!REVENUECAT_ANDROID_PUBLIC_KEY) {
     console.warn('EXPO_PUBLIC_REVENUECAT_ANDROID_PUBLIC_KEY is missing. RevenueCat is disabled.');
     return false;
   }
 
   if (isConfigured) {
-    console.log('[RevenueCat] SDK already configured.');
     return true;
   }
 
@@ -31,7 +25,6 @@ export const configureRevenueCat = async (): Promise<boolean> => {
   });
 
   isConfigured = true;
-  console.log('[RevenueCat] SDK configured successfully.');
   return true;
 };
 

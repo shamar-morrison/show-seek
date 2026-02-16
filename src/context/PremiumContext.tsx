@@ -131,7 +131,10 @@ const resolvePackagesByPlan = (
     offering.availablePackages,
     SUBSCRIPTION_PRODUCT_IDS.monthly
   );
-  const yearly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.yearly);
+  const yearly = findPackageByProductId(
+    offering.availablePackages,
+    SUBSCRIPTION_PRODUCT_IDS.yearly
+  );
 
   return {
     monthly,
@@ -238,18 +241,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return;
         }
 
-        console.log('[RevenueCat] Purchases.logIn start for user:', nextUser.uid);
         await Purchases.logIn(nextUser.uid);
-        console.log('[RevenueCat] Purchases.logIn completed for user:', nextUser.uid);
 
         const customerInfo = await Purchases.getCustomerInfo();
         await applyCustomerInfo(customerInfo, nextUser.uid);
 
         try {
           await refreshOfferings('syncRevenueCatForUser');
-        } catch (offeringsError) {
-          console.error('[RevenueCat] Offerings refresh failed during user sync:', offeringsError);
-        }
+        } catch (offeringsError) {}
       } catch (err) {
         console.error('RevenueCat sync failed:', err);
       } finally {
@@ -470,10 +469,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         const requestedProductId = getProductIdForPlan(plan);
         let selectedPackage = packagesByPlan[plan];
         if (!selectedPackage) {
-          console.log('[RevenueCat] No cached package found for plan. Refreshing offerings.', {
-            plan,
-            requestedProductId,
-          });
           const refreshedPackagesByPlan = await refreshOfferings('purchasePremium:fallback');
           selectedPackage = refreshedPackagesByPlan[plan];
         }
