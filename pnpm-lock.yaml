@@ -5,7 +5,7 @@ patchedDependencies:
     hash: 5v32ut4p46krbjb6bi6iqaooaq
     path: patches/@bittingz+expo-widgets+3.0.2.patch
   react-native-iap@14.7.11:
-    hash: 3u3e5ebhrqk7rnhjyk3oytskgi
+    hash: fuaoiikujwccikgo4qffyzdn6i
     path: patches/react-native-iap+14.7.11.patch
 
 dependencies:
@@ -146,7 +146,7 @@ dependencies:
     version: 1.2.0(expo@54.0.25)(react-native@0.81.5)(react@19.1.0)
   react-native-iap:
     specifier: 14.7.11
-    version: 14.7.11(patch_hash=3u3e5ebhrqk7rnhjyk3oytskgi)(react-native-nitro-modules@0.31.10)(react-native@0.81.5)(react@19.1.0)
+    version: 14.7.11(patch_hash=fuaoiikujwccikgo4qffyzdn6i)(react-native-nitro-modules@0.31.10)(react-native@0.81.5)(react@19.1.0)
   react-native-paper:
     specifier: ^5.14.5
     version: 5.14.5(react-native-safe-area-context@5.6.0)(react-native@0.81.5)(react@19.1.0)
@@ -11582,7 +11582,7 @@ packages:
       react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
     dev: false
 
-  /react-native-iap@14.7.11(patch_hash=3u3e5ebhrqk7rnhjyk3oytskgi)(react-native-nitro-modules@0.31.10)(react-native@0.81.5)(react@19.1.0):
+  /react-native-iap@14.7.11(patch_hash=fuaoiikujwccikgo4qffyzdn6i)(react-native-nitro-modules@0.31.10)(react-native@0.81.5)(react@19.1.0):
     resolution: {integrity: sha512-kG/qGWcs3dtwnZqghtZ12oMz7P7rAk76TRP5Ysu3H/2DzM52y2QRoksgNEprxSUe7C7F5P3slnO+ibMOcOA3XA==}
     peerDependencies:
       react: '*'
