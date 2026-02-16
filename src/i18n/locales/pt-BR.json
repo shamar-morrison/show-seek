@@ -1035,6 +1035,7 @@
     "devResetMessage": "Isto redefinirá compras avulsas ou abrirá o gerenciamento de assinaturas. Continuar?",
     "devResetTitle": "Resetar compra (Dev)",
     "noPurchasesMessage": "Não encontramos nenhuma compra para restaurar.",
+    "restorePendingMessage": "Sua compra ainda aparece como pendente no Google Play. Aguarde a conclusão e tente restaurar novamente.",
     "noPurchasesTitle": "Nenhuma compra encontrada",
     "openSubscriptions": "Abrir assinaturas",
     "perMonth": "/ Mês",

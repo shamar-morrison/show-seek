@@ -944,6 +944,7 @@
     "devResetMessage": "This will reset one-time purchases or open subscription management. Continue?",
     "devResetTitle": "Reset Purchase (Dev)",
     "noPurchasesMessage": "We couldn't find any purchases to restore.",
+    "restorePendingMessage": "Your purchase is still pending in Google Play. Please wait for completion and try restoring again.",
     "noPurchasesTitle": "No Purchases Found",
     "openSubscriptions": "Open Subscriptions",
     "bestValueBadge": "Best value",

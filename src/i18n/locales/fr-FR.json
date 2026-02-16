@@ -815,6 +815,7 @@
     "devResetButton": "Réinitialiser l’achat (Dev)",
     "devResetTitle": "Réinitialiser l’achat (Dev)",
     "noPurchasesMessage": "Nous n’avons trouvé aucun achat à restaurer.",
+    "restorePendingMessage": "Votre achat apparaît encore comme en attente dans Google Play. Attendez qu’il soit finalisé puis réessayez la restauration.",
     "noPurchasesTitle": "Aucun achat trouvé",
     "bestValueBadge": "Meilleur rapport qualité-prix",
     "monthlyPlanBilling": "Facturé mensuellement",

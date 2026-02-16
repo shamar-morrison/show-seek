@@ -1068,6 +1068,7 @@
     "devResetMessage": "Isto irá repor compras únicas ou abrir a gestão de subscrições. Continuar?",
     "devResetTitle": "Repor compra (Dev)",
     "noPurchasesMessage": "Não encontrámos nenhuma compra para restaurar.",
+    "restorePendingMessage": "A sua compra ainda aparece como pendente no Google Play. Aguarde a conclusão e tente restaurar novamente.",
     "noPurchasesTitle": "Nenhuma compra encontrada",
     "openSubscriptions": "Abrir subscrições",
     "perMonth": "/ Mês",

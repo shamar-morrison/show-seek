@@ -134,4 +134,22 @@ describe('PremiumScreen', () => {
       expect(alertSpy).toHaveBeenCalledWith('Offerings', '2');
     });
   });
+
+  it('shows pending-specific restore message when restore throws LEGACY_RESTORE_PENDING', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const pendingError = Object.assign(new Error('pending'), {
+      code: 'LEGACY_RESTORE_PENDING',
+    });
+    mockRestorePurchases.mockRejectedValueOnce(pendingError);
+    const { getByText } = render(<PremiumScreen />);
+
+    fireEvent.press(getByText('Restore Purchases'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Purchase Pending Verification',
+        'Your purchase is still pending in Google Play. Please wait for completion and try restoring again.'
+      );
+    });
+  });
 });
