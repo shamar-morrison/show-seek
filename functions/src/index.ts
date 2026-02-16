@@ -504,6 +504,7 @@ const validateSubscriptionWithGoogle = async (
   };
 };
 
+// DEPRECATED: Kept temporarily for safety, remove after confirming no usage
 export const validatePurchase = onCall(
   { secrets: [PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON] },
   async (request) => {

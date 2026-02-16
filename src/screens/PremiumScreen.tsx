@@ -98,11 +98,7 @@ export default function PremiumScreen() {
         Alert.alert(t('premium.noPurchasesTitle'), t('premium.noPurchasesMessage'));
       }
     } catch (error: any) {
-      if (error?.code === 'LEGACY_RESTORE_PENDING') {
-        Alert.alert(t('premium.purchasePendingVerificationTitle'), t('premium.restorePendingMessage'));
-      } else {
-        Alert.alert(t('premium.restoreFailedTitle'), error?.message || t('errors.generic'));
-      }
+      Alert.alert(t('premium.restoreFailedTitle'), error?.message || t('errors.generic'));
     } finally {
       setIsRestoring(false);
     }

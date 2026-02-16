@@ -8,11 +8,6 @@ import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import i18n from '@/src/i18n';
 import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
-import {
-  findLegacyLifetimePurchases,
-  type LegacyLifetimePurchase,
-  restoreLegacyLifetimeViaCallable,
-} from '@/src/services/legacyLifetimeRestore';
 import { configureRevenueCat } from '@/src/services/revenueCat';
 import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
 import createContextHook from '@nkzw/create-context-hook';
@@ -30,17 +25,6 @@ import Purchases, {
 
 const PREMIUM_ENTITLEMENT_ID = 'premium';
 const OFFERING_NAME = 'Premium';
-const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
-const LEGACY_RESTORE_NON_FATAL_REASONS = new Set([
-  'LIFETIME_PURCHASE_PENDING',
-  'LIFETIME_PURCHASE_NOT_PURCHASED',
-  'PURCHASE_NOT_FOUND_OR_EXPIRED',
-]);
-const LEGACY_RESTORE_PENDING_ERROR_CODE = 'LEGACY_RESTORE_PENDING';
-const KNOWN_SUBSCRIPTION_PRODUCT_IDS = new Set([
-  SUBSCRIPTION_PRODUCT_IDS.monthly,
-  SUBSCRIPTION_PRODUCT_IDS.yearly,
-]);
 
 interface PremiumPrices {
   monthly: string | null;
@@ -74,140 +58,10 @@ const resolveHasTrialHistory = (customerInfo: CustomerInfo): boolean => {
   return subscriptions.some((subscription) => subscription.periodType === 'TRIAL');
 };
 
-const isLegacyLifetimePremium = (premiumData?: Record<string, unknown>): boolean => {
-  const entitlementType = String(premiumData?.entitlementType ?? '')
-    .trim()
-    .toLowerCase();
-  const productId = String(premiumData?.productId ?? '').trim();
-
-  return entitlementType === 'lifetime' || productId === LEGACY_LIFETIME_PRODUCT_ID;
-};
-
-const hasKnownSubscriptionMarker = (premiumData?: Record<string, unknown>): boolean => {
-  const entitlementType = String(premiumData?.entitlementType ?? '')
-    .trim()
-    .toLowerCase();
-  const productId = String(premiumData?.productId ?? '').trim();
-
-  return entitlementType === 'subscription' || KNOWN_SUBSCRIPTION_PRODUCT_IDS.has(productId);
-};
-
-const shouldRunLegacyPreflight = (premiumData?: Record<string, unknown>): boolean => {
-  return !isLegacyLifetimePremium(premiumData) && !hasKnownSubscriptionMarker(premiumData);
-};
-
 const resolveFirestoreTrialHistory = (premiumData?: Record<string, unknown>): boolean =>
   premiumData?.hasUsedTrial === true ||
   premiumData?.trialConsumedAt != null ||
   premiumData?.trialStartAt != null;
-
-const toRedactedTokenPrefix = (purchaseToken: string): string => purchaseToken.slice(0, 8);
-
-const extractRevenueCatPurchaseToken = (error: unknown): string | null => {
-  const errorRecord = error as {
-    message?: unknown;
-    underlyingErrorMessage?: unknown;
-    userInfo?: unknown;
-  };
-
-  const userInfo = errorRecord?.userInfo;
-  const userInfoMessage =
-    userInfo && typeof userInfo === 'object'
-      ? String((userInfo as { underlyingErrorMessage?: unknown }).underlyingErrorMessage ?? '')
-      : '';
-
-  const rawErrorText = [
-    String(errorRecord?.message ?? ''),
-    String(errorRecord?.underlyingErrorMessage ?? ''),
-    userInfoMessage,
-    String(error ?? ''),
-  ]
-    .join('\n')
-    .trim();
-  if (!rawErrorText) {
-    return null;
-  }
-
-  const directTokenMatch = rawErrorText.match(/purchaseToken=([A-Za-z0-9._-]+)/);
-  if (directTokenMatch?.[1]) {
-    return directTokenMatch[1];
-  }
-
-  const jsonTokenMatch = rawErrorText.match(/"purchaseToken":"([^"]+)"/);
-  if (jsonTokenMatch?.[1]) {
-    return jsonTokenMatch[1];
-  }
-
-  return null;
-};
-
-interface LegacyRestoreReasonContext {
-  hasLegacyLifetimeEvidence?: boolean;
-}
-
-const getLegacyRestoreReason = (
-  error: unknown,
-  context: LegacyRestoreReasonContext = {}
-): string | null => {
-  const errorRecord = error as { details?: unknown; message?: unknown; reason?: unknown };
-  if (typeof errorRecord?.reason === 'string') {
-    return errorRecord.reason;
-  }
-
-  const details = errorRecord?.details;
-  if (details && typeof details === 'object') {
-    const reason = (details as { reason?: unknown }).reason;
-    if (typeof reason === 'string') {
-      return reason;
-    }
-  }
-
-  const message = String(errorRecord?.message ?? '').toLowerCase();
-  if (message.includes('pending')) {
-    if (!context.hasLegacyLifetimeEvidence) {
-      return null;
-    }
-    return 'LIFETIME_PURCHASE_PENDING';
-  }
-
-  if (message.includes('not purchased')) {
-    return 'LIFETIME_PURCHASE_NOT_PURCHASED';
-  }
-
-  return null;
-};
-
-const isRecoverableLegacyRestoreError = (
-  error: unknown,
-  context: LegacyRestoreReasonContext = {}
-): boolean => {
-  const reason = getLegacyRestoreReason(error, context);
-  if (reason) {
-    return LEGACY_RESTORE_NON_FATAL_REASONS.has(reason);
-  }
-
-  const message = String((error as { message?: unknown })?.message ?? '').toLowerCase();
-  return message.includes('legacy lifetime validation did not return premium success');
-};
-
-interface LegacyRestoreDiagnostics {
-  hadAnyLegacyCandidate: boolean;
-  hadNotPurchasedLegacyFailure: boolean;
-  hadPendingLegacyFailure: boolean;
-}
-
-interface LegacyRestoreAttemptResult extends LegacyRestoreDiagnostics {
-  attemptedCount: number;
-  restored: boolean;
-}
-
-const createPendingLegacyRestoreError = (): Error & { code: string } => {
-  const pendingError = new Error(i18n.t('premium.restorePendingMessage')) as Error & {
-    code: string;
-  };
-  pendingError.code = LEGACY_RESTORE_PENDING_ERROR_CODE;
-  return pendingError;
-};
 
 const resolveOffering = (offeringData: {
   current: PurchasesOffering | null;
@@ -277,10 +131,7 @@ const resolvePackagesByPlan = (
     offering.availablePackages,
     SUBSCRIPTION_PRODUCT_IDS.monthly
   );
-  const yearly = findPackageByProductId(
-    offering.availablePackages,
-    SUBSCRIPTION_PRODUCT_IDS.yearly
-  );
+  const yearly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.yearly);
 
   return {
     monthly,
@@ -292,7 +143,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const [isPremiumFromRevenueCat, setIsPremiumFromRevenueCat] = useState(false);
   const [hasUsedTrialFromRevenueCat, setHasUsedTrialFromRevenueCat] = useState(false);
   const [isRevenueCatLoading, setIsRevenueCatLoading] = useState(Platform.OS === 'android');
-  const [isRevenueCatBypassed, setIsRevenueCatBypassed] = useState(false);
 
   const [isPremiumFromFirestore, setIsPremiumFromFirestore] = useState(false);
   const [hasUsedTrialFromFirestore, setHasUsedTrialFromFirestore] = useState(false);
@@ -409,177 +259,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     [applyCustomerInfo, refreshOfferings]
   );
 
-  const attemptLegacyLifetimeRestoreCandidates = useCallback(
-    async (
-      userId: string,
-      context: 'startup-preflight' | 'manual-restore'
-    ): Promise<LegacyRestoreAttemptResult> => {
-      const legacyLifetimePurchases = await findLegacyLifetimePurchases();
-      if (legacyLifetimePurchases.length === 0) {
-        console.log(`[PremiumContext] ${context}: no legacy lifetime purchase candidates found.`);
-        return {
-          attemptedCount: 0,
-          hadAnyLegacyCandidate: false,
-          hadNotPurchasedLegacyFailure: false,
-          hadPendingLegacyFailure: false,
-          restored: false,
-        };
-      }
-
-      let hadPendingLegacyFailure = false;
-      let hadNotPurchasedLegacyFailure = false;
-      for (const [index, purchase] of legacyLifetimePurchases.entries()) {
-        console.log(`[PremiumContext] ${context}: validating legacy lifetime candidate.`, {
-          candidateIndex: index + 1,
-          purchaseState: purchase.purchaseState,
-          tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
-          totalCandidates: legacyLifetimePurchases.length,
-        });
-
-        try {
-          const restoredLifetime = await restoreLegacyLifetimeViaCallable(userId, purchase);
-          if (restoredLifetime) {
-            console.log(`[PremiumContext] ${context}: legacy lifetime restore succeeded.`, {
-              candidateIndex: index + 1,
-              purchaseState: purchase.purchaseState,
-              tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
-              totalCandidates: legacyLifetimePurchases.length,
-            });
-            return {
-              attemptedCount: index + 1,
-              hadAnyLegacyCandidate: true,
-              hadNotPurchasedLegacyFailure,
-              hadPendingLegacyFailure,
-              restored: true,
-            };
-          }
-        } catch (error) {
-          if (
-            isRecoverableLegacyRestoreError(error, {
-              hasLegacyLifetimeEvidence: true,
-            })
-          ) {
-            const reason = getLegacyRestoreReason(error, {
-              hasLegacyLifetimeEvidence: true,
-            });
-            hadPendingLegacyFailure =
-              hadPendingLegacyFailure || reason === 'LIFETIME_PURCHASE_PENDING';
-            hadNotPurchasedLegacyFailure =
-              hadNotPurchasedLegacyFailure || reason === 'LIFETIME_PURCHASE_NOT_PURCHASED';
-            console.warn(`[PremiumContext] ${context}: recoverable legacy candidate validation failure.`, {
-              candidateIndex: index + 1,
-              purchaseState: purchase.purchaseState,
-              reason,
-              tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
-              totalCandidates: legacyLifetimePurchases.length,
-            });
-            continue;
-          }
-
-          console.error(`[PremiumContext] ${context}: fatal legacy candidate validation failure.`, error);
-          throw error;
-        }
-      }
-
-      console.log(`[PremiumContext] ${context}: legacy candidates exhausted without restorable lifetime.`);
-      return {
-        attemptedCount: legacyLifetimePurchases.length,
-        hadAnyLegacyCandidate: true,
-        hadNotPurchasedLegacyFailure,
-        hadPendingLegacyFailure,
-        restored: false,
-      };
-    },
-    []
-  );
-
-  const attemptLegacyRestoreFromRevenueCatError = useCallback(
-    async (userId: string, error: unknown): Promise<LegacyRestoreAttemptResult> => {
-      const purchaseToken = extractRevenueCatPurchaseToken(error);
-      if (!purchaseToken) {
-        console.log(
-          '[PremiumContext] RevenueCat restore error did not include a purchase token for legacy validation.'
-        );
-        return {
-          attemptedCount: 0,
-          hadAnyLegacyCandidate: false,
-          hadNotPurchasedLegacyFailure: false,
-          hadPendingLegacyFailure: false,
-          restored: false,
-        };
-      }
-
-      const candidate: LegacyLifetimePurchase = {
-        productId: LEGACY_LIFETIME_PRODUCT_ID,
-        purchaseState: 'unknown',
-        purchaseToken,
-        transactionDate: Date.now(),
-        transactionId: null,
-      };
-      console.log(
-        '[PremiumContext] Attempting legacy lifetime validation using purchase token from RevenueCat restore error.',
-        {
-          tokenPrefix: toRedactedTokenPrefix(purchaseToken),
-        }
-      );
-
-      try {
-        const restored = await restoreLegacyLifetimeViaCallable(userId, candidate);
-        if (restored) {
-          console.log(
-            '[PremiumContext] Legacy lifetime restore succeeded using purchase token from RevenueCat restore error.'
-          );
-          return {
-            attemptedCount: 1,
-            hadAnyLegacyCandidate: true,
-            hadNotPurchasedLegacyFailure: false,
-            hadPendingLegacyFailure: false,
-            restored: true,
-          };
-        }
-      } catch (restoreError) {
-        if (
-          isRecoverableLegacyRestoreError(restoreError, {
-            hasLegacyLifetimeEvidence: true,
-          })
-        ) {
-          const reason = getLegacyRestoreReason(restoreError, {
-            hasLegacyLifetimeEvidence: true,
-          });
-          console.warn(
-            '[PremiumContext] RevenueCat-derived legacy token failed validation with recoverable reason.',
-            {
-              reason,
-              tokenPrefix: toRedactedTokenPrefix(purchaseToken),
-            }
-          );
-          return {
-            attemptedCount: 1,
-            hadAnyLegacyCandidate: true,
-            hadNotPurchasedLegacyFailure: reason === 'LIFETIME_PURCHASE_NOT_PURCHASED',
-            hadPendingLegacyFailure: reason === 'LIFETIME_PURCHASE_PENDING',
-            restored: false,
-          };
-        }
-
-        console.error(
-          '[PremiumContext] RevenueCat-derived legacy token failed validation with fatal reason.',
-          restoreError
-        );
-        throw restoreError;
-      }
-
-      return {
-        attemptedCount: 1,
-        hadAnyLegacyCandidate: true,
-        hadNotPurchasedLegacyFailure: false,
-        hadPendingLegacyFailure: false,
-        restored: false,
-      };
-    },
-    []
-  );
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (newUser) => {
       setUser(newUser);
@@ -592,7 +271,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     if (!user) {
       setIsPremiumFromRevenueCat(false);
       setHasUsedTrialFromRevenueCat(false);
-      setIsRevenueCatBypassed(false);
       setIsRevenueCatLoading(false);
       setPrices({ monthly: null, yearly: null });
       setPackagesByPlan({ monthly: null, yearly: null });
@@ -613,97 +291,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         return;
       }
 
-      if (Platform.OS === 'android') {
-        if (isRevenueCatBypassed) {
-          console.log('[PremiumContext] Startup sync: RevenueCat bypass already active.');
-          setIsRevenueCatLoading(false);
-          return;
-        }
-
-        try {
-          const userData = await getCachedUserDocument(user.uid, {
-            forceRefresh: true,
-            callsite: 'PremiumContext.initializeForUser.preflight',
-          });
-          if (isCancelled) {
-            return;
-          }
-          const premiumData = userData?.premium as Record<string, unknown> | undefined;
-
-          if (isLegacyLifetimePremium(premiumData)) {
-            console.log(
-              '[PremiumContext] Startup preflight: lifetime marker detected in Firestore, bypassing RevenueCat sync.'
-            );
-            setIsRevenueCatBypassed(true);
-            setIsPremiumFromFirestore(true);
-            setHasUsedTrialFromFirestore(resolveFirestoreTrialHistory(premiumData));
-            setIsRevenueCatLoading(false);
-            return;
-          }
-
-          if (shouldRunLegacyPreflight(premiumData)) {
-            console.log(
-              '[PremiumContext] Startup preflight: checking legacy lifetime purchase before RevenueCat sync.'
-            );
-            try {
-              const legacyRestoreResult = await attemptLegacyLifetimeRestoreCandidates(
-                user.uid,
-                'startup-preflight'
-              );
-              if (isCancelled) {
-                return;
-              }
-              if (legacyRestoreResult.restored) {
-                console.log(
-                  '[PremiumContext] Startup preflight: restored legacy lifetime, enabling RevenueCat bypass.'
-                );
-                setIsPremiumFromFirestore(true);
-                setIsRevenueCatBypassed(true);
-                setIsRevenueCatLoading(false);
-                return;
-              }
-
-              if (legacyRestoreResult.attemptedCount === 0) {
-                console.log(
-                  '[PremiumContext] Startup preflight: no legacy lifetime purchase found, falling back to RevenueCat.'
-                );
-              } else {
-                console.log(
-                  '[PremiumContext] Startup preflight: no restorable legacy lifetime purchase found, falling back to RevenueCat.'
-                );
-              }
-            } catch (preflightError) {
-              if (isCancelled) {
-                return;
-              }
-              console.warn(
-                '[PremiumContext] Startup preflight failed; continuing with RevenueCat sync:',
-                preflightError
-              );
-            }
-          } else {
-            console.log(
-              '[PremiumContext] Startup preflight skipped due known subscription markers in premium data.'
-            );
-          }
-        } catch (preflightLoadError) {
-          if (isCancelled) {
-            return;
-          }
-          console.warn(
-            '[PremiumContext] Startup preflight data load failed; continuing with RevenueCat sync:',
-            preflightLoadError
-          );
-        }
-      }
-
-      if (isCancelled) {
-        return;
-      }
       await syncRevenueCatForUser(user);
-      if (isCancelled) {
-        return;
-      }
     };
 
     void initializeForUser();
@@ -711,13 +299,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       isCancelled = true;
     };
-  }, [attemptLegacyLifetimeRestoreCandidates, isRevenueCatBypassed, syncRevenueCatForUser, user]);
+  }, [syncRevenueCatForUser, user]);
 
   useEffect(() => {
-    if (!user || Platform.OS !== 'android' || isRevenueCatBypassed || isRevenueCatLoading) {
-      if (isRevenueCatBypassed) {
-        console.log('[PremiumContext] RevenueCat customer info listener bypassed for legacy lifetime.');
-      }
+    if (!user || Platform.OS !== 'android' || isRevenueCatLoading) {
       return;
     }
 
@@ -729,13 +314,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [applyCustomerInfo, isRevenueCatBypassed, isRevenueCatLoading, user]);
+  }, [applyCustomerInfo, isRevenueCatLoading, user]);
 
   useEffect(() => {
-    if (!user?.uid || Platform.OS !== 'android' || isRevenueCatBypassed || isRevenueCatLoading) {
-      if (isRevenueCatBypassed) {
-        console.log('[PremiumContext] RevenueCat foreground refresh bypassed for legacy lifetime.');
-      }
+    if (!user?.uid || Platform.OS !== 'android' || isRevenueCatLoading) {
       return;
     }
 
@@ -754,7 +336,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       appStateSubscription?.remove?.();
     };
-  }, [applyCustomerInfo, isRevenueCatBypassed, isRevenueCatLoading, user?.uid]);
+  }, [applyCustomerInfo, isRevenueCatLoading, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -781,15 +363,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
           const data = snapshot.data() as Record<string, unknown> | undefined;
           const premiumData = data?.premium as Record<string, unknown> | undefined;
-          const lifetimeMarker = isLegacyLifetimePremium(premiumData);
-          const premiumStatus = premiumData?.isPremium === true || lifetimeMarker;
+          const premiumStatus = premiumData?.isPremium === true;
           const hasTrialHistory = resolveFirestoreTrialHistory(premiumData);
 
           setIsPremiumFromFirestore(premiumStatus);
           setHasUsedTrialFromFirestore(hasTrialHistory);
-          if (lifetimeMarker) {
-            setIsRevenueCatBypassed(true);
-          }
           setIsFirestoreLoading(false);
 
           try {
@@ -841,15 +419,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         const premiumData = userData.premium as Record<string, unknown> | undefined;
-        const lifetimeMarker = isLegacyLifetimePremium(premiumData);
-        const premiumStatus = premiumData?.isPremium === true || lifetimeMarker;
+        const premiumStatus = premiumData?.isPremium === true;
         const hasTrialHistory = resolveFirestoreTrialHistory(premiumData);
 
         setIsPremiumFromFirestore(premiumStatus);
         setHasUsedTrialFromFirestore(hasTrialHistory);
-        if (lifetimeMarker) {
-          setIsRevenueCatBypassed(true);
-        }
         setIsFirestoreLoading(false);
 
         try {
@@ -936,86 +510,21 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       return false;
     }
 
-    console.log('[PremiumContext] Attempting legacy lifetime restore...');
-    const legacyRestoreResult = await attemptLegacyLifetimeRestoreCandidates(user.uid, 'manual-restore');
-    let hadPendingLegacyFailure = legacyRestoreResult.hadPendingLegacyFailure;
-    let hadNotPurchasedLegacyFailure = legacyRestoreResult.hadNotPurchasedLegacyFailure;
-    let hadAnyLegacyCandidate = legacyRestoreResult.hadAnyLegacyCandidate;
-
-    if (legacyRestoreResult.restored) {
-      setIsPremiumFromFirestore(true);
-      setIsRevenueCatBypassed(true);
-      return true;
-    }
-
-    if (legacyRestoreResult.attemptedCount === 0) {
-      console.log('[PremiumContext] No legacy lifetime purchase found in Google Play.');
-    } else {
-      console.log('[PremiumContext] No restorable legacy lifetime purchase found.');
-    }
-
-    if (isRevenueCatBypassed) {
-      console.log(
-        '[PremiumContext] RevenueCat restore skipped because legacy lifetime bypass is active for this user.'
-      );
-      return false;
-    }
-
     const configured = await configureRevenueCat();
     if (!configured) {
       return false;
     }
 
-    console.log('[PremiumContext] Falling back to RevenueCat restore for subscriptions.');
     try {
       const customerInfo = await Purchases.restorePurchases();
       await applyCustomerInfo(customerInfo, user.uid);
       const hasRevenueCatPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
-      console.log('[PremiumContext] RevenueCat restore result:', {
-        hasRevenueCatPremium,
-      });
-      if (hasRevenueCatPremium) {
-        return true;
-      }
+      return hasRevenueCatPremium;
     } catch (error) {
-      console.warn('[PremiumContext] RevenueCat restore failed:', error);
-      const revenueCatFallbackResult = await attemptLegacyRestoreFromRevenueCatError(user.uid, error);
-      if (revenueCatFallbackResult.restored) {
-        setIsPremiumFromFirestore(true);
-        setIsRevenueCatBypassed(true);
-        return true;
-      }
-
-      const revenueCatRestoreReason = getLegacyRestoreReason(error, {
-        hasLegacyLifetimeEvidence: revenueCatFallbackResult.hadAnyLegacyCandidate,
-      });
-      hadPendingLegacyFailure =
-        hadPendingLegacyFailure ||
-        revenueCatFallbackResult.hadPendingLegacyFailure ||
-        revenueCatRestoreReason === 'LIFETIME_PURCHASE_PENDING';
-      hadNotPurchasedLegacyFailure =
-        hadNotPurchasedLegacyFailure ||
-        revenueCatFallbackResult.hadNotPurchasedLegacyFailure ||
-        revenueCatRestoreReason === 'LIFETIME_PURCHASE_NOT_PURCHASED';
-      hadAnyLegacyCandidate = hadAnyLegacyCandidate || revenueCatFallbackResult.hadAnyLegacyCandidate;
+      console.error('[PremiumContext] Restore failed:', error);
+      throw error;
     }
-
-    if (hadPendingLegacyFailure) {
-      console.warn('[PremiumContext] Restore concluded with pending legacy purchase state.', {
-        hadAnyLegacyCandidate,
-        hadNotPurchasedLegacyFailure,
-      });
-      throw createPendingLegacyRestoreError();
-    }
-
-    return false;
-  }, [
-    applyCustomerInfo,
-    attemptLegacyLifetimeRestoreCandidates,
-    attemptLegacyRestoreFromRevenueCatError,
-    isRevenueCatBypassed,
-    user,
-  ]);
+  }, [applyCustomerInfo, user]);
 
   const resetTestPurchase = useCallback(async () => {
     if (Platform.OS !== 'android') {
