@@ -1,9 +1,11 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockResetTestPurchase = jest.fn();
+const mockGetOfferings = jest.fn();
 
 const mockPremiumState = {
   isPremium: false,
@@ -48,13 +50,38 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
 }));
 
+jest.mock('react-native-purchases', () => ({
+  __esModule: true,
+  default: {
+    getOfferings: (...args: unknown[]) => mockGetOfferings(...args),
+  },
+}));
+
 import PremiumScreen from '@/src/screens/PremiumScreen';
 
 describe('PremiumScreen', () => {
+  const originalDev = (global as { __DEV__?: boolean }).__DEV__;
+
   beforeEach(() => {
+    (global as { __DEV__?: boolean }).__DEV__ = true;
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
+    mockGetOfferings.mockReset().mockResolvedValue({
+      all: {
+        Premium: {
+          availablePackages: [{ identifier: '$rc_monthly' }, { identifier: '$rc_annual' }],
+        },
+      },
+      current: {
+        availablePackages: [{ identifier: '$rc_monthly' }, { identifier: '$rc_annual' }],
+        identifier: 'Premium',
+      },
+    });
+  });
+
+  afterAll(() => {
+    (global as { __DEV__?: boolean }).__DEV__ = originalDev;
   });
 
   it('defaults to yearly selection when subscribing', () => {
@@ -94,5 +121,17 @@ describe('PremiumScreen', () => {
     expect(queryByTestId('free-trial-helper-text')).toBeNull();
     expect(queryByTestId('free-trial-inline-message')).toBeNull();
     expect(queryByText('One Week Free')).toBeNull();
+  });
+
+  it('runs manual offerings fetch from the dev debug button', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const { getByTestId } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('test-offerings-button'));
+
+    await waitFor(() => {
+      expect(mockGetOfferings).toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalledWith('Offerings', '2');
+    });
   });
 });

@@ -97,6 +97,30 @@ const baseOfferings = {
   current: null,
 };
 
+const basePlanSuffixOfferings = {
+  all: {
+    Premium: {
+      availablePackages: [
+        {
+          identifier: '$rc_monthly',
+          product: {
+            identifier: 'monthly_showseek_sub:monthly-base-plan',
+            priceString: '$3.00',
+          },
+        },
+        {
+          identifier: '$rc_annual',
+          product: {
+            identifier: 'showseek_yearly_sub:yearly-base-plan',
+            priceString: '$12.00',
+          },
+        },
+      ],
+    },
+  },
+  current: null,
+};
+
 const makeCustomerInfo = (isPremium: boolean) => ({
   entitlements: {
     active: isPremium
@@ -208,6 +232,56 @@ describe('PremiumContext', () => {
     });
 
     expect(purchaseResult).toBe(false);
+  });
+
+  it('matches package selection when RevenueCat product IDs include base plan suffixes', async () => {
+    mockGetOfferings.mockResolvedValue(basePlanSuffixOfferings);
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(result.current.prices.monthly).toBe('$3.00'));
+
+    let purchaseResult = false;
+    await act(async () => {
+      purchaseResult = await result.current.purchasePremium('monthly');
+    });
+
+    expect(mockPurchasePackage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        product: expect.objectContaining({
+          identifier: 'monthly_showseek_sub:monthly-base-plan',
+        }),
+      })
+    );
+    expect(purchaseResult).toBe(true);
+  });
+
+  it('throws an explicit error when Premium offering is missing', async () => {
+    mockGetOfferings.mockResolvedValue({
+      all: {
+        Default: {
+          availablePackages: [],
+        },
+      },
+      current: null,
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+    await waitFor(() => expect(mockConfigureRevenueCat).toHaveBeenCalled());
+
+    let thrownError: unknown = null;
+    await act(async () => {
+      try {
+        await result.current.purchasePremium('monthly');
+      } catch (error) {
+        thrownError = error;
+      }
+    });
+
+    expect(thrownError).toEqual(
+      expect.objectContaining({
+        message: 'RevenueCat offering "Premium" not found',
+      })
+    );
   });
 
   it('keeps premium true from Firestore fallback when RevenueCat is non-premium', async () => {

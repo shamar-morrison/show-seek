@@ -27,6 +27,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PremiumScreen() {
@@ -93,6 +94,23 @@ export default function PremiumScreen() {
       Alert.alert(t('premium.restoreFailedTitle'), error.message);
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  const testOfferings = async () => {
+    try {
+      const offerings = await Purchases.getOfferings();
+      const premiumPackageCount = offerings.all.Premium?.availablePackages?.length ?? 0;
+      console.log('[RevenueCat Debug] Test fetch successful:', {
+        allOfferings: Object.keys(offerings.all),
+        currentOffering: offerings.current?.identifier ?? null,
+        currentPackageCount: offerings.current?.availablePackages?.length ?? 0,
+        premiumPackageCount,
+      });
+      Alert.alert('Offerings', JSON.stringify(premiumPackageCount));
+    } catch (error) {
+      console.error('[RevenueCat Debug] Test fetch failed:', error);
+      Alert.alert('Error', String(error));
     }
   };
 
@@ -213,25 +231,36 @@ export default function PremiumScreen() {
             )}
           </TouchableOpacity>
 
-          {/* DEV ONLY: Reset purchase button for testing */}
+          {/* DEV ONLY: RevenueCat diagnostics + reset controls */}
           {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
-              onPress={async () => {
-                Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('common.reset'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      if (resetTestPurchase) await resetTestPurchase();
+            <>
+              <TouchableOpacity
+                testID="test-offerings-button"
+                style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
+                onPress={() => {
+                  void testOfferings();
+                }}
+              >
+                <Text style={styles.restoreButtonText}>Test Offerings (Dev)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
+                onPress={async () => {
+                  Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    {
+                      text: t('common.reset'),
+                      style: 'destructive',
+                      onPress: async () => {
+                        if (resetTestPurchase) await resetTestPurchase();
+                      },
                     },
-                  },
-                ]);
-              }}
-            >
-              <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
-            </TouchableOpacity>
+                  ]);
+                }}
+              >
+                <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </SafeAreaView>

@@ -62,16 +62,79 @@ const resolveOffering = (offeringData: {
   current: PurchasesOffering | null;
   all: Record<string, PurchasesOffering>;
 }): PurchasesOffering | null => {
-  if (offeringData.current) {
-    return offeringData.current;
-  }
+  return offeringData.all[OFFERING_NAME] ?? null;
+};
 
-  if (offeringData.all[OFFERING_NAME]) {
-    return offeringData.all[OFFERING_NAME];
-  }
+const normalizeStoreProductId = (productId?: string | null): string =>
+  String(productId ?? '')
+    .split(':')[0]
+    .trim();
 
-  const allOfferings = Object.values(offeringData.all);
-  return allOfferings.length > 0 ? allOfferings[0] : null;
+const findPackageByProductId = (
+  packages: PurchasesPackage[],
+  expectedProductId: string
+): PurchasesPackage | null => {
+  const normalizedExpectedProductId = normalizeStoreProductId(expectedProductId);
+  return (
+    packages.find((pkg) => {
+      const packageProductId = pkg.product.identifier;
+      return (
+        packageProductId === expectedProductId ||
+        normalizeStoreProductId(packageProductId) === normalizedExpectedProductId
+      );
+    }) ?? null
+  );
+};
+
+const logOfferingsDebug = (
+  offerings: {
+    current: PurchasesOffering | null;
+    all: Record<string, PurchasesOffering>;
+  },
+  context: string
+): void => {
+  const premiumOffering = offerings.all[OFFERING_NAME] ?? null;
+  const packageSummaries = (premiumOffering?.availablePackages ?? []).map((pkg) => ({
+    identifier: pkg.identifier,
+    normalizedProductId: normalizeStoreProductId(pkg.product.identifier),
+    productId: pkg.product.identifier,
+    productType: (pkg.product as { productType?: unknown }).productType ?? null,
+  }));
+
+  console.log('=== OFFERINGS DEBUG ===');
+  console.log('Context:', context);
+  console.log('Current offering identifier:', offerings.current?.identifier ?? null);
+  console.log('Current offering package count:', offerings.current?.availablePackages.length ?? 0);
+  console.log('All offerings:', Object.keys(offerings.all));
+  console.log('Premium offering exists:', premiumOffering != null);
+  console.log('Premium offering package count:', premiumOffering?.availablePackages.length ?? 0);
+  console.log('Premium offering packages:', packageSummaries);
+  console.log('==================');
+};
+
+const logResolvedPackagesDebug = (
+  context: string,
+  packagesByPlan: Record<PremiumPlan, PurchasesPackage | null>
+): void => {
+  console.log('=== OFFERINGS DEBUG ===');
+  console.log('Context:', `${context}:after-resolve`);
+  console.log('Resolved packages by plan:', {
+    monthly: packagesByPlan.monthly
+      ? {
+          identifier: packagesByPlan.monthly.identifier,
+          normalizedProductId: normalizeStoreProductId(packagesByPlan.monthly.product.identifier),
+          productId: packagesByPlan.monthly.product.identifier,
+        }
+      : null,
+    yearly: packagesByPlan.yearly
+      ? {
+          identifier: packagesByPlan.yearly.identifier,
+          normalizedProductId: normalizeStoreProductId(packagesByPlan.yearly.product.identifier),
+          productId: packagesByPlan.yearly.product.identifier,
+        }
+      : null,
+  });
+  console.log('==================');
 };
 
 const resolvePackagesByPlan = (
@@ -84,14 +147,8 @@ const resolvePackagesByPlan = (
     };
   }
 
-  const monthly =
-    offering.availablePackages.find(
-      (pkg) => pkg.product.identifier === SUBSCRIPTION_PRODUCT_IDS.monthly
-    ) ?? null;
-  const yearly =
-    offering.availablePackages.find(
-      (pkg) => pkg.product.identifier === SUBSCRIPTION_PRODUCT_IDS.yearly
-    ) ?? null;
+  const monthly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.monthly);
+  const yearly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.yearly);
 
   return {
     monthly,
@@ -140,17 +197,53 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     []
   );
 
-  const refreshOfferings = useCallback(async () => {
-    const offerings = await Purchases.getOfferings();
-    const resolvedOffering = resolveOffering(offerings);
-    const nextPackages = resolvePackagesByPlan(resolvedOffering);
+  const applyOfferingsState = useCallback(
+    (
+      offerings: {
+        current: PurchasesOffering | null;
+        all: Record<string, PurchasesOffering>;
+      },
+      context: string
+    ): Record<PremiumPlan, PurchasesPackage | null> => {
+      logOfferingsDebug(offerings, `${context}:before-resolve`);
 
-    setPackagesByPlan(nextPackages);
-    setPrices({
-      monthly: nextPackages.monthly?.product.priceString ?? null,
-      yearly: nextPackages.yearly?.product.priceString ?? null,
-    });
-  }, []);
+      const resolvedOffering = resolveOffering(offerings);
+      if (!resolvedOffering) {
+        const clearedPackages = {
+          monthly: null,
+          yearly: null,
+        };
+        setPackagesByPlan(clearedPackages);
+        setPrices({
+          monthly: null,
+          yearly: null,
+        });
+
+        console.error(`RevenueCat offering "${OFFERING_NAME}" not found. Available offerings:`, {
+          availableOfferingKeys: Object.keys(offerings.all),
+        });
+        throw new Error(`RevenueCat offering "${OFFERING_NAME}" not found`);
+      }
+
+      const nextPackages = resolvePackagesByPlan(resolvedOffering);
+      setPackagesByPlan(nextPackages);
+      setPrices({
+        monthly: nextPackages.monthly?.product.priceString ?? null,
+        yearly: nextPackages.yearly?.product.priceString ?? null,
+      });
+      logResolvedPackagesDebug(context, nextPackages);
+      return nextPackages;
+    },
+    []
+  );
+
+  const refreshOfferings = useCallback(
+    async (context = 'refreshOfferings'): Promise<Record<PremiumPlan, PurchasesPackage | null>> => {
+      const offerings = await Purchases.getOfferings();
+      return applyOfferingsState(offerings, context);
+    },
+    [applyOfferingsState]
+  );
 
   const syncRevenueCatForUser = useCallback(
     async (nextUser: User) => {
@@ -166,14 +259,18 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return;
         }
 
+        console.log('[RevenueCat] Purchases.logIn start for user:', nextUser.uid);
         await Purchases.logIn(nextUser.uid);
+        console.log('[RevenueCat] Purchases.logIn completed for user:', nextUser.uid);
 
-        const [customerInfo] = await Promise.all([
-          Purchases.getCustomerInfo(),
-          refreshOfferings(),
-        ]);
-
+        const customerInfo = await Purchases.getCustomerInfo();
         await applyCustomerInfo(customerInfo, nextUser.uid);
+
+        try {
+          await refreshOfferings('syncRevenueCatForUser');
+        } catch (offeringsError) {
+          console.error('[RevenueCat] Offerings refresh failed during user sync:', offeringsError);
+        }
       } catch (err) {
         console.error('RevenueCat sync failed:', err);
       } finally {
@@ -396,17 +493,25 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           throw new Error('RevenueCat SDK key is missing.');
         }
 
+        const requestedProductId = getProductIdForPlan(plan);
         let selectedPackage = packagesByPlan[plan];
         if (!selectedPackage) {
-          await refreshOfferings();
-          const refreshedProductId = getProductIdForPlan(plan);
-          const refreshedOfferings = await Purchases.getOfferings();
-          const resolvedOffering = resolveOffering(refreshedOfferings);
-          selectedPackage =
-            resolvedOffering?.availablePackages.find(
-              (pkg) => pkg.product.identifier === refreshedProductId
-            ) ?? null;
+          console.log('[RevenueCat] No cached package found for plan. Refreshing offerings.', {
+            plan,
+            requestedProductId,
+          });
+          const refreshedPackagesByPlan = await refreshOfferings('purchasePremium:fallback');
+          selectedPackage = refreshedPackagesByPlan[plan];
         }
+
+        console.log('=== PURCHASE ATTEMPT ===');
+        console.log('Selected plan:', plan);
+        console.log('Requested product ID:', requestedProductId);
+        console.log('Selected package:', selectedPackage);
+        console.log('Package identifier:', selectedPackage?.identifier ?? null);
+        console.log('Product ID:', selectedPackage?.product.identifier ?? null);
+        console.log('Normalized Product ID:', normalizeStoreProductId(selectedPackage?.product.identifier));
+        console.log('==================');
 
         if (!selectedPackage) {
           throw new Error('No subscription package available for selected plan.');
