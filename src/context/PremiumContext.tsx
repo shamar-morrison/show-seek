@@ -1,9 +1,9 @@
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import {
   getProductIdForPlan,
   SUBSCRIPTION_PRODUCT_IDS,
   type PremiumPlan,
 } from '@/src/context/premiumBilling';
-import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import i18n from '@/src/i18n';
@@ -100,41 +100,6 @@ const logOfferingsDebug = (
     productId: pkg.product.identifier,
     productType: (pkg.product as { productType?: unknown }).productType ?? null,
   }));
-
-  console.log('=== OFFERINGS DEBUG ===');
-  console.log('Context:', context);
-  console.log('Current offering identifier:', offerings.current?.identifier ?? null);
-  console.log('Current offering package count:', offerings.current?.availablePackages.length ?? 0);
-  console.log('All offerings:', Object.keys(offerings.all));
-  console.log('Premium offering exists:', premiumOffering != null);
-  console.log('Premium offering package count:', premiumOffering?.availablePackages.length ?? 0);
-  console.log('Premium offering packages:', packageSummaries);
-  console.log('==================');
-};
-
-const logResolvedPackagesDebug = (
-  context: string,
-  packagesByPlan: Record<PremiumPlan, PurchasesPackage | null>
-): void => {
-  console.log('=== OFFERINGS DEBUG ===');
-  console.log('Context:', `${context}:after-resolve`);
-  console.log('Resolved packages by plan:', {
-    monthly: packagesByPlan.monthly
-      ? {
-          identifier: packagesByPlan.monthly.identifier,
-          normalizedProductId: normalizeStoreProductId(packagesByPlan.monthly.product.identifier),
-          productId: packagesByPlan.monthly.product.identifier,
-        }
-      : null,
-    yearly: packagesByPlan.yearly
-      ? {
-          identifier: packagesByPlan.yearly.identifier,
-          normalizedProductId: normalizeStoreProductId(packagesByPlan.yearly.product.identifier),
-          productId: packagesByPlan.yearly.product.identifier,
-        }
-      : null,
-  });
-  console.log('==================');
 };
 
 const resolvePackagesByPlan = (
@@ -147,8 +112,14 @@ const resolvePackagesByPlan = (
     };
   }
 
-  const monthly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.monthly);
-  const yearly = findPackageByProductId(offering.availablePackages, SUBSCRIPTION_PRODUCT_IDS.yearly);
+  const monthly = findPackageByProductId(
+    offering.availablePackages,
+    SUBSCRIPTION_PRODUCT_IDS.monthly
+  );
+  const yearly = findPackageByProductId(
+    offering.availablePackages,
+    SUBSCRIPTION_PRODUCT_IDS.yearly
+  );
 
   return {
     monthly,
@@ -169,33 +140,30 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     monthly: null,
     yearly: null,
   });
-  const [packagesByPlan, setPackagesByPlan] = useState<Record<PremiumPlan, PurchasesPackage | null>>(
-    {
-      monthly: null,
-      yearly: null,
-    }
-  );
+  const [packagesByPlan, setPackagesByPlan] = useState<
+    Record<PremiumPlan, PurchasesPackage | null>
+  >({
+    monthly: null,
+    yearly: null,
+  });
 
   const [user, setUser] = useState<User | null>(auth.currentUser);
 
-  const applyCustomerInfo = useCallback(
-    async (customerInfo: CustomerInfo, userId?: string) => {
-      const isPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
-      const hasTrialHistory = resolveHasTrialHistory(customerInfo);
+  const applyCustomerInfo = useCallback(async (customerInfo: CustomerInfo, userId?: string) => {
+    const isPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
+    const hasTrialHistory = resolveHasTrialHistory(customerInfo);
 
-      setIsPremiumFromRevenueCat(isPremium);
-      setHasUsedTrialFromRevenueCat(hasTrialHistory);
+    setIsPremiumFromRevenueCat(isPremium);
+    setHasUsedTrialFromRevenueCat(hasTrialHistory);
 
-      if (userId) {
-        try {
-          await AsyncStorage.setItem(`isPremium_${userId}`, String(isPremium));
-        } catch (err) {
-          console.warn('Failed to write premium cache:', err);
-        }
+    if (userId) {
+      try {
+        await AsyncStorage.setItem(`isPremium_${userId}`, String(isPremium));
+      } catch (err) {
+        console.warn('Failed to write premium cache:', err);
       }
-    },
-    []
-  );
+    }
+  }, []);
 
   const applyOfferingsState = useCallback(
     (
@@ -231,7 +199,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         monthly: nextPackages.monthly?.product.priceString ?? null,
         yearly: nextPackages.yearly?.product.priceString ?? null,
       });
-      logResolvedPackagesDebug(context, nextPackages);
       return nextPackages;
     },
     []
@@ -504,15 +471,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           selectedPackage = refreshedPackagesByPlan[plan];
         }
 
-        console.log('=== PURCHASE ATTEMPT ===');
-        console.log('Selected plan:', plan);
-        console.log('Requested product ID:', requestedProductId);
-        console.log('Selected package:', selectedPackage);
-        console.log('Package identifier:', selectedPackage?.identifier ?? null);
-        console.log('Product ID:', selectedPackage?.product.identifier ?? null);
-        console.log('Normalized Product ID:', normalizeStoreProductId(selectedPackage?.product.identifier));
-        console.log('==================');
-
         if (!selectedPackage) {
           throw new Error('No subscription package available for selected plan.');
         }
@@ -573,10 +531,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         return;
       }
 
-      Alert.alert(
-        i18n.t('premium.noPurchaseFoundTitle'),
-        i18n.t('premium.noPurchaseFoundMessage')
-      );
+      Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
     } catch (err: any) {
       console.error('Reset error:', err);
       Alert.alert(i18n.t('premium.resetFailedTitle'), err.message || i18n.t('errors.generic'));
