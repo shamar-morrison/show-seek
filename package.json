@@ -59,8 +59,9 @@
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-google-auth": "^1.2.0",
-    "react-native-iap": "^14.5.0",
+    "react-native-iap": "14.7.11",
     "react-native-paper": "^5.14.5",
+    "react-native-purchases": "^9.9.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
@@ -94,7 +95,8 @@
   "packageManager": "pnpm@8.5.1",
   "pnpm": {
     "patchedDependencies": {
-      "@bittingz/expo-widgets@3.0.2": "patches/@bittingz+expo-widgets+3.0.2.patch"
+      "@bittingz/expo-widgets@3.0.2": "patches/@bittingz+expo-widgets+3.0.2.patch",
+      "react-native-iap@14.7.11": "patches/react-native-iap+14.7.11.patch"
     }
   }
 }

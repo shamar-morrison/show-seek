@@ -68,7 +68,6 @@
       ],
       "./withWidgetManifestFix.js",
       "./withSharedDataPackage.js",
-      "react-native-iap",
       "expo-updates",
       "react-native-google-auth",
       [

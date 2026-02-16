@@ -4,6 +4,7 @@
     "lint": "eslint src/",
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "migrate:revenuecat": "npm run build && node lib/scripts/migrateRevenueCatSubscribers.js",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",

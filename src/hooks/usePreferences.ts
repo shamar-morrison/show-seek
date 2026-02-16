@@ -43,21 +43,6 @@ export const usePreferences = () => {
     if (!__DEV__ || !READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
       return;
     }
-
-    console.log('[usePreferences] Query lifecycle', {
-      userId: userId ?? null,
-      authLoading,
-      enabled: queryEnabled,
-      status: query.status,
-      fetchStatus: query.fetchStatus,
-      isLoading: query.isLoading,
-      isHydratingInitial,
-      isFetched: query.isFetched,
-      dataUpdatedAt: query.dataUpdatedAt,
-      hasLoaded,
-      error: query.error ? String(query.error) : null,
-      timestamp: Date.now(),
-    });
   }, [
     authLoading,
     queryEnabled,

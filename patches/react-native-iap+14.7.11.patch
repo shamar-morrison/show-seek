@@ -1,0 +1,107 @@
+diff --git a/lib/module/index.js b/lib/module/index.js
+index d5c015c..34c3926 100644
+--- a/lib/module/index.js
++++ b/lib/module/index.js
+@@ -520,6 +520,34 @@ export const getAvailablePurchases = async options => {
+   }
+ };
+ 
++/**
++ * Get available purchases on Android using the history-aware OpenIAP path.
++ * This includes purchases that may not be returned by the active-only query.
++ * @param options - Android-specific options
++ * @param options.includeSuspendedAndroid - Include suspended subscriptions when available
++ */
++export const getAvailablePurchasesIncludingHistoryAndroid = async options => {
++  if (Platform.OS !== 'android') {
++    return getAvailablePurchases(options);
++  }
++  const includeSuspendedAndroid = Boolean(options?.includeSuspendedAndroid ?? false);
++  try {
++    const nitroPurchases = await IAP.instance.getAvailablePurchases({
++      android: {
++        includeSuspended: includeSuspendedAndroid
++      }
++    });
++    const validPurchases = nitroPurchases.filter(validateNitroPurchase);
++    if (validPurchases.length !== nitroPurchases.length) {
++      RnIapConsole.warn(`[getAvailablePurchasesIncludingHistoryAndroid] Some Android purchases failed validation: ${nitroPurchases.length - validPurchases.length} invalid`);
++    }
++    return validPurchases.map(convertNitroPurchaseToPurchase);
++  } catch (error) {
++    RnIapConsole.error('Failed to get Android purchases with history:', error);
++    throw error;
++  }
++};
++
+ /**
+  * Request the promoted product from the App Store (iOS only)
+  * @returns Promise<Product | null> - The promoted product or null if none available
+diff --git a/lib/typescript/src/index.d.ts b/lib/typescript/src/index.d.ts
+index 5b5e676..861cbee 100644
+--- a/lib/typescript/src/index.d.ts
++++ b/lib/typescript/src/index.d.ts
+@@ -73,6 +73,15 @@ export declare const fetchProducts: QueryField<'fetchProducts'>;
+  * ```
+  */
+ export declare const getAvailablePurchases: QueryField<'getAvailablePurchases'>;
++/**
++ * Get available purchases on Android using the history-aware OpenIAP path.
++ * This includes purchases that may not be returned by the active-only query.
++ * @param options - Android-specific options
++ * @param options.includeSuspendedAndroid - Include suspended subscriptions when available
++ */
++export declare const getAvailablePurchasesIncludingHistoryAndroid: (options?: {
++    includeSuspendedAndroid?: (boolean | null);
++}) => Promise<Purchase[]>;
+ /**
+  * Request the promoted product from the App Store (iOS only)
+  * @returns Promise<Product | null> - The promoted product or null if none available
+diff --git a/src/index.ts b/src/index.ts
+index 18acb05..64388c2 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -732,6 +732,43 @@ export const getAvailablePurchases: QueryField<
+   }
+ };
+ 
++/**
++ * Get available purchases on Android using the history-aware OpenIAP path.
++ * This includes purchases that may not be returned by the active-only query.
++ * @param options - Android-specific options
++ * @param options.includeSuspendedAndroid - Include suspended subscriptions when available
++ */
++export const getAvailablePurchasesIncludingHistoryAndroid = async (
++  options?: {
++    includeSuspendedAndroid?: boolean | null;
++  },
++): Promise<Purchase[]> => {
++  if (Platform.OS !== 'android') {
++    return getAvailablePurchases(options);
++  }
++
++  const includeSuspendedAndroid = Boolean(options?.includeSuspendedAndroid ?? false);
++  try {
++    const nitroPurchases = await IAP.instance.getAvailablePurchases({
++      android: {
++        includeSuspended: includeSuspendedAndroid,
++      },
++    });
++
++    const validPurchases = nitroPurchases.filter(validateNitroPurchase);
++    if (validPurchases.length !== nitroPurchases.length) {
++      RnIapConsole.warn(
++        `[getAvailablePurchasesIncludingHistoryAndroid] Some Android purchases failed validation: ${nitroPurchases.length - validPurchases.length} invalid`,
++      );
++    }
++
++    return validPurchases.map(convertNitroPurchaseToPurchase);
++  } catch (error) {
++    RnIapConsole.error('Failed to get Android purchases with history:', error);
++    throw error;
++  }
++};
++
+ /**
+  * Request the promoted product from the App Store (iOS only)
+  * @returns Promise<Product | null> - The promoted product or null if none available

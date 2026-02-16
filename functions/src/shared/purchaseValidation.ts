@@ -3,6 +3,8 @@ export const PURCHASE_VALIDATION_REASON_PURCHASE_NOT_FOUND_OR_EXPIRED =
   'PURCHASE_NOT_FOUND_OR_EXPIRED';
 export const PURCHASE_VALIDATION_REASON_PLAY_TEMPORARY_FAILURE = 'PLAY_TEMPORARY_FAILURE';
 export const PURCHASE_VALIDATION_REASON_PURCHASE_VALIDATION_FAILED = 'PURCHASE_VALIDATION_FAILED';
+export const LIFETIME_PURCHASE_PENDING_REASON = 'LIFETIME_PURCHASE_PENDING';
+export const LIFETIME_PURCHASE_NOT_PURCHASED_REASON = 'LIFETIME_PURCHASE_NOT_PURCHASED';
 
 export interface PurchaseValidationErrorMapping {
   code: 'failed-precondition' | 'internal' | 'unavailable';
@@ -10,6 +12,31 @@ export interface PurchaseValidationErrorMapping {
   retryable: boolean;
   statusCode: number | null;
 }
+
+export interface LifetimePurchaseStateFailure {
+  message: string;
+  reason: string;
+}
+
+export const resolveLifetimePurchaseStateFailure = (
+  purchaseState: number | null | undefined
+): LifetimePurchaseStateFailure | null => {
+  if (purchaseState === 0) {
+    return null;
+  }
+
+  if (purchaseState === 2) {
+    return {
+      message: 'Lifetime purchase is pending.',
+      reason: LIFETIME_PURCHASE_PENDING_REASON,
+    };
+  }
+
+  return {
+    message: `Lifetime purchase is not in a purchased state (${String(purchaseState)}).`,
+    reason: LIFETIME_PURCHASE_NOT_PURCHASED_REASON,
+  };
+};
 
 const getErrorStatusCode = (error: unknown): number | null => {
   const errorRecord = error as {

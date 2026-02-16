@@ -151,20 +151,20 @@ export function logReadAuditSessionReport(context = 'session') {
   const report = getReadAuditSessionReport();
 
   if (!report) {
-    console.log(`[ReadAuditCollector:${context}]`, { message: 'No active session' });
+    // console.log(`[ReadAuditCollector:${context}]`, { message: 'No active session' });
     return;
   }
 
-  console.log(`[ReadAuditCollector:${context}]`, {
-    sessionId: report.sessionId,
-    userId: report.userId ?? null,
-    durationHours: Number(report.durationHours.toFixed(2)),
-    totalReads: report.totalReads,
-    eventCount: report.eventCount,
-    readsPerDayEstimate: report.readsPerDayEstimate,
-    thresholdBand: report.thresholdBand,
-    topPaths: report.byPath.slice(0, 5),
-    topOperations: report.byOperation.slice(0, 5),
-    topCallsites: report.byCallsite.slice(0, 5),
-  });
+  // console.log(`[ReadAuditCollector:${context}]`, {
+  //   sessionId: report.sessionId,
+  //   userId: report.userId ?? null,
+  //   durationHours: Number(report.durationHours.toFixed(2)),
+  //   totalReads: report.totalReads,
+  //   eventCount: report.eventCount,
+  //   readsPerDayEstimate: report.readsPerDayEstimate,
+  //   thresholdBand: report.thresholdBand,
+  //   topPaths: report.byPath.slice(0, 5),
+  //   topOperations: report.byOperation.slice(0, 5),
+  //   topCallsites: report.byCallsite.slice(0, 5),
+  // });
 }

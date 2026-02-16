@@ -8,4 +8,7 @@ class HttpsError extends Error {
   }
 }
 
-module.exports = { HttpsError };
+const onCall = (_options, handler) => handler;
+const onRequest = (_options, handler) => handler;
+
+module.exports = { HttpsError, onCall, onRequest };

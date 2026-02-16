@@ -1,10 +1,13 @@
 import {
+  LIFETIME_PURCHASE_NOT_PURCHASED_REASON,
+  LIFETIME_PURCHASE_PENDING_REASON,
   PURCHASE_VALIDATION_REASON_PLAY_API_PERMISSION,
   PURCHASE_VALIDATION_REASON_PLAY_TEMPORARY_FAILURE,
   PURCHASE_VALIDATION_REASON_PURCHASE_NOT_FOUND_OR_EXPIRED,
   PURCHASE_VALIDATION_REASON_PURCHASE_VALIDATION_FAILED,
   isIdempotentAcknowledgeError,
   mapPurchaseValidationError,
+  resolveLifetimePurchaseStateFailure,
   resolveSubscriptionAcknowledgeId,
   shouldAcknowledgeSubscription,
 } from '@/functions/src/shared/purchaseValidation';
@@ -22,6 +25,25 @@ describe('purchaseValidation shared helpers', () => {
     );
     expect(resolveSubscriptionAcknowledgeId(null, 'fallback_sub')).toBe('fallback_sub');
     expect(resolveSubscriptionAcknowledgeId(undefined, null)).toBeNull();
+  });
+
+  it('maps lifetime purchaseState=2 to pending reason and purchaseState=0 to success', () => {
+    expect(resolveLifetimePurchaseStateFailure(0)).toBeNull();
+    expect(resolveLifetimePurchaseStateFailure(2)).toEqual({
+      message: 'Lifetime purchase is pending.',
+      reason: LIFETIME_PURCHASE_PENDING_REASON,
+    });
+  });
+
+  it('maps non-purchased lifetime states to not-purchased reason', () => {
+    expect(resolveLifetimePurchaseStateFailure(1)).toEqual({
+      message: 'Lifetime purchase is not in a purchased state (1).',
+      reason: LIFETIME_PURCHASE_NOT_PURCHASED_REASON,
+    });
+    expect(resolveLifetimePurchaseStateFailure(undefined)).toEqual({
+      message: 'Lifetime purchase is not in a purchased state (undefined).',
+      reason: LIFETIME_PURCHASE_NOT_PURCHASED_REASON,
+    });
   });
 
   it('maps permission errors to failed-precondition and non-retryable', () => {

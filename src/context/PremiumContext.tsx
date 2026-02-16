@@ -1,55 +1,56 @@
-import {
-  getDisplayPriceForSubscriptionProduct,
-  getProductIdForPlan,
-  inferPurchaseType,
-  isKnownPremiumProductId,
-  LEGACY_LIFETIME_PRODUCT_ID,
-  resolveMonthlyStandardOffer,
-  resolveMonthlyTrialOffer,
-  shouldTreatRestoreAsSuccess,
-  sortPurchasesByPremiumPriority,
-  SUBSCRIPTION_PRODUCT_IDS as SUBSCRIPTION_ID_MAP,
-  SUBSCRIPTION_PRODUCT_ID_LIST,
-  type PremiumPlan,
-  type PremiumPurchaseType,
-} from '@/src/context/premiumBilling';
-import {
-  CLIENT_FINISH_TRANSACTION_FAILED,
-  getPendingValidationMessageKey,
-  getPendingValidationRetryDelayMs,
-  getPurchaseValidationErrorDetails,
-  MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION,
-  normalizePendingValidationQueue,
-  PENDING_VALIDATION_QUEUE_STORAGE_KEY,
-  PURCHASE_NOT_AVAILABLE_FOR_FINISH,
-  type PurchaseValidationErrorDetails,
-  type PendingValidationPurchase,
-  type PendingValidationQueue,
-} from '@/src/context/purchaseValidationRetry';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
-import { auth, db, functions } from '@/src/firebase/config';
+import {
+  getProductIdForPlan,
+  SUBSCRIPTION_PRODUCT_IDS,
+  type PremiumPlan,
+} from '@/src/context/premiumBilling';
+import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import i18n from '@/src/i18n';
 import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import {
+  findLegacyLifetimePurchases,
+  type LegacyLifetimePurchase,
+  restoreLegacyLifetimeViaCallable,
+} from '@/src/services/legacyLifetimeRestore';
+import { configureRevenueCat } from '@/src/services/revenueCat';
 import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, AppState, Platform } from 'react-native';
-import type { Purchase } from 'react-native-iap';
-import * as RNIap from 'react-native-iap';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, AppState, Linking, Platform } from 'react-native';
+import Purchases, {
+  PURCHASES_ERROR_CODE,
+  type CustomerInfo,
+  type PurchasesOffering,
+  type PurchasesPackage,
+} from 'react-native-purchases';
 
-const AVAILABLE_SUBSCRIPTION_PRODUCT_IDS = Platform.select({
-  android: SUBSCRIPTION_PRODUCT_ID_LIST,
-  default: [],
-});
+const PREMIUM_ENTITLEMENT_ID = 'premium';
+const OFFERING_NAME = 'Premium';
+const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
+const LEGACY_RESTORE_NON_FATAL_REASONS = new Set([
+  'LIFETIME_PURCHASE_PENDING',
+  'LIFETIME_PURCHASE_NOT_PURCHASED',
+  'PURCHASE_NOT_FOUND_OR_EXPIRED',
+]);
+const LEGACY_RESTORE_PENDING_ERROR_CODE = 'LEGACY_RESTORE_PENDING';
+const KNOWN_SUBSCRIPTION_PRODUCT_IDS = new Set([
+  SUBSCRIPTION_PRODUCT_IDS.monthly,
+  SUBSCRIPTION_PRODUCT_IDS.yearly,
+]);
 
 interface PremiumPrices {
   monthly: string | null;
   yearly: string | null;
+}
+
+interface MonthlyTrialAvailability {
+  isEligible: boolean;
+  offerToken: string | null;
+  reasonKey: string | null;
 }
 
 interface PremiumState {
@@ -63,913 +64,733 @@ interface PremiumState {
   checkPremiumFeature: (featureName: string) => boolean;
 }
 
-interface MonthlyTrialAvailability {
-  isEligible: boolean;
-  offerToken: string | null;
-  reasonKey: string | null;
-}
-
-interface ValidationResponse {
-  success: boolean;
-  isPremium?: boolean;
-  message?: string;
-}
-
-interface SyncPremiumStatusResponse {
-  success: boolean;
-  isPremium: boolean;
-}
-
-interface ProcessPurchaseResult {
-  isPremium: boolean;
-  validationSucceeded: boolean;
-}
-
-type PremiumWriteSource =
-  | 'purchase_success'
-  | 'restore'
-  | 'retry_success'
-  | 'manual'
-  | 'app_open'
-  | 'unknown';
-
-interface SyncPremiumStatusOptions {
-  source?: PremiumWriteSource;
-  allowDowngrade?: boolean;
-}
-
-const TRIAL_INELIGIBLE_ERROR_CODE = 'TRIAL_INELIGIBLE';
-const TRIAL_UNAVAILABLE_REASON_KEY = 'premium.freeTrialUnavailableMessage';
-const TRIAL_USED_REASON_KEY = 'premium.freeTrialUsedMessage';
-const TRIAL_ALREADY_USED_REASON = 'TRIAL_ALREADY_USED';
-const PENDING_VALIDATION_ALERT_COOLDOWN_MS = 12000;
-
-const isCancelledPurchaseError = (error: unknown): boolean => {
-  const code = String((error as { code?: string })?.code || '').toLowerCase();
-  const message = String((error as { message?: string })?.message || '').toLowerCase();
-
-  return (
-    code === 'e_user_cancelled' ||
-    code === 'user-cancelled' ||
-    message === 'user canceled' ||
-    message.includes('user cancelled')
-  );
-};
-
-const isAlreadyOwnedError = (error: unknown): boolean => {
-  const code = String((error as { code?: string })?.code || '').toLowerCase();
-  const message = String((error as { message?: string })?.message || '').toLowerCase();
-
-  return code === 'e_already_owned' || code === 'already-owned' || message.includes('already own');
-};
-
-const isTrialIneligiblePurchaseError = (error: unknown): boolean => {
-  const code = String((error as { code?: string })?.code || '').toLowerCase();
-  const message = String((error as { message?: string })?.message || '').toLowerCase();
-
-  if (code === 'e_item_unavailable' || code === 'item_unavailable') {
+const resolveHasTrialHistory = (customerInfo: CustomerInfo): boolean => {
+  const entitlement = customerInfo.entitlements.all[PREMIUM_ENTITLEMENT_ID];
+  if (entitlement?.periodType === 'TRIAL') {
     return true;
   }
 
-  return (
-    (message.includes('trial') &&
-      (message.includes('ineligible') ||
-        message.includes('not eligible') ||
-        message.includes('unavailable'))) ||
-    (message.includes('offer') &&
-      (message.includes('token') ||
-        message.includes('ineligible') ||
-        message.includes('not eligible')))
-  );
+  const subscriptions = Object.values(customerInfo.subscriptionsByProductIdentifier ?? {});
+  return subscriptions.some((subscription) => subscription.periodType === 'TRIAL');
 };
 
-const isTrialAlreadyUsedValidationError = (error: unknown): boolean => {
-  const code = String((error as { code?: string })?.code || '').toLowerCase();
-  const message = String((error as { message?: string })?.message || '').toLowerCase();
-  const details = (error as { details?: { code?: string; reason?: string } })?.details;
-  const reason = String(details?.reason || details?.code || '').toUpperCase();
+const isLegacyLifetimePremium = (premiumData?: Record<string, unknown>): boolean => {
+  const entitlementType = String(premiumData?.entitlementType ?? '')
+    .trim()
+    .toLowerCase();
+  const productId = String(premiumData?.productId ?? '').trim();
 
-  if (reason === TRIAL_ALREADY_USED_REASON) {
-    return true;
-  }
-
-  return code === 'functions/failed-precondition' && message.includes('trial');
+  return entitlementType === 'lifetime' || productId === LEGACY_LIFETIME_PRODUCT_ID;
 };
 
-const createTrialIneligibleError = (
-  cause: unknown,
-  messageKey = 'premium.freeTrialRejectedMessage'
-): Error => {
-  const trialError = new Error(i18n.t(messageKey)) as Error & {
-    cause?: unknown;
-    code?: string;
-    reasonKey?: string;
+const hasKnownSubscriptionMarker = (premiumData?: Record<string, unknown>): boolean => {
+  const entitlementType = String(premiumData?.entitlementType ?? '')
+    .trim()
+    .toLowerCase();
+  const productId = String(premiumData?.productId ?? '').trim();
+
+  return entitlementType === 'subscription' || KNOWN_SUBSCRIPTION_PRODUCT_IDS.has(productId);
+};
+
+const shouldRunLegacyPreflight = (premiumData?: Record<string, unknown>): boolean => {
+  return !isLegacyLifetimePremium(premiumData) && !hasKnownSubscriptionMarker(premiumData);
+};
+
+const resolveFirestoreTrialHistory = (premiumData?: Record<string, unknown>): boolean =>
+  premiumData?.hasUsedTrial === true ||
+  premiumData?.trialConsumedAt != null ||
+  premiumData?.trialStartAt != null;
+
+const toRedactedTokenPrefix = (purchaseToken: string): string => purchaseToken.slice(0, 8);
+
+const extractRevenueCatPurchaseToken = (error: unknown): string | null => {
+  const errorRecord = error as {
+    message?: unknown;
+    underlyingErrorMessage?: unknown;
+    userInfo?: unknown;
   };
-  trialError.code = TRIAL_INELIGIBLE_ERROR_CODE;
-  trialError.cause = cause;
-  trialError.reasonKey = messageKey;
-  return trialError;
+
+  const userInfo = errorRecord?.userInfo;
+  const userInfoMessage =
+    userInfo && typeof userInfo === 'object'
+      ? String((userInfo as { underlyingErrorMessage?: unknown }).underlyingErrorMessage ?? '')
+      : '';
+
+  const rawErrorText = [
+    String(errorRecord?.message ?? ''),
+    String(errorRecord?.underlyingErrorMessage ?? ''),
+    userInfoMessage,
+    String(error ?? ''),
+  ]
+    .join('\n')
+    .trim();
+  if (!rawErrorText) {
+    return null;
+  }
+
+  const directTokenMatch = rawErrorText.match(/purchaseToken=([A-Za-z0-9._-]+)/);
+  if (directTokenMatch?.[1]) {
+    return directTokenMatch[1];
+  }
+
+  const jsonTokenMatch = rawErrorText.match(/"purchaseToken":"([^"]+)"/);
+  if (jsonTokenMatch?.[1]) {
+    return jsonTokenMatch[1];
+  }
+
+  return null;
+};
+
+interface LegacyRestoreReasonContext {
+  hasLegacyLifetimeEvidence?: boolean;
+}
+
+const getLegacyRestoreReason = (
+  error: unknown,
+  context: LegacyRestoreReasonContext = {}
+): string | null => {
+  const errorRecord = error as { details?: unknown; message?: unknown; reason?: unknown };
+  if (typeof errorRecord?.reason === 'string') {
+    return errorRecord.reason;
+  }
+
+  const details = errorRecord?.details;
+  if (details && typeof details === 'object') {
+    const reason = (details as { reason?: unknown }).reason;
+    if (typeof reason === 'string') {
+      return reason;
+    }
+  }
+
+  const message = String(errorRecord?.message ?? '').toLowerCase();
+  if (message.includes('pending')) {
+    if (!context.hasLegacyLifetimeEvidence) {
+      return null;
+    }
+    return 'LIFETIME_PURCHASE_PENDING';
+  }
+
+  if (message.includes('not purchased')) {
+    return 'LIFETIME_PURCHASE_NOT_PURCHASED';
+  }
+
+  return null;
+};
+
+const isRecoverableLegacyRestoreError = (
+  error: unknown,
+  context: LegacyRestoreReasonContext = {}
+): boolean => {
+  const reason = getLegacyRestoreReason(error, context);
+  if (reason) {
+    return LEGACY_RESTORE_NON_FATAL_REASONS.has(reason);
+  }
+
+  const message = String((error as { message?: unknown })?.message ?? '').toLowerCase();
+  return message.includes('legacy lifetime validation did not return premium success');
+};
+
+interface LegacyRestoreDiagnostics {
+  hadAnyLegacyCandidate: boolean;
+  hadNotPurchasedLegacyFailure: boolean;
+  hadPendingLegacyFailure: boolean;
+}
+
+interface LegacyRestoreAttemptResult extends LegacyRestoreDiagnostics {
+  attemptedCount: number;
+  restored: boolean;
+}
+
+const createPendingLegacyRestoreError = (): Error & { code: string } => {
+  const pendingError = new Error(i18n.t('premium.restorePendingMessage')) as Error & {
+    code: string;
+  };
+  pendingError.code = LEGACY_RESTORE_PENDING_ERROR_CODE;
+  return pendingError;
+};
+
+const resolveOffering = (offeringData: {
+  current: PurchasesOffering | null;
+  all: Record<string, PurchasesOffering>;
+}): PurchasesOffering | null => {
+  return offeringData.all[OFFERING_NAME] ?? null;
+};
+
+const normalizeStoreProductId = (productId?: string | null): string =>
+  String(productId ?? '')
+    .split(':')[0]
+    .trim();
+
+const findPackageByProductId = (
+  packages: PurchasesPackage[],
+  expectedProductId: string
+): PurchasesPackage | null => {
+  const normalizedExpectedProductId = normalizeStoreProductId(expectedProductId);
+  return (
+    packages.find((pkg) => {
+      const packageProductId = pkg.product.identifier;
+      return (
+        packageProductId === expectedProductId ||
+        normalizeStoreProductId(packageProductId) === normalizedExpectedProductId
+      );
+    }) ?? null
+  );
+};
+
+const logOfferingsDebug = (
+  offerings: {
+    current: PurchasesOffering | null;
+    all: Record<string, PurchasesOffering>;
+  },
+  context: string
+): void => {
+  const premiumOffering = offerings.all[OFFERING_NAME] ?? null;
+  const packageSummaries = (premiumOffering?.availablePackages ?? []).map((pkg) => ({
+    identifier: pkg.identifier,
+    normalizedProductId: normalizeStoreProductId(pkg.product.identifier),
+    productId: pkg.product.identifier,
+    productType: (pkg.product as { productType?: unknown }).productType ?? null,
+  }));
+  console.debug('=== OFFERINGS DEBUG ===');
+  console.debug('[RevenueCat Debug] Offerings summary:', {
+    allOfferingKeys: Object.keys(offerings.all),
+    context,
+    currentOfferingIdentifier: offerings.current?.identifier ?? null,
+    premiumOfferingFound: premiumOffering != null,
+    premiumPackageCount: packageSummaries.length,
+    premiumPackages: packageSummaries,
+  });
+  console.debug('==================');
+};
+
+const resolvePackagesByPlan = (
+  offering: PurchasesOffering | null
+): Record<PremiumPlan, PurchasesPackage | null> => {
+  if (!offering) {
+    return {
+      monthly: null,
+      yearly: null,
+    };
+  }
+
+  const monthly = findPackageByProductId(
+    offering.availablePackages,
+    SUBSCRIPTION_PRODUCT_IDS.monthly
+  );
+  const yearly = findPackageByProductId(
+    offering.availablePackages,
+    SUBSCRIPTION_PRODUCT_IDS.yearly
+  );
+
+  return {
+    monthly,
+    yearly,
+  };
 };
 
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
-  const [isPremium, setIsPremium] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPremiumFromRevenueCat, setIsPremiumFromRevenueCat] = useState(false);
+  const [hasUsedTrialFromRevenueCat, setHasUsedTrialFromRevenueCat] = useState(false);
+  const [isRevenueCatLoading, setIsRevenueCatLoading] = useState(Platform.OS === 'android');
+  const [isRevenueCatBypassed, setIsRevenueCatBypassed] = useState(false);
+
+  const [isPremiumFromFirestore, setIsPremiumFromFirestore] = useState(false);
+  const [hasUsedTrialFromFirestore, setHasUsedTrialFromFirestore] = useState(false);
+  const [isFirestoreLoading, setIsFirestoreLoading] = useState(true);
+
   const [prices, setPrices] = useState<PremiumPrices>({
     monthly: null,
     yearly: null,
   });
-  const [playMonthlyTrial, setPlayMonthlyTrial] = useState<MonthlyTrialAvailability>({
-    isEligible: false,
-    offerToken: null,
-    reasonKey: null,
+  const [packagesByPlan, setPackagesByPlan] = useState<
+    Record<PremiumPlan, PurchasesPackage | null>
+  >({
+    monthly: null,
+    yearly: null,
   });
-  const [monthlyStandardOfferToken, setMonthlyStandardOfferToken] = useState<string | null>(null);
-  const [hasUsedTrial, setHasUsedTrial] = useState(false);
+
   const [user, setUser] = useState<User | null>(auth.currentUser);
-  const pendingValidationQueueRef = useRef<PendingValidationQueue>({});
-  const pendingValidationQueueLoadedRef = useRef(false);
-  const pendingValidationRetryTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
-    {}
-  );
-  const inFlightValidationTokensRef = useRef<Set<string>>(new Set());
-  const sessionRetryAttemptsRef = useRef<Record<string, number>>({});
-  const recentPurchasesRef = useRef<Record<string, Purchase>>({});
-  const retryPendingValidationPurchasesRef = useRef<((trigger: string) => Promise<void>) | null>(
-    null
-  );
-  const processPurchaseRef = useRef<
-    ((
-      purchase: Purchase,
-      options?: { syncAfterSuccess?: boolean }
-    ) => Promise<ProcessPurchaseResult>) | null
-  >(null);
-  const lastPendingValidationAlertAtRef = useRef(0);
 
-  const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
-    if (hasUsedTrial) {
-      return {
-        isEligible: false,
-        offerToken: null,
-        reasonKey: TRIAL_USED_REASON_KEY,
-      };
-    }
+  const applyCustomerInfo = useCallback(async (customerInfo: CustomerInfo, userId?: string) => {
+    const isPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
+    const hasTrialHistory = resolveHasTrialHistory(customerInfo);
 
-    if (playMonthlyTrial.isEligible) {
-      return {
-        isEligible: true,
-        offerToken: playMonthlyTrial.offerToken,
-        reasonKey: null,
-      };
-    }
+    setIsPremiumFromRevenueCat(isPremium);
+    setHasUsedTrialFromRevenueCat(hasTrialHistory);
 
-    return {
-      isEligible: false,
-      offerToken: null,
-      reasonKey: playMonthlyTrial.reasonKey ?? TRIAL_UNAVAILABLE_REASON_KEY,
-    };
-  }, [hasUsedTrial, playMonthlyTrial]);
-
-  const logPremiumWriteDetected = useCallback(
-    (source: PremiumWriteSource, callsite: string, extra?: Record<string, unknown>) => {
-      if (process.env.NODE_ENV === 'test') {
-        return;
-      }
-
-      console.error('[PREMIUM WRITE DETECTED][CLIENT_CALL]', {
-        source,
-        callsite,
-        userId: user?.uid ?? null,
-        timestamp: Date.now(),
-        stack: new Error().stack,
-        ...(extra || {}),
-      });
-    },
-    [user?.uid]
-  );
-
-  const syncPremiumStatus = useCallback(async (options?: SyncPremiumStatusOptions): Promise<boolean> => {
-    if (!user) {
-      return false;
-    }
-
-    const source = options?.source ?? 'unknown';
-    const allowDowngrade = options?.allowDowngrade === true;
-
-    try {
-      logPremiumWriteDetected(source, 'PremiumContext.syncPremiumStatus', {
-        allowDowngrade,
-      });
-
-      const syncPremiumStatusFn = httpsCallable(functions, 'syncPremiumStatus');
-      const syncResult = await syncPremiumStatusFn({
-        source,
-        allowDowngrade,
-      });
-      const data = syncResult.data as SyncPremiumStatusResponse;
-
-      if (typeof data?.isPremium === 'boolean') {
-        if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
-          setIsPremium(data.isPremium);
-        }
-        return data.isPremium;
-      }
-
-      return false;
-    } catch (err) {
-      console.error('Error syncing premium status:', err);
-      return false;
-    }
-  }, [logPremiumWriteDetected, user]);
-
-  const clearPendingValidationRetryTimeout = useCallback((purchaseToken: string) => {
-    const existingTimeout = pendingValidationRetryTimeoutsRef.current[purchaseToken];
-    if (!existingTimeout) {
-      return;
-    }
-
-    clearTimeout(existingTimeout);
-    delete pendingValidationRetryTimeoutsRef.current[purchaseToken];
-  }, []);
-
-  const clearAllPendingValidationRetryTimeouts = useCallback(() => {
-    Object.values(pendingValidationRetryTimeoutsRef.current).forEach((timeoutId) => {
-      clearTimeout(timeoutId);
-    });
-    pendingValidationRetryTimeoutsRef.current = {};
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (newUser) => {
-      // Reset pending validation queue state when user changes to prevent
-      // tokens from one user leaking into another user's session.
-      pendingValidationQueueRef.current = {};
-      pendingValidationQueueLoadedRef.current = false;
-      clearAllPendingValidationRetryTimeouts();
-      sessionRetryAttemptsRef.current = {};
-      inFlightValidationTokensRef.current.clear();
-      recentPurchasesRef.current = {};
-
-      setUser(newUser);
-    });
-    return () => unsubscribe();
-  }, [clearAllPendingValidationRetryTimeouts]);
-
-  const persistPendingValidationQueue = useCallback(async () => {
-    if (!user) return;
-    try {
-      await AsyncStorage.setItem(
-        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`,
-        JSON.stringify(pendingValidationQueueRef.current)
-      );
-    } catch (err) {
-      console.warn('Failed to persist pending purchase validation queue:', err);
-    }
-  }, [user]);
-
-  const ensurePendingValidationQueueLoaded = useCallback(async () => {
-    if (pendingValidationQueueLoadedRef.current) {
-      return;
-    }
-    if (!user) return;
-
-    try {
-      const storedQueue = await AsyncStorage.getItem(
-        `${PENDING_VALIDATION_QUEUE_STORAGE_KEY}_${user.uid}`
-      );
-      if (storedQueue) {
-        pendingValidationQueueRef.current = normalizePendingValidationQueue(
-          JSON.parse(storedQueue)
-        );
-      }
-    } catch (err) {
-      console.warn('Failed to load pending purchase validation queue:', err);
-      pendingValidationQueueRef.current = {};
-    } finally {
-      pendingValidationQueueLoadedRef.current = true;
-    }
-  }, [user]);
-
-  const upsertPendingValidationPurchase = useCallback(
-    async (
-      purchase: Omit<PendingValidationPurchase, 'createdAt' | 'updatedAt'> & {
-        createdAt?: number;
-        updatedAt?: number;
-      }
-    ) => {
-      await ensurePendingValidationQueueLoaded();
-
-      const now = Date.now();
-      const existingPurchase = pendingValidationQueueRef.current[purchase.purchaseToken];
-      pendingValidationQueueRef.current[purchase.purchaseToken] = {
-        ...existingPurchase,
-        ...purchase,
-        createdAt: existingPurchase?.createdAt ?? purchase.createdAt ?? now,
-        updatedAt: purchase.updatedAt ?? now,
-      };
-
-      await persistPendingValidationQueue();
-    },
-    [ensurePendingValidationQueueLoaded, persistPendingValidationQueue]
-  );
-
-  const removePendingValidationPurchase = useCallback(
-    async (purchaseToken: string) => {
-      await ensurePendingValidationQueueLoaded();
-
-      if (pendingValidationQueueRef.current[purchaseToken]) {
-        delete pendingValidationQueueRef.current[purchaseToken];
-      }
-
-      delete sessionRetryAttemptsRef.current[purchaseToken];
-      delete recentPurchasesRef.current[purchaseToken];
-      inFlightValidationTokensRef.current.delete(purchaseToken);
-      clearPendingValidationRetryTimeout(purchaseToken);
-      await persistPendingValidationQueue();
-    },
-    [
-      clearPendingValidationRetryTimeout,
-      ensurePendingValidationQueueLoaded,
-      persistPendingValidationQueue,
-    ]
-  );
-
-  const showPendingValidationAlert = useCallback((messageKey: string) => {
-    const now = Date.now();
-    if (now - lastPendingValidationAlertAtRef.current < PENDING_VALIDATION_ALERT_COOLDOWN_MS) {
-      return;
-    }
-
-    lastPendingValidationAlertAtRef.current = now;
-    Alert.alert(
-      i18n.t('premium.purchasePendingVerificationTitle'),
-      i18n.t(messageKey || 'premium.purchasePendingVerificationNotice')
-    );
-  }, []);
-
-  const schedulePendingValidationRetry = useCallback(
-    (purchaseToken: string, nextRetryAt: number) => {
-      clearPendingValidationRetryTimeout(purchaseToken);
-
-      const delay = Math.max(nextRetryAt - Date.now(), 0);
-      pendingValidationRetryTimeoutsRef.current[purchaseToken] = setTimeout(() => {
-        delete pendingValidationRetryTimeoutsRef.current[purchaseToken];
-        const retryFn = retryPendingValidationPurchasesRef.current;
-        if (retryFn) {
-          void retryFn(`scheduled:${purchaseToken}`);
-        }
-      }, delay);
-    },
-    [clearPendingValidationRetryTimeout]
-  );
-
-  const enqueueRetryableValidationFailure = useCallback(
-    async ({
-      purchaseToken,
-      productId,
-      purchaseType,
-      errorDetails,
-    }: {
-      purchaseToken: string;
-      productId: string;
-      purchaseType: PremiumPurchaseType;
-      errorDetails: PurchaseValidationErrorDetails;
-    }) => {
-      const nextAttempt = (sessionRetryAttemptsRef.current[purchaseToken] ?? 0) + 1;
-      sessionRetryAttemptsRef.current[purchaseToken] = nextAttempt;
-      const nextRetryAt = Date.now() + getPendingValidationRetryDelayMs(nextAttempt);
-
-      await upsertPendingValidationPurchase({
-        purchaseToken,
-        productId,
-        purchaseType,
-        nextRetryAt,
-        lastReason: errorDetails.reason,
-      });
-
-      if (nextAttempt < MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
-        schedulePendingValidationRetry(purchaseToken, nextRetryAt);
-      }
-
-      showPendingValidationAlert(getPendingValidationMessageKey(errorDetails));
-    },
-    [schedulePendingValidationRetry, showPendingValidationAlert, upsertPendingValidationPurchase]
-  );
-
-  const validatePurchaseWithServer = useCallback(
-    async (
-      purchase: {
-        productId: string;
-        purchaseToken: string;
-        purchaseType: PremiumPurchaseType;
-      },
-      source: PremiumWriteSource
-    ): Promise<ValidationResponse> => {
-      logPremiumWriteDetected(source, 'PremiumContext.validatePurchaseWithServer', {
-        productId: purchase.productId,
-        purchaseType: purchase.purchaseType,
-        purchaseTokenPrefix: purchase.purchaseToken.slice(0, 8),
-      });
-
-      const validatePurchaseFn = httpsCallable(functions, 'validatePurchase');
-      const validationResult = await validatePurchaseFn({
-        purchaseToken: purchase.purchaseToken,
-        productId: purchase.productId,
-        purchaseType: purchase.purchaseType,
-        source,
-      });
-
-      return validationResult.data as ValidationResponse;
-    },
-    [logPremiumWriteDetected]
-  );
-
-  const findPurchaseByToken = useCallback(
-    async (purchaseToken: string): Promise<Purchase | null> => {
-      const cachedPurchase = recentPurchasesRef.current[purchaseToken];
-      if (cachedPurchase) {
-        return cachedPurchase;
-      }
-
+    if (userId) {
       try {
-        const purchases = await RNIap.getAvailablePurchases();
-        const matchedPurchase = purchases.find(
-          (purchase) => purchase.purchaseToken === purchaseToken
-        );
-        if (!matchedPurchase) {
-          return null;
-        }
-
-        recentPurchasesRef.current[purchaseToken] = matchedPurchase;
-        return matchedPurchase;
+        await AsyncStorage.setItem(`isPremium_${userId}`, String(isPremium));
       } catch (err) {
-        console.warn('Failed to fetch available purchases while finishing transaction:', err);
-        return null;
+        console.warn('Failed to write premium cache:', err);
       }
+    }
+  }, []);
+
+  const applyOfferingsState = useCallback(
+    (
+      offerings: {
+        current: PurchasesOffering | null;
+        all: Record<string, PurchasesOffering>;
+      },
+      context: string
+    ): Record<PremiumPlan, PurchasesPackage | null> => {
+      logOfferingsDebug(offerings, `${context}:before-resolve`);
+
+      const resolvedOffering = resolveOffering(offerings);
+      if (!resolvedOffering) {
+        const clearedPackages = {
+          monthly: null,
+          yearly: null,
+        };
+        setPackagesByPlan(clearedPackages);
+        setPrices({
+          monthly: null,
+          yearly: null,
+        });
+
+        console.error(`RevenueCat offering "${OFFERING_NAME}" not found. Available offerings:`, {
+          availableOfferingKeys: Object.keys(offerings.all),
+        });
+        throw new Error(`RevenueCat offering "${OFFERING_NAME}" not found`);
+      }
+
+      const nextPackages = resolvePackagesByPlan(resolvedOffering);
+      setPackagesByPlan(nextPackages);
+      setPrices({
+        monthly: nextPackages.monthly?.product.priceString ?? null,
+        yearly: nextPackages.yearly?.product.priceString ?? null,
+      });
+      return nextPackages;
     },
     []
   );
 
-  const retryPendingValidationPurchases = useCallback(
-    async (trigger: string) => {
-      await ensurePendingValidationQueueLoaded();
-
-      const now = Date.now();
-      const queuedPurchases = Object.values(pendingValidationQueueRef.current);
-      if (queuedPurchases.length === 0) {
-        return;
-      }
-
-      const duePurchases = queuedPurchases.filter((purchase) => purchase.nextRetryAt <= now);
-      if (duePurchases.length === 0) {
-        const nextQueuedPurchase = queuedPurchases.reduce<PendingValidationPurchase | null>(
-          (earliestPurchase, purchase) => {
-            if (!earliestPurchase || purchase.nextRetryAt < earliestPurchase.nextRetryAt) {
-              return purchase;
-            }
-            return earliestPurchase;
-          },
-          null
-        );
-
-        if (nextQueuedPurchase) {
-          schedulePendingValidationRetry(
-            nextQueuedPurchase.purchaseToken,
-            nextQueuedPurchase.nextRetryAt
-          );
-        }
-        return;
-      }
-
-      for (const queuedPurchase of duePurchases) {
-        const { purchaseToken } = queuedPurchase;
-
-        if (inFlightValidationTokensRef.current.has(purchaseToken)) {
-          continue;
-        }
-
-        const sessionAttempts = sessionRetryAttemptsRef.current[purchaseToken] ?? 0;
-        if (sessionAttempts >= MAX_PENDING_VALIDATION_RETRY_ATTEMPTS_PER_SESSION) {
-          console.warn(
-            'Skipping pending purchase validation retry for this app session; max attempts reached.',
-            { purchaseTokenPrefix: purchaseToken.slice(0, 8), trigger }
-          );
-          continue;
-        }
-
-        inFlightValidationTokensRef.current.add(purchaseToken);
-
-        try {
-          const validationResponse = await validatePurchaseWithServer({
-            productId: queuedPurchase.productId,
-            purchaseToken: queuedPurchase.purchaseToken,
-            purchaseType: queuedPurchase.purchaseType,
-          }, 'retry_success');
-
-          if (validationResponse?.success !== true) {
-            throw new Error('Purchase validation returned unsuccessful response.');
-          }
-
-          const isPremiumValidation = validationResponse?.isPremium === true;
-          if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
-            setIsPremium(isPremiumValidation);
-          }
-          const purchaseForFinishing = await findPurchaseByToken(purchaseToken);
-          if (!purchaseForFinishing) {
-            const errorDetails: PurchaseValidationErrorDetails = {
-              reason: PURCHASE_NOT_AVAILABLE_FOR_FINISH,
-              retryable: true,
-            };
-            await enqueueRetryableValidationFailure({
-              purchaseToken,
-              productId: queuedPurchase.productId,
-              purchaseType: queuedPurchase.purchaseType,
-              errorDetails,
-            });
-            console.error('Pending purchase acknowledgment retry queued:', {
-              flow: 'retryPendingValidationPurchases',
-              error: new Error('Purchase unavailable for finishTransaction.'),
-              productId: queuedPurchase.productId,
-              purchaseTokenPrefix: purchaseToken.slice(0, 8),
-              reason: errorDetails.reason,
-              retryable: errorDetails.retryable,
-              trigger,
-            });
-            continue;
-          }
-
-          try {
-            await RNIap.finishTransaction({
-              purchase: purchaseForFinishing,
-              isConsumable: false,
-            });
-          } catch (finishError) {
-            const errorDetails: PurchaseValidationErrorDetails = {
-              reason: CLIENT_FINISH_TRANSACTION_FAILED,
-              retryable: true,
-            };
-            await enqueueRetryableValidationFailure({
-              purchaseToken,
-              productId: queuedPurchase.productId,
-              purchaseType: queuedPurchase.purchaseType,
-              errorDetails,
-            });
-            console.error('Pending purchase acknowledgment retry queued:', {
-              flow: 'retryPendingValidationPurchases',
-              error: finishError,
-              productId: queuedPurchase.productId,
-              purchaseTokenPrefix: purchaseToken.slice(0, 8),
-              reason: errorDetails.reason,
-              retryable: errorDetails.retryable,
-              trigger,
-            });
-            continue;
-          }
-
-          await removePendingValidationPurchase(purchaseToken);
-          await syncPremiumStatus({ source: 'retry_success' });
-        } catch (retryError) {
-          if (isTrialAlreadyUsedValidationError(retryError)) {
-            setHasUsedTrial(true);
-          }
-
-          const errorDetails = getPurchaseValidationErrorDetails(retryError);
-          const messageKey = getPendingValidationMessageKey(errorDetails);
-
-          if (errorDetails.retryable) {
-            await enqueueRetryableValidationFailure({
-              purchaseToken,
-              productId: queuedPurchase.productId,
-              purchaseType: queuedPurchase.purchaseType,
-              errorDetails,
-            });
-          } else {
-            await removePendingValidationPurchase(purchaseToken);
-            showPendingValidationAlert(messageKey);
-          }
-
-          console.error('Pending purchase validation retry failed:', {
-            flow: 'retryPendingValidationPurchases',
-            error: retryError,
-            productId: queuedPurchase.productId,
-            purchaseTokenPrefix: purchaseToken.slice(0, 8),
-            reason: errorDetails.reason,
-            retryable: errorDetails.retryable,
-            trigger,
-          });
-        } finally {
-          inFlightValidationTokensRef.current.delete(purchaseToken);
-        }
-      }
+  const refreshOfferings = useCallback(
+    async (context = 'refreshOfferings'): Promise<Record<PremiumPlan, PurchasesPackage | null>> => {
+      const offerings = await Purchases.getOfferings();
+      return applyOfferingsState(offerings, context);
     },
-    [
-      enqueueRetryableValidationFailure,
-      ensurePendingValidationQueueLoaded,
-      findPurchaseByToken,
-      removePendingValidationPurchase,
-      schedulePendingValidationRetry,
-      showPendingValidationAlert,
-      syncPremiumStatus,
-      validatePurchaseWithServer,
-    ]
+    [applyOfferingsState]
   );
 
-  useEffect(() => {
-    retryPendingValidationPurchasesRef.current = retryPendingValidationPurchases;
-  }, [retryPendingValidationPurchases]);
+  const syncRevenueCatForUser = useCallback(
+    async (nextUser: User) => {
+      if (Platform.OS !== 'android') {
+        setIsRevenueCatLoading(false);
+        return;
+      }
 
-  // Process a purchase: validate with server and finish transaction
-  const processPurchase = useCallback(
+      setIsRevenueCatLoading(true);
+      try {
+        const configured = await configureRevenueCat();
+        if (!configured) {
+          return;
+        }
+
+        console.log('[RevenueCat] Purchases.logIn start for user:', nextUser.uid);
+        await Purchases.logIn(nextUser.uid);
+        console.log('[RevenueCat] Purchases.logIn completed for user:', nextUser.uid);
+
+        const customerInfo = await Purchases.getCustomerInfo();
+        await applyCustomerInfo(customerInfo, nextUser.uid);
+
+        try {
+          await refreshOfferings('syncRevenueCatForUser');
+        } catch (offeringsError) {
+          console.error('[RevenueCat] Offerings refresh failed during user sync:', offeringsError);
+        }
+      } catch (err) {
+        console.error('RevenueCat sync failed:', err);
+      } finally {
+        setIsRevenueCatLoading(false);
+      }
+    },
+    [applyCustomerInfo, refreshOfferings]
+  );
+
+  const attemptLegacyLifetimeRestoreCandidates = useCallback(
     async (
-      purchase: Purchase,
-      options?: { syncAfterSuccess?: boolean; source?: PremiumWriteSource }
-    ): Promise<ProcessPurchaseResult> => {
-      const syncAfterSuccess = options?.syncAfterSuccess ?? true;
-      const source = options?.source ?? 'purchase_success';
-
-      try {
-        console.log('Processing purchase:', purchase.productId);
-
-        const purchaseToken = purchase.purchaseToken;
-        if (!purchaseToken) {
-          console.error('Purchase missing token', purchase);
-          return {
-            isPremium: false,
-            validationSucceeded: false,
-          };
-        }
-
-        recentPurchasesRef.current[purchaseToken] = purchase;
-        const purchaseType = inferPurchaseType(purchase.productId);
-        const validationResponse = await validatePurchaseWithServer({
-          purchaseToken,
-          productId: purchase.productId,
-          purchaseType,
-        }, source);
-        console.log('Validation response:', validationResponse);
-
-        if (validationResponse?.success !== true) {
-          throw new Error('Purchase validation returned unsuccessful response.');
-        }
-
-        const isPremiumValidation = validationResponse?.isPremium === true;
-        if (!READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
-          setIsPremium(isPremiumValidation);
-        }
-        try {
-          // Acknowledge/finish transaction after successful validation.
-          await RNIap.finishTransaction({
-            purchase,
-            isConsumable: false,
-          });
-          console.log('Transaction finished successfully');
-        } catch (finishErr) {
-          const errorDetails: PurchaseValidationErrorDetails = {
-            reason: CLIENT_FINISH_TRANSACTION_FAILED,
-            retryable: true,
-          };
-
-          await enqueueRetryableValidationFailure({
-            purchaseToken,
-            productId: purchase.productId,
-            purchaseType,
-            errorDetails,
-          });
-
-          console.error('Error finishing transaction; queued for retry:', {
-            flow: 'processPurchase',
-            error: finishErr,
-            productId: purchase.productId,
-            purchaseTokenPrefix: purchaseToken.slice(0, 8),
-            reason: errorDetails.reason,
-            retryable: errorDetails.retryable,
-          });
-
-          if (syncAfterSuccess) {
-            await syncPremiumStatus({ source });
-          }
-
-          return {
-            isPremium: isPremiumValidation,
-            validationSucceeded: true,
-          };
-        }
-
-        await removePendingValidationPurchase(purchaseToken);
-        if (syncAfterSuccess) {
-          await syncPremiumStatus({ source });
-        }
-
+      userId: string,
+      context: 'startup-preflight' | 'manual-restore'
+    ): Promise<LegacyRestoreAttemptResult> => {
+      const legacyLifetimePurchases = await findLegacyLifetimePurchases();
+      if (legacyLifetimePurchases.length === 0) {
+        console.log(`[PremiumContext] ${context}: no legacy lifetime purchase candidates found.`);
         return {
-          isPremium: isPremiumValidation,
-          validationSucceeded: true,
-        };
-      } catch (err) {
-        if (isTrialAlreadyUsedValidationError(err)) {
-          setHasUsedTrial(true);
-        }
-
-        const purchaseToken = purchase.purchaseToken;
-        if (purchaseToken) {
-          const errorDetails = getPurchaseValidationErrorDetails(err);
-          const inlineMessageKey = getPendingValidationMessageKey(errorDetails);
-
-          if (errorDetails.retryable) {
-            await enqueueRetryableValidationFailure({
-              purchaseToken,
-              productId: purchase.productId,
-              purchaseType: inferPurchaseType(purchase.productId),
-              errorDetails,
-            });
-          } else {
-            await removePendingValidationPurchase(purchaseToken);
-            if (!isTrialAlreadyUsedValidationError(err)) {
-              showPendingValidationAlert(inlineMessageKey);
-            }
-          }
-
-          console.error('Error processing purchase:', {
-            flow: 'processPurchase',
-            error: err,
-            productId: purchase.productId,
-            purchaseTokenPrefix: purchaseToken.slice(0, 8),
-            reason: errorDetails.reason,
-            retryable: errorDetails.retryable,
-          });
-        } else {
-          console.error('Error processing purchase:', err);
-        }
-
-        return {
-          isPremium: false,
-          validationSucceeded: false,
+          attemptedCount: 0,
+          hadAnyLegacyCandidate: false,
+          hadNotPurchasedLegacyFailure: false,
+          hadPendingLegacyFailure: false,
+          restored: false,
         };
       }
+
+      let hadPendingLegacyFailure = false;
+      let hadNotPurchasedLegacyFailure = false;
+      for (const [index, purchase] of legacyLifetimePurchases.entries()) {
+        console.log(`[PremiumContext] ${context}: validating legacy lifetime candidate.`, {
+          candidateIndex: index + 1,
+          purchaseState: purchase.purchaseState,
+          tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
+          totalCandidates: legacyLifetimePurchases.length,
+        });
+
+        try {
+          const restoredLifetime = await restoreLegacyLifetimeViaCallable(userId, purchase);
+          if (restoredLifetime) {
+            console.log(`[PremiumContext] ${context}: legacy lifetime restore succeeded.`, {
+              candidateIndex: index + 1,
+              purchaseState: purchase.purchaseState,
+              tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
+              totalCandidates: legacyLifetimePurchases.length,
+            });
+            return {
+              attemptedCount: index + 1,
+              hadAnyLegacyCandidate: true,
+              hadNotPurchasedLegacyFailure,
+              hadPendingLegacyFailure,
+              restored: true,
+            };
+          }
+        } catch (error) {
+          if (
+            isRecoverableLegacyRestoreError(error, {
+              hasLegacyLifetimeEvidence: true,
+            })
+          ) {
+            const reason = getLegacyRestoreReason(error, {
+              hasLegacyLifetimeEvidence: true,
+            });
+            hadPendingLegacyFailure =
+              hadPendingLegacyFailure || reason === 'LIFETIME_PURCHASE_PENDING';
+            hadNotPurchasedLegacyFailure =
+              hadNotPurchasedLegacyFailure || reason === 'LIFETIME_PURCHASE_NOT_PURCHASED';
+            console.warn(`[PremiumContext] ${context}: recoverable legacy candidate validation failure.`, {
+              candidateIndex: index + 1,
+              purchaseState: purchase.purchaseState,
+              reason,
+              tokenPrefix: toRedactedTokenPrefix(purchase.purchaseToken),
+              totalCandidates: legacyLifetimePurchases.length,
+            });
+            continue;
+          }
+
+          console.error(`[PremiumContext] ${context}: fatal legacy candidate validation failure.`, error);
+          throw error;
+        }
+      }
+
+      console.log(`[PremiumContext] ${context}: legacy candidates exhausted without restorable lifetime.`);
+      return {
+        attemptedCount: legacyLifetimePurchases.length,
+        hadAnyLegacyCandidate: true,
+        hadNotPurchasedLegacyFailure,
+        hadPendingLegacyFailure,
+        restored: false,
+      };
     },
-    [
-      enqueueRetryableValidationFailure,
-      removePendingValidationPurchase,
-      showPendingValidationAlert,
-      syncPremiumStatus,
-      validatePurchaseWithServer,
-    ]
+    []
+  );
+
+  const attemptLegacyRestoreFromRevenueCatError = useCallback(
+    async (userId: string, error: unknown): Promise<LegacyRestoreAttemptResult> => {
+      const purchaseToken = extractRevenueCatPurchaseToken(error);
+      if (!purchaseToken) {
+        console.log(
+          '[PremiumContext] RevenueCat restore error did not include a purchase token for legacy validation.'
+        );
+        return {
+          attemptedCount: 0,
+          hadAnyLegacyCandidate: false,
+          hadNotPurchasedLegacyFailure: false,
+          hadPendingLegacyFailure: false,
+          restored: false,
+        };
+      }
+
+      const candidate: LegacyLifetimePurchase = {
+        productId: LEGACY_LIFETIME_PRODUCT_ID,
+        purchaseState: 'unknown',
+        purchaseToken,
+        transactionDate: Date.now(),
+        transactionId: null,
+      };
+      console.log(
+        '[PremiumContext] Attempting legacy lifetime validation using purchase token from RevenueCat restore error.',
+        {
+          tokenPrefix: toRedactedTokenPrefix(purchaseToken),
+        }
+      );
+
+      try {
+        const restored = await restoreLegacyLifetimeViaCallable(userId, candidate);
+        if (restored) {
+          console.log(
+            '[PremiumContext] Legacy lifetime restore succeeded using purchase token from RevenueCat restore error.'
+          );
+          return {
+            attemptedCount: 1,
+            hadAnyLegacyCandidate: true,
+            hadNotPurchasedLegacyFailure: false,
+            hadPendingLegacyFailure: false,
+            restored: true,
+          };
+        }
+      } catch (restoreError) {
+        if (
+          isRecoverableLegacyRestoreError(restoreError, {
+            hasLegacyLifetimeEvidence: true,
+          })
+        ) {
+          const reason = getLegacyRestoreReason(restoreError, {
+            hasLegacyLifetimeEvidence: true,
+          });
+          console.warn(
+            '[PremiumContext] RevenueCat-derived legacy token failed validation with recoverable reason.',
+            {
+              reason,
+              tokenPrefix: toRedactedTokenPrefix(purchaseToken),
+            }
+          );
+          return {
+            attemptedCount: 1,
+            hadAnyLegacyCandidate: true,
+            hadNotPurchasedLegacyFailure: reason === 'LIFETIME_PURCHASE_NOT_PURCHASED',
+            hadPendingLegacyFailure: reason === 'LIFETIME_PURCHASE_PENDING',
+            restored: false,
+          };
+        }
+
+        console.error(
+          '[PremiumContext] RevenueCat-derived legacy token failed validation with fatal reason.',
+          restoreError
+        );
+        throw restoreError;
+      }
+
+      return {
+        attemptedCount: 1,
+        hadAnyLegacyCandidate: true,
+        hadNotPurchasedLegacyFailure: false,
+        hadPendingLegacyFailure: false,
+        restored: false,
+      };
+    },
+    []
   );
 
   useEffect(() => {
-    processPurchaseRef.current = processPurchase;
-  }, [processPurchase]);
+    const unsubscribe = onAuthStateChanged(auth, (newUser) => {
+      setUser(newUser);
+    });
 
-  // Initialize IAP listeners
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
-    let purchaseUpdateSubscription: { remove: () => void } | undefined;
-    let purchaseErrorSubscription: { remove: () => void } | undefined;
+    if (!user) {
+      setIsPremiumFromRevenueCat(false);
+      setHasUsedTrialFromRevenueCat(false);
+      setIsRevenueCatBypassed(false);
+      setIsRevenueCatLoading(false);
+      setPrices({ monthly: null, yearly: null });
+      setPackagesByPlan({ monthly: null, yearly: null });
 
-    const initListeners = async () => {
-      try {
-        await RNIap.initConnection();
-
-        // Listen for successful purchases
-        purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase: Purchase) => {
-          console.log('Purchase Updated Listener triggered:', purchase);
-
-          if (purchase.purchaseToken || (purchase as any).transactionReceipt) {
-            console.log('Receipt/Token found, processing...');
-            const processPurchaseFn = processPurchaseRef.current;
-            const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
-
-            if (!processPurchaseFn || !retryPendingValidationPurchasesFn) {
-              console.warn(
-                'Purchase update handlers are unavailable; skipping purchase processing for this event.'
-              );
-              return;
-            }
-
-            await processPurchaseFn(purchase);
-            await retryPendingValidationPurchasesFn('purchase-updated-listener');
-          } else {
-            console.log('No transaction receipt/token in purchase object');
-          }
+      if (Platform.OS === 'android') {
+        void Purchases.logOut().catch(() => {
+          // Ignore logOut failures when SDK is not configured yet.
         });
+      }
+      return;
+    }
 
-        // Listen for purchase errors
-        purchaseErrorSubscription = RNIap.purchaseErrorListener((error: unknown) => {
-          console.warn('Purchase notification error:', error);
-          // We don't necessarily update state here as UI handles specific errors from requestPurchase
-        });
+    let isCancelled = false;
 
-        if (AVAILABLE_SUBSCRIPTION_PRODUCT_IDS && AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length > 0) {
-          const products = await RNIap.fetchProducts({
-            skus: AVAILABLE_SUBSCRIPTION_PRODUCT_IDS,
-            type: 'subs',
+    const initializeForUser = async () => {
+      await createUserDocument(user);
+      if (isCancelled) {
+        return;
+      }
+
+      if (Platform.OS === 'android') {
+        if (isRevenueCatBypassed) {
+          console.log('[PremiumContext] Startup sync: RevenueCat bypass already active.');
+          setIsRevenueCatLoading(false);
+          return;
+        }
+
+        try {
+          const userData = await getCachedUserDocument(user.uid, {
+            forceRefresh: true,
+            callsite: 'PremiumContext.initializeForUser.preflight',
           });
-
-          if (products) {
-            const monthlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.monthly) as
-              | RNIap.ProductSubscriptionAndroid
-              | undefined;
-            const yearlyProduct = products.find((p) => p.id === SUBSCRIPTION_ID_MAP.yearly) as
-              | RNIap.ProductSubscriptionAndroid
-              | undefined;
-            const monthlyTrialOffer = resolveMonthlyTrialOffer(
-              monthlyProduct?.subscriptionOfferDetailsAndroid
-            );
-            const monthlyStandardOffer = resolveMonthlyStandardOffer(
-              monthlyProduct?.subscriptionOfferDetailsAndroid
-            );
-
-            setPrices({
-              monthly: getDisplayPriceForSubscriptionProduct(monthlyProduct),
-              yearly: getDisplayPriceForSubscriptionProduct(yearlyProduct),
-            });
-
-            setPlayMonthlyTrial({
-              isEligible: monthlyTrialOffer.isEligible,
-              offerToken: monthlyTrialOffer.offerToken,
-              reasonKey: monthlyTrialOffer.isEligible ? null : TRIAL_UNAVAILABLE_REASON_KEY,
-            });
-            setMonthlyStandardOfferToken(monthlyStandardOffer.offerToken);
+          if (isCancelled) {
+            return;
           }
-        }
+          const premiumData = userData?.premium as Record<string, unknown> | undefined;
 
-        const retryPendingValidationPurchasesFn = retryPendingValidationPurchasesRef.current;
-        if (retryPendingValidationPurchasesFn) {
-          await retryPendingValidationPurchasesFn('iap-init');
+          if (isLegacyLifetimePremium(premiumData)) {
+            console.log(
+              '[PremiumContext] Startup preflight: lifetime marker detected in Firestore, bypassing RevenueCat sync.'
+            );
+            setIsRevenueCatBypassed(true);
+            setIsPremiumFromFirestore(true);
+            setHasUsedTrialFromFirestore(resolveFirestoreTrialHistory(premiumData));
+            setIsRevenueCatLoading(false);
+            return;
+          }
+
+          if (shouldRunLegacyPreflight(premiumData)) {
+            console.log(
+              '[PremiumContext] Startup preflight: checking legacy lifetime purchase before RevenueCat sync.'
+            );
+            try {
+              const legacyRestoreResult = await attemptLegacyLifetimeRestoreCandidates(
+                user.uid,
+                'startup-preflight'
+              );
+              if (isCancelled) {
+                return;
+              }
+              if (legacyRestoreResult.restored) {
+                console.log(
+                  '[PremiumContext] Startup preflight: restored legacy lifetime, enabling RevenueCat bypass.'
+                );
+                setIsPremiumFromFirestore(true);
+                setIsRevenueCatBypassed(true);
+                setIsRevenueCatLoading(false);
+                return;
+              }
+
+              if (legacyRestoreResult.attemptedCount === 0) {
+                console.log(
+                  '[PremiumContext] Startup preflight: no legacy lifetime purchase found, falling back to RevenueCat.'
+                );
+              } else {
+                console.log(
+                  '[PremiumContext] Startup preflight: no restorable legacy lifetime purchase found, falling back to RevenueCat.'
+                );
+              }
+            } catch (preflightError) {
+              if (isCancelled) {
+                return;
+              }
+              console.warn(
+                '[PremiumContext] Startup preflight failed; continuing with RevenueCat sync:',
+                preflightError
+              );
+            }
+          } else {
+            console.log(
+              '[PremiumContext] Startup preflight skipped due known subscription markers in premium data.'
+            );
+          }
+        } catch (preflightLoadError) {
+          if (isCancelled) {
+            return;
+          }
+          console.warn(
+            '[PremiumContext] Startup preflight data load failed; continuing with RevenueCat sync:',
+            preflightLoadError
+          );
         }
-      } catch (err) {
-        console.warn('IAP initialization error:', err);
-        setPlayMonthlyTrial({
-          isEligible: false,
-          offerToken: null,
-          reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
-        });
-        setMonthlyStandardOfferToken(null);
+      }
+
+      if (isCancelled) {
+        return;
+      }
+      await syncRevenueCatForUser(user);
+      if (isCancelled) {
+        return;
       }
     };
 
-    initListeners();
+    void initializeForUser();
 
     return () => {
-      if (purchaseUpdateSubscription) {
-        purchaseUpdateSubscription.remove();
-      }
-      if (purchaseErrorSubscription) {
-        purchaseErrorSubscription.remove();
-      }
-      clearAllPendingValidationRetryTimeouts();
-      RNIap.endConnection();
+      isCancelled = true;
     };
-  }, [clearAllPendingValidationRetryTimeouts]);
+  }, [attemptLegacyLifetimeRestoreCandidates, isRevenueCatBypassed, syncRevenueCatForUser, user]);
 
-  // Read premium status from Firestore with strict single-path branching:
-  // - Realtime listener path (default)
-  // - Fetch-based fallback path (when listener is explicitly disabled)
+  useEffect(() => {
+    if (!user || Platform.OS !== 'android' || isRevenueCatBypassed || isRevenueCatLoading) {
+      if (isRevenueCatBypassed) {
+        console.log('[PremiumContext] RevenueCat customer info listener bypassed for legacy lifetime.');
+      }
+      return;
+    }
+
+    const listener = (customerInfo: CustomerInfo) => {
+      void applyCustomerInfo(customerInfo, user.uid);
+    };
+
+    Purchases.addCustomerInfoUpdateListener(listener);
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(listener);
+    };
+  }, [applyCustomerInfo, isRevenueCatBypassed, isRevenueCatLoading, user]);
+
+  useEffect(() => {
+    if (!user?.uid || Platform.OS !== 'android' || isRevenueCatBypassed || isRevenueCatLoading) {
+      if (isRevenueCatBypassed) {
+        console.log('[PremiumContext] RevenueCat foreground refresh bypassed for legacy lifetime.');
+      }
+      return;
+    }
+
+    const appStateSubscription = AppState?.addEventListener?.('change', (nextState) => {
+      if (nextState !== 'active') {
+        return;
+      }
+
+      void Purchases.getCustomerInfo()
+        .then((customerInfo) => applyCustomerInfo(customerInfo, user.uid))
+        .catch((err) => {
+          console.warn('Failed to refresh customer info on foreground:', err);
+        });
+    });
+
+    return () => {
+      appStateSubscription?.remove?.();
+    };
+  }, [applyCustomerInfo, isRevenueCatBypassed, isRevenueCatLoading, user?.uid]);
+
   useEffect(() => {
     if (!user?.uid) {
-      setIsPremium(false);
-      setHasUsedTrial(false);
-      setIsLoading(false);
+      setIsPremiumFromFirestore(false);
+      setHasUsedTrialFromFirestore(false);
+      setIsFirestoreLoading(false);
       return;
     }
 
     const userId = user.uid;
 
     if (READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
-      if (__DEV__) {
-        console.log('[PremiumContext] Starting premium listener for:', userId);
-      }
-      setIsLoading(true);
+      setIsFirestoreLoading(true);
 
       const unsubscribe = auditedOnSnapshot(
         doc(db, 'users', userId),
         async (snapshot) => {
-          // IMPORTANT: Listener is the source of truth.
-          // Any writes from syncPremiumStatus/validatePurchase are reflected here.
-          // Never set premium state directly from API calls in listener mode.
           if (!snapshot.exists()) {
-            setIsPremium(false);
-            setHasUsedTrial(false);
-            setIsLoading(false);
+            setIsPremiumFromFirestore(false);
+            setHasUsedTrialFromFirestore(false);
+            setIsFirestoreLoading(false);
             return;
           }
 
           const data = snapshot.data() as Record<string, unknown> | undefined;
           const premiumData = data?.premium as Record<string, unknown> | undefined;
-          const premiumStatus = premiumData?.isPremium === true;
-          const hasTrialHistory =
-            premiumData?.hasUsedTrial === true ||
-            premiumData?.trialConsumedAt != null ||
-            premiumData?.trialStartAt != null;
+          const lifetimeMarker = isLegacyLifetimePremium(premiumData);
+          const premiumStatus = premiumData?.isPremium === true || lifetimeMarker;
+          const hasTrialHistory = resolveFirestoreTrialHistory(premiumData);
 
-          if (__DEV__) {
-            console.log('[PremiumContext] Listener update (SOURCE OF TRUTH):', {
-              isPremium: premiumStatus,
-              hasUsedTrial: hasTrialHistory,
-              source: 'firestore_listener',
-            });
+          setIsPremiumFromFirestore(premiumStatus);
+          setHasUsedTrialFromFirestore(hasTrialHistory);
+          if (lifetimeMarker) {
+            setIsRevenueCatBypassed(true);
           }
-
-          setIsPremium(premiumStatus);
-          setHasUsedTrial(hasTrialHistory);
-          setIsLoading(false);
+          setIsFirestoreLoading(false);
 
           try {
             await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
@@ -979,10 +800,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         },
         (error) => {
           console.error('[PremiumContext] Premium listener error:', error);
-          // Fail closed for entitlement security.
-          setIsPremium(false);
-          setHasUsedTrial(false);
-          setIsLoading(false);
+          setIsPremiumFromFirestore(false);
+          setHasUsedTrialFromFirestore(false);
+          setIsFirestoreLoading(false);
         },
         {
           path: `users/${userId}`,
@@ -991,64 +811,17 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
       );
 
-      return () => {
-        if (__DEV__) {
-          console.log('[PremiumContext] Cleaning up premium listener');
-        }
-        unsubscribe();
-      };
-    }
-
-    if (__DEV__) {
-      console.log('[PremiumContext] Using fetch-based premium check (listener disabled)');
+      return () => unsubscribe();
     }
 
     let isCancelled = false;
     let lastForegroundRefresh = 0;
     const FOREGROUND_REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
 
-    const checkLocalCache = async () => {
-      try {
-        const cached = await AsyncStorage.getItem(`isPremium_${userId}`);
-        if (cached === 'true') {
-          setIsPremium(true);
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.warn('Failed to read premium cache:', err);
-      }
-    };
-
-    const applyPremiumData = async (userData: Record<string, unknown> | null) => {
-      if (isCancelled) return;
-
-      // Null payload means "no fresh user document data"; do not treat it as
-      // a definitive entitlement revoke in fallback mode.
-      if (!userData) {
-        setIsLoading(false);
+    const refreshPremiumFromFirestore = async (forceRefresh = false) => {
+      if (isCancelled) {
         return;
       }
-
-      const premiumData = userData?.premium as Record<string, unknown> | undefined;
-      const premiumStatus = premiumData?.isPremium === true;
-      const hasTrialHistory =
-        premiumData?.hasUsedTrial === true ||
-        premiumData?.trialConsumedAt != null ||
-        premiumData?.trialStartAt != null;
-
-      setIsPremium(premiumStatus);
-      setHasUsedTrial(hasTrialHistory);
-      setIsLoading(false);
-
-      try {
-        await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
-      } catch (err) {
-        console.warn('Failed to write premium cache:', err);
-      }
-    };
-
-    const refreshPremiumFromFirestore = async (forceRefresh = false) => {
-      if (isCancelled) return;
 
       const now = Date.now();
       if (!forceRefresh && now - lastForegroundRefresh < FOREGROUND_REFRESH_COOLDOWN_MS) {
@@ -1061,19 +834,40 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           forceRefresh,
           callsite: 'PremiumContext.refreshPremiumFromFirestore',
         });
-        await applyPremiumData(userData);
+
+        if (!userData) {
+          setIsFirestoreLoading(false);
+          return;
+        }
+
+        const premiumData = userData.premium as Record<string, unknown> | undefined;
+        const lifetimeMarker = isLegacyLifetimePremium(premiumData);
+        const premiumStatus = premiumData?.isPremium === true || lifetimeMarker;
+        const hasTrialHistory = resolveFirestoreTrialHistory(premiumData);
+
+        setIsPremiumFromFirestore(premiumStatus);
+        setHasUsedTrialFromFirestore(hasTrialHistory);
+        if (lifetimeMarker) {
+          setIsRevenueCatBypassed(true);
+        }
+        setIsFirestoreLoading(false);
+
+        try {
+          await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
+        } catch (cacheError) {
+          console.warn('Failed to write premium cache:', cacheError);
+        }
       } catch (err) {
         console.error('Error fetching premium status:', err);
-        setIsLoading(false);
+        setIsFirestoreLoading(false);
       }
     };
 
-    checkLocalCache();
-    refreshPremiumFromFirestore(true);
+    void refreshPremiumFromFirestore(true);
 
     const appStateSubscription = AppState?.addEventListener?.('change', (nextState) => {
       if (nextState === 'active') {
-        refreshPremiumFromFirestore();
+        void refreshPremiumFromFirestore();
       }
     });
 
@@ -1083,254 +877,213 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     };
   }, [user?.uid]);
 
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const syncOnAppOpen = async () => {
-      await createUserDocument(user);
-      await retryPendingValidationPurchases('app-open');
-
-      if (isCancelled) {
-        return;
-      }
-    };
-
-    syncOnAppOpen();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [retryPendingValidationPurchases, user]);
-
-  const restorePurchases = useCallback(async (): Promise<boolean> => {
-    try {
-      console.log('Starting restorePurchases...');
-      await retryPendingValidationPurchases('restore-start');
-      const purchases = await RNIap.getAvailablePurchases();
-      console.log('Available purchases found:', purchases.length);
-
-      const knownPurchases = sortPurchasesByPremiumPriority(
-        purchases.filter((purchase) => isKnownPremiumProductId(purchase.productId))
-      );
-
-      if (knownPurchases.length === 0) {
-        console.log('No known premium purchase found in history');
-        return false;
-      }
-
-      for (const purchase of knownPurchases) {
-        const restoreResult = await processPurchase(purchase, {
-          syncAfterSuccess: false,
-          source: 'restore',
-        });
-
-        if (shouldTreatRestoreAsSuccess(restoreResult)) {
-          await retryPendingValidationPurchases('restore-success');
-          await syncPremiumStatus({ source: 'restore' });
-          return true;
-        }
-      }
-
-      await retryPendingValidationPurchases('restore-complete');
-      return false;
-    } catch (err: any) {
-      console.error('Restore error detail:', err);
-      // Ensure we treat Cloud Function errors clearly
-      if (
-        err.code === 'functions/internal' ||
-        err.code === 'functions/unknown' ||
-        err.code === 'internal'
-      ) {
-        throw new Error('Cloud Function Error: ' + err.message + ' check Firebase console logs');
-      }
-      throw err;
-    }
-  }, [processPurchase, retryPendingValidationPurchases, syncPremiumStatus]);
-
   const purchasePremium = useCallback(
-    async (plan: PremiumPlan, options?: { useTrial?: boolean }) => {
+    async (plan: PremiumPlan): Promise<boolean> => {
+      if (Platform.OS !== 'android') {
+        throw new Error('Subscriptions are only configured on Android right now.');
+      }
+
+      if (!user) {
+        throw new Error('User must be signed in to purchase premium.');
+      }
+
       try {
-        if (Platform.OS !== 'android') {
-          throw new Error('Subscriptions are only configured on Android right now.');
+        const configured = await configureRevenueCat();
+        if (!configured) {
+          throw new Error('RevenueCat SDK key is missing.');
         }
 
-        if (
-          !AVAILABLE_SUBSCRIPTION_PRODUCT_IDS ||
-          AVAILABLE_SUBSCRIPTION_PRODUCT_IDS.length === 0
-        ) {
-          throw new Error('No subscription products available');
-        }
-
-        const subscriptionProductId = getProductIdForPlan(plan);
-        const shouldUseTrial = plan === 'monthly' && options?.useTrial === true;
-        const shouldUseStandardMonthlyOffer = plan === 'monthly' && !shouldUseTrial;
-
-        if (shouldUseTrial && hasUsedTrial) {
-          throw createTrialIneligibleError(
-            new Error('Monthly trial already used for this account.'),
-            TRIAL_USED_REASON_KEY
-          );
-        }
-
-        if (shouldUseTrial && !monthlyTrial.offerToken) {
-          setPlayMonthlyTrial({
-            isEligible: false,
-            offerToken: null,
-            reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
+        const requestedProductId = getProductIdForPlan(plan);
+        let selectedPackage = packagesByPlan[plan];
+        if (!selectedPackage) {
+          console.log('[RevenueCat] No cached package found for plan. Refreshing offerings.', {
+            plan,
+            requestedProductId,
           });
-          throw createTrialIneligibleError(
-            new Error('Monthly trial offer token is unavailable for this account.'),
-            TRIAL_UNAVAILABLE_REASON_KEY
-          );
+          const refreshedPackagesByPlan = await refreshOfferings('purchasePremium:fallback');
+          selectedPackage = refreshedPackagesByPlan[plan];
         }
 
-        const androidPurchaseRequest: RNIap.RequestSubscriptionAndroidProps = {
-          skus: [subscriptionProductId],
-        };
-
-        if (shouldUseTrial && monthlyTrial.offerToken) {
-          androidPurchaseRequest.subscriptionOffers = [
-            {
-              sku: subscriptionProductId,
-              offerToken: monthlyTrial.offerToken,
-            },
-          ];
-        } else if (shouldUseStandardMonthlyOffer) {
-          if (monthlyStandardOfferToken) {
-            androidPurchaseRequest.subscriptionOffers = [
-              {
-                sku: subscriptionProductId,
-                offerToken: monthlyStandardOfferToken,
-              },
-            ];
-          } else {
-            console.warn(
-              'No standard monthly offer token found; falling back to skus-only monthly purchase request.'
-            );
-          }
+        if (!selectedPackage) {
+          throw new Error('No subscription package available for selected plan.');
         }
 
-        // Note: We rely on purchaseUpdatedListener for final validation and unlock.
-        await RNIap.requestPurchase({
-          type: 'subs',
-          request: {
-            android: androidPurchaseRequest,
-          },
-        });
+        const { customerInfo } = await Purchases.purchasePackage(selectedPackage);
+        await applyCustomerInfo(customerInfo, user.uid);
 
-        // We return true indicating the REQUEST was successful.
-        // Actual success (premium unlock) happens asynchronously via listener.
-        return true;
-      } catch (err: any) {
-        // User cancelled - silently return false without error
-        if (isCancelledPurchaseError(err)) {
+        return customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
+      } catch (err: unknown) {
+        const purchaseError = err as { code?: string; userCancelled?: boolean };
+        if (
+          purchaseError.userCancelled === true ||
+          purchaseError.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR
+        ) {
           return false;
         }
 
-        if (options?.useTrial === true && isTrialIneligiblePurchaseError(err)) {
-          setPlayMonthlyTrial({
-            isEligible: false,
-            offerToken: null,
-            reasonKey: TRIAL_UNAVAILABLE_REASON_KEY,
-          });
-          throw createTrialIneligibleError(err);
-        }
-
-        // Already-owned subscription - attempt restore/sync
-        if (isAlreadyOwnedError(err)) {
-          try {
-            console.log('User already owns a subscription, attempting restore...');
-            const restored = await restorePurchases();
-            if (!restored) {
-              throw new Error('restorePurchases() returned false after already-owned error');
-            }
-            console.log('Restore successful after already-owned error');
-            return true;
-          } catch (restoreErr: any) {
-            console.error('Failed to restore after already-owned:', restoreErr);
-            throw new Error(
-              'Restoration failed: ' + (restoreErr.message || JSON.stringify(restoreErr))
-            );
-          }
-        }
-
-        console.error('Purchase error:', err);
         throw err;
       }
     },
-    [hasUsedTrial, monthlyStandardOfferToken, monthlyTrial.offerToken, restorePurchases]
+    [applyCustomerInfo, packagesByPlan, refreshOfferings, user]
   );
 
-  const resetTestPurchase = useCallback(async () => {
-    try {
-      if (Platform.OS === 'android') {
-        const purchases = await RNIap.getAvailablePurchases();
-        const legacyPurchases = purchases.filter(
-          (purchase) =>
-            purchase.productId === LEGACY_LIFETIME_PRODUCT_ID && !!purchase.purchaseToken
-        );
-        const subscriptionPurchase = purchases.filter((purchase) =>
-          SUBSCRIPTION_PRODUCT_ID_LIST.includes(purchase.productId)
-        );
-        const prioritizedSubscriptions = sortPurchasesByPremiumPriority(subscriptionPurchase);
-        const topSubscriptionPurchase = prioritizedSubscriptions[0];
-
-        let didConsumeLegacy = false;
-        for (const legacyPurchase of legacyPurchases) {
-          if (legacyPurchase.purchaseToken) {
-            await RNIap.consumePurchaseAndroid(legacyPurchase.purchaseToken);
-            didConsumeLegacy = true;
-          }
-        }
-
-        if (didConsumeLegacy) {
-          await syncPremiumStatus({ source: 'manual', allowDowngrade: true });
-        }
-
-        if (topSubscriptionPurchase) {
-          Alert.alert(
-            i18n.t('premium.subscriptionManageTitle'),
-            i18n.t('premium.subscriptionManageMessage'),
-            [
-              { text: i18n.t('common.cancel'), style: 'cancel' },
-              {
-                text: i18n.t('premium.openSubscriptions'),
-                onPress: async () => {
-                  try {
-                    await RNIap.deepLinkToSubscriptions({
-                      skuAndroid: topSubscriptionPurchase.productId,
-                    });
-                  } catch (linkErr: any) {
-                    console.error('Subscription management deep link error:', linkErr);
-                    Alert.alert(i18n.t('premium.resetFailedTitle'), linkErr.message);
-                  }
-                },
-              },
-            ]
-          );
-          return;
-        }
-
-        if (didConsumeLegacy) {
-          setIsPremium(false);
-          Alert.alert(i18n.t('premium.resetCompleteTitle'), i18n.t('premium.resetCompleteMessage'));
-          return;
-        }
-
-        Alert.alert(
-          i18n.t('premium.noPurchaseFoundTitle'),
-          i18n.t('premium.noPurchaseFoundMessage')
-        );
-      }
-    } catch (err: any) {
-      console.error('Reset error:', err);
-      Alert.alert(i18n.t('premium.resetFailedTitle'), err.message);
+  const restorePurchases = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') {
+      return false;
     }
-  }, [syncPremiumStatus]);
+
+    if (!user) {
+      return false;
+    }
+
+    console.log('[PremiumContext] Attempting legacy lifetime restore...');
+    const legacyRestoreResult = await attemptLegacyLifetimeRestoreCandidates(user.uid, 'manual-restore');
+    let hadPendingLegacyFailure = legacyRestoreResult.hadPendingLegacyFailure;
+    let hadNotPurchasedLegacyFailure = legacyRestoreResult.hadNotPurchasedLegacyFailure;
+    let hadAnyLegacyCandidate = legacyRestoreResult.hadAnyLegacyCandidate;
+
+    if (legacyRestoreResult.restored) {
+      setIsPremiumFromFirestore(true);
+      setIsRevenueCatBypassed(true);
+      return true;
+    }
+
+    if (legacyRestoreResult.attemptedCount === 0) {
+      console.log('[PremiumContext] No legacy lifetime purchase found in Google Play.');
+    } else {
+      console.log('[PremiumContext] No restorable legacy lifetime purchase found.');
+    }
+
+    if (isRevenueCatBypassed) {
+      console.log(
+        '[PremiumContext] RevenueCat restore skipped because legacy lifetime bypass is active for this user.'
+      );
+      return false;
+    }
+
+    const configured = await configureRevenueCat();
+    if (!configured) {
+      return false;
+    }
+
+    console.log('[PremiumContext] Falling back to RevenueCat restore for subscriptions.');
+    try {
+      const customerInfo = await Purchases.restorePurchases();
+      await applyCustomerInfo(customerInfo, user.uid);
+      const hasRevenueCatPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
+      console.log('[PremiumContext] RevenueCat restore result:', {
+        hasRevenueCatPremium,
+      });
+      if (hasRevenueCatPremium) {
+        return true;
+      }
+    } catch (error) {
+      console.warn('[PremiumContext] RevenueCat restore failed:', error);
+      const revenueCatFallbackResult = await attemptLegacyRestoreFromRevenueCatError(user.uid, error);
+      if (revenueCatFallbackResult.restored) {
+        setIsPremiumFromFirestore(true);
+        setIsRevenueCatBypassed(true);
+        return true;
+      }
+
+      const revenueCatRestoreReason = getLegacyRestoreReason(error, {
+        hasLegacyLifetimeEvidence: revenueCatFallbackResult.hadAnyLegacyCandidate,
+      });
+      hadPendingLegacyFailure =
+        hadPendingLegacyFailure ||
+        revenueCatFallbackResult.hadPendingLegacyFailure ||
+        revenueCatRestoreReason === 'LIFETIME_PURCHASE_PENDING';
+      hadNotPurchasedLegacyFailure =
+        hadNotPurchasedLegacyFailure ||
+        revenueCatFallbackResult.hadNotPurchasedLegacyFailure ||
+        revenueCatRestoreReason === 'LIFETIME_PURCHASE_NOT_PURCHASED';
+      hadAnyLegacyCandidate = hadAnyLegacyCandidate || revenueCatFallbackResult.hadAnyLegacyCandidate;
+    }
+
+    if (hadPendingLegacyFailure) {
+      console.warn('[PremiumContext] Restore concluded with pending legacy purchase state.', {
+        hadAnyLegacyCandidate,
+        hadNotPurchasedLegacyFailure,
+      });
+      throw createPendingLegacyRestoreError();
+    }
+
+    return false;
+  }, [
+    applyCustomerInfo,
+    attemptLegacyLifetimeRestoreCandidates,
+    attemptLegacyRestoreFromRevenueCatError,
+    isRevenueCatBypassed,
+    user,
+  ]);
+
+  const resetTestPurchase = useCallback(async () => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    try {
+      const configured = await configureRevenueCat();
+      if (!configured) {
+        throw new Error('RevenueCat SDK key is missing.');
+      }
+
+      const customerInfo = await Purchases.getCustomerInfo();
+      if (customerInfo.managementURL) {
+        await Linking.openURL(customerInfo.managementURL);
+        return;
+      }
+
+      Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
+    } catch (err: unknown) {
+      console.error('Reset error:', err);
+      const rawResetErrorMessage =
+        (typeof (err as { message?: unknown } | null)?.message === 'string'
+          ? ((err as { message?: string }).message ?? '')
+          : '') ||
+        (typeof err === 'string' ? err : '') ||
+        (err != null ? String(err) : '');
+      const trimmedResetErrorMessage = rawResetErrorMessage.trim();
+      const resetErrorMessage =
+        !trimmedResetErrorMessage ||
+        trimmedResetErrorMessage === 'undefined' ||
+        trimmedResetErrorMessage === '[object Object]'
+          ? i18n.t('errors.generic')
+          : trimmedResetErrorMessage;
+      Alert.alert(i18n.t('premium.resetFailedTitle'), resetErrorMessage);
+    }
+  }, []);
+
+  const isPremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
+  const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
+  const isLoading = isRevenueCatLoading || isFirestoreLoading;
+
+  const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
+    const monthlyPackage = packagesByPlan.monthly;
+    const hasMonthlyIntroOffer = monthlyPackage?.product.introPrice != null;
+
+    if (hasUsedTrial) {
+      return {
+        isEligible: false,
+        offerToken: null,
+        reasonKey: 'premium.freeTrialUsedMessage',
+      };
+    }
+
+    if (!hasMonthlyIntroOffer) {
+      return {
+        isEligible: false,
+        offerToken: null,
+        reasonKey: 'premium.freeTrialUnavailableMessage',
+      };
+    }
+
+    return {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+  }, [hasUsedTrial, packagesByPlan.monthly]);
 
   return {
     isPremium,
@@ -1340,10 +1093,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     resetTestPurchase,
     prices,
     monthlyTrial,
-    checkPremiumFeature: (_featureName: string) => {
-      // For now, all premium features require isPremium to be true
-      // We can add more granular logic here later if needed
-      return isPremium;
-    },
+    checkPremiumFeature: (_featureName: string) => isPremium,
   };
 });

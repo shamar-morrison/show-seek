@@ -9,6 +9,7 @@ import {
   isIdempotentAcknowledgeError,
   isTransientSubscriptionError,
   mapPurchaseValidationError,
+  resolveLifetimePurchaseStateFailure,
   resolveSubscriptionAcknowledgeId,
   shouldAcknowledgeSubscription,
 } from './shared/purchaseValidation';
@@ -395,11 +396,16 @@ const validateLifetimeWithGoogle = async (
     token: purchaseToken,
   });
 
-  // purchaseState: 0=Purchased, 1=Canceled, 2=Pending
-  if (response.data.purchaseState !== 0) {
+  const lifetimePurchaseStateFailure = resolveLifetimePurchaseStateFailure(response.data.purchaseState);
+  if (lifetimePurchaseStateFailure) {
     throw new HttpsError(
-      'invalid-argument',
-      'Invalid lifetime purchase state: ' + response.data.purchaseState
+      'failed-precondition',
+      lifetimePurchaseStateFailure.message,
+      {
+        purchaseState: response.data.purchaseState ?? null,
+        reason: lifetimePurchaseStateFailure.reason,
+        retryable: false,
+      }
     );
   }
 
@@ -879,3 +885,5 @@ export const syncPremiumStatus = onCall(
     }
   }
 );
+
+export { revenuecatWebhook } from './revenuecatWebhook';
