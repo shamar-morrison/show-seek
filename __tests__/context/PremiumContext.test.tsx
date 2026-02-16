@@ -795,6 +795,59 @@ describe('PremiumContext', () => {
     );
   });
 
+  it('marks monthly trial as eligible when monthly package has intro price and user has no trial history', async () => {
+    mockGetOfferings.mockResolvedValue({
+      all: {
+        Premium: {
+          availablePackages: [
+            {
+              identifier: '$rc_monthly',
+              product: {
+                identifier: 'monthly_showseek_sub',
+                introPrice: {
+                  priceString: 'Free',
+                },
+                priceString: '$3.00',
+              },
+            },
+            {
+              identifier: '$rc_annual',
+              product: {
+                identifier: 'showseek_yearly_sub',
+                priceString: '$12.00',
+              },
+            },
+          ],
+        },
+      },
+      current: null,
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prices.monthly).toBe('$3.00');
+      expect(result.current.monthlyTrial).toEqual({
+        isEligible: true,
+        offerToken: null,
+        reasonKey: null,
+      });
+    });
+  });
+
+  it('marks monthly trial as unavailable when monthly package has no intro price and no trial history', async () => {
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.prices.monthly).toBe('$3.00');
+      expect(result.current.monthlyTrial).toEqual({
+        isEligible: false,
+        offerToken: null,
+        reasonKey: 'premium.freeTrialUnavailableMessage',
+      });
+    });
+  });
+
   it('keeps premium true from Firestore fallback when RevenueCat is non-premium', async () => {
     mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(false));
     mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(false), created: false });

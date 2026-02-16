@@ -34,6 +34,7 @@ export default function PremiumScreen() {
   const {
     isPremium,
     isLoading,
+    monthlyTrial,
     purchasePremium,
     restorePurchases,
     resetTestPurchase,
@@ -48,6 +49,12 @@ export default function PremiumScreen() {
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
+  const monthlyTrialNote =
+    selectedPlan === 'monthly'
+      ? monthlyTrial.isEligible
+        ? t('premium.freeTrialEligibleMessage')
+        : t('premium.freeTrialUnavailableMessage')
+      : null;
 
   // Watch for premium status change to show success
   React.useEffect(() => {
@@ -163,7 +170,11 @@ export default function PremiumScreen() {
             <Text style={[styles.premiumLabel, { color: accentColor }]}>ShowSeek Premium</Text>
             <Text style={styles.title}>{t('premium.unlockTitle')}</Text>
             <Text style={styles.subtitle}>{t('premium.unlockSubtitle')}</Text>
-            <Text style={styles.autoTrialNote}>{t('premium.freeTrialHelperText')}</Text>
+            {monthlyTrialNote ? (
+              <Text style={styles.autoTrialNote} testID="billing-helper-text">
+                {monthlyTrialNote}
+              </Text>
+            ) : null}
           </View>
 
           <View style={styles.planList}>

@@ -996,6 +996,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     : isRevenueCatLoading || isFirestoreLoading;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
+    const monthlyPackage = packagesByPlan.monthly;
+    const hasMonthlyIntroOffer = monthlyPackage?.product.introPrice != null;
+
     if (hasUsedTrial) {
       return {
         isEligible: false,
@@ -1004,12 +1007,20 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       };
     }
 
+    if (!hasMonthlyIntroOffer) {
+      return {
+        isEligible: false,
+        offerToken: null,
+        reasonKey: 'premium.freeTrialUnavailableMessage',
+      };
+    }
+
     return {
-      isEligible: false,
+      isEligible: true,
       offerToken: null,
       reasonKey: null,
     };
-  }, [hasUsedTrial]);
+  }, [hasUsedTrial, packagesByPlan.monthly]);
 
   return {
     isPremium,

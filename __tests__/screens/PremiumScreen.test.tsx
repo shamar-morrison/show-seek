@@ -67,6 +67,15 @@ describe('PremiumScreen', () => {
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
+    mockPremiumState.monthlyTrial = {
+      isEligible: false,
+      offerToken: null,
+      reasonKey: null,
+    };
+    mockPremiumState.prices = {
+      monthly: '$3.00',
+      yearly: '$12.00',
+    };
     mockGetOfferings.mockReset().mockResolvedValue({
       all: {
         Premium: {
@@ -121,6 +130,42 @@ describe('PremiumScreen', () => {
     expect(queryByTestId('free-trial-helper-text')).toBeNull();
     expect(queryByTestId('free-trial-inline-message')).toBeNull();
     expect(queryByText('One Week Free')).toBeNull();
+  });
+
+  it('does not show trial helper text when yearly is selected', () => {
+    const { queryByTestId } = render(<PremiumScreen />);
+
+    expect(queryByTestId('billing-helper-text')).toBeNull();
+  });
+
+  it('shows monthly trial-eligible helper text when monthly is selected and eligible', () => {
+    mockPremiumState.monthlyTrial = {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+
+    const { getByTestId, queryByTestId } = render(<PremiumScreen />);
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByTestId('billing-helper-text')).toHaveTextContent('Eligible for a 7-day free trial.');
+    expect(queryByTestId('billing-helper-reason')).toBeNull();
+  });
+
+  it('shows monthly ineligible text when monthly trial is unavailable', () => {
+    mockPremiumState.monthlyTrial = {
+      isEligible: false,
+      offerToken: null,
+      reasonKey: 'premium.freeTrialUsedMessage',
+    };
+
+    const { getByTestId, queryByTestId } = render(<PremiumScreen />);
+    fireEvent.press(getByTestId('plan-monthly'));
+
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      'Free trial not available for this account.'
+    );
+    expect(queryByTestId('billing-helper-reason')).toBeNull();
   });
 
   it('runs manual offerings fetch from the dev debug button', async () => {
