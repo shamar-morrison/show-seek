@@ -6,7 +6,6 @@ import {
   inferPurchaseType,
   isKnownPremiumProductId,
   isMonthlyTrialOffer,
-  LEGACY_LIFETIME_PRODUCT_ID,
   MONTHLY_TRIAL_OFFER_ID,
   resolveMonthlyStandardOffer,
   resolveMonthlyTrialOffer,
@@ -24,30 +23,26 @@ describe('premiumBilling helpers', () => {
   it('maps known product IDs to plans', () => {
     expect(getPlanForProductId(SUBSCRIPTION_PRODUCT_IDS.monthly)).toBe('monthly');
     expect(getPlanForProductId(SUBSCRIPTION_PRODUCT_IDS.yearly)).toBe('yearly');
-    expect(getPlanForProductId(LEGACY_LIFETIME_PRODUCT_ID)).toBeNull();
     expect(getPlanForProductId('unknown_product')).toBeNull();
   });
 
-  it('infers purchase type from product ID', () => {
-    expect(inferPurchaseType(LEGACY_LIFETIME_PRODUCT_ID)).toBe('in-app');
+  it('infers purchase type as subscription', () => {
+    expect(inferPurchaseType()).toBe('subs');
     expect(inferPurchaseType(SUBSCRIPTION_PRODUCT_IDS.monthly)).toBe('subs');
     expect(inferPurchaseType(SUBSCRIPTION_PRODUCT_IDS.yearly)).toBe('subs');
   });
 
-  it('recognizes known premium products', () => {
-    expect(isKnownPremiumProductId(LEGACY_LIFETIME_PRODUCT_ID)).toBe(true);
+  it('recognizes known subscription premium products', () => {
     expect(isKnownPremiumProductId(SUBSCRIPTION_PRODUCT_IDS.monthly)).toBe(true);
     expect(isKnownPremiumProductId(SUBSCRIPTION_PRODUCT_IDS.yearly)).toBe(true);
     expect(isKnownPremiumProductId('anything_else')).toBe(false);
   });
 
-  it('prioritizes legacy lifetime before subscription plans', () => {
-    const lifetimePriority = getProductPriority(LEGACY_LIFETIME_PRODUCT_ID);
+  it('prioritizes yearly before monthly before unknown', () => {
     const yearlyPriority = getProductPriority(SUBSCRIPTION_PRODUCT_IDS.yearly);
     const monthlyPriority = getProductPriority(SUBSCRIPTION_PRODUCT_IDS.monthly);
     const unknownPriority = getProductPriority('unknown');
 
-    expect(lifetimePriority).toBeLessThan(yearlyPriority);
     expect(yearlyPriority).toBeLessThan(monthlyPriority);
     expect(monthlyPriority).toBeLessThan(unknownPriority);
   });
@@ -327,11 +322,9 @@ describe('premiumBilling helpers', () => {
     const sorted = sortPurchasesByPremiumPriority([
       { productId: SUBSCRIPTION_PRODUCT_IDS.monthly },
       { productId: SUBSCRIPTION_PRODUCT_IDS.yearly },
-      { productId: LEGACY_LIFETIME_PRODUCT_ID },
     ]);
 
     expect(sorted.map((purchase) => purchase.productId)).toEqual([
-      LEGACY_LIFETIME_PRODUCT_ID,
       SUBSCRIPTION_PRODUCT_IDS.yearly,
       SUBSCRIPTION_PRODUCT_IDS.monthly,
     ]);

@@ -15,7 +15,6 @@
 - Webhook writes directly from payload to `users/{userId}.premium` (no per-event REST fetch).
 - Added idempotency via `revenuecatWebhookEvents/{eventId}`.
 - Added stale-event guard using `premium.rcLastEventTimestampMs`.
-- Added legacy lifetime protection for `premium_unlock` users.
 
 ## Migration Script
 

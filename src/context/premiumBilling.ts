@@ -24,9 +24,8 @@ type BillingProduct = {
 };
 
 export type PremiumPlan = 'monthly' | 'yearly';
-export type PremiumPurchaseType = 'in-app' | 'subs';
+export type PremiumPurchaseType = 'subs';
 
-export const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
 export { MONTHLY_TRIAL_OFFER_ID };
 
 export const SUBSCRIPTION_PRODUCT_IDS: Record<PremiumPlan, string> = {
@@ -40,7 +39,6 @@ export const SUBSCRIPTION_PRODUCT_ID_LIST: string[] = [
 ];
 
 export const PREMIUM_PRODUCT_PRIORITY: string[] = [
-  LEGACY_LIFETIME_PRODUCT_ID,
   SUBSCRIPTION_PRODUCT_IDS.yearly,
   SUBSCRIPTION_PRODUCT_IDS.monthly,
 ];
@@ -54,17 +52,13 @@ export const getPlanForProductId = (productId?: string | null): PremiumPlan | nu
   return null;
 };
 
-export const isLegacyLifetimeProduct = (productId?: string | null): boolean =>
-  productId === LEGACY_LIFETIME_PRODUCT_ID;
-
 export const isSubscriptionProduct = (productId?: string | null): boolean =>
   getPlanForProductId(productId) !== null;
 
 export const isKnownPremiumProductId = (productId?: string | null): boolean =>
-  isLegacyLifetimeProduct(productId) || isSubscriptionProduct(productId);
+  isSubscriptionProduct(productId);
 
-export const inferPurchaseType = (productId?: string | null): PremiumPurchaseType =>
-  isSubscriptionProduct(productId) ? 'subs' : 'in-app';
+export const inferPurchaseType = (_productId?: string | null): PremiumPurchaseType => 'subs';
 
 export const getProductPriority = (productId?: string | null): number => {
   if (!productId) return Number.MAX_SAFE_INTEGER;

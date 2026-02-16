@@ -2,8 +2,8 @@
 
 ## Play Purchase Validation Credentials
 
-Google Play validation in `validatePurchase` and `syncPremiumStatus` uses a dedicated
-service account JSON from Secret Manager:
+`syncPremiumStatus` uses a dedicated Google Play service account JSON from Secret Manager.
+`validatePurchase` is deprecated and kept temporarily for safety.
 
 - Secret name: `PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON`
 - Expected value: full JSON key for
@@ -26,7 +26,7 @@ firebase functions:secrets:set PLAY_VALIDATOR_SERVICE_ACCOUNT_JSON --project sho
 After updating the secret, redeploy affected functions:
 
 ```bash
-firebase deploy --only functions:validatePurchase,functions:syncPremiumStatus --project showseek-app-2025
+firebase deploy --only functions:syncPremiumStatus --project showseek-app-2025
 ```
 
 ## RevenueCat Webhook Secrets
