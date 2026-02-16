@@ -1035,17 +1035,28 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
 
       Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Reset error:', err);
-      Alert.alert(i18n.t('premium.resetFailedTitle'), err.message || i18n.t('errors.generic'));
+      const rawResetErrorMessage =
+        (typeof (err as { message?: unknown } | null)?.message === 'string'
+          ? ((err as { message?: string }).message ?? '')
+          : '') ||
+        (typeof err === 'string' ? err : '') ||
+        (err != null ? String(err) : '');
+      const trimmedResetErrorMessage = rawResetErrorMessage.trim();
+      const resetErrorMessage =
+        !trimmedResetErrorMessage ||
+        trimmedResetErrorMessage === 'undefined' ||
+        trimmedResetErrorMessage === '[object Object]'
+          ? i18n.t('errors.generic')
+          : trimmedResetErrorMessage;
+      Alert.alert(i18n.t('premium.resetFailedTitle'), resetErrorMessage);
     }
   }, []);
 
   const isPremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
   const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
-  const isLoading = user
-    ? isRevenueCatLoading || isFirestoreLoading
-    : isRevenueCatLoading || isFirestoreLoading;
+  const isLoading = isRevenueCatLoading || isFirestoreLoading;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
     const monthlyPackage = packagesByPlan.monthly;

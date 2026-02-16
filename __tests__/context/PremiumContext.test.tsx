@@ -744,6 +744,7 @@ describe('PremiumContext', () => {
     expect(mockRestorePurchases).toHaveBeenCalled();
   });
 
+  // Subscriptions are only configured on Android right now, so restore returns false elsewhere.
   it('does not run restore fallback flow on non-android platform', async () => {
     (Platform as { OS: string }).OS = 'ios';
     const { result } = renderHook(() => usePremium(), { wrapper });

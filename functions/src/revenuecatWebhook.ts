@@ -62,7 +62,7 @@ const parseMillis = (value: unknown): number | null => {
     return null;
   }
 
-  const numeric = typeof value === 'string' ? Number(value) : Number(value);
+  const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return null;
   }
