@@ -307,12 +307,6 @@ function RootLayoutNav() {
           });
         }
       } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
-        if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-          console.log('[RootLayout] queryClient.clear() executed on auth transition', {
-            previousUid,
-            currentUid,
-          });
-        }
         queryClient.clear();
       }
       resetClientReadState();
@@ -327,18 +321,11 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
-      if (__DEV__ && READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-        console.log('[RootLayout] AppState audit logging disabled by debug flag');
-      }
       return;
     }
 
     if (!AppState?.addEventListener) {
       return;
-    }
-
-    if (__DEV__ && READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-      console.log('[RootLayout] AppState audit logging enabled');
     }
 
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -479,7 +466,11 @@ function RootLayoutNav() {
           style={{
             color: COLORS.text,
             fontSize: 12,
-            fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+            fontFamily: Platform.select({
+              ios: 'Menlo',
+              android: 'monospace',
+              default: 'monospace',
+            }),
           }}
         >
           {JSON.stringify(debugSnapshot, null, 2)}
