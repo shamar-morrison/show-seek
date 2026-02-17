@@ -38,6 +38,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const getReleaseTimestamp = (releaseDate?: string | null) => {
+  if (!releaseDate) return Number.POSITIVE_INFINITY;
+  const timestamp = new Date(releaseDate).getTime();
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+};
+
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -165,26 +171,23 @@ export default function CollectionScreen() {
 
   const collection = collectionQuery.data;
 
-  const getReleaseTimestamp = (releaseDate?: string | null) => {
-    if (!releaseDate) return Number.POSITIVE_INFINITY;
-    const timestamp = new Date(releaseDate).getTime();
-    return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
-  };
+  const sortedMovies = useMemo(
+    () =>
+      [...collection.parts]
+        .map((movie, index) => ({ movie, index }))
+        .sort((a, b) => {
+          const timestampDiff =
+            getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
+          if (timestampDiff !== 0) return timestampDiff;
 
-  // Sort movies chronologically by release date, keeping invalid/missing dates at the end.
-  const sortedMovies = [...collection.parts]
-    .map((movie, index) => ({ movie, index }))
-    .sort((a, b) => {
-      const timestampDiff =
-        getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
-      if (timestampDiff !== 0) return timestampDiff;
+          const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
+          if (titleDiff !== 0) return titleDiff;
 
-      const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
-      if (titleDiff !== 0) return titleDiff;
-
-      return a.index - b.index;
-    })
-    .map(({ movie }) => movie);
+          return a.index - b.index;
+        })
+        .map(({ movie }) => movie),
+    [collection.parts]
+  );
 
   const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.large);
 

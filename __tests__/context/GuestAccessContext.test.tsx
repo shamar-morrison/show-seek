@@ -87,4 +87,36 @@ describe('GuestAccessContext', () => {
 
     alertSpy.mockRestore();
   });
+
+  it('does not dismiss modal via onRequestClose while sign-out is in progress', async () => {
+    mockSignOut.mockImplementationOnce(
+      () =>
+        new Promise<void>(() => {
+          // Keep sign-out pending to preserve isSigningOut=true.
+        })
+    );
+
+    const { getByTestId, getByText, UNSAFE_getByType } = render(
+      <GuestAccessProvider>
+        <GuardProbe />
+      </GuestAccessProvider>
+    );
+
+    fireEvent.press(getByTestId('guard-probe-trigger'));
+
+    act(() => {
+      fireEvent.press(getByText("Ok let's go"));
+    });
+
+    await waitFor(() => {
+      expect(mockSignOut).toHaveBeenCalledTimes(1);
+    });
+
+    act(() => {
+      UNSAFE_getByType(Modal).props.onRequestClose();
+    });
+
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(true);
+    expect(getByText(/Not now/i).parent?.props.disabled).toBe(true);
+  });
 });

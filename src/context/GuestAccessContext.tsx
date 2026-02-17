@@ -57,8 +57,9 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
   }, [signOut, t]);
 
   const handleSecondaryAction = useCallback(() => {
+    if (isSigningOut) return;
     setIsVisible(false);
-  }, []);
+  }, [isSigningOut]);
 
   const value = useMemo<GuestAccessContextValue>(
     () => ({
