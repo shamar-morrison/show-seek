@@ -15,11 +15,16 @@ jest.mock('@/src/context/auth', () => ({
 }));
 
 function GuardProbe() {
-  const { requireAccount } = useGuestAccess();
+  const { requireAccount, showGuestAccessModal } = useGuestAccess();
   return (
-    <Pressable testID="guard-probe-trigger" onPress={() => requireAccount()}>
-      <Text>Trigger guard</Text>
-    </Pressable>
+    <>
+      <Pressable testID="guard-probe-trigger" onPress={() => requireAccount()}>
+        <Text>Trigger guard</Text>
+      </Pressable>
+      <Pressable testID="show-modal-probe-trigger" onPress={() => showGuestAccessModal()}>
+        <Text>Trigger show modal</Text>
+      </Pressable>
+    </>
   );
 }
 
@@ -47,6 +52,10 @@ describe('GuestAccessContext', () => {
     fireEvent.press(getByTestId('guard-probe-trigger'));
 
     expect(getByText('You need an account to do that. Please sign in.')).toBeTruthy();
+    expect(getByText(/Ok let/i).parent?.props.accessibilityRole).toBe('button');
+    expect(getByText(/Ok let/i).parent?.props.accessibilityState).toEqual({ disabled: false });
+    expect(getByText(/Not now/i).parent?.props.accessibilityRole).toBe('button');
+    expect(getByText(/Not now/i).parent?.props.accessibilityState).toEqual({ disabled: false });
 
     await act(async () => {
       fireEvent.press(getByText("Ok let's go"));
@@ -96,7 +105,7 @@ describe('GuestAccessContext', () => {
         })
     );
 
-    const { getByTestId, getByText, UNSAFE_getByType } = render(
+    const { getByTestId, getByText, UNSAFE_getByType, UNSAFE_getAllByType } = render(
       <GuestAccessProvider>
         <GuardProbe />
       </GuestAccessProvider>
@@ -118,5 +127,27 @@ describe('GuestAccessContext', () => {
 
     expect(UNSAFE_getByType(Modal).props.visible).toBe(true);
     expect(getByText(/Not now/i).parent?.props.disabled).toBe(true);
+    expect(getByText(/Not now/i).parent?.props.accessibilityState).toEqual({ disabled: true });
+
+    const modalButtons = UNSAFE_getAllByType(Pressable).filter(
+      (pressable) => pressable.props.accessibilityRole === 'button'
+    );
+    expect(modalButtons).toHaveLength(2);
+    expect(modalButtons[0].props.accessibilityState).toEqual({ disabled: true });
+    expect(modalButtons[1].props.accessibilityState).toEqual({ disabled: true });
+  });
+
+  it('does not open modal via showGuestAccessModal for non-guest users', () => {
+    mockAuthState.user = { uid: 'member-user', isAnonymous: false };
+
+    const { getByTestId, UNSAFE_getByType } = render(
+      <GuestAccessProvider>
+        <GuardProbe />
+      </GuestAccessProvider>
+    );
+
+    fireEvent.press(getByTestId('show-modal-probe-trigger'));
+
+    expect(UNSAFE_getByType(Modal).props.visible).toBe(false);
   });
 });

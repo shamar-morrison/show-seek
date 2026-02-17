@@ -32,8 +32,10 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
   const isGuest = !!user?.isAnonymous;
 
   const showGuestAccessModal = useCallback(() => {
-    setIsVisible(true);
-  }, []);
+    if (!user || user.isAnonymous) {
+      setIsVisible(true);
+    }
+  }, [user]);
 
   const requireAccount = useCallback(() => {
     if (!user || user.isAnonymous) {
@@ -91,6 +93,8 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
                 styles.primaryButton,
                 (pressed || isSigningOut) && styles.primaryButtonPressed,
               ]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSigningOut }}
               onPress={handlePrimaryAction}
               disabled={isSigningOut}
             >
@@ -106,6 +110,8 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
                 styles.secondaryButton,
                 pressed && !isSigningOut && styles.secondaryButtonPressed,
               ]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSigningOut }}
               onPress={handleSecondaryAction}
               disabled={isSigningOut}
             >

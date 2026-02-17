@@ -150,6 +150,24 @@ export default function CollectionScreen() {
     );
   }, [isAccountRequired, collectionQuery.data, stopTrackingMutation, collectionId]);
 
+  const sortedMovies = useMemo(() => {
+    const parts = collectionQuery.data?.parts ?? [];
+
+    return [...parts]
+      .map((movie, index) => ({ movie, index }))
+      .sort((a, b) => {
+        const timestampDiff =
+          getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
+        if (timestampDiff !== 0) return timestampDiff;
+
+        const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
+        if (titleDiff !== 0) return titleDiff;
+
+        return a.index - b.index;
+      })
+      .map(({ movie }) => movie);
+  }, [collectionQuery.data]);
+
   if (collectionQuery.isLoading) {
     return <FullScreenLoading />;
   }
@@ -170,24 +188,6 @@ export default function CollectionScreen() {
   }
 
   const collection = collectionQuery.data;
-
-  const sortedMovies = useMemo(
-    () =>
-      [...collection.parts]
-        .map((movie, index) => ({ movie, index }))
-        .sort((a, b) => {
-          const timestampDiff =
-            getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
-          if (timestampDiff !== 0) return timestampDiff;
-
-          const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
-          if (titleDiff !== 0) return titleDiff;
-
-          return a.index - b.index;
-        })
-        .map(({ movie }) => movie),
-    [collection.parts]
-  );
 
   const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.large);
 
