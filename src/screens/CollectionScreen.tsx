@@ -156,9 +156,9 @@ export default function CollectionScreen() {
     return [...parts]
       .map((movie, index) => ({ movie, index }))
       .sort((a, b) => {
-        const timestampDiff =
-          getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
-        if (timestampDiff !== 0) return timestampDiff;
+        const tsA = getReleaseTimestamp(a.movie.release_date);
+        const tsB = getReleaseTimestamp(b.movie.release_date);
+        if (tsA !== tsB) return tsA < tsB ? -1 : 1;
 
         const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
         if (titleDiff !== 0) return titleDiff;
@@ -166,7 +166,7 @@ export default function CollectionScreen() {
         return a.index - b.index;
       })
       .map(({ movie }) => movie);
-  }, [collectionQuery.data]);
+  }, [collectionQuery.data?.parts]);
 
   if (collectionQuery.isLoading) {
     return <FullScreenLoading />;
