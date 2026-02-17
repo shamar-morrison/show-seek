@@ -1,8 +1,5 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   arrayRemove,
