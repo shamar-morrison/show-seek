@@ -20,6 +20,35 @@ const mockAddMutate = jest.fn();
 const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
+const mockInvalidateQueries = jest.fn(async () => {});
+let latestCreateListModalProps:
+  | {
+      onSuccess?: (listId: string, listName: string) => void;
+      onCancel?: () => void;
+    }
+  | null = null;
+
+const mockQueryClient = {
+  invalidateQueries: mockInvalidateQueries,
+};
+
+type Deferred<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: Error) => void;
+};
+
+const createDeferred = <T,>(): Deferred<T> => {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -107,7 +136,8 @@ jest.mock('@/src/components/ui/AnimatedCheck', () => ({
 jest.mock('@/src/components/CreateListModal', () => {
   const React = require('react');
 
-  const MockCreateListModal = React.forwardRef((_props: any, ref: any) => {
+  const MockCreateListModal = React.forwardRef((props: any, ref: any) => {
+    latestCreateListModalProps = props;
     React.useImperativeHandle(ref, () => ({
       present: jest.fn(async () => {}),
       dismiss: jest.fn(async () => {}),
@@ -115,6 +145,7 @@ jest.mock('@/src/components/CreateListModal', () => {
 
     return null;
   });
+  MockCreateListModal.displayName = 'MockCreateListModal';
 
   return {
     __esModule: true,
@@ -134,6 +165,16 @@ jest.mock('@/src/hooks/useLists', () => ({
   useDeleteList: () => ({
     mutateAsync: mockDeleteMutateAsync,
   }),
+}));
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'test-user-id' },
+  }),
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mockQueryClient,
 }));
 
 const createMediaItem = (
@@ -156,6 +197,7 @@ const createStoredItem = (item: Omit<ListMediaItem, 'addedAt'>): ListMediaItem =
 describe('AddToListModal (bulk mode)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    latestCreateListModalProps = null;
 
     mockListsState.data = [];
     mockListsState.isLoading = false;
@@ -163,6 +205,7 @@ describe('AddToListModal (bulk mode)', () => {
     mockAddMutateAsync.mockResolvedValue(undefined);
     mockRemoveMutateAsync.mockResolvedValue(undefined);
     mockDeleteMutateAsync.mockResolvedValue(undefined);
+    mockInvalidateQueries.mockResolvedValue(undefined);
   });
 
   it('filters out the source list and requires selecting a target list before save', async () => {
@@ -295,6 +338,92 @@ describe('AddToListModal (bulk mode)', () => {
     expect(getByText('Add to List')).toBeTruthy();
   });
 
+  it('reconciles list queries after create-list success in single-item mode', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockAddMutateAsync.mockResolvedValue(undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(latestCreateListModalProps?.onSuccess).toBeDefined();
+
+    await act(async () => {
+      await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
+    });
+
+    expect(mockAddMutateAsync).toHaveBeenCalledWith({
+      listId: 'my-new-list',
+      mediaItem: selected,
+      listName: 'My New List',
+    });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
+  });
+
+  it('reconciles list queries and surfaces an error after create-list add failure in single-item mode', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockAddMutateAsync.mockRejectedValueOnce(new Error('Create list add failed'));
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByText } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(latestCreateListModalProps?.onSuccess).toBeDefined();
+
+    await act(async () => {
+      await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
+    });
+
+    await waitFor(() => {
+      expect(getByText('Create list add failed')).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
+  });
+
   it('removes from source list in move mode after successful adds', async () => {
     const selected = createMediaItem(1);
 
@@ -347,6 +476,17 @@ describe('AddToListModal (bulk mode)', () => {
         mediaId: selected.id,
       });
     });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
   });
 
   it('does not remove from source list in copy mode', async () => {
@@ -396,6 +536,113 @@ describe('AddToListModal (bulk mode)', () => {
     });
 
     expect(mockRemoveMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('processes single-item changes sequentially', async () => {
+    const selected = createMediaItem(1);
+    const removeDeferred = createDeferred<void>();
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockRemoveMutateAsync.mockImplementationOnce(() => removeDeferred.promise);
+    mockAddMutateAsync.mockResolvedValue(undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+    fireEvent.press(getByTestId('add-to-list-row-favorites'));
+
+    act(() => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveMutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockAddMutateAsync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      removeDeferred.resolve(undefined);
+    });
+
+    await waitFor(() => {
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows a partial failure banner for single-item saves with mixed outcomes', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    mockRemoveMutateAsync.mockRejectedValueOnce(
+      new Error('You do not have permission to perform this action')
+    );
+    mockAddMutateAsync.mockResolvedValue(undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId, getByText } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+    fireEvent.press(getByTestId('add-to-list-row-favorites'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(getByText('Changes failed to save')).toBeTruthy();
+    });
+
+    expect(mockSheetDismiss).not.toHaveBeenCalled();
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-id'],
+      refetchType: 'active',
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-id'],
+      refetchType: 'active',
+    });
   });
 
 });

@@ -111,10 +111,15 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['items', 'updatedAt', 'name', 'createdAt', 'description'])
-          && (!('description' in request.resource.data) || (
-            request.resource.data.description is string
-            && request.resource.data.description.size() <= 120
-          ));
+          // Validate description only when this write actually modifies description.
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['description'])
+            || !('description' in request.resource.data)
+            || (
+              request.resource.data.description is string
+              && request.resource.data.description.size() <= 120
+            )
+          );
         allow delete: if isOwner(userId);
       }
 

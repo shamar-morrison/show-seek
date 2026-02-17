@@ -115,6 +115,83 @@ describe('ListService', () => {
       expect(getDoc).not.toHaveBeenCalled();
     });
 
+    it('should fallback to setDoc with createdAt when updateDoc fails with permission-denied', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (updateDoc as jest.Mock).mockRejectedValue({
+        code: 'permission-denied',
+        message: 'Permission denied',
+      });
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const mediaItem = {
+        id: 123,
+        title: 'Test Movie',
+        poster_path: '/poster.jpg',
+        media_type: 'movie' as const,
+        vote_average: 8.5,
+        release_date: '2024-01-01',
+      };
+
+      await listService.addToList('watchlist', mediaItem);
+
+      expect(setDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          name: 'watchlist',
+          items: expect.objectContaining({
+            123: expect.objectContaining({
+              id: 123,
+              title: 'Test Movie',
+              media_type: 'movie',
+              addedAt: expect.any(Number),
+            }),
+          }),
+          updatedAt: expect.any(Number),
+          createdAt: expect.any(Number),
+        }),
+        { merge: true }
+      );
+    });
+
+    it('should throw when update and fallback create both fail with permission-denied', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        const mockDocRef = { path: 'users/test-user-id/lists/watchlist' };
+        (doc as jest.Mock).mockReturnValue(mockDocRef);
+        (updateDoc as jest.Mock).mockRejectedValue({
+          code: 'permission-denied',
+          message: 'Permission denied',
+        });
+        (setDoc as jest.Mock).mockRejectedValue({
+          code: 'permission-denied',
+          message: 'Permission denied',
+        });
+
+        const mediaItem = {
+          id: 123,
+          title: 'Test Movie',
+          poster_path: '/poster.jpg',
+          media_type: 'movie' as const,
+          vote_average: 8.5,
+          release_date: '2024-01-01',
+        };
+
+        await expect(listService.addToList('watchlist', mediaItem)).rejects.toThrow(
+          'Permission denied'
+        );
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '[ListService] addToList error:',
+          expect.objectContaining({
+            code: 'permission-denied',
+            stage: 'fallback-create',
+          })
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+
     it('should throw error when user is not authenticated', async () => {
       mockUserId = null;
 

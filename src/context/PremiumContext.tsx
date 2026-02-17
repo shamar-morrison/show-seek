@@ -105,16 +105,6 @@ const logOfferingsDebug = (
     productId: pkg.product.identifier,
     productType: (pkg.product as { productType?: unknown }).productType ?? null,
   }));
-  console.debug('=== OFFERINGS DEBUG ===');
-  console.debug('[RevenueCat Debug] Offerings summary:', {
-    allOfferingKeys: Object.keys(offerings.all),
-    context,
-    currentOfferingIdentifier: offerings.current?.identifier ?? null,
-    premiumOfferingFound: premiumOffering != null,
-    premiumPackageCount: packageSummaries.length,
-    premiumPackages: packageSummaries,
-  });
-  console.debug('==================');
 };
 
 const resolvePackagesByPlan = (

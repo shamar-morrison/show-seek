@@ -1,14 +1,17 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
 import { getListIconComponent } from '@/src/utils/listIcons';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Check, Plus, Settings2 } from 'lucide-react-native';
@@ -117,6 +120,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const router = useRouter();
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
+    const { user } = useAuth();
+    const userId = user?.uid;
+    const queryClient = useQueryClient();
     const sheetRef = useRef<TrueSheet>(null);
     const listRef = useRef<FlatList<ListWithCount>>(null);
     const createListModalRef = useRef<CreateListModalRef>(null);
@@ -167,6 +173,21 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const addMutation = useAddToList();
     const removeMutation = useRemoveFromList();
     const deleteMutation = useDeleteList();
+
+    const reconcileListQueries = useCallback(async () => {
+      if (!userId) return;
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['lists', userId],
+          refetchType: 'active',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        }),
+      ]);
+    }, [queryClient, userId]);
 
     const singleMembership = useMemo<Record<string, boolean>>(() => {
       if (isBulkMode || !mediaItem || !lists) return {};
@@ -311,42 +332,54 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       setIsSaving(true);
       setOperationError(null);
 
-      const operations: Promise<unknown>[] = [];
+      let totalOperations = 0;
+      let failedOperations = 0;
+      let firstError: Error | null = null;
 
       for (const list of changedLists) {
         const wasInList = !!initialMembershipRef.current[list.id];
         const isNowInList = !!pendingSelections[list.id];
 
         if (wasInList && !isNowInList) {
-          operations.push(removeMutation.mutateAsync({ listId: list.id, mediaId: mediaItem.id }));
+          totalOperations++;
+          try {
+            await removeMutation.mutateAsync({ listId: list.id, mediaId: mediaItem.id });
+          } catch (error) {
+            failedOperations++;
+            if (!firstError) {
+              firstError = error instanceof Error ? error : new Error(t('errors.saveFailed'));
+            }
+          }
         } else if (!wasInList && isNowInList) {
-          operations.push(addMutation.mutateAsync({ listId: list.id, mediaItem, listName: list.name }));
+          totalOperations++;
+          try {
+            await addMutation.mutateAsync({ listId: list.id, mediaItem, listName: list.name });
+          } catch (error) {
+            failedOperations++;
+            if (!firstError) {
+              firstError = error instanceof Error ? error : new Error(t('errors.saveFailed'));
+            }
+          }
         }
       }
 
-      const results = await Promise.allSettled(operations);
-      const failures = results.filter(
-        (result): result is PromiseRejectedResult => result.status === 'rejected'
-      );
+      await reconcileListQueries();
 
-      if (failures.length === 0) {
+      if (failedOperations === 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (onShowToast) {
           onShowToast(t('library.listsUpdated'));
         }
         didCompleteRef.current = true;
         await sheetRef.current?.dismiss();
-      } else if (failures.length < operations.length) {
+      } else if (failedOperations < totalOperations) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         setOperationError(
-          t('library.changesFailedToSave', { failed: failures.length, total: operations.length })
+          t('library.changesFailedToSave', { failed: failedOperations, total: totalOperations })
         );
         setIsSaving(false);
       } else {
-        const firstError = failures[0].reason;
-        handleMutationError(
-          firstError instanceof Error ? firstError : new Error(t('errors.saveFailed'))
-        );
+        handleMutationError(firstError ?? new Error(t('errors.saveFailed')));
         setIsSaving(false);
       }
     }, [
@@ -354,9 +387,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       handleMutationError,
       listsWithCounts,
       mediaItem,
-      onComplete,
       onShowToast,
       pendingSelections,
+      reconcileListQueries,
       removeMutation,
       t,
     ]);
@@ -418,6 +451,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         }
       }
 
+      await reconcileListQueries();
+
       if (failedOperations === 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onShowToast?.(t('library.listsUpdated'));
@@ -443,9 +478,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       bulkMediaItems,
       handleMutationError,
       listsWithCounts,
-      onComplete,
       onShowToast,
       pendingSelections,
+      reconcileListQueries,
       removeMutation,
       sourceListId,
       t,
@@ -529,20 +564,23 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         return;
       }
 
-      addMutation.mutate(
-        { listId, mediaItem, listName },
-        {
-          onSuccess: () => {
-            initialMembershipRef.current[listId] = true;
-            setPendingSelections((prev) => ({
-              ...prev,
-              [listId]: true,
-            }));
-            setSuccessMessage(t('library.addedToList', { list: listName }));
-          },
-          onError: handleMutationError,
+      try {
+        await addMutation.mutateAsync({ listId, mediaItem, listName });
+        initialMembershipRef.current[listId] = true;
+        setPendingSelections((prev) => ({
+          ...prev,
+          [listId]: true,
+        }));
+        setSuccessMessage(t('library.addedToList', { list: listName }));
+      } catch (error) {
+        handleMutationError(error instanceof Error ? error : new Error(t('errors.saveFailed')));
+      } finally {
+        try {
+          await reconcileListQueries();
+        } catch (error) {
+          console.error('Failed to reconcile list queries after list creation:', error);
         }
-      );
+      }
 
       await sheetRef.current?.present();
     };
@@ -755,7 +793,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successBanner: {
-    backgroundColor: '#22c55e',
+    backgroundColor: COLORS.success,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     marginBottom: SPACING.m,

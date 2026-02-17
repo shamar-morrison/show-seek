@@ -230,6 +230,13 @@ export const useAddToList = () => {
           context.previousMembershipIndex
         );
       }
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: ['lists', userId], refetchType: 'active' });
+        void queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        });
+      }
     },
 
     // Prefetch TV show details for the Calendar feature
@@ -351,6 +358,13 @@ export const useRemoveFromList = () => {
           [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
           context.previousMembershipIndex
         );
+      }
+      if (userId) {
+        void queryClient.invalidateQueries({ queryKey: ['lists', userId], refetchType: 'active' });
+        void queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        });
       }
     },
 

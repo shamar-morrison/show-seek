@@ -1,9 +1,11 @@
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 
 const mockAddToList = jest.fn();
 const mockGetUserLists = jest.fn();
+const mockRemoveFromList = jest.fn();
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
@@ -33,11 +35,12 @@ jest.mock('@/src/services/ListService', () => ({
   listService: {
     addToList: (...args: any[]) => mockAddToList(...args),
     getUserLists: (...args: any[]) => mockGetUserLists(...args),
+    removeFromList: (...args: any[]) => mockRemoveFromList(...args),
   },
   DEFAULT_LISTS: [],
 }));
 
-import { PremiumLimitError, useAddToList, useMediaLists } from '@/src/hooks/useLists';
+import { PremiumLimitError, useAddToList, useMediaLists, useRemoveFromList } from '@/src/hooks/useLists';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -82,6 +85,7 @@ describe('useAddToList', () => {
     mockAuthState.user = { uid: 'test-user-id' };
     mockAddToList.mockResolvedValue(undefined);
     mockGetUserLists.mockResolvedValue([]);
+    mockRemoveFromList.mockResolvedValue(undefined);
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
   });
@@ -130,6 +134,7 @@ describe('useAddToList', () => {
 
   it('rolls back optimistic updates when mutation fails', async () => {
     const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
 
     const initialLists = [
       {
@@ -165,6 +170,64 @@ describe('useAddToList', () => {
     });
 
     expect(client.getQueryData(['lists', 'test-user-id'])).toEqual(initialLists);
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
+  });
+});
+
+describe('useRemoveFromList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockRemoveFromList.mockResolvedValue(undefined);
+  });
+
+  it('invalidates list and membership queries when removal fails', async () => {
+    const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    const initialLists = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {
+          1: { id: 1, media_type: 'movie', addedAt: Date.now() },
+        },
+      },
+    ];
+
+    client.setQueryData(['lists', 'test-user-id'], initialLists);
+    mockRemoveFromList.mockRejectedValueOnce(new Error('Network error'));
+
+    const { result } = renderHook(() => useRemoveFromList(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ listId: 'watchlist', mediaId: 1 })).rejects.toThrow(
+        'Network error'
+      );
+    });
+
+    expect(client.getQueryData(['lists', 'test-user-id'])).toEqual(initialLists);
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
   });
 });
 
