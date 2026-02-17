@@ -6,6 +6,8 @@ import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -37,6 +39,8 @@ interface TabConfig {
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const {
     user,
     isPremium,
@@ -89,6 +93,9 @@ export default function ProfileScreen() {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
+    if (isGuest && !requireAccount()) {
+      return;
+    }
     setUpdatingPreferenceKey(key);
     updatePreference.mutate(
       { key, value },
@@ -103,6 +110,13 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleGuardedContentAction = (action: () => void) => {
+    if (isGuest && !requireAccount()) {
+      return;
+    }
+    action();
+  };
+
   const renderTabContent = () => {
     switch (selectedTab) {
       case 'preferences':
@@ -115,7 +129,7 @@ export default function ProfileScreen() {
             onUpdate={handlePreferenceUpdate}
             isUpdating={updatePreference.isPending}
             isPremium={isPremium}
-            onPremiumPress={handlePremiumPress}
+            onPremiumPress={() => handleGuardedContentAction(handlePremiumPress)}
             updatingPreferenceKey={updatingPreferenceKey}
             showTitle={false}
           />
@@ -128,17 +142,18 @@ export default function ProfileScreen() {
             preferences={preferences}
             isTraktConnected={isTraktConnected}
             isTraktLoading={isTraktLoading}
-            onLanguagePress={handleLanguagePress}
-            onRegionPress={handleRegionPress}
-            onColorPress={handleColorPress}
-            onLaunchScreenPress={handleLaunchScreenPress}
-            onTraktPress={handleTraktPress}
+            onLanguagePress={() => handleGuardedContentAction(handleLanguagePress)}
+            onRegionPress={() => handleGuardedContentAction(handleRegionPress)}
+            onColorPress={() => handleGuardedContentAction(handleColorPress)}
+            onLaunchScreenPress={() => handleGuardedContentAction(handleLaunchScreenPress)}
+            onTraktPress={() => handleGuardedContentAction(handleTraktPress)}
             showTitle={false}
           />
         );
       case 'settings':
         return (
           <AppSettingsSection
+            isGuest={isGuest}
             isPremium={isPremium}
             isExporting={isExporting}
             isClearingCache={isClearingCache}
@@ -173,8 +188,10 @@ export default function ProfileScreen() {
         {/* User Info Section - Fixed at top */}
         <UserInfoSection
           user={user}
+          isGuest={isGuest}
           isPremium={isPremium}
           onUpgradePress={handleUpgradePress}
+          onSignOut={handleSignOut}
         />
 
         {/* Tabs */}

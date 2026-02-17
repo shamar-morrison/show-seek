@@ -9,6 +9,8 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useLists } from '@/src/hooks/useLists';
@@ -29,6 +31,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 export default function CustomListsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
@@ -88,6 +92,11 @@ export default function CustomListsScreen() {
   const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
 
   const handleCreateList = useCallback(() => {
+    if (!user || isGuest) {
+      requireAccount();
+      return;
+    }
+
     if (isLimitReached) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
@@ -107,7 +116,7 @@ export default function CustomListsScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     createListModalRef.current?.present();
-  }, [isLimitReached, router]);
+  }, [isGuest, isLimitReached, requireAccount, router, user]);
 
   const handleCreateSuccess = useCallback(
     (listId: string) => {

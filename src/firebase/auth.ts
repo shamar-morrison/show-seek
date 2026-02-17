@@ -4,7 +4,7 @@
  */
 
 import { auth } from '@/src/firebase/config';
-import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { GoogleAuthProvider, signInAnonymously, signInWithCredential } from 'firebase/auth';
 import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
 
 // Track if GoogleAuth has been configured
@@ -81,6 +81,28 @@ export async function signInWithGoogle(): Promise<
     console.error('[GoogleAuth] Error code:', error?.code);
     console.error('[GoogleAuth] Error message:', error?.message);
     return { success: false, error: getGoogleAuthErrorMessage(error) };
+  }
+}
+
+/**
+ * Sign in anonymously for guest access.
+ */
+export async function signInAsGuest(): Promise<
+  | {
+      success: true;
+      user: import('firebase/auth').User;
+    }
+  | {
+      success: false;
+      error?: string;
+    }
+> {
+  try {
+    const userCredential = await signInAnonymously(auth);
+    return { success: true, user: userCredential.user };
+  } catch (error: any) {
+    console.error('[GuestAuth] Error:', error);
+    return { success: false, error: 'Unable to continue as guest. Please try again.' };
   }
 }
 

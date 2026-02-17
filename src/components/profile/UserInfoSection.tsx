@@ -10,10 +10,14 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 export interface UserInfoSectionProps {
   /** Firebase user object */
   user: User | null;
+  /** Whether the current user is a guest */
+  isGuest: boolean;
   /** Whether the user has premium status */
   isPremium: boolean;
   /** Handler for upgrade button press */
   onUpgradePress: () => void;
+  /** Handler for sign out button press */
+  onSignOut: () => void;
 }
 
 /**
@@ -22,12 +26,14 @@ export interface UserInfoSectionProps {
  */
 export function UserInfoSection({
   user,
+  isGuest,
   isPremium,
   onUpgradePress,
+  onSignOut,
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const displayName = user?.displayName || t('profile.user');
+  const displayName = isGuest ? t('profile.guestUser') : user?.displayName || t('profile.user');
   const email = user?.email || t('profile.noEmail');
 
   return (
@@ -45,10 +51,19 @@ export function UserInfoSection({
         <Text style={styles.displayName} numberOfLines={1}>
           {displayName}
         </Text>
-        <Text style={styles.email} numberOfLines={1}>
-          {email}
-        </Text>
-        {!isPremium && (
+        {isGuest ? (
+          <TouchableOpacity
+            style={[styles.signOutButton, { borderColor: accentColor }]}
+            onPress={onSignOut}
+          >
+            <Text style={[styles.signOutButtonText, { color: accentColor }]}>{t('auth.signOut')}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.email} numberOfLines={1}>
+            {email}
+          </Text>
+        )}
+        {!isGuest && !isPremium && (
           <TouchableOpacity
             style={[styles.upgradeButton, { backgroundColor: accentColor }]}
             onPress={onUpgradePress}
@@ -57,7 +72,7 @@ export function UserInfoSection({
             <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
           </TouchableOpacity>
         )}
-        {isPremium && (
+        {!isGuest && isPremium && (
           <View style={styles.premiumStatusContainer}>
             <Text style={styles.premiumStatusText}>{t('profile.premiumMember')}</Text>
           </View>
@@ -89,6 +104,18 @@ const styles = StyleSheet.create({
   email: {
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
+  },
+  signOutButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: BORDER_RADIUS.s,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+    marginTop: SPACING.s,
+  },
+  signOutButtonText: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
   },
   upgradeButton: {
     flexDirection: 'row',

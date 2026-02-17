@@ -5,6 +5,8 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -43,10 +45,19 @@ export default function CollectionScreen() {
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { isPremium } = usePremium();
+  const isAccountRequired = useCallback(() => {
+    if (!user || isGuest) {
+      requireAccount();
+      return true;
+    }
+    return false;
+  }, [isGuest, requireAccount, user]);
 
   // Collection tracking state
   const {
@@ -87,6 +98,7 @@ export default function CollectionScreen() {
   );
 
   const handleStartTracking = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!collectionQuery.data) return;
 
     // Guard: don't start tracking if already tracked
@@ -109,9 +121,17 @@ export default function CollectionScreen() {
         console.error('[CollectionScreen] Failed to start tracking:', error);
       }
     })();
-  }, [collectionQuery.data, isTracked, canTrackMore, startTrackingMutation, collectionId]);
+  }, [
+    isAccountRequired,
+    collectionQuery.data,
+    isTracked,
+    canTrackMore,
+    startTrackingMutation,
+    collectionId,
+  ]);
 
   const handleStopTracking = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!collectionQuery.data) return;
 
     stopTrackingMutation.mutate(
@@ -131,7 +151,7 @@ export default function CollectionScreen() {
         },
       }
     );
-  }, [collectionQuery.data, stopTrackingMutation, collectionId]);
+  }, [isAccountRequired, collectionQuery.data, stopTrackingMutation, collectionId]);
 
   if (collectionQuery.isLoading) {
     return <FullScreenLoading />;

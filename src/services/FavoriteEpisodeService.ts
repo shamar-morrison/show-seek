@@ -49,7 +49,7 @@ class FavoriteEpisodeService {
   async addFavoriteEpisode(userId: string, episodeData: Omit<FavoriteEpisode, 'addedAt'>) {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -73,7 +73,7 @@ class FavoriteEpisodeService {
   async removeFavoriteEpisode(userId: string, episodeId: string) {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -92,7 +92,7 @@ class FavoriteEpisodeService {
   async getFavoriteEpisodes(userId: string): Promise<FavoriteEpisode[]> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -133,7 +133,7 @@ class FavoriteEpisodeService {
   async getFavoriteEpisode(userId: string, episodeId: string): Promise<FavoriteEpisode | null> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 

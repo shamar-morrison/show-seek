@@ -14,6 +14,7 @@ import {
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
@@ -32,7 +33,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -69,7 +69,8 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
@@ -131,8 +132,8 @@ export default function SearchScreen() {
   };
 
   const handleLongPress = (item: any) => {
-    if (!user) {
-      Alert.alert(t('common.error'), t('errors.unauthorized'));
+    if (!user || isGuest) {
+      requireAccount();
       return;
     }
 

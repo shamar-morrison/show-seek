@@ -10,7 +10,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
-  const isCleaningAnonymousUser = useRef(false);
   const signOutInFlight = useRef<Promise<void> | null>(null);
 
   const persistUserId = (userId: string) => {
@@ -85,25 +84,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   // Monitor auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      // Guest mode has been removed. Treat anonymous users as signed out.
-      if (currentUser?.isAnonymous) {
-        clearPersistedUserId();
-        setUser(null);
-        setLoading(false);
-
-        if (!isCleaningAnonymousUser.current) {
-          isCleaningAnonymousUser.current = true;
-          firebaseSignOut(auth)
-            .catch((error) => {
-              console.error('Error clearing anonymous session:', error);
-            })
-            .finally(() => {
-              isCleaningAnonymousUser.current = false;
-            });
-        }
-        return;
-      }
-
       if (!currentUser) {
         clearPersistedUserId();
         setUser(null);
@@ -184,6 +164,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   return {
     user,
+    isGuest: !!user?.isAnonymous,
     loading,
     hasCompletedOnboarding,
     completeOnboarding,

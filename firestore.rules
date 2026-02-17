@@ -12,11 +12,16 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Helper function to block writes from anonymous/guest sessions
+    function canWriteUserData(userId) {
+      return isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
     // User data - each user can only access their own data
     match /users/{userId} {
       // User profile document - allow users to read their own data and create during sign-up
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId)
+      allow create: if canWriteUserData(userId)
         // Enforce exact allowed key set (required + optional photoURL)
         && request.resource.data.keys().hasOnly(['uid', 'displayName', 'email', 'createdAt', 'photoURL'])
         && request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt'])
@@ -27,7 +32,7 @@ service cloud.firestore {
         && request.resource.data.createdAt is timestamp
         // photoURL is optional but if present must be null or string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
-      allow update: if isOwner(userId)
+      allow update: if canWriteUserData(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region'])
         && request.resource.data.displayName is string
@@ -58,15 +63,17 @@ service cloud.firestore {
           && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
         ));
       // Allow users to delete their own user document (for account deletion)
-      allow delete: if isOwner(userId);
+      allow delete: if canWriteUserData(userId);
       // Favorites collection
       match /favorites/{favoriteId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow write: if canWriteUserData(userId);
       }
 
       // Favorite episodes collection
       match /favorite_episodes/{episodeId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow write: if canWriteUserData(userId);
       }
 
       // Watched movies collection (tracking movie watch instances)
@@ -75,31 +82,33 @@ service cloud.firestore {
         
         match /watches/{watchId} {
           allow read: if isOwner(userId);
-          allow create: if isOwner(userId)
+          allow create: if canWriteUserData(userId)
             && request.resource.data.keys().hasOnly(['watchedAt', 'movieId'])
             && request.resource.data.watchedAt is timestamp
             && request.resource.data.movieId is int;
-          allow update: if isOwner(userId)
+          allow update: if canWriteUserData(userId)
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['watchedAt'])
             && request.resource.data.watchedAt is timestamp;
-          allow delete: if isOwner(userId);
+          allow delete: if canWriteUserData(userId);
         }
       }
 
       // Watchlist collection
       match /watchlist/{watchlistId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow write: if canWriteUserData(userId);
       }
 
       // Ratings collection
       match /ratings/{ratingId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow write: if canWriteUserData(userId);
       }
 
       // Lists collection (custom user lists)
       match /lists/{listId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['name', 'items', 'createdAt'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0
@@ -108,7 +117,7 @@ service cloud.firestore {
             request.resource.data.description is string
             && request.resource.data.description.size() <= 120
           ));
-        allow update: if isOwner(userId)
+        allow update: if canWriteUserData(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['items', 'updatedAt', 'name', 'createdAt', 'description'])
           // Validate description only when this write actually modifies description.
@@ -120,13 +129,13 @@ service cloud.firestore {
               && request.resource.data.description.size() <= 120
             )
           );
-        allow delete: if isOwner(userId);
+        allow delete: if canWriteUserData(userId);
       }
 
       // Notes collection (personal notes for movies/TV shows/episodes)
       match /notes/{noteId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           // Restrict to exactly these allowed fields
           && request.resource.data.keys().hasOnly(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'posterPath', 'createdAt', 'updatedAt', 'seasonNumber', 'episodeNumber', 'showId'])
           && request.resource.data.keys().hasAll(['userId', 'mediaType', 'mediaId', 'content', 'mediaTitle', 'createdAt', 'updatedAt'])
@@ -150,29 +159,29 @@ service cloud.firestore {
           && (!('seasonNumber' in request.resource.data) || request.resource.data.seasonNumber is int)
           && (!('episodeNumber' in request.resource.data) || request.resource.data.episodeNumber is int)
           && (!('showId' in request.resource.data) || request.resource.data.showId is int);
-        allow update: if isOwner(userId)
+        allow update: if canWriteUserData(userId)
           && request.resource.data.userId == userId
           && request.resource.data.content is string
           && request.resource.data.content.size() <= 120;
-        allow delete: if isOwner(userId);
+        allow delete: if canWriteUserData(userId);
       }
 
       // Episode tracking collection
       match /episode_tracking/{tvShowId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata'])
           && request.resource.data.metadata.keys().hasAll(['tvShowName', 'lastUpdated'])
           && request.resource.data.episodes is map;
-        allow update: if isOwner(userId)
+        allow update: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['episodes', 'metadata']);
-        allow delete: if isOwner(userId);
+        allow delete: if canWriteUserData(userId);
       }
 
       // Collection tracking (movie collections like Lord of the Rings, Marvel, etc.)
       match /collection_tracking/{collectionId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['collectionId', 'name', 'totalMovies', 'watchedMovieIds', 'startedAt', 'lastUpdated'])
           && request.resource.data.collectionId is number
           && request.resource.data.name is string
@@ -181,27 +190,27 @@ service cloud.firestore {
           && request.resource.data.startedAt is number
           && request.resource.data.lastUpdated is number;
         // Allow update for both partial updates (adding watched movies) and full rewrites (setDoc)
-        allow update: if isOwner(userId)
+        allow update: if canWriteUserData(userId)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['collectionId', 'name', 'totalMovies', 'watchedMovieIds', 'startedAt', 'lastUpdated']);
-        allow delete: if isOwner(userId);
+        allow delete: if canWriteUserData(userId);
       }
 
       // Favorite persons collection
       match /favorite_persons/{personId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['id', 'name', 'addedAt'])
           && request.resource.data.id is int
           && request.resource.data.name is string
           && request.resource.data.addedAt is int;
-        allow delete: if isOwner(userId);
+        allow delete: if canWriteUserData(userId);
       }
 
       // Reminders collection
       match /reminders/{reminderId} {
         allow read: if isOwner(userId);
-        allow create: if isOwner(userId)
+        allow create: if canWriteUserData(userId)
           && request.resource.data.userId == userId
           && request.resource.data.keys().hasAll([
             'userId', 'mediaType', 'mediaId', 'title', 'releaseDate',
@@ -223,11 +232,11 @@ service cloud.firestore {
           // TV-specific optional fields
           && (!('tvFrequency' in request.resource.data) || request.resource.data.tvFrequency in ['every_episode', 'season_premiere'])
           && (!('nextEpisode' in request.resource.data) || request.resource.data.nextEpisode is map);
-        allow update: if isOwner(userId)
+        allow update: if canWriteUserData(userId)
           && resource.data.userId == userId
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate', 'noNextEpisodeFound']);
-        allow delete: if isOwner(userId)
+        allow delete: if canWriteUserData(userId)
           && resource.data.userId == userId;
       }
     }

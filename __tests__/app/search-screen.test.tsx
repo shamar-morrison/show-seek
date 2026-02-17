@@ -1,12 +1,13 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Alert } from 'react-native';
 
 const mockPush = jest.fn();
 const mockPresent = jest.fn();
+const mockRequireAccount = jest.fn();
 
 const mockAuthState = {
   user: { uid: 'user-1' } as null | { uid: string },
+  isGuest: false,
 };
 
 let mockQueryResults: any[] = [];
@@ -53,6 +54,12 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/context/GuestAccessContext', () => ({
+  useGuestAccess: () => ({
+    requireAccount: mockRequireAccount,
+  }),
 }));
 
 jest.mock('@/src/context/AccentColorProvider', () => ({
@@ -128,9 +135,9 @@ function enterQueryAndFlush(getByPlaceholderText: (text: string) => any) {
 describe('SearchScreen routing and auth guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     jest.useFakeTimers();
     mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.isGuest = false;
     mockQueryLoading = false;
     mockQueryResults = [];
   });
@@ -193,7 +200,7 @@ describe('SearchScreen routing and auth guard', () => {
 
     fireEvent(getByText('Movie Item'), 'longPress');
 
-    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.any(String));
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 

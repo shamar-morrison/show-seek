@@ -116,7 +116,7 @@ class RatingService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
@@ -151,7 +151,7 @@ class RatingService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
@@ -269,7 +269,7 @@ class RatingService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,
@@ -312,7 +312,7 @@ class RatingService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,

@@ -241,7 +241,7 @@ class ListService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
@@ -324,7 +324,7 @@ class ListService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const listRef = this.getUserListRef(user.uid, listId);
 
@@ -358,7 +358,7 @@ class ListService {
   async createList(listName: string, description?: string) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       // Generate a URL-friendly ID from the name
       const baseId = listName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -431,7 +431,7 @@ class ListService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       // Prevent deleting default lists
       if (DEFAULT_LISTS.some((l) => l.id === listId)) {
@@ -458,7 +458,7 @@ class ListService {
 
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       // Prevent renaming default lists
       if (DEFAULT_LISTS.some((l) => l.id === listId)) {

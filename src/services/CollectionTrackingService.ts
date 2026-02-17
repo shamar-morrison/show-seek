@@ -135,7 +135,7 @@ class CollectionTrackingService {
     const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       const now = Date.now();
@@ -166,7 +166,7 @@ class CollectionTrackingService {
     const deleteTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
@@ -203,7 +203,7 @@ class CollectionTrackingService {
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       try {
@@ -237,7 +237,7 @@ class CollectionTrackingService {
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       try {

@@ -6,6 +6,7 @@ import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
@@ -121,6 +122,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
     const { user } = useAuth();
+    const { requireAccount } = useGuestAccess();
     const userId = user?.uid;
     const queryClient = useQueryClient();
     const sheetRef = useRef<TrueSheet>(null);
@@ -487,13 +489,18 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     ]);
 
     const handleSave = useCallback(async () => {
+      if (!user || user.isAnonymous) {
+        requireAccount();
+        return;
+      }
+
       if (isBulkMode) {
         await handleBulkSave();
         return;
       }
 
       await handleSingleSave();
-    }, [handleBulkSave, handleSingleSave, isBulkMode]);
+    }, [handleBulkSave, handleSingleSave, isBulkMode, requireAccount, user]);
 
     const handleDeleteList = (listId: string, listName: string) => {
       if (isDefaultList(listId)) {
@@ -543,6 +550,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     };
 
     const handleCreateCustomListPress = async () => {
+      if (!user || user.isAnonymous) {
+        requireAccount();
+        return;
+      }
+
       isTransitioningToCreateRef.current = true;
       await sheetRef.current?.dismiss();
       await createListModalRef.current?.present();

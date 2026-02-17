@@ -89,6 +89,7 @@
     "continueWithEmailPassword": "Continuar con correo y contraseña",
     "orContinueWith": "O continuar con",
     "google": "Continuar con Google",
+    "continueAsGuest": "Continuar como invitado",
     "createAccount": "Crear cuenta",
     "alreadyHaveAccount": "¿Ya tienes una cuenta?",
     "dontHaveAccount": "¿No tienes una cuenta?",
@@ -745,12 +746,18 @@
     "unableToOpenWebsite": "No se pudo abrir el sitio web.",
     "updatePreferenceError": "No se pudo actualizar la preferencia. Inténtalo de nuevo.",
     "user": "Usuario",
+    "guestUser": "Usuario invitado",
     "webAppModal": {
       "title": "Abrir versión web",
       "description": "¿Continuar a la app web de ShowSeek?"
     },
     "defaultBulkAction": "Acción masiva predeterminada: {{mode}}",
     "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista."
+  },
+  "guestAccess": {
+    "body": "Necesitas una cuenta para hacer eso. Inicia sesión.",
+    "okLetsGo": "Ok vamos",
+    "notNowKeepLooking": "Ahora no, seguiré mirando"
   },
   "onboarding": {
     "welcome": "Bienvenido a ShowSeek",

@@ -9,6 +9,7 @@ import { COLORS } from '@/src/constants/theme';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
+import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
@@ -557,19 +558,21 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PremiumProvider>
-          <TraktProvider>
-            <LanguageProvider>
-              <RegionProvider>
-                <AccentColorProvider>
-                  <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </AccentColorProvider>
-              </RegionProvider>
-            </LanguageProvider>
-          </TraktProvider>
-        </PremiumProvider>
+        <GuestAccessProvider>
+          <PremiumProvider>
+            <TraktProvider>
+              <LanguageProvider>
+                <RegionProvider>
+                  <AccentColorProvider>
+                    <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </AccentColorProvider>
+                </RegionProvider>
+              </LanguageProvider>
+            </TraktProvider>
+          </PremiumProvider>
+        </GuestAccessProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

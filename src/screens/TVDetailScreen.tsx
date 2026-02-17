@@ -33,6 +33,8 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -77,6 +79,8 @@ export default function TVDetailScreen() {
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -95,6 +99,14 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isPremium } = usePremium();
+
+  const isAccountRequired = useCallback(() => {
+    if (!user || isGuest) {
+      requireAccount();
+      return true;
+    }
+    return false;
+  }, [isGuest, requireAccount, user]);
 
   // Long-press handler for similar/recommended media
   const {
@@ -369,14 +381,27 @@ export default function TVDetailScreen() {
 
           {/* Action buttons */}
           <MediaActionButtons
-            onAddToList={() => addToListModalRef.current?.present()}
-            onRate={() => setRatingModalVisible(true)}
+            onAddToList={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              addToListModalRef.current?.present();
+            }}
+            onRate={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              setRatingModalVisible(true);
+            }}
             onReminder={
               show.status === 'Returning Series' ||
               show.status === 'In Production' ||
               show.status === 'Planned' ||
               show.status === 'Pilot'
                 ? () => {
+                    if (isAccountRequired()) {
+                      return;
+                    }
                     if (!isPremium) {
                       showPremiumAlert('premiumFeature.features.reminders');
                       return;
@@ -385,15 +410,18 @@ export default function TVDetailScreen() {
                   }
                 : undefined
             }
-            onNote={() =>
+            onNote={() => {
+              if (isAccountRequired()) {
+                return;
+              }
               noteSheetRef.current?.present({
                 mediaType: 'tv',
                 mediaId: tvId,
                 posterPath: show.poster_path,
                 mediaTitle: show.name,
                 initialNote: note?.content,
-              })
-            }
+              });
+            }}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
