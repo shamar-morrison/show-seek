@@ -145,6 +145,7 @@ jest.mock('@/src/components/CreateListModal', () => {
 
     return null;
   });
+  MockCreateListModal.displayName = 'MockCreateListModal';
 
   return {
     __esModule: true,
@@ -348,7 +349,7 @@ describe('AddToListModal (bulk mode)', () => {
         createdAt: 2,
       },
     ];
-    mockAddMutate.mockImplementation(() => undefined);
+    mockAddMutateAsync.mockResolvedValue(undefined);
 
     const ref = createRef<AddToListModalRef>();
     render(<AddToListModal ref={ref} mediaItem={selected} />);
@@ -363,24 +364,10 @@ describe('AddToListModal (bulk mode)', () => {
       await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
     });
 
-    expect(mockAddMutate).toHaveBeenCalledWith(
-      {
-        listId: 'my-new-list',
-        mediaItem: selected,
-        listName: 'My New List',
-      },
-      expect.objectContaining({
-        onError: expect.any(Function),
-        onSuccess: expect.any(Function),
-      })
-    );
-
-    const mutateOptions = mockAddMutate.mock.calls[0][1] as
-      | { onSuccess?: () => Promise<void> | void }
-      | undefined;
-
-    await act(async () => {
-      await mutateOptions?.onSuccess?.();
+    expect(mockAddMutateAsync).toHaveBeenCalledWith({
+      listId: 'my-new-list',
+      mediaItem: selected,
+      listName: 'My New List',
     });
 
     await waitFor(() => {
