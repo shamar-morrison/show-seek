@@ -73,7 +73,12 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
     <GuestAccessContext.Provider value={value}>
       {children}
 
-      <Modal visible={isVisible} transparent animationType="fade" onRequestClose={() => {}}>
+      <Modal
+        visible={isVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleSecondaryAction}
+      >
         <View style={modalLayoutStyles.container}>
           <View style={modalLayoutStyles.backdrop} />
 

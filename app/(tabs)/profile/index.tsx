@@ -92,9 +92,7 @@ export default function ProfileScreen() {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
-    if ((isGuest || !user) && isAccountRequired()) {
-      return;
-    }
+    if (isAccountRequired()) return;
     setUpdatingPreferenceKey(key);
     updatePreference.mutate(
       { key, value },
@@ -110,9 +108,7 @@ export default function ProfileScreen() {
   };
 
   const handleGuardedContentAction = (action: () => void) => {
-    if ((isGuest || !user) && isAccountRequired()) {
-      return;
-    }
+    if (isAccountRequired()) return;
     action();
   };
 

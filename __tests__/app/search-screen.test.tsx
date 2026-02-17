@@ -234,6 +234,33 @@ describe('SearchScreen routing and auth guard', () => {
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
+  it('does not trigger account guard for guest long press on person results', async () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+    mockQueryResults = [
+      {
+        id: 88,
+        media_type: 'person',
+        name: 'Guest Person',
+        profile_path: null,
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Guest Person')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Guest Person'), 'longPress');
+
+    expect(mockRequireAccount).not.toHaveBeenCalled();
+    expect(mockPresent).not.toHaveBeenCalled();
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
   it('opens AddToListModal on authenticated long press', async () => {
     mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockQueryResults = [

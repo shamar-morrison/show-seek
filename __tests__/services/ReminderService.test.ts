@@ -158,6 +158,67 @@ describe('ReminderService', () => {
       );
       expect(getDocs).not.toHaveBeenCalled();
     });
+
+    it('rejects when user is anonymous', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.getActiveReminders('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('anonymous user write guards', () => {
+    it('rejects createReminder for anonymous users without writing', async () => {
+      mockIsAnonymous = true;
+
+      await expect(
+        reminderService.createReminder({
+          mediaType: 'movie',
+          mediaId: 123,
+          title: 'Test Movie',
+          posterPath: null,
+          releaseDate: '2026-05-01',
+          reminderTiming: 'on_release_day',
+        })
+      ).rejects.toThrow('Please sign in to continue');
+
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects cancelReminder for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.cancelReminder('movie-123')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(deleteDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects updateReminder for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.updateReminder('movie-123', 'on_release_day')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects updateReminderDetails for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(
+        reminderService.updateReminderDetails('movie-123', { reminderTiming: '1_day_before' })
+      ).rejects.toThrow('Please sign in to continue');
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
   });
 
   describe('getReminder', () => {

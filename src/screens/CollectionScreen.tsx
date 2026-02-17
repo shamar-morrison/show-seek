@@ -165,10 +165,26 @@ export default function CollectionScreen() {
 
   const collection = collectionQuery.data;
 
-  // Sort movies chronologically by release date
-  const sortedMovies = [...collection.parts].sort(
-    (a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime()
-  );
+  const getReleaseTimestamp = (releaseDate?: string | null) => {
+    if (!releaseDate) return Number.POSITIVE_INFINITY;
+    const timestamp = new Date(releaseDate).getTime();
+    return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+  };
+
+  // Sort movies chronologically by release date, keeping invalid/missing dates at the end.
+  const sortedMovies = [...collection.parts]
+    .map((movie, index) => ({ movie, index }))
+    .sort((a, b) => {
+      const timestampDiff =
+        getReleaseTimestamp(a.movie.release_date) - getReleaseTimestamp(b.movie.release_date);
+      if (timestampDiff !== 0) return timestampDiff;
+
+      const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
+      if (titleDiff !== 0) return titleDiff;
+
+      return a.index - b.index;
+    })
+    .map(({ movie }) => movie);
 
   const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.large);
 

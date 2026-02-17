@@ -130,10 +130,9 @@ export default function SearchScreen() {
   };
 
   const handleLongPress = (item: any) => {
-    if (isAccountRequired()) return;
-
     // Skip for person results
     if (item.media_type === 'person') return;
+    if (isAccountRequired()) return;
 
     const itemMediaType = resolveSearchResultMediaType(item, mediaType);
     if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;
