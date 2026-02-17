@@ -73,9 +73,14 @@ class ListService {
     return sanitized;
   }
 
-  private isNotFoundError(error: unknown): boolean {
+  private isCreateFallbackEligibleError(error: unknown): boolean {
     const code = (error as { code?: string })?.code;
-    return code === 'not-found' || code === 'firestore/not-found';
+    return (
+      code === 'not-found' ||
+      code === 'firestore/not-found' ||
+      code === 'permission-denied' ||
+      code === 'firestore/permission-denied'
+    );
   }
 
   async getUserLists(userId: string): Promise<UserList[]> {
@@ -229,6 +234,8 @@ class ListService {
    * Add a media item to a specific list
    */
   async addToList(listId: string, mediaItem: Omit<ListMediaItem, 'addedAt'>, listName?: string) {
+    let failureStage: 'update' | 'fallback-create' | null = null;
+
     try {
       const user = auth.currentUser;
       if (!user) throw new Error('Please sign in to continue');
@@ -258,8 +265,9 @@ class ListService {
         ]);
         return;
       } catch (error) {
-        if (!this.isNotFoundError(error)) {
-          throw new Error(getFirestoreErrorMessage(error));
+        failureStage = 'update';
+        if (!this.isCreateFallbackEligibleError(error)) {
+          throw error;
         }
       } finally {
         updateTimeout.cancel();
@@ -284,13 +292,23 @@ class ListService {
           createTimeout.promise,
         ]);
       } catch (error) {
-        throw new Error(getFirestoreErrorMessage(error));
+        failureStage = 'fallback-create';
+        throw error;
       } finally {
         createTimeout.cancel();
       }
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
-      console.error('[ListService] addToList error:', error);
+      const firebaseCode = (error as { code?: string })?.code;
+      const currentUserId = auth.currentUser?.uid ?? null;
+      console.error('[ListService] addToList error:', {
+        error,
+        code: firebaseCode,
+        userId: currentUserId,
+        listId,
+        mediaId: mediaItem.id,
+        stage: failureStage,
+      });
       throw new Error(message);
     }
   }
@@ -316,7 +334,15 @@ class ListService {
       ]);
     } catch (error) {
       const message = getFirestoreErrorMessage(error);
-      console.error('[ListService] removeFromList error:', error);
+      const firebaseCode = (error as { code?: string })?.code;
+      const currentUserId = auth.currentUser?.uid ?? null;
+      console.error('[ListService] removeFromList error:', {
+        error,
+        code: firebaseCode,
+        userId: currentUserId,
+        listId,
+        mediaId,
+      });
       throw new Error(message);
     } finally {
       timeout.cancel();

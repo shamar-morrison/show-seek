@@ -20,6 +20,29 @@ const mockAddMutate = jest.fn();
 const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
+const mockInvalidateQueries = jest.fn(async () => {});
+
+const mockQueryClient = {
+  invalidateQueries: mockInvalidateQueries,
+};
+
+type Deferred<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: Error) => void;
+};
+
+const createDeferred = <T,>(): Deferred<T> => {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
 
 jest.mock('react-native', () => {
   const React = require('react');
@@ -136,6 +159,16 @@ jest.mock('@/src/hooks/useLists', () => ({
   }),
 }));
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'test-user-id' },
+  }),
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mockQueryClient,
+}));
+
 const createMediaItem = (
   id: number,
   mediaType: 'movie' | 'tv' = 'movie'
@@ -163,6 +196,7 @@ describe('AddToListModal (bulk mode)', () => {
     mockAddMutateAsync.mockResolvedValue(undefined);
     mockRemoveMutateAsync.mockResolvedValue(undefined);
     mockDeleteMutateAsync.mockResolvedValue(undefined);
+    mockInvalidateQueries.mockResolvedValue(undefined);
   });
 
   it('filters out the source list and requires selecting a target list before save', async () => {
@@ -396,6 +430,113 @@ describe('AddToListModal (bulk mode)', () => {
     });
 
     expect(mockRemoveMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('processes single-item changes sequentially', async () => {
+    const selected = createMediaItem(1);
+    const removeDeferred = createDeferred<void>();
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockRemoveMutateAsync.mockImplementationOnce(() => removeDeferred.promise);
+    mockAddMutateAsync.mockResolvedValue(undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+    fireEvent.press(getByTestId('add-to-list-row-favorites'));
+
+    act(() => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveMutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockAddMutateAsync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      removeDeferred.resolve(undefined);
+    });
+
+    await waitFor(() => {
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows a partial failure banner for single-item saves with mixed outcomes', async () => {
+    const selected = createMediaItem(1);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: { [selected.id]: createStoredItem(selected) },
+        createdAt: 1,
+      },
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+
+    mockRemoveMutateAsync.mockRejectedValueOnce(
+      new Error('You do not have permission to perform this action')
+    );
+    mockAddMutateAsync.mockResolvedValue(undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId, getByText } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('add-to-list-row-watchlist'));
+    fireEvent.press(getByTestId('add-to-list-row-favorites'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('add-to-list-save-button'));
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockAddMutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    await waitFor(() => {
+      expect(getByText('Changes failed to save')).toBeTruthy();
+    });
+
+    expect(mockSheetDismiss).not.toHaveBeenCalled();
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-id'],
+      refetchType: 'active',
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-id'],
+      refetchType: 'active',
+    });
   });
 
 });
