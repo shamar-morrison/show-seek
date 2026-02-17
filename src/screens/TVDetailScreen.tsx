@@ -276,10 +276,6 @@ export default function TVDetailScreen() {
       .slice(0, 10)
       .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original) || '') || [];
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
-  const recommendations = recommendationsQuery.data?.results.slice(0, 10) || [];
-
-  const backdropUrl = getImageUrl(show.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
-  const posterUrl = getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.medium);
 
   const handleTrailerPress = () => {
     if (trailer) {
