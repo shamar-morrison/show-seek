@@ -21,6 +21,12 @@ const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
 const mockInvalidateQueries = jest.fn(async () => {});
+let latestCreateListModalProps:
+  | {
+      onSuccess?: (listId: string, listName: string) => void;
+      onCancel?: () => void;
+    }
+  | null = null;
 
 const mockQueryClient = {
   invalidateQueries: mockInvalidateQueries,
@@ -130,7 +136,8 @@ jest.mock('@/src/components/ui/AnimatedCheck', () => ({
 jest.mock('@/src/components/CreateListModal', () => {
   const React = require('react');
 
-  const MockCreateListModal = React.forwardRef((_props: any, ref: any) => {
+  const MockCreateListModal = React.forwardRef((props: any, ref: any) => {
+    latestCreateListModalProps = props;
     React.useImperativeHandle(ref, () => ({
       present: jest.fn(async () => {}),
       dismiss: jest.fn(async () => {}),
@@ -189,6 +196,7 @@ const createStoredItem = (item: Omit<ListMediaItem, 'addedAt'>): ListMediaItem =
 describe('AddToListModal (bulk mode)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    latestCreateListModalProps = null;
 
     mockListsState.data = [];
     mockListsState.isLoading = false;
@@ -327,6 +335,64 @@ describe('AddToListModal (bulk mode)', () => {
     });
 
     expect(getByText('Add to List')).toBeTruthy();
+  });
+
+  it('reconciles list queries after create-list success in single-item mode', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockAddMutate.mockImplementation(() => undefined);
+
+    const ref = createRef<AddToListModalRef>();
+    render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(latestCreateListModalProps?.onSuccess).toBeDefined();
+
+    await act(async () => {
+      await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
+    });
+
+    expect(mockAddMutate).toHaveBeenCalledWith(
+      {
+        listId: 'my-new-list',
+        mediaItem: selected,
+        listName: 'My New List',
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      })
+    );
+
+    const mutateOptions = mockAddMutate.mock.calls[0][1] as
+      | { onSuccess?: () => Promise<void> | void }
+      | undefined;
+
+    await act(async () => {
+      await mutateOptions?.onSuccess?.();
+    });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
   });
 
   it('removes from source list in move mode after successful adds', async () => {

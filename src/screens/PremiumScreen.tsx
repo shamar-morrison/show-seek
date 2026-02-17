@@ -108,12 +108,6 @@ export default function PremiumScreen() {
     try {
       const offerings = await Purchases.getOfferings();
       const premiumPackageCount = offerings.all.Premium?.availablePackages?.length ?? 0;
-      console.log('[RevenueCat Debug] Test fetch successful:', {
-        allOfferings: Object.keys(offerings.all),
-        currentOffering: offerings.current?.identifier ?? null,
-        currentPackageCount: offerings.current?.availablePackages?.length ?? 0,
-        premiumPackageCount,
-      });
       Alert.alert('Offerings', JSON.stringify(premiumPackageCount));
     } catch (error) {
       console.error('[RevenueCat Debug] Test fetch failed:', error);

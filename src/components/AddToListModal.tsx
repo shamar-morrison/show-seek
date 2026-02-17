@@ -567,13 +567,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       addMutation.mutate(
         { listId, mediaItem, listName },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
             initialMembershipRef.current[listId] = true;
             setPendingSelections((prev) => ({
               ...prev,
               [listId]: true,
             }));
             setSuccessMessage(t('library.addedToList', { list: listName }));
+            await reconcileListQueries();
           },
           onError: handleMutationError,
         }
