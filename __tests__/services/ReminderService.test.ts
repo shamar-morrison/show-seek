@@ -2,11 +2,12 @@ import * as Notifications from 'expo-notifications';
 import { deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
+let mockIsAnonymous = false;
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
-      return mockUserId ? { uid: mockUserId } : null;
+      return mockUserId ? { uid: mockUserId, isAnonymous: mockIsAnonymous } : null;
     },
   },
   db: {},
@@ -22,6 +23,7 @@ describe('ReminderService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
+    mockIsAnonymous = false;
   });
 
   it('rejects creating a reminder with missing release date', async () => {
@@ -155,6 +157,17 @@ describe('ReminderService', () => {
         'Please sign in to continue'
       );
       expect(getDocs).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getReminder', () => {
+    it('returns null for anonymous users without querying Firestore', async () => {
+      mockIsAnonymous = true;
+
+      const result = await reminderService.getReminder('movie', 123);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
     });
   });
 });

@@ -93,7 +93,7 @@ class FavoriteEpisodeService {
     try {
       const user = auth.currentUser;
       if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
+        return [];
       }
 
       this.logDebug('getFavoriteEpisodes:start', {
@@ -134,7 +134,7 @@ class FavoriteEpisodeService {
     try {
       const user = auth.currentUser;
       if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
+        return null;
       }
 
       const episodeRef = this.getFavoriteEpisodeRef(userId, episodeId);

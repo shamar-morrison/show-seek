@@ -121,7 +121,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const router = useRouter();
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
-    const { user } = useAuth();
+    const { user, isGuest } = useAuth();
     const { requireAccount } = useGuestAccess();
     const userId = user?.uid;
     const queryClient = useQueryClient();
@@ -489,7 +489,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     ]);
 
     const handleSave = useCallback(async () => {
-      if (!user || user.isAnonymous) {
+      if (!user || isGuest) {
         requireAccount();
         return;
       }
@@ -500,7 +500,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }
 
       await handleSingleSave();
-    }, [handleBulkSave, handleSingleSave, isBulkMode, requireAccount, user]);
+    }, [handleBulkSave, handleSingleSave, isBulkMode, isGuest, requireAccount, user]);
 
     const handleDeleteList = (listId: string, listName: string) => {
       if (isDefaultList(listId)) {
@@ -550,7 +550,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     };
 
     const handleCreateCustomListPress = async () => {
-      if (!user || user.isAnonymous) {
+      if (!user || isGuest) {
         requireAccount();
         return;
       }

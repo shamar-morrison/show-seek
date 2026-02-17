@@ -43,10 +43,10 @@ import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
@@ -174,8 +174,7 @@ const tryAutoAddToAlreadyWatched = async (params: {
 export default function MovieDetailScreen() {
   const styles = useDetailStyles();
   const queryClient = useQueryClient();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
+  const { user } = useAuth();
   const userId = user?.uid;
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -204,14 +203,7 @@ export default function MovieDetailScreen() {
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
-
-  const isAccountRequired = useCallback(() => {
-    if (!user || isGuest) {
-      requireAccount();
-      return true;
-    }
-    return false;
-  }, [isGuest, requireAccount, user]);
+  const isAccountRequired = useAccountRequired();
 
   // Long-press handler for similar/recommended media
   const {

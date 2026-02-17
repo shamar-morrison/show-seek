@@ -41,7 +41,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const [listDescription, setListDescription] = useState('');
     const [error, setError] = useState<string | null>(null);
     const { accentColor } = useAccentColor();
-    const { user } = useAuth();
+    const { user, isGuest } = useAuth();
     const { requireAccount } = useGuestAccess();
 
     const createMutation = useCreateList();
@@ -104,7 +104,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const handleCreate = async () => {
       const trimmedName = listName.trim();
       if (!trimmedName) return;
-      if (!user || user.isAnonymous) {
+      if (!user || isGuest) {
         requireAccount();
         return;
       }

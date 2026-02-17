@@ -3,7 +3,7 @@ import { useAuth } from '@/src/context/auth';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface GuestAccessContextValue {
   isGuest: boolean;
@@ -13,7 +13,7 @@ interface GuestAccessContextValue {
 
 const defaultGuestAccessContextValue: GuestAccessContextValue = {
   isGuest: false,
-  requireAccount: () => true,
+  requireAccount: () => false,
   showGuestAccessModal: () => {},
 };
 
@@ -47,11 +47,14 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
     setIsSigningOut(true);
     try {
       await signOut();
+      setIsVisible(false);
+    } catch (error) {
+      console.error('[GuestAccessContext] Failed to sign out guest user:', error);
+      Alert.alert(t('common.errorTitle'), t('auth.signOutFailed'));
     } finally {
       setIsSigningOut(false);
-      setIsVisible(false);
     }
-  }, [signOut]);
+  }, [signOut, t]);
 
   const handleSecondaryAction = useCallback(() => {
     setIsVisible(false);
@@ -152,6 +155,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: COLORS.textSecondary,
     fontWeight: '600',
-    fontSize: FONT_SIZE.s,
+    fontSize: FONT_SIZE.m,
   },
 });

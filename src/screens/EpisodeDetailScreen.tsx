@@ -26,10 +26,9 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useIsEpisodeWatched,
@@ -83,8 +82,6 @@ export default function EpisodeDetailScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
   const {
     tvId,
     seasonNumber,
@@ -109,13 +106,7 @@ export default function EpisodeDetailScreen() {
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
-  const isAccountRequired = useCallback(() => {
-    if (!user || isGuest) {
-      requireAccount();
-      return true;
-    }
-    return false;
-  }, [isGuest, requireAccount, user]);
+  const isAccountRequired = useAccountRequired();
 
   // Progressive render: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();

@@ -63,14 +63,10 @@ export function AppSettingsSection({
         </Text>
       )}
       <View style={styles.actionsList}>
+        <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
+        <ActionButton icon={MessageCircle} label={t('profile.sendFeedback')} onPress={onFeedback} />
         {isGuest ? (
           <>
-            <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
-            <ActionButton
-              icon={MessageCircle}
-              label={t('profile.sendFeedback')}
-              onPress={onFeedback}
-            />
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
             <ActionButton
               icon={LogOut}
@@ -82,12 +78,6 @@ export function AppSettingsSection({
           </>
         ) : (
           <>
-            <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
-            <ActionButton
-              icon={MessageCircle}
-              label={t('profile.sendFeedback')}
-              onPress={onFeedback}
-            />
             <ActionButton
               icon={Download}
               label={t('profile.exportData')}

@@ -9,8 +9,8 @@ import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,8 +27,8 @@ export default function HomeScreen() {
   const toastRef = useRef<ToastRef>(null);
   const queryClient = useQueryClient();
   const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
+  const { user } = useAuth();
+  const isAccountRequired = useAccountRequired();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -60,9 +60,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleOpenCustomization = () => {
-    if (isGuest && !requireAccount()) {
-      return;
-    }
+    if (isAccountRequired()) return;
     modalRef.current?.present();
   };
 

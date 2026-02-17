@@ -6,7 +6,7 @@ const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
 
 const mockAuthState = {
-  user: { uid: 'user-1' } as null | { uid: string },
+  user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
   isGuest: false,
 };
 
@@ -136,7 +136,7 @@ describe('SearchScreen routing and auth guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockAuthState.isGuest = false;
     mockQueryLoading = false;
     mockQueryResults = [];
@@ -204,8 +204,38 @@ describe('SearchScreen routing and auth guard', () => {
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
+  it('blocks anonymous guest long press from opening AddToListModal', async () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+    mockQueryResults = [
+      {
+        id: 43,
+        media_type: 'movie',
+        title: 'Guest Movie Item',
+        release_date: '2024-01-01',
+        vote_average: 7,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Guest Movie Item')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Guest Movie Item'), 'longPress');
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
   it('opens AddToListModal on authenticated long press', async () => {
-    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockQueryResults = [
       {
         id: 9,

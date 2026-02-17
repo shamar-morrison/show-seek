@@ -7,9 +7,9 @@ import { WebAppModal } from '@/src/components/profile/WebAppModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
@@ -39,10 +39,9 @@ interface TabConfig {
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
+  const { user, isGuest } = useAuth();
+  const isAccountRequired = useAccountRequired();
   const {
-    user,
     isPremium,
     showSupportModal,
     isExporting,
@@ -93,7 +92,7 @@ export default function ProfileScreen() {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
-    if (isGuest && !requireAccount()) {
+    if ((isGuest || !user) && isAccountRequired()) {
       return;
     }
     setUpdatingPreferenceKey(key);
@@ -111,7 +110,7 @@ export default function ProfileScreen() {
   };
 
   const handleGuardedContentAction = (action: () => void) => {
-    if (isGuest && !requireAccount()) {
+    if ((isGuest || !user) && isAccountRequired()) {
       return;
     }
     action();

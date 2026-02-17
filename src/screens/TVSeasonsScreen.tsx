@@ -4,9 +4,8 @@ import { SeasonItem } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
-import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
@@ -40,8 +39,6 @@ export default function TVSeasonsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
   const tvId = Number(id);
   const [expandedSeason, setExpandedSeason] = useState<number | null>(() => {
     return season ? Number(season) : null;
@@ -83,13 +80,7 @@ export default function TVSeasonsScreen() {
     : 0;
 
   const { data: ratings } = useRatings();
-  const isAccountRequired = useCallback(() => {
-    if (!user || isGuest) {
-      requireAccount();
-      return true;
-    }
-    return false;
-  }, [isGuest, requireAccount, user]);
+  const isAccountRequired = useAccountRequired();
 
   // Progressive render: defer heavy content until navigation animation completes
   const { isReady } = useProgressiveRender();

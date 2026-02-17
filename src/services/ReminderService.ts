@@ -523,7 +523,7 @@ class ReminderService {
   async getReminder(mediaType: ReminderMediaType, mediaId: number): Promise<Reminder | null> {
     try {
       const user = auth.currentUser;
-      if (!user) return null;
+      if (!user || user.isAnonymous) return null;
 
       const reminderId = this.getReminderId(mediaType, mediaId);
       const reminderRef = this.getReminderRef(user.uid, reminderId);

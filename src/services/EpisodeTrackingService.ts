@@ -38,7 +38,7 @@ class EpisodeTrackingService {
 
   async getShowTracking(tvShowId: number): Promise<TVShowEpisodeTracking | null> {
     const user = auth.currentUser;
-    if (!user) return null;
+    if (!user || user.isAnonymous) return null;
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     const timeout = createTimeoutWithCleanup(10000);

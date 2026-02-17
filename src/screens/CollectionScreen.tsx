@@ -5,10 +5,9 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useCanTrackMoreCollections,
@@ -45,19 +44,11 @@ export default function CollectionScreen() {
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { isPremium } = usePremium();
-  const isAccountRequired = useCallback(() => {
-    if (!user || isGuest) {
-      requireAccount();
-      return true;
-    }
-    return false;
-  }, [isGuest, requireAccount, user]);
+  const isAccountRequired = useAccountRequired();
 
   // Collection tracking state
   const {

@@ -13,11 +13,10 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -69,8 +68,7 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
+  const isAccountRequired = useAccountRequired();
   const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
@@ -132,10 +130,7 @@ export default function SearchScreen() {
   };
 
   const handleLongPress = (item: any) => {
-    if (!user || isGuest) {
-      requireAccount();
-      return;
-    }
+    if (isAccountRequired()) return;
 
     // Skip for person results
     if (item.media_type === 'person') return;

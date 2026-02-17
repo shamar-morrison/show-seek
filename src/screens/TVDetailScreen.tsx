@@ -33,10 +33,9 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
-import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
@@ -79,8 +78,6 @@ export default function TVDetailScreen() {
   const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
-  const { user, isGuest } = useAuth();
-  const { requireAccount } = useGuestAccess();
   const tvId = Number(id);
   const [trailerModalVisible, setTrailerModalVisible] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
@@ -99,14 +96,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isPremium } = usePremium();
-
-  const isAccountRequired = useCallback(() => {
-    if (!user || isGuest) {
-      requireAccount();
-      return true;
-    }
-    return false;
-  }, [isGuest, requireAccount, user]);
+  const isAccountRequired = useAccountRequired();
 
   // Long-press handler for similar/recommended media
   const {
