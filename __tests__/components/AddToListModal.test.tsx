@@ -381,6 +381,17 @@ describe('AddToListModal (bulk mode)', () => {
         mediaId: selected.id,
       });
     });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
   });
 
   it('does not remove from source list in copy mode', async () => {

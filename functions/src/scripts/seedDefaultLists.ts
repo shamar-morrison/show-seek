@@ -16,6 +16,9 @@ interface ApplyFailure {
 }
 
 const DEFAULT_LISTS: DefaultListDefinition[] = [
+  // Canonical source: ListService.DEFAULT_LISTS in src/services/ListService.ts.
+  // Keep this script's DefaultListDefinition + DEFAULT_LISTS aligned with ListService;
+  // update ListService first to avoid divergence across app/functions boundaries.
   { id: 'watchlist', name: 'Should Watch' },
   { id: 'currently-watching', name: 'Watching' },
   { id: 'already-watched', name: 'Already Watched' },

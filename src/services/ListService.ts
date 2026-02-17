@@ -75,6 +75,9 @@ class ListService {
 
   private isCreateFallbackEligibleError(error: unknown): boolean {
     const code = (error as { code?: string })?.code;
+    // Intentional: updateDoc on a missing document can surface as permission-denied when
+    // rules evaluate resource.data, so we allow fallback from updateDoc to setDoc(..., { merge: true }).
+    // This is first-write recovery logic, not a generic auth retry.
     return (
       code === 'not-found' ||
       code === 'firestore/not-found' ||

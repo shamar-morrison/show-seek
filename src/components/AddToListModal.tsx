@@ -451,6 +451,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         }
       }
 
+      await reconcileListQueries();
+
       if (failedOperations === 0) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         onShowToast?.(t('library.listsUpdated'));
@@ -476,9 +478,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       bulkMediaItems,
       handleMutationError,
       listsWithCounts,
-      onComplete,
       onShowToast,
       pendingSelections,
+      reconcileListQueries,
       removeMutation,
       sourceListId,
       t,
