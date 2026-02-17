@@ -87,9 +87,8 @@ describe('AuthProvider', () => {
       expect(AsyncStorage.removeItem).toHaveBeenCalledWith('userId');
     });
 
-    it('should normalize anonymous auth state to signed-out and trigger cleanup sign-out', async () => {
+    it('should keep anonymous auth state for guest sessions', async () => {
       const anonymousUser = { uid: 'anon-1', isAnonymous: true };
-      (firebaseSignOut as jest.Mock).mockResolvedValue(undefined);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -101,9 +100,10 @@ describe('AuthProvider', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      expect(result.current.user).toBeNull();
-      expect(firebaseSignOut).toHaveBeenCalledTimes(1);
-      expect(AsyncStorage.removeItem).toHaveBeenCalledWith('userId');
+      expect(result.current.user).toEqual(anonymousUser);
+      expect(result.current.isGuest).toBe(true);
+      expect(firebaseSignOut).not.toHaveBeenCalled();
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('userId', anonymousUser.uid);
     });
 
     it('should keep auth state transition when persisting userId fails', async () => {

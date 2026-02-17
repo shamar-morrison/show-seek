@@ -52,7 +52,7 @@ class ReminderService {
   async getActiveReminders(userId: string): Promise<Reminder[]> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -256,7 +256,7 @@ class ReminderService {
   async createReminder(input: CreateReminderInput): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       // Validate release date
       if (!input.releaseDate) {
@@ -328,7 +328,7 @@ class ReminderService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
@@ -380,7 +380,7 @@ class ReminderService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
       let currentReminder = sourceReminder;
@@ -445,7 +445,7 @@ class ReminderService {
   async updateReminderDetails(reminderId: string, updates: Partial<Reminder>): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
@@ -523,7 +523,7 @@ class ReminderService {
   async getReminder(mediaType: ReminderMediaType, mediaId: number): Promise<Reminder | null> {
     try {
       const user = auth.currentUser;
-      if (!user) return null;
+      if (!user || user.isAnonymous) return null;
 
       const reminderId = this.getReminderId(mediaType, mediaId);
       const reminderRef = this.getReminderRef(user.uid, reminderId);

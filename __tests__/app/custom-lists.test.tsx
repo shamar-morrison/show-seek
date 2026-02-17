@@ -17,6 +17,19 @@ jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockUsePremium(),
 }));
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'user-1' },
+    isGuest: false,
+  }),
+}));
+
+jest.mock('@/src/context/GuestAccessContext', () => ({
+  useGuestAccess: () => ({
+    requireAccount: jest.fn(),
+  }),
+}));
+
 jest.mock('@/src/hooks/useLists', () => ({
   useLists: () => mockUseLists(),
 }));

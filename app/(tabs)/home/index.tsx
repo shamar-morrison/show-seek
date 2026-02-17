@@ -10,6 +10,7 @@ import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
   const { user } = useAuth();
+  const isAccountRequired = useAccountRequired();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -58,6 +60,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleOpenCustomization = () => {
+    if (isAccountRequired()) return;
     modalRef.current?.present();
   };
 

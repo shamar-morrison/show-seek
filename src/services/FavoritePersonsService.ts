@@ -30,7 +30,7 @@ class FavoritePersonsService {
   async getFavoritePersons(userId: string): Promise<FavoritePerson[]> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -76,7 +76,7 @@ class FavoritePersonsService {
   async getFavoritePerson(userId: string, personId: number): Promise<FavoritePerson | null> {
     try {
       const user = auth.currentUser;
-      if (!user || user.uid !== userId) {
+      if (!user || user.isAnonymous || user.uid !== userId) {
         throw new Error('Please sign in to continue');
       }
 
@@ -113,7 +113,7 @@ class FavoritePersonsService {
   async addFavoritePerson(personData: Omit<FavoritePerson, 'addedAt'>) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personData.id.toString());
 
@@ -138,7 +138,7 @@ class FavoritePersonsService {
   async removeFavoritePerson(personId: number) {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const personRef = this.getUserFavoritePersonRef(user.uid, personId.toString());
 

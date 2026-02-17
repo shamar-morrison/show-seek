@@ -6,6 +6,7 @@ describe('AppSettingsSection', () => {
   const createProps = (
     overrides: Partial<AppSettingsSectionProps> = {}
   ): AppSettingsSectionProps => ({
+    isGuest: false,
     isPremium: true,
     isExporting: false,
     isClearingCache: false,
@@ -86,5 +87,13 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-signing-out...'));
 
     expect(props.onSignOut).not.toHaveBeenCalled();
+  });
+
+  it('hides export and clear cache actions for guest users', () => {
+    const props = createProps({ isGuest: true });
+    const { queryByText } = render(<AppSettingsSection {...props} />);
+
+    expect(queryByText('Export Data')).toBeNull();
+    expect(queryByText('Clear Image Cache')).toBeNull();
   });
 });

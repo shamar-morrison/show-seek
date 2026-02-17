@@ -40,7 +40,7 @@ export interface HomeDrawerProps {
 export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user, signOut } = useAuth();
+  const { user, isGuest, signOut } = useAuth();
   const { isPremium } = usePremium();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -50,7 +50,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const translateX = useSharedValue(-DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
-  const displayName = user?.displayName || t('profile.user');
+  const displayName = isGuest ? t('profile.guestUser') : user?.displayName || t('profile.user');
   const email = user?.email || t('profile.noEmail');
 
   useEffect(() => {
@@ -154,9 +154,11 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
               <Text style={styles.displayName} numberOfLines={1}>
                 {displayName}
               </Text>
-              <Text style={styles.email} numberOfLines={1}>
-                {email}
-              </Text>
+              {!isGuest && (
+                <Text style={styles.email} numberOfLines={1}>
+                  {email}
+                </Text>
+              )}
             </View>
           </View>
 

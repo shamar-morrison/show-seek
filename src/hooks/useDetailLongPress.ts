@@ -1,5 +1,7 @@
 import { AddToListModalRef } from '@/src/components/AddToListModal';
 import { SimilarMediaItem } from '@/src/components/detail/types';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { ToastRef } from '@/src/components/ui/Toast';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +15,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * @returns Object containing handlers and state for long-press interactions
  */
 export function useDetailLongPress(mediaType: 'movie' | 'tv') {
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
@@ -38,11 +42,16 @@ export function useDetailLongPress(mediaType: 'movie' | 'tv') {
 
   const handleLongPress = useCallback(
     (item: SimilarMediaItem) => {
+      if (!user || isGuest) {
+        requireAccount();
+        return;
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       const mediaItem = convertToListMediaItem(item);
       setSelectedMediaItem(mediaItem);
     },
-    [convertToListMediaItem]
+    [convertToListMediaItem, isGuest, requireAccount, user]
   );
 
   // Present the modal when an item is selected

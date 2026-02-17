@@ -7,6 +7,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useCanTrackMoreCollections,
@@ -37,6 +38,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+const getReleaseTimestamp = (releaseDate?: string | null) => {
+  if (!releaseDate) return Number.POSITIVE_INFINITY;
+  const timestamp = new Date(releaseDate).getTime();
+  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+};
+
 export default function CollectionScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -47,6 +54,7 @@ export default function CollectionScreen() {
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { isPremium } = usePremium();
+  const isAccountRequired = useAccountRequired();
 
   // Collection tracking state
   const {
@@ -87,6 +95,7 @@ export default function CollectionScreen() {
   );
 
   const handleStartTracking = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!collectionQuery.data) return;
 
     // Guard: don't start tracking if already tracked
@@ -109,9 +118,17 @@ export default function CollectionScreen() {
         console.error('[CollectionScreen] Failed to start tracking:', error);
       }
     })();
-  }, [collectionQuery.data, isTracked, canTrackMore, startTrackingMutation, collectionId]);
+  }, [
+    isAccountRequired,
+    collectionQuery.data,
+    isTracked,
+    canTrackMore,
+    startTrackingMutation,
+    collectionId,
+  ]);
 
   const handleStopTracking = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!collectionQuery.data) return;
 
     stopTrackingMutation.mutate(
@@ -131,7 +148,25 @@ export default function CollectionScreen() {
         },
       }
     );
-  }, [collectionQuery.data, stopTrackingMutation, collectionId]);
+  }, [isAccountRequired, collectionQuery.data, stopTrackingMutation, collectionId]);
+
+  const sortedMovies = useMemo(() => {
+    const parts = collectionQuery.data?.parts ?? [];
+
+    return [...parts]
+      .map((movie, index) => ({ movie, index }))
+      .sort((a, b) => {
+        const tsA = getReleaseTimestamp(a.movie.release_date);
+        const tsB = getReleaseTimestamp(b.movie.release_date);
+        if (tsA !== tsB) return tsA < tsB ? -1 : 1;
+
+        const titleDiff = (a.movie.title || '').localeCompare(b.movie.title || '');
+        if (titleDiff !== 0) return titleDiff;
+
+        return a.index - b.index;
+      })
+      .map(({ movie }) => movie);
+  }, [collectionQuery.data?.parts]);
 
   if (collectionQuery.isLoading) {
     return <FullScreenLoading />;
@@ -153,11 +188,6 @@ export default function CollectionScreen() {
   }
 
   const collection = collectionQuery.data;
-
-  // Sort movies chronologically by release date
-  const sortedMovies = [...collection.parts].sort(
-    (a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime()
-  );
 
   const backdropUrl = getImageUrl(collection.backdrop_path, TMDB_IMAGE_SIZES.backdrop.large);
 

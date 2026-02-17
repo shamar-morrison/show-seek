@@ -1,12 +1,13 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Alert } from 'react-native';
 
 const mockPush = jest.fn();
 const mockPresent = jest.fn();
+const mockRequireAccount = jest.fn();
 
 const mockAuthState = {
-  user: { uid: 'user-1' } as null | { uid: string },
+  user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
+  isGuest: false,
 };
 
 let mockQueryResults: any[] = [];
@@ -53,6 +54,12 @@ jest.mock('react-native-safe-area-context', () => {
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/context/GuestAccessContext', () => ({
+  useGuestAccess: () => ({
+    requireAccount: mockRequireAccount,
+  }),
 }));
 
 jest.mock('@/src/context/AccentColorProvider', () => ({
@@ -128,9 +135,9 @@ function enterQueryAndFlush(getByPlaceholderText: (text: string) => any) {
 describe('SearchScreen routing and auth guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     jest.useFakeTimers();
-    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+    mockAuthState.isGuest = false;
     mockQueryLoading = false;
     mockQueryResults = [];
   });
@@ -193,12 +200,69 @@ describe('SearchScreen routing and auth guard', () => {
 
     fireEvent(getByText('Movie Item'), 'longPress');
 
-    expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.any(String));
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('blocks anonymous guest long press from opening AddToListModal', async () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+    mockQueryResults = [
+      {
+        id: 43,
+        media_type: 'movie',
+        title: 'Guest Movie Item',
+        release_date: '2024-01-01',
+        vote_average: 7,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Guest Movie Item')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Guest Movie Item'), 'longPress');
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('does not trigger account guard for guest long press on person results', async () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+    mockQueryResults = [
+      {
+        id: 88,
+        media_type: 'person',
+        name: 'Guest Person',
+        profile_path: null,
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Guest Person')).toBeTruthy();
+    });
+
+    fireEvent(getByText('Guest Person'), 'longPress');
+
+    expect(mockRequireAccount).not.toHaveBeenCalled();
+    expect(mockPresent).not.toHaveBeenCalled();
     expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 
   it('opens AddToListModal on authenticated long press', async () => {
-    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockQueryResults = [
       {
         id: 9,

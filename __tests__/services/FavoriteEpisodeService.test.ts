@@ -1,14 +1,15 @@
 import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
-import { deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
+let mockIsAnonymous = false;
 
 // Mock the firebase config
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
-      return mockUserId ? { uid: mockUserId } : null;
+      return mockUserId ? { uid: mockUserId, isAnonymous: mockIsAnonymous } : null;
     },
   },
   db: {},
@@ -23,6 +24,7 @@ describe('FavoriteEpisodeService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
+    mockIsAnonymous = false;
   });
 
   describe('addFavoriteEpisode', () => {
@@ -102,6 +104,43 @@ describe('FavoriteEpisodeService', () => {
       expect(result).toEqual(mockEpisodes);
       expect(getDocs).toHaveBeenCalled();
     });
+
+    it('returns an empty array for unauthenticated users without querying Firestore', async () => {
+      mockUserId = null;
+
+      const result = await favoriteEpisodeService.getFavoriteEpisodes('test-user-id');
+
+      expect(result).toEqual([]);
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty array for anonymous users without querying Firestore', async () => {
+      mockIsAnonymous = true;
+
+      const result = await favoriteEpisodeService.getFavoriteEpisodes('test-user-id');
+
+      expect(result).toEqual([]);
+      expect(getDocs).not.toHaveBeenCalled();
+    });
   });
 
+  describe('getFavoriteEpisode', () => {
+    it('returns null for unauthorized users without querying Firestore', async () => {
+      mockUserId = 'another-user-id';
+
+      const result = await favoriteEpisodeService.getFavoriteEpisode('test-user-id', '1-1-1');
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns null for anonymous users without querying Firestore', async () => {
+      mockIsAnonymous = true;
+
+      const result = await favoriteEpisodeService.getFavoriteEpisode('test-user-id', '1-1-1');
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+  });
 });

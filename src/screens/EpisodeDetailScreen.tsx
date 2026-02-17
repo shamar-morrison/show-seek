@@ -28,6 +28,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
   useIsEpisodeWatched,
@@ -105,6 +106,7 @@ export default function EpisodeDetailScreen() {
 
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const currentTab = useCurrentTab();
+  const isAccountRequired = useAccountRequired();
 
   // Progressive render: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
@@ -232,6 +234,7 @@ export default function EpisodeDetailScreen() {
   );
 
   const handleMarkWatched = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!episode || !tvShow) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -273,6 +276,7 @@ export default function EpisodeDetailScreen() {
       });
     }
   }, [
+    isAccountRequired,
     episode,
     tvShow,
     isWatched,
@@ -289,6 +293,7 @@ export default function EpisodeDetailScreen() {
   ]);
 
   const handleToggleFavorite = useCallback(() => {
+    if (isAccountRequired()) return;
     if (!episode || !tvShow) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -315,6 +320,7 @@ export default function EpisodeDetailScreen() {
       }
     })();
   }, [
+    isAccountRequired,
     isFavorited,
     toggleFavoriteMutation,
     episode,
@@ -498,7 +504,10 @@ export default function EpisodeDetailScreen() {
             <View style={styles.secondaryActions}>
               <View style={styles.actionButtonWrapper}>
                 <RatingButton
-                  onPress={() => setRatingModalVisible(true)}
+                  onPress={() => {
+                    if (isAccountRequired()) return;
+                    setRatingModalVisible(true);
+                  }}
                   isRated={userRating > 0}
                   isLoading={isLoadingRating}
                 />
@@ -525,7 +534,8 @@ export default function EpisodeDetailScreen() {
 
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
-                onPress={() =>
+                onPress={() => {
+                  if (isAccountRequired()) return;
                   noteSheetRef.current?.present({
                     mediaType: 'episode',
                     mediaId: tvId,
@@ -535,8 +545,8 @@ export default function EpisodeDetailScreen() {
                     mediaTitle: episode.name,
                     initialNote: note?.content,
                     showId: tvId,
-                  })
-                }
+                  });
+                }}
                 disabled={isLoadingNote}
                 activeOpacity={ACTIVE_OPACITY}
               >

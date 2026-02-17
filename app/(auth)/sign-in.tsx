@@ -2,11 +2,12 @@ import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { configureGoogleAuth, signInWithGoogle } from '@/src/firebase/auth';
+import { configureGoogleAuth, signInAsGuest, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import { User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,6 +29,7 @@ export default function SignIn() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   // Configure Google Auth on mount
   useEffect(() => {
@@ -54,6 +56,20 @@ export default function SignIn() {
     }
   };
 
+  const handleGuestSignIn = async () => {
+    setGuestLoading(true);
+    try {
+      const result = await signInAsGuest();
+      if (!result.success && result.error) {
+        Alert.alert(t('auth.signInFailed'), result.error);
+      }
+    } catch {
+      Alert.alert(t('common.error'), t('errors.generic'));
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
   return (
     <View style={screenStyles.container}>
       <AnimatedBackground />
@@ -77,7 +93,7 @@ export default function SignIn() {
                 <TouchableOpacity
                   style={styles.googleButton}
                   onPress={handleGoogleSignIn}
-                  disabled={googleLoading}
+                  disabled={googleLoading || guestLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {googleLoading ? (
@@ -89,6 +105,22 @@ export default function SignIn() {
                         style={styles.googleIcon}
                       />
                       <Text style={styles.googleButtonText}>{t('auth.google')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.guestButton}
+                  onPress={handleGuestSignIn}
+                  disabled={googleLoading || guestLoading}
+                  activeOpacity={ACTIVE_OPACITY}
+                >
+                  {guestLoading ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <>
+                      <User size={16} color={COLORS.white} />
+                      <Text style={styles.guestButtonText}>{t('auth.continueAsGuest')}</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -203,6 +235,22 @@ const styles = StyleSheet.create({
   googleButtonText: {
     color: COLORS.white,
     fontWeight: 'bold',
+    fontSize: FONT_SIZE.m,
+  },
+  guestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    padding: SPACING.m,
+    borderRadius: BORDER_RADIUS.m,
+    gap: SPACING.s,
+  },
+  guestButtonText: {
+    color: COLORS.white,
+    fontWeight: '600',
     fontSize: FONT_SIZE.m,
   },
   legacyLinkContainer: {

@@ -9,6 +9,7 @@ import { COLORS } from '@/src/constants/theme';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
+import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
@@ -306,12 +307,6 @@ function RootLayoutNav() {
           });
         }
       } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
-        if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-          console.log('[RootLayout] queryClient.clear() executed on auth transition', {
-            previousUid,
-            currentUid,
-          });
-        }
         queryClient.clear();
       }
       resetClientReadState();
@@ -326,18 +321,11 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
-      if (__DEV__ && READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-        console.log('[RootLayout] AppState audit logging disabled by debug flag');
-      }
       return;
     }
 
     if (!AppState?.addEventListener) {
       return;
-    }
-
-    if (__DEV__ && READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-      console.log('[RootLayout] AppState audit logging enabled');
     }
 
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -478,7 +466,11 @@ function RootLayoutNav() {
           style={{
             color: COLORS.text,
             fontSize: 12,
-            fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+            fontFamily: Platform.select({
+              ios: 'Menlo',
+              android: 'monospace',
+              default: 'monospace',
+            }),
           }}
         >
           {JSON.stringify(debugSnapshot, null, 2)}
@@ -557,19 +549,21 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PremiumProvider>
-          <TraktProvider>
-            <LanguageProvider>
-              <RegionProvider>
-                <AccentColorProvider>
-                  <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </AccentColorProvider>
-              </RegionProvider>
-            </LanguageProvider>
-          </TraktProvider>
-        </PremiumProvider>
+        <GuestAccessProvider>
+          <PremiumProvider>
+            <TraktProvider>
+              <LanguageProvider>
+                <RegionProvider>
+                  <AccentColorProvider>
+                    <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </AccentColorProvider>
+                </RegionProvider>
+              </LanguageProvider>
+            </TraktProvider>
+          </PremiumProvider>
+        </GuestAccessProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

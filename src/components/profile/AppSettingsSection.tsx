@@ -7,6 +7,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from './ActionButton';
 
 export interface AppSettingsSectionProps {
+  /** Whether user is a guest */
+  isGuest: boolean;
   /** Whether user has premium */
   isPremium: boolean;
   /** Whether export is in progress */
@@ -37,6 +39,7 @@ export interface AppSettingsSectionProps {
  * App settings section with Rate App, Feedback, Export Data, Web App, and Sign Out.
  */
 export function AppSettingsSection({
+  isGuest,
   isPremium,
   isExporting,
   isClearingCache,
@@ -62,28 +65,43 @@ export function AppSettingsSection({
       <View style={styles.actionsList}>
         <ActionButton icon={Star} label={t('profile.rateApp')} onPress={onRateApp} />
         <ActionButton icon={MessageCircle} label={t('profile.sendFeedback')} onPress={onFeedback} />
-        <ActionButton
-          icon={Download}
-          label={t('profile.exportData')}
-          onPress={onExportData}
-          loading={isExporting}
-          isPremiumFeature
-          isPremium={isPremium}
-        />
-        <ActionButton
-          icon={Trash2}
-          label={t('profile.clearCache')}
-          onPress={onClearCache}
-          loading={isClearingCache}
-        />
-        <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
-        <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
-        <ActionButton
-          icon={LogOut}
-          label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
-          onPress={onSignOut}
-          loading={isSigningOut}
-        />
+        {isGuest ? (
+          <>
+            <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              icon={LogOut}
+              label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
+              onPress={onSignOut}
+              loading={isSigningOut}
+            />
+            <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
+          </>
+        ) : (
+          <>
+            <ActionButton
+              icon={Download}
+              label={t('profile.exportData')}
+              onPress={onExportData}
+              loading={isExporting}
+              isPremiumFeature
+              isPremium={isPremium}
+            />
+            <ActionButton
+              icon={Trash2}
+              label={t('profile.clearCache')}
+              onPress={onClearCache}
+              loading={isClearingCache}
+            />
+            <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
+            <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              icon={LogOut}
+              label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
+              onPress={onSignOut}
+              loading={isSigningOut}
+            />
+          </>
+        )}
       </View>
     </View>
   );

@@ -13,10 +13,10 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -32,7 +32,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -69,7 +68,7 @@ export default function SearchScreen() {
   const [mediaType, setMediaType] = useState<MediaType>('all');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user } = useAuth();
+  const isAccountRequired = useAccountRequired();
   const { preferences } = usePreferences();
 
   const genresQuery = useAllGenres();
@@ -131,13 +130,9 @@ export default function SearchScreen() {
   };
 
   const handleLongPress = (item: any) => {
-    if (!user) {
-      Alert.alert(t('common.error'), t('errors.unauthorized'));
-      return;
-    }
-
     // Skip for person results
     if (item.media_type === 'person') return;
+    if (isAccountRequired()) return;
 
     const itemMediaType = resolveSearchResultMediaType(item, mediaType);
     if (itemMediaType !== 'movie' && itemMediaType !== 'tv') return;

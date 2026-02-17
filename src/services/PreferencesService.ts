@@ -118,7 +118,7 @@ class PreferencesService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const userRef = this.getUserDocRef(user.uid);
 

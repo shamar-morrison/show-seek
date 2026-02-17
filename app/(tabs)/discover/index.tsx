@@ -6,6 +6,8 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
@@ -43,6 +45,8 @@ export default function DiscoverScreen() {
   const { t } = useTranslation();
   const { preferences } = usePreferences();
   const { accentColor } = useAccentColor();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
 
   // Load genres based on media type
   const genresQuery = useGenres(mediaType);
@@ -123,6 +127,11 @@ export default function DiscoverScreen() {
   };
 
   const handleLongPress = (item: Movie | TVShow) => {
+    if (!user || isGuest) {
+      requireAccount();
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const title = 'title' in item ? item.title : item.name;
     const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;

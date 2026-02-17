@@ -46,6 +46,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
@@ -202,6 +203,7 @@ export default function MovieDetailScreen() {
   const [isSavingWatch, setIsSavingWatch] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
+  const isAccountRequired = useAccountRequired();
 
   // Long-press handler for similar/recommended media
   const {
@@ -500,6 +502,10 @@ export default function MovieDetailScreen() {
 
   // Handle button press - either show modal or quick mark based on preference
   const handleWatchedButtonPress = () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
     if (preferences?.quickMarkAsWatched) {
       // Quick mark: save immediately with current time
       setIsSavingWatch(true);
@@ -524,6 +530,10 @@ export default function MovieDetailScreen() {
 
   // Handle long-press on watched button to show history actions
   const handleWatchedButtonLongPress = () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
     if (watchCount > 0) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       watchHistoryModalRef.current?.present();
@@ -675,20 +685,40 @@ export default function MovieDetailScreen() {
 
           {/* Action Buttons */}
           <MediaActionButtons
-            onAddToList={() => addToListModalRef.current?.present()}
-            onRate={() => setRatingModalVisible(true)}
+            onAddToList={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              addToListModalRef.current?.present();
+            }}
+            onRate={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              setRatingModalVisible(true);
+            }}
             onReminder={
-              canShowReminder(displayReleaseDate) ? () => setReminderModalVisible(true) : undefined
+              canShowReminder(displayReleaseDate)
+                ? () => {
+                    if (isAccountRequired()) {
+                      return;
+                    }
+                    setReminderModalVisible(true);
+                  }
+                : undefined
             }
-            onNote={() =>
+            onNote={() => {
+              if (isAccountRequired()) {
+                return;
+              }
               noteSheetRef.current?.present({
                 mediaType: 'movie',
                 mediaId: movieId,
                 posterPath: movie.poster_path,
                 mediaTitle: movie.title,
                 initialNote: note?.content,
-              })
-            }
+              });
+            }}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}

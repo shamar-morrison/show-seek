@@ -3,6 +3,8 @@ import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { act, renderHook } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 
+const mockRequireAccount = jest.fn();
+
 // Mock expo-haptics
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
@@ -11,6 +13,19 @@ jest.mock('expo-haptics', () => ({
     Medium: 'medium',
     Heavy: 'heavy',
   },
+}));
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: { uid: 'user-1' },
+    isGuest: false,
+  }),
+}));
+
+jest.mock('@/src/context/GuestAccessContext', () => ({
+  useGuestAccess: () => ({
+    requireAccount: mockRequireAccount,
+  }),
 }));
 
 describe('useDetailLongPress', () => {

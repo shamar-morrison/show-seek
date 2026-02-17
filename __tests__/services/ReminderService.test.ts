@@ -2,11 +2,12 @@ import * as Notifications from 'expo-notifications';
 import { deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
+let mockIsAnonymous = false;
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
-      return mockUserId ? { uid: mockUserId } : null;
+      return mockUserId ? { uid: mockUserId, isAnonymous: mockIsAnonymous } : null;
     },
   },
   db: {},
@@ -22,6 +23,7 @@ describe('ReminderService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
+    mockIsAnonymous = false;
   });
 
   it('rejects creating a reminder with missing release date', async () => {
@@ -155,6 +157,78 @@ describe('ReminderService', () => {
         'Please sign in to continue'
       );
       expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('rejects when user is anonymous', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.getActiveReminders('test-user-id')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('anonymous user write guards', () => {
+    it('rejects createReminder for anonymous users without writing', async () => {
+      mockIsAnonymous = true;
+
+      await expect(
+        reminderService.createReminder({
+          mediaType: 'movie',
+          mediaId: 123,
+          title: 'Test Movie',
+          posterPath: null,
+          releaseDate: '2026-05-01',
+          reminderTiming: 'on_release_day',
+        })
+      ).rejects.toThrow('Please sign in to continue');
+
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects cancelReminder for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.cancelReminder('movie-123')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(deleteDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects updateReminder for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(reminderService.updateReminder('movie-123', 'on_release_day')).rejects.toThrow(
+        'Please sign in to continue'
+      );
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+
+    it('rejects updateReminderDetails for anonymous users without Firestore reads/writes', async () => {
+      mockIsAnonymous = true;
+
+      await expect(
+        reminderService.updateReminderDetails('movie-123', { reminderTiming: '1_day_before' })
+      ).rejects.toThrow('Please sign in to continue');
+
+      expect(getDoc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getReminder', () => {
+    it('returns null for anonymous users without querying Firestore', async () => {
+      mockIsAnonymous = true;
+
+      const result = await reminderService.getReminder('movie', 123);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
     });
   });
 });

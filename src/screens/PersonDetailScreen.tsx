@@ -6,6 +6,8 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
+import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import {
@@ -61,6 +63,8 @@ export default function PersonDetailScreen() {
   const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
+  const { user, isGuest } = useAuth();
+  const { requireAccount } = useGuestAccess();
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
@@ -227,6 +231,11 @@ export default function PersonDetailScreen() {
   };
 
   const handleFavoriteToggle = () => {
+    if (!user || isGuest) {
+      requireAccount();
+      return;
+    }
+
     if (isLoadingFavorite) return;
 
     (async () => {

@@ -88,6 +88,7 @@
     "continueWithEmailPassword": "Continuer avec e-mail et mot de passe",
     "orContinueWith": "Ou continuer avec",
     "google": "Continuer avec Google",
+    "continueAsGuest": "Continuer en invité",
     "createAccount": "Créer un compte",
     "alreadyHaveAccount": "Vous avez déjà un compte ?",
     "dontHaveAccount": "Vous n'avez pas de compte ?",
@@ -747,10 +748,16 @@
     "unableToOpenPlayStore": "Impossible d’ouvrir le Play Store.",
     "unableToOpenWebsite": "Impossible d’ouvrir le site web.",
     "user": "Utilisateur",
+    "guestUser": "Invité",
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
     }
+  },
+  "guestAccess": {
+    "body": "Vous avez besoin d'un compte pour faire cela. Veuillez vous connecter.",
+    "okLetsGo": "Ok, allons-y",
+    "notNowKeepLooking": "Pas maintenant, je continue"
   },
   "onboarding": {
     "welcome": "Bienvenue sur ShowSeek",

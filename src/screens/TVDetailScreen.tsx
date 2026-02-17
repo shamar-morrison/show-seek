@@ -35,6 +35,7 @@ import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
@@ -95,6 +96,7 @@ export default function TVDetailScreen() {
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isPremium } = usePremium();
+  const isAccountRequired = useAccountRequired();
 
   // Long-press handler for similar/recommended media
   const {
@@ -369,14 +371,27 @@ export default function TVDetailScreen() {
 
           {/* Action buttons */}
           <MediaActionButtons
-            onAddToList={() => addToListModalRef.current?.present()}
-            onRate={() => setRatingModalVisible(true)}
+            onAddToList={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              addToListModalRef.current?.present();
+            }}
+            onRate={() => {
+              if (isAccountRequired()) {
+                return;
+              }
+              setRatingModalVisible(true);
+            }}
             onReminder={
               show.status === 'Returning Series' ||
               show.status === 'In Production' ||
               show.status === 'Planned' ||
               show.status === 'Pilot'
                 ? () => {
+                    if (isAccountRequired()) {
+                      return;
+                    }
                     if (!isPremium) {
                       showPremiumAlert('premiumFeature.features.reminders');
                       return;
@@ -385,15 +400,18 @@ export default function TVDetailScreen() {
                   }
                 : undefined
             }
-            onNote={() =>
+            onNote={() => {
+              if (isAccountRequired()) {
+                return;
+              }
               noteSheetRef.current?.present({
                 mediaType: 'tv',
                 mediaId: tvId,
                 posterPath: show.poster_path,
                 mediaTitle: show.name,
                 initialNote: note?.content,
-              })
-            }
+              });
+            }}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}

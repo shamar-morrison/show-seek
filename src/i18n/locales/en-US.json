@@ -89,6 +89,7 @@
     "continueWithEmailPassword": "Continue with Email and Password",
     "orContinueWith": "Or continue with",
     "google": "Continue with Google",
+    "continueAsGuest": "Continue as guest",
     "createAccount": "Create Account",
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
@@ -750,12 +751,18 @@
     "unableToOpenPlayStore": "Unable to open the Play Store.",
     "unableToOpenWebsite": "Unable to open website.",
     "user": "User",
+    "guestUser": "Guest User",
     "webAppModal": {
       "description": "Continue to the ShowSeek web app?",
       "title": "Open Web App"
     },
     "defaultBulkAction": "Default bulk action: {{mode}}",
     "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list."
+  },
+  "guestAccess": {
+    "body": "You need an account to do that. Please sign in.",
+    "okLetsGo": "Ok let's go",
+    "notNowKeepLooking": "Not now I'll keep looking"
   },
   "onboarding": {
     "welcome": "Welcome to ShowSeek",

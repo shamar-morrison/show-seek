@@ -38,7 +38,7 @@ class EpisodeTrackingService {
 
   async getShowTracking(tvShowId: number): Promise<TVShowEpisodeTracking | null> {
     const user = auth.currentUser;
-    if (!user) return null;
+    if (!user || user.isAnonymous) return null;
 
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     const timeout = createTimeoutWithCleanup(10000);
@@ -84,7 +84,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
@@ -136,7 +136,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const episodeKey = this.getEpisodeKey(seasonNumber, episodeNumber);
@@ -188,7 +188,7 @@ class EpisodeTrackingService {
   ): Promise<void> {
     try {
       const user = auth.currentUser;
-      if (!user) throw new Error('Please sign in to continue');
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
 
       const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
       const now = Date.now();

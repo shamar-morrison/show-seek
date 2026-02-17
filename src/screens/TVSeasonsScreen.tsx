@@ -5,6 +5,7 @@ import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
@@ -79,6 +80,7 @@ export default function TVSeasonsScreen() {
     : 0;
 
   const { data: ratings } = useRatings();
+  const isAccountRequired = useAccountRequired();
 
   // Progressive render: defer heavy content until navigation animation completes
   const { isReady } = useProgressiveRender();
@@ -107,23 +109,32 @@ export default function TVSeasonsScreen() {
       params: MarkEpisodeWatchedParams,
       callbacks?: { onSuccess?: () => void; onError?: (error: Error) => void }
     ) => {
+      if (isAccountRequired()) {
+        return;
+      }
       markWatched.mutate(params, callbacks);
     },
-    [markWatched]
+    [isAccountRequired, markWatched]
   );
 
   const handleMarkUnwatched = useCallback(
     (params: MarkEpisodeUnwatchedParams) => {
+      if (isAccountRequired()) {
+        return;
+      }
       markUnwatched.mutate(params);
     },
-    [markUnwatched]
+    [isAccountRequired, markUnwatched]
   );
 
   const handleMarkAllWatched = useCallback(
     (params: MarkAllEpisodesWatchedParams) => {
+      if (isAccountRequired()) {
+        return;
+      }
       markAllWatched.mutate(params);
     },
-    [markAllWatched]
+    [isAccountRequired, markAllWatched]
   );
 
   if (!isReady || tvQuery.isLoading || seasonQueries.isLoading) {
