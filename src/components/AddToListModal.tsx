@@ -572,9 +572,14 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           [listId]: true,
         }));
         setSuccessMessage(t('library.addedToList', { list: listName }));
-        await reconcileListQueries();
       } catch (error) {
         handleMutationError(error instanceof Error ? error : new Error(t('errors.saveFailed')));
+      } finally {
+        try {
+          await reconcileListQueries();
+        } catch (error) {
+          console.error('Failed to reconcile list queries after list creation:', error);
+        }
       }
 
       await sheetRef.current?.present();
@@ -788,7 +793,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successBanner: {
-    backgroundColor: '#22c55e',
+    backgroundColor: COLORS.success,
     padding: SPACING.m,
     borderRadius: BORDER_RADIUS.m,
     marginBottom: SPACING.m,

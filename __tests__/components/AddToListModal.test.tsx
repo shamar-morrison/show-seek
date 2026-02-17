@@ -382,6 +382,48 @@ describe('AddToListModal (bulk mode)', () => {
     });
   });
 
+  it('reconciles list queries and surfaces an error after create-list add failure in single-item mode', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 2,
+      },
+    ];
+    mockAddMutateAsync.mockRejectedValueOnce(new Error('Create list add failed'));
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByText } = render(<AddToListModal ref={ref} mediaItem={selected} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    expect(latestCreateListModalProps?.onSuccess).toBeDefined();
+
+    await act(async () => {
+      await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
+    });
+
+    await waitFor(() => {
+      expect(getByText('Create list add failed')).toBeTruthy();
+    });
+
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
+  });
+
   it('removes from source list in move mode after successful adds', async () => {
     const selected = createMediaItem(1);
 
