@@ -621,9 +621,9 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   profileImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 170,
+    height: 220,
+    borderRadius: 10,
     marginBottom: SPACING.l,
     borderWidth: 4,
     borderColor: COLORS.surfaceLight,
