@@ -447,7 +447,7 @@ export default function WhereToWatchScreen() {
                   </Pressable>
                 </View>
               ) : lists.length === 0 ? (
-                <View style={styles.modalLoadingState}>
+                <View style={styles.modalLoadingState} testID="where-to-watch-empty-state">
                   <Text style={styles.modalLoadingText}>{t('whereToWatch.emptyNoListDescription')}</Text>
                 </View>
               ) : (

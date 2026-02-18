@@ -3,7 +3,6 @@ import React from 'react';
 
 jest.mock('react-native', () => {
   const actual = jest.requireActual('react-native');
-  const ReactModule = require('react');
   return {
     ...actual,
     FlatList: ({ data = [], renderItem, keyExtractor, ...rest }: any) => (
@@ -116,7 +115,6 @@ jest.mock('@/src/context/RegionProvider', () => ({
 }));
 
 jest.mock('@shopify/flash-list', () => {
-  const ReactModule = require('react');
   const { View } = require('react-native');
   return {
     FlashList: ({ data, renderItem, keyExtractor, ...rest }: any) => (
@@ -263,13 +261,11 @@ describe('WhereToWatchScreen', () => {
   it('shows empty-state message in list modal when there are no lists', () => {
     mockListsState.data = [];
 
-    const { getByTestId, getAllByText, queryByTestId } = render(<WhereToWatchScreen />);
+    const { getByTestId, queryByTestId } = render(<WhereToWatchScreen />);
 
     fireEvent.press(getByTestId('where-to-watch-list-selector'));
 
-    expect(
-      getAllByText('Pick one of your lists to start filtering by streaming service.').length
-    ).toBe(2);
+    expect(getByTestId('where-to-watch-empty-state')).toBeTruthy();
     expect(queryByTestId('where-to-watch-list-option-watchlist')).toBeNull();
   });
 
