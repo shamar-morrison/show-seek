@@ -113,7 +113,7 @@ describe('useWatchProviderEnrichment', () => {
 
     expect(result.current.providerMap.get('movie-1')).toEqual({ flatrate: [] });
     expect(result.current.providerMap.get('tv-2')).toBeNull();
-    expect(result.current.providerMap.has('movie-3')).toBe(false);
+    expect(result.current.providerMap.get('movie-3')).toBeNull();
     expect(result.current.enrichmentProgress).toBe(1);
     expect(result.current.isLoadingEnrichment).toBe(false);
   });

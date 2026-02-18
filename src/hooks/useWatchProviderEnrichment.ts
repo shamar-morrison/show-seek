@@ -55,6 +55,7 @@ export function useWatchProviderEnrichment(
           : tmdbApi.getTVWatchProviders(target.id)
       ),
       staleTime: WATCH_PROVIDER_STALE_TIME,
+      gcTime: WATCH_PROVIDER_STALE_TIME,
       enabled: enabled && targets.length > 0,
     })),
   });
@@ -63,9 +64,11 @@ export function useWatchProviderEnrichment(
     const map = new Map<string, WatchProviderResults | null>();
 
     enrichmentQueries.forEach((query, index) => {
+      const providerKey = `${targets[index].mediaType}-${targets[index].id}`;
       if (query.data !== undefined) {
-        const providerKey = `${targets[index].mediaType}-${targets[index].id}`;
         map.set(providerKey, query.data);
+      } else if (query.isError) {
+        map.set(providerKey, null);
       }
     });
 

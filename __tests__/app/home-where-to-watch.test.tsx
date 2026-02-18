@@ -148,7 +148,11 @@ jest.mock('@tanstack/react-query', () => ({
     getQueryData: jest.fn(() => undefined),
   }),
   useQuery: ({ queryKey }: any) => {
-    const mediaType = queryKey?.[2];
+    if (!Array.isArray(queryKey) || queryKey.length !== 3 || queryKey[0] !== 'watch-providers-catalog') {
+      throw new Error(`Unexpected queryKey shape in useQuery mock: ${JSON.stringify(queryKey)}`);
+    }
+
+    const mediaType = queryKey[2];
     if (mediaType === 'movie') {
       return { data: mockMovieProviders, isLoading: false };
     }
