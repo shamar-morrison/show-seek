@@ -1,5 +1,7 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
+import { Pressable } from 'react-native';
 
 const mockPush = jest.fn();
 const mockPresent = jest.fn();
@@ -95,6 +97,7 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 
 jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
   InlineListIndicators: () => null,
+  ListMembershipBadge: () => null,
 }));
 
 jest.mock('@/src/components/ui/FavoritePersonBadge', () => ({
@@ -132,6 +135,11 @@ function enterQueryAndFlush(getByPlaceholderText: (text: string) => any) {
   });
 }
 
+function toggleViewMode(UNSAFE_getAllByType: (type: any) => any[]) {
+  const [headerToggleButton] = UNSAFE_getAllByType(Pressable);
+  fireEvent.press(headerToggleButton);
+}
+
 describe('SearchScreen routing and auth guard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -140,6 +148,8 @@ describe('SearchScreen routing and auth guard', () => {
     mockAuthState.isGuest = false;
     mockQueryLoading = false;
     mockQueryResults = [];
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -291,5 +301,127 @@ describe('SearchScreen routing and auth guard', () => {
     });
 
     expect(mockPresent).toHaveBeenCalled();
+  });
+
+  it('toggles to grid mode and persists preference', async () => {
+    mockQueryResults = [
+      {
+        id: 123,
+        media_type: 'person',
+        name: 'Grid Person',
+        known_for_department: 'Acting',
+        known_for: [{ title: 'Known Work' }],
+        profile_path: null,
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByText, UNSAFE_getAllByType } = render(
+      <SearchScreen />
+    );
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Grid Person')).toBeTruthy();
+      expect(getByText(/Known for:\s*Known Work/)).toBeTruthy();
+    });
+
+    toggleViewMode(UNSAFE_getAllByType);
+
+    await waitFor(() => {
+      expect(queryByText(/Known for:\s*Known Work/)).toBeNull();
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('searchViewMode', 'grid');
+    });
+  });
+
+  it('routes TV items to TV detail in grid mode', async () => {
+    mockQueryResults = [
+      {
+        id: 177,
+        media_type: 'tv',
+        title: 'Grid TV Item',
+        name: 'Grid TV Item',
+        first_air_date: '2024-01-01',
+        vote_average: 8,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, UNSAFE_getAllByType } = render(<SearchScreen />);
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Grid TV Item')).toBeTruthy();
+    });
+
+    toggleViewMode(UNSAFE_getAllByType);
+    fireEvent.press(getByText('Grid TV Item'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/search/tv/177');
+  });
+
+  it('blocks unauthenticated long press in grid mode', async () => {
+    mockAuthState.user = null;
+    mockQueryResults = [
+      {
+        id: 333,
+        media_type: 'movie',
+        title: 'Grid Guard Movie',
+        release_date: '2024-01-01',
+        vote_average: 7,
+        overview: 'overview',
+        poster_path: null,
+        genre_ids: [],
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId, UNSAFE_getAllByType } = render(
+      <SearchScreen />
+    );
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Grid Guard Movie')).toBeTruthy();
+    });
+
+    toggleViewMode(UNSAFE_getAllByType);
+    fireEvent(getByText('Grid Guard Movie'), 'longPress');
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('does not trigger account guard for person long press in grid mode', async () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+    mockQueryResults = [
+      {
+        id: 444,
+        media_type: 'person',
+        name: 'Grid Person Guard',
+        profile_path: null,
+      },
+    ];
+
+    const { getByPlaceholderText, getByText, queryByTestId, UNSAFE_getAllByType } = render(
+      <SearchScreen />
+    );
+
+    enterQueryAndFlush(getByPlaceholderText);
+
+    await waitFor(() => {
+      expect(getByText('Grid Person Guard')).toBeTruthy();
+    });
+
+    toggleViewMode(UNSAFE_getAllByType);
+    fireEvent(getByText('Grid Person Guard'), 'longPress');
+
+    expect(mockRequireAccount).not.toHaveBeenCalled();
+    expect(mockPresent).not.toHaveBeenCalled();
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 });

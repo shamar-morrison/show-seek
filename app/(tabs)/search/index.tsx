@@ -1,7 +1,8 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
-import { InlineListIndicators } from '@/src/components/ui/ListMembershipBadge';
+import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import {
@@ -23,12 +24,13 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
-import { Search as SearchIcon, Star, X } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import { Grid3X3, List, Search as SearchIcon, Star, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -36,11 +38,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type MediaType = 'all' | 'movie' | 'tv';
+type ViewMode = 'list' | 'grid';
+const SEARCH_VIEW_MODE_STORAGE_KEY = 'searchViewMode';
+const GRID_COLUMN_COUNT = 3;
 
 function resolveSearchResultMediaType(
   item: any,
@@ -63,9 +69,11 @@ function resolveSearchResultMediaType(
 
 export default function SearchScreen() {
   const segments = useSegments();
+  const { width: windowWidth } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mediaType, setMediaType] = useState<MediaType>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const isAccountRequired = useAccountRequired();
@@ -91,6 +99,33 @@ export default function SearchScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const loadViewMode = async () => {
+      try {
+        const savedViewMode = await AsyncStorage.getItem(SEARCH_VIEW_MODE_STORAGE_KEY);
+        if (savedViewMode === 'list' || savedViewMode === 'grid') {
+          setViewMode(savedViewMode);
+        }
+      } catch (error) {
+        console.error('Failed to load search view mode preference:', error);
+      }
+    };
+
+    void loadViewMode();
+  }, []);
+
+  const toggleViewMode = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const nextViewMode: ViewMode = viewMode === 'list' ? 'grid' : 'list';
+    setViewMode(nextViewMode);
+
+    try {
+      await AsyncStorage.setItem(SEARCH_VIEW_MODE_STORAGE_KEY, nextViewMode);
+    } catch (error) {
+      console.error('Failed to save search view mode preference:', error);
+    }
+  }, [viewMode]);
+
   const searchResultsQuery = useQuery({
     queryKey: ['search', debouncedQuery, mediaType],
     queryFn: async () => {
@@ -114,6 +149,8 @@ export default function SearchScreen() {
   const personResults = allResults.filter((item: any) => item.media_type === 'person');
   const filteredMediaResults = useContentFilter(mediaResults);
   const filteredResults = [...personResults, ...filteredMediaResults];
+  const gridItemWidth =
+    (windowWidth - SPACING.l * 2 - SPACING.m * (GRID_COLUMN_COUNT - 1)) / GRID_COLUMN_COUNT;
 
   const handleItemPress = (item: any) => {
     const currentTab = segments[1];
@@ -257,11 +294,82 @@ export default function SearchScreen() {
     );
   };
 
+  const renderGridItem = ({ item }: { item: any }) => {
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
+    const isPerson = resolvedMediaType === 'person';
+    const displayTitle = isPerson
+      ? item.name || item.title || ''
+      : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+    const releaseDate = item.release_date || item.first_air_date;
+    const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    const posterUrl = getImageUrl(
+      item.poster_path || item.profile_path,
+      isPerson ? TMDB_IMAGE_SIZES.profile.medium : TMDB_IMAGE_SIZES.poster.medium
+    );
+    const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');
+    const listIds = !isPerson && showIndicators ? getListsForMedia(item.id, itemMediaType) : [];
+    const isPersonFavorited = isPerson && favoritePersons?.some((p) => p.id === item.id);
+
+    return (
+      <TouchableOpacity
+        style={[styles.gridItem, { width: gridItemWidth }]}
+        onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <View style={styles.gridPosterContainer}>
+          <MediaImage
+            source={{ uri: posterUrl }}
+            style={[styles.gridPoster, { width: gridItemWidth, height: gridItemWidth * 1.5 }]}
+            contentFit="cover"
+            placeholderType={isPerson ? 'person' : undefined}
+          />
+          {isPersonFavorited && <FavoritePersonBadge />}
+          {!isPerson && listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+        </View>
+        <View style={styles.gridInfo}>
+          <Text style={styles.gridTitle} numberOfLines={1}>
+            {displayTitle}
+          </Text>
+          {isPerson ? (
+            item.known_for_department ? (
+              <Text style={styles.gridDepartment} numberOfLines={1}>
+                {item.known_for_department}
+              </Text>
+            ) : null
+          ) : (
+            (year || item.vote_average > 0) && (
+              <View style={styles.gridMetaRow}>
+                {year && <Text style={styles.gridMetaText}>{year}</Text>}
+                {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
+                {item.vote_average > 0 && (
+                  <View style={styles.gridRatingContainer}>
+                    <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                    <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
+            )
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <>
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>{t('tabs.search')}</Text>
+          <View style={styles.headerActions}>
+            <HeaderIconButton onPress={toggleViewMode}>
+              {viewMode === 'list' ? (
+                <Grid3X3 size={24} color={COLORS.text} />
+              ) : (
+                <List size={24} color={COLORS.text} />
+              )}
+            </HeaderIconButton>
+          </View>
         </View>
 
         <View style={styles.searchContainer}>
@@ -334,10 +442,12 @@ export default function SearchScreen() {
           </View>
         ) : (
           <FlashList
+            key={`${viewMode}-${mediaType}`}
             data={filteredResults}
-            renderItem={renderMediaItem}
+            renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
             keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
-            contentContainerStyle={[styles.listContainer]}
+            contentContainerStyle={[viewMode === 'list' ? styles.listContainer : styles.gridListContainer]}
+            numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
             showsVerticalScrollIndicator={false}
             removeClippedSubviews={true}
             drawDistance={400}
@@ -359,6 +469,9 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.s,
     borderBottomWidth: 1,
@@ -368,6 +481,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xxl,
     fontWeight: 'bold',
     color: COLORS.text,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   searchContainer: {
     paddingHorizontal: SPACING.m,
@@ -424,6 +541,53 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: SPACING.l,
+  },
+  gridListContainer: {
+    paddingHorizontal: SPACING.l,
+    marginLeft: SPACING.s,
+  },
+  gridItem: {
+    marginRight: SPACING.m,
+    marginBottom: SPACING.m,
+  },
+  gridPosterContainer: {
+    position: 'relative',
+  },
+  gridPoster: {
+    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  gridInfo: {
+    marginTop: SPACING.s,
+  },
+  gridTitle: {
+    fontSize: FONT_SIZE.s,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  gridDepartment: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  gridMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  gridMetaText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+  },
+  gridRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  gridRating: {
+    color: COLORS.warning,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
   },
   resultItem: {
     flexDirection: 'row',
