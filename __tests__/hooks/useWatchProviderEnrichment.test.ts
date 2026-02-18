@@ -111,9 +111,39 @@ describe('useWatchProviderEnrichment', () => {
 
     const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
 
-    expect(result.current.providerMap.get(1)).toEqual({ flatrate: [] });
-    expect(result.current.providerMap.get(2)).toBeNull();
-    expect(result.current.providerMap.has(3)).toBe(false);
+    expect(result.current.providerMap.get('movie-1')).toEqual({ flatrate: [] });
+    expect(result.current.providerMap.get('tv-2')).toBeNull();
+    expect(result.current.providerMap.has('movie-3')).toBe(false);
+    expect(result.current.enrichmentProgress).toBe(1);
+    expect(result.current.isLoadingEnrichment).toBe(false);
+  });
+
+  it('keeps separate map entries when movie and tv share the same numeric id', () => {
+    mockUseQueries.mockReturnValue([
+      {
+        data: { flatrate: [{ provider_id: 8 }] },
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      },
+      {
+        data: { flatrate: [{ provider_id: 9 }] },
+        isSuccess: true,
+        isError: false,
+        isLoading: false,
+      },
+    ]);
+
+    const items = [
+      createListItem({ id: 100, media_type: 'movie' }),
+      createListItem({ id: 100, media_type: 'tv', name: 'Show 100' }),
+    ];
+
+    const { result } = renderHook(() => useWatchProviderEnrichment(items, true));
+
+    expect(result.current.providerMap.get('movie-100')).toEqual({ flatrate: [{ provider_id: 8 }] });
+    expect(result.current.providerMap.get('tv-100')).toEqual({ flatrate: [{ provider_id: 9 }] });
+    expect(result.current.providerMap.size).toBe(2);
     expect(result.current.enrichmentProgress).toBe(1);
     expect(result.current.isLoadingEnrichment).toBe(false);
   });

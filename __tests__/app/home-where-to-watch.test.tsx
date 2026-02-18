@@ -61,16 +61,16 @@ const mockListsState = {
 };
 
 const mockEnrichmentState = {
-  providerMap: new Map<number, any>([
+  providerMap: new Map<string, any>([
     [
-      101,
+      'movie-101',
       {
         flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
         rent: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: '/apple.png', display_priority: 2 }],
       },
     ],
     [
-      202,
+      'tv-202',
       {
         buy: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
       },
@@ -198,16 +198,16 @@ describe('WhereToWatchScreen', () => {
     mockListsState.isError = false;
     mockListsState.error = null;
     mockEnrichmentState.isLoadingEnrichment = false;
-    mockEnrichmentState.providerMap = new Map<number, any>([
+    mockEnrichmentState.providerMap = new Map<string, any>([
       [
-        101,
+        'movie-101',
         {
           flatrate: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
           rent: [{ provider_id: 2, provider_name: 'Apple TV', logo_path: '/apple.png', display_priority: 2 }],
         },
       ],
       [
-        202,
+        'tv-202',
         {
           buy: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 }],
         },
@@ -265,7 +265,7 @@ describe('WhereToWatchScreen', () => {
 
     expect(
       getAllByText('Pick one of your lists to start filtering by streaming service.').length
-    ).toBeGreaterThan(0);
+    ).toBe(2);
     expect(queryByTestId('where-to-watch-list-option-watchlist')).toBeNull();
   });
 

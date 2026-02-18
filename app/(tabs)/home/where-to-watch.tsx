@@ -133,7 +133,8 @@ export default function WhereToWatchScreen() {
     const counts = new Map<number, number>();
 
     selectedListItems.forEach((item) => {
-      const providers = providerMap.get(item.id)?.flatrate || [];
+      const providerKey = `${item.media_type}-${item.id}`;
+      const providers = providerMap.get(providerKey)?.flatrate || [];
       const seenForItem = new Set<number>();
 
       providers.forEach((provider) => {
@@ -163,7 +164,8 @@ export default function WhereToWatchScreen() {
     }
 
     return selectedListItems.filter((item) => {
-      const providers = providerMap.get(item.id);
+      const providerKey = `${item.media_type}-${item.id}`;
+      const providers = providerMap.get(providerKey);
       return providers?.flatrate?.some((provider) => provider.provider_id === selectedService.provider_id) ?? false;
     });
   }, [providerMap, selectedListItems, selectedService]);

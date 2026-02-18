@@ -13,7 +13,7 @@ interface WatchProviderEnrichmentTarget {
 }
 
 export interface UseWatchProviderEnrichmentResult {
-  providerMap: Map<number, WatchProviderResults | null>;
+  providerMap: Map<string, WatchProviderResults | null>;
   isLoadingEnrichment: boolean;
   enrichmentProgress: number;
 }
@@ -60,11 +60,12 @@ export function useWatchProviderEnrichment(
   });
 
   const providerMap = useMemo(() => {
-    const map = new Map<number, WatchProviderResults | null>();
+    const map = new Map<string, WatchProviderResults | null>();
 
     enrichmentQueries.forEach((query, index) => {
       if (query.data !== undefined) {
-        map.set(targets[index].id, query.data);
+        const providerKey = `${targets[index].mediaType}-${targets[index].id}`;
+        map.set(providerKey, query.data);
       }
     });
 
