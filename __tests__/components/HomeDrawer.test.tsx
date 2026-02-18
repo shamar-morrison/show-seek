@@ -14,10 +14,12 @@ jest.mock('react-native', () => {
 
 const mockSignOut = jest.fn();
 const mockOnClose = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
     user: { uid: 'user-1', displayName: 'Test User', email: 'test@example.com' },
+    isGuest: false,
     signOut: mockSignOut,
   }),
 }));
@@ -46,6 +48,12 @@ jest.mock('react-native-reanimated', () => ({
   useSharedValue: (initialValue: number) => ({ value: initialValue }),
   useAnimatedStyle: () => ({}),
   withTiming: (value: number) => value,
+}));
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: (...args: unknown[]) => mockPush(...args),
+  }),
 }));
 
 import { HomeDrawer } from '@/src/components/HomeDrawer';
@@ -96,5 +104,14 @@ describe('HomeDrawer sign out flow', () => {
     });
 
     alertSpy.mockRestore();
+  });
+
+  it('navigates to where-to-watch from the drawer card', () => {
+    const { getByText } = render(<HomeDrawer visible onClose={mockOnClose} />);
+
+    fireEvent.press(getByText('Where to Watch'));
+
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith({ pathname: '/(tabs)/home/where-to-watch' });
   });
 });

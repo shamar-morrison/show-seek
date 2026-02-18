@@ -5,7 +5,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, LogOut, Palette, Sparkles } from 'lucide-react-native';
+import { Calendar, ChevronRight, LogOut, Palette, Sparkles, Tv2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -106,6 +106,12 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
     router.push({ pathname: '/(tabs)/home/mood-picker' });
   };
 
+  const handleWhereToWatchPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+    router.push({ pathname: '/(tabs)/home/where-to-watch' });
+  };
+
   const handleSignOut = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setIsSigningOut(true);
@@ -199,6 +205,18 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
             >
               <Palette size={24} color={accentColor} />
               <Text style={styles.navigationTitle}>{t('mood.picker')}</Text>
+              <ChevronRight size={20} color={COLORS.textSecondary} />
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.navigationCard,
+                pressed && styles.navigationCardPressed,
+              ]}
+              onPress={handleWhereToWatchPress}
+            >
+              <Tv2 size={24} color={accentColor} />
+              <Text style={styles.navigationTitle}>{t('whereToWatch.title')}</Text>
               <ChevronRight size={20} color={COLORS.textSecondary} />
             </Pressable>
           </View>
