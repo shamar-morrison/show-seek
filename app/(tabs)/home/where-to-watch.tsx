@@ -103,7 +103,7 @@ export default function WhereToWatchScreen() {
     staleTime: Infinity,
     gcTime: PROVIDER_LIST_GC_TIME,
     enabled: !!selectedList,
-    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watchProviders', 'movie']),
+    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'movie']),
   });
 
   const tvProvidersQuery = useQuery({
@@ -112,7 +112,7 @@ export default function WhereToWatchScreen() {
     staleTime: Infinity,
     gcTime: PROVIDER_LIST_GC_TIME,
     enabled: !!selectedList,
-    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watchProviders', 'tv']),
+    initialData: () => queryClient.getQueryData<WatchProvider[]>(['watch-providers-catalog', region, 'tv']),
   });
 
   const mergedProviders = useMemo(() => {
