@@ -19,6 +19,12 @@ jest.mock('react-native', () => {
 
 const mockPush = jest.fn();
 const mockRefetchLists = jest.fn();
+const mockRequireAccount = jest.fn();
+
+const mockAuthState = {
+  user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
+  isGuest: false,
+};
 
 const mockPremiumState = {
   isPremium: true,
@@ -102,6 +108,16 @@ jest.mock('@/src/hooks/useWatchProviderEnrichment', () => ({
   useWatchProviderEnrichment: () => mockEnrichmentState,
 }));
 
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/context/GuestAccessContext', () => ({
+  useGuestAccess: () => ({
+    requireAccount: mockRequireAccount,
+  }),
+}));
+
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
 }));
@@ -167,6 +183,9 @@ describe('WhereToWatchScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefetchLists.mockReset();
+    mockRequireAccount.mockReset();
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+    mockAuthState.isGuest = false;
     mockPremiumState.isPremium = true;
     mockListsState.data = [
       {
@@ -222,6 +241,20 @@ describe('WhereToWatchScreen', () => {
 
     expect(getByText('Choose a list')).toBeTruthy();
     expect(getByTestId('where-to-watch-service-selector').props.disabled).toBe(true);
+  });
+
+  it('blocks guest users from opening the list modal and prompts sign in', () => {
+    mockAuthState.user = { uid: 'guest-user', isAnonymous: true };
+    mockAuthState.isGuest = true;
+
+    const { getByTestId, UNSAFE_getAllByType } = render(<WhereToWatchScreen />);
+
+    fireEvent.press(getByTestId('where-to-watch-list-selector'));
+
+    const [listModal] = UNSAFE_getAllByType(require('react-native').Modal);
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(listModal.props.visible).toBe(false);
   });
 
   it('shows list options when list modal is opened and data exists', () => {

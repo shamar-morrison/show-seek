@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING, he
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useLists } from '@/src/hooks/useLists';
 import { useWatchProviderEnrichment } from '@/src/hooks/useWatchProviderEnrichment';
 import { UserList } from '@/src/services/ListService';
@@ -65,6 +66,7 @@ export default function WhereToWatchScreen() {
   const { region } = useRegion();
   const { isPremium } = usePremium();
   const queryClient = useQueryClient();
+  const isAccountRequired = useAccountRequired();
 
   const {
     data: lists = [],
@@ -196,11 +198,19 @@ export default function WhereToWatchScreen() {
   }, [isLoadingEnrichment, pendingServiceValidation, providerCounts, selectedService]);
 
   const handleOpenListModal = () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
     triggerLightHaptic();
     setIsListModalVisible(true);
   };
 
   const handleOpenServiceModal = () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
     if (!selectedList) {
       return;
     }
@@ -211,6 +221,10 @@ export default function WhereToWatchScreen() {
 
   const handleListSelect = useCallback(
     (list: UserList) => {
+      if (isAccountRequired()) {
+        return;
+      }
+
       triggerLightHaptic();
       if (selectedService && selectedListId !== list.id) {
         setPendingServiceValidation(true);
@@ -218,8 +232,15 @@ export default function WhereToWatchScreen() {
       setSelectedListId(list.id);
       setIsListModalVisible(false);
     },
-    [selectedListId, selectedService]
+    [isAccountRequired, selectedListId, selectedService]
   );
+
+  const handleRetryLists = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+    refetchLists();
+  }, [isAccountRequired, refetchLists]);
 
   const handleServiceSelect = useCallback((provider: WatchProvider) => {
     triggerLightHaptic();
@@ -441,7 +462,7 @@ export default function WhereToWatchScreen() {
                       { borderColor: accentColor },
                       pressed && styles.modalRetryButtonPressed,
                     ]}
-                    onPress={() => refetchLists()}
+                    onPress={handleRetryLists}
                   >
                     <Text style={[styles.modalRetryText, { color: accentColor }]}>{t('common.retry')}</Text>
                   </Pressable>
