@@ -19,7 +19,7 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -34,8 +34,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const COLUMN_COUNT = 3;
 
 const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 
@@ -226,7 +224,7 @@ export default function TVShowRatingsScreen() {
             data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
-            numColumns={COLUMN_COUNT}
+            numColumns={GRID_COLUMN_COUNT}
             contentContainerStyle={[
               styles.gridListContent,
               { paddingHorizontal: listPaddingHorizontal },

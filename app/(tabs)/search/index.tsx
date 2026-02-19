@@ -23,7 +23,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -47,7 +47,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type MediaType = 'all' | 'movie' | 'tv';
 type ViewMode = 'list' | 'grid';
 const SEARCH_VIEW_MODE_STORAGE_KEY = 'searchViewMode';
-const GRID_COLUMN_COUNT = 3;
 
 function resolveSearchResultMediaType(
   item: any,
@@ -448,7 +447,7 @@ export default function SearchScreen() {
             renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
             keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
             contentContainerStyle={[
-              viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+              viewMode === 'list' && styles.listContainer,
               viewMode === 'grid' && { paddingHorizontal: listPaddingHorizontal },
             ]}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
@@ -545,8 +544,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: SPACING.l,
-  },
-  gridListContainer: {
   },
   gridItem: {
     marginBottom: SPACING.m,

@@ -1,6 +1,6 @@
 import { SPACING } from '@/src/constants/theme';
 
-const GRID_COLUMN_COUNT = 3;
+export const GRID_COLUMN_COUNT = 3;
 const GRID_GAP = SPACING.m;
 const TARGET_OUTER_PADDING = SPACING.l;
 

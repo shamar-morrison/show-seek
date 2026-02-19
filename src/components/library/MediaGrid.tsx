@@ -5,15 +5,13 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { ListMediaItem } from '@/src/services/ListService';
-import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
 import React, { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
-
-const COLUMN_COUNT = 3;
 
 interface MediaGridProps {
   items: ListMediaItem[];
@@ -194,9 +192,8 @@ export const MediaGrid = memo(
           ref={listRef}
           data={items}
           renderItem={renderItem}
-          numColumns={COLUMN_COUNT}
+          numColumns={GRID_COLUMN_COUNT}
           contentContainerStyle={[
-            styles.listContent,
             { paddingHorizontal: listPaddingHorizontal },
             contentBottomPadding > 0 && { paddingBottom: contentBottomPadding },
           ]}
@@ -217,8 +214,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  listContent: {
   },
   mediaCard: {
     marginBottom: SPACING.m,

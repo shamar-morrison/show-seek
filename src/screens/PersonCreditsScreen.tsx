@@ -28,7 +28,7 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { createSortAction } from '@/src/utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
@@ -53,8 +53,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const COLUMN_COUNT = 3;
 
 const DEFAULT_CREDITS_SORT: SortState = {
   option: 'rating',
@@ -377,7 +375,7 @@ export default function PersonCreditsScreen() {
             data={credits}
             renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
             keyExtractor={(item) => `${item.id}-${item.media_type}`}
-            numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+            numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
             key={viewMode}
             drawDistance={400}
             contentContainerStyle={
