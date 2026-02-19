@@ -16,6 +16,8 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,7 +35,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'movie' | 'tv';
 type ViewMode = 'list' | 'grid';
@@ -207,8 +208,8 @@ export default function DiscoverScreen() {
 
   // Filter out watched content
   const filteredResults = useContentFilter(allResults);
-  const gridItemWidth =
-    (windowWidth - SPACING.l * 2 - SPACING.m * (GRID_COLUMN_COUNT - 1)) / GRID_COLUMN_COUNT;
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
     const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
@@ -277,7 +278,7 @@ export default function DiscoverScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.gridItem, { width: gridItemWidth }]}
+        style={[styles.gridItem, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
         onPress={() => handleItemPress(item)}
         onLongPress={() => handleLongPress(item)}
         activeOpacity={ACTIVE_OPACITY}
@@ -285,7 +286,7 @@ export default function DiscoverScreen() {
         <View style={styles.gridPosterContainer}>
           <MediaImage
             source={{ uri: posterUrl }}
-            style={[styles.gridPoster, { width: gridItemWidth, height: gridItemWidth * 1.5 }]}
+            style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
           />
           {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
@@ -386,6 +387,7 @@ export default function DiscoverScreen() {
             keyExtractor={(item: Movie | TVShow) => `${mediaType}-${item.id}`}
             contentContainerStyle={[
               viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+              viewMode === 'grid' && { paddingHorizontal: listPaddingHorizontal },
               { paddingBottom: 100 },
             ]}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
@@ -487,13 +489,10 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.m,
   },
   gridListContainer: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
-    marginLeft: SPACING.s,
   },
   gridItem: {
     backgroundColor: COLORS.transparent,
-    marginRight: SPACING.m,
     marginBottom: SPACING.m,
   },
   gridPosterContainer: {

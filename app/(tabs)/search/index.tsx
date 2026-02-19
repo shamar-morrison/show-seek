@@ -23,6 +23,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -149,8 +150,8 @@ export default function SearchScreen() {
   const personResults = allResults.filter((item: any) => item.media_type === 'person');
   const filteredMediaResults = useContentFilter(mediaResults);
   const filteredResults = [...personResults, ...filteredMediaResults];
-  const gridItemWidth =
-    (windowWidth - SPACING.l * 2 - SPACING.m * (GRID_COLUMN_COUNT - 1)) / GRID_COLUMN_COUNT;
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   const handleItemPress = (item: any) => {
     const currentTab = segments[1];
@@ -312,7 +313,7 @@ export default function SearchScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.gridItem, { width: gridItemWidth }]}
+        style={[styles.gridItem, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
         onPress={() => handleItemPress(item)}
         onLongPress={() => handleLongPress(item)}
         activeOpacity={ACTIVE_OPACITY}
@@ -320,7 +321,7 @@ export default function SearchScreen() {
         <View style={styles.gridPosterContainer}>
           <MediaImage
             source={{ uri: posterUrl }}
-            style={[styles.gridPoster, { width: gridItemWidth, height: gridItemWidth * 1.5 }]}
+            style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
             placeholderType={isPerson ? 'person' : undefined}
           />
@@ -446,7 +447,10 @@ export default function SearchScreen() {
             data={filteredResults}
             renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
             keyExtractor={(item: any) => `${item.media_type || mediaType}-${item.id}`}
-            contentContainerStyle={[viewMode === 'list' ? styles.listContainer : styles.gridListContainer]}
+            contentContainerStyle={[
+              viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+              viewMode === 'grid' && { paddingHorizontal: listPaddingHorizontal },
+            ]}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
             showsVerticalScrollIndicator={false}
             removeClippedSubviews={true}
@@ -543,11 +547,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.l,
   },
   gridListContainer: {
-    paddingHorizontal: SPACING.l,
-    marginLeft: SPACING.s,
   },
   gridItem: {
-    marginRight: SPACING.m,
     marginBottom: SPACING.m,
   },
   gridPosterContainer: {
