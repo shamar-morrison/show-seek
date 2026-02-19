@@ -33,6 +33,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -343,6 +344,26 @@ export default function DiscoverScreen() {
     ]
   );
 
+  const flashListContentContainerStyle = useMemo<ViewStyle>(
+    () => {
+      const flattenedStyle = StyleSheet.flatten([
+        viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+        viewMode === 'grid' ? { paddingHorizontal: listPaddingHorizontal } : null,
+        { paddingBottom: 100 },
+      ]);
+
+      if (Array.isArray(flattenedStyle)) {
+        return flattenedStyle.reduce<ViewStyle>((acc, style) => {
+          if (!style || typeof style !== 'object') return acc;
+          return { ...acc, ...(style as ViewStyle) };
+        }, {});
+      }
+
+      return (flattenedStyle as ViewStyle) ?? {};
+    },
+    [viewMode, listPaddingHorizontal]
+  );
+
   return (
     <>
       <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
@@ -416,11 +437,7 @@ export default function DiscoverScreen() {
             data={filteredResults}
             renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
             keyExtractor={(item: Movie | TVShow) => `${mediaType}-${item.id}`}
-            contentContainerStyle={[
-              viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
-              viewMode === 'grid' && { paddingHorizontal: listPaddingHorizontal },
-              { paddingBottom: 100 },
-            ]}
+            contentContainerStyle={flashListContentContainerStyle}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
             maintainVisibleContentPosition={{ disabled: true }}
             drawDistance={600}

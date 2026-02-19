@@ -218,5 +218,9 @@ describe('DiscoverScreen stability', () => {
     expect(capturedFlashListProps).toBeTruthy();
     expect(capturedFlashListProps.maintainVisibleContentPosition).toEqual({ disabled: true });
     expect(capturedFlashListProps.drawDistance).toBe(600);
+    expect(Array.isArray(capturedFlashListProps.contentContainerStyle)).toBe(false);
+    expect(capturedFlashListProps.contentContainerStyle).toEqual(
+      expect.objectContaining({ paddingBottom: 100 })
+    );
   });
 });
