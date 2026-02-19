@@ -1168,6 +1168,10 @@
         "description": "Acompanhe próximos lançamentos no seu calendário.",
         "title": "Calendário de lançamentos"
       },
+      "where-to-watch": {
+        "description": "Veja quais títulos das suas listas estão em streaming em cada serviço.",
+        "title": "Onde ver"
+      },
       "release-reminders": {
         "description": "Receba notificações quando filmes e episódios forem lançados.",
         "title": "Lembretes de lançamento"
@@ -1298,6 +1302,27 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Falha ao carregar temporadas"
+  },
+  "whereToWatch": {
+    "title": "Onde ver",
+    "intro": "Selecione uma das suas listas e um serviço de streaming para ver o que está disponível para assistir agora.",
+    "selectList": "Selecionar lista",
+    "selectService": "Selecionar serviço",
+    "selectListTitle": "Selecionar uma lista",
+    "selectServiceTitle": "Selecionar um serviço de streaming",
+    "updatingAvailability": "A atualizar disponibilidade...",
+    "emptyNoListTitle": "Escolha uma lista",
+    "emptyNoListDescription": "Escolha uma das suas listas para começar a filtrar por serviço de streaming.",
+    "emptyNoServiceTitle": "Escolha um serviço",
+    "emptyNoServiceDescription": "Selecione um serviço de streaming para ver o que está disponível nesta lista.",
+    "emptyNoMatchesTitle": "Nenhum resultado encontrado",
+    "emptyNoMatchesDescription": "Nada em {{listName}} está em streaming no {{serviceName}} na região {{region}}.",
+    "providerMatches_one": "{{count}} resultado",
+    "providerMatches_other": "{{count}} resultados",
+    "noServicesAvailable": "Ainda não foram encontrados serviços de streaming para esta lista.",
+    "upgradeTitle": "Onde ver é Premium",
+    "upgradeDescription": "Desbloqueie a disponibilidade completa de streaming para as suas listas e descubra o que pode ver instantaneamente.",
+    "upgradeButton": "Fazer upgrade para Premium"
   },
   "watchProviders": {
     "accessibility": {

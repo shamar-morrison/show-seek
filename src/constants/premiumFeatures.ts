@@ -96,6 +96,13 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         titleKey: 'premiumFeatures.features.release-calendar.title',
         descriptionKey: 'premiumFeatures.features.release-calendar.description',
       },
+      {
+        id: 'where-to-watch',
+        icon: 'tv-outline',
+        titleKey: 'premiumFeatures.features.where-to-watch.title',
+        descriptionKey: 'premiumFeatures.features.where-to-watch.description',
+        isNew: true,
+      },
     ],
   },
   {

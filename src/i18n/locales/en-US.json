@@ -1214,6 +1214,10 @@
         "description": "Track upcoming releases in your calendar.",
         "title": "Release calendar"
       },
+      "where-to-watch": {
+        "description": "See which items in your lists are streaming on each service.",
+        "title": "Where to Watch"
+      },
       "release-reminders": {
         "description": "Get notified when movies and episodes release.",
         "title": "Release reminders"
@@ -1306,6 +1310,28 @@
   },
   "tvSeasons": {
     "failedToLoadSeasons": "Failed to load seasons"
+  },
+  "whereToWatch": {
+    "title": "Where to Watch",
+    "intro": "Select one of your lists and a streaming service to see what's available to watch right now.",
+    "selectList": "Select a list",
+    "selectService": "Select service",
+    "selectListTitle": "Select a List",
+    "selectServiceTitle": "Select a Streaming Service",
+    "updatingAvailability": "Updating availability...",
+    "emptyNoListTitle": "Choose a list",
+    "emptyNoListDescription": "Pick one of your lists to start filtering by streaming service.",
+    "emptyNoServiceTitle": "Choose a service",
+    "emptyNoServiceDescription": "Select a streaming service to see what is available from this list.",
+    "emptyNoMatchesTitle": "No matches found",
+    "emptyNoMatchesDescription": "Nothing in {{listName}} is streaming on {{serviceName}} in {{region}}.",
+    "providerMatches_one": "{{count}} match",
+    "providerMatches_other": "{{count}} matches",
+    "fetchError": "Unable to load streaming services right now.",
+    "noServicesAvailable": "No streaming services found for this list yet.",
+    "upgradeTitle": "Where to Watch is Premium",
+    "upgradeDescription": "Unlock full streaming availability for your lists and find what you can watch instantly.",
+    "upgradeButton": "Upgrade to Premium"
   },
   "watchProviders": {
     "accessibility": {
