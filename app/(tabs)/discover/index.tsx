@@ -16,13 +16,16 @@ import { screenStyles } from '@/src/styles/screenStyles';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
+import { dedupeMediaById } from '@/src/utils/mediaUtils';
+import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
 import { Grid3X3, List, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -30,10 +33,10 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 
 type MediaType = 'movie' | 'tv';
 type ViewMode = 'list' | 'grid';
@@ -47,7 +50,6 @@ const DEFAULT_FILTERS: FilterState = {
   watchProvider: null,
 };
 const VIEW_MODE_STORAGE_KEY = 'discoverViewMode';
-const GRID_COLUMN_COUNT = 3;
 
 export default function DiscoverScreen() {
   const segments = useSegments();
@@ -149,7 +151,7 @@ export default function DiscoverScreen() {
     setFilters(DEFAULT_FILTERS);
   };
 
-  const handleItemPress = (item: Movie | TVShow) => {
+  const handleItemPress = useCallback((item: Movie | TVShow) => {
     const currentTab = segments[1];
     const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
 
@@ -158,7 +160,7 @@ export default function DiscoverScreen() {
     } else {
       router.push(`${basePath}/tv/${item.id}` as any);
     }
-  };
+  }, [segments]);
 
   const handleLoadMore = () => {
     if (discoverQuery.hasNextPage && !discoverQuery.isFetchingNextPage) {
@@ -166,7 +168,7 @@ export default function DiscoverScreen() {
     }
   };
 
-  const handleLongPress = (item: Movie | TVShow) => {
+  const handleLongPress = useCallback((item: Movie | TVShow) => {
     if (!user || isGuest) {
       requireAccount();
       return;
@@ -186,7 +188,7 @@ export default function DiscoverScreen() {
       first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
     });
     // Note: Modal is presented via useEffect below to ensure it's mounted first
-  };
+  }, [isGuest, mediaType, requireAccount, user]);
 
   // Present the modal when an item is selected
   // This uses useEffect to ensure the modal is mounted (if conditionally rendered)
@@ -201,100 +203,121 @@ export default function DiscoverScreen() {
     toastRef.current?.show(message);
   };
 
-  // Flatten paginated data
-  const allResults: (Movie | TVShow)[] =
-    discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [];
+  // Flatten paginated data and remove duplicate ids to keep keys stable.
+  const allResults = useMemo<(Movie | TVShow)[]>(
+    () => discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [],
+    [discoverQuery.data]
+  );
+  const uniqueResults = useMemo(() => dedupeMediaById(allResults), [allResults]);
+
+  useEffect(() => {
+    const duplicateCount = allResults.length - uniqueResults.length;
+    if (process.env.NODE_ENV !== 'production' && duplicateCount > 0) {
+      console.warn(`[discover] Removed ${duplicateCount} duplicate results for ${mediaType}`);
+    }
+  }, [allResults.length, mediaType, uniqueResults.length]);
 
   // Filter out watched content
-  const filteredResults = useContentFilter(allResults);
-  const gridItemWidth =
-    (windowWidth - SPACING.l * 2 - SPACING.m * (GRID_COLUMN_COUNT - 1)) / GRID_COLUMN_COUNT;
+  const filteredResults = useContentFilter(uniqueResults);
+  const gridMetrics = useMemo(() => getThreeColumnGridMetrics(windowWidth), [windowWidth]);
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = gridMetrics;
 
-  const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
-    const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
-    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
+  const renderMediaItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) => {
+      const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
-    const genres = item.genre_ids
-      ? item.genre_ids
-          .slice(0, 3)
-          .map((id: number) => genreMap[id])
-          .filter(Boolean)
-      : [];
+      const genres = item.genre_ids
+        ? item.genre_ids
+            .slice(0, 3)
+            .map((id: number) => genreMap[id])
+            .filter(Boolean)
+        : [];
 
-    const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
+      const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
 
-    return (
-      <TouchableOpacity
-        style={styles.resultItem}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <View style={styles.posterContainer}>
-          <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
-        </View>
-        <View style={styles.resultInfo}>
-          <Text style={styles.resultTitle} numberOfLines={2}>
-            {displayTitle}
-          </Text>
-          <View style={styles.metaRow}>
-            {releaseDate && (
-              <Text style={metaTextStyles.secondary}>{new Date(releaseDate).getFullYear()}</Text>
-            )}
-            {item.vote_average > 0 && releaseDate && (
-              <Text style={metaTextStyles.secondary}> • </Text>
-            )}
-            {item.vote_average > 0 && (
-              <View style={styles.ratingContainer}>
-                <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </View>
-            )}
+      return (
+        <TouchableOpacity
+          style={styles.resultItem}
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <View style={styles.posterContainer}>
+            <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
           </View>
-          {genres.length > 0 && (
-            <Text style={styles.genres} numberOfLines={1}>
-              {genres.join(' • ')}
+          <View style={styles.resultInfo}>
+            <Text style={styles.resultTitle} numberOfLines={2}>
+              {displayTitle}
             </Text>
-          )}
-          {item.overview && (
-            <Text style={styles.resultOverview} numberOfLines={3}>
-              {item.overview}
+            <View style={styles.metaRow}>
+              {releaseDate && (
+                <Text style={metaTextStyles.secondary}>{new Date(releaseDate).getFullYear()}</Text>
+              )}
+              {item.vote_average > 0 && releaseDate && (
+                <Text style={metaTextStyles.secondary}> • </Text>
+              )}
+              {item.vote_average > 0 && (
+                <View style={styles.ratingContainer}>
+                  <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+            {genres.length > 0 && (
+              <Text style={styles.genres} numberOfLines={1}>
+                {genres.join(' • ')}
+              </Text>
+            )}
+            {item.overview && (
+              <Text style={styles.resultOverview} numberOfLines={3}>
+                {item.overview}
+              </Text>
+            )}
+            {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [
+      genreMap,
+      getListsForMedia,
+      handleItemPress,
+      handleLongPress,
+      mediaType,
+      preferences?.showOriginalTitles,
+      showIndicators,
+    ]
+  );
+
+  const renderGridItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) => {
+      const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+      const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+      const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
+
+      return (
+        <TouchableOpacity
+          style={[styles.gridItem, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <View style={styles.gridPosterContainer}>
+            <MediaImage
+              source={{ uri: posterUrl }}
+              style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
+              contentFit="cover"
+            />
+            {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+          </View>
+          <View style={styles.gridInfo}>
+            <Text style={styles.gridTitle} numberOfLines={1}>
+              {displayTitle}
             </Text>
-          )}
-          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderGridItem = ({ item }: { item: Movie | TVShow }) => {
-    const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
-    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium);
-    const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
-    const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
-
-    return (
-      <TouchableOpacity
-        style={[styles.gridItem, { width: gridItemWidth }]}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <View style={styles.gridPosterContainer}>
-          <MediaImage
-            source={{ uri: posterUrl }}
-            style={[styles.gridPoster, { width: gridItemWidth, height: gridItemWidth * 1.5 }]}
-            contentFit="cover"
-          />
-          {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
-        </View>
-        <View style={styles.gridInfo}>
-          <Text style={styles.gridTitle} numberOfLines={1}>
-            {displayTitle}
-          </Text>
-          {(year || item.vote_average > 0) && (
             <View style={styles.gridMetaRow}>
               {year && <Text style={styles.gridMetaText}>{year}</Text>}
               {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
@@ -305,11 +328,41 @@ export default function DiscoverScreen() {
                 </View>
               )}
             </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [
+      getListsForMedia,
+      handleItemPress,
+      handleLongPress,
+      itemHorizontalMargin,
+      itemWidth,
+      mediaType,
+      preferences?.showOriginalTitles,
+      showIndicators,
+    ]
+  );
+
+  const flashListContentContainerStyle = useMemo<ViewStyle>(
+    () => {
+      const flattenedStyle = StyleSheet.flatten([
+        viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
+        viewMode === 'grid' ? { paddingHorizontal: listPaddingHorizontal } : null,
+        { paddingBottom: 100 },
+      ]);
+
+      if (Array.isArray(flattenedStyle)) {
+        return flattenedStyle.reduce<ViewStyle>((acc, style) => {
+          if (!style || typeof style !== 'object') return acc;
+          return { ...acc, ...(style as ViewStyle) };
+        }, {});
+      }
+
+      return (flattenedStyle as ViewStyle) ?? {};
+    },
+    [viewMode, listPaddingHorizontal]
+  );
 
   return (
     <>
@@ -384,11 +437,10 @@ export default function DiscoverScreen() {
             data={filteredResults}
             renderItem={viewMode === 'list' ? renderMediaItem : renderGridItem}
             keyExtractor={(item: Movie | TVShow) => `${mediaType}-${item.id}`}
-            contentContainerStyle={[
-              viewMode === 'list' ? styles.listContainer : styles.gridListContainer,
-              { paddingBottom: 100 },
-            ]}
+            contentContainerStyle={flashListContentContainerStyle}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
+            maintainVisibleContentPosition={{ disabled: true }}
+            drawDistance={600}
             showsVerticalScrollIndicator={false}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
@@ -487,13 +539,10 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.m,
   },
   gridListContainer: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
-    marginLeft: SPACING.s,
   },
   gridItem: {
     backgroundColor: COLORS.transparent,
-    marginRight: SPACING.m,
     marginBottom: SPACING.m,
   },
   gridPosterContainer: {
@@ -515,6 +564,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+    minHeight: FONT_SIZE.xs + 2,
   },
   gridMetaText: {
     color: COLORS.textSecondary,

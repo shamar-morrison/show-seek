@@ -11,71 +11,74 @@ import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface MovieCardProps {
   movie: Movie;
   width?: number;
+  containerStyle?: StyleProp<ViewStyle>;
   /** Show badge if movie is in any list (default: true) */
   showListBadge?: boolean;
 }
 
-export const MovieCard = memo<MovieCardProps>(({ movie, width = 140, showListBadge = true }) => {
-  const currentTab = useCurrentTab();
-  const { getListsForMedia } = useListMembership();
-  const { preferences } = usePreferences();
+export const MovieCard = memo<MovieCardProps>(
+  ({ movie, width = 140, containerStyle, showListBadge = true }) => {
+    const currentTab = useCurrentTab();
+    const { getListsForMedia } = useListMembership();
+    const { preferences } = usePreferences();
 
-  const posterUrl = useMemo(
-    () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
-    [movie.poster_path, preferences?.dataSaver]
-  );
-  const displayTitle = useMemo(
-    () => getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles),
-    [movie, preferences?.showOriginalTitles]
-  );
+    const posterUrl = useMemo(
+      () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
+      [movie.poster_path, preferences?.dataSaver]
+    );
+    const displayTitle = useMemo(
+      () => getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles),
+      [movie, preferences?.showOriginalTitles]
+    );
 
-  const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
-  const showBadge = listIds.length > 0;
+    const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
+    const showBadge = listIds.length > 0;
 
-  const handlePress = useCallback(() => {
-    const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
-    router.push(path as Route);
-  }, [currentTab, movie.id]);
+    const handlePress = useCallback(() => {
+      const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
+      router.push(path as Route);
+    }, [currentTab, movie.id]);
 
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      style={[styles.container, { width }]}
-      activeOpacity={ACTIVE_OPACITY}
-    >
-      <View style={styles.posterContainer}>
-        <MediaImage
-          source={{ uri: posterUrl }}
-          style={[styles.poster, { width, height: width * 1.5 }]}
-          contentFit="cover"
-        />
-        {showBadge && <ListMembershipBadge listIds={listIds} />}
-      </View>
-      <View style={mediaCardStyles.info}>
-        <Text style={mediaCardStyles.title} numberOfLines={2}>
-          {displayTitle}
-        </Text>
-        {movie.release_date && (
-          <View style={mediaMetaStyles.yearRatingContainer}>
-            <Text style={mediaMetaStyles.year}>{new Date(movie.release_date).getFullYear()}</Text>
-            {movie.vote_average > 0 && (
-              <>
-                <Text style={mediaMetaStyles.separator}> • </Text>
-                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={mediaMetaStyles.rating}>{movie.vote_average.toFixed(1)}</Text>
-              </>
-            )}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-});
+    return (
+      <TouchableOpacity
+        onPress={handlePress}
+        style={[styles.container, { width }, containerStyle]}
+        activeOpacity={ACTIVE_OPACITY}
+      >
+        <View style={styles.posterContainer}>
+          <MediaImage
+            source={{ uri: posterUrl }}
+            style={[styles.poster, { width, height: width * 1.5 }]}
+            contentFit="cover"
+          />
+          {showBadge && <ListMembershipBadge listIds={listIds} />}
+        </View>
+        <View style={mediaCardStyles.info}>
+          <Text style={mediaCardStyles.title} numberOfLines={2}>
+            {displayTitle}
+          </Text>
+          {movie.release_date && (
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              <Text style={mediaMetaStyles.year}>{new Date(movie.release_date).getFullYear()}</Text>
+              {movie.vote_average > 0 && (
+                <>
+                  <Text style={mediaMetaStyles.separator}> • </Text>
+                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={mediaMetaStyles.rating}>{movie.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+);
 
 MovieCard.displayName = 'MovieCard';
 

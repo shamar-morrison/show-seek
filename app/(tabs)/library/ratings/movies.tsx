@@ -18,18 +18,15 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, Star } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 const VIEW_MODE_STORAGE_KEY = 'movieRatingsViewMode';
 
@@ -45,9 +42,11 @@ export default function MovieRatingsScreen() {
     refetch,
   } = useEnrichedMovieRatings();
   const { t } = useTranslation();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   // Search functionality - create searchButton first, then pass to useRatingScreenLogic
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,12 +130,16 @@ export default function MovieRatingsScreen() {
 
       return (
         <Pressable
-          style={({ pressed }) => [styles.mediaCard, pressed && styles.mediaCardPressed]}
+          style={({ pressed }) => [
+            styles.mediaCard,
+            { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+            pressed && styles.mediaCardPressed,
+          ]}
           onPress={() => handleItemPress(item.movie!.id)}
         >
           <MediaImage
             source={{ uri: getImageUrl(item.movie.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-            style={styles.poster}
+            style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
           />
           <View style={styles.ratingBadgeContainer}>
@@ -168,7 +171,7 @@ export default function MovieRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress]
+    [handleItemPress, itemHorizontalMargin, itemWidth]
   );
 
   const renderListItem = useCallback(
@@ -222,8 +225,11 @@ export default function MovieRatingsScreen() {
             data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
-            numColumns={COLUMN_COUNT}
-            contentContainerStyle={styles.gridListContent}
+            numColumns={GRID_COLUMN_COUNT}
+            contentContainerStyle={[
+              styles.gridListContent,
+              { paddingHorizontal: listPaddingHorizontal },
+            ]}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <RatingsEmptyState
@@ -283,20 +289,15 @@ export default function MovieRatingsScreen() {
 
 const styles = StyleSheet.create({
   gridListContent: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
   },
   mediaCard: {
-    width: ITEM_WIDTH,
     marginBottom: SPACING.m,
-    marginRight: SPACING.m,
   },
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
   },
   poster: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },

@@ -28,6 +28,7 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { createSortAction } from '@/src/utils/listActions';
 import {
   DEFAULT_WATCH_STATUS_FILTERS,
@@ -43,12 +44,15 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Film, SlidersHorizontal, Star, Tv } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 const DEFAULT_CREDITS_SORT: SortState = {
   option: 'rating',
@@ -64,6 +68,7 @@ interface CreditItem extends ListMediaItem {
 export default function PersonCreditsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
   const currentTab = useCurrentTab();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -104,6 +109,8 @@ export default function PersonCreditsScreen() {
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
 
   const { data: genreMap = {} } = useAllGenres();
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_CREDITS_SORT.option ||
@@ -264,12 +271,16 @@ export default function PersonCreditsScreen() {
   const renderGridItem = useCallback(
     ({ item }: { item: CreditItem }) => (
       <Pressable
-        style={({ pressed }) => [styles.gridCard, pressed && styles.cardPressed]}
+        style={({ pressed }) => [
+          styles.gridCard,
+          { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+          pressed && styles.cardPressed,
+        ]}
         onPress={() => handleItemPress(item)}
       >
         <MediaImage
           source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-          style={styles.gridPoster}
+          style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
           contentFit="cover"
         />
         <View style={styles.gridInfo}>
@@ -291,7 +302,7 @@ export default function PersonCreditsScreen() {
         </View>
       </Pressable>
     ),
-    [handleItemPress]
+    [handleItemPress, itemHorizontalMargin, itemWidth]
   );
 
   const renderListItem = useCallback(
@@ -364,10 +375,14 @@ export default function PersonCreditsScreen() {
             data={credits}
             renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
             keyExtractor={(item) => `${item.id}-${item.media_type}`}
-            numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+            numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
             key={viewMode}
             drawDistance={400}
-            contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
+            contentContainerStyle={
+              viewMode === 'grid'
+                ? [styles.gridContent, { paddingHorizontal: listPaddingHorizontal }]
+                : styles.listContent
+            }
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -434,18 +449,12 @@ const styles = StyleSheet.create({
   },
   // Grid styles - aligned with MediaGrid
   gridContent: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
-    marginLeft: SPACING.s,
   },
   gridCard: {
-    width: ITEM_WIDTH,
     marginBottom: SPACING.m,
-    marginRight: SPACING.m,
   },
   gridPoster: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },

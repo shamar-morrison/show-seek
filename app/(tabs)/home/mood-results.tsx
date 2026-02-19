@@ -7,22 +7,28 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getGridMetrics } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Frown, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLUMN_COUNT = 2;
-const HORIZONTAL_PADDING = SPACING.l;
 const ITEM_GAP = SPACING.m;
-const LIST_HORIZONTAL_PADDING = HORIZONTAL_PADDING - ITEM_GAP / 2;
-const ITEM_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - ITEM_GAP) / COLUMN_COUNT;
+const TARGET_OUTER_PADDING = SPACING.l;
 
 /**
  * Media type toggle component.
@@ -77,13 +83,19 @@ function MediaTypeToggle({
 /**
  * Loading skeleton for the results list.
  */
-function ResultsSkeleton() {
+function ResultsSkeleton({
+  itemWidth,
+  cardSpacingStyle,
+  listPaddingHorizontal,
+}: {
+  itemWidth: number;
+  cardSpacingStyle: StyleProp<ViewStyle>;
+  listPaddingHorizontal: number;
+}) {
   return (
-    <View style={styles.skeletonContainer}>
+    <View style={[styles.skeletonContainer, { paddingHorizontal: listPaddingHorizontal }]}>
       {[1, 2, 3, 4, 5, 6].map((i) => (
-        <View key={i} style={styles.skeletonCard}>
-          <MovieCardSkeleton />
-        </View>
+        <MovieCardSkeleton key={i} width={itemWidth} containerStyle={cardSpacingStyle} />
       ))}
     </View>
   );
@@ -125,6 +137,7 @@ export default function MoodResultsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
   const { accentColor } = useAccentColor();
   const params = useLocalSearchParams<{ moodId: string }>();
   const moodId = params.moodId || '';
@@ -172,24 +185,30 @@ export default function MoodResultsScreen() {
     setMediaType(type);
   }, []);
 
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = useMemo(
+    () => getGridMetrics(windowWidth, COLUMN_COUNT, ITEM_GAP, TARGET_OUTER_PADDING),
+    [windowWidth]
+  );
+
+  const cardSpacingStyle = useMemo(
+    () => ({
+      marginLeft: itemHorizontalMargin,
+      marginRight: itemHorizontalMargin,
+      marginBottom: SPACING.m,
+    }),
+    [itemHorizontalMargin]
+  );
+
   const renderItem = useCallback(({ item }: { item: Movie | TVShow }) => {
     // Type guard to determine if it's a Movie or TVShow
     const isMovie = 'title' in item;
 
     if (isMovie) {
-      return (
-        <View style={styles.cardWrapper}>
-          <MovieCard movie={item as Movie} />
-        </View>
-      );
+      return <MovieCard movie={item as Movie} width={itemWidth} containerStyle={cardSpacingStyle} />;
     } else {
-      return (
-        <View style={styles.cardWrapper}>
-          <TVShowCard show={item as TVShow} />
-        </View>
-      );
+      return <TVShowCard show={item as TVShow} width={itemWidth} containerStyle={cardSpacingStyle} />;
     }
-  }, []);
+  }, [cardSpacingStyle, itemWidth]);
 
   const keyExtractor = useCallback(
     (item: Movie | TVShow) => `${item.id}-${mediaType}`,
@@ -219,19 +238,23 @@ export default function MoodResultsScreen() {
     if (isFetchingNextPage) {
       return (
         <View style={styles.loadingMore}>
-          <MovieCardSkeleton />
+          <MovieCardSkeleton width={itemWidth} containerStyle={cardSpacingStyle} />
         </View>
       );
     }
     return null;
-  }, [isFetchingNextPage]);
+  }, [cardSpacingStyle, isFetchingNextPage, itemWidth]);
 
   // Loading state
   if (isLoading) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         {ListHeader}
-        <ResultsSkeleton />
+        <ResultsSkeleton
+          itemWidth={itemWidth}
+          cardSpacingStyle={cardSpacingStyle}
+          listPaddingHorizontal={listPaddingHorizontal}
+        />
       </SafeAreaView>
     );
   }
@@ -275,7 +298,7 @@ export default function MoodResultsScreen() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={COLUMN_COUNT}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingHorizontal: listPaddingHorizontal }]}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
         onEndReached={handleEndReached}
@@ -289,7 +312,7 @@ export default function MoodResultsScreen() {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingHorizontal: HORIZONTAL_PADDING,
+    paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.l,
     alignItems: 'center',
     gap: SPACING.m,
@@ -342,24 +365,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    paddingHorizontal: LIST_HORIZONTAL_PADDING,
     paddingBottom: SPACING.xl,
-  },
-  cardWrapper: {
-    width: ITEM_WIDTH,
-    marginHorizontal: ITEM_GAP / 2,
-    marginBottom: SPACING.m,
   },
   skeletonContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: LIST_HORIZONTAL_PADDING,
     paddingTop: SPACING.m,
-  },
-  skeletonCard: {
-    width: ITEM_WIDTH,
-    marginHorizontal: ITEM_GAP / 2,
-    marginBottom: SPACING.m,
   },
   emptyContainer: {
     flex: 1,

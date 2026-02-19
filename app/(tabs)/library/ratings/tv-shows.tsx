@@ -19,6 +19,7 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -26,7 +27,6 @@ import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
 import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Dimensions,
   Pressable,
   StyleSheet,
   Text,
@@ -34,10 +34,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 
@@ -54,9 +50,11 @@ export default function TVShowRatingsScreen() {
     refetch,
   } = useEnrichedTVRatings();
   const { t } = useTranslation();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   // Search functionality using shared hook (initialize with empty array first)
   const {
@@ -129,14 +127,18 @@ export default function TVShowRatingsScreen() {
 
       return (
         <Pressable
-          style={({ pressed }) => [styles.mediaCard, pressed && styles.mediaCardPressed]}
+          style={({ pressed }) => [
+            styles.mediaCard,
+            { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+            pressed && styles.mediaCardPressed,
+          ]}
           onPress={() => handleItemPress(item.tvShow!.id)}
         >
           <MediaImage
             source={{
               uri: getImageUrl(item.tvShow.poster_path, TMDB_IMAGE_SIZES.poster.medium),
             }}
-            style={styles.poster}
+            style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
           />
           <View style={styles.ratingBadgeContainer}>
@@ -168,7 +170,7 @@ export default function TVShowRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress]
+    [handleItemPress, itemHorizontalMargin, itemWidth]
   );
 
   const renderListItem = useCallback(
@@ -222,17 +224,20 @@ export default function TVShowRatingsScreen() {
             data={displayItems}
             renderItem={renderGridItem}
             keyExtractor={keyExtractor}
-            numColumns={COLUMN_COUNT}
-            contentContainerStyle={styles.gridListContent}
+            numColumns={GRID_COLUMN_COUNT}
+            contentContainerStyle={[
+              styles.gridListContent,
+              { paddingHorizontal: listPaddingHorizontal },
+            ]}
             showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <RatingsEmptyState
-              searchQuery={searchQuery}
-              hasActiveFilterState={hasActiveFilterState}
-              height={emptyStateHeight}
-              onClearFilters={setFilterState}
-            />
-          }
+            ListEmptyComponent={
+              <RatingsEmptyState
+                searchQuery={searchQuery}
+                hasActiveFilterState={hasActiveFilterState}
+                height={emptyStateHeight}
+                onClearFilters={setFilterState}
+              />
+            }
           />
         ) : (
           <FlashList
@@ -243,14 +248,14 @@ export default function TVShowRatingsScreen() {
             keyExtractor={keyExtractor}
             contentContainerStyle={libraryListStyles.listContent}
             showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <RatingsEmptyState
-              searchQuery={searchQuery}
-              hasActiveFilterState={hasActiveFilterState}
-              height={emptyStateHeight}
-              onClearFilters={setFilterState}
-            />
-          }
+            ListEmptyComponent={
+              <RatingsEmptyState
+                searchQuery={searchQuery}
+                hasActiveFilterState={hasActiveFilterState}
+                height={emptyStateHeight}
+                onClearFilters={setFilterState}
+              />
+            }
           />
         )}
       </SafeAreaView>
@@ -283,20 +288,15 @@ export default function TVShowRatingsScreen() {
 
 const styles = StyleSheet.create({
   gridListContent: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
   },
   mediaCard: {
-    width: ITEM_WIDTH,
     marginBottom: SPACING.m,
-    marginRight: SPACING.m,
   },
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
   },
   poster: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },

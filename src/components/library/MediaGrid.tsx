@@ -5,16 +5,13 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { ListMediaItem } from '@/src/services/ListService';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
-import React, { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { forwardRef, memo, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
-
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 interface MediaGridProps {
   items: ListMediaItem[];
@@ -43,7 +40,18 @@ const MediaGridItem = memo<{
   onLongPress: (item: ListMediaItem) => void;
   selectionMode?: boolean;
   isSelected?: boolean;
-}>(({ item, onPress, onLongPress, selectionMode = false, isSelected = false }) => {
+  itemWidth: number;
+  itemHorizontalMargin: number;
+}>(
+  ({
+    item,
+    onPress,
+    onLongPress,
+    selectionMode = false,
+    isSelected = false,
+    itemWidth,
+    itemHorizontalMargin,
+  }) => {
   const { accentColor } = useAccentColor();
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
@@ -54,14 +62,18 @@ const MediaGridItem = memo<{
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.mediaCard, pressed && styles.mediaCardPressed]}
+      style={({ pressed }) => [
+        styles.mediaCard,
+        { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+        pressed && styles.mediaCardPressed,
+      ]}
       onPress={handlePress}
       onLongPress={handleLongPress}
     >
       <View style={styles.posterContainer}>
         <MediaImage
           source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-          style={styles.poster}
+          style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
           contentFit="cover"
         />
         {selectionMode && (
@@ -103,7 +115,8 @@ const MediaGridItem = memo<{
       </View>
     </Pressable>
   );
-});
+}
+);
 
 MediaGridItem.displayName = 'MediaGridItem';
 
@@ -124,6 +137,11 @@ export const MediaGrid = memo(
     ) => {
       const listRef = useRef<any>(null);
       const { accentColor } = useAccentColor();
+      const { width: windowWidth } = useWindowDimensions();
+      const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = useMemo(
+        () => getThreeColumnGridMetrics(windowWidth),
+        [windowWidth]
+      );
 
       useImperativeHandle(ref, () => ({
         scrollToTop: (animated = true) => {
@@ -139,14 +157,24 @@ export const MediaGrid = memo(
             onLongPress={onItemLongPress}
             selectionMode={selectionMode}
             isSelected={isItemSelected?.(item) ?? false}
+            itemWidth={itemWidth}
+            itemHorizontalMargin={itemHorizontalMargin}
           />
         ),
-        [isItemSelected, onItemLongPress, onItemPress, selectionMode]
+        [isItemSelected, itemHorizontalMargin, itemWidth, onItemLongPress, onItemPress, selectionMode]
       );
 
       const keyExtractor = useCallback(
         (item: ListMediaItem) => `${item.id}-${item.media_type}`,
         []
+      );
+
+      const contentContainerStyle = useMemo(
+        () => ({
+          paddingHorizontal: listPaddingHorizontal,
+          ...(contentBottomPadding > 0 ? { paddingBottom: contentBottomPadding } : {}),
+        }),
+        [contentBottomPadding, listPaddingHorizontal]
       );
 
       if (isLoading) {
@@ -174,8 +202,8 @@ export const MediaGrid = memo(
           ref={listRef}
           data={items}
           renderItem={renderItem}
-          numColumns={COLUMN_COUNT}
-          contentContainerStyle={[styles.listContent, contentBottomPadding > 0 && { paddingBottom: contentBottomPadding }]}
+          numColumns={GRID_COLUMN_COUNT}
+          contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
           keyExtractor={keyExtractor}
           drawDistance={400}
@@ -194,14 +222,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    paddingHorizontal: SPACING.l,
-    marginLeft: SPACING.s,
-  },
   mediaCard: {
-    width: ITEM_WIDTH,
     marginBottom: SPACING.m,
-    marginRight: SPACING.m,
   },
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
@@ -210,8 +232,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   poster: {
-    width: ITEM_WIDTH,
-    height: ITEM_WIDTH * 1.5,
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },
