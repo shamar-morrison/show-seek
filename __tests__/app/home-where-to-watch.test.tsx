@@ -94,6 +94,20 @@ const mockTvProviders = [
   { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.png', display_priority: 1 },
 ];
 
+const mockMovieProvidersQueryState = {
+  data: mockMovieProviders as any[],
+  isLoading: false,
+  isError: false,
+  error: null as Error | null,
+};
+
+const mockTvProvidersQueryState = {
+  data: mockTvProviders as any[],
+  isLoading: false,
+  isError: false,
+  error: null as Error | null,
+};
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: (...args: unknown[]) => mockPush(...args),
@@ -168,12 +182,12 @@ jest.mock('@tanstack/react-query', () => ({
 
     const mediaType = queryKey[2];
     if (mediaType === 'movie') {
-      return { data: mockMovieProviders, isLoading: false };
+      return mockMovieProvidersQueryState;
     }
     if (mediaType === 'tv') {
-      return { data: mockTvProviders, isLoading: false };
+      return mockTvProvidersQueryState;
     }
-    return { data: [], isLoading: false };
+    return { data: [], isLoading: false, isError: false, error: null };
   },
 }));
 
@@ -218,6 +232,14 @@ describe('WhereToWatchScreen', () => {
     mockListsState.isLoading = false;
     mockListsState.isError = false;
     mockListsState.error = null;
+    mockMovieProvidersQueryState.data = mockMovieProviders;
+    mockMovieProvidersQueryState.isLoading = false;
+    mockMovieProvidersQueryState.isError = false;
+    mockMovieProvidersQueryState.error = null;
+    mockTvProvidersQueryState.data = mockTvProviders;
+    mockTvProvidersQueryState.isLoading = false;
+    mockTvProvidersQueryState.isError = false;
+    mockTvProvidersQueryState.error = null;
     mockEnrichmentState.isLoadingEnrichment = false;
     mockEnrichmentState.providerMap = new Map<string, any>([
       [
@@ -311,6 +333,22 @@ describe('WhereToWatchScreen', () => {
     fireEvent.press(getByTestId('where-to-watch-list-option-watchlist'));
 
     expect(await findByText('Updating availability...')).toBeTruthy();
+  });
+
+  it('shows provider fetch error state before empty-state when service providers fail to load', () => {
+    mockMovieProvidersQueryState.isError = true;
+    mockMovieProvidersQueryState.error = new Error('Provider fetch failed');
+    mockMovieProvidersQueryState.data = [];
+    mockTvProvidersQueryState.data = [];
+
+    const { getByTestId, getByText, queryByText } = render(<WhereToWatchScreen />);
+
+    fireEvent.press(getByTestId('where-to-watch-list-selector'));
+    fireEvent.press(getByTestId('where-to-watch-list-option-watchlist'));
+    fireEvent.press(getByTestId('where-to-watch-service-selector'));
+
+    expect(getByText('Unable to load streaming services right now.')).toBeTruthy();
+    expect(queryByText('No streaming services found for this list yet.')).toBeNull();
   });
 
   it('filters results by flatrate only and excludes non-matching providers after enrichment', async () => {

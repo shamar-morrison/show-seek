@@ -172,6 +172,9 @@ export default function WhereToWatchScreen() {
     });
   }, [providerMap, selectedListItems, selectedService]);
 
+  const hasProviderFetchError = movieProvidersQuery.isError || tvProvidersQuery.isError;
+  const isProviderFetchLoading = movieProvidersQuery.isLoading || tvProvidersQuery.isLoading;
+
   useEffect(() => {
     if (!selectedListId) {
       return;
@@ -530,7 +533,11 @@ export default function WhereToWatchScreen() {
               </Pressable>
             </View>
             <View style={styles.modalListContainer}>
-              {(movieProvidersQuery.isLoading || tvProvidersQuery.isLoading) && visibleProviders.length === 0 ? (
+              {hasProviderFetchError ? (
+                <View style={styles.modalLoadingState}>
+                  <Text style={styles.modalLoadingText}>{t('whereToWatch.fetchError')}</Text>
+                </View>
+              ) : isProviderFetchLoading && visibleProviders.length === 0 ? (
                 <View style={styles.modalLoadingState}>
                   <ActivityIndicator size="small" color={accentColor} />
                   <Text style={styles.modalLoadingText}>{t('common.loading')}</Text>

@@ -1327,6 +1327,7 @@
     "emptyNoMatchesDescription": "Nothing in {{listName}} is streaming on {{serviceName}} in {{region}}.",
     "providerMatches_one": "{{count}} match",
     "providerMatches_other": "{{count}} matches",
+    "fetchError": "Unable to load streaming services right now.",
     "noServicesAvailable": "No streaming services found for this list yet.",
     "upgradeTitle": "Where to Watch is Premium",
     "upgradeDescription": "Unlock full streaming availability for your lists and find what you can watch instantly.",
