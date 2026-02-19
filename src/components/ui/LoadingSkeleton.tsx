@@ -1,6 +1,6 @@
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import React from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface LoadingSkeletonProps {
   width?: number | string;
@@ -48,9 +48,14 @@ export function LoadingSkeleton({ width = '100%', height = 20, style }: LoadingS
   );
 }
 
-export function MovieCardSkeleton({ width = 140 }: { width?: number }) {
+interface MovieCardSkeletonProps {
+  width?: number;
+  containerStyle?: StyleProp<ViewStyle>;
+}
+
+export function MovieCardSkeleton({ width = 140, containerStyle }: MovieCardSkeletonProps) {
   return (
-    <View style={[styles.cardContainer, { width }]}>
+    <View style={[styles.cardContainer, { width }, containerStyle]}>
       <LoadingSkeleton width={width} height={width * 1.5} style={styles.poster} />
       <LoadingSkeleton width="80%" height={14} style={{ marginTop: SPACING.s }} />
       <LoadingSkeleton width="40%" height={12} style={{ marginTop: 4 }} />
