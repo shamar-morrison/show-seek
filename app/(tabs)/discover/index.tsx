@@ -17,6 +17,7 @@ import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { getThreeColumnGridMetrics } from '@/src/utils/gridLayout';
+import { dedupeMediaById } from '@/src/utils/mediaUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -24,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { router, useSegments } from 'expo-router';
 import { Grid3X3, List, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -202,12 +203,22 @@ export default function DiscoverScreen() {
     toastRef.current?.show(message);
   };
 
-  // Flatten paginated data
-  const allResults: (Movie | TVShow)[] =
-    discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [];
+  // Flatten paginated data and remove duplicate ids to keep keys stable.
+  const allResults = useMemo<(Movie | TVShow)[]>(
+    () => discoverQuery.data?.pages.flatMap((page) => page.results as (Movie | TVShow)[]) || [],
+    [discoverQuery.data]
+  );
+  const uniqueResults = useMemo(() => dedupeMediaById(allResults), [allResults]);
+
+  useEffect(() => {
+    const duplicateCount = allResults.length - uniqueResults.length;
+    if (process.env.NODE_ENV !== 'production' && duplicateCount > 0) {
+      console.warn(`[discover] Removed ${duplicateCount} duplicate results for ${mediaType}`);
+    }
+  }, [allResults.length, mediaType, uniqueResults.length]);
 
   // Filter out watched content
-  const filteredResults = useContentFilter(allResults);
+  const filteredResults = useContentFilter(uniqueResults);
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
     getThreeColumnGridMetrics(windowWidth);
 
@@ -295,18 +306,16 @@ export default function DiscoverScreen() {
           <Text style={styles.gridTitle} numberOfLines={1}>
             {displayTitle}
           </Text>
-          {(year || item.vote_average > 0) && (
-            <View style={styles.gridMetaRow}>
-              {year && <Text style={styles.gridMetaText}>{year}</Text>}
-              {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
-              {item.vote_average > 0 && (
-                <View style={styles.gridRatingContainer}>
-                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          <View style={styles.gridMetaRow}>
+            {year && <Text style={styles.gridMetaText}>{year}</Text>}
+            {year && item.vote_average > 0 && <Text style={styles.gridMetaText}> • </Text>}
+            {item.vote_average > 0 && (
+              <View style={styles.gridRatingContainer}>
+                <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                <Text style={styles.gridRating}>{item.vote_average.toFixed(1)}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -391,6 +400,8 @@ export default function DiscoverScreen() {
               { paddingBottom: 100 },
             ]}
             numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
+            maintainVisibleContentPosition={{ disabled: true }}
+            drawDistance={600}
             showsVerticalScrollIndicator={false}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
@@ -514,6 +525,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+    minHeight: FONT_SIZE.xs + 2,
   },
   gridMetaText: {
     color: COLORS.textSecondary,

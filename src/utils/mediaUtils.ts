@@ -5,6 +5,24 @@ import { MovieDetails, TVShowDetails } from '@/src/api/tmdb';
  */
 
 /**
+ * Remove duplicate media entries by id while preserving the original order.
+ */
+export const dedupeMediaById = <T extends { id: number }>(items: T[]): T[] => {
+  const seenIds = new Set<number>();
+  const dedupedItems: T[] = [];
+
+  for (const item of items) {
+    if (seenIds.has(item.id)) {
+      continue;
+    }
+    seenIds.add(item.id);
+    dedupedItems.push(item);
+  }
+
+  return dedupedItems;
+};
+
+/**
  * Check if watch providers data contains any available providers
  * (streaming, rent, or buy options)
  */
