@@ -86,8 +86,8 @@ function ResultsSkeleton({
 }) {
   const cardSpacingStyle = useMemo(
     () => ({
-      marginRight: 0,
-      marginHorizontal: itemHorizontalMargin,
+      marginLeft: itemHorizontalMargin,
+      marginRight: itemHorizontalMargin,
       marginBottom: SPACING.m,
     }),
     [itemHorizontalMargin]
@@ -193,8 +193,8 @@ export default function MoodResultsScreen() {
 
   const cardSpacingStyle = useMemo(
     () => ({
-      marginRight: 0,
-      marginHorizontal: itemHorizontalMargin,
+      marginLeft: itemHorizontalMargin,
+      marginRight: itemHorizontalMargin,
       marginBottom: SPACING.m,
     }),
     [itemHorizontalMargin]

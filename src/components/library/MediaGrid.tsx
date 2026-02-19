@@ -8,7 +8,7 @@ import { ListMediaItem } from '@/src/services/ListService';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
-import React, { forwardRef, memo, useCallback, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, memo, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { EmptyState } from './EmptyState';
@@ -167,6 +167,14 @@ export const MediaGrid = memo(
         []
       );
 
+      const contentContainerStyle = useMemo(
+        () => ({
+          paddingHorizontal: listPaddingHorizontal,
+          ...(contentBottomPadding > 0 ? { paddingBottom: contentBottomPadding } : {}),
+        }),
+        [contentBottomPadding, listPaddingHorizontal]
+      );
+
       if (isLoading) {
         return (
           <View style={styles.loadingContainer}>
@@ -193,10 +201,7 @@ export const MediaGrid = memo(
           data={items}
           renderItem={renderItem}
           numColumns={GRID_COLUMN_COUNT}
-          contentContainerStyle={[
-            { paddingHorizontal: listPaddingHorizontal },
-            contentBottomPadding > 0 && { paddingBottom: contentBottomPadding },
-          ]}
+          contentContainerStyle={contentContainerStyle}
           showsVerticalScrollIndicator={false}
           keyExtractor={keyExtractor}
           drawDistance={400}

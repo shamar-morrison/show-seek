@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
+import * as ReactNative from 'react-native';
 
 let capturedFlashListProps: any = null;
 const mockMovieCard = jest.fn();
@@ -8,6 +9,7 @@ const mockMovieCardSkeleton = jest.fn();
 const mockUseMoodDiscovery = jest.fn();
 const mockSetOptions = jest.fn();
 const mockBack = jest.fn();
+const MOCK_WINDOW_DIMENSIONS = { width: 375, height: 812, scale: 2, fontScale: 2 };
 
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
@@ -112,8 +114,13 @@ const flattenStyle = (style: any): Record<string, any> => {
 };
 
 describe('MoodResultsScreen grid layout', () => {
+  let useWindowDimensionsSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    useWindowDimensionsSpy = jest
+      .spyOn(ReactNative, 'useWindowDimensions')
+      .mockReturnValue(MOCK_WINDOW_DIMENSIONS);
     capturedFlashListProps = null;
     mockUseMoodDiscovery.mockReturnValue({
       data: [
@@ -143,6 +150,10 @@ describe('MoodResultsScreen grid layout', () => {
     });
   });
 
+  afterEach(() => {
+    useWindowDimensionsSpy.mockRestore();
+  });
+
   it('passes computed width and spacing overrides to cards and list content', () => {
     render(<MoodResultsScreen />);
 
@@ -153,8 +164,8 @@ describe('MoodResultsScreen grid layout', () => {
     expect(movieCardProps.width).toBe(expected.itemWidth);
     expect(movieCardProps.containerStyle).toEqual(
       expect.objectContaining({
-        marginRight: 0,
-        marginHorizontal: expected.itemHorizontalMargin,
+        marginLeft: expected.itemHorizontalMargin,
+        marginRight: expected.itemHorizontalMargin,
         marginBottom: SPACING.m,
       })
     );

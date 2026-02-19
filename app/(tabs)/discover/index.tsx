@@ -221,63 +221,74 @@ export default function DiscoverScreen() {
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
     getThreeColumnGridMetrics(windowWidth);
 
-  const renderMediaItem = ({ item }: { item: Movie | TVShow }) => {
-    const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
-    const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-    const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
+  const renderMediaItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) => {
+      const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
+      const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
+      const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
 
-    const genres = item.genre_ids
-      ? item.genre_ids
-          .slice(0, 3)
-          .map((id: number) => genreMap[id])
-          .filter(Boolean)
-      : [];
+      const genres = item.genre_ids
+        ? item.genre_ids
+            .slice(0, 3)
+            .map((id: number) => genreMap[id])
+            .filter(Boolean)
+        : [];
 
-    const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
+      const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
 
-    return (
-      <TouchableOpacity
-        style={styles.resultItem}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-        activeOpacity={ACTIVE_OPACITY}
-      >
-        <View style={styles.posterContainer}>
-          <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
-        </View>
-        <View style={styles.resultInfo}>
-          <Text style={styles.resultTitle} numberOfLines={2}>
-            {displayTitle}
-          </Text>
-          <View style={styles.metaRow}>
-            {releaseDate && (
-              <Text style={metaTextStyles.secondary}>{new Date(releaseDate).getFullYear()}</Text>
-            )}
-            {item.vote_average > 0 && releaseDate && (
-              <Text style={metaTextStyles.secondary}> • </Text>
-            )}
-            {item.vote_average > 0 && (
-              <View style={styles.ratingContainer}>
-                <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
-                <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
-              </View>
-            )}
+      return (
+        <TouchableOpacity
+          style={styles.resultItem}
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <View style={styles.posterContainer}>
+            <MediaImage source={{ uri: posterUrl }} style={styles.resultPoster} contentFit="cover" />
           </View>
-          {genres.length > 0 && (
-            <Text style={styles.genres} numberOfLines={1}>
-              {genres.join(' • ')}
+          <View style={styles.resultInfo}>
+            <Text style={styles.resultTitle} numberOfLines={2}>
+              {displayTitle}
             </Text>
-          )}
-          {item.overview && (
-            <Text style={styles.resultOverview} numberOfLines={3}>
-              {item.overview}
-            </Text>
-          )}
-          {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+            <View style={styles.metaRow}>
+              {releaseDate && (
+                <Text style={metaTextStyles.secondary}>{new Date(releaseDate).getFullYear()}</Text>
+              )}
+              {item.vote_average > 0 && releaseDate && (
+                <Text style={metaTextStyles.secondary}> • </Text>
+              )}
+              {item.vote_average > 0 && (
+                <View style={styles.ratingContainer}>
+                  <Star size={14} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={styles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
+            {genres.length > 0 && (
+              <Text style={styles.genres} numberOfLines={1}>
+                {genres.join(' • ')}
+              </Text>
+            )}
+            {item.overview && (
+              <Text style={styles.resultOverview} numberOfLines={3}>
+                {item.overview}
+              </Text>
+            )}
+            {listIds.length > 0 && <InlineListIndicators listIds={listIds} size="medium" />}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [
+      genreMap,
+      getListsForMedia,
+      handleItemPress,
+      handleLongPress,
+      mediaType,
+      preferences?.showOriginalTitles,
+      showIndicators,
+    ]
+  );
 
   const renderGridItem = useCallback(
     ({ item }: { item: Movie | TVShow }) => {
