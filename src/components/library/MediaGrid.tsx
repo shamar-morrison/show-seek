@@ -138,8 +138,10 @@ export const MediaGrid = memo(
       const listRef = useRef<any>(null);
       const { accentColor } = useAccentColor();
       const { width: windowWidth } = useWindowDimensions();
-      const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
-        getThreeColumnGridMetrics(windowWidth);
+      const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = useMemo(
+        () => getThreeColumnGridMetrics(windowWidth),
+        [windowWidth]
+      );
 
       useImperativeHandle(ref, () => ({
         scrollToTop: (animated = true) => {

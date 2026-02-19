@@ -14,7 +14,15 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Frown, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import {
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  ViewStyle,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -77,22 +85,13 @@ function MediaTypeToggle({
  */
 function ResultsSkeleton({
   itemWidth,
-  itemHorizontalMargin,
+  cardSpacingStyle,
   listPaddingHorizontal,
 }: {
   itemWidth: number;
-  itemHorizontalMargin: number;
+  cardSpacingStyle: StyleProp<ViewStyle>;
   listPaddingHorizontal: number;
 }) {
-  const cardSpacingStyle = useMemo(
-    () => ({
-      marginLeft: itemHorizontalMargin,
-      marginRight: itemHorizontalMargin,
-      marginBottom: SPACING.m,
-    }),
-    [itemHorizontalMargin]
-  );
-
   return (
     <View style={[styles.skeletonContainer, { paddingHorizontal: listPaddingHorizontal }]}>
       {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -253,7 +252,7 @@ export default function MoodResultsScreen() {
         {ListHeader}
         <ResultsSkeleton
           itemWidth={itemWidth}
-          itemHorizontalMargin={itemHorizontalMargin}
+          cardSpacingStyle={cardSpacingStyle}
           listPaddingHorizontal={listPaddingHorizontal}
         />
       </SafeAreaView>

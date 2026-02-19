@@ -218,8 +218,8 @@ export default function DiscoverScreen() {
 
   // Filter out watched content
   const filteredResults = useContentFilter(uniqueResults);
-  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
-    getThreeColumnGridMetrics(windowWidth);
+  const gridMetrics = useMemo(() => getThreeColumnGridMetrics(windowWidth), [windowWidth]);
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = gridMetrics;
 
   const renderMediaItem = useCallback(
     ({ item }: { item: Movie | TVShow }) => {

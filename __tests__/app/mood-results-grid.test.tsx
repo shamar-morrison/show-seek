@@ -171,6 +171,7 @@ describe('MoodResultsScreen grid layout', () => {
     );
 
     expect(capturedFlashListProps).toBeTruthy();
+    expect(capturedFlashListProps.numColumns).toBe(2);
     const contentStyle = flattenStyle(capturedFlashListProps.contentContainerStyle);
     expect(contentStyle.paddingHorizontal).toBe(expected.listPaddingHorizontal);
   });
