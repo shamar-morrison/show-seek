@@ -413,6 +413,7 @@
     "searchShowsPlaceholder": "Pesquisar séries...",
     "loadingCollections": "Carregando suas coleções...",
     "loadingWatchHistory": "Carregando seu histórico de exibição...",
+    "updatingWatchProgress": "Atualizando progresso de exibição...",
     "emptyCollectionProgress": "Nenhuma coleção acompanhada",
     "emptyCollectionProgressHint": "Comece a acompanhar uma coleção na página de coleção de um filme para ver seu progresso aqui.",
     "emptyWatchProgress": "Nenhuma série em andamento",
