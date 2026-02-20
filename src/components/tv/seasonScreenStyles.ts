@@ -107,8 +107,12 @@ export const useSeasonScreenStyles = () =>
       paddingHorizontal: SPACING.m,
       paddingBottom: SPACING.m,
     },
+    seasonExpandedContentRow: {
+      backgroundColor: COLORS.surface,
+    },
     episodesContainer: {
       paddingTop: SPACING.s,
+      backgroundColor: COLORS.surface,
     },
     episodesLoadingContainer: {
       paddingVertical: SPACING.xl,
@@ -118,6 +122,7 @@ export const useSeasonScreenStyles = () =>
     episodeCard: {
       marginBottom: SPACING.m,
       paddingHorizontal: SPACING.m,
+      backgroundColor: COLORS.surface,
     },
     episodeStill: {
       width: '100%',
