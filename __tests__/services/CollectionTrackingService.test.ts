@@ -1,4 +1,5 @@
 import { collection, doc, getDoc, getDocs, limit, query, updateDoc } from 'firebase/firestore';
+import { auth } from '@/src/firebase/config';
 
 let mockUserId: string | null = 'test-user-id';
 
@@ -166,5 +167,18 @@ describe('CollectionTrackingService', () => {
       []
     );
     expect(getDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns empty watched IDs for anonymous users without querying Firestore', async () => {
+    const authCurrentUserGetterSpy = jest
+      .spyOn(auth, 'currentUser', 'get')
+      .mockReturnValue({ uid: 'anon-uid', isAnonymous: true } as any);
+
+    await expect(collectionTrackingService.getPreviouslyWatchedMovieIds([10, 20])).resolves.toEqual(
+      []
+    );
+    expect(getDocs).not.toHaveBeenCalled();
+
+    authCurrentUserGetterSpy.mockRestore();
   });
 });

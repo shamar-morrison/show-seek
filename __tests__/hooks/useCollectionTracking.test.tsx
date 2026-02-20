@@ -6,6 +6,7 @@ const mockGetAllTrackedCollections = jest.fn();
 const mockGetCollectionTracking = jest.fn();
 const mockGetPreviouslyWatchedMovieIds = jest.fn();
 const mockStartTracking = jest.fn();
+const mockCreateTimeoutWithCleanup = jest.fn();
 
 const mockAuthState: { currentUser: { uid: string } | null } = {
   currentUser: { uid: 'test-user-id' },
@@ -22,6 +23,10 @@ jest.mock('@/src/firebase/config', () => ({
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => ({ isPremium: false }),
+}));
+
+jest.mock('@/src/utils/timeout', () => ({
+  createTimeoutWithCleanup: (...args: unknown[]) => mockCreateTimeoutWithCleanup(...args),
 }));
 
 jest.mock('@/src/services/CollectionTrackingService', () => ({
@@ -68,6 +73,10 @@ describe('useCollectionTracking hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.currentUser = { uid: 'test-user-id' };
+    mockCreateTimeoutWithCleanup.mockImplementation(() => ({
+      promise: new Promise<never>(() => {}),
+      cancel: jest.fn(),
+    }));
   });
 
   it('loads tracked collections with query caching', async () => {
@@ -208,5 +217,58 @@ describe('useCollectionTracking hooks', () => {
 
     expect(mockGetPreviouslyWatchedMovieIds).not.toHaveBeenCalled();
     expect(mockStartTracking).toHaveBeenCalledWith(9, 'Toy Story Collection', 4, [20]);
+  });
+
+  it('uses empty initial watched IDs when no backfill inputs are provided', async () => {
+    mockStartTracking.mockResolvedValueOnce(undefined);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useStartCollectionTracking(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        collectionId: 10,
+        name: 'The Matrix Collection',
+        totalMovies: 4,
+      });
+    });
+
+    expect(mockGetPreviouslyWatchedMovieIds).not.toHaveBeenCalled();
+    expect(mockStartTracking).toHaveBeenCalledWith(10, 'The Matrix Collection', 4, []);
+  });
+
+  it('falls back to empty initial progress when overall backfill timeout is reached', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    const cancelSpy = jest.fn();
+
+    mockCreateTimeoutWithCleanup.mockReturnValueOnce({
+      promise: Promise.reject(new Error('Backfill watched history timed out')),
+      cancel: cancelSpy,
+    });
+    mockGetPreviouslyWatchedMovieIds.mockImplementation(() => new Promise<number[]>(() => {}));
+    mockStartTracking.mockResolvedValueOnce(undefined);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useStartCollectionTracking(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        collectionId: 11,
+        name: 'Terminator Collection',
+        totalMovies: 6,
+        collectionMovieIds: [101, 102, 103],
+      });
+    });
+
+    expect(mockGetPreviouslyWatchedMovieIds).toHaveBeenCalledWith([101, 102, 103]);
+    expect(mockStartTracking).toHaveBeenCalledWith(11, 'Terminator Collection', 6, []);
+    expect(cancelSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 });
