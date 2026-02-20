@@ -1,4 +1,5 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -18,6 +19,7 @@ import {
 } from '@/src/hooks/useFavoritePersons';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { ListMediaItem } from '@/src/services/ListService';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
@@ -37,7 +39,7 @@ import {
   Twitter,
   Youtube,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -69,6 +71,10 @@ export default function PersonDetailScreen() {
   const { requireAccount } = useGuestAccess();
   const personId = Number(id);
   const [refreshing, setRefreshing] = useState(false);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { getListsForMedia } = useListMembership();
@@ -106,6 +112,45 @@ export default function PersonDetailScreen() {
     },
     [currentTab, router]
   );
+
+  const handleKnownForLongPress = useCallback(
+    (
+      item: {
+        id: number;
+        title?: string;
+        name?: string;
+        poster_path: string | null;
+        vote_average: number;
+        release_date?: string;
+        first_air_date?: string;
+      },
+      mediaType: 'movie' | 'tv'
+    ) => {
+      if (!user || isGuest) {
+        requireAccount();
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: mediaType,
+        title: item.title || item.name || '',
+        name: item.name,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average || 0,
+        release_date: item.release_date || item.first_air_date || '',
+        first_air_date: item.first_air_date,
+      });
+    },
+    [isGuest, requireAccount, user]
+  );
+
+  useEffect(() => {
+    if (selectedMediaItem) {
+      addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
 
   if (personQuery.isLoading) {
     return <FullScreenLoading />;
@@ -501,6 +546,7 @@ export default function PersonDetailScreen() {
                     key={`movie-${movie.id}-${index}`}
                     style={styles.creditCard}
                     onPress={() => handleMoviePress(movie.id)}
+                    onLongPress={() => handleKnownForLongPress(movie, 'movie')}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <View style={styles.creditPosterContainer}>
@@ -570,6 +616,7 @@ export default function PersonDetailScreen() {
                     key={`tv-${show.id}-${index}`}
                     style={styles.creditCard}
                     onPress={() => handleTVPress(show.id)}
+                    onLongPress={() => handleKnownForLongPress(show, 'tv')}
                     activeOpacity={ACTIVE_OPACITY}
                   >
                     <View style={styles.creditPosterContainer}>
@@ -610,6 +657,8 @@ export default function PersonDetailScreen() {
           </View>
         )}
       </Animated.ScrollView>
+
+      {selectedMediaItem && <AddToListModal ref={addToListModalRef} mediaItem={selectedMediaItem} />}
     </View>
   );
 }
