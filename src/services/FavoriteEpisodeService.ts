@@ -1,20 +1,10 @@
-import { auth, db } from '@/src/firebase/config';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
+import { auth, db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { createTimeout } from '@/src/utils/timeout';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  orderBy,
-  query,
-  setDoc,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, orderBy, query, setDoc } from 'firebase/firestore';
 
 class FavoriteEpisodeService {
   private isDebugLoggingEnabled() {
