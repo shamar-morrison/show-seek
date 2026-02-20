@@ -148,7 +148,7 @@ export default function PersonDetailScreen() {
 
   useEffect(() => {
     if (selectedMediaItem) {
-      addToListModalRef.current?.present();
+      void addToListModalRef.current?.present();
     }
   }, [selectedMediaItem]);
 
