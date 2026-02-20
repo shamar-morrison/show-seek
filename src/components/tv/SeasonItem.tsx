@@ -188,7 +188,6 @@ export const SeasonItem = memo<SeasonItemProps>(
       tvId,
       showName,
       showPosterPath,
-      onMarkUnwatched,
       onMarkAllWatched,
       onMarkAllUnwatched,
       t,
@@ -196,7 +195,7 @@ export const SeasonItem = memo<SeasonItemProps>(
 
     // Calculate if all aired episodes are watched
     const allAiredWatched = (() => {
-      if (!season.episodes || season.episodes.length === 0) return false;
+      if (!seasonEpisodes || seasonEpisodes.length === 0) return false;
 
       const today = new Date();
       const airedEpisodes = seasonEpisodes.filter(
