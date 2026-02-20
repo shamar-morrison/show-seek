@@ -104,10 +104,13 @@ jest.mock('@lodev09/react-native-true-sheet', () => {
   const React = require('react');
   const { View } = require('react-native');
 
-  const TrueSheet = React.forwardRef(({ children }: any, ref: any) => {
+  const TrueSheet = React.forwardRef(({ children, onDidDismiss }: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
       present: mockSheetPresent,
-      dismiss: mockSheetDismiss,
+      dismiss: async () => {
+        await mockSheetDismiss();
+        onDidDismiss?.();
+      },
     }));
 
     return <View>{children}</View>;
@@ -643,6 +646,54 @@ describe('AddToListModal (bulk mode)', () => {
       queryKey: ['list-membership-index', 'test-user-id'],
       refetchType: 'active',
     });
+  });
+
+  it('calls onDismiss when the sheet is fully dismissed', async () => {
+    const selected = createMediaItem(77);
+    const onDismiss = jest.fn();
+    const ref = createRef<AddToListModalRef>();
+
+    render(<AddToListModal ref={ref} mediaItem={selected} onDismiss={onDismiss} />);
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    await act(async () => {
+      await ref.current?.dismiss();
+    });
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onDismiss during create-list transition dismiss', async () => {
+    const selected = createMediaItem(78);
+    const onDismiss = jest.fn();
+    const ref = createRef<AddToListModalRef>();
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 1,
+      },
+    ];
+
+    const { getByText } = render(
+      <AddToListModal ref={ref} mediaItem={selected} onDismiss={onDismiss} />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    await act(async () => {
+      fireEvent.press(getByText('Create Custom List'));
+    });
+
+    expect(mockSheetDismiss).toHaveBeenCalled();
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 
 });

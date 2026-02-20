@@ -1,5 +1,5 @@
 import PersonDetailScreen from '@/src/screens/PersonDetailScreen';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPush = jest.fn();
@@ -12,6 +12,7 @@ const mockAuthState = {
   user: { uid: 'user-1' } as { uid: string } | null,
   isGuest: false,
 };
+let latestAddToListModalOnDismiss: (() => void) | null = null;
 
 const mockMovie = {
   id: 101,
@@ -204,7 +205,8 @@ jest.mock('@/src/hooks/useFavoritePersons', () => ({
 jest.mock('@/src/components/AddToListModal', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const AddToListModal = React.forwardRef(({ mediaItem }: any, ref: any) => {
+  const AddToListModal = React.forwardRef(({ mediaItem, onDismiss }: any, ref: any) => {
+    latestAddToListModalOnDismiss = onDismiss ?? null;
     React.useImperativeHandle(ref, () => ({
       present: mockPresent,
       dismiss: jest.fn(),
@@ -220,6 +222,7 @@ describe('PersonDetailScreen', () => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'user-1' };
     mockAuthState.isGuest = false;
+    latestAddToListModalOnDismiss = null;
 
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
       const creditKey = queryKey[2];
@@ -338,6 +341,25 @@ describe('PersonDetailScreen', () => {
     expect(getByTestId('add-to-list-modal').props.children).toBe('tv');
     expect(mockPresent).toHaveBeenCalledTimes(1);
     expect(mockRequireAccount).not.toHaveBeenCalled();
+  });
+
+  it('clears selected media when AddToListModal is dismissed', async () => {
+    const { getByText, getByTestId, queryByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known Movie'), 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('add-to-list-modal')).toBeTruthy();
+    });
+    expect(latestAddToListModalOnDismiss).toBeDefined();
+
+    act(() => {
+      latestAddToListModalOnDismiss?.();
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('add-to-list-modal')).toBeNull();
+    });
   });
 
   it('blocks unauthenticated long press from opening AddToListModal', () => {

@@ -658,7 +658,13 @@ export default function PersonDetailScreen() {
         )}
       </Animated.ScrollView>
 
-      {selectedMediaItem && <AddToListModal ref={addToListModalRef} mediaItem={selectedMediaItem} />}
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onDismiss={() => setSelectedMediaItem(null)}
+        />
+      )}
     </View>
   );
 }
