@@ -17,7 +17,7 @@ import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
 import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { EpisodeItem } from './EpisodeItem';
 import { useSeasonScreenStyles } from './seasonScreenStyles';
@@ -109,23 +109,24 @@ export const SeasonItem = memo<SeasonItemProps>(
     // Defer episode rendering to show loading indicator immediately on expand
     const { shouldRenderContent, isLoading } = useDeferredExpansion(shouldShowEpisodeList);
 
-    const handleMarkAllPress = useCallback(() => {
-      if (seasonEpisodes.length === 0) return;
-
+    const airedEpisodes = useMemo(() => {
       const today = new Date();
-      const airedEpisodes = seasonEpisodes.filter(
-        (ep) => ep.air_date && new Date(ep.air_date) <= today
-      );
-      const hasAiredEpisodes = airedEpisodes.length > 0;
+      return seasonEpisodes.filter((ep) => ep.air_date && new Date(ep.air_date) <= today);
+    }, [seasonEpisodes]);
 
+    const hasAiredEpisodes = useMemo(() => airedEpisodes.length > 0, [airedEpisodes]);
+
+    const allAiredWatched = useMemo(() => {
+      if (airedEpisodes.length === 0) return false;
+
+      return airedEpisodes.every((ep) => {
+        const episodeKey = `${season.season_number}_${ep.episode_number}`;
+        return !!episodeTracking?.episodes?.[episodeKey];
+      });
+    }, [airedEpisodes, episodeTracking?.episodes, season.season_number]);
+
+    const handleMarkAllPress = useCallback(() => {
       if (!hasAiredEpisodes) return;
-
-      const allAiredWatched =
-        hasAiredEpisodes &&
-        airedEpisodes.every((ep) => {
-          const episodeKey = `${season.season_number}_${ep.episode_number}`;
-          return episodeTracking?.episodes?.[episodeKey];
-        });
 
       if (allAiredWatched) {
         // Unmark all episodes
@@ -181,10 +182,11 @@ export const SeasonItem = memo<SeasonItemProps>(
         );
       }
     }, [
-      seasonEpisodes,
+      airedEpisodes,
+      hasAiredEpisodes,
+      allAiredWatched,
       season.season_number,
       season.name,
-      episodeTracking,
       tvId,
       showName,
       showPosterPath,
@@ -193,28 +195,6 @@ export const SeasonItem = memo<SeasonItemProps>(
       t,
     ]);
 
-    // Calculate if all aired episodes are watched
-    const allAiredWatched = (() => {
-      if (!seasonEpisodes || seasonEpisodes.length === 0) return false;
-
-      const today = new Date();
-      const airedEpisodes = seasonEpisodes.filter(
-        (ep) => ep.air_date && new Date(ep.air_date) <= today
-      );
-      if (airedEpisodes.length === 0) return false;
-
-      return airedEpisodes.every((ep) => {
-        const episodeKey = `${season.season_number}_${ep.episode_number}`;
-        return episodeTracking?.episodes?.[episodeKey];
-      });
-    })();
-
-    const hasAiredEpisodes = (() => {
-      if (seasonEpisodes.length === 0) return false;
-      const today = new Date();
-      return seasonEpisodes.some((ep) => ep.air_date && new Date(ep.air_date) <= today);
-    })();
-
     const isBulkActionPending =
       !!bulkActionState?.isPending &&
       bulkActionState.seasonNumber === season.season_number &&
@@ -222,7 +202,6 @@ export const SeasonItem = memo<SeasonItemProps>(
 
     return (
       <View
-        key={season.season_number}
         style={[
           styles.seasonContainer,
           isExpanded && !showEpisodes && styles.seasonContainerExpandedHeaderOnly,
