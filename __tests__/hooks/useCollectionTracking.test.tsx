@@ -4,6 +4,8 @@ import React from 'react';
 
 const mockGetAllTrackedCollections = jest.fn();
 const mockGetCollectionTracking = jest.fn();
+const mockGetPreviouslyWatchedMovieIds = jest.fn();
+const mockStartTracking = jest.fn();
 
 const mockAuthState: { currentUser: { uid: string } | null } = {
   currentUser: { uid: 'test-user-id' },
@@ -26,8 +28,10 @@ jest.mock('@/src/services/CollectionTrackingService', () => ({
   collectionTrackingService: {
     getAllTrackedCollections: (...args: unknown[]) => mockGetAllTrackedCollections(...args),
     getCollectionTracking: (...args: unknown[]) => mockGetCollectionTracking(...args),
+    getPreviouslyWatchedMovieIds: (...args: unknown[]) =>
+      mockGetPreviouslyWatchedMovieIds(...args),
     getTrackedCollectionCount: jest.fn(),
-    startTracking: jest.fn(),
+    startTracking: (...args: unknown[]) => mockStartTracking(...args),
     stopTracking: jest.fn(),
     addWatchedMovie: jest.fn(),
     removeWatchedMovie: jest.fn(),
@@ -35,7 +39,11 @@ jest.mock('@/src/services/CollectionTrackingService', () => ({
   MAX_FREE_COLLECTIONS: 2,
 }));
 
-import { useCollectionTracking, useTrackedCollections } from '@/src/hooks/useCollectionTracking';
+import {
+  useCollectionTracking,
+  useStartCollectionTracking,
+  useTrackedCollections,
+} from '@/src/hooks/useCollectionTracking';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -126,5 +134,79 @@ describe('useCollectionTracking hooks', () => {
     expect(result.current.tracking).toBeNull();
     expect(result.current.isTracked).toBe(false);
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('backfills initial watched IDs when starting tracking with collection movie IDs', async () => {
+    mockGetPreviouslyWatchedMovieIds.mockResolvedValueOnce([11, 33]);
+    mockStartTracking.mockResolvedValueOnce(undefined);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useStartCollectionTracking(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        collectionId: 7,
+        name: 'Mission Impossible Collection',
+        totalMovies: 4,
+        collectionMovieIds: [11, 22, 33],
+      });
+    });
+
+    expect(mockGetPreviouslyWatchedMovieIds).toHaveBeenCalledWith([11, 22, 33]);
+    expect(mockStartTracking).toHaveBeenCalledWith(
+      7,
+      'Mission Impossible Collection',
+      4,
+      [11, 33]
+    );
+  });
+
+  it('falls back to empty initial progress if watched-history backfill fails', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+    mockGetPreviouslyWatchedMovieIds.mockRejectedValueOnce(new Error('backfill failed'));
+    mockStartTracking.mockResolvedValueOnce(undefined);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useStartCollectionTracking(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        collectionId: 8,
+        name: 'Alien Collection',
+        totalMovies: 6,
+        collectionMovieIds: [1, 2, 3],
+      });
+    });
+
+    expect(mockGetPreviouslyWatchedMovieIds).toHaveBeenCalledWith([1, 2, 3]);
+    expect(mockStartTracking).toHaveBeenCalledWith(8, 'Alien Collection', 6, []);
+
+    warnSpy.mockRestore();
+  });
+
+  it('uses explicit initial watched IDs without backfill lookup', async () => {
+    mockStartTracking.mockResolvedValueOnce(undefined);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useStartCollectionTracking(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        collectionId: 9,
+        name: 'Toy Story Collection',
+        totalMovies: 4,
+        collectionMovieIds: [10, 20, 30],
+        initialWatchedMovieIds: [20],
+      });
+    });
+
+    expect(mockGetPreviouslyWatchedMovieIds).not.toHaveBeenCalled();
+    expect(mockStartTracking).toHaveBeenCalledWith(9, 'Toy Story Collection', 4, [20]);
   });
 });

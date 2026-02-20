@@ -7,6 +7,8 @@ import {
   collection,
   deleteDoc,
   doc,
+  limit,
+  query,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -22,6 +24,7 @@ export const MAX_FREE_COLLECTIONS = 2;
  * Timeout duration for Firestore operations (10 seconds)
  */
 const TIMEOUT_MS = 10000;
+const WATCHED_HISTORY_CHECK_BATCH_SIZE = 8;
 
 class CollectionTrackingService {
   /**
@@ -118,6 +121,77 @@ class CollectionTrackingService {
         timeout.cancel();
       });
       return snapshot.docs.length;
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
+   * Resolve which collection movies were already watched before tracking started.
+   */
+  async getPreviouslyWatchedMovieIds(movieIds: number[]): Promise<number[]> {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) return [];
+
+    const uniqueMovieIds: number[] = [];
+    const seenMovieIds = new Set<number>();
+
+    movieIds.forEach((movieId) => {
+      if (!Number.isInteger(movieId) || movieId <= 0 || seenMovieIds.has(movieId)) {
+        return;
+      }
+
+      seenMovieIds.add(movieId);
+      uniqueMovieIds.push(movieId);
+    });
+
+    if (uniqueMovieIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const watchedMovieIds: number[] = [];
+
+      for (let i = 0; i < uniqueMovieIds.length; i += WATCHED_HISTORY_CHECK_BATCH_SIZE) {
+        const batch = uniqueMovieIds.slice(i, i + WATCHED_HISTORY_CHECK_BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (movieId) => {
+            const watchesRef = collection(
+              db,
+              'users',
+              user.uid,
+              'watched_movies',
+              movieId.toString(),
+              'watches'
+            );
+            const watchesQuery = query(watchesRef, limit(1));
+            const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
+
+            try {
+              const snapshot = await Promise.race([
+                auditedGetDocs(watchesQuery, {
+                  path: `users/${user.uid}/watched_movies/${movieId}/watches`,
+                  queryKey: 'watchedMoviesByMovie',
+                  callsite: 'CollectionTrackingService.getPreviouslyWatchedMovieIds',
+                }),
+                timeout.promise,
+              ]);
+
+              return snapshot.empty ? null : movieId;
+            } finally {
+              timeout.cancel();
+            }
+          })
+        );
+
+        batchResults.forEach((movieId) => {
+          if (movieId !== null) {
+            watchedMovieIds.push(movieId);
+          }
+        });
+      }
+
+      return watchedMovieIds;
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }

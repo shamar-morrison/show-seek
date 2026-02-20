@@ -99,12 +99,30 @@ export const useStartCollectionTracking = () => {
       name: string;
       totalMovies: number;
       initialWatchedMovieIds?: number[];
+      collectionMovieIds?: number[];
     }) => {
+      let initialWatchedMovieIds = params.initialWatchedMovieIds ?? [];
+
+      if (
+        params.initialWatchedMovieIds === undefined &&
+        Array.isArray(params.collectionMovieIds) &&
+        params.collectionMovieIds.length > 0
+      ) {
+        try {
+          initialWatchedMovieIds = await collectionTrackingService.getPreviouslyWatchedMovieIds(
+            params.collectionMovieIds
+          );
+        } catch (error) {
+          console.warn('[useStartCollectionTracking] Failed to backfill watched history:', error);
+          initialWatchedMovieIds = [];
+        }
+      }
+
       await collectionTrackingService.startTracking(
         params.collectionId,
         params.name,
         params.totalMovies,
-        params.initialWatchedMovieIds
+        initialWatchedMovieIds
       );
     },
     onSuccess: () => {
