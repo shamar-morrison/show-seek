@@ -101,6 +101,15 @@ export interface MarkAllEpisodesWatchedParams {
 }
 
 /**
+ * Parameters for marking all episodes in a season as unwatched
+ */
+export interface MarkAllEpisodesUnwatchedParams {
+  tvShowId: number;
+  seasonNumber: number;
+  episodes: Episode[];
+}
+
+/**
  * Fetch episode tracking data for a specific TV show.
  */
 export const useShowEpisodeTracking = (tvShowId: number) => {
@@ -321,6 +330,31 @@ export const useMarkAllEpisodesWatched = () => {
         params.seasonNumber,
         params.episodes,
         params.showMetadata
+      ),
+    onSuccess: async (_result, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+  });
+};
+
+/**
+ * Mutation hook for marking all episodes in a season as unwatched
+ */
+export const useMarkAllEpisodesUnwatched = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: MarkAllEpisodesUnwatchedParams) =>
+      episodeTrackingService.markAllEpisodesUnwatched(
+        params.tvShowId,
+        params.seasonNumber,
+        params.episodes
       ),
     onSuccess: async (_result, params) => {
       const userId = getUserId();

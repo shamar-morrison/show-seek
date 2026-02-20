@@ -38,9 +38,15 @@ export const useSeasonScreenStyles = () =>
     scrollView: {
       flex: 1,
     },
+    seasonsListContent: {
+      paddingBottom: SPACING.m,
+    },
     seasonContainer: {
       marginBottom: SPACING.m,
       backgroundColor: COLORS.surface,
+    },
+    seasonContainerExpandedHeaderOnly: {
+      marginBottom: 0,
     },
     seasonHeader: {
       flexDirection: 'row',
@@ -85,6 +91,9 @@ export const useSeasonScreenStyles = () =>
       paddingVertical: SPACING.xs,
       paddingHorizontal: SPACING.s,
       borderRadius: BORDER_RADIUS.s,
+    },
+    markAllButtonDisabled: {
+      opacity: 0.7,
     },
     markAllText: {
       color: COLORS.white,
