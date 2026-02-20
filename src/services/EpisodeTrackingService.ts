@@ -236,6 +236,58 @@ class EpisodeTrackingService {
   }
 
   /**
+   * Mark all episodes in a season as unwatched (single batch operation)
+   */
+  async markAllEpisodesUnwatched(
+    tvShowId: number,
+    seasonNumber: number,
+    episodes: Episode[]
+  ): Promise<void> {
+    try {
+      const user = auth.currentUser;
+      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      if (episodes.length === 0) return;
+
+      const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+      const timeout = createTimeoutWithCleanup(10000);
+
+      // Check document existence once to avoid not-found errors on update.
+      const snapshot = await Promise.race([
+        auditedGetDoc(trackingRef, {
+          path: `users/${user.uid}/episode_tracking/${tvShowId}`,
+          queryKey: 'episodeTrackingByShow',
+          callsite: 'EpisodeTrackingService.markAllEpisodesUnwatched',
+        }),
+        timeout.promise,
+      ]).finally(() => {
+        timeout.cancel();
+      });
+
+      if (!snapshot.exists()) {
+        return;
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        'metadata.lastUpdated': Date.now(),
+      };
+
+      episodes.forEach((episode) => {
+        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
+        updatePayload[`episodes.${episodeKey}`] = deleteField();
+      });
+
+      const updateTimeout = createTimeoutWithCleanup(10000);
+      await Promise.race([updateDoc(trackingRef, updatePayload), updateTimeout.promise]).finally(
+        () => {
+          updateTimeout.cancel();
+        }
+      );
+    } catch (error) {
+      throw new Error(getFirestoreErrorMessage(error));
+    }
+  }
+
+  /**
    * Calculate progress for a specific season
    * Excludes unaired episodes from total count
    */

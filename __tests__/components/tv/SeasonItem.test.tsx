@@ -28,6 +28,7 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
 jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
   useSeasonScreenStyles: () => ({
     seasonContainer: {},
+    seasonContainerExpandedHeaderOnly: {},
     seasonHeader: {},
     seasonPoster: {},
     seasonInfo: {},
@@ -37,6 +38,7 @@ jest.mock('@/src/components/tv/seasonScreenStyles', () => ({
     seasonOverview: {},
     seasonActions: {},
     markAllButton: {},
+    markAllButtonDisabled: {},
     markAllText: {},
     episodesContainer: {},
     episodesLoadingContainer: {},
@@ -132,6 +134,7 @@ const defaultProps: SeasonItemProps = {
   onMarkWatched: jest.fn(),
   onMarkUnwatched: jest.fn(),
   onMarkAllWatched: jest.fn(),
+  onMarkAllUnwatched: jest.fn(),
   episodeTracking: null,
   markWatchedPending: false,
   markUnwatchedPending: false,
@@ -228,5 +231,73 @@ describe('SeasonItem', () => {
     );
 
     expect(getByText('Season 1')).toBeTruthy();
+  });
+
+  it('renders header-only mode without episode rows', () => {
+    const { queryByText } = renderWithProviders(
+      <SeasonItem {...defaultProps} isExpanded={true} showEpisodes={false} />
+    );
+
+    expect(queryByText('Pilot')).toBeNull();
+    expect(queryByText('Episode 2')).toBeNull();
+  });
+
+  it('shows spinner and disables mark-all button while bulk action is pending for the season', () => {
+    const { getByTestId } = renderWithProviders(
+      <SeasonItem
+        {...defaultProps}
+        isExpanded={true}
+        bulkActionState={{ action: 'mark', seasonNumber: 1, isPending: true }}
+      />
+    );
+
+    expect(getByTestId('season-mark-all-spinner-1')).toBeTruthy();
+    expect(getByTestId('season-mark-all-button-1').props.disabled).toBe(true);
+  });
+
+  it('calls onMarkAllUnwatched once for unmark-all confirmation', () => {
+    const alertMock = jest
+      .spyOn(require('react-native').Alert, 'alert')
+      .mockImplementation(jest.fn());
+    const onMarkAllUnwatched = jest.fn();
+    const { getByTestId } = renderWithProviders(
+      <SeasonItem
+        {...defaultProps}
+        isExpanded={true}
+        showEpisodes={false}
+        episodeTracking={{
+          episodes: {
+            '1_1': {} as any,
+            '1_2': {} as any,
+          },
+          metadata: {
+            tvShowName: 'Test Show',
+            posterPath: '/show-poster.jpg',
+            lastUpdated: Date.now(),
+          },
+        }}
+        onMarkAllUnwatched={onMarkAllUnwatched}
+      />
+    );
+
+    fireEvent.press(getByTestId('season-mark-all-button-1'));
+    expect(alertMock).toHaveBeenCalledTimes(1);
+
+    const alertCall = alertMock.mock.calls[0];
+    const buttons = alertCall[2] as Array<{ text?: string; onPress?: () => void }>;
+    const confirmButton = buttons.find((button) => button.text === 'Unmark all');
+
+    expect(confirmButton?.onPress).toBeDefined();
+    confirmButton?.onPress?.();
+
+    expect(onMarkAllUnwatched).toHaveBeenCalledTimes(1);
+    expect(onMarkAllUnwatched).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tvShowId: 100,
+        seasonNumber: 1,
+      })
+    );
+    expect(onMarkAllUnwatched.mock.calls[0][0].episodes).toHaveLength(2);
+    alertMock.mockRestore();
   });
 });

@@ -11,6 +11,7 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
     markEpisodeWatched: jest.fn().mockResolvedValue(undefined),
     markEpisodeUnwatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesWatched: jest.fn().mockResolvedValue(undefined),
+    markAllEpisodesUnwatched: jest.fn().mockResolvedValue(undefined),
     getShowTracking: jest.fn().mockResolvedValue(null),
     isEpisodeWatched: jest.fn().mockReturnValue(false),
     calculateSeasonProgress: jest.fn().mockReturnValue({ watched: 0, total: 10, percentage: 0 }),
@@ -67,6 +68,7 @@ jest.mock('@tanstack/react-query', () => ({
 
 // Dynamically import after mocks are set up
 import {
+  useMarkAllEpisodesUnwatched,
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
@@ -402,6 +404,37 @@ describe('useMarkEpisodeWatched', () => {
       1,
       mockSeasonEpisodes,
       mockShowMetadata
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['lists', 'test-user-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['list-membership-index', 'test-user-123'],
+      refetchType: 'active',
+    });
+  });
+
+  it('invalidates tracking and list queries after marking all season episodes unwatched', async () => {
+    const { result } = renderHook(() => useMarkAllEpisodesUnwatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodes: mockSeasonEpisodes,
+      });
+    });
+
+    expect(episodeTrackingService.markAllEpisodesUnwatched).toHaveBeenCalledWith(
+      123,
+      1,
+      mockSeasonEpisodes
     );
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['episodeTracking', 'test-user-123', 123],

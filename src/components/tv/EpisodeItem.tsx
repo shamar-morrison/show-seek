@@ -20,6 +20,7 @@ export interface EpisodeItemProps {
   isPending: boolean;
   hasAired: boolean;
   userRating: number;
+  disableWatchButton?: boolean;
   formatDate: (date: string | null) => string;
   onPress: () => void;
   onMarkWatched: () => void;
@@ -40,6 +41,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     isPending,
     hasAired,
     userRating,
+    disableWatchButton = false,
     formatDate,
     onPress,
     onMarkWatched,
@@ -49,7 +51,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     const styles = useSeasonScreenStyles();
     const { accentColor } = useAccentColor();
     const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
-    const isDisabled = isPending || (!isWatched && !hasAired);
+    const isDisabled = isPending || disableWatchButton || (!isWatched && !hasAired);
 
     const handleWatchToggle = useCallback(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
