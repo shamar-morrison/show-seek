@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -15,6 +16,7 @@ import {
   useIsPersonFavorited,
   useRemoveFavoritePerson,
 } from '@/src/hooks/useFavoritePersons';
+import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -69,6 +71,7 @@ export default function PersonDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
+  const { getListsForMedia } = useListMembership();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
   const addFavoriteMutation = useAddFavoritePerson();
   const removeFavoriteMutation = useRemoveFavoritePerson();
@@ -491,43 +494,49 @@ export default function PersonDetailScreen() {
               </View>
             )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForMovies.map((movie, index) => (
-                <TouchableOpacity
-                  key={`movie-${movie.id}-${index}`}
-                  style={styles.creditCard}
-                  onPress={() => handleMoviePress(movie.id)}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <MediaImage
-                    source={{
-                      uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small),
-                    }}
-                    style={styles.creditPoster}
-                    contentFit="cover"
-                  />
-                  <Text style={styles.creditTitle} numberOfLines={2}>
-                    {getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles)}
-                  </Text>
-                  <View style={styles.creditMeta}>
-                    {movie.release_date && (
-                      <Text style={styles.creditYear}>
-                        {new Date(movie.release_date).getFullYear()}
-                      </Text>
-                    )}
-                    {movie.vote_average > 0 && (
-                      <>
-                        {movie.release_date && <Text style={styles.creditYear}> • </Text>}
-                        <View style={styles.creditRating}>
-                          <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-                          <Text style={styles.creditRatingText}>
-                            {movie.vote_average.toFixed(1)}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {knownForMovies.map((movie, index) => {
+                const movieListIds = getListsForMedia(movie.id, 'movie');
+                return (
+                  <TouchableOpacity
+                    key={`movie-${movie.id}-${index}`}
+                    style={styles.creditCard}
+                    onPress={() => handleMoviePress(movie.id)}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <View style={styles.creditPosterContainer}>
+                      <MediaImage
+                        source={{
+                          uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small),
+                        }}
+                        style={styles.creditPoster}
+                        contentFit="cover"
+                      />
+                      {movieListIds.length > 0 && <ListMembershipBadge listIds={movieListIds} />}
+                    </View>
+                    <Text style={styles.creditTitle} numberOfLines={2}>
+                      {getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles)}
+                    </Text>
+                    <View style={styles.creditMeta}>
+                      {movie.release_date && (
+                        <Text style={styles.creditYear}>
+                          {new Date(movie.release_date).getFullYear()}
+                        </Text>
+                      )}
+                      {movie.vote_average > 0 && (
+                        <>
+                          {movie.release_date && <Text style={styles.creditYear}> • </Text>}
+                          <View style={styles.creditRating}>
+                            <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                            <Text style={styles.creditRatingText}>
+                              {movie.vote_average.toFixed(1)}
+                            </Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -554,43 +563,49 @@ export default function PersonDetailScreen() {
               </View>
             )}
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForTV.map((show, index) => (
-                <TouchableOpacity
-                  key={`tv-${show.id}-${index}`}
-                  style={styles.creditCard}
-                  onPress={() => handleTVPress(show.id)}
-                  activeOpacity={ACTIVE_OPACITY}
-                >
-                  <MediaImage
-                    source={{
-                      uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small),
-                    }}
-                    style={styles.creditPoster}
-                    contentFit="cover"
-                  />
-                  <Text style={styles.creditTitle} numberOfLines={2}>
-                    {getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)}
-                  </Text>
-                  <View style={styles.creditMeta}>
-                    {show.first_air_date && (
-                      <Text style={styles.creditYear}>
-                        {new Date(show.first_air_date).getFullYear()}
-                      </Text>
-                    )}
-                    {show.vote_average > 0 && (
-                      <>
-                        {show.first_air_date && <Text style={styles.creditYear}> • </Text>}
-                        <View style={styles.creditRating}>
-                          <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-                          <Text style={styles.creditRatingText}>
-                            {show.vote_average.toFixed(1)}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {knownForTV.map((show, index) => {
+                const showListIds = getListsForMedia(show.id, 'tv');
+                return (
+                  <TouchableOpacity
+                    key={`tv-${show.id}-${index}`}
+                    style={styles.creditCard}
+                    onPress={() => handleTVPress(show.id)}
+                    activeOpacity={ACTIVE_OPACITY}
+                  >
+                    <View style={styles.creditPosterContainer}>
+                      <MediaImage
+                        source={{
+                          uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small),
+                        }}
+                        style={styles.creditPoster}
+                        contentFit="cover"
+                      />
+                      {showListIds.length > 0 && <ListMembershipBadge listIds={showListIds} />}
+                    </View>
+                    <Text style={styles.creditTitle} numberOfLines={2}>
+                      {getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)}
+                    </Text>
+                    <View style={styles.creditMeta}>
+                      {show.first_air_date && (
+                        <Text style={styles.creditYear}>
+                          {new Date(show.first_air_date).getFullYear()}
+                        </Text>
+                      )}
+                      {show.vote_average > 0 && (
+                        <>
+                          {show.first_air_date && <Text style={styles.creditYear}> • </Text>}
+                          <View style={styles.creditRating}>
+                            <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                            <Text style={styles.creditRatingText}>
+                              {show.vote_average.toFixed(1)}
+                            </Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -698,11 +713,14 @@ const styles = StyleSheet.create({
     width: 120,
     marginRight: SPACING.m,
   },
+  creditPosterContainer: {
+    position: 'relative',
+    marginBottom: SPACING.s,
+  },
   creditPoster: {
     width: 120,
     height: 180,
     borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
   },
   creditTitle: {
     color: COLORS.text,

@@ -48,6 +48,7 @@ module.exports = {
   TouchableWithoutFeedback: createTouchable('TouchableWithoutFeedback'),
   Pressable: createTouchable('Pressable'),
   ScrollView: 'ScrollView',
+  RefreshControl: 'RefreshControl',
   FlatList: 'FlatList',
   SectionList: 'SectionList',
   ActivityIndicator: 'ActivityIndicator',
@@ -64,6 +65,7 @@ module.exports = {
     View: 'Animated.View',
     Text: 'Animated.Text',
     Image: 'Animated.Image',
+    ScrollView: 'Animated.ScrollView',
     Value: jest.fn(() => ({
       setValue: jest.fn(),
       interpolate: jest.fn(),
