@@ -4,9 +4,9 @@ enableScreens();
 // Initialize i18n early to ensure translations are available throughout the app
 import i18n from '@/src/i18n';
 
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS } from '@/src/constants/theme';
-import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
@@ -17,21 +17,20 @@ import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
-import { resetReadBudgetForSession } from '@/src/services/ReadBudgetGuard';
-import { configureRevenueCat } from '@/src/services/revenueCat';
 import {
   clearFirestoreReadAuditEvents,
-  getFirestoreReadAuditReport,
   logFirestoreReadAuditReport,
 } from '@/src/services/firestoreReadAudit';
+import { resetReadBudgetForSession } from '@/src/services/ReadBudgetGuard';
+import { configureRevenueCat } from '@/src/services/revenueCat';
 
-import { initializeReminderSync } from '@/src/utils/reminderSync';
 import {
   clearReadAuditSession,
   getReadAuditSessionReport,
   logReadAuditSessionReport,
   startReadAuditSession,
 } from '@/src/utils/readAuditCollector';
+import { initializeReminderSync } from '@/src/utils/reminderSync';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -243,46 +242,6 @@ function RootLayoutNav() {
       console.error('[NotificationChannel] Failed to create default channel', error);
     });
   }, [accentColor]);
-
-  useEffect(() => {
-    if (!__DEV__) {
-      return;
-    }
-
-    if (READ_OPTIMIZATION_FLAGS.debugDisableReadAuditGlobalSetup) {
-      if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-        console.log('[RootLayout] __READ_AUDIT__ setup disabled by debug flag');
-      }
-      return;
-    }
-
-    if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-      console.log('[RootLayout] __READ_AUDIT__ setup enabled');
-    }
-
-    const reportAuditState = (context: string) => {
-      logFirestoreReadAuditReport(context);
-      logReadAuditSessionReport(context);
-      return {
-        firestore: getFirestoreReadAuditReport(),
-        session: getReadAuditSessionReport(),
-      };
-    };
-
-    (globalThis as any).__READ_AUDIT__ = {
-      report: (context = 'manual') => reportAuditState(context),
-      clear: () => {
-        resetClientReadState();
-        const uid = user?.uid;
-        startReadAuditSession(uid);
-        return reportAuditState('manual-clear');
-      },
-    };
-
-    return () => {
-      delete (globalThis as any).__READ_AUDIT__;
-    };
-  }, [user?.uid]);
 
   useEffect(() => {
     const currentUid = user?.uid ?? null;
