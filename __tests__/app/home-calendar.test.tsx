@@ -104,4 +104,12 @@ describe('CalendarScreen', () => {
       })
     );
   });
+
+  it('shows updating text while enrichment is loading', () => {
+    mockUpcomingState.isLoadingEnrichment = true;
+
+    const { getByText } = render(<CalendarScreen />);
+
+    expect(getByText('Updating TV episodes...')).toBeTruthy();
+  });
 });

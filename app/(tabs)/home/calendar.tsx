@@ -1,5 +1,6 @@
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -10,7 +11,7 @@ import { useRouter } from 'expo-router';
 import { Calendar } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -68,12 +69,7 @@ export default function CalendarScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
       {/* Enrichment loading indicator */}
-      {isLoadingEnrichment && (
-        <View style={styles.enrichmentIndicator}>
-          <ActivityIndicator size="small" color={accentColor} />
-          <Text style={styles.enrichmentText}>{t('calendar.updatingEpisodes')}</Text>
-        </View>
-      )}
+      {isLoadingEnrichment && <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />}
 
       <ReleaseCalendar
         sections={sections}
@@ -123,17 +119,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.white,
-  },
-  enrichmentIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xs,
-    gap: SPACING.s,
-    backgroundColor: COLORS.surface,
-  },
-  enrichmentText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
 });

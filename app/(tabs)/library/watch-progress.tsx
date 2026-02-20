@@ -4,6 +4,7 @@ import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { SortOption, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { WatchingShowCard } from '@/src/components/watching/WatchingShowCard';
 import { COLORS, EMPTY_STATE_HEIGHT } from '@/src/constants/theme';
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
@@ -19,8 +20,8 @@ import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
 const ALLOWED_SORT_OPTIONS: SortOption[] = ['progress', 'alphabetical', 'lastWatched'];
@@ -111,8 +112,6 @@ export default function WatchProgressScreen() {
     getSearchableText: (item) => item.tvShowName,
   });
 
-  const insets = useSafeAreaInsets();
-
   // Configure header with search + sort buttons
   useLayoutEffect(() => {
     if (isSearchActive) {
@@ -130,7 +129,6 @@ export default function WatchProgressScreen() {
         headerTitle: undefined,
         headerRight: () => (
           <View style={styles.headerButtons}>
-            {isFetching && <ActivityIndicator size="small" color={COLORS.textSecondary} />}
             <HeaderIconButton onPress={searchButton.onPress}>
               <Search size={22} color={COLORS.text} />
             </HeaderIconButton>
@@ -151,7 +149,6 @@ export default function WatchProgressScreen() {
     setSearchQuery,
     deactivateSearch,
     searchButton,
-    isFetching,
     hasActiveSort,
     t,
   ]);
@@ -174,6 +171,12 @@ export default function WatchProgressScreen() {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
+        {isFetching && (
+          <InlineUpdatingIndicator
+            message={t('library.updatingWatchProgress')}
+            testID="watch-progress-updating-indicator"
+          />
+        )}
         <EmptyState
           icon={TvIcon}
           title={t('library.emptyWatchProgress')}
@@ -186,6 +189,12 @@ export default function WatchProgressScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={libraryListStyles.divider} />
+      {isFetching && (
+        <InlineUpdatingIndicator
+          message={t('library.updatingWatchProgress')}
+          testID="watch-progress-updating-indicator"
+        />
+      )}
       <FlashList
         data={displayItems}
         renderItem={renderItem}

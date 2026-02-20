@@ -1,4 +1,5 @@
 import { getImageUrl, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING, hexToRGBA } from '@/src/constants/theme';
@@ -363,10 +364,10 @@ export default function WhereToWatchScreen() {
         </View>
 
         {selectedList && isLoadingEnrichment && (
-          <View style={styles.enrichmentIndicator} testID="where-to-watch-enrichment-indicator">
-            <ActivityIndicator size="small" color={accentColor} />
-            <Text style={styles.enrichmentText}>{t('whereToWatch.updatingAvailability')}</Text>
-          </View>
+          <InlineUpdatingIndicator
+            message={t('whereToWatch.updatingAvailability')}
+            testID="where-to-watch-enrichment-indicator"
+          />
         )}
 
         <View style={styles.resultsContainer}>
@@ -645,18 +646,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: BORDER_RADIUS.s,
     backgroundColor: COLORS.surfaceLight,
-  },
-  enrichmentIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.s,
-    paddingVertical: SPACING.xs,
-    backgroundColor: COLORS.surface,
-  },
-  enrichmentText: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
   },
   resultsContainer: {
     flex: 1,
