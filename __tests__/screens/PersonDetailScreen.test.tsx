@@ -1,11 +1,18 @@
 import PersonDetailScreen from '@/src/screens/PersonDetailScreen';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockGetListsForMedia = jest.fn();
 const mockUseQuery = jest.fn();
+const mockPresent = jest.fn();
+const mockRequireAccount = jest.fn();
+const mockAuthState = {
+  user: { uid: 'user-1' } as { uid: string } | null,
+  isGuest: false,
+};
+let latestAddToListModalOnDismiss: (() => void) | null = null;
 
 const mockMovie = {
   id: 101,
@@ -146,15 +153,12 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 }));
 
 jest.mock('@/src/context/auth', () => ({
-  useAuth: () => ({
-    user: { uid: 'user-1' },
-    isGuest: false,
-  }),
+  useAuth: () => mockAuthState,
 }));
 
 jest.mock('@/src/context/GuestAccessContext', () => ({
   useGuestAccess: () => ({
-    requireAccount: jest.fn(),
+    requireAccount: mockRequireAccount,
   }),
 }));
 
@@ -198,9 +202,27 @@ jest.mock('@/src/hooks/useFavoritePersons', () => ({
   }),
 }));
 
+jest.mock('@/src/components/AddToListModal', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const AddToListModal = React.forwardRef(({ mediaItem, onDismiss }: any, ref: any) => {
+    latestAddToListModalOnDismiss = onDismiss ?? null;
+    React.useImperativeHandle(ref, () => ({
+      present: mockPresent,
+      dismiss: jest.fn(),
+    }));
+    return React.createElement(Text, { testID: 'add-to-list-modal' }, mediaItem?.media_type || '');
+  });
+  AddToListModal.displayName = 'AddToListModal';
+  return { __esModule: true, default: AddToListModal };
+});
+
 describe('PersonDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.isGuest = false;
+    latestAddToListModalOnDismiss = null;
 
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
       const creditKey = queryKey[2];
@@ -250,5 +272,118 @@ describe('PersonDetailScreen', () => {
     const { queryAllByTestId } = render(<PersonDetailScreen />);
 
     expect(queryAllByTestId('list-membership-badge')).toHaveLength(0);
+  });
+
+  it('does not throw when transitioning from loading to loaded state', () => {
+    let isPersonLoading = true;
+
+    mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
+      const creditKey = queryKey[2];
+
+      if (creditKey === 'movie-credits') {
+        return {
+          data: { cast: [mockMovie], crew: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
+      }
+
+      if (creditKey === 'tv-credits') {
+        return {
+          data: { cast: [mockTVShow], crew: [] },
+          isLoading: false,
+          isError: false,
+          refetch: jest.fn(),
+        };
+      }
+
+      return {
+        data: isPersonLoading ? undefined : mockPerson,
+        isLoading: isPersonLoading,
+        isError: false,
+        refetch: jest.fn(),
+      };
+    });
+
+    const { queryByText, rerender } = render(<PersonDetailScreen />);
+    expect(queryByText('Known Movie')).toBeNull();
+
+    isPersonLoading = false;
+
+    expect(() => rerender(<PersonDetailScreen />)).not.toThrow();
+    expect(queryByText('Known Movie')).toBeTruthy();
+  });
+
+  it('opens AddToListModal for authenticated long press on known-for movie', async () => {
+    const { getByText, getByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known Movie'), 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('add-to-list-modal')).toBeTruthy();
+    });
+
+    expect(getByTestId('add-to-list-modal').props.children).toBe('movie');
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+    expect(mockRequireAccount).not.toHaveBeenCalled();
+  });
+
+  it('opens AddToListModal for authenticated long press on known-for TV', async () => {
+    const { getByText, getByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known TV Show'), 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('add-to-list-modal')).toBeTruthy();
+    });
+
+    expect(getByTestId('add-to-list-modal').props.children).toBe('tv');
+    expect(mockPresent).toHaveBeenCalledTimes(1);
+    expect(mockRequireAccount).not.toHaveBeenCalled();
+  });
+
+  it('clears selected media when AddToListModal is dismissed', async () => {
+    const { getByText, getByTestId, queryByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known Movie'), 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('add-to-list-modal')).toBeTruthy();
+    });
+    expect(latestAddToListModalOnDismiss).toBeDefined();
+
+    act(() => {
+      latestAddToListModalOnDismiss?.();
+    });
+
+    await waitFor(() => {
+      expect(queryByTestId('add-to-list-modal')).toBeNull();
+    });
+  });
+
+  it('blocks unauthenticated long press from opening AddToListModal', () => {
+    mockAuthState.user = null;
+
+    const { getByText, queryByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known Movie'), 'longPress');
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(mockPresent).not.toHaveBeenCalled();
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
+  });
+
+  it('blocks guest long press from opening AddToListModal', () => {
+    mockAuthState.user = { uid: 'guest-user' };
+    mockAuthState.isGuest = true;
+
+    const { getByText, queryByTestId } = render(<PersonDetailScreen />);
+
+    fireEvent(getByText('Known TV Show'), 'longPress');
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(mockPresent).not.toHaveBeenCalled();
+    expect(queryByTestId('add-to-list-modal')).toBeNull();
   });
 });

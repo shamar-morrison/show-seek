@@ -49,6 +49,7 @@ interface AddToListModalProps {
   sourceListId?: string;
   bulkAddMode?: 'move' | 'copy';
   onShowToast?: (message: string) => void;
+  onDismiss?: () => void;
   onComplete?: () => void;
 }
 
@@ -115,7 +116,7 @@ ListItemRow.displayName = 'ListItemRow';
 
 const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
   (
-    { mediaItem, mediaItems, sourceListId, bulkAddMode = 'move', onShowToast, onComplete },
+    { mediaItem, mediaItems, sourceListId, bulkAddMode = 'move', onShowToast, onDismiss, onComplete },
     ref
   ) => {
     const router = useRouter();
@@ -263,6 +264,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       initialMembershipRef.current = {};
       setOperationError(null);
       setIsSaving(false);
+      onDismiss?.();
 
       // For bulk mode sessions, dismissing the modal is treated as ending the selection flow.
       // For non-bulk sessions, only fire completion callback after successful save.
@@ -272,7 +274,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       didCompleteRef.current = false;
       wasBulkSessionRef.current = false;
-    }, [onComplete]);
+    }, [onComplete, onDismiss]);
 
     // Error handler for mutations
     const handleMutationError = useCallback(
