@@ -5,6 +5,7 @@ import {
   MAX_FREE_COLLECTIONS,
 } from '@/src/services/CollectionTrackingService';
 import type { CollectionProgressItem } from '@/src/types/collectionTracking';
+import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -13,6 +14,7 @@ import { auth } from '../firebase/config';
 // Aggressive cache time for collection data since it rarely changes
 const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
 const COLLECTION_GC_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
+const START_TRACKING_BACKFILL_TIMEOUT_MS = 5000;
 
 /**
  * Hook to fetch all tracked collections using cached query reads.
@@ -99,12 +101,37 @@ export const useStartCollectionTracking = () => {
       name: string;
       totalMovies: number;
       initialWatchedMovieIds?: number[];
+      collectionMovieIds?: number[];
     }) => {
+      let initialWatchedMovieIds = params.initialWatchedMovieIds ?? [];
+
+      if (
+        params.initialWatchedMovieIds === undefined &&
+        Array.isArray(params.collectionMovieIds) &&
+        params.collectionMovieIds.length > 0
+      ) {
+        const timeout = createTimeoutWithCleanup(
+          START_TRACKING_BACKFILL_TIMEOUT_MS,
+          'Backfill watched history timed out'
+        );
+        try {
+          initialWatchedMovieIds = await Promise.race([
+            collectionTrackingService.getPreviouslyWatchedMovieIds(params.collectionMovieIds),
+            timeout.promise,
+          ]);
+        } catch (error) {
+          console.warn('[useStartCollectionTracking] Failed to backfill watched history:', error);
+          initialWatchedMovieIds = [];
+        } finally {
+          timeout.cancel();
+        }
+      }
+
       await collectionTrackingService.startTracking(
         params.collectionId,
         params.name,
         params.totalMovies,
-        params.initialWatchedMovieIds
+        initialWatchedMovieIds
       );
     },
     onSuccess: () => {

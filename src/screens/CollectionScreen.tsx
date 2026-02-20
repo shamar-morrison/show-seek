@@ -112,6 +112,7 @@ export default function CollectionScreen() {
           collectionId,
           name: collectionQuery.data.name,
           totalMovies: collectionQuery.data.parts.length,
+          collectionMovieIds: collectionQuery.data.parts.map((part) => part.id),
         });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (error) {

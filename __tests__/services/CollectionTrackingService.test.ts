@@ -1,4 +1,5 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, updateDoc } from 'firebase/firestore';
+import { auth } from '@/src/firebase/config';
 
 let mockUserId: string | null = 'test-user-id';
 
@@ -16,6 +17,12 @@ jest.mock('@/src/firebase/firestore', () => ({
 }));
 
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
+
+const createGetDocsSnapshot = (empty: boolean) => ({
+  empty,
+  size: empty ? 0 : 1,
+  docs: empty ? [] : [{}],
+});
 
 describe('CollectionTrackingService', () => {
   beforeEach(() => {
@@ -99,5 +106,79 @@ describe('CollectionTrackingService', () => {
 
     await expect(collectionTrackingService.removeWatchedMovie(123, 456)).resolves.toBeUndefined();
     expect(getDoc).not.toHaveBeenCalled();
+  });
+
+  it('returns watched movie IDs from history checks in input order', async () => {
+    (collection as jest.Mock).mockImplementation((_db, ...segments: string[]) => ({
+      path: segments.join('/'),
+    }));
+    (limit as jest.Mock).mockImplementation((value: number) => ({ type: 'limit', value }));
+    (query as jest.Mock).mockImplementation((ref: { path: string }, ...constraints: unknown[]) => ({
+      ref,
+      constraints,
+    }));
+    (getDocs as jest.Mock).mockImplementation(({ ref }: { ref: { path: string } }) => {
+      if (
+        ref.path === 'users/test-user-id/watched_movies/101/watches' ||
+        ref.path === 'users/test-user-id/watched_movies/303/watches'
+      ) {
+        return Promise.resolve(createGetDocsSnapshot(false));
+      }
+
+      return Promise.resolve(createGetDocsSnapshot(true));
+    });
+
+    await expect(
+      collectionTrackingService.getPreviouslyWatchedMovieIds([101, 202, 303])
+    ).resolves.toEqual([101, 303]);
+    expect(getDocs).toHaveBeenCalledTimes(3);
+    expect(limit).toHaveBeenCalledWith(1);
+  });
+
+  it('de-duplicates and sanitizes movie IDs before checking watch history', async () => {
+    (collection as jest.Mock).mockImplementation((_db, ...segments: string[]) => ({
+      path: segments.join('/'),
+    }));
+    (limit as jest.Mock).mockImplementation((value: number) => ({ type: 'limit', value }));
+    (query as jest.Mock).mockImplementation((ref: { path: string }, ...constraints: unknown[]) => ({
+      ref,
+      constraints,
+    }));
+    (getDocs as jest.Mock).mockResolvedValue(createGetDocsSnapshot(true));
+
+    await expect(
+      collectionTrackingService.getPreviouslyWatchedMovieIds([10, 10, -4, 0, 8.5, 12, NaN, 12])
+    ).resolves.toEqual([]);
+
+    const requestedPaths = (collection as jest.Mock).mock.calls.map(([, ...segments]) =>
+      segments.join('/')
+    );
+    expect(requestedPaths).toEqual([
+      'users/test-user-id/watched_movies/10/watches',
+      'users/test-user-id/watched_movies/12/watches',
+    ]);
+    expect(getDocs).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns empty watched IDs when unauthenticated', async () => {
+    mockUserId = null;
+
+    await expect(collectionTrackingService.getPreviouslyWatchedMovieIds([10, 20])).resolves.toEqual(
+      []
+    );
+    expect(getDocs).not.toHaveBeenCalled();
+  });
+
+  it('returns empty watched IDs for anonymous users without querying Firestore', async () => {
+    const authCurrentUserGetterSpy = jest
+      .spyOn(auth, 'currentUser', 'get')
+      .mockReturnValue({ uid: 'anon-uid', isAnonymous: true } as any);
+
+    await expect(collectionTrackingService.getPreviouslyWatchedMovieIds([10, 20])).resolves.toEqual(
+      []
+    );
+    expect(getDocs).not.toHaveBeenCalled();
+
+    authCurrentUserGetterSpy.mockRestore();
   });
 });
