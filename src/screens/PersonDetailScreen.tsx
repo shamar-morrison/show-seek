@@ -123,6 +123,7 @@ export default function PersonDetailScreen() {
         vote_average: number;
         release_date?: string;
         first_air_date?: string;
+        genre_ids?: number[];
       },
       mediaType: 'movie' | 'tv'
     ) => {
@@ -141,6 +142,7 @@ export default function PersonDetailScreen() {
         vote_average: item.vote_average || 0,
         release_date: item.release_date || item.first_air_date || '',
         first_air_date: item.first_air_date,
+        genre_ids: item.genre_ids,
       });
     },
     [isGuest, requireAccount, user]
