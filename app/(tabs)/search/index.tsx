@@ -1,7 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
-import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
@@ -14,10 +14,10 @@ import {
   SPACING,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
-import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';

@@ -80,7 +80,7 @@ export default function EpisodeDetailScreen() {
   const detailStyles = useDetailStyles();
   const params = useLocalSearchParams();
   const router = useRouter();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const {
     tvId,
