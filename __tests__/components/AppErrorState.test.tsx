@@ -1,4 +1,5 @@
 import AppErrorState from '@/src/components/ui/AppErrorState';
+import { SPACING } from '@/src/constants/theme';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
@@ -8,6 +9,41 @@ jest.mock('expo-linear-gradient', () => {
     LinearGradient: ({ children, ...props }: any) => React.createElement('LinearGradient', props, children),
   };
 });
+
+const hasActionsContainerStyle = (node: unknown): boolean => {
+  if (!node) {
+    return false;
+  }
+
+  if (Array.isArray(node)) {
+    return node.some((child) => hasActionsContainerStyle(child));
+  }
+
+  if (typeof node !== 'object') {
+    return false;
+  }
+
+  const typedNode = node as {
+    props?: { style?: unknown };
+    children?: unknown[];
+  };
+  const style = typedNode.props?.style;
+  const styleEntries = Array.isArray(style) ? style : [style];
+  const matchesActionsStyle = styleEntries.some(
+    (entry) =>
+      !!entry &&
+      typeof entry === 'object' &&
+      (entry as { width?: unknown }).width === '100%' &&
+      (entry as { marginTop?: unknown }).marginTop === SPACING.l &&
+      (entry as { gap?: unknown }).gap === SPACING.s
+  );
+
+  if (matchesActionsStyle) {
+    return true;
+  }
+
+  return Array.isArray(typedNode.children) && typedNode.children.some((child) => hasActionsContainerStyle(child));
+};
 
 describe('AppErrorState', () => {
   const originalDev = (global as any).__DEV__;
@@ -51,6 +87,12 @@ describe('AppErrorState', () => {
 
     expect(queryByText('Debug')).toBeNull();
     expect(queryByText('Low-level failure')).toBeNull();
+  });
+
+  it('does not render actions container when no actions are provided', () => {
+    const { toJSON } = render(<AppErrorState error={new Error('Failure')} message="Friendly fallback" />);
+
+    expect(hasActionsContainerStyle(toJSON())).toBe(false);
   });
 
   it('fires primary and secondary actions', () => {

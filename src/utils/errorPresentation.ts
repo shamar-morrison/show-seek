@@ -59,12 +59,57 @@ const collectCandidates = (error: unknown): string[] => {
     }
   };
 
+  const pushDetails = (value: unknown) => {
+    if (value && typeof value === 'object') {
+      const details = value as Record<string, unknown>;
+      pushValue(details.message);
+      pushValue(details.code);
+      pushValue(details.reason);
+    }
+  };
+
+  const pushResponse = (value: unknown) => {
+    if (value && typeof value === 'object') {
+      const response = value as Record<string, unknown>;
+      pushValue(response.status);
+      pushValue(response.statusText);
+      if (response.data && typeof response.data === 'object') {
+        const responseData = response.data as Record<string, unknown>;
+        pushValue(responseData.message);
+        pushValue(responseData.error);
+      }
+    }
+  };
+
   pushValue(error);
 
   if (error instanceof Error) {
+    const typedError = error as Error & {
+      name?: unknown;
+      code?: unknown;
+      cause?: unknown;
+      response?: unknown;
+    };
+
     pushValue(error.message);
-    pushValue((error as Error & { name?: unknown }).name);
-    pushValue((error as Error & { cause?: unknown }).cause);
+    pushValue(typedError.name);
+    pushValue(typedError.code);
+    pushResponse(typedError.response);
+    pushValue(typedError.cause);
+
+    const cause = typedError.cause;
+    if (cause instanceof Error) {
+      const causeError = cause as Error & { code?: unknown; response?: unknown };
+      pushValue(causeError.message);
+      pushValue(causeError.code);
+      pushResponse(causeError.response);
+    } else if (cause && typeof cause === 'object') {
+      const causeObj = cause as Record<string, unknown>;
+      pushValue(causeObj.message);
+      pushValue(causeObj.code);
+      pushDetails(causeObj.details);
+      pushResponse(causeObj.response);
+    }
   }
 
   if (error && typeof error === 'object' && !(error instanceof Error)) {
@@ -77,23 +122,8 @@ const collectCandidates = (error: unknown): string[] => {
     pushValue(obj.reason);
     pushValue(obj.error);
 
-    if (obj.details && typeof obj.details === 'object') {
-      const details = obj.details as Record<string, unknown>;
-      pushValue(details.message);
-      pushValue(details.code);
-      pushValue(details.reason);
-    }
-
-    if (obj.response && typeof obj.response === 'object') {
-      const response = obj.response as Record<string, unknown>;
-      pushValue(response.status);
-      pushValue(response.statusText);
-      if (response.data && typeof response.data === 'object') {
-        const responseData = response.data as Record<string, unknown>;
-        pushValue(responseData.message);
-        pushValue(responseData.error);
-      }
-    }
+    pushDetails(obj.details);
+    pushResponse(obj.response);
   }
 
   return candidates;

@@ -15,24 +15,6 @@ function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
   );
 }
 
-// Component with controllable error state
-function ControllableComponent({
-  error,
-  setError,
-}: {
-  error: boolean;
-  setError: (val: boolean) => void;
-}) {
-  if (error) {
-    throw new Error('Controlled error');
-  }
-  return (
-    <View testID="controllable-content">
-      <Text>Normal content</Text>
-    </View>
-  );
-}
-
 describe('ErrorBoundary', () => {
   // Suppress console.error for expected errors in tests
   const originalError = console.error;
@@ -150,9 +132,13 @@ describe('ErrorBoundary', () => {
     it('should trigger app reload action when reload button is pressed', async () => {
       const updatesModule = require('expo-updates');
       const platformOSDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
-      const originalWindow = (global as { window?: Window }).window;
 
       try {
+        Object.defineProperty(Platform, 'OS', {
+          value: 'ios',
+          configurable: true,
+        });
+
         const { getByTestId } = render(
           <ErrorBoundary>
             <ThrowingComponent shouldThrow={true} />
@@ -167,14 +153,6 @@ describe('ErrorBoundary', () => {
       } finally {
         if (platformOSDescriptor) {
           Object.defineProperty(Platform, 'OS', platformOSDescriptor);
-        }
-        if (typeof originalWindow === 'undefined') {
-          delete (global as { window?: Window }).window;
-        } else {
-          Object.defineProperty(global, 'window', {
-            value: originalWindow,
-            configurable: true,
-          });
         }
       }
     });

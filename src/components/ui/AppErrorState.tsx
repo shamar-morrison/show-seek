@@ -56,6 +56,7 @@ export const AppErrorState = memo<AppErrorStateProps>(
           : message ?? t('errors.generic');
 
     const Icon = kind === 'network' ? Globe : kind === 'timeout' ? Clock : AlertCircle;
+    const hasActions = Boolean(onRetry || onSecondaryAction);
 
     return (
       <View style={styles.container} testID={testID}>
@@ -85,29 +86,31 @@ export const AppErrorState = memo<AppErrorStateProps>(
             </View>
           ) : null}
 
-          <View style={styles.actions}>
-            {onRetry ? (
-              <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: resolvedAccentColor }]}
-                onPress={onRetry}
-                testID={retryTestID}
-              >
-                <Text style={styles.primaryButtonText}>{retryLabel ?? t('common.retry')}</Text>
-              </TouchableOpacity>
-            ) : null}
+          {hasActions ? (
+            <View style={styles.actions}>
+              {onRetry ? (
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: resolvedAccentColor }]}
+                  onPress={onRetry}
+                  testID={retryTestID}
+                >
+                  <Text style={styles.primaryButtonText}>{retryLabel ?? t('common.retry')}</Text>
+                </TouchableOpacity>
+              ) : null}
 
-            {onSecondaryAction ? (
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={onSecondaryAction}
-                testID={secondaryActionTestID}
-              >
-                <Text style={[styles.secondaryButtonText, { color: resolvedAccentColor }]}> 
-                  {secondaryActionLabel ?? t('common.goBack')}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
+              {onSecondaryAction ? (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={onSecondaryAction}
+                  testID={secondaryActionTestID}
+                >
+                  <Text style={[styles.secondaryButtonText, { color: resolvedAccentColor }]}>
+                    {secondaryActionLabel ?? t('common.goBack')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </View>
     );
