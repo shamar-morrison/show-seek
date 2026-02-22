@@ -7,6 +7,7 @@ import i18n from '@/src/i18n';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { BASE_STACK_SCREEN_OPTIONS } from '@/src/constants/navigation';
 import { COLORS } from '@/src/constants/theme';
+import ErrorBoundary from '@/src/components/ErrorBoundary';
 import { AccentColorProvider, useAccentColor } from '@/src/context/AccentColorProvider';
 import { AuthProvider, useAuth } from '@/src/context/auth';
 import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
@@ -506,24 +507,26 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <GuestAccessProvider>
-          <PremiumProvider>
-            <TraktProvider>
-              <LanguageProvider>
-                <RegionProvider>
-                  <AccentColorProvider>
-                    <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
-                      <RootLayoutNav />
-                    </GestureHandlerRootView>
-                  </AccentColorProvider>
-                </RegionProvider>
-              </LanguageProvider>
-            </TraktProvider>
-          </PremiumProvider>
-        </GuestAccessProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <GuestAccessProvider>
+            <PremiumProvider>
+              <TraktProvider>
+                <LanguageProvider>
+                  <RegionProvider>
+                    <AccentColorProvider>
+                      <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                        <RootLayoutNav />
+                      </GestureHandlerRootView>
+                    </AccentColorProvider>
+                  </RegionProvider>
+                </LanguageProvider>
+              </TraktProvider>
+            </PremiumProvider>
+          </GuestAccessProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

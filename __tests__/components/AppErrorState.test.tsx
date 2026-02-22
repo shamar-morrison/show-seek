@@ -1,0 +1,77 @@
+import AppErrorState from '@/src/components/ui/AppErrorState';
+import { fireEvent, render } from '@testing-library/react-native';
+import React from 'react';
+
+jest.mock('expo-linear-gradient', () => {
+  const React = require('react');
+  return {
+    LinearGradient: ({ children, ...props }: any) => React.createElement('LinearGradient', props, children),
+  };
+});
+
+describe('AppErrorState', () => {
+  const originalDev = (global as any).__DEV__;
+
+  afterEach(() => {
+    (global as any).__DEV__ = originalDev;
+    jest.clearAllMocks();
+  });
+
+  it('shows network-specific friendly copy for connectivity errors', () => {
+    const { getByText } = render(
+      <AppErrorState error={{ code: 'ERR_NETWORK', message: 'Network Error' }} message="Fallback" />
+    );
+
+    expect(getByText('Network error. Please check your connection.')).toBeTruthy();
+  });
+
+  it('uses caller fallback message for generic errors', () => {
+    const { getByText } = render(<AppErrorState error={new Error('Boom')} message="Friendly fallback" />);
+
+    expect(getByText('Friendly fallback')).toBeTruthy();
+  });
+
+  it('shows technical details only in dev mode', () => {
+    (global as any).__DEV__ = true;
+
+    const { getByText } = render(
+      <AppErrorState error={new Error('Low-level failure')} message="Friendly fallback" />
+    );
+
+    expect(getByText('Debug')).toBeTruthy();
+    expect(getByText('Low-level failure')).toBeTruthy();
+  });
+
+  it('hides technical details in non-dev mode', () => {
+    (global as any).__DEV__ = false;
+
+    const { queryByText } = render(
+      <AppErrorState error={new Error('Low-level failure')} message="Friendly fallback" />
+    );
+
+    expect(queryByText('Debug')).toBeNull();
+    expect(queryByText('Low-level failure')).toBeNull();
+  });
+
+  it('fires primary and secondary actions', () => {
+    const onRetry = jest.fn();
+    const onSecondaryAction = jest.fn();
+
+    const { getByText } = render(
+      <AppErrorState
+        error={new Error('Failure')}
+        message="Friendly"
+        onRetry={onRetry}
+        retryLabel="Retry now"
+        onSecondaryAction={onSecondaryAction}
+        secondaryActionLabel="Go back now"
+      />
+    );
+
+    fireEvent.press(getByText('Retry now'));
+    fireEvent.press(getByText('Go back now'));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onSecondaryAction).toHaveBeenCalledTimes(1);
+  });
+});

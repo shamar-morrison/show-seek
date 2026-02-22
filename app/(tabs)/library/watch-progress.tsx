@@ -2,6 +2,7 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { SortOption, SortState } from '@/src/components/MediaSortModal';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
@@ -33,7 +34,7 @@ const DEFAULT_SORT_STATE: SortState = {
 
 export default function WatchProgressScreen() {
   const navigation = useNavigation();
-  const { data, isLoading, isFetching, error } = useCurrentlyWatching();
+  const { data, isLoading, isFetching, error, refresh } = useCurrentlyWatching();
   const { t } = useTranslation();
   const iconBadgeStyles = useIconBadgeStyles();
 
@@ -161,9 +162,15 @@ export default function WatchProgressScreen() {
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
+      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
+        <AppErrorState
+          error={error}
+          message={t('library.loadingWatchHistory')}
+          onRetry={() => {
+            void refresh();
+          }}
+        />
+      </SafeAreaView>
     );
   }
 
@@ -215,17 +222,6 @@ export default function WatchProgressScreen() {
 }
 
 const styles = StyleSheet.create({
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.background,
-  },
-  errorText: {
-    color: COLORS.error,
-    textAlign: 'center',
-  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',

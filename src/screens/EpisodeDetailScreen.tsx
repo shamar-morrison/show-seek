@@ -11,6 +11,7 @@ import RatingButton from '@/src/components/RatingButton';
 import RatingModal from '@/src/components/RatingModal';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
@@ -42,7 +43,6 @@ import { useMediaNote } from '@/src/hooks/useNotes';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
@@ -391,15 +391,24 @@ export default function EpisodeDetailScreen() {
 
   if (isError || !episode) {
     return (
-      <SafeAreaView style={[errorStyles.container, styles.errorContainer]}>
+      <SafeAreaView style={screenStyles.container} edges={['top']}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={[errorStyles.text, styles.errorText]}>{t('episodeDetail.failedToLoad')}</Text>
-        <TouchableOpacity
-          style={[styles.errorButton, { backgroundColor: accentColor }]}
-          onPress={handleBack}
-        >
-          <Text style={styles.errorButtonText}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
+        <AppErrorState
+          error={episodeDetailsQuery.error ?? tvShowQuery.error ?? seasonQuery.error}
+          message={t('episodeDetail.failedToLoad')}
+          onRetry={() => {
+            void Promise.all([
+              episodeDetailsQuery.refetch(),
+              episodeCreditsQuery.refetch(),
+              episodeVideosQuery.refetch(),
+              episodeImagesQuery.refetch(),
+              seasonQuery.refetch(),
+              tvShowQuery.refetch(),
+            ]);
+          }}
+          onSecondaryAction={handleBack}
+          secondaryActionLabel={t('common.goBack')}
+        />
       </SafeAreaView>
     );
   }

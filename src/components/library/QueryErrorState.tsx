@@ -1,4 +1,4 @@
-import { ErrorState } from '@/src/components/library/ErrorState';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,14 +9,6 @@ interface QueryErrorStateProps {
   fallbackMessage?: string;
 }
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-
-  return fallback;
-};
-
 export function QueryErrorState({
   error,
   onRetry,
@@ -26,9 +18,10 @@ export function QueryErrorState({
   const { t } = useTranslation();
 
   return (
-    <ErrorState
+    <AppErrorState
+      error={error}
       title={title ?? t('common.error')}
-      message={getErrorMessage(error, fallbackMessage ?? t('errors.generic'))}
+      message={fallbackMessage ?? t('errors.generic')}
       onRetry={onRetry}
     />
   );

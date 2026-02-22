@@ -28,6 +28,7 @@ import { BlurredText } from '@/src/components/ui/BlurredText';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
@@ -54,7 +55,6 @@ import {
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useTVReminderLogic } from '@/src/hooks/useTVReminderLogic';
-import { errorStyles } from '@/src/styles/errorStyles';
 import {
   getListColor,
   getListIconComponent,
@@ -243,16 +243,15 @@ export default function TVDetailScreen() {
 
   if (tvQuery.isError || !tvQuery.data) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>{t('tvDetail.failedToLoad')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={tvQuery.error}
+        message={t('tvDetail.failedToLoad')}
+        onRetry={() => {
+          void tvQuery.refetch();
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+      />
     );
   }
 

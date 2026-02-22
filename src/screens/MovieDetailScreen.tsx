@@ -31,6 +31,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { OpenWithButton } from '@/src/components/ui/OpenWithButton';
 import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { ShareButton } from '@/src/components/ui/ShareButton';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
@@ -66,7 +67,6 @@ import {
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
 import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 import { getLanguageName } from '@/src/utils/languages';
@@ -335,16 +335,15 @@ export default function MovieDetailScreen() {
 
   if (movieQuery.isError || !movieQuery.data) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>{t('movieDetail.failedToLoad')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={movieQuery.error}
+        message={t('movieDetail.failedToLoad')}
+        onRetry={() => {
+          void movieQuery.refetch();
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+      />
     );
   }
 
