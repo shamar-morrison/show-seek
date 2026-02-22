@@ -23,14 +23,6 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('expo-linear-gradient', () => {
-  const React = require('react');
-  return {
-    LinearGradient: ({ children, ...props }: any) =>
-      React.createElement('LinearGradient', props, children),
-  };
-});
-
 jest.mock('expo-image', () => ({
   Image: 'Image',
 }));

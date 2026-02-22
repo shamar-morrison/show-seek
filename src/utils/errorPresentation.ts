@@ -70,13 +70,24 @@ const collectCandidates = (error: unknown): string[] => {
 
   const pushResponse = (value: unknown) => {
     if (value && typeof value === 'object') {
+      const pushScalarValue = (scalar: unknown) => {
+        if (
+          typeof scalar === 'string' ||
+          typeof scalar === 'number' ||
+          typeof scalar === 'boolean' ||
+          typeof scalar === 'bigint'
+        ) {
+          pushValue(String(scalar));
+        }
+      };
+
       const response = value as Record<string, unknown>;
-      pushValue(response.status);
-      pushValue(response.statusText);
+      pushScalarValue(response.status);
+      pushScalarValue(response.statusText);
       if (response.data && typeof response.data === 'object') {
         const responseData = response.data as Record<string, unknown>;
-        pushValue(responseData.message);
-        pushValue(responseData.error);
+        pushScalarValue(responseData.message);
+        pushScalarValue(responseData.error);
       }
     }
   };

@@ -70,4 +70,13 @@ describe('errorPresentation', () => {
       'Nested message'
     );
   });
+
+  it('extracts numeric response status values as strings', () => {
+    expect(getTechnicalErrorMessage({ response: { status: 503 } })).toBe('503');
+  });
+
+  it('extracts non-string response data scalars as strings', () => {
+    expect(getTechnicalErrorMessage({ response: { data: { message: 408 } } })).toBe('408');
+    expect(getTechnicalErrorMessage({ response: { data: { error: false } } })).toBe('false');
+  });
 });

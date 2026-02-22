@@ -3,13 +3,6 @@ import { SPACING } from '@/src/constants/theme';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-linear-gradient', () => {
-  const React = require('react');
-  return {
-    LinearGradient: ({ children, ...props }: any) => React.createElement('LinearGradient', props, children),
-  };
-});
-
 const hasActionsContainerStyle = (node: unknown): boolean => {
   if (!node) {
     return false;
