@@ -3,6 +3,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { EpisodeItem } from '@/src/components/tv/EpisodeItem';
 import { SeasonItem, type BulkSeasonActionState } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import LoadingModal from '@/src/components/ui/LoadingModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
@@ -29,7 +30,6 @@ import {
   getSeasonHeaderRowIndex,
   type TVSeasonsListRow,
 } from '@/src/screens/tvSeasonsListRows';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
@@ -590,18 +590,17 @@ export default function TVSeasonsScreen() {
     return <FullScreenLoading />;
   }
 
-  if (tvQuery.isError || !show) {
+  if (tvQuery.isError || seasonQueries.isError || !show) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>{t('tvSeasons.failedToLoadSeasons')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={tvQuery.error ?? seasonQueries.error}
+        message={t('tvSeasons.failedToLoadSeasons')}
+        onRetry={() => {
+          void Promise.all([tvQuery.refetch(), seasonQueries.refetch()]);
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+      />
     );
   }
 

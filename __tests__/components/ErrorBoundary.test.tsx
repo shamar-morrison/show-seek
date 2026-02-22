@@ -1,7 +1,7 @@
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 // Component that throws an error
 function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
@@ -11,24 +11,6 @@ function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
   return (
     <View testID="child-component">
       <Text>Child content</Text>
-    </View>
-  );
-}
-
-// Component with controllable error state
-function ControllableComponent({
-  error,
-  setError,
-}: {
-  error: boolean;
-  setError: (val: boolean) => void;
-}) {
-  if (error) {
-    throw new Error('Controlled error');
-  }
-  return (
-    <View testID="controllable-content">
-      <Text>Normal content</Text>
     </View>
   );
 }
@@ -112,7 +94,7 @@ describe('ErrorBoundary', () => {
   });
 
   describe('retry functionality', () => {
-    it('should render retry button', () => {
+    it('should render retry and reload buttons', () => {
       const { getByTestId, getByText } = render(
         <ErrorBoundary>
           <ThrowingComponent shouldThrow={true} />
@@ -120,7 +102,9 @@ describe('ErrorBoundary', () => {
       );
 
       expect(getByTestId('error-boundary-retry')).toBeTruthy();
+      expect(getByTestId('error-boundary-reload')).toBeTruthy();
       expect(getByText('Try Again')).toBeTruthy();
+      expect(getByText('Reload App')).toBeTruthy();
     });
 
     it('should reset error state when retry button is pressed', () => {
@@ -143,6 +127,82 @@ describe('ErrorBoundary', () => {
       // Since ThrowingComponent still throws, we'll see the fallback again
       // But the state was reset momentarily
       expect(queryByTestId('error-boundary-fallback')).toBeTruthy();
+    });
+
+    it('should trigger app reload action when reload button is pressed', async () => {
+      const updatesModule = require('expo-updates');
+      const platformOSDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
+
+      try {
+        Object.defineProperty(Platform, 'OS', {
+          value: 'ios',
+          configurable: true,
+        });
+
+        const { getByTestId } = render(
+          <ErrorBoundary>
+            <ThrowingComponent shouldThrow={true} />
+          </ErrorBoundary>
+        );
+
+        fireEvent.press(getByTestId('error-boundary-reload'));
+
+        await waitFor(() => {
+          expect((updatesModule.reloadAsync as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+        });
+      } finally {
+        if (platformOSDescriptor) {
+          Object.defineProperty(Platform, 'OS', platformOSDescriptor);
+        }
+      }
+    });
+
+    it('should trigger web reload action when reload button is pressed', async () => {
+      const platformOSDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
+      const originalWindow = (global as { window?: Window }).window;
+      const reloadSpy = jest.fn();
+
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: 'web',
+      });
+
+      Object.defineProperty(global, 'window', {
+        value: {
+          ...(originalWindow ?? {}),
+          location: {
+            ...(originalWindow?.location ?? {}),
+            reload: reloadSpy,
+          },
+        },
+        configurable: true,
+      });
+
+      try {
+        const { getByTestId } = render(
+          <ErrorBoundary>
+            <ThrowingComponent shouldThrow={true} />
+          </ErrorBoundary>
+        );
+
+        fireEvent.press(getByTestId('error-boundary-reload'));
+
+        await waitFor(() => {
+          expect(reloadSpy).toHaveBeenCalledTimes(1);
+        });
+      } finally {
+        if (platformOSDescriptor) {
+          Object.defineProperty(Platform, 'OS', platformOSDescriptor);
+        }
+        if (typeof originalWindow === 'undefined') {
+          delete (global as { window?: Window }).window;
+        } else {
+          Object.defineProperty(global, 'window', {
+            value: originalWindow,
+            configurable: true,
+          });
+        }
+      }
     });
   });
 

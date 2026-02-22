@@ -1,6 +1,7 @@
 import { getImageUrl, Movie, TMDB_IMAGE_SIZES, tmdbApi, TVShow } from '@/src/api/tmdb';
 import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import DiscoverFilters, { FilterState } from '@/src/components/DiscoverFilters';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -426,6 +427,15 @@ export default function DiscoverScreen() {
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={accentColor} />
           </View>
+        ) : discoverQuery.isError ? (
+          <AppErrorState
+            error={discoverQuery.error}
+            message={t('errors.loadingFailed')}
+            onRetry={() => {
+              void discoverQuery.refetch();
+            }}
+            accentColor={accentColor}
+          />
         ) : filteredResults.length === 0 ? (
           <View style={styles.centerContainer}>
             <Text style={styles.emptyText}>{t('common.noResults')}</Text>

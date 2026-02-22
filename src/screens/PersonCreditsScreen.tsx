@@ -14,6 +14,7 @@ import ListActionsModal, {
   ListActionsModalRef,
 } from '@/src/components/ListActionsModal';
 import { SortState } from '@/src/components/MediaSortModal';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
@@ -25,7 +26,6 @@ import { useAllGenres } from '@/src/hooks/useGenres';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
@@ -325,16 +325,16 @@ export default function PersonCreditsScreen() {
 
   if (creditsQuery.isError) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>{t('credits.failedToLoad')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButtonError}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.backButtonText, { color: accentColor }]}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={creditsQuery.error}
+        message={t('credits.failedToLoad')}
+        onRetry={() => {
+          void creditsQuery.refetch();
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+        accentColor={accentColor}
+      />
     );
   }
 
@@ -414,10 +414,6 @@ export default function PersonCreditsScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButtonError: {
-    padding: SPACING.m,
-  },
-  backButtonText: {},
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -45,6 +45,20 @@ jest.mock('react-native-reanimated', () => {
   return Reanimated;
 });
 
+// Mock expo-linear-gradient
+jest.mock('expo-linear-gradient', () => {
+  const React = require('react');
+  return {
+    LinearGradient: ({ children, ...props }) =>
+      React.createElement('LinearGradient', props, children),
+  };
+});
+
+// Mock expo-updates
+jest.mock('expo-updates', () => ({
+  reloadAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // Mock expo-router
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -215,6 +229,7 @@ jest.mock('@/src/firebase/config', () => ({
 // Mock AccentColorProvider context
 jest.mock('@/src/context/AccentColorProvider', () => ({
   AccentColorProvider: ({ children }) => children,
+  AccentColorContext: require('react').createContext(null),
   useAccentColor: () => ({
     accentColor: '#6B46C1',
     isAccentReady: true,

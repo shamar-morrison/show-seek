@@ -1,11 +1,11 @@
 import { CastMember, CrewMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQuery } from '@tanstack/react-query';
@@ -128,16 +128,16 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 
   if (creditsQuery.isError || !creditsQuery.data) {
     return (
-      <View style={errorStyles.container}>
-        <Text style={errorStyles.text}>{t('credits.failedToLoad')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={[styles.backButtonText, { color: accentColor }]}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={creditsQuery.error}
+        message={t('credits.failedToLoad')}
+        onRetry={() => {
+          void creditsQuery.refetch();
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+        accentColor={accentColor}
+      />
     );
   }
 
@@ -216,11 +216,6 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    padding: SPACING.m,
-  },
-  backButtonText: {
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,7 @@
 import { Movie, TVShow } from '@/src/api/tmdb';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { getMoodById } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -146,12 +147,20 @@ export default function MoodResultsScreen() {
 
   const mood = useMemo(() => getMoodById(moodId), [moodId]);
 
-  const { data, isLoading, isError, hasNextPage, isFetchingNextPage, fetchNextPage, refetch } =
-    useMoodDiscovery({
-      moodId,
-      mediaType,
-      enabled: !!moodId,
-    });
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    refetch,
+  } = useMoodDiscovery({
+    moodId,
+    mediaType,
+    enabled: !!moodId,
+  });
 
   // Get mood name for display
   const moodKey = mood?.translationKey?.replace('mood.', '') || '';
@@ -264,19 +273,14 @@ export default function MoodResultsScreen() {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         {ListHeader}
-        <View style={styles.emptyContainer}>
-          <View style={[styles.emptyIcon, { backgroundColor: accentColor + '20' }]}>
-            <Frown size={48} color={accentColor} />
-          </View>
-          <Text style={styles.emptyTitle}>{t('common.error')}</Text>
-          <Pressable
-            style={[styles.tryAnotherButton, { backgroundColor: accentColor }]}
-            onPress={() => refetch()}
-          >
-            <RefreshCw size={20} color={COLORS.text} />
-            <Text style={styles.tryAnotherText}>{t('common.retry')}</Text>
-          </Pressable>
-        </View>
+        <AppErrorState
+          error={error}
+          message={t('errors.loadingFailed')}
+          onRetry={() => {
+            void refetch();
+          }}
+          accentColor={accentColor}
+        />
       </SafeAreaView>
     );
   }

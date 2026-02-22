@@ -1,10 +1,11 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 
 const mockPush = jest.fn();
 const mockRequireAccount = jest.fn();
 const mockFetchNextPage = jest.fn();
+const mockDiscoverRefetch = jest.fn();
 const mockAuthState = {
   user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
   isGuest: false,
@@ -12,6 +13,7 @@ const mockAuthState = {
 
 let mockDiscoverPages: any[] = [];
 let mockDiscoverLoading = false;
+let mockDiscoverError = false;
 let capturedFlashListProps: any = null;
 
 jest.mock('react-i18next', () => ({
@@ -31,9 +33,12 @@ jest.mock('@tanstack/react-query', () => ({
   useInfiniteQuery: () => ({
     data: { pages: mockDiscoverPages },
     isLoading: mockDiscoverLoading,
+    isError: mockDiscoverError,
+    error: mockDiscoverError ? new Error('discover failed') : null,
     hasNextPage: false,
     isFetchingNextPage: false,
     fetchNextPage: mockFetchNextPage,
+    refetch: mockDiscoverRefetch,
   }),
 }));
 
@@ -147,6 +152,28 @@ jest.mock('@/src/components/AddToListModal', () => {
   return { __esModule: true, default: AddToListModal };
 });
 
+jest.mock('@/src/components/ui/AppErrorState', () => {
+  const React = require('react');
+  const { Text, TouchableOpacity, View } = require('react-native');
+
+  return {
+    __esModule: true,
+    default: ({ message, onRetry }: { message: string; onRetry?: () => void }) =>
+      React.createElement(
+        View,
+        null,
+        React.createElement(Text, null, message),
+        onRetry
+          ? React.createElement(
+              TouchableOpacity,
+              { onPress: onRetry, testID: 'discover-error-retry' },
+              React.createElement(Text, null, 'retry-action')
+            )
+          : null
+      ),
+  };
+});
+
 import DiscoverScreen from '@/app/(tabs)/discover/index';
 
 const baseMovie = {
@@ -170,6 +197,7 @@ describe('DiscoverScreen stability', () => {
     jest.clearAllMocks();
     capturedFlashListProps = null;
     mockDiscoverLoading = false;
+    mockDiscoverError = false;
     mockDiscoverPages = [];
     mockAuthState.user = { uid: 'user-1', isAnonymous: false };
     mockAuthState.isGuest = false;
@@ -222,5 +250,16 @@ describe('DiscoverScreen stability', () => {
     expect(capturedFlashListProps.contentContainerStyle).toEqual(
       expect.objectContaining({ paddingBottom: 100 })
     );
+  });
+
+  it('renders explicit error state and retries discover query', () => {
+    mockDiscoverError = true;
+
+    const { getByText, getByTestId } = render(<DiscoverScreen />);
+
+    expect(getByText('errors.loadingFailed')).toBeTruthy();
+
+    fireEvent.press(getByTestId('discover-error-retry'));
+    expect(mockDiscoverRefetch).toHaveBeenCalledTimes(1);
   });
 });

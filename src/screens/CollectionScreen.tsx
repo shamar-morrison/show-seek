@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
 import { AnimatedScrollHeader } from '@/src/components/ui/AnimatedScrollHeader';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { ExpandableText } from '@/src/components/ui/ExpandableText';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -16,7 +17,6 @@ import {
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
 import { usePreferences } from '@/src/hooks/usePreferences';
-import { errorStyles } from '@/src/styles/errorStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
@@ -175,16 +175,16 @@ export default function CollectionScreen() {
 
   if (collectionQuery.isError || !collectionQuery.data) {
     return (
-      <View style={[errorStyles.container, styles.errorContainer]}>
-        <Text style={[errorStyles.text, styles.errorText]}>{t('collection.failedToLoad')}</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.backButton, { backgroundColor: accentColor }]}
-          activeOpacity={ACTIVE_OPACITY}
-        >
-          <Text style={styles.backButtonText}>{t('common.goBack')}</Text>
-        </TouchableOpacity>
-      </View>
+      <AppErrorState
+        error={collectionQuery.error}
+        message={t('collection.failedToLoad')}
+        onRetry={() => {
+          void collectionQuery.refetch();
+        }}
+        onSecondaryAction={() => router.back()}
+        secondaryActionLabel={t('common.goBack')}
+        accentColor={accentColor}
+      />
     );
   }
 
@@ -376,25 +376,6 @@ export default function CollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  errorContainer: {
-    padding: SPACING.xl,
-  },
-  errorText: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.text,
-    marginBottom: SPACING.l,
-    textAlign: 'center',
-  },
-  backButton: {
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  backButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },

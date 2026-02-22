@@ -1,9 +1,10 @@
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockSetOptions = jest.fn();
 const mockUseCurrentlyWatching = jest.fn();
 const mockUseHeaderSearch = jest.fn();
+const mockRefresh = jest.fn();
 
 const mockShows = [
   {
@@ -61,6 +62,23 @@ jest.mock('@/src/components/library/EmptyState', () => ({
   },
 }));
 
+jest.mock('@/src/components/ui/AppErrorState', () => ({
+  __esModule: true,
+  default: ({ message, onRetry }: { message: string; onRetry?: () => void }) => {
+    const { Text, TouchableOpacity, View } = require('react-native');
+    return (
+      <View>
+        <Text>{message}</Text>
+        {onRetry ? (
+          <TouchableOpacity testID="watch-progress-error-retry" onPress={onRetry}>
+            <Text>Retry</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  },
+}));
+
 jest.mock('@/src/styles/iconBadgeStyles', () => ({
   useIconBadgeStyles: () => ({ wrapper: {}, badge: {} }),
 }));
@@ -94,12 +112,13 @@ import WatchProgressScreen from '@/app/(tabs)/library/watch-progress';
 describe('WatchProgressScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRefresh.mockReset();
     mockUseCurrentlyWatching.mockReturnValue({
       data: mockShows,
       isLoading: false,
       isFetching: false,
       error: null,
-      refresh: jest.fn(),
+      refresh: mockRefresh,
     });
     mockUseHeaderSearch.mockReturnValue({
       searchQuery: '',
@@ -117,7 +136,7 @@ describe('WatchProgressScreen', () => {
       isLoading: false,
       isFetching: true,
       error: null,
-      refresh: jest.fn(),
+      refresh: mockRefresh,
     });
 
     const { getByTestId, getByText } = render(<WatchProgressScreen />);
@@ -150,5 +169,24 @@ describe('WatchProgressScreen', () => {
     const hookArgs = mockUseHeaderSearch.mock.calls[lastCallIndex][0];
     expect(hookArgs.items).toEqual(mockShows);
     expect(hookArgs.getSearchableText(mockShows[0])).toBe('Mock Show');
+  });
+
+  it('renders enhanced error state and retries loading', async () => {
+    mockUseCurrentlyWatching.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetching: false,
+      error: new Error('Network error'),
+      refresh: mockRefresh,
+    });
+
+    const { getByText, getByTestId } = render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(getByText('Failed to load watch progress')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('watch-progress-error-retry'));
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,5 @@
 import { EmptyState } from '@/src/components/library/EmptyState';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -143,7 +144,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { data: historyData, isLoading, error } = useHistory();
+  const { data: historyData, isLoading, error, refetch } = useHistory();
 
   const handleMonthPress = useCallback(
     (month: string) => {
@@ -160,10 +161,14 @@ export default function StatsScreen() {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={styles.divider} />
-        <EmptyState
-          icon={BarChart3}
+        <AppErrorState
+          error={error}
           title={t('stats.errorTitle')}
-          description={t('stats.errorDescription')}
+          message={t('stats.errorDescription')}
+          onRetry={() => {
+            void refetch();
+          }}
+          accentColor={accentColor}
         />
       </SafeAreaView>
     );
