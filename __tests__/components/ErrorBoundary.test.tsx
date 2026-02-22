@@ -1,18 +1,7 @@
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Text, View } from 'react-native';
-
-jest.mock('expo-linear-gradient', () => {
-  const React = require('react');
-  return {
-    LinearGradient: ({ children, ...props }: any) => React.createElement('LinearGradient', props, children),
-  };
-});
-
-jest.mock('expo-updates', () => ({
-  reloadAsync: jest.fn(() => Promise.resolve()),
-}));
+import { Platform, Text, View } from 'react-native';
 
 // Component that throws an error
 function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {
@@ -160,8 +149,45 @@ describe('ErrorBoundary', () => {
 
     it('should trigger app reload action when reload button is pressed', async () => {
       const updatesModule = require('expo-updates');
+      const platformOSDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
+      const originalWindow = (global as { window?: Window }).window;
+
+      try {
+        const { getByTestId } = render(
+          <ErrorBoundary>
+            <ThrowingComponent shouldThrow={true} />
+          </ErrorBoundary>
+        );
+
+        fireEvent.press(getByTestId('error-boundary-reload'));
+
+        await waitFor(() => {
+          expect((updatesModule.reloadAsync as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+        });
+      } finally {
+        if (platformOSDescriptor) {
+          Object.defineProperty(Platform, 'OS', platformOSDescriptor);
+        }
+        if (typeof originalWindow === 'undefined') {
+          delete (global as { window?: Window }).window;
+        } else {
+          Object.defineProperty(global, 'window', {
+            value: originalWindow,
+            configurable: true,
+          });
+        }
+      }
+    });
+
+    it('should trigger web reload action when reload button is pressed', async () => {
+      const platformOSDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
       const originalWindow = (global as { window?: Window }).window;
       const reloadSpy = jest.fn();
+
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        value: 'web',
+      });
 
       Object.defineProperty(global, 'window', {
         value: {
@@ -184,11 +210,12 @@ describe('ErrorBoundary', () => {
         fireEvent.press(getByTestId('error-boundary-reload'));
 
         await waitFor(() => {
-          const nativeReloadCalls = (updatesModule.reloadAsync as jest.Mock).mock.calls.length;
-          const webReloadCalls = reloadSpy.mock.calls.length;
-          expect(nativeReloadCalls + webReloadCalls).toBeGreaterThan(0);
+          expect(reloadSpy).toHaveBeenCalledTimes(1);
         });
       } finally {
+        if (platformOSDescriptor) {
+          Object.defineProperty(Platform, 'OS', platformOSDescriptor);
+        }
         if (typeof originalWindow === 'undefined') {
           delete (global as { window?: Window }).window;
         } else {

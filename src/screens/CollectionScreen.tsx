@@ -183,6 +183,7 @@ export default function CollectionScreen() {
         }}
         onSecondaryAction={() => router.back()}
         secondaryActionLabel={t('common.goBack')}
+        accentColor={accentColor}
       />
     );
   }
@@ -375,25 +376,6 @@ export default function CollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  errorContainer: {
-    padding: SPACING.xl,
-  },
-  errorText: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.text,
-    marginBottom: SPACING.l,
-    textAlign: 'center',
-  },
-  backButton: {
-    paddingHorizontal: SPACING.l,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  backButtonText: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.m,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },

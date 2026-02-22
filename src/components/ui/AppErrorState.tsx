@@ -11,6 +11,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface AppErrorStateProps {
   error?: unknown;
   title?: string;
+  /**
+   * Used for generic errors. When kind is "network" or "timeout", localized standard
+   * copy is shown instead. Use a different error surface if you need fully custom
+   * messaging for network/timeout failures.
+   */
   message?: string;
   onRetry?: () => void;
   retryLabel?: string;

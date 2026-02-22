@@ -590,7 +590,7 @@ export default function TVSeasonsScreen() {
     return <FullScreenLoading />;
   }
 
-  if (tvQuery.isError || !show) {
+  if (tvQuery.isError || seasonQueries.isError || !show) {
     return (
       <AppErrorState
         error={tvQuery.error ?? seasonQueries.error}

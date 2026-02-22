@@ -414,10 +414,6 @@ export default function PersonCreditsScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButtonError: {
-    padding: SPACING.m,
-  },
-  backButtonText: {},
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -216,11 +216,6 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    padding: SPACING.m,
-  },
-  backButtonText: {
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

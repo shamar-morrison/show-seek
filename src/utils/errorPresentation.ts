@@ -20,25 +20,25 @@ const TIMEOUT_CODE_TOKENS = [
 ];
 
 const NETWORK_MESSAGE_PATTERNS = [
-  /network/i,
-  /internet/i,
-  /offline/i,
-  /failed to fetch/i,
-  /could(?:n't| not) connect/i,
-  /unable to connect/i,
-  /connection\s+(?:failed|lost|error)/i,
-  /host unreachable/i,
-  /name resolution/i,
-  /temporary failure in name resolution/i,
-  /socket hang up/i,
+  /network/,
+  /internet/,
+  /offline/,
+  /failed to fetch/,
+  /could(?:n't| not) connect/,
+  /unable to connect/,
+  /connection\s+(?:failed|lost|error)/,
+  /host unreachable/,
+  /name resolution/,
+  /temporary failure in name resolution/,
+  /socket hang up/,
 ];
 
 const TIMEOUT_MESSAGE_PATTERNS = [
-  /timed out/i,
-  /timeout/i,
-  /time-out/i,
-  /deadline exceeded/i,
-  /request took too long/i,
+  /timed out/,
+  /timeout/,
+  /time-out/,
+  /deadline exceeded/,
+  /request took too long/,
 ];
 
 const extractStringValue = (value: unknown): string | null => {
@@ -67,7 +67,7 @@ const collectCandidates = (error: unknown): string[] => {
     pushValue((error as Error & { cause?: unknown }).cause);
   }
 
-  if (error && typeof error === 'object') {
+  if (error && typeof error === 'object' && !(error instanceof Error)) {
     const obj = error as Record<string, unknown>;
 
     pushValue(obj.message);

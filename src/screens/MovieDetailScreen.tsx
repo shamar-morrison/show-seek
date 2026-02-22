@@ -343,6 +343,7 @@ export default function MovieDetailScreen() {
         }}
         onSecondaryAction={() => router.back()}
         secondaryActionLabel={t('common.goBack')}
+        accentColor={accentColor}
       />
     );
   }

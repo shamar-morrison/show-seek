@@ -414,6 +414,7 @@
     "searchShowsPlaceholder": "Search shows...",
     "loadingCollections": "Loading your collections...",
     "loadingWatchHistory": "Loading your watch history...",
+    "watchProgressError": "Failed to load watch progress",
     "updatingWatchProgress": "Updating watch progress...",
     "emptyCollectionProgress": "No collections tracked",
     "emptyCollectionProgressHint": "Start tracking a collection from a movie's collection page to see your progress here.",

@@ -165,7 +165,7 @@ export default function WatchProgressScreen() {
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <AppErrorState
           error={error}
-          message={t('library.loadingWatchHistory')}
+          message={t('library.watchProgressError')}
           onRetry={() => {
             void refresh();
           }}

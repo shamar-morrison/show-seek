@@ -729,24 +729,6 @@ export default function EpisodeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  errorContainer: {
-    padding: SPACING.xl,
-  },
-  errorText: {
-    fontSize: FONT_SIZE.l,
-    textAlign: 'center',
-    marginBottom: SPACING.l,
-  },
-  errorButton: {
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.xl,
-    borderRadius: BORDER_RADIUS.m,
-  },
-  errorButtonText: {
-    fontSize: FONT_SIZE.m,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
   scrollView: {
     flex: 1,
   },

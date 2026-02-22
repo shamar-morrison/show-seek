@@ -183,7 +183,7 @@ describe('WatchProgressScreen', () => {
     const { getByText, getByTestId } = render(<WatchProgressScreen />);
 
     await waitFor(() => {
-      expect(getByText('Loading your watch history...')).toBeTruthy();
+      expect(getByText('Failed to load watch progress')).toBeTruthy();
     });
 
     fireEvent.press(getByTestId('watch-progress-error-retry'));
