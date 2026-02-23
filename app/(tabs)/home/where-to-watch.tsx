@@ -1,4 +1,4 @@
-import { getImageUrl, tmdbApi, WatchProvider } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
@@ -291,7 +291,7 @@ export default function WhereToWatchScreen() {
           onPress={() => handleResultPress(item)}
         >
           <MediaImage
-            source={{ uri: getImageUrl(posterPath, '/w185') }}
+            source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
             style={styles.resultPoster}
             contentFit="cover"
             placeholderType={item.media_type === 'movie' ? 'movie' : 'tv'}

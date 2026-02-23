@@ -23,8 +23,8 @@ export interface TVHeroSectionProps {
   onBackPress: () => void;
   /** Handler for open-with button press */
   onOpenWithPress: () => void;
-  /** Handler for poster long-press */
-  onPosterLongPress: () => void;
+  /** Handler for poster press */
+  onPosterPress: () => void;
   /** Handler for toast messages */
   onShowToast: (message: string) => void;
 }
@@ -44,7 +44,7 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
     showId,
     onBackPress,
     onOpenWithPress,
-    onPosterLongPress,
+    onPosterPress,
     onShowToast,
   }) => {
     const styles = useDetailStyles();
@@ -76,7 +76,7 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
         <TouchableOpacity
           style={styles.posterContainer}
           activeOpacity={ACTIVE_OPACITY}
-          onLongPress={onPosterLongPress}
+          onPress={onPosterPress}
         >
           <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
         </TouchableOpacity>

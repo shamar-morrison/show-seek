@@ -1,7 +1,6 @@
 import MovieDetailScreen from '@/src/screens/MovieDetailScreen';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -28,7 +27,9 @@ jest.mock('expo-router', () => {
   const React = require('react');
   const Stack = ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
-  Stack.Screen = () => null;
+  const StackScreen = () => null;
+  StackScreen.displayName = 'StackScreen';
+  Stack.Screen = StackScreen;
 
   return {
     Stack,
@@ -269,7 +270,9 @@ jest.mock('@/src/components/ui/ShareButton', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return ({ message }: { message: string }) => React.createElement(Text, null, message);
+  const AppErrorState = ({ message }: { message: string }) => React.createElement(Text, null, message);
+  AppErrorState.displayName = 'AppErrorState';
+  return AppErrorState;
 });
 
 jest.mock('@/src/components/ui/Toast', () => {
@@ -406,16 +409,10 @@ describe('MovieDetailScreen', () => {
     expect(getByText('Loaded Movie Overview')).toBeTruthy();
   });
 
-  it('navigates to poster picker on poster long press', () => {
-    const { UNSAFE_getAllByType } = render(<MovieDetailScreen />);
+  it('navigates to poster picker on poster press', () => {
+    const { getByTestId } = render(<MovieDetailScreen />);
 
-    const longPressTouchable = UNSAFE_getAllByType(TouchableOpacity).find(
-      (node) => typeof node.props.onLongPress === 'function'
-    );
-
-    expect(longPressTouchable).toBeTruthy();
-
-    fireEvent(longPressTouchable!, 'longPress');
+    fireEvent.press(getByTestId('movie-poster-touchable'));
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/movie/10/poster-picker');
   });

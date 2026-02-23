@@ -27,7 +27,10 @@ jest.mock('expo-router', () => {
   const React = require('react');
   const Stack = ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children);
-  Stack.Screen = () => null;
+  Stack.displayName = 'Stack';
+  const StackScreen = () => null;
+  StackScreen.displayName = 'StackScreen';
+  Stack.Screen = StackScreen;
 
   return {
     Stack,
@@ -233,7 +236,9 @@ jest.mock('@/src/components/ui/SectionSeparator', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  return ({ message }: { message: string }) => React.createElement(Text, null, message);
+  const AppErrorState = ({ message }: { message: string }) => React.createElement(Text, null, message);
+  AppErrorState.displayName = 'AppErrorState';
+  return AppErrorState;
 });
 
 jest.mock('@/src/components/ui/Toast', () => {
@@ -255,12 +260,12 @@ jest.mock('@/src/components/detail/DetailScreenSkeleton', () => ({
 }));
 
 jest.mock('@/src/components/detail/TVHeroSection', () => ({
-  TVHeroSection: ({ onPosterLongPress }: { onPosterLongPress: () => void }) => {
+  TVHeroSection: ({ onPosterPress }: { onPosterPress: () => void }) => {
     const React = require('react');
     const { TouchableOpacity } = require('react-native');
     return React.createElement(TouchableOpacity, {
       testID: 'tv-poster-touchable',
-      onLongPress: onPosterLongPress,
+      onPress: onPosterPress,
     });
   },
 }));
@@ -370,10 +375,10 @@ describe('TVDetailScreen', () => {
     expect(getByText('Loaded TV Overview')).toBeTruthy();
   });
 
-  it('navigates to poster picker on poster long press', () => {
+  it('navigates to poster picker on poster press', () => {
     const { getByTestId } = render(<TVDetailScreen />);
 
-    fireEvent(getByTestId('tv-poster-touchable'), 'longPress');
+    fireEvent.press(getByTestId('tv-poster-touchable'));
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10/poster-picker');
   });

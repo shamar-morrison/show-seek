@@ -103,6 +103,25 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
     const { t } = useTranslation();
     const styles = useDetailStyles();
     const { resolvePosterPath } = usePosterOverrides();
+    const renderRecommendationItem = useCallback(
+      ({ item }: { item: SimilarMediaItem }) => (
+        <RecommendationCard
+          item={item}
+          onPress={onMediaPress}
+          onLongPress={onMediaLongPress}
+          mediaType={mediaType}
+          preferOriginalTitles={preferOriginalTitles}
+          resolvePosterPath={resolvePosterPath}
+        />
+      ),
+      [
+        mediaType,
+        onMediaLongPress,
+        onMediaPress,
+        preferOriginalTitles,
+        resolvePosterPath,
+      ]
+    );
 
     // Render loading skeleton
     if (isLoading && shouldLoad) {
@@ -157,16 +176,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
               showsHorizontalScrollIndicator={false}
               removeClippedSubviews={true}
               drawDistance={400}
-              renderItem={({ item }: { item: SimilarMediaItem }) => (
-                <RecommendationCard
-                  item={item}
-                  onPress={onMediaPress}
-                  onLongPress={onMediaLongPress}
-                  mediaType={mediaType}
-                  preferOriginalTitles={preferOriginalTitles}
-                  resolvePosterPath={resolvePosterPath}
-                />
-              )}
+              renderItem={renderRecommendationItem}
             />
           </View>
         </View>

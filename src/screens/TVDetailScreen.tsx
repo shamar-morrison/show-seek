@@ -206,7 +206,7 @@ export default function TVDetailScreen() {
     [currentTab, router]
   );
 
-  const handlePosterLongPress = useCallback(() => {
+  const handlePosterPress = useCallback(() => {
     if (isAccountRequired()) {
       return;
     }
@@ -369,7 +369,7 @@ export default function TVDetailScreen() {
           showId={tvId}
           onBackPress={() => router.back()}
           onOpenWithPress={() => setOpenWithDrawerVisible(true)}
-          onPosterLongPress={handlePosterLongPress}
+          onPosterPress={handlePosterPress}
           onShowToast={(msg) => toastRef.current?.show(msg)}
         />
 

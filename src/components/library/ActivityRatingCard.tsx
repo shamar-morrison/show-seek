@@ -28,15 +28,9 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
 
   const posterPath = useMemo(() => {
     if (item.mediaType === 'movie' || item.mediaType === 'tv') {
-      const rawId =
-        typeof item.id === 'number'
-          ? item.id
-          : (() => {
-              const match = String(item.id).match(/(\d+)(?!.*\d)/);
-              return match ? Number(match[1]) : null;
-            })();
+      const rawId = typeof item.id === 'number' ? item.id : Number(item.id);
 
-      if (typeof rawId === 'number' && Number.isFinite(rawId)) {
+      if (Number.isFinite(rawId)) {
         return resolvePosterPath(item.mediaType, rawId, item.posterPath);
       }
     }

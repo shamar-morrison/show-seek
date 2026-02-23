@@ -1,8 +1,12 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { buildPosterOverrideKey, type PosterOverrideMediaType } from '@/src/utils/posterOverrides';
+import {
+  buildPosterOverrideKey,
+  POSTER_OVERRIDE_MAX_ENTRIES,
+  type PosterOverrideMediaType,
+} from '@/src/utils/posterOverrides';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import { deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '@/src/firebase/config';
 
 class PosterOverrideService {
   private getUserDocRef(userId: string) {
@@ -24,6 +28,18 @@ class PosterOverrideService {
 
       const key = buildPosterOverrideKey(mediaType, mediaId);
       const userDocRef = this.getUserDocRef(user.uid);
+      const snapshot = await Promise.race([getDoc(userDocRef), timeout.promise]);
+      const rawOverrides = snapshot.data()?.preferences?.posterOverrides;
+      const overrides =
+        rawOverrides && typeof rawOverrides === 'object' && !Array.isArray(rawOverrides)
+          ? (rawOverrides as Record<string, unknown>)
+          : {};
+      const overrideCount = Object.keys(overrides).length;
+      const isExistingOverride = Object.prototype.hasOwnProperty.call(overrides, key);
+
+      if (!isExistingOverride && overrideCount >= POSTER_OVERRIDE_MAX_ENTRIES) {
+        throw new Error(`You can save up to ${POSTER_OVERRIDE_MAX_ENTRIES} poster overrides`);
+      }
 
       await Promise.race([
         setDoc(

@@ -23,16 +23,16 @@ export const TVShowRatingListCard = memo<TVShowRatingListCardProps>(({ item, onP
     }
   }, [onPress, item.tvShow]);
 
-  if (!item.tvShow) return null;
   const tvShow = item.tvShow;
-
-  const year = tvShow.first_air_date
-    ? new Date(tvShow.first_air_date).getFullYear()
-    : null;
+  const tvShowId = tvShow?.id;
+  const tvShowPosterPath = tvShow?.poster_path ?? null;
+  const year = tvShow?.first_air_date ? new Date(tvShow.first_air_date).getFullYear() : null;
   const posterPath = useMemo(
-    () => resolvePosterPath('tv', tvShow.id, tvShow.poster_path),
-    [resolvePosterPath, tvShow.id, tvShow.poster_path]
+    () => (tvShowId ? resolvePosterPath('tv', tvShowId, tvShowPosterPath) : null),
+    [resolvePosterPath, tvShowId, tvShowPosterPath]
   );
+
+  if (!tvShow) return null;
 
   return (
     <Pressable

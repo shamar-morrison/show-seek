@@ -79,6 +79,7 @@ describe('usePosterOverrides', () => {
   });
 
   it('optimistically updates preferences cache when setting override', async () => {
+    jest.useFakeTimers();
     mockSetPosterOverride.mockResolvedValue(undefined);
 
     const client = createQueryClient();
@@ -91,16 +92,24 @@ describe('usePosterOverrides', () => {
       wrapper: createWrapper(client),
     });
 
-    await act(async () => {
-      await result.current.mutateAsync({ mediaType: 'movie', mediaId: 77, posterPath: '/new.jpg' });
-    });
+    try {
+      await act(async () => {
+        await result.current.mutateAsync({ mediaType: 'movie', mediaId: 77, posterPath: '/new.jpg' });
+      });
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
 
-    const optimistic = client.getQueryData<any>(['preferences', 'user-1']);
-    expect(optimistic.posterOverrides.movie_77).toBe('/new.jpg');
-    expect(mockSetPosterOverride).toHaveBeenCalledWith('movie', 77, '/new.jpg');
+      const optimistic = client.getQueryData<any>(['preferences', 'user-1']);
+      expect(optimistic.posterOverrides.movie_77).toBe('/new.jpg');
+      expect(mockSetPosterOverride).toHaveBeenCalledWith('movie', 77, '/new.jpg');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('optimistically removes override from preferences cache when clearing override', async () => {
+    jest.useFakeTimers();
     mockClearPosterOverride.mockResolvedValue(undefined);
 
     const client = createQueryClient();
@@ -116,13 +125,20 @@ describe('usePosterOverrides', () => {
       wrapper: createWrapper(client),
     });
 
-    await act(async () => {
-      await result.current.mutateAsync({ mediaType: 'movie', mediaId: 77 });
-    });
+    try {
+      await act(async () => {
+        await result.current.mutateAsync({ mediaType: 'movie', mediaId: 77 });
+      });
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
 
-    const optimistic = client.getQueryData<any>(['preferences', 'user-1']);
-    expect(optimistic.posterOverrides.movie_77).toBeUndefined();
-    expect(optimistic.posterOverrides.tv_88).toBe('/stay.jpg');
-    expect(mockClearPosterOverride).toHaveBeenCalledWith('movie', 77);
+      const optimistic = client.getQueryData<any>(['preferences', 'user-1']);
+      expect(optimistic.posterOverrides.movie_77).toBeUndefined();
+      expect(optimistic.posterOverrides.tv_88).toBe('/stay.jpg');
+      expect(mockClearPosterOverride).toHaveBeenCalledWith('movie', 77);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

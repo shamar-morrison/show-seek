@@ -19,11 +19,6 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
     onPress(rating);
   }, [onPress, rating]);
 
-  if (rating.mediaType !== 'episode') {
-    return null;
-  }
-
-  const episodeCode = `S${rating.seasonNumber}E${rating.episodeNumber}`;
   const posterPath = useMemo(
     () =>
       rating.tvShowId
@@ -31,6 +26,12 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
         : (rating.posterPath ?? null),
     [rating.posterPath, rating.tvShowId, resolvePosterPath]
   );
+
+  if (rating.mediaType !== 'episode') {
+    return null;
+  }
+
+  const episodeCode = `S${rating.seasonNumber}E${rating.episodeNumber}`;
 
   return (
     <Pressable

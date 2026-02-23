@@ -322,7 +322,7 @@ export default function MovieDetailScreen() {
     [currentTab, router]
   );
 
-  const handlePosterLongPress = useCallback(() => {
+  const handlePosterPress = useCallback(() => {
     if (isAccountRequired()) {
       return;
     }
@@ -632,9 +632,10 @@ export default function MovieDetailScreen() {
           <OpenWithButton onPress={() => setOpenWithDrawerVisible(true)} />
 
           <TouchableOpacity
+            testID="movie-poster-touchable"
             style={styles.posterContainer}
             activeOpacity={ACTIVE_OPACITY}
-            onLongPress={handlePosterLongPress}
+            onPress={handlePosterPress}
           >
             <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
           </TouchableOpacity>

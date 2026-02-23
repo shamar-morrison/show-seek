@@ -9,7 +9,7 @@ import {
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useClearPosterOverride, usePosterOverrides, useSetPosterOverride } from '@/src/hooks/usePosterOverrides';
@@ -78,14 +78,15 @@ export default function MediaPosterPickerScreen({ mediaType }: MediaPosterPicker
     () => (Number.isFinite(mediaId) ? buildPosterOverrideKey(mediaType, mediaId) : null),
     [mediaId, mediaType]
   );
+  const currentOverride = overrideKey ? overrides?.[overrideKey] ?? null : null;
 
   useEffect(() => {
     if (!details || !overrideKey) {
       return;
     }
 
-    setSelectedPosterPath(overrides[overrideKey] ?? details.poster_path ?? null);
-  }, [details, overrideKey, overrides]);
+    setSelectedPosterPath(currentOverride ?? details.poster_path ?? null);
+  }, [currentOverride, details, overrideKey]);
 
   const activePosterPath = useMemo(
     () =>

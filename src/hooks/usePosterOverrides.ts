@@ -9,7 +9,7 @@ import {
 } from '@/src/utils/posterOverrides';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { usePreferences } from './usePreferences';
+import { usePreferences } from '@/src/hooks/usePreferences';
 
 type UpdatePosterOverrideContext = {
   previousPreferences?: UserPreferences;

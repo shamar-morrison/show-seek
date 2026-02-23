@@ -62,7 +62,10 @@ service cloud.firestore {
           && (!('dataSaver' in request.resource.data.preferences) || request.resource.data.preferences.dataSaver is bool)
           && (!('copyInsteadOfMove' in request.resource.data.preferences) || request.resource.data.preferences.copyInsteadOfMove is bool)
           && (!('showOriginalTitles' in request.resource.data.preferences) || request.resource.data.preferences.showOriginalTitles is bool)
-          && (!('posterOverrides' in request.resource.data.preferences) || request.resource.data.preferences.posterOverrides is map)
+          && (!('posterOverrides' in request.resource.data.preferences) || (
+            request.resource.data.preferences.posterOverrides is map
+            && request.resource.data.preferences.posterOverrides.size() <= 1000
+          ))
         ));
       // Allow users to delete their own user document (for account deletion)
       allow delete: if canWriteUserData(userId);

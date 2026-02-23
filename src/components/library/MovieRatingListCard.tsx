@@ -22,15 +22,21 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPre
       onPress(item.movie.id);
     }
   }, [onPress, item.movie]);
+  const movieId = item.movie?.id;
+  const moviePosterPath = item.movie?.poster_path ?? null;
+
+  const posterPath = useMemo(() => {
+    if (!movieId) {
+      return null;
+    }
+
+    return resolvePosterPath('movie', movieId, moviePosterPath);
+  }, [movieId, moviePosterPath, resolvePosterPath]);
 
   if (!item.movie) return null;
   const movie = item.movie;
 
   const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
-  const posterPath = useMemo(
-    () => resolvePosterPath('movie', movie.id, movie.poster_path),
-    [movie.id, movie.poster_path, resolvePosterPath]
-  );
 
   return (
     <Pressable
