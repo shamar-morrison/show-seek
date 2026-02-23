@@ -12,6 +12,7 @@ import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useGenres } from '@/src/hooks/useGenres';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useListMembership } from '@/src/hooks/useListMembership';
@@ -61,6 +62,7 @@ export default function DiscoverScreen() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const { t } = useTranslation();
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const { accentColor } = useAccentColor();
   const { user, isGuest } = useAuth();
   const { requireAccount } = useGuestAccess();
@@ -227,7 +229,10 @@ export default function DiscoverScreen() {
     ({ item }: { item: Movie | TVShow }) => {
       const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
       const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-      const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small);
+      const posterUrl = getImageUrl(
+        resolvePosterPath(mediaType, item.id, item.poster_path),
+        TMDB_IMAGE_SIZES.poster.small
+      );
 
       const genres = item.genre_ids
         ? item.genre_ids
@@ -288,6 +293,7 @@ export default function DiscoverScreen() {
       handleLongPress,
       mediaType,
       preferences?.showOriginalTitles,
+      resolvePosterPath,
       showIndicators,
     ]
   );
@@ -296,7 +302,10 @@ export default function DiscoverScreen() {
     ({ item }: { item: Movie | TVShow }) => {
       const displayTitle = getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
       const releaseDate = 'release_date' in item ? item.release_date : item.first_air_date;
-      const posterUrl = getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+      const posterUrl = getImageUrl(
+        resolvePosterPath(mediaType, item.id, item.poster_path),
+        TMDB_IMAGE_SIZES.poster.medium
+      );
       const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
       const listIds = showIndicators ? getListsForMedia(item.id, mediaType) : [];
 
@@ -341,6 +350,7 @@ export default function DiscoverScreen() {
       itemWidth,
       mediaType,
       preferences?.showOriginalTitles,
+      resolvePosterPath,
       showIndicators,
     ]
   );

@@ -5,12 +5,13 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,6 +148,14 @@ function RecommendationSection({
   isLoading,
   icon,
 }: RecommendationSectionProps) {
+  const { overrides } = usePosterOverrides();
+  const listExtraData = useMemo(() => ({ overrides }), [overrides]);
+  const renderItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) =>
+      mediaType === 'tv' ? <TVShowCard show={item as TVShow} /> : <MovieCard movie={item as Movie} />,
+    [mediaType]
+  );
+
   if (!isLoading && items.length === 0) {
     return null;
   }
@@ -170,14 +179,9 @@ function RecommendationSection({
         <FlashList
           horizontal
           data={items}
-          renderItem={({ item }) =>
-            mediaType === 'tv' ? (
-              <TVShowCard show={item as TVShow} />
-            ) : (
-              <MovieCard movie={item as Movie} />
-            )
-          }
+          renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
+          extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
         />

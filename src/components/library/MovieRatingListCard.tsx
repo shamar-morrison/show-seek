@@ -1,10 +1,11 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { EnrichedMovieRating } from '@/src/hooks/useEnrichedRatings';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { Star } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
@@ -15,15 +16,27 @@ interface MovieRatingListCardProps {
 }
 
 export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPress }) => {
+  const { resolvePosterPath } = usePosterOverrides();
   const handlePress = useCallback(() => {
     if (item.movie) {
       onPress(item.movie.id);
     }
   }, [onPress, item.movie]);
+  const movieId = item.movie?.id;
+  const moviePosterPath = item.movie?.poster_path ?? null;
+
+  const posterPath = useMemo(() => {
+    if (!movieId) {
+      return null;
+    }
+
+    return resolvePosterPath('movie', movieId, moviePosterPath);
+  }, [movieId, moviePosterPath, resolvePosterPath]);
 
   if (!item.movie) return null;
+  const movie = item.movie;
 
-  const year = item.movie.release_date ? new Date(item.movie.release_date).getFullYear() : null;
+  const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
 
   return (
     <Pressable
@@ -35,23 +48,23 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(({ item, onPre
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(item.movie.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={listCardStyles.poster}
         contentFit="cover"
       />
       <View style={listCardStyles.info}>
         <Text style={styles.title} numberOfLines={2}>
-          {item.movie.title}
+          {movie.title}
         </Text>
         <View style={styles.metaContainer}>
           {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
-          {item.movie.vote_average > 0 && year && (
+          {movie.vote_average > 0 && year && (
             <Text style={metaTextStyles.secondary}> • </Text>
           )}
-          {item.movie.vote_average > 0 && (
+          {movie.vote_average > 0 && (
             <View style={styles.tmdbRating}>
               <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-              <Text style={styles.ratingText}>{item.movie.vote_average.toFixed(1)}</Text>
+              <Text style={styles.ratingText}>{movie.vote_average.toFixed(1)}</Text>
             </View>
           )}
         </View>

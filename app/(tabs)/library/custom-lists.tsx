@@ -189,10 +189,13 @@ export default function CustomListsScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: UserList }) => {
-      // Extract poster paths from list items (up to 3)
-      const posterPaths = Object.values(item.items || {})
+      const previewItems = Object.values(item.items || {})
         .slice(0, 3)
-        .map((mediaItem) => mediaItem.poster_path);
+        .map((mediaItem) => ({
+          mediaType: mediaItem.media_type,
+          mediaId: mediaItem.id,
+          posterPath: mediaItem.poster_path,
+        }));
 
       // Count total items
       const itemCount = Object.keys(item.items || {}).length;
@@ -202,7 +205,7 @@ export default function CustomListsScreen() {
           style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
           onPress={() => handleListPress(item.id)}
         >
-          <StackedPosterPreview posterPaths={posterPaths} />
+          <StackedPosterPreview items={previewItems} />
           <View style={styles.listInfo}>
             <Text style={styles.listName}>{item.name}</Text>
             {!!item.description?.trim() && (

@@ -1,10 +1,11 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { EnrichedTVRating } from '@/src/hooks/useEnrichedRatings';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { Star } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
@@ -15,17 +16,23 @@ interface TVShowRatingListCardProps {
 }
 
 export const TVShowRatingListCard = memo<TVShowRatingListCardProps>(({ item, onPress }) => {
+  const { resolvePosterPath } = usePosterOverrides();
   const handlePress = useCallback(() => {
     if (item.tvShow) {
       onPress(item.tvShow.id);
     }
   }, [onPress, item.tvShow]);
 
-  if (!item.tvShow) return null;
+  const tvShow = item.tvShow;
+  const tvShowId = tvShow?.id;
+  const tvShowPosterPath = tvShow?.poster_path ?? null;
+  const year = tvShow?.first_air_date ? new Date(tvShow.first_air_date).getFullYear() : null;
+  const posterPath = useMemo(
+    () => (tvShowId ? resolvePosterPath('tv', tvShowId, tvShowPosterPath) : null),
+    [resolvePosterPath, tvShowId, tvShowPosterPath]
+  );
 
-  const year = item.tvShow.first_air_date
-    ? new Date(item.tvShow.first_air_date).getFullYear()
-    : null;
+  if (!tvShow) return null;
 
   return (
     <Pressable
@@ -37,23 +44,23 @@ export const TVShowRatingListCard = memo<TVShowRatingListCardProps>(({ item, onP
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(item.tvShow.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={listCardStyles.poster}
         contentFit="cover"
       />
       <View style={listCardStyles.info}>
         <Text style={styles.title} numberOfLines={2}>
-          {item.tvShow.name}
+          {tvShow.name}
         </Text>
         <View style={styles.metaContainer}>
           {year && <Text style={metaTextStyles.secondary}>{year}</Text>}
-          {item.tvShow.vote_average > 0 && year && (
+          {tvShow.vote_average > 0 && year && (
             <Text style={metaTextStyles.secondary}> • </Text>
           )}
-          {item.tvShow.vote_average > 0 && (
+          {tvShow.vote_average > 0 && (
             <View style={styles.tmdbRating}>
               <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-              <Text style={styles.ratingText}>{item.tvShow.vote_average.toFixed(1)}</Text>
+              <Text style={styles.ratingText}>{tvShow.vote_average.toFixed(1)}</Text>
             </View>
           )}
         </View>

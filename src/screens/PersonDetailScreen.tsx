@@ -19,6 +19,7 @@ import {
   useRemoveFavoritePerson,
 } from '@/src/hooks/useFavoritePersons';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -78,6 +79,7 @@ export default function PersonDetailScreen() {
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
   const { getListsForMedia } = useListMembership();
+  const { resolvePosterPath } = usePosterOverrides();
   const { isFavorited, isLoading: isFavoritedLoading } = useIsPersonFavorited(personId);
   const addFavoriteMutation = useAddFavoritePerson();
   const removeFavoriteMutation = useRemoveFavoritePerson();
@@ -543,6 +545,7 @@ export default function PersonDetailScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForMovies.map((movie, index) => {
                 const movieListIds = getListsForMedia(movie.id, 'movie');
+                const moviePosterPath = resolvePosterPath('movie', movie.id, movie.poster_path);
                 return (
                   <TouchableOpacity
                     key={`movie-${movie.id}-${index}`}
@@ -554,7 +557,7 @@ export default function PersonDetailScreen() {
                     <View style={styles.creditPosterContainer}>
                       <MediaImage
                         source={{
-                          uri: getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small),
+                          uri: getImageUrl(moviePosterPath, TMDB_IMAGE_SIZES.poster.small),
                         }}
                         style={styles.creditPoster}
                         contentFit="cover"
@@ -613,6 +616,7 @@ export default function PersonDetailScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {knownForTV.map((show, index) => {
                 const showListIds = getListsForMedia(show.id, 'tv');
+                const showPosterPath = resolvePosterPath('tv', show.id, show.poster_path);
                 return (
                   <TouchableOpacity
                     key={`tv-${show.id}-${index}`}
@@ -624,7 +628,7 @@ export default function PersonDetailScreen() {
                     <View style={styles.creditPosterContainer}>
                       <MediaImage
                         source={{
-                          uri: getImageUrl(show.poster_path, TMDB_IMAGE_SIZES.poster.small),
+                          uri: getImageUrl(showPosterPath, TMDB_IMAGE_SIZES.poster.small),
                         }}
                         style={styles.creditPoster}
                         contentFit="cover"

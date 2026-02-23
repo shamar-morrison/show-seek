@@ -22,6 +22,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -127,6 +128,7 @@ export default function NotesScreen() {
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
 
   // Calculate tab bar height (matches _layout.tsx)
   const hideLabels = preferences?.hideTabLabels ?? false;
@@ -365,7 +367,13 @@ export default function NotesScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: Note }) => {
-      const posterUrl = getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small);
+      const resolvedPosterPath =
+        item.mediaType === 'episode' && item.showId
+          ? resolvePosterPath('tv', item.showId, item.posterPath)
+          : item.mediaType === 'movie' || item.mediaType === 'tv'
+            ? resolvePosterPath(item.mediaType, item.mediaId, item.posterPath)
+            : item.posterPath;
+      const posterUrl = getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.small);
 
       return (
         <Pressable
@@ -413,7 +421,13 @@ export default function NotesScreen() {
         </Pressable>
       );
     },
-    [handleCardPress, handleEditNote, handleDeleteNote, deleteNoteMutation.isPending]
+    [
+      deleteNoteMutation.isPending,
+      handleCardPress,
+      handleDeleteNote,
+      handleEditNote,
+      resolvePosterPath,
+    ]
   );
 
   const renderSectionHeader = useCallback(

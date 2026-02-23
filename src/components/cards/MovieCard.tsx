@@ -4,6 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
@@ -19,17 +20,24 @@ interface MovieCardProps {
   containerStyle?: StyleProp<ViewStyle>;
   /** Show badge if movie is in any list (default: true) */
   showListBadge?: boolean;
+  /** Optional pre-resolved poster path to avoid stale list cells */
+  posterPathOverride?: string | null;
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, width = 140, containerStyle, showListBadge = true }) => {
+  ({ movie, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
+    const { resolvePosterPath } = usePosterOverrides();
+    const resolvedPosterPath = useMemo(
+      () => posterPathOverride ?? resolvePosterPath('movie', movie.id, movie.poster_path),
+      [movie.id, movie.poster_path, posterPathOverride, resolvePosterPath]
+    );
 
     const posterUrl = useMemo(
-      () => getOptimizedImageUrl(movie.poster_path, 'poster', 'medium', preferences?.dataSaver),
-      [movie.poster_path, preferences?.dataSaver]
+      () => getOptimizedImageUrl(resolvedPosterPath, 'poster', 'medium', preferences?.dataSaver),
+      [preferences?.dataSaver, resolvedPosterPath]
     );
     const displayTitle = useMemo(
       () => getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles),

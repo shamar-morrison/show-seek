@@ -44,6 +44,7 @@ import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -65,6 +66,7 @@ import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
 import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
@@ -114,6 +116,7 @@ export default function TVDetailScreen() {
   const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
   const listIcon =
@@ -203,6 +206,15 @@ export default function TVDetailScreen() {
     [currentTab, router]
   );
 
+  const handlePosterPress = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigateTo(`/tv/${tvId}/poster-picker`);
+  }, [isAccountRequired, navigateTo, tvId]);
+
   const handleToast = useCallback((message: string) => {
     toastRef.current?.show(message);
   }, []);
@@ -256,6 +268,7 @@ export default function TVDetailScreen() {
   }
 
   const show = tvQuery.data;
+  const resolvedShowPosterPath = resolvePosterPath('tv', show.id, show.poster_path);
   const displayShowTitle = getDisplayMediaTitle(show, !!preferences?.showOriginalTitles);
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const creators = show.created_by || [];
@@ -351,11 +364,12 @@ export default function TVDetailScreen() {
         {/* Hero Section */}
         <TVHeroSection
           backdropPath={show.backdrop_path}
-          posterPath={show.poster_path}
+          posterPath={resolvedShowPosterPath}
           showName={displayShowTitle}
           showId={tvId}
           onBackPress={() => router.back()}
           onOpenWithPress={() => setOpenWithDrawerVisible(true)}
+          onPosterPress={handlePosterPress}
           onShowToast={(msg) => toastRef.current?.show(msg)}
         />
 
@@ -406,7 +420,7 @@ export default function TVDetailScreen() {
               noteSheetRef.current?.present({
                 mediaType: 'tv',
                 mediaId: tvId,
-                posterPath: show.poster_path,
+                posterPath: resolvedShowPosterPath,
                 mediaTitle: show.name,
                 initialNote: note?.content,
               });
@@ -669,7 +683,7 @@ export default function TVDetailScreen() {
                 id: show.id,
                 type: 'tv',
                 title: displayShowTitle,
-                posterPath: show.poster_path,
+                posterPath: resolvedShowPosterPath,
                 backdropPath: show.backdrop_path,
                 releaseYear: show.first_air_date?.split('-')[0] || '',
                 genres: show.genres?.map((g) => g.name) || [],

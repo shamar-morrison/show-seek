@@ -10,6 +10,11 @@ jest.mock('@/src/hooks/useListMembership', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => {
+  const { posterOverridesMock } = require('@/__tests__/utils/posterOverridesMock');
+  return posterOverridesMock();
+});
+
 jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
   ListMembershipBadge: () => null,
 }));

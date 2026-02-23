@@ -13,6 +13,7 @@ import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedMovieRating, useEnrichedMovieRatings } from '@/src/hooks/useEnrichedRatings';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
@@ -42,6 +43,7 @@ export default function MovieRatingsScreen() {
     refetch,
   } = useEnrichedMovieRatings();
   const { t } = useTranslation();
+  const { resolvePosterPath } = usePosterOverrides();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
@@ -127,6 +129,7 @@ export default function MovieRatingsScreen() {
   const renderGridItem = useCallback(
     ({ item }: { item: EnrichedMovieRating }) => {
       if (!item.movie) return null;
+      const posterPath = resolvePosterPath('movie', item.movie.id, item.movie.poster_path);
 
       return (
         <Pressable
@@ -138,7 +141,7 @@ export default function MovieRatingsScreen() {
           onPress={() => handleItemPress(item.movie!.id)}
         >
           <MediaImage
-            source={{ uri: getImageUrl(item.movie.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
+            source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
             style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
           />
@@ -171,7 +174,7 @@ export default function MovieRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress, itemHorizontalMargin, itemWidth]
+    [handleItemPress, itemHorizontalMargin, itemWidth, resolvePosterPath]
   );
 
   const renderListItem = useCallback(

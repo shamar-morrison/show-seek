@@ -40,6 +40,14 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: (props: any) => require('react').createElement('Image', props),
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 const item: ListMediaItem = {
   id: 10,
   title: 'Selection Test',

@@ -1,9 +1,10 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +15,12 @@ interface FavoriteEpisodeCardProps {
 
 export const FavoriteEpisodeCard = memo<FavoriteEpisodeCardProps>(({ episode, onPress }) => {
   const { t } = useTranslation();
-  const posterUrl = getImageUrl(episode.posterPath, TMDB_IMAGE_SIZES.poster.small);
+  const { resolvePosterPath } = usePosterOverrides();
+  const posterPath = useMemo(
+    () => resolvePosterPath('tv', episode.tvShowId, episode.posterPath),
+    [episode.posterPath, episode.tvShowId, resolvePosterPath]
+  );
+  const posterUrl = getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small);
 
   return (
     <Pressable

@@ -2,9 +2,11 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { ListMediaItem } from '@/src/services/ListService';
+import { PosterOverrideMediaType } from '@/src/utils/posterOverrides';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import { LucideIcon, Star } from 'lucide-react-native';
@@ -42,6 +44,11 @@ const MediaGridItem = memo<{
   isSelected?: boolean;
   itemWidth: number;
   itemHorizontalMargin: number;
+  resolvePosterPath: (
+    mediaType: PosterOverrideMediaType,
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
 }>(
   ({
     item,
@@ -51,10 +58,15 @@ const MediaGridItem = memo<{
     isSelected = false,
     itemWidth,
     itemHorizontalMargin,
+    resolvePosterPath,
   }) => {
   const { accentColor } = useAccentColor();
   const handlePress = useCallback(() => onPress(item), [onPress, item]);
   const handleLongPress = useCallback(() => onLongPress(item), [onLongPress, item]);
+  const posterPath = useMemo(
+    () => resolvePosterPath(item.media_type, item.id, item.poster_path),
+    [item.id, item.media_type, item.poster_path, resolvePosterPath]
+  );
 
   const displayTitle = item.title || item.name;
   const releaseDate = item.release_date || item.first_air_date;
@@ -72,7 +84,7 @@ const MediaGridItem = memo<{
     >
       <View style={styles.posterContainer}>
         <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
+          source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
           style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
           contentFit="cover"
         />
@@ -137,6 +149,7 @@ export const MediaGrid = memo(
     ) => {
       const listRef = useRef<any>(null);
       const { accentColor } = useAccentColor();
+      const { resolvePosterPath } = usePosterOverrides();
       const { width: windowWidth } = useWindowDimensions();
       const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = useMemo(
         () => getThreeColumnGridMetrics(windowWidth),
@@ -159,9 +172,18 @@ export const MediaGrid = memo(
             isSelected={isItemSelected?.(item) ?? false}
             itemWidth={itemWidth}
             itemHorizontalMargin={itemHorizontalMargin}
+            resolvePosterPath={resolvePosterPath}
           />
         ),
-        [isItemSelected, itemHorizontalMargin, itemWidth, onItemLongPress, onItemPress, selectionMode]
+        [
+          isItemSelected,
+          itemHorizontalMargin,
+          itemWidth,
+          onItemLongPress,
+          onItemPress,
+          resolvePosterPath,
+          selectionMode,
+        ]
       );
 
       const keyExtractor = useCallback(

@@ -3,6 +3,7 @@ import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -18,7 +19,12 @@ const SimilarMediaCard = memo<{
   onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
   preferOriginalTitles: boolean;
-}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles }) => {
+  resolvePosterPath: (
+    mediaType: 'movie' | 'tv',
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
+}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles, resolvePosterPath }) => {
   const styles = useDetailStyles();
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
@@ -30,6 +36,10 @@ const SimilarMediaCard = memo<{
   const displayTitle = useMemo(
     () => getMediaTitle(item, preferOriginalTitles),
     [item, preferOriginalTitles]
+  );
+  const posterPath = useMemo(
+    () => resolvePosterPath(mediaType, item.id, item.poster_path),
+    [item.id, item.poster_path, mediaType, resolvePosterPath]
   );
 
   const handlePress = useCallback(() => {
@@ -50,7 +60,7 @@ const SimilarMediaCard = memo<{
       <View style={styles.similarPosterContainer}>
         <MediaImage
           source={{
-            uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small),
+            uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small),
           }}
           style={styles.similarPoster}
           contentFit="cover"
@@ -87,6 +97,7 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
     preferOriginalTitles = false,
   }) => {
     const styles = useDetailStyles();
+    const { resolvePosterPath } = usePosterOverrides();
     // Hook must be called unconditionally (before any early returns)
     const renderItem = useCallback(
       ({ item }: { item: SimilarMediaItem }) => (
@@ -96,9 +107,10 @@ export const SimilarMediaSection = memo<SimilarMediaSectionProps>(
           onLongPress={onMediaLongPress}
           mediaType={mediaType}
           preferOriginalTitles={preferOriginalTitles}
+          resolvePosterPath={resolvePosterPath}
         />
       ),
-      [onMediaPress, onMediaLongPress, mediaType, preferOriginalTitles]
+      [mediaType, onMediaLongPress, onMediaPress, preferOriginalTitles, resolvePosterPath]
     );
 
     if (items.length === 0) {

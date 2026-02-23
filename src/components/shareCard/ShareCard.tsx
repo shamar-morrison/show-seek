@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { forwardRef } from 'react';
@@ -59,13 +60,15 @@ interface MediaShareCardProps {
 const MediaShareCard = forwardRef<View, MediaShareCardProps>(({ data }, ref) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { resolvePosterPath } = usePosterOverrides();
 
   // Use poster for background blur (not backdrop)
-  const posterUrl = data.posterPath
-    ? getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.original)
+  const resolvedPosterPath = resolvePosterPath(data.type, data.id, data.posterPath);
+  const posterUrl = resolvedPosterPath
+    ? getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.original)
     : null;
-  const posterDisplayUrl = data.posterPath
-    ? getImageUrl(data.posterPath, TMDB_IMAGE_SIZES.poster.large)
+  const posterDisplayUrl = resolvedPosterPath
+    ? getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.large)
     : null;
 
   const hasRating = data.userRating > 0;

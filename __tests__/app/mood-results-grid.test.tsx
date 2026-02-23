@@ -7,6 +7,8 @@ const mockMovieCard = jest.fn();
 const mockTVShowCard = jest.fn();
 const mockMovieCardSkeleton = jest.fn();
 const mockUseMoodDiscovery = jest.fn();
+const mockUsePosterOverrides = jest.fn();
+const mockResolvePosterPath = jest.fn();
 const mockSetOptions = jest.fn();
 const mockBack = jest.fn();
 const MOCK_WINDOW_DIMENSIONS = { width: 375, height: 812, scale: 2, fontScale: 2 };
@@ -27,11 +29,18 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ moodId: 'calm' }),
-  useNavigation: () => ({ setOptions: mockSetOptions }),
-  useRouter: () => ({ back: mockBack }),
-}));
+jest.mock('expo-router', () => {
+  const React = require('react');
+
+  return {
+    useLocalSearchParams: () => ({ moodId: 'calm' }),
+    useNavigation: () => ({ setOptions: mockSetOptions }),
+    useRouter: () => ({ back: mockBack }),
+    useFocusEffect: (effect: () => void | (() => void)) => {
+      React.useEffect(() => effect(), [effect]);
+    },
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
@@ -55,6 +64,10 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 
 jest.mock('@/src/hooks/useMoodDiscovery', () => ({
   useMoodDiscovery: (...args: any[]) => mockUseMoodDiscovery(...args),
+}));
+
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => mockUsePosterOverrides(),
 }));
 
 jest.mock('@/src/components/cards/MovieCard', () => ({
@@ -122,6 +135,16 @@ describe('MoodResultsScreen grid layout', () => {
       .spyOn(ReactNative, 'useWindowDimensions')
       .mockReturnValue(MOCK_WINDOW_DIMENSIONS);
     capturedFlashListProps = null;
+    mockResolvePosterPath.mockImplementation((mediaType, mediaId, fallbackPosterPath) => {
+      if (mediaType === 'movie' && mediaId === 101) {
+        return '/override.jpg';
+      }
+      return fallbackPosterPath;
+    });
+    mockUsePosterOverrides.mockReturnValue({
+      overrides: { movie_101: '/override.jpg' },
+      resolvePosterPath: (...args: unknown[]) => mockResolvePosterPath(...args),
+    });
     mockUseMoodDiscovery.mockReturnValue({
       data: [
         {
@@ -162,6 +185,7 @@ describe('MoodResultsScreen grid layout', () => {
 
     expect(movieCardProps).toBeTruthy();
     expect(movieCardProps.width).toBe(expected.itemWidth);
+    expect(movieCardProps.posterPathOverride).toBe('/override.jpg');
     expect(movieCardProps.containerStyle).toEqual(
       expect.objectContaining({
         marginLeft: expected.itemHorizontalMargin,
@@ -169,6 +193,7 @@ describe('MoodResultsScreen grid layout', () => {
         marginBottom: SPACING.m,
       })
     );
+    expect(mockResolvePosterPath).toHaveBeenCalledWith('movie', 101, '/poster.jpg');
 
     expect(capturedFlashListProps).toBeTruthy();
     expect(capturedFlashListProps.numColumns).toBe(2);

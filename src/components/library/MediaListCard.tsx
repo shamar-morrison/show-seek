@@ -2,11 +2,12 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import { Star } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
@@ -39,6 +40,7 @@ export const MediaListCard = memo<MediaListCardProps>(
     tvShowLabel,
   }) => {
     const { accentColor } = useAccentColor();
+    const { resolvePosterPath } = usePosterOverrides();
     const handlePress = useCallback(() => {
       onPress(item);
     }, [onPress, item]);
@@ -52,6 +54,10 @@ export const MediaListCard = memo<MediaListCardProps>(
       : item.first_air_date
         ? new Date(item.first_air_date).getFullYear()
         : null;
+    const posterPath = useMemo(
+      () => resolvePosterPath(item.media_type, item.id, item.poster_path),
+      [item.id, item.media_type, item.poster_path, resolvePosterPath]
+    );
 
     return (
       <Pressable
@@ -77,7 +83,7 @@ export const MediaListCard = memo<MediaListCardProps>(
           </View>
         )}
         <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small) }}
+          source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
           style={listCardStyles.poster}
           contentFit="cover"
         />

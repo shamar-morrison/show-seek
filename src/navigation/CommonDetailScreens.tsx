@@ -17,6 +17,10 @@ export const CommonDetailScreens = () => (
       }}
     />
     <Stack.Screen
+      name="movie/[id]/poster-picker"
+      options={{ title: 'Poster', headerShown: false, presentation: 'modal', gestureEnabled: true }}
+    />
+    <Stack.Screen
       name="tv/[id]/index"
       options={{ title: '', headerTransparent: true, headerShown: true }}
     />
@@ -28,6 +32,10 @@ export const CommonDetailScreens = () => (
         gestureEnabled: true,
         headerShown: true,
       }}
+    />
+    <Stack.Screen
+      name="tv/[id]/poster-picker"
+      options={{ title: 'Poster', headerShown: false, presentation: 'modal', gestureEnabled: true }}
     />
     <Stack.Screen name="tv/[id]/seasons" options={{ title: 'Seasons', headerShown: true }} />
     <Stack.Screen

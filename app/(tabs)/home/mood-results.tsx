@@ -7,11 +7,12 @@ import { getMoodById } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getGridMetrics } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Frown, RefreshCw } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -140,6 +141,8 @@ export default function MoodResultsScreen() {
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
   const { accentColor } = useAccentColor();
+  const { resolvePosterPath, overrides } = usePosterOverrides();
+  const [isFocused, setIsFocused] = useState(false);
   const params = useLocalSearchParams<{ moodId: string }>();
   const moodId = params.moodId || '';
 
@@ -179,6 +182,15 @@ export default function MoodResultsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
+
   const handleTryAnother = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.back();
@@ -207,17 +219,35 @@ export default function MoodResultsScreen() {
     }),
     [itemHorizontalMargin]
   );
+  const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
 
   const renderItem = useCallback(({ item }: { item: Movie | TVShow }) => {
     // Type guard to determine if it's a Movie or TVShow
     const isMovie = 'title' in item;
+    const posterPathOverride = isMovie
+      ? resolvePosterPath('movie', item.id, item.poster_path)
+      : resolvePosterPath('tv', item.id, item.poster_path);
 
     if (isMovie) {
-      return <MovieCard movie={item as Movie} width={itemWidth} containerStyle={cardSpacingStyle} />;
+      return (
+        <MovieCard
+          movie={item as Movie}
+          width={itemWidth}
+          containerStyle={cardSpacingStyle}
+          posterPathOverride={posterPathOverride}
+        />
+      );
     } else {
-      return <TVShowCard show={item as TVShow} width={itemWidth} containerStyle={cardSpacingStyle} />;
+      return (
+        <TVShowCard
+          show={item as TVShow}
+          width={itemWidth}
+          containerStyle={cardSpacingStyle}
+          posterPathOverride={posterPathOverride}
+        />
+      );
     }
-  }, [cardSpacingStyle, itemWidth]);
+  }, [cardSpacingStyle, itemWidth, resolvePosterPath]);
 
   const keyExtractor = useCallback(
     (item: Movie | TVShow) => `${item.id}-${mediaType}`,
@@ -301,6 +331,7 @@ export default function MoodResultsScreen() {
         data={data}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
+        extraData={listExtraData}
         numColumns={COLUMN_COUNT}
         contentContainerStyle={[styles.listContent, { paddingHorizontal: listPaddingHorizontal }]}
         ListHeaderComponent={ListHeader}

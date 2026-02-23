@@ -72,6 +72,11 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({ preferences: { showOriginalTitles: false } }),
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => {
+  const { posterOverridesMock } = require('@/__tests__/utils/posterOverridesMock');
+  return posterOverridesMock();
+});
+
 jest.mock('@/src/hooks/useGenres', () => ({
   useAllGenres: () => ({ data: {} }),
 }));

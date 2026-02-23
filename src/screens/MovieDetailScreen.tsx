@@ -55,6 +55,7 @@ import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
@@ -223,6 +224,7 @@ export default function MovieDetailScreen() {
   const { isPremium } = usePremium();
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const listIds = Object.keys(membership);
   const isInAnyList = listIds.length > 0;
   const listIcon =
@@ -320,6 +322,15 @@ export default function MovieDetailScreen() {
     [currentTab, router]
   );
 
+  const handlePosterPress = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigateTo(`/movie/${movieId}/poster-picker`);
+  }, [isAccountRequired, movieId, navigateTo]);
+
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
 
@@ -349,6 +360,7 @@ export default function MovieDetailScreen() {
   }
 
   const movie = movieQuery.data;
+  const resolvedMoviePosterPath = resolvePosterPath('movie', movie.id, movie.poster_path);
   const displayMovieTitle = getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles);
   // Get region-specific release date
   const displayReleaseDate = getRegionalReleaseDate(movie, region);
@@ -375,7 +387,7 @@ export default function MovieDetailScreen() {
   const reviews = reviewsQuery.data?.results.slice(0, 10) || [];
 
   const backdropUrl = getImageUrl(movie.backdrop_path, TMDB_IMAGE_SIZES.backdrop.medium);
-  const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.medium);
+  const posterUrl = getImageUrl(resolvedMoviePosterPath, TMDB_IMAGE_SIZES.poster.medium);
 
   const formatRuntime = (minutes: number | null) => {
     if (!minutes) return t('common.notAvailable');
@@ -619,9 +631,14 @@ export default function MovieDetailScreen() {
           />
           <OpenWithButton onPress={() => setOpenWithDrawerVisible(true)} />
 
-          <View style={styles.posterContainer}>
+          <TouchableOpacity
+            testID="movie-poster-touchable"
+            style={styles.posterContainer}
+            activeOpacity={ACTIVE_OPACITY}
+            onPress={handlePosterPress}
+          >
             <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -714,7 +731,7 @@ export default function MovieDetailScreen() {
               noteSheetRef.current?.present({
                 mediaType: 'movie',
                 mediaId: movieId,
-                posterPath: movie.poster_path,
+                posterPath: resolvedMoviePosterPath,
                 mediaTitle: movie.title,
                 initialNote: note?.content,
               });
@@ -1001,7 +1018,7 @@ export default function MovieDetailScreen() {
                 id: movie.id,
                 type: 'movie',
                 title: displayMovieTitle,
-                posterPath: movie.poster_path,
+                posterPath: resolvedMoviePosterPath,
                 backdropPath: movie.backdrop_path,
                 releaseYear: (displayReleaseDate || movie.release_date)?.split('-')[0] || '',
                 genres: movie.genres?.map((g) => g.name) || [],

@@ -19,6 +19,7 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
@@ -78,6 +79,7 @@ export default function SearchScreen() {
   const { accentColor } = useAccentColor();
   const isAccountRequired = useAccountRequired();
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
 
   const genresQuery = useAllGenres();
   const genreMap = genresQuery.data || {};
@@ -204,13 +206,18 @@ export default function SearchScreen() {
   };
 
   const renderMediaItem = ({ item }: { item: any }) => {
-    const isPerson = item.media_type === 'person';
+    const resolvedMediaType = resolveSearchResultMediaType(item, mediaType);
+    const isPerson = resolvedMediaType === 'person';
     const displayTitle = isPerson
       ? item.name || item.title || ''
       : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
     const releaseDate = item.release_date || item.first_air_date;
+    const resolvedPosterPath =
+      resolvedMediaType === 'movie' || resolvedMediaType === 'tv'
+        ? resolvePosterPath(resolvedMediaType, item.id, item.poster_path)
+        : item.profile_path;
     const posterUrl = getImageUrl(
-      item.poster_path || item.profile_path,
+      resolvedPosterPath,
       TMDB_IMAGE_SIZES.poster.small
     );
 
@@ -302,8 +309,12 @@ export default function SearchScreen() {
       : getDisplayMediaTitle(item, !!preferences?.showOriginalTitles);
     const releaseDate = item.release_date || item.first_air_date;
     const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    const resolvedPosterPath =
+      resolvedMediaType === 'movie' || resolvedMediaType === 'tv'
+        ? resolvePosterPath(resolvedMediaType, item.id, item.poster_path)
+        : item.profile_path;
     const posterUrl = getImageUrl(
-      item.poster_path || item.profile_path,
+      resolvedPosterPath,
       isPerson ? TMDB_IMAGE_SIZES.profile.medium : TMDB_IMAGE_SIZES.poster.medium
     );
     const itemMediaType = item.media_type || (mediaType !== 'all' ? mediaType : 'movie');

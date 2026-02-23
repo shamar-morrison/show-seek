@@ -23,6 +23,8 @@ export interface TVHeroSectionProps {
   onBackPress: () => void;
   /** Handler for open-with button press */
   onOpenWithPress: () => void;
+  /** Handler for poster press */
+  onPosterPress: () => void;
   /** Handler for toast messages */
   onShowToast: (message: string) => void;
 }
@@ -35,7 +37,16 @@ export interface TVHeroSectionProps {
  * - Poster overlay
  */
 export const TVHeroSection = memo<TVHeroSectionProps>(
-  ({ backdropPath, posterPath, showName, showId, onBackPress, onOpenWithPress, onShowToast }) => {
+  ({
+    backdropPath,
+    posterPath,
+    showName,
+    showId,
+    onBackPress,
+    onOpenWithPress,
+    onPosterPress,
+    onShowToast,
+  }) => {
     const styles = useDetailStyles();
     const backdropUrl = getImageUrl(backdropPath, TMDB_IMAGE_SIZES.backdrop.medium);
     const posterUrl = getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
@@ -62,9 +73,13 @@ export const TVHeroSection = memo<TVHeroSectionProps>(
         <ShareButton id={showId} title={showName} mediaType="tv" onShowToast={onShowToast} />
         <OpenWithButton onPress={onOpenWithPress} />
 
-        <View style={styles.posterContainer}>
+        <TouchableOpacity
+          style={styles.posterContainer}
+          activeOpacity={ACTIVE_OPACITY}
+          onPress={onPosterPress}
+        >
           <MediaImage source={{ uri: posterUrl }} style={styles.poster} contentFit="cover" />
-        </View>
+        </TouchableOpacity>
       </View>
     );
   }

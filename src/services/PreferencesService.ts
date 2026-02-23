@@ -1,5 +1,6 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import { sanitizePosterOverrides } from '@/src/utils/posterOverrides';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
@@ -35,6 +36,9 @@ class PreferencesService {
       dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
       showOriginalTitles:
         data?.preferences?.showOriginalTitles ?? DEFAULT_PREFERENCES.showOriginalTitles,
+      posterOverrides: sanitizePosterOverrides(
+        data?.preferences?.posterOverrides ?? DEFAULT_PREFERENCES.posterOverrides
+      ),
     };
   }
 

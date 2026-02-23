@@ -1,12 +1,19 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS } from '@/src/constants/theme';
-import React, { memo } from 'react';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import React, { memo, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 
+export interface StackedPosterItem {
+  mediaType: 'movie' | 'tv';
+  mediaId: number;
+  posterPath: string | null;
+}
+
 interface StackedPosterPreviewProps {
-  /** Up to 3 poster paths to display */
-  posterPaths: (string | null)[];
+  /** Up to 3 media items to display */
+  items: StackedPosterItem[];
   /** Size variant for the posters */
   size?: 'small' | 'medium';
 }
@@ -29,16 +36,15 @@ const STACK_CONFIG = [
  * Used in custom list cards to preview list contents.
  */
 export const StackedPosterPreview = memo<StackedPosterPreviewProps>(
-  ({ posterPaths, size = 'small' }) => {
+  ({ items, size = 'small' }) => {
+    const { resolvePosterPath } = usePosterOverrides();
     const dimensions = POSTER_SIZES[size];
 
-    // Take up to 3 posters, pad with nulls if needed for empty state
-    const displayPaths = posterPaths.slice(0, 3);
+    // Take up to 3 posters, keep media identity for override resolution.
+    const displayItems = useMemo(() => items.slice(0, 3), [items]);
 
     // If no posters at all, show a single placeholder
-    if (displayPaths.length === 0) {
-      displayPaths.push(null);
-    }
+    const hasItems = displayItems.length > 0;
 
     // Calculate container dimensions to accommodate rotated posters
     const containerWidth = dimensions.width + 20;
@@ -46,14 +52,22 @@ export const StackedPosterPreview = memo<StackedPosterPreviewProps>(
 
     return (
       <View style={[styles.container, { width: containerWidth, height: containerHeight }]}>
-        {displayPaths.map((posterPath, index) => {
+        {(hasItems ? displayItems : [null]).map((stackItem, index) => {
           // Reverse the render order so back posters are rendered first (underneath)
-          const reverseIndex = displayPaths.length - 1 - index;
+          const reverseIndex = (hasItems ? displayItems.length : 1) - 1 - index;
           const config = STACK_CONFIG[reverseIndex];
+          const resolvedPosterPath = stackItem
+            ? resolvePosterPath(stackItem.mediaType, stackItem.mediaId, stackItem.posterPath)
+            : null;
+          const placeholderType = stackItem?.mediaType ?? 'movie';
 
           return (
             <View
-              key={`poster-${index}`}
+              key={
+                stackItem
+                  ? `${stackItem.mediaType}-${stackItem.mediaId}-${index}`
+                  : `poster-placeholder-${index}`
+              }
               style={[
                 styles.posterWrapper,
                 {
@@ -69,10 +83,10 @@ export const StackedPosterPreview = memo<StackedPosterPreviewProps>(
               ]}
             >
               <MediaImage
-                source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+                source={{ uri: getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.small) }}
                 style={[styles.poster, { width: dimensions.width, height: dimensions.height }]}
                 contentFit="cover"
-                placeholderType="movie"
+                placeholderType={placeholderType}
               />
             </View>
           );

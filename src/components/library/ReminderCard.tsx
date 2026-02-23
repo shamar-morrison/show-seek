@@ -2,6 +2,7 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import i18n from '@/src/i18n';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { Reminder, ReminderTiming } from '@/src/types/reminder';
@@ -9,7 +10,7 @@ import { formatTmdbDate } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -91,6 +92,11 @@ export const ReminderCard = memo<ReminderCardProps>(
     const router = useRouter();
     const currentTab = useCurrentTab();
     const { accentColor } = useAccentColor();
+    const { resolvePosterPath } = usePosterOverrides();
+    const posterPath = useMemo(
+      () => resolvePosterPath(reminder.mediaType, reminder.mediaId, reminder.posterPath),
+      [reminder.mediaId, reminder.mediaType, reminder.posterPath, resolvePosterPath]
+    );
 
     const handlePress = useCallback(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -125,7 +131,7 @@ export const ReminderCard = memo<ReminderCardProps>(
         disabled={isLoading}
       >
         <MediaImage
-          source={{ uri: getImageUrl(reminder.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+          source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
           style={listCardStyles.poster}
           contentFit="cover"
         />
