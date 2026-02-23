@@ -20,17 +20,19 @@ interface MovieCardProps {
   containerStyle?: StyleProp<ViewStyle>;
   /** Show badge if movie is in any list (default: true) */
   showListBadge?: boolean;
+  /** Optional pre-resolved poster path to avoid stale list cells */
+  posterPathOverride?: string | null;
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, width = 140, containerStyle, showListBadge = true }) => {
+  ({ movie, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
     const { resolvePosterPath } = usePosterOverrides();
     const resolvedPosterPath = useMemo(
-      () => resolvePosterPath('movie', movie.id, movie.poster_path),
-      [movie.id, movie.poster_path, resolvePosterPath]
+      () => posterPathOverride ?? resolvePosterPath('movie', movie.id, movie.poster_path),
+      [movie.id, movie.poster_path, posterPathOverride, resolvePosterPath]
     );
 
     const posterUrl = useMemo(

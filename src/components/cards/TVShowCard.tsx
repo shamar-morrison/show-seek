@@ -20,17 +20,19 @@ interface TVShowCardProps {
   containerStyle?: StyleProp<ViewStyle>;
   /** Show badge if show is in any list (default: true) */
   showListBadge?: boolean;
+  /** Optional pre-resolved poster path to avoid stale list cells */
+  posterPathOverride?: string | null;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
-  ({ show, width = 140, containerStyle, showListBadge = true }) => {
+  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
     const { resolvePosterPath } = usePosterOverrides();
     const resolvedPosterPath = useMemo(
-      () => resolvePosterPath('tv', show.id, show.poster_path),
-      [resolvePosterPath, show.id, show.poster_path]
+      () => posterPathOverride ?? resolvePosterPath('tv', show.id, show.poster_path),
+      [posterPathOverride, resolvePosterPath, show.id, show.poster_path]
     );
 
     const posterUrl = useMemo(

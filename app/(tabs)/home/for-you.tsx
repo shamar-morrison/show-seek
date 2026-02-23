@@ -5,12 +5,13 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useForYouRecommendations } from '@/src/hooks/useForYouRecommendations';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,6 +148,18 @@ function RecommendationSection({
   isLoading,
   icon,
 }: RecommendationSectionProps) {
+  const { resolvePosterPath, overrides } = usePosterOverrides();
+  const [isFocused, setIsFocused] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
+  const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
+
   if (!isLoading && items.length === 0) {
     return null;
   }
@@ -170,14 +183,16 @@ function RecommendationSection({
         <FlashList
           horizontal
           data={items}
-          renderItem={({ item }) =>
-            mediaType === 'tv' ? (
-              <TVShowCard show={item as TVShow} />
+          renderItem={({ item }) => {
+            const posterPathOverride = resolvePosterPath(mediaType, item.id, item.poster_path);
+            return mediaType === 'tv' ? (
+              <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
             ) : (
-              <MovieCard movie={item as Movie} />
-            )
-          }
+              <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
+            );
+          }}
           keyExtractor={(item) => item.id.toString()}
+          extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
         />

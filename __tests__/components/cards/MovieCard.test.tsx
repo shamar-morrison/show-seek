@@ -124,4 +124,10 @@ describe('MovieCard', () => {
 
     expect(mockResolvePosterPath).toHaveBeenCalledWith('movie', 123, '/poster.jpg');
   });
+
+  it('prefers posterPathOverride when provided', () => {
+    render(<MovieCard movie={movie} showListBadge={false} posterPathOverride="/override.jpg" />);
+
+    expect(mockResolvePosterPath).not.toHaveBeenCalled();
+  });
 });

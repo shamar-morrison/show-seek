@@ -8,10 +8,12 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useLists } from '@/src/hooks/useLists';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { HomeScreenListItem } from '@/src/types/preferences';
 import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import React, { useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -31,6 +33,21 @@ const LIST_LABEL_KEYS: Record<string, string> = {
 
 interface HomeListSectionProps {
   config: HomeScreenListItem;
+}
+
+function useSectionFocusState() {
+  const [isFocused, setIsFocused] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
+
+  return isFocused;
 }
 
 // Map TMDB list IDs to their query functions
@@ -79,6 +96,9 @@ const TMDB_QUERY_MAP: Record<
  */
 function TMDBListSection({ id, label }: { id: string; label: string }) {
   const config = TMDB_QUERY_MAP[id];
+  const { resolvePosterPath, overrides } = usePosterOverrides();
+  const isFocused = useSectionFocusState();
+  const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
 
   const query = useInfiniteQuery({
     queryKey: config?.queryKey ?? [id],
@@ -134,10 +154,16 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
         <FlashList
           horizontal
           data={filteredItems}
-          renderItem={({ item }) =>
-            isTV ? <TVShowCard show={item as TVShow} /> : <MovieCard movie={item as Movie} />
-          }
+          renderItem={({ item }) => {
+            const posterPathOverride = resolvePosterPath(config.mediaType, item.id, item.poster_path);
+            return isTV ? (
+              <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
+            ) : (
+              <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
+            );
+          }}
           keyExtractor={(item) => item.id.toString()}
+          extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           onEndReached={handleLoadMore}
@@ -156,6 +182,9 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
 function UserListSection({ listId, label }: { listId: string; label: string }) {
   const { t } = useTranslation();
   const { data: lists, isLoading } = useLists();
+  const { resolvePosterPath, overrides } = usePosterOverrides();
+  const isFocused = useSectionFocusState();
+  const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
 
   const listData = useMemo(() => {
     if (!lists) return null;
@@ -202,8 +231,9 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
       <FlashList
         horizontal
         data={items}
-        renderItem={({ item }) =>
-          item.media_type === 'tv' ? (
+        renderItem={({ item }) => {
+          const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);
+          return item.media_type === 'tv' ? (
             <TVShowCard
               show={{
                 id: item.id,
@@ -219,6 +249,7 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
                 original_name: item.name || item.title,
                 original_language: 'en',
               }}
+              posterPathOverride={posterPathOverride}
             />
           ) : (
             <MovieCard
@@ -238,10 +269,12 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
                 video: false,
                 vote_count: 0,
               }}
+              posterPathOverride={posterPathOverride}
             />
-          )
-        }
+          );
+        }}
         keyExtractor={(item) => `${item.media_type}-${item.id}`}
+        extraData={listExtraData}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         removeClippedSubviews={true}

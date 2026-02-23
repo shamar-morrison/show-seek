@@ -100,4 +100,10 @@ describe('TVShowCard', () => {
 
     expect(mockResolvePosterPath).toHaveBeenCalledWith('tv', 321, '/poster.jpg');
   });
+
+  it('prefers posterPathOverride when provided', () => {
+    render(<TVShowCard show={show} showListBadge={false} posterPathOverride="/override.jpg" />);
+
+    expect(mockResolvePosterPath).not.toHaveBeenCalled();
+  });
 });
