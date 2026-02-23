@@ -159,6 +159,17 @@ function RecommendationSection({
     }, [])
   );
   const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
+  const renderItem = useCallback(
+    ({ item }: { item: Movie | TVShow }) => {
+      const posterPathOverride = resolvePosterPath(mediaType, item.id, item.poster_path);
+      return mediaType === 'tv' ? (
+        <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
+      ) : (
+        <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
+      );
+    },
+    [resolvePosterPath, mediaType]
+  );
 
   if (!isLoading && items.length === 0) {
     return null;
@@ -183,14 +194,7 @@ function RecommendationSection({
         <FlashList
           horizontal
           data={items}
-          renderItem={({ item }) => {
-            const posterPathOverride = resolvePosterPath(mediaType, item.id, item.poster_path);
-            return mediaType === 'tv' ? (
-              <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
-            ) : (
-              <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
-            );
-          }}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           extraData={listExtraData}
           showsHorizontalScrollIndicator={false}
