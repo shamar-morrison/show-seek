@@ -72,6 +72,14 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({ preferences: { showOriginalTitles: false } }),
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 jest.mock('@/src/hooks/useGenres', () => ({
   useAllGenres: () => ({ data: {} }),
 }));

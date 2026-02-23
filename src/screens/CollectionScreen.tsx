@@ -16,6 +16,7 @@ import {
   useStartCollectionTracking,
   useStopCollectionTracking,
 } from '@/src/hooks/useCollectionTracking';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
@@ -53,6 +54,7 @@ export default function CollectionScreen() {
   const collectionId = Number(id);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const { isPremium } = usePremium();
   const isAccountRequired = useAccountRequired();
 
@@ -321,7 +323,10 @@ export default function CollectionScreen() {
 
           {/* Movie List */}
           {sortedMovies.map((movie) => {
-            const posterUrl = getImageUrl(movie.poster_path, TMDB_IMAGE_SIZES.poster.small);
+            const posterUrl = getImageUrl(
+              resolvePosterPath('movie', movie.id, movie.poster_path),
+              TMDB_IMAGE_SIZES.poster.small
+            );
             const year = formatYear(movie.release_date);
             const isWatched = watchedMovieIds.has(movie.id);
 

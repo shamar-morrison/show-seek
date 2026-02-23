@@ -2,12 +2,13 @@ import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { ListMediaItem } from '@/src/services/ListService';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Shuffle, Star, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -39,6 +40,7 @@ export default function ShuffleModal({
 }: ShuffleModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { resolvePosterPath } = usePosterOverrides();
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayedItem, setDisplayedItem] = useState<ListMediaItem | null>(null);
   const [hasRevealed, setHasRevealed] = useState(false);
@@ -180,6 +182,14 @@ export default function ShuffleModal({
     return item.title || item.name || t('media.unknown');
   };
 
+  const displayedPosterPath = useMemo(() => {
+    if (!displayedItem) {
+      return null;
+    }
+
+    return resolvePosterPath(displayedItem.media_type, displayedItem.id, displayedItem.poster_path);
+  }, [displayedItem, resolvePosterPath]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <ModalBackground />
@@ -206,9 +216,9 @@ export default function ShuffleModal({
           <View style={styles.posterContainer}>
             {displayedItem ? (
               <Animated.View style={[styles.posterWrapper, posterAnimatedStyle]}>
-                {displayedItem.poster_path ? (
+                {displayedPosterPath ? (
                   <Image
-                    source={getImageUrl(displayedItem.poster_path, TMDB_IMAGE_SIZES.poster.medium)}
+                    source={getImageUrl(displayedPosterPath, TMDB_IMAGE_SIZES.poster.medium)}
                     style={styles.poster}
                     contentFit="cover"
                     transition={isAnimating ? 0 : 200}

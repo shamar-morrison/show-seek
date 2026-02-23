@@ -3,10 +3,11 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { InProgressShow } from '@/src/types/episodeTracking';
 import { useRouter } from 'expo-router';
 import { Play } from 'lucide-react-native';
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -18,8 +19,13 @@ interface WatchingShowCardProps {
 export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   const router = useRouter();
   const { accentColor } = useAccentColor();
+  const { resolvePosterPath } = usePosterOverrides();
 
   const currentTab = useCurrentTab();
+  const posterPath = useMemo(
+    () => resolvePosterPath('tv', show.tvShowId, show.posterPath),
+    [resolvePosterPath, show.posterPath, show.tvShowId]
+  );
 
   const handlePress = () => {
     const tab = currentTab || 'library';
@@ -45,7 +51,7 @@ export function WatchingShowCard({ show, t }: WatchingShowCardProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={ACTIVE_OPACITY}>
       <MediaImage
-        source={{ uri: getImageUrl(show.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={styles.poster}
       />
 

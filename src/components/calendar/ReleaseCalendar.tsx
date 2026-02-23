@@ -1,6 +1,7 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
 import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import { toLocalDateKey } from '@/src/utils/dateUtils';
@@ -295,6 +296,7 @@ interface ReleaseCardProps {
 function ReleaseCard({ release, onPress }: ReleaseCardProps) {
   const { t, i18n } = useTranslation();
   const styles = useStyles();
+  const { resolvePosterPath } = usePosterOverrides();
   const today = new Date();
   const todayStr = toLocalDateKey(today);
   const releaseDateStr = toLocalDateKey(release.releaseDate);
@@ -310,9 +312,10 @@ function ReleaseCard({ release, onPress }: ReleaseCardProps) {
     return t('calendar.inDays', { count: daysUntil });
   };
 
+  const posterPath = resolvePosterPath(release.mediaType, release.id, release.posterPath);
   const imageUrl =
     getImageUrl(release.backdropPath, TMDB_IMAGE_SIZES.backdrop.medium) ||
-    getImageUrl(release.posterPath, TMDB_IMAGE_SIZES.poster.medium);
+    getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
 
   const isToday = releaseDateStr === todayStr;
 

@@ -6,6 +6,7 @@ import { TouchableOpacity } from 'react-native';
 
 const mockPush = jest.fn();
 const mockUsePreferences = jest.fn();
+const mockResolvePosterPath = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: {
@@ -25,6 +26,13 @@ jest.mock('@/src/hooks/useListMembership', () => ({
 
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => mockUsePreferences(),
+}));
+
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (...args: unknown[]) => mockResolvePosterPath(...args),
+  }),
 }));
 
 jest.mock('@/src/components/ui/MediaImage', () => ({
@@ -58,6 +66,9 @@ describe('MovieCard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockResolvePosterPath.mockImplementation((_mediaType, _mediaId, fallbackPosterPath) => {
+      return fallbackPosterPath as string | null;
+    });
     mockUsePreferences.mockReturnValue({
       preferences: { dataSaver: false, showOriginalTitles: false },
     });
@@ -106,5 +117,11 @@ describe('MovieCard', () => {
         expect.objectContaining({ width: 120 }),
       ])
     );
+  });
+
+  it('resolves poster path with media identity', () => {
+    render(<MovieCard movie={movie} showListBadge={false} />);
+
+    expect(mockResolvePosterPath).toHaveBeenCalledWith('movie', 123, '/poster.jpg');
   });
 });

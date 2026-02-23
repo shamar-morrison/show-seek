@@ -41,6 +41,7 @@ export interface UserPreferences {
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
   dataSaver: boolean; // Load lower resolution images to save data
   showOriginalTitles: boolean; // Show movie/TV titles in original language when available
+  posterOverrides: Record<string, string>; // Per-user poster overrides keyed by "movie_<id>" / "tv_<id>"
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -57,4 +58,5 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   hideTabLabels: false, // Off by default - show labels
   dataSaver: false, // Off by default - load full quality images
   showOriginalTitles: false, // Off by default - show localized titles
+  posterOverrides: {},
 };

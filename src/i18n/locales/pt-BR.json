@@ -1188,6 +1188,19 @@
     "linkCopied": "Link copiado para a área de transferência",
     "unableToShare": "Não foi possível compartilhar. Tente novamente."
   },
+  "posterPicker": {
+    "movieTitle": "Escolher pôster do filme",
+    "tvTitle": "Escolher pôster da série",
+    "subtitleMovie": "Escolha um pôster personalizado para este filme.",
+    "subtitleTV": "Escolha um pôster personalizado para esta série.",
+    "useDefault": "Usar pôster padrão",
+    "save": "Salvar pôster",
+    "saving": "Salvando...",
+    "noPosters": "Não há pôsteres disponíveis para este título.",
+    "updated": "Pôster atualizado",
+    "reset": "Pôster padrão restaurado",
+    "failed": "Falha ao atualizar o pôster. Tente novamente."
+  },
   "shareCard": {
     "title": "Cartão para compartilhar",
     "share": "Compartilhar para...",

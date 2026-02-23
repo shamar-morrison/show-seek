@@ -23,6 +23,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -73,6 +74,7 @@ export default function PersonCreditsScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
@@ -193,7 +195,7 @@ export default function PersonCreditsScreen() {
       (credit): CreditItem => ({
         id: credit.id,
         title: getDisplayMediaTitle(credit, !!preferences?.showOriginalTitles),
-        poster_path: credit.poster_path,
+        poster_path: resolvePosterPath(mediaType, credit.id, credit.poster_path),
         media_type: mediaType as 'movie' | 'tv',
         vote_average: credit.vote_average || 0,
         release_date: 'first_air_date' in credit ? credit.first_air_date : credit.release_date,
@@ -236,6 +238,7 @@ export default function PersonCreditsScreen() {
     mediaType,
     filterState,
     sortState,
+    resolvePosterPath,
     preferences?.showOriginalTitles,
   ]);
 

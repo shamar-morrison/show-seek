@@ -8,6 +8,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useLists } from '@/src/hooks/useLists';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useWatchProviderEnrichment } from '@/src/hooks/useWatchProviderEnrichment';
 import { UserList } from '@/src/services/ListService';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -66,6 +67,7 @@ export default function WhereToWatchScreen() {
   const { accentColor } = useAccentColor();
   const { region } = useRegion();
   const { isPremium } = usePremium();
+  const { resolvePosterPath } = usePosterOverrides();
   const queryClient = useQueryClient();
   const isAccountRequired = useAccountRequired();
 
@@ -280,39 +282,43 @@ export default function WhereToWatchScreen() {
   const showPremiumOverlay = !isPremium && !!selectedList;
 
   const renderResultItem = useCallback(
-    ({ item }: { item: (typeof selectedListItems)[number] }) => (
-      <Pressable
-        style={({ pressed }) => [styles.resultCard, pressed && styles.resultCardPressed]}
-        onPress={() => handleResultPress(item)}
-      >
-        <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, '/w185') }}
-          style={styles.resultPoster}
-          contentFit="cover"
-          placeholderType={item.media_type === 'movie' ? 'movie' : 'tv'}
-        />
-        <View style={styles.resultInfo}>
-          <Text style={styles.resultTitle} numberOfLines={2}>
-            {item.title || item.name}
-          </Text>
-          <View style={styles.resultMetaRow}>
-            <View style={[styles.mediaTypeBadge, { borderColor: accentColor }]}>
-              <Text style={[styles.mediaTypeText, { color: accentColor }]}>
-                {item.media_type === 'movie' ? t('media.movie') : t('media.tvShow')}
-              </Text>
+    ({ item }: { item: (typeof selectedListItems)[number] }) => {
+      const posterPath = resolvePosterPath(item.media_type, item.id, item.poster_path);
+
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.resultCard, pressed && styles.resultCardPressed]}
+          onPress={() => handleResultPress(item)}
+        >
+          <MediaImage
+            source={{ uri: getImageUrl(posterPath, '/w185') }}
+            style={styles.resultPoster}
+            contentFit="cover"
+            placeholderType={item.media_type === 'movie' ? 'movie' : 'tv'}
+          />
+          <View style={styles.resultInfo}>
+            <Text style={styles.resultTitle} numberOfLines={2}>
+              {item.title || item.name}
+            </Text>
+            <View style={styles.resultMetaRow}>
+              <View style={[styles.mediaTypeBadge, { borderColor: accentColor }]}>
+                <Text style={[styles.mediaTypeText, { color: accentColor }]}>
+                  {item.media_type === 'movie' ? t('media.movie') : t('media.tvShow')}
+                </Text>
+              </View>
+              {selectedServiceLogo && (
+                <MediaImage
+                  source={{ uri: selectedServiceLogo }}
+                  style={styles.resultProviderLogo}
+                  contentFit="contain"
+                />
+              )}
             </View>
-            {selectedServiceLogo && (
-              <MediaImage
-                source={{ uri: selectedServiceLogo }}
-                style={styles.resultProviderLogo}
-                contentFit="contain"
-              />
-            )}
           </View>
-        </View>
-      </Pressable>
-    ),
-    [accentColor, handleResultPress, selectedServiceLogo, t]
+        </Pressable>
+      );
+    },
+    [accentColor, handleResultPress, resolvePosterPath, selectedServiceLogo, t]
   );
 
   return (

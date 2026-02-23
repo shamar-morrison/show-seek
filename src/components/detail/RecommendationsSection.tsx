@@ -3,6 +3,7 @@ import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { FlashList } from '@shopify/flash-list';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
@@ -19,7 +20,12 @@ const RecommendationCard = memo<{
   onLongPress?: (item: any) => void;
   mediaType: 'movie' | 'tv';
   preferOriginalTitles: boolean;
-}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles }) => {
+  resolvePosterPath: (
+    mediaType: 'movie' | 'tv',
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
+}>(({ item, onPress, onLongPress, mediaType, preferOriginalTitles, resolvePosterPath }) => {
   const styles = useDetailStyles();
   const { getListsForMedia } = useListMembership();
   const listIds = getListsForMedia(item.id, mediaType);
@@ -31,6 +37,10 @@ const RecommendationCard = memo<{
   const displayTitle = useMemo(
     () => getMediaTitle(item, preferOriginalTitles),
     [item, preferOriginalTitles]
+  );
+  const posterPath = useMemo(
+    () => resolvePosterPath(mediaType, item.id, item.poster_path),
+    [item.id, item.poster_path, mediaType, resolvePosterPath]
   );
 
   const handlePress = useCallback(() => {
@@ -51,7 +61,7 @@ const RecommendationCard = memo<{
       <View style={styles.similarPosterContainer}>
         <MediaImage
           source={{
-            uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.small),
+            uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small),
           }}
           style={styles.similarPoster}
           contentFit="cover"
@@ -92,6 +102,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
   }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
+    const { resolvePosterPath } = usePosterOverrides();
 
     // Render loading skeleton
     if (isLoading && shouldLoad) {
@@ -153,6 +164,7 @@ export const RecommendationsSection = memo<RecommendationsSectionProps>(
                   onLongPress={onMediaLongPress}
                   mediaType={mediaType}
                   preferOriginalTitles={preferOriginalTitles}
+                  resolvePosterPath={resolvePosterPath}
                 />
               )}
             />

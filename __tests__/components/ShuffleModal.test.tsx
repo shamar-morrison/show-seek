@@ -39,6 +39,14 @@ jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 // Mock Reanimated for testing (v4 compatible)
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native');

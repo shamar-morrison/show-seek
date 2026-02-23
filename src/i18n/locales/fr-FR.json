@@ -1046,6 +1046,19 @@
     "linkCopied": "Lien copié dans le presse-papiers",
     "unableToShare": "Impossible de partager. Veuillez réessayer."
   },
+  "posterPicker": {
+    "movieTitle": "Choisir l'affiche du film",
+    "tvTitle": "Choisir l'affiche de la série",
+    "subtitleMovie": "Choisissez une affiche personnalisée pour ce film.",
+    "subtitleTV": "Choisissez une affiche personnalisée pour cette série.",
+    "useDefault": "Utiliser l'affiche par défaut",
+    "save": "Enregistrer l'affiche",
+    "saving": "Enregistrement...",
+    "noPosters": "Aucune affiche disponible pour ce titre.",
+    "updated": "Affiche mise à jour",
+    "reset": "Affiche par défaut restaurée",
+    "failed": "Impossible de mettre à jour l'affiche. Veuillez réessayer."
+  },
   "notFound": {
     "title": "Oups !",
     "message": "Cet écran n'existe pas.",

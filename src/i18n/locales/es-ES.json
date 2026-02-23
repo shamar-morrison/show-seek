@@ -1207,6 +1207,19 @@
     "linkCopied": "Enlace copiado al portapapeles",
     "unableToShare": "No se pudo compartir. Inténtalo de nuevo."
   },
+  "posterPicker": {
+    "movieTitle": "Elegir póster de película",
+    "tvTitle": "Elegir póster de serie",
+    "subtitleMovie": "Elige un póster personalizado para esta película.",
+    "subtitleTV": "Elige un póster personalizado para esta serie.",
+    "useDefault": "Usar póster predeterminado",
+    "save": "Guardar póster",
+    "saving": "Guardando...",
+    "noPosters": "No hay pósteres disponibles para este título.",
+    "updated": "Póster actualizado",
+    "reset": "Póster predeterminado restaurado",
+    "failed": "No se pudo actualizar el póster. Inténtalo de nuevo."
+  },
   "shuffle": {
     "noImage": "Sin imagen",
     "shuffling": "Barajando...",

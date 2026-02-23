@@ -14,6 +14,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
@@ -50,6 +51,7 @@ export default function TVShowRatingsScreen() {
     refetch,
   } = useEnrichedTVRatings();
   const { t } = useTranslation();
+  const { resolvePosterPath } = usePosterOverrides();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
@@ -124,6 +126,7 @@ export default function TVShowRatingsScreen() {
   const renderGridItem = useCallback(
     ({ item }: { item: EnrichedTVRating }) => {
       if (!item.tvShow) return null;
+      const posterPath = resolvePosterPath('tv', item.tvShow.id, item.tvShow.poster_path);
 
       return (
         <Pressable
@@ -136,7 +139,7 @@ export default function TVShowRatingsScreen() {
         >
           <MediaImage
             source={{
-              uri: getImageUrl(item.tvShow.poster_path, TMDB_IMAGE_SIZES.poster.medium),
+              uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium),
             }}
             style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
             contentFit="cover"
@@ -170,7 +173,7 @@ export default function TVShowRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress, itemHorizontalMargin, itemWidth]
+    [handleItemPress, itemHorizontalMargin, itemWidth, resolvePosterPath]
   );
 
   const renderListItem = useCallback(

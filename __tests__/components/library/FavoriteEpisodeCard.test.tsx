@@ -25,6 +25,14 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: 'MediaImage',
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 describe('FavoriteEpisodeCard', () => {
   const mockEpisode = {
     id: '123-1-5',

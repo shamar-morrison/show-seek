@@ -4,6 +4,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
@@ -26,10 +27,15 @@ export const TVShowCard = memo<TVShowCardProps>(
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
+    const { resolvePosterPath } = usePosterOverrides();
+    const resolvedPosterPath = useMemo(
+      () => resolvePosterPath('tv', show.id, show.poster_path),
+      [resolvePosterPath, show.id, show.poster_path]
+    );
 
     const posterUrl = useMemo(
-      () => getOptimizedImageUrl(show.poster_path, 'poster', 'medium', preferences?.dataSaver),
-      [show.poster_path, preferences?.dataSaver]
+      () => getOptimizedImageUrl(resolvedPosterPath, 'poster', 'medium', preferences?.dataSaver),
+      [preferences?.dataSaver, resolvedPosterPath]
     );
     const displayTitle = useMemo(
       () => getDisplayMediaTitle(show, !!preferences?.showOriginalTitles),

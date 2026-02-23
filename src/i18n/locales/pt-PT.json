@@ -1221,6 +1221,19 @@
     "linkCopied": "Ligação copiada para a área de transferência",
     "unableToShare": "Não foi possível partilhar. Tente novamente."
   },
+  "posterPicker": {
+    "movieTitle": "Escolher cartaz do filme",
+    "tvTitle": "Escolher cartaz da série",
+    "subtitleMovie": "Escolha um cartaz personalizado para este filme.",
+    "subtitleTV": "Escolha um cartaz personalizado para esta série.",
+    "useDefault": "Usar cartaz predefinido",
+    "save": "Guardar cartaz",
+    "saving": "A guardar...",
+    "noPosters": "Não há cartazes disponíveis para este título.",
+    "updated": "Cartaz atualizado",
+    "reset": "Cartaz predefinido restaurado",
+    "failed": "Falha ao atualizar o cartaz. Tente novamente."
+  },
   "shareCard": {
     "title": "Cartão para partilhar",
     "share": "Partilhar para...",

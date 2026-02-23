@@ -1,8 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE } from '@/src/constants/theme';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { RatingItem } from '@/src/services/RatingService';
 import { listCardStyles } from '@/src/styles/listCardStyles';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
@@ -13,6 +14,7 @@ interface EpisodeRatingCardProps {
 }
 
 export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress }) => {
+  const { resolvePosterPath } = usePosterOverrides();
   const handlePress = useCallback(() => {
     onPress(rating);
   }, [onPress, rating]);
@@ -22,6 +24,13 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
   }
 
   const episodeCode = `S${rating.seasonNumber}E${rating.episodeNumber}`;
+  const posterPath = useMemo(
+    () =>
+      rating.tvShowId
+        ? resolvePosterPath('tv', rating.tvShowId, rating.posterPath ?? null)
+        : (rating.posterPath ?? null),
+    [rating.posterPath, rating.tvShowId, resolvePosterPath]
+  );
 
   return (
     <Pressable
@@ -32,7 +41,7 @@ export const EpisodeRatingCard = memo<EpisodeRatingCardProps>(({ rating, onPress
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(rating.posterPath ?? null, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={listCardStyles.poster}
         contentFit="cover"
       />

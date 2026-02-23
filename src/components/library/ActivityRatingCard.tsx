@@ -1,8 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import type { ActivityItem } from '@/src/types/history';
 import { listCardStyles } from '@/src/styles/listCardStyles';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MediaImage } from '../ui/MediaImage';
@@ -19,10 +20,33 @@ interface ActivityRatingCardProps {
  * Consistent with MovieRatingListCard and TVShowRatingListCard styling.
  */
 export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress, t }) => {
+  const { resolvePosterPath } = usePosterOverrides();
 
   const handlePress = useCallback(() => {
     onPress(item);
   }, [onPress, item]);
+
+  const posterPath = useMemo(() => {
+    if (item.mediaType === 'movie' || item.mediaType === 'tv') {
+      const rawId =
+        typeof item.id === 'number'
+          ? item.id
+          : (() => {
+              const match = String(item.id).match(/(\d+)(?!.*\d)/);
+              return match ? Number(match[1]) : null;
+            })();
+
+      if (typeof rawId === 'number' && Number.isFinite(rawId)) {
+        return resolvePosterPath(item.mediaType, rawId, item.posterPath);
+      }
+    }
+
+    if (item.mediaType === 'episode' && item.tvShowId) {
+      return resolvePosterPath('tv', item.tvShowId, item.posterPath);
+    }
+
+    return item.posterPath;
+  }, [item.id, item.mediaType, item.posterPath, item.tvShowId, resolvePosterPath]);
 
   // Extract year from release date if available
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
@@ -50,7 +74,7 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
       onPress={handlePress}
     >
       <MediaImage
-        source={{ uri: getImageUrl(item.posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+        source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
         style={listCardStyles.poster}
         contentFit="cover"
       />

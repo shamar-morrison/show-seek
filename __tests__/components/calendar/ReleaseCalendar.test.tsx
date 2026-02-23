@@ -11,6 +11,14 @@ jest.mock('expo-linear-gradient', () => ({
   LinearGradient: 'LinearGradient',
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 function createRelease(id: number, day: number): UpcomingRelease {
   return {
     id,

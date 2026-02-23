@@ -928,6 +928,19 @@
     "linkCopied": "Link copied to clipboard",
     "unableToShare": "Unable to share. Please try again."
   },
+  "posterPicker": {
+    "movieTitle": "Choose Movie Poster",
+    "tvTitle": "Choose TV Poster",
+    "subtitleMovie": "Pick a custom poster for this movie.",
+    "subtitleTV": "Pick a custom poster for this TV show.",
+    "useDefault": "Use Default Poster",
+    "save": "Save Poster",
+    "saving": "Saving...",
+    "noPosters": "No posters available for this title.",
+    "updated": "Poster updated",
+    "reset": "Default poster restored",
+    "failed": "Failed to update poster. Please try again."
+  },
   "notFound": {
     "title": "Oops!",
     "message": "This screen doesn't exist.",

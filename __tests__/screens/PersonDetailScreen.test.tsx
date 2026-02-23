@@ -181,6 +181,14 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    overrides: {},
+    resolvePosterPath: (_mediaType: 'movie' | 'tv', _mediaId: number, fallbackPosterPath: string | null) =>
+      fallbackPosterPath,
+  }),
+}));
+
 jest.mock('@/src/hooks/useListMembership', () => ({
   useListMembership: () => ({
     getListsForMedia: mockGetListsForMedia,
