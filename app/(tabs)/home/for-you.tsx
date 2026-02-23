@@ -9,9 +9,9 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Sparkles, Star, TrendingUp } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -148,27 +148,12 @@ function RecommendationSection({
   isLoading,
   icon,
 }: RecommendationSectionProps) {
-  const { resolvePosterPath, overrides } = usePosterOverrides();
-  const [isFocused, setIsFocused] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      setIsFocused(true);
-      return () => {
-        setIsFocused(false);
-      };
-    }, [])
-  );
-  const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
+  const { overrides } = usePosterOverrides();
+  const listExtraData = useMemo(() => ({ overrides }), [overrides]);
   const renderItem = useCallback(
-    ({ item }: { item: Movie | TVShow }) => {
-      const posterPathOverride = resolvePosterPath(mediaType, item.id, item.poster_path);
-      return mediaType === 'tv' ? (
-        <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
-      ) : (
-        <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
-      );
-    },
-    [resolvePosterPath, mediaType]
+    ({ item }: { item: Movie | TVShow }) =>
+      mediaType === 'tv' ? <TVShowCard show={item as TVShow} /> : <MovieCard movie={item as Movie} />,
+    [mediaType]
   );
 
   if (!isLoading && items.length === 0) {
