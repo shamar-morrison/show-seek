@@ -5,6 +5,7 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "migrate:revenuecat": "npm run build && node lib/scripts/migrateRevenueCatSubscribers.js",
+    "repair:revenuecat-premium": "npm run build && node lib/scripts/repairRevenueCatPremiumStatus.js",
     "repair:list-descriptions": "npm run build && node lib/scripts/repairListDescriptions.js",
     "repair:list-descriptions:apply": "npm run build && node lib/scripts/repairListDescriptions.js --apply",
     "seed:default-lists": "npm run build && node lib/scripts/seedDefaultLists.js",

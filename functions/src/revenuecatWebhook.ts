@@ -2,13 +2,15 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
 import * as crypto from 'node:crypto';
+import {
+  DEFAULT_LEGACY_LIFETIME_PRODUCT_ID,
+  MONTHLY_SUBSCRIPTION_PRODUCT_ID,
+  YEARLY_SUBSCRIPTION_PRODUCT_ID,
+  isLegacyLifetimeProductId,
+} from './shared/premiumProducts';
 
 export const REVENUECAT_WEBHOOK_AUTH = defineSecret('REVENUECAT_WEBHOOK_AUTH');
 export const REVENUECAT_API_KEY = defineSecret('REVENUECAT_API_KEY');
-
-const LEGACY_LIFETIME_PRODUCT_ID = 'premium_unlock';
-const MONTHLY_SUBSCRIPTION_PRODUCT_ID = 'monthly_showseek_sub';
-const YEARLY_SUBSCRIPTION_PRODUCT_ID = 'showseek_yearly_sub';
 
 const ACTIVE_EVENT_TYPES = new Set([
   'INITIAL_PURCHASE',
@@ -125,7 +127,7 @@ const resolveExistingTrialConsumedAt = (
 const isLegacyLifetimeEntitlement = (existingPremium: ExistingPremiumData): boolean => {
   return (
     existingPremium.entitlementType === 'lifetime' ||
-    existingPremium.productId === LEGACY_LIFETIME_PRODUCT_ID
+    isLegacyLifetimeProductId(existingPremium.productId)
   );
 };
 
@@ -195,21 +197,17 @@ export const mapRevenueCatEventToPremiumPayload = (
     ? (resolveExistingTrialConsumedAt(existingPremium) ?? trialStartAt)
     : null;
 
-  const fallbackExpiredAt = admin.firestore.Timestamp.fromMillis(nowMs);
-  const expiredAt = isPremium
-    ? null
-    : (toTimestamp(expiresAtMs) ??
-      existingPremium.expiredAt ??
-      existingPremium.expireAt ??
-      fallbackExpiredAt);
+  const shouldUseLifetimeEntitlement =
+    isLegacyLifetimeProductId(productId) || isLegacyLifetimeEntitlement(existingPremium);
 
-  const preservedLifetime = isLegacyLifetimeEntitlement(existingPremium) && !isPremium;
-  if (preservedLifetime) {
+  if (shouldUseLifetimeEntitlement) {
     return {
       isPremium: true,
       entitlementType: 'lifetime',
       purchaseToken: existingPremium.purchaseToken ?? null,
-      productId: existingPremium.productId ?? LEGACY_LIFETIME_PRODUCT_ID,
+      productId:
+        (isLegacyLifetimeProductId(productId) ? productId : existingPremium.productId) ??
+        DEFAULT_LEGACY_LIFETIME_PRODUCT_ID,
       orderId: existingPremium.orderId ?? null,
       purchaseDate:
         existingPremium.purchaseDate ?? admin.firestore.Timestamp.fromMillis(eventTimestampMs),
@@ -230,6 +228,14 @@ export const mapRevenueCatEventToPremiumPayload = (
       rcLastEventId: event.id ?? null,
     };
   }
+
+  const fallbackExpiredAt = admin.firestore.Timestamp.fromMillis(nowMs);
+  const expiredAt = isPremium
+    ? null
+    : (toTimestamp(expiresAtMs) ??
+      existingPremium.expiredAt ??
+      existingPremium.expireAt ??
+      fallbackExpiredAt);
 
   return {
     isPremium,
