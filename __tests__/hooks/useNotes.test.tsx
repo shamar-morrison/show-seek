@@ -7,6 +7,7 @@ const mockGetUserNotes = jest.fn();
 const mockGetNote = jest.fn();
 const mockSaveNote = jest.fn();
 const mockDeleteNote = jest.fn();
+const mockCanUseNonCriticalRead = jest.fn();
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
@@ -23,6 +24,10 @@ jest.mock('@/src/services/NoteService', () => ({
     saveNote: (...args: unknown[]) => mockSaveNote(...args),
     deleteNote: (...args: unknown[]) => mockDeleteNote(...args),
   },
+}));
+
+jest.mock('@/src/services/ReadBudgetGuard', () => ({
+  canUseNonCriticalRead: (...args: unknown[]) => mockCanUseNonCriticalRead(...args),
 }));
 
 import { useDeleteNote, useMediaNote, useSaveNote } from '@/src/hooks/useNotes';
@@ -102,6 +107,7 @@ afterAll(() => {
 describe('useNotes optimistic cache behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCanUseNonCriticalRead.mockReturnValue(true);
     mockAuthState.user = { uid: 'test-user-id' };
     mockGetUserNotes.mockResolvedValue([]);
     mockGetNote.mockResolvedValue(null);
@@ -398,5 +404,76 @@ describe('useNotes optimistic cache behavior', () => {
       saveDeferred.resolve(undefined);
       await saveDeferred.promise;
     });
+  });
+
+  it('uses notes-list cache fallback when detail note query is disabled', async () => {
+    const client = createQueryClient();
+    const listCachedNote = createNote({
+      id: 'movie-777',
+      mediaType: 'movie',
+      mediaId: 777,
+      content: 'List cached note',
+      mediaTitle: 'Movie 777',
+    });
+
+    mockCanUseNonCriticalRead.mockReturnValue(false);
+    client.setQueryData(getNotesKey(), [listCachedNote]);
+
+    const { result } = renderHook(() => useMediaNote('movie', 777), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.hasNote).toBe(true);
+      expect(result.current.note?.content).toBe('List cached note');
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(mockGetNote).not.toHaveBeenCalled();
+  });
+
+  it('ensureNoteLoadedForEdit fetches missing note on demand and updates cache', async () => {
+    const client = createQueryClient();
+    const fetchedNote = createNote({
+      id: 'movie-456',
+      mediaType: 'movie',
+      mediaId: 456,
+      content: 'Fetched on demand',
+      mediaTitle: 'Movie 456',
+    });
+
+    mockCanUseNonCriticalRead.mockReturnValue(false);
+    mockGetNote.mockResolvedValueOnce(fetchedNote);
+
+    const { result } = renderHook(() => useMediaNote('movie', 456), {
+      wrapper: createWrapper(client),
+    });
+
+    let ensuredNote: Note | null | undefined;
+    await act(async () => {
+      ensuredNote = await result.current.ensureNoteLoadedForEdit();
+    });
+
+    expect(ensuredNote).toEqual(fetchedNote);
+    expect(client.getQueryData(getMovieNoteKey(456))).toEqual(fetchedNote);
+    expect(mockGetNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('ensureNoteLoadedForEdit propagates errors and keeps note state safe', async () => {
+    const client = createQueryClient();
+
+    mockCanUseNonCriticalRead.mockReturnValue(false);
+    mockGetNote.mockRejectedValueOnce(new Error('note fetch failed'));
+
+    const { result } = renderHook(() => useMediaNote('movie', 999), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(result.current.ensureNoteLoadedForEdit()).rejects.toThrow('note fetch failed');
+    });
+
+    expect(result.current.hasNote).toBe(false);
+    expect(result.current.note).toBeNull();
   });
 });

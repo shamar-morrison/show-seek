@@ -29,10 +29,12 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Note } from '@/src/types/note';
+import { navigateFromLibraryNote } from '@/src/utils/noteNavigation';
 import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { getSortableTitle } from '@/src/utils/sortUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import {
@@ -117,6 +119,7 @@ function truncateText(text: string, maxLength: number): string {
 export default function NotesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
@@ -306,23 +309,17 @@ export default function NotesScreen() {
     (note: Note) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      if (!currentTab) {
-        console.warn('Cannot navigate: currentTab is null');
-        return;
-      }
-
-      if (note.mediaType === 'episode') {
-        // Navigate to episode detail screen
-        const path = `/(tabs)/${currentTab}/tv/${note.showId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
-        router.push(path as any);
-      } else {
-        // Navigate to movie or TV show detail screen
-        const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';
-        const path = `/(tabs)/${currentTab}/${mediaPath}/${note.mediaId}`;
-        router.push(path as any);
-      }
+      navigateFromLibraryNote({
+        note,
+        currentTab,
+        queryClient,
+        push: (path) => router.push(path as any),
+        onMissingTab: () => console.warn('Cannot navigate: currentTab is null'),
+        onInvalidEpisodeNote: () =>
+          console.warn('Cannot navigate: episode note is missing show or episode metadata'),
+      });
     },
-    [currentTab, router]
+    [currentTab, queryClient, router]
   );
 
   const handleEditNote = useCallback((note: Note) => {

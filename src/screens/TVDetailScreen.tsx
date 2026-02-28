@@ -71,7 +71,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TVDetailScreen() {
   const styles = useDetailStyles();
@@ -95,6 +95,7 @@ export default function TVDetailScreen() {
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isPremium } = usePremium();
@@ -134,7 +135,12 @@ export default function TVDetailScreen() {
 
   // Reminder hooks
   const { reminder, hasReminder, isLoading: isLoadingReminder } = useMediaReminder(tvId, 'tv');
-  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('tv', tvId);
+  const {
+    note,
+    hasNote,
+    isLoading: isLoadingNote,
+    ensureNoteLoadedForEdit,
+  } = useMediaNote('tv', tvId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -311,6 +317,47 @@ export default function TVDetailScreen() {
     navigateTo(path);
   };
 
+  const handleNotePress = async () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    if (isOpeningNote) {
+      return;
+    }
+
+    setIsOpeningNote(true);
+
+    try {
+      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+
+      noteSheetRef.current?.present({
+        mediaType: 'tv',
+        mediaId: tvId,
+        posterPath: resolvedShowPosterPath,
+        mediaTitle: show.name,
+        initialNote: resolvedNote?.content,
+      });
+    } catch (error) {
+      console.error('[TVDetailScreen] Failed to load note before opening editor:', error);
+
+      if (!note?.content) {
+        Alert.alert(t('common.error'), t('common.tryAgain'));
+        return;
+      }
+
+      noteSheetRef.current?.present({
+        mediaType: 'tv',
+        mediaId: tvId,
+        posterPath: resolvedShowPosterPath,
+        mediaTitle: show.name,
+        initialNote: note.content,
+      });
+    } finally {
+      setIsOpeningNote(false);
+    }
+  };
+
   const handleCastViewAll = () => {
     navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(displayShowTitle)}`);
   };
@@ -413,18 +460,7 @@ export default function TVDetailScreen() {
                   }
                 : undefined
             }
-            onNote={() => {
-              if (isAccountRequired()) {
-                return;
-              }
-              noteSheetRef.current?.present({
-                mediaType: 'tv',
-                mediaId: tvId,
-                posterPath: resolvedShowPosterPath,
-                mediaTitle: show.name,
-                initialNote: note?.content,
-              });
-            }}
+            onNote={handleNotePress}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
@@ -436,7 +472,7 @@ export default function TVDetailScreen() {
             hasReminder={hasReminder}
             isLoadingReminder={isLoadingReminder}
             hasNote={hasNote}
-            isLoadingNote={isLoadingNote}
+            isLoadingNote={isLoadingNote || isOpeningNote}
             hasTrailer={!!trailer}
           />
 
