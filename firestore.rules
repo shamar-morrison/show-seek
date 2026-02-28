@@ -214,33 +214,84 @@ service cloud.firestore {
 
       // Reminders collection
       match /reminders/{reminderId} {
+        function isValidReminderBase(targetUserId) {
+          return request.resource.data.userId == targetUserId
+            && request.resource.data.keys().hasAll([
+              'userId', 'mediaType', 'mediaId', 'title', 'releaseDate',
+              'reminderTiming', 'status', 'createdAt', 'updatedAt'
+            ])
+            && request.resource.data.mediaType is string
+            && request.resource.data.mediaType in ['movie', 'tv']
+            && request.resource.data.mediaId is int
+            && request.resource.data.title is string
+            && request.resource.data.title.size() > 0
+            && request.resource.data.releaseDate is string
+            && request.resource.data.releaseDate.size() > 0
+            && request.resource.data.reminderTiming is string
+            && request.resource.data.reminderTiming in ['1_day_before', '1_week_before', 'on_release_day']
+            && request.resource.data.status is string
+            && request.resource.data.status in ['active', 'cancelled']
+            && request.resource.data.createdAt is int
+            && request.resource.data.updatedAt is int;
+        }
+
+        function hasAllowedReminderKeys() {
+          return request.resource.data.keys().hasOnly([
+            'id',
+            'userId',
+            'mediaType',
+            'mediaId',
+            'title',
+            'posterPath',
+            'releaseDate',
+            'reminderTiming',
+            'notificationScheduledFor',
+            'localNotificationId',
+            'status',
+            'createdAt',
+            'updatedAt',
+            'tvFrequency',
+            'nextEpisode',
+            'noNextEpisodeFound'
+          ]);
+        }
+
+        function hasValidOptionalReminderFields() {
+          return (!('id' in request.resource.data) || (
+              request.resource.data.id is string
+              && request.resource.data.id == reminderId
+            ))
+            && (!('posterPath' in request.resource.data)
+              || request.resource.data.posterPath == null
+              || request.resource.data.posterPath is string)
+            && (!('notificationScheduledFor' in request.resource.data)
+              || request.resource.data.notificationScheduledFor is int)
+            && (!('localNotificationId' in request.resource.data)
+              || request.resource.data.localNotificationId == null
+              || request.resource.data.localNotificationId is string)
+            && (!('tvFrequency' in request.resource.data)
+              || request.resource.data.tvFrequency in ['every_episode', 'season_premiere'])
+            && (!('nextEpisode' in request.resource.data)
+              || request.resource.data.nextEpisode is map)
+            && (!('noNextEpisodeFound' in request.resource.data)
+              || request.resource.data.noNextEpisodeFound is bool);
+        }
+
+        function isValidReminderWrite(targetUserId) {
+          return isValidReminderBase(targetUserId)
+            && hasAllowedReminderKeys()
+            && hasValidOptionalReminderFields();
+        }
+
         allow read: if isOwner(userId);
         allow create: if canWriteUserData(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.keys().hasAll([
-            'userId', 'mediaType', 'mediaId', 'title', 'releaseDate',
-            'reminderTiming', 'status', 'createdAt', 'updatedAt'
-          ])
-          && request.resource.data.mediaType is string
-          && request.resource.data.mediaType in ['movie', 'tv']
-          && request.resource.data.mediaId is int
-          && request.resource.data.title is string
-          && request.resource.data.title.size() > 0
-          && request.resource.data.releaseDate is string
-          && request.resource.data.releaseDate.size() > 0
-          && request.resource.data.reminderTiming is string
-          && request.resource.data.reminderTiming in ['1_day_before', '1_week_before', 'on_release_day']
-          && request.resource.data.status is string
-          && request.resource.data.status in ['active', 'cancelled']
-          && request.resource.data.createdAt is int
-          && request.resource.data.updatedAt is int
-          // TV-specific optional fields
-          && (!('tvFrequency' in request.resource.data) || request.resource.data.tvFrequency in ['every_episode', 'season_premiere'])
-          && (!('nextEpisode' in request.resource.data) || request.resource.data.nextEpisode is map);
+          && isValidReminderWrite(userId);
         allow update: if canWriteUserData(userId)
           && resource.data.userId == userId
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['reminderTiming', 'localNotificationId', 'notificationScheduledFor', 'status', 'updatedAt', 'nextEpisode', 'releaseDate', 'noNextEpisodeFound']);
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.mediaType == resource.data.mediaType
+          && request.resource.data.mediaId == resource.data.mediaId
+          && isValidReminderWrite(userId);
         allow delete: if canWriteUserData(userId)
           && resource.data.userId == userId;
       }
