@@ -66,6 +66,7 @@ import {
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   ActivityIndicator,
   Animated,
   RefreshControl,
@@ -101,6 +102,7 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
 
@@ -138,6 +140,7 @@ export default function EpisodeDetailScreen() {
     note,
     hasNote,
     isLoading: isLoadingNote,
+    ensureNoteLoadedForEdit,
   } = useMediaNote('episode', tvId, seasonNumber, episodeNumber);
 
   // Calculate current count for 'currently-watching' list
@@ -416,6 +419,42 @@ export default function EpisodeDetailScreen() {
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.large);
   const isPending = markWatched.isPending || markUnwatched.isPending;
   const headerSubtitle = t('media.seasonEpisode', { season: seasonNumber, episode: episodeNumber });
+  const isNoteActionLoading = isLoadingNote || isOpeningNote;
+
+  const handleNotePress = async () => {
+    if (isAccountRequired()) return;
+    if (isOpeningNote) return;
+
+    setIsOpeningNote(true);
+
+    const openNoteEditor = (initialNote?: string) => {
+      noteSheetRef.current?.present({
+        mediaType: 'episode',
+        mediaId: tvId,
+        seasonNumber,
+        episodeNumber,
+        posterPath: tvShow?.poster_path || null,
+        mediaTitle: episode.name,
+        initialNote,
+        showId: tvId,
+      });
+    };
+
+    try {
+      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+      openNoteEditor(resolvedNote?.content);
+    } catch (error) {
+      console.error('[EpisodeDetailScreen] Failed to load note before opening editor:', error);
+
+      if (!note?.content) {
+        Alert.alert(t('common.error'), t('common.tryAgain'));
+      }
+
+      openNoteEditor(note?.content ?? '');
+    } finally {
+      setIsOpeningNote(false);
+    }
+  };
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['top']}>
@@ -543,24 +582,12 @@ export default function EpisodeDetailScreen() {
 
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
-                onPress={() => {
-                  if (isAccountRequired()) return;
-                  noteSheetRef.current?.present({
-                    mediaType: 'episode',
-                    mediaId: tvId,
-                    seasonNumber,
-                    episodeNumber,
-                    posterPath: tvShow?.poster_path || null,
-                    mediaTitle: episode.name,
-                    initialNote: note?.content,
-                    showId: tvId,
-                  });
-                }}
-                disabled={isLoadingNote}
+                onPress={handleNotePress}
+                disabled={isNoteActionLoading}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 <View style={styles.iconButton}>
-                  {isLoadingNote ? (
+                  {isNoteActionLoading ? (
                     <ActivityIndicator size="small" color={COLORS.text} />
                   ) : hasNote ? (
                     <Pencil size={24} color={COLORS.white} />

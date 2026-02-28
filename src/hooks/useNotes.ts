@@ -1,23 +1,15 @@
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { Note, NoteInput } from '@/src/types/note';
+import { getMediaNoteQueryKey, getNotesQueryKey } from '@/src/utils/noteQueries';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth';
 import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { noteService } from '../services/NoteService';
 
 const getStatusReadsEnabled = () =>
   !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
-const getNotesQueryKey = (userId: string | undefined) => ['notes', userId] as const;
-
-const getMediaNoteQueryKey = (
-  userId: string | undefined,
-  mediaType: 'movie' | 'tv' | 'episode',
-  mediaId: number,
-  seasonNumber?: number,
-  episodeNumber?: number
-) =>
-  ['note', userId, mediaType, mediaId, seasonNumber ?? null, episodeNumber ?? null] as const;
+export { getMediaNoteQueryKey };
 
 const getNoteId = (
   mediaType: 'movie' | 'tv' | 'episode',
@@ -40,6 +32,24 @@ const upsertNoteInList = (notes: Note[], nextNote: Note): Note[] => {
   return [nextNote, ...withoutExisting].sort(
     (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()
   );
+};
+
+const isSameMediaNote = (
+  note: Note,
+  mediaType: 'movie' | 'tv' | 'episode',
+  mediaId: number,
+  seasonNumber?: number,
+  episodeNumber?: number
+) => {
+  if (note.mediaType !== mediaType || note.mediaId !== mediaId) {
+    return false;
+  }
+
+  if (mediaType !== 'episode') {
+    return true;
+  }
+
+  return note.seasonNumber === seasonNumber && note.episodeNumber === episodeNumber;
 };
 
 /**
@@ -85,21 +95,74 @@ export const useMediaNote = (
   seasonNumber?: number,
   episodeNumber?: number
 ) => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
+  const detailKey = getMediaNoteQueryKey(userId, mediaType, mediaId, seasonNumber, episodeNumber);
+
+  const getNoteFromNotesListCache = useCallback((): Note | null => {
+    if (!userId || !mediaId) {
+      return null;
+    }
+
+    const notesList = queryClient.getQueryData<Note[]>(getNotesQueryKey(userId)) ?? [];
+    return (
+      notesList.find((note) =>
+        isSameMediaNote(note, mediaType, mediaId, seasonNumber, episodeNumber)
+      ) ?? null
+    );
+  }, [queryClient, userId, mediaType, mediaId, seasonNumber, episodeNumber]);
 
   const query = useQuery({
-    queryKey: getMediaNoteQueryKey(userId, mediaType, mediaId, seasonNumber, episodeNumber),
+    queryKey: detailKey,
     queryFn: () => noteService.getNote(userId!, mediaType, mediaId, seasonNumber, episodeNumber),
     enabled: !!userId && !!mediaId && getStatusReadsEnabled(),
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
 
+  const resolvedNote = query.data ?? getNoteFromNotesListCache() ?? null;
+
+  const ensureNoteLoadedForEdit = useCallback(async (): Promise<Note | null> => {
+    if (!userId || !mediaId) {
+      return null;
+    }
+
+    const cachedDetailNote = queryClient.getQueryData<Note | null>(detailKey);
+    if (cachedDetailNote) {
+      return cachedDetailNote;
+    }
+
+    const noteFromListCache = getNoteFromNotesListCache();
+    if (noteFromListCache) {
+      queryClient.setQueryData<Note | null>(detailKey, noteFromListCache);
+      return noteFromListCache;
+    }
+
+    const fetchedNote = await queryClient.fetchQuery({
+      queryKey: detailKey,
+      queryFn: () => noteService.getNote(userId, mediaType, mediaId, seasonNumber, episodeNumber),
+      staleTime: 0,
+      gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+    });
+
+    return fetchedNote ?? null;
+  }, [
+    userId,
+    mediaId,
+    queryClient,
+    detailKey,
+    getNoteFromNotesListCache,
+    mediaType,
+    seasonNumber,
+    episodeNumber,
+  ]);
+
   return {
-    note: query.data || null,
-    hasNote: !!query.data,
+    note: resolvedNote,
+    hasNote: !!resolvedNote,
     isLoading: query.isLoading,
+    ensureNoteLoadedForEdit,
   };
 };
 

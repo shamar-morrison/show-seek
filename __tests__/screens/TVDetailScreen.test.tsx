@@ -1,11 +1,20 @@
 import TVDetailScreen from '@/src/screens/TVDetailScreen';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockUseQuery = jest.fn();
 const mockIsAccountRequired = jest.fn(() => false);
+const mockEnsureNoteLoadedForEdit = jest.fn();
+const mockNoteModalPresent = jest.fn();
+let mockUseMediaNoteValue: any = {
+  note: null,
+  hasNote: false,
+  isLoading: false,
+  ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
+};
 let mockTvLoading = false;
 
 const mockShow = {
@@ -119,7 +128,7 @@ jest.mock('@/src/hooks/useLists', () => ({
 }));
 
 jest.mock('@/src/hooks/useNotes', () => ({
-  useMediaNote: () => ({ note: null, hasNote: false, isLoading: false }),
+  useMediaNote: () => mockUseMediaNoteValue,
 }));
 
 jest.mock('@/src/hooks/useNotificationPermissions', () => ({
@@ -186,7 +195,13 @@ jest.mock('@/src/components/AddToListModal', () => {
 
 jest.mock('@/src/components/NotesModal', () => {
   const React = require('react');
-  const NoteModal = React.forwardRef((_props: any, _ref: any) => null);
+  const NoteModal = React.forwardRef((_props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      present: mockNoteModalPresent,
+      dismiss: jest.fn(),
+    }));
+    return null;
+  });
   NoteModal.displayName = 'NoteModal';
   return {
     __esModule: true,
@@ -276,7 +291,14 @@ jest.mock('@/src/components/detail/ExternalRatingsSection', () => ({
   ExternalRatingsSection: () => null,
 }));
 jest.mock('@/src/components/detail/MediaActionButtons', () => ({
-  MediaActionButtons: () => null,
+  MediaActionButtons: ({ onNote }: { onNote?: () => void }) => {
+    const React = require('react');
+    const { TouchableOpacity } = require('react-native');
+    return React.createElement(TouchableOpacity, {
+      testID: 'media-action-note',
+      onPress: onNote,
+    });
+  },
 }));
 jest.mock('@/src/components/detail/MediaDetailsInfo', () => ({ MediaDetailsInfo: () => null }));
 jest.mock('@/src/components/detail/OpenWithDrawer', () => () => null);
@@ -302,6 +324,13 @@ describe('TVDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTvLoading = false;
+    mockUseMediaNoteValue = {
+      note: null,
+      hasNote: false,
+      isLoading: false,
+      ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
+    };
+    mockEnsureNoteLoadedForEdit.mockResolvedValue(null);
 
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
       const subKey = queryKey[2];
@@ -381,5 +410,28 @@ describe('TVDetailScreen', () => {
     fireEvent.press(getByTestId('tv-poster-touchable'));
 
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10/poster-picker');
+  });
+
+  it('alerts and still opens note editor when note preload fails without note content', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockEnsureNoteLoadedForEdit.mockRejectedValueOnce(new Error('Failed to load note'));
+
+    const { getByTestId } = render(<TVDetailScreen />);
+
+    fireEvent.press(getByTestId('media-action-note'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalled();
+      expect(mockNoteModalPresent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mediaType: 'tv',
+          mediaId: 10,
+          mediaTitle: 'Loaded Show',
+          initialNote: '',
+        })
+      );
+    });
+
+    alertSpy.mockRestore();
   });
 });

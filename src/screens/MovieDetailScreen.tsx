@@ -202,6 +202,7 @@ export default function MovieDetailScreen() {
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
+  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const isAccountRequired = useAccountRequired();
@@ -245,7 +246,12 @@ export default function MovieDetailScreen() {
     hasReminder,
     isLoading: isLoadingReminder,
   } = useMediaReminder(movieId, 'movie');
-  const { note, hasNote, isLoading: isLoadingNote } = useMediaNote('movie', movieId);
+  const {
+    note,
+    hasNote,
+    isLoading: isLoadingNote,
+    ensureNoteLoadedForEdit,
+  } = useMediaNote('movie', movieId);
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
@@ -400,6 +406,43 @@ export default function MovieDetailScreen() {
     if (trailer) {
       setSelectedVideo(trailer);
       setTrailerModalVisible(true);
+    }
+  };
+
+  const handleNotePress = async () => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    if (isOpeningNote) {
+      return;
+    }
+
+    setIsOpeningNote(true);
+
+    const openNoteEditor = (initialNote?: string) => {
+      noteSheetRef.current?.present({
+        mediaType: 'movie',
+        mediaId: movieId,
+        posterPath: resolvedMoviePosterPath,
+        mediaTitle: movie.title,
+        initialNote,
+      });
+    };
+
+    try {
+      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+      openNoteEditor(resolvedNote?.content);
+    } catch (error) {
+      console.error('[MovieDetailScreen] Failed to load note before opening editor:', error);
+
+      if (!note?.content) {
+        Alert.alert(t('common.error'), t('common.tryAgain'));
+      }
+
+      openNoteEditor(note?.content ?? '');
+    } finally {
+      setIsOpeningNote(false);
     }
   };
 
@@ -724,18 +767,7 @@ export default function MovieDetailScreen() {
                   }
                 : undefined
             }
-            onNote={() => {
-              if (isAccountRequired()) {
-                return;
-              }
-              noteSheetRef.current?.present({
-                mediaType: 'movie',
-                mediaId: movieId,
-                posterPath: resolvedMoviePosterPath,
-                mediaTitle: movie.title,
-                initialNote: note?.content,
-              });
-            }}
+            onNote={handleNotePress}
             onTrailer={handleTrailerPress}
             onShareCard={() => setShareCardModalVisible(true)}
             isInAnyList={isInAnyList}
@@ -747,7 +779,7 @@ export default function MovieDetailScreen() {
             hasReminder={hasReminder}
             isLoadingReminder={isLoadingReminder}
             hasNote={hasNote}
-            isLoadingNote={isLoadingNote}
+            isLoadingNote={isLoadingNote || isOpeningNote}
             hasTrailer={!!trailer}
           />
 
