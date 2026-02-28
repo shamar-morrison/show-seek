@@ -9,9 +9,6 @@ export const getNoteDetailPath = (note: Note, currentTab: string): string | null
     }
 
     const showOrMediaId = note.showId ?? note.mediaId;
-    if (showOrMediaId === undefined) {
-      return null;
-    }
 
     return `/(tabs)/${currentTab}/tv/${showOrMediaId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
   }

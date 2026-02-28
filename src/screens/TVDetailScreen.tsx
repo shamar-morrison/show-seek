@@ -343,7 +343,6 @@ export default function TVDetailScreen() {
 
       if (!note?.content) {
         Alert.alert(t('common.error'), t('common.tryAgain'));
-        return;
       }
 
       noteSheetRef.current?.present({
@@ -351,7 +350,7 @@ export default function TVDetailScreen() {
         mediaId: tvId,
         posterPath: resolvedShowPosterPath,
         mediaTitle: show.name,
-        initialNote: note.content,
+        initialNote: note?.content ?? '',
       });
     } finally {
       setIsOpeningNote(false);
