@@ -1,16 +1,7 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import {
-  collection,
-  deleteField,
-  doc,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
+import { collection, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
 import { auth, db } from '../firebase/config';
 import type {
