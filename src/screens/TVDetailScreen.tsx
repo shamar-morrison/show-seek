@@ -71,7 +71,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Animated, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, RefreshControl, Text, View } from 'react-native';
 
 export default function TVDetailScreen() {
   const styles = useDetailStyles();

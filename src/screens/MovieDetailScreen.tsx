@@ -420,31 +420,27 @@ export default function MovieDetailScreen() {
 
     setIsOpeningNote(true);
 
-    try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-
+    const openNoteEditor = (initialNote?: string) => {
       noteSheetRef.current?.present({
         mediaType: 'movie',
         mediaId: movieId,
         posterPath: resolvedMoviePosterPath,
         mediaTitle: movie.title,
-        initialNote: resolvedNote?.content,
+        initialNote,
       });
+    };
+
+    try {
+      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+      openNoteEditor(resolvedNote?.content);
     } catch (error) {
       console.error('[MovieDetailScreen] Failed to load note before opening editor:', error);
 
       if (!note?.content) {
         Alert.alert(t('common.error'), t('common.tryAgain'));
-        return;
       }
 
-      noteSheetRef.current?.present({
-        mediaType: 'movie',
-        mediaId: movieId,
-        posterPath: resolvedMoviePosterPath,
-        mediaTitle: movie.title,
-        initialNote: note.content,
-      });
+      openNoteEditor(note?.content ?? '');
     } finally {
       setIsOpeningNote(false);
     }

@@ -119,7 +119,7 @@ describe('navigateFromLibraryNote', () => {
     expect(queryClient.getQueryData(getMediaNoteQueryKey('user-1', 'movie', 20, undefined, undefined))).toBeUndefined();
   });
 
-  it('does not navigate or seed cache for malformed episode notes', () => {
+  it('falls back to mediaId when episode note showId is missing', () => {
     const queryClient = new QueryClient();
     const push = jest.fn();
     const onInvalidEpisodeNote = jest.fn();
@@ -140,9 +140,48 @@ describe('navigateFromLibraryNote', () => {
       onInvalidEpisodeNote,
     });
 
+    expect(path).toBe('/(tabs)/library/tv/100/season/2/episode/3');
+    expect(push).toHaveBeenCalledWith('/(tabs)/library/tv/100/season/2/episode/3');
+    expect(onInvalidEpisodeNote).not.toHaveBeenCalled();
+    expect(queryClient.getQueryData(getMediaNoteQueryKey('user-1', 'episode', 100, 2, 3))).toEqual(note);
+  });
+
+  it.each([
+    ['seasonNumber is missing', { seasonNumber: undefined, episodeNumber: 3 }],
+    ['episodeNumber is missing', { seasonNumber: 2, episodeNumber: undefined }],
+  ])('does not navigate or seed cache when %s', (_reason, partialNote) => {
+    const queryClient = new QueryClient();
+    const push = jest.fn();
+    const onInvalidEpisodeNote = jest.fn();
+    const note = createNote({
+      id: 'episode-100-2-3',
+      mediaType: 'episode',
+      mediaId: 100,
+      showId: 100,
+      ...partialNote,
+    });
+
+    const path = navigateFromLibraryNote({
+      note,
+      currentTab: 'library',
+      queryClient,
+      push,
+      onInvalidEpisodeNote,
+    });
+
     expect(path).toBeNull();
     expect(onInvalidEpisodeNote).toHaveBeenCalledTimes(1);
     expect(push).not.toHaveBeenCalled();
-    expect(queryClient.getQueryData(getMediaNoteQueryKey('user-1', 'episode', 100, 2, 3))).toBeUndefined();
+    expect(
+      queryClient.getQueryData(
+        getMediaNoteQueryKey(
+          'user-1',
+          'episode',
+          100,
+          partialNote.seasonNumber,
+          partialNote.episodeNumber
+        )
+      )
+    ).toBeUndefined();
   });
 });

@@ -4,15 +4,16 @@ import { QueryClient } from '@tanstack/react-query';
 
 export const getNoteDetailPath = (note: Note, currentTab: string): string | null => {
   if (note.mediaType === 'episode') {
-    if (
-      note.showId === undefined ||
-      note.seasonNumber === undefined ||
-      note.episodeNumber === undefined
-    ) {
+    if (note.seasonNumber === undefined || note.episodeNumber === undefined) {
       return null;
     }
 
-    return `/(tabs)/${currentTab}/tv/${note.showId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
+    const showOrMediaId = note.showId ?? note.mediaId;
+    if (showOrMediaId === undefined) {
+      return null;
+    }
+
+    return `/(tabs)/${currentTab}/tv/${showOrMediaId}/season/${note.seasonNumber}/episode/${note.episodeNumber}`;
   }
 
   const mediaPath = note.mediaType === 'movie' ? 'movie' : 'tv';

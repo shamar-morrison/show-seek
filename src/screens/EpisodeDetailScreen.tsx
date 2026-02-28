@@ -427,9 +427,7 @@ export default function EpisodeDetailScreen() {
 
     setIsOpeningNote(true);
 
-    try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-
+    const openNoteEditor = (initialNote?: string) => {
       noteSheetRef.current?.present({
         mediaType: 'episode',
         mediaId: tvId,
@@ -437,27 +435,22 @@ export default function EpisodeDetailScreen() {
         episodeNumber,
         posterPath: tvShow?.poster_path || null,
         mediaTitle: episode.name,
-        initialNote: resolvedNote?.content,
+        initialNote,
         showId: tvId,
       });
+    };
+
+    try {
+      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+      openNoteEditor(resolvedNote?.content);
     } catch (error) {
       console.error('[EpisodeDetailScreen] Failed to load note before opening editor:', error);
 
       if (!note?.content) {
         Alert.alert(t('common.error'), t('common.tryAgain'));
-        return;
       }
 
-      noteSheetRef.current?.present({
-        mediaType: 'episode',
-        mediaId: tvId,
-        seasonNumber,
-        episodeNumber,
-        posterPath: tvShow?.poster_path || null,
-        mediaTitle: episode.name,
-        initialNote: note.content,
-        showId: tvId,
-      });
+      openNoteEditor(note?.content ?? '');
     } finally {
       setIsOpeningNote(false);
     }
