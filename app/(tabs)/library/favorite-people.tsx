@@ -3,9 +3,10 @@ import { PersonCard } from '@/src/components/library/PersonCard';
 import { PersonListCard } from '@/src/components/library/PersonListCard';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useFavoritePersons } from '@/src/hooks/useFavoritePersons';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
@@ -21,26 +22,21 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  SectionList,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'grid' | 'list';
-type PersonSection = {
-  title: string;
-  data: FavoritePerson[];
-};
+const ALL_TAB_KEY = 'all';
 
 const STORAGE_KEY = 'favoritePeopleViewMode';
 
 export default function FavoritePeopleScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentTab = useCurrentTab();
   const { data: favoritePersons, isLoading, error, refetch } = useFavoritePersons();
   const { height: windowHeight } = useWindowDimensions();
@@ -48,6 +44,7 @@ export default function FavoritePeopleScreen() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [activeDepartment, setActiveDepartment] = useState(ALL_TAB_KEY);
 
   useEffect(() => {
     const loadPreference = async () => {
@@ -136,31 +133,35 @@ export default function FavoritePeopleScreen() {
     t,
   ]);
 
-  const groupedPersons = useMemo(() => {
-    if (!displayItems || viewMode === 'grid') return null;
-
-    // Group by known_for_department
-    const groupedMap = new Map<string, FavoritePerson[]>();
-
-    displayItems.forEach((person) => {
-      const department = person.known_for_department || t('common.other');
-
-      if (!groupedMap.has(department)) {
-        groupedMap.set(department, []);
-      }
-      groupedMap.get(department)!.push(person);
+  const departmentTabs = useMemo<CategoryTab[]>(() => {
+    const departmentSet = new Set<string>();
+    (displayItems || []).forEach((person) => {
+      departmentSet.add(person.known_for_department || t('common.other'));
     });
 
-    // Convert to sections array, sorted by department name
-    const sections: PersonSection[] = Array.from(groupedMap.entries())
-      .map(([department, people]) => ({
-        title: department,
-        data: people,
-      }))
-      .sort((a, b) => a.title.localeCompare(b.title));
+    const dynamicTabs = Array.from(departmentSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((department) => ({
+        key: department,
+        label: department,
+      }));
 
-    return sections;
-  }, [displayItems, viewMode, t]);
+    return [{ key: ALL_TAB_KEY, label: t('common.all', { defaultValue: 'All' }) }, ...dynamicTabs];
+  }, [displayItems, t, i18n.language]);
+
+  const groupedModeItems = useMemo(() => {
+    if (!displayItems) return [];
+    if (activeDepartment === ALL_TAB_KEY) return displayItems;
+    return displayItems.filter(
+      (person) => (person.known_for_department || t('common.other')) === activeDepartment
+    );
+  }, [displayItems, activeDepartment, t]);
+
+  useEffect(() => {
+    if (viewMode === 'grid') return;
+    if (departmentTabs.some((tab) => tab.key === activeDepartment)) return;
+    setActiveDepartment(ALL_TAB_KEY);
+  }, [departmentTabs, activeDepartment, viewMode]);
 
   const handlePersonPress = useCallback(
     (personId: number) => {
@@ -191,15 +192,7 @@ export default function FavoritePeopleScreen() {
 
   const keyExtractor = useCallback((item: FavoritePerson) => item.id.toString(), []);
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: PersonSection }) => (
-      <Text style={styles.sectionHeader}>{section.title}</Text>
-    ),
-    []
-  );
-
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
-  const SectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
@@ -251,22 +244,27 @@ export default function FavoritePeopleScreen() {
           }
         />
       ) : (
-        <SectionList
-          sections={groupedPersons || []}
-          renderItem={renderListItem}
-          renderSectionHeader={renderSectionHeader}
-          SectionSeparatorComponent={SectionSeparator}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={libraryListStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={
-            searchQuery ? (
-              <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
-            ) : null
-          }
-        />
+        <View style={styles.listModeContainer}>
+          <CategoryTabs
+            tabs={departmentTabs}
+            activeKey={activeDepartment}
+            onChange={setActiveDepartment}
+            testID="favorite-people-category-tabs"
+          />
+          <FlatList
+            data={groupedModeItems}
+            renderItem={renderListItem}
+            keyExtractor={keyExtractor}
+            contentContainerStyle={libraryListStyles.listContent}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={ItemSeparator}
+            ListEmptyComponent={
+              searchQuery ? (
+                <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
+              ) : null
+            }
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -283,17 +281,8 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.m,
   },
-  sectionHeader: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.l,
+  listModeContainer: {
+    flex: 1,
   },
   headerButtons: {
     flexDirection: 'row',

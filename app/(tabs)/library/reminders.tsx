@@ -1,8 +1,9 @@
 import EditTimingModal from '@/src/components/library/EditTimingModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { ReminderCard } from '@/src/components/library/ReminderCard';
+import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { ACTIVE_OPACITY, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
+import { ACTIVE_OPACITY, COLORS, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useCancelReminder, useReminders, useUpdateReminder } from '@/src/hooks/useReminders';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -16,29 +17,28 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } fro
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  SectionList,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
-type ReminderSection = {
-  title: string;
-  data: Reminder[];
-};
+type ReminderGroupKey = 'today' | 'thisWeek' | 'thisMonth' | 'later';
+type ReminderGroups = Record<ReminderGroupKey, Reminder[]>;
+type ReminderTabKey = 'all' | ReminderGroupKey;
 
 const STORAGE_KEY = 'remindersViewMode';
+const REMINDER_LIST_DRAW_DISTANCE = 350;
 
 export default function RemindersScreen() {
   const navigation = useNavigation();
   const { data: reminders, isLoading } = useReminders();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [activeReminderTab, setActiveReminderTab] = useState<ReminderTabKey>('all');
   const [selectedReminder, setSelectedReminder] = useState<Reminder | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -101,10 +101,7 @@ export default function RemindersScreen() {
     return [...reminders].sort((a, b) => a.notificationScheduledFor - b.notificationScheduledFor);
   }, [reminders]);
 
-  // Group reminders by release date proximity
-  const groupedReminders = useMemo(() => {
-    if (!sortedReminders || viewMode === 'flat') return null;
-
+  const groupedReminders = useMemo<ReminderGroups>(() => {
     const now = new Date();
     const todayEnd = new Date(now);
     todayEnd.setHours(23, 59, 59, 999);
@@ -115,7 +112,7 @@ export default function RemindersScreen() {
     const monthEnd = new Date(now);
     monthEnd.setDate(monthEnd.getDate() + 30);
 
-    const groups = {
+    const groups: ReminderGroups = {
       today: [] as Reminder[],
       thisWeek: [] as Reminder[],
       thisMonth: [] as Reminder[],
@@ -135,16 +132,27 @@ export default function RemindersScreen() {
       }
     });
 
-    const sections: ReminderSection[] = [];
-    if (groups.today.length) sections.push({ title: t('common.today'), data: groups.today });
-    if (groups.thisWeek.length)
-      sections.push({ title: t('common.thisWeek'), data: groups.thisWeek });
-    if (groups.thisMonth.length)
-      sections.push({ title: t('common.thisMonth'), data: groups.thisMonth });
-    if (groups.later.length) sections.push({ title: t('common.later'), data: groups.later });
+    return groups;
+  }, [sortedReminders]);
 
-    return sections;
-  }, [sortedReminders, viewMode, t]);
+  const reminderTabs = useMemo<CategoryTab[]>(
+    () => [
+      { key: 'all', label: t('common.all', { defaultValue: 'All' }) },
+      { key: 'today', label: t('common.today') },
+      { key: 'thisWeek', label: t('common.thisWeek') },
+      { key: 'thisMonth', label: t('common.thisMonth') },
+      { key: 'later', label: t('common.later') },
+    ],
+    [t, i18n.language]
+  );
+
+  const groupedModeReminders = useMemo(() => {
+    if (activeReminderTab === 'all') return sortedReminders;
+    return groupedReminders[activeReminderTab];
+  }, [activeReminderTab, groupedReminders, sortedReminders]);
+
+  const isTabMode = viewMode === 'grouped';
+  const listData = isTabMode ? groupedModeReminders : sortedReminders;
 
   // Action handlers
   const handleEditTiming = useCallback((reminder: Reminder) => {
@@ -213,15 +221,6 @@ export default function RemindersScreen() {
 
   const keyExtractor = useCallback((item: Reminder) => item.id, []);
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: ReminderSection }) => (
-      <Text style={styles.sectionHeader}>{section.title}</Text>
-    ),
-    []
-  );
-
-  const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
-
   // Loading state
   if (isLoading || isLoadingPreference) {
     return <FullScreenLoading />;
@@ -244,28 +243,25 @@ export default function RemindersScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={libraryListStyles.divider} />
-      {viewMode === 'flat' ? (
+      <View style={styles.listContainer}>
+        {isTabMode && (
+          <CategoryTabs
+            tabs={reminderTabs}
+            activeKey={activeReminderTab}
+            onChange={(key) => setActiveReminderTab(key as ReminderTabKey)}
+            testID="reminders-category-tabs"
+          />
+        )}
         <FlashList
-          data={sortedReminders}
+          data={listData}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          drawDistance={REMINDER_LIST_DRAW_DISTANCE}
         />
-      ) : (
-        <SectionList
-          sections={groupedReminders || []}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          SectionSeparatorComponent={renderSectionSeparator}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={libraryListStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={ItemSeparator}
-        />
-      )}
+      </View>
 
       {selectedReminder && (
         <EditTimingModal
@@ -283,16 +279,7 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.m,
   },
-  sectionHeader: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.l,
+  listContainer: {
+    flex: 1,
   },
 });

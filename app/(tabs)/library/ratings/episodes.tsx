@@ -2,9 +2,10 @@ import { EmptyState } from '@/src/components/library/EmptyState';
 import { EpisodeRatingCard } from '@/src/components/library/EpisodeRatingCard';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
+import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
-import { COLORS, FONT_SIZE, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
+import { COLORS, HEADER_CHROME_HEIGHT, SPACING } from '@/src/constants/theme';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useRatings } from '@/src/hooks/useRatings';
@@ -20,34 +21,35 @@ import { List, Rows3, Search, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  SectionList,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'flat' | 'grouped';
-type EpisodeSection = {
-  title: string;
-  tvShowId: number;
+type EpisodeGroup = {
+  key: string;
+  label: string;
   data: RatingItem[];
 };
+const ALL_TAB_KEY = 'all';
 
 const STORAGE_KEY = 'episodeRatingsViewMode';
+const EPISODE_LIST_DRAW_DISTANCE = 350;
 
 export default function EpisodeRatingsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const currentTab = useCurrentTab();
   const { data: ratings, isLoading, error, refetch } = useRatings();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   const [viewMode, setViewMode] = useState<ViewMode>('flat');
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
+  const [activeShowTab, setActiveShowTab] = useState(ALL_TAB_KEY);
 
   // Filter episode ratings from all ratings
   const episodeRatings = useMemo(() => {
@@ -138,13 +140,10 @@ export default function EpisodeRatingsScreen() {
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
 
-  const groupedEpisodeRatings = useMemo(() => {
-    if (!filteredItems || viewMode === 'flat') return null;
-
-    // Group episodes by TV show
+  const episodeGroups = useMemo<EpisodeGroup[]>(() => {
     const groupedMap = new Map<number, RatingItem[]>();
 
-    filteredItems.forEach((rating) => {
+    (filteredItems || []).forEach((rating) => {
       if (rating.mediaType !== 'episode' || !rating.tvShowId) return;
 
       if (!groupedMap.has(rating.tvShowId)) {
@@ -154,10 +153,10 @@ export default function EpisodeRatingsScreen() {
     });
 
     // Convert to sections array
-    const sections: EpisodeSection[] = Array.from(groupedMap.entries())
+    const groups: EpisodeGroup[] = Array.from(groupedMap.entries())
       .map(([tvShowId, episodes]) => ({
-        title: episodes[0].tvShowName || t('library.unknownShow'),
-        tvShowId,
+        key: `show-${tvShowId}`,
+        label: episodes[0].tvShowName || t('library.unknownShow'),
         data: episodes.sort((a, b) => b.ratedAt - a.ratedAt),
       }))
       .sort((a, b) => {
@@ -167,8 +166,33 @@ export default function EpisodeRatingsScreen() {
         return bLatest - aLatest;
       });
 
-    return sections;
-  }, [filteredItems, viewMode, t]);
+    return groups;
+  }, [filteredItems, t]);
+
+  const showTabs = useMemo<CategoryTab[]>(
+    () => [
+      { key: ALL_TAB_KEY, label: t('common.all', { defaultValue: 'All' }) },
+      ...episodeGroups.map((group) => ({
+        key: group.key,
+        label: group.label,
+      })),
+    ],
+    [episodeGroups, t, i18n.language]
+  );
+
+  const groupedModeItems = useMemo(() => {
+    if (activeShowTab === ALL_TAB_KEY) return filteredItems || [];
+    return episodeGroups.find((group) => group.key === activeShowTab)?.data ?? [];
+  }, [activeShowTab, filteredItems, episodeGroups]);
+
+  const isTabMode = viewMode === 'grouped';
+  const listData = isTabMode ? groupedModeItems : (filteredItems ?? []);
+
+  useEffect(() => {
+    if (viewMode === 'flat') return;
+    if (showTabs.some((tab) => tab.key === activeShowTab)) return;
+    setActiveShowTab(ALL_TAB_KEY);
+  }, [activeShowTab, showTabs, viewMode]);
 
   const handleItemPress = useCallback(
     (rating: RatingItem) => {
@@ -195,15 +219,6 @@ export default function EpisodeRatingsScreen() {
   );
 
   const keyExtractor = useCallback((item: RatingItem) => item.id, []);
-
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: EpisodeSection }) => (
-      <Text style={styles.sectionHeader}>{section.title}</Text>
-    ),
-    []
-  );
-
-  const renderSectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
   const searchEmptyComponent = useMemo(
     () =>
@@ -249,30 +264,26 @@ export default function EpisodeRatingsScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={libraryListStyles.divider} />
-      {viewMode === 'flat' ? (
+      <View style={styles.listContainer}>
+        {isTabMode && (
+          <CategoryTabs
+            tabs={showTabs}
+            activeKey={activeShowTab}
+            onChange={setActiveShowTab}
+            testID="episode-ratings-category-tabs"
+          />
+        )}
         <FlashList
-          data={filteredItems}
+          data={listData}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={searchEmptyComponent}
+          drawDistance={EPISODE_LIST_DRAW_DISTANCE}
         />
-      ) : (
-        <SectionList
-          sections={groupedEpisodeRatings || []}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          SectionSeparatorComponent={renderSectionSeparator}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={libraryListStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={searchEmptyComponent}
-        />
-      )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -281,17 +292,8 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.m,
   },
-  sectionHeader: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.l,
+  listContainer: {
+    flex: 1,
   },
   headerButtons: {
     flexDirection: 'row',

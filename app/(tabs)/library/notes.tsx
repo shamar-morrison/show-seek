@@ -5,6 +5,7 @@ import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
 import { NOTES_SCREEN_SORT_OPTIONS, SortState } from '@/src/components/MediaSortModal';
 import NoteModal, { NoteModalRef } from '@/src/components/NotesModal';
+import { CategoryTab, CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
@@ -52,7 +53,6 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -62,13 +62,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'list' | 'grouped';
-type NoteSection = {
-  title: string;
-  data: Note[];
-};
+type NoteCategory = 'all' | 'movie' | 'tv' | 'episode';
 
 const VIEW_MODE_STORAGE_KEY = 'notesViewMode';
 const SORT_STATE_STORAGE_KEY = 'notesSortState';
+const NOTE_LIST_DRAW_DISTANCE = 350;
 
 const DEFAULT_SORT_STATE: SortState = {
   option: 'dateAdded',
@@ -122,7 +120,7 @@ export default function NotesScreen() {
   const queryClient = useQueryClient();
   const currentTab = useCurrentTab();
   const { isPremium } = usePremium();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
   const { data: notes, isLoading, error, refetch } = useNotes();
@@ -141,6 +139,7 @@ export default function NotesScreen() {
   const [isLoadingPreference, setIsLoadingPreference] = useState(true);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const [activeCategory, setActiveCategory] = useState<NoteCategory>('all');
 
   // Load preferences
   useEffect(() => {
@@ -283,27 +282,34 @@ export default function NotesScreen() {
     t,
   ]);
 
-  // Group notes by media type (uses search-filtered notes)
-  const groupedNotes = useMemo(() => {
-    if (!displayNotes || viewMode === 'list') return null;
+  const noteTabs = useMemo<CategoryTab[]>(
+    () => [
+      { key: 'all', label: t('common.all', { defaultValue: 'All' }) },
+      { key: 'movie', label: t('media.movies') },
+      { key: 'tv', label: t('media.tvShows') },
+      { key: 'episode', label: t('media.episodes') },
+    ],
+    [t, i18n.language]
+  );
 
-    const movieNotes = displayNotes.filter((n) => n.mediaType === 'movie');
-    const tvNotes = displayNotes.filter((n) => n.mediaType === 'tv');
-    const episodeNotes = displayNotes.filter((n) => n.mediaType === 'episode');
+  const groupedModeNotes = useMemo(() => {
+    if (!displayNotes) return [];
+    if (activeCategory === 'all') return displayNotes;
+    return displayNotes.filter((note) => note.mediaType === activeCategory);
+  }, [displayNotes, activeCategory]);
 
-    const sections: NoteSection[] = [];
-    if (movieNotes.length > 0) {
-      sections.push({ title: t('media.movies'), data: movieNotes });
-    }
-    if (tvNotes.length > 0) {
-      sections.push({ title: t('media.tvShows'), data: tvNotes });
-    }
-    if (episodeNotes.length > 0) {
-      sections.push({ title: t('media.episodes'), data: episodeNotes });
-    }
+  const isTabMode = viewMode === 'grouped';
+  const listData = isTabMode ? groupedModeNotes : (displayNotes ?? []);
 
-    return sections;
-  }, [displayNotes, viewMode, t]);
+  const searchEmptyComponent = useMemo(
+    () =>
+      searchQuery ? (
+        <SearchEmptyState
+          height={windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT - TAB_BAR_HEIGHT}
+        />
+      ) : null,
+    [searchQuery, windowHeight, insets.top, insets.bottom, TAB_BAR_HEIGHT]
+  );
 
   const handleCardPress = useCallback(
     (note: Note) => {
@@ -427,15 +433,7 @@ export default function NotesScreen() {
     ]
   );
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: NoteSection }) => (
-      <Text style={styles.sectionHeader}>{section.title}</Text>
-    ),
-    []
-  );
-
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
-  const SectionSeparator = useCallback(() => <View style={styles.sectionSeparator} />, []);
 
   // Premium gate
   if (!isPremium) {
@@ -494,46 +492,26 @@ export default function NotesScreen() {
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
       <View style={libraryListStyles.divider} />
-      {viewMode === 'list' ? (
+      <View style={styles.listContainer}>
+        {isTabMode && (
+          <CategoryTabs
+            tabs={noteTabs}
+            activeKey={activeCategory}
+            onChange={(key) => setActiveCategory(key as NoteCategory)}
+            testID="notes-category-tabs"
+          />
+        )}
         <FlashList
-          data={displayNotes}
+          data={listData}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
-          ListEmptyComponent={
-            searchQuery ? (
-              <SearchEmptyState
-                height={
-                  windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT - TAB_BAR_HEIGHT
-                }
-              />
-            ) : null
-          }
+          ListEmptyComponent={searchEmptyComponent}
+          drawDistance={NOTE_LIST_DRAW_DISTANCE}
         />
-      ) : (
-        <SectionList
-          sections={groupedNotes || []}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={libraryListStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={ItemSeparator}
-          SectionSeparatorComponent={SectionSeparator}
-          ListEmptyComponent={
-            searchQuery ? (
-              <SearchEmptyState
-                height={
-                  windowHeight - insets.top - insets.bottom - HEADER_CHROME_HEIGHT - TAB_BAR_HEIGHT
-                }
-              />
-            ) : null
-          }
-        />
-      )}
+      </View>
       <NoteModal ref={noteSheetRef} />
       <LibrarySortModal
         visible={sortModalVisible}
@@ -550,17 +528,8 @@ const styles = StyleSheet.create({
   separator: {
     height: SPACING.m,
   },
-  sectionHeader: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    backgroundColor: COLORS.background,
-    paddingVertical: SPACING.s,
-  },
-  sectionSeparator: {
-    height: SPACING.l,
+  listContainer: {
+    flex: 1,
   },
   mediaTitle: {
     fontSize: FONT_SIZE.m,
