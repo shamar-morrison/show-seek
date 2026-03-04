@@ -3,6 +3,14 @@ import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import React from 'react';
 
+const mockPush = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
+
 jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
@@ -33,6 +41,25 @@ function createRelease(id: number, day: number): UpcomingRelease {
   };
 }
 
+function createTVRelease(
+  id: number,
+  day: number,
+  nextEpisode?: { seasonNumber: number; episodeNumber: number }
+): UpcomingRelease {
+  return {
+    id,
+    mediaType: 'tv',
+    title: `TV Release ${id}`,
+    posterPath: null,
+    backdropPath: null,
+    releaseDate: new Date(2026, 1, day),
+    nextEpisode,
+    isReminder: false,
+    sourceLists: ['currently-watching'],
+    uniqueKey: `tv-release-${id}-${nextEpisode?.seasonNumber ?? 'none'}-${nextEpisode?.episodeNumber ?? 'none'}`,
+  };
+}
+
 function createSections(): ReleaseSection[] {
   return [
     {
@@ -59,6 +86,13 @@ function findNodeByTestId(node: any, testID: string): any {
   }
 
   return null;
+}
+
+function triggerFirstReleasePress(sectionList: any) {
+  const renderedSections = sectionList.props.sections as ReleaseSection[];
+  const firstRelease = renderedSections[0].data[0];
+  const itemNode = sectionList.props.renderItem({ item: firstRelease });
+  itemNode.props.onPress();
 }
 
 describe('ReleaseCalendar', () => {
@@ -123,5 +157,62 @@ describe('ReleaseCalendar', () => {
     upgradeButton.props.onPress();
 
     expect(onUpgradePress).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates movie releases to movie details', () => {
+    const sections: ReleaseSection[] = [
+      {
+        title: 'February 2026',
+        data: [createRelease(101, 10)],
+      },
+    ];
+
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
+    const sectionList = getByTestId('release-calendar-section-list');
+
+    triggerFirstReleasePress(sectionList);
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/home/movie/[id]',
+      params: { id: 101 },
+    });
+  });
+
+  it('navigates TV releases with episode metadata to episode details', () => {
+    const sections: ReleaseSection[] = [
+      {
+        title: 'February 2026',
+        data: [createTVRelease(202, 12, { seasonNumber: 2, episodeNumber: 3 })],
+      },
+    ];
+
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
+    const sectionList = getByTestId('release-calendar-section-list');
+
+    triggerFirstReleasePress(sectionList);
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/home/tv/[id]/season/[seasonNum]/episode/[episodeNum]',
+      params: { id: 202, seasonNum: 2, episodeNum: 3 },
+    });
+  });
+
+  it('falls back to TV show details when episode metadata is missing', () => {
+    const sections: ReleaseSection[] = [
+      {
+        title: 'February 2026',
+        data: [createTVRelease(303, 14)],
+      },
+    ];
+
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
+    const sectionList = getByTestId('release-calendar-section-list');
+
+    triggerFirstReleasePress(sectionList);
+
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/home/tv/[id]',
+      params: { id: 303 },
+    });
   });
 });

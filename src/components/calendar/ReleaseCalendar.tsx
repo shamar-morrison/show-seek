@@ -120,9 +120,28 @@ export function ReleaseCalendar({
     (release: UpcomingRelease) => {
       if (release.mediaType === 'movie') {
         router.push({ pathname: '/(tabs)/home/movie/[id]', params: { id: release.id } });
-      } else {
-        router.push({ pathname: '/(tabs)/home/tv/[id]', params: { id: release.id } });
+        return;
       }
+
+      if (
+        release.nextEpisode &&
+        Number.isInteger(release.nextEpisode.seasonNumber) &&
+        release.nextEpisode.seasonNumber >= 0 &&
+        Number.isInteger(release.nextEpisode.episodeNumber) &&
+        release.nextEpisode.episodeNumber > 0
+      ) {
+        router.push({
+          pathname: '/(tabs)/home/tv/[id]/season/[seasonNum]/episode/[episodeNum]',
+          params: {
+            id: release.id,
+            seasonNum: release.nextEpisode.seasonNumber,
+            episodeNum: release.nextEpisode.episodeNumber,
+          },
+        });
+        return;
+      }
+
+      router.push({ pathname: '/(tabs)/home/tv/[id]', params: { id: release.id } });
     },
     [router]
   );
