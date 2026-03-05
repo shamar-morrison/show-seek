@@ -1,5 +1,4 @@
 import type { TVShow } from '@/src/api/tmdb';
-import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
@@ -10,7 +9,7 @@ const mockResolvePosterPath = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: {
-    push: mockPush,
+    push: (...args: unknown[]) => mockPush(...args),
   },
 }));
 
@@ -45,6 +44,8 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
   ListMembershipBadge: () => null,
 }));
+
+const { TVShowCard } = require('@/src/components/cards/TVShowCard');
 
 describe('TVShowCard', () => {
   const show: TVShow = {
@@ -112,9 +113,19 @@ describe('TVShowCard', () => {
     const { UNSAFE_getByType } = render(
       <TVShowCard show={show} showListBadge={false} onLongPress={onLongPress} />
     );
+    const touchable = UNSAFE_getByType(TouchableOpacity);
 
-    fireEvent(UNSAFE_getByType(TouchableOpacity), 'longPress');
+    fireEvent(touchable, 'longPress');
 
     expect(onLongPress).toHaveBeenCalledWith(show);
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.press(touchable);
+
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.press(touchable);
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/tv/321');
   });
 });

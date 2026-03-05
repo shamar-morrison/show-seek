@@ -11,7 +11,7 @@ import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { router } from 'expo-router';
 import { Star } from 'lucide-react-native';
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface TVShowCardProps {
@@ -31,6 +31,8 @@ export const TVShowCard = memo<TVShowCardProps>(
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
     const { resolvePosterPath } = usePosterOverrides();
+    const longPressHandledRef = useRef(false);
+    const longPressResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resolvedPosterPath = useMemo(
       () => posterPathOverride ?? resolvePosterPath('tv', show.id, show.poster_path),
       [posterPathOverride, resolvePosterPath, show.id, show.poster_path]
@@ -48,18 +50,55 @@ export const TVShowCard = memo<TVShowCardProps>(
     const listIds = showListBadge ? getListsForMedia(show.id, 'tv') : [];
     const showBadge = listIds.length > 0;
 
+    const clearLongPressHandled = useCallback(() => {
+      if (longPressResetTimeoutRef.current) {
+        clearTimeout(longPressResetTimeoutRef.current);
+        longPressResetTimeoutRef.current = null;
+      }
+      longPressHandledRef.current = false;
+    }, []);
+
+    const scheduleLongPressReset = useCallback(() => {
+      if (longPressResetTimeoutRef.current) {
+        clearTimeout(longPressResetTimeoutRef.current);
+      }
+
+      longPressResetTimeoutRef.current = setTimeout(() => {
+        longPressHandledRef.current = false;
+        longPressResetTimeoutRef.current = null;
+      }, 0);
+    }, []);
+
+    useEffect(() => clearLongPressHandled, [clearLongPressHandled]);
+
     const handlePress = useCallback(() => {
+      if (longPressHandledRef.current) {
+        clearLongPressHandled();
+        return;
+      }
+
       const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
       router.push(path as any);
-    }, [currentTab, show.id]);
+    }, [clearLongPressHandled, currentTab, show.id]);
 
     const handleLongPress = useCallback(() => {
+      clearLongPressHandled();
+      longPressHandledRef.current = true;
       onLongPress?.(show);
-    }, [onLongPress, show]);
+    }, [clearLongPressHandled, onLongPress, show]);
+
+    const handlePressOut = useCallback(() => {
+      if (!longPressHandledRef.current) {
+        return;
+      }
+
+      scheduleLongPressReset();
+    }, [scheduleLongPressReset]);
 
     return (
       <TouchableOpacity
         onPress={handlePress}
+        onPressOut={handlePressOut}
         onLongPress={onLongPress ? handleLongPress : undefined}
         style={[styles.container, { width }, containerStyle]}
         activeOpacity={ACTIVE_OPACITY}

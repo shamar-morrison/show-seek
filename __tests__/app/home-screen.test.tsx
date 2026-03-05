@@ -256,6 +256,7 @@ describe('HomeScreen long press add-to-list', () => {
       expect(mockPresent).toHaveBeenCalledTimes(1);
     });
 
+    expect(mockPush).not.toHaveBeenCalled();
     expect(latestMediaItem).toEqual({
       id: 101,
       media_type: 'movie',
@@ -300,6 +301,7 @@ describe('HomeScreen long press add-to-list', () => {
       expect(mockPresent).toHaveBeenCalledTimes(1);
     });
 
+    expect(mockPush).not.toHaveBeenCalled();
     expect(latestMediaItem).toEqual({
       id: 202,
       media_type: 'movie',
