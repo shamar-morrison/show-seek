@@ -1,11 +1,11 @@
 import { CastMember, getImageUrl, TMDB_IMAGE_SIZES, tmdbApi } from '@/src/api/tmdb';
-import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { ViewMode, useViewModeToggle } from '@/src/hooks/useViewModeToggle';
+import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { mergeCrewMembersByPerson } from '@/src/utils/credits';
@@ -59,7 +59,11 @@ const GridCreditCard = memo<{
   }, [item.id, onPress]);
 
   return (
-    <TouchableOpacity style={[styles.card, style]} onPress={handlePress} activeOpacity={ACTIVE_OPACITY}>
+    <TouchableOpacity
+      style={[styles.card, style]}
+      onPress={handlePress}
+      activeOpacity={ACTIVE_OPACITY}
+    >
       <MediaImage
         source={{ uri: getImageUrl(item.profilePath, TMDB_IMAGE_SIZES.profile.medium) }}
         style={styles.profileImage}
@@ -256,7 +260,11 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => router.back()}
+          activeOpacity={ACTIVE_OPACITY}
+        >
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
@@ -269,25 +277,39 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
         </View>
         <View style={styles.headerActions}>
           <HeaderIconButton onPress={toggleViewMode}>
-            {viewMode === 'grid' ? <List size={24} color={COLORS.text} /> : <Grid3X3 size={24} color={COLORS.text} />}
+            {viewMode === 'grid' ? (
+              <List size={24} color={COLORS.text} />
+            ) : (
+              <Grid3X3 size={24} color={COLORS.text} />
+            )}
           </HeaderIconButton>
         </View>
       </View>
 
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'cast' && [styles.activeTab, { backgroundColor: accentColor }]]}
+          style={[
+            styles.tab,
+            activeTab === 'cast' && [styles.activeTab, { backgroundColor: accentColor }],
+          ]}
           onPress={handleCastTabPress}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>{t('media.cast')}</Text>
+          <Text style={[styles.tabText, activeTab === 'cast' && styles.activeTabText]}>
+            {t('media.cast')}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'crew' && [styles.activeTab, { backgroundColor: accentColor }]]}
+          style={[
+            styles.tab,
+            activeTab === 'crew' && [styles.activeTab, { backgroundColor: accentColor }],
+          ]}
           onPress={handleCrewTabPress}
           activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>{t('media.crew')}</Text>
+          <Text style={[styles.tabText, activeTab === 'crew' && styles.activeTabText]}>
+            {t('media.crew')}
+          </Text>
         </TouchableOpacity>
       </View>
 
