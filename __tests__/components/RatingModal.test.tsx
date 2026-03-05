@@ -121,6 +121,25 @@ describe('RatingModal', () => {
     expect(removeFromListSpy).not.toHaveBeenCalled();
   });
 
+  it('does not auto-remove when list membership is not loaded yet', async () => {
+    const { getByText } = render(
+      <RatingModal
+        {...defaultProps}
+        autoAddOptions={{
+          shouldAutoRemoveFromShouldWatch: true,
+        }}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateMediaMutateAsync).toHaveBeenCalled();
+    });
+
+    expect(removeFromListSpy).not.toHaveBeenCalled();
+  });
+
   it('does not auto-remove when rating tv content', async () => {
     const { getByText } = render(
       <RatingModal

@@ -79,7 +79,7 @@ import {
 } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { getRegionalReleaseDate, hasWatchProviders } from '@/src/utils/mediaUtils';
-import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -121,15 +121,12 @@ const tryAutoAddToAlreadyWatched = async (params: {
   membership: Record<string, boolean>;
   lists: { id: string; items?: Record<string, unknown> }[] | undefined;
   isPremium: boolean;
-  userId?: string;
-  queryClient: QueryClient;
   t: (key: string) => string;
 }) => {
-  const { movieId, movie, releaseDate, membership, lists, isPremium, userId, queryClient, t } =
-    params;
+  const { movieId, movie, releaseDate, membership, lists, isPremium, t } = params;
   const isNotInAlreadyWatched = !membership['already-watched'];
 
-  if (!isNotInAlreadyWatched) return;
+  if (!isNotInAlreadyWatched) return false;
 
   // Check list limit for free users before auto-adding
   const alreadyWatchedList = lists?.find((l) => l.id === 'already-watched');
@@ -137,7 +134,7 @@ const tryAutoAddToAlreadyWatched = async (params: {
 
   if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
     console.log('[MovieDetailScreen] Skipping auto-add: list limit reached for free user');
-    return;
+    return false;
   }
 
   try {
@@ -156,19 +153,11 @@ const tryAutoAddToAlreadyWatched = async (params: {
       t('lists.alreadyWatched')
     );
 
-    if (userId) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
-        queryClient.invalidateQueries({
-          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
-          refetchType: 'active',
-        }),
-      ]);
-    }
-
     console.log('[MovieDetailScreen] Auto-added to Already Watched list:', movie.title);
+    return true;
   } catch (autoAddError) {
     console.error('[MovieDetailScreen] Auto-add to Already Watched failed:', autoAddError);
+    return false;
   }
 };
 
@@ -177,31 +166,21 @@ const tryAutoRemoveFromShouldWatch = async (params: {
   movieId: number;
   movieTitle?: string;
   membership: Record<string, boolean>;
-  userId?: string;
-  queryClient: QueryClient;
 }) => {
-  const { movieId, movieTitle, membership, userId, queryClient } = params;
-  const isInShouldWatch = !!membership.watchlist;
+  const { movieId, movieTitle, membership } = params;
+  const isInShouldWatch = membership.watchlist === true;
 
-  if (!isInShouldWatch) return;
+  if (!isInShouldWatch) return false;
 
   try {
-    const { listService } = await import('../services/ListService');
+    const { listService } = await import('@/src/services/ListService');
     await listService.removeFromList('watchlist', movieId);
 
-    if (userId) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
-        queryClient.invalidateQueries({
-          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
-          refetchType: 'active',
-        }),
-      ]);
-    }
-
     console.log('[MovieDetailScreen] Auto-removed from Should Watch list:', movieTitle ?? movieId);
+    return true;
   } catch (autoRemoveError) {
     console.error('[MovieDetailScreen] Auto-remove from Should Watch failed:', autoRemoveError);
+    return false;
   }
 };
 
@@ -549,6 +528,8 @@ export default function MovieDetailScreen() {
   };
 
   const runPostWatchActions = async (isFirstWatch: boolean) => {
+    let didMutateLists = false;
+
     // Update collection tracking if movie belongs to a tracked collection.
     if (movie?.belongs_to_collection) {
       try {
@@ -562,28 +543,36 @@ export default function MovieDetailScreen() {
 
     // Auto-add to "Already Watched" list on first watch.
     if (isFirstWatch && preferences?.autoAddToAlreadyWatched && movie) {
-      await tryAutoAddToAlreadyWatched({
-        movieId,
-        movie,
-        releaseDate: displayReleaseDate || movie.release_date,
-        membership,
-        lists,
-        isPremium,
-        userId,
-        queryClient,
-        t,
-      });
+      didMutateLists =
+        (await tryAutoAddToAlreadyWatched({
+          movieId,
+          movie,
+          releaseDate: displayReleaseDate || movie.release_date,
+          membership,
+          lists,
+          isPremium,
+          t,
+        })) || didMutateLists;
     }
 
     // Auto-remove from "Should Watch" list on any successful watch action.
     if (preferences?.autoRemoveFromShouldWatch) {
-      await tryAutoRemoveFromShouldWatch({
-        movieId,
-        movieTitle: movie?.title,
-        membership,
-        userId,
-        queryClient,
-      });
+      didMutateLists =
+        (await tryAutoRemoveFromShouldWatch({
+          movieId,
+          movieTitle: movie?.title,
+          membership,
+        })) || didMutateLists;
+    }
+
+    if (didMutateLists && userId) {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        }),
+      ]);
     }
   };
 

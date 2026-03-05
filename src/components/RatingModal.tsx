@@ -277,7 +277,7 @@ export default function RatingModal({
         // Auto-remove from "Should Watch" list on any successful movie rating.
         const shouldAutoRemoveFromShouldWatch =
           autoAddOptions?.shouldAutoRemoveFromShouldWatch ?? true;
-        const isInShouldWatch = !!autoAddOptions?.listMembership?.watchlist;
+        const isInShouldWatch = autoAddOptions?.listMembership?.watchlist === true;
 
         if (mediaType === 'movie' && shouldAutoRemoveFromShouldWatch && isInShouldWatch) {
           try {
