@@ -10,6 +10,7 @@ import {
   useRateEpisode,
   useRateMedia,
 } from '@/src/hooks/useRatings';
+import { listService } from '@/src/services/ListService';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
 import { useQueryClient } from '@tanstack/react-query';
@@ -133,6 +134,8 @@ interface RatingModalProps {
   autoAddOptions?: {
     /** Whether auto-add is enabled (from user preferences) */
     shouldAutoAdd?: boolean;
+    /** Whether auto-remove from Should Watch is enabled (from user preferences) */
+    shouldAutoRemoveFromShouldWatch?: boolean;
     /** Cached list membership - map of listId to boolean */
     listMembership?: Record<string, boolean>;
     /** Media metadata for adding to list */
@@ -223,6 +226,8 @@ export default function RatingModal({
             : undefined,
         });
 
+        let didMutateLists = false;
+
         // Auto-add to "Already Watched" list for first-time movie ratings
         // Only applies when: mediaType is 'movie', initialRating is 0 (first-time),
         // preference is enabled, and movie is not already in the list
@@ -244,8 +249,6 @@ export default function RatingModal({
             console.log('[RatingModal] Skipping auto-add: list limit reached for free user');
           } else {
             try {
-              // Dynamically import to avoid circular dependencies
-              const { listService } = await import('../services/ListService');
               const metadata = autoAddOptions.mediaMetadata;
 
               await listService.addToList(
@@ -262,22 +265,39 @@ export default function RatingModal({
                 t('lists.alreadyWatched')
               );
 
-              if (userId) {
-                await Promise.all([
-                  queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
-                  queryClient.invalidateQueries({
-                    queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
-                    refetchType: 'active',
-                  }),
-                ]);
-              }
-
+              didMutateLists = true;
               console.log('[RatingModal] Auto-added to Already Watched list:', metadata.title);
             } catch (autoAddError) {
               // Log but don't throw - auto-add is non-critical
               console.error('[RatingModal] Auto-add to Already Watched list failed:', autoAddError);
             }
           }
+        }
+
+        // Auto-remove from "Should Watch" list on any successful movie rating.
+        const shouldAutoRemoveFromShouldWatch =
+          autoAddOptions?.shouldAutoRemoveFromShouldWatch ?? true;
+        const isInShouldWatch = autoAddOptions?.listMembership?.watchlist === true;
+
+        if (mediaType === 'movie' && shouldAutoRemoveFromShouldWatch && isInShouldWatch) {
+          try {
+            await listService.removeFromList('watchlist', mediaId);
+            didMutateLists = true;
+            console.log('[RatingModal] Auto-removed from Should Watch list:', mediaId);
+          } catch (autoRemoveError) {
+            // Log but don't throw - auto-remove is non-critical
+            console.error('[RatingModal] Auto-remove from Should Watch list failed:', autoRemoveError);
+          }
+        }
+
+        if (didMutateLists && userId) {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+            queryClient.invalidateQueries({
+              queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+              refetchType: 'active',
+            }),
+          ]);
         }
       }
 

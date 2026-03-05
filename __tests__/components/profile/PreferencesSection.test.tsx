@@ -99,4 +99,35 @@ describe('PreferencesSection', () => {
 
     expect(onUpdate).toHaveBeenCalledWith('showOriginalTitles', true);
   });
+
+  it('renders auto-remove from should watch preference and updates it', () => {
+    const onUpdate = jest.fn();
+    const { getByText, getAllByTestId } = renderWithProviders(
+      <PreferencesSection
+        preferences={DEFAULT_PREFERENCES}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Auto-remove from Should Watch')).toBeTruthy();
+
+    const preferenceItems = getAllByTestId('preference-item');
+    const preferenceItem = preferenceItems.find((item) =>
+      within(item).queryByText('Auto-remove from Should Watch')
+    );
+    expect(preferenceItem).toBeTruthy();
+    if (!preferenceItem) {
+      throw new Error('Auto-remove from Should Watch preference row not found');
+    }
+    const autoRemoveSwitch = within(preferenceItem).getByTestId('preference-switch');
+    fireEvent(autoRemoveSwitch, 'valueChange', false);
+
+    expect(onUpdate).toHaveBeenCalledWith('autoRemoveFromShouldWatch', false);
+  });
 });

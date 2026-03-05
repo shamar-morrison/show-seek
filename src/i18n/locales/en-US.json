@@ -709,6 +709,8 @@
     "autoAddToWatchingDescription": "Automatically add series to your Watching list when you mark an episode as watched",
     "autoAddToAlreadyWatched": "Auto-add to Already Watched",
     "autoAddToAlreadyWatchedDescription": "Automatically add movies to your Already Watched list when you rate or mark them as watched",
+    "autoRemoveFromShouldWatch": "Auto-remove from Should Watch",
+    "autoRemoveFromShouldWatchDescription": "Automatically remove movies from your Should Watch list when you rate or mark them as watched",
     "quickMarkAsWatched": "Quick Mark as Watched",
     "quickMarkAsWatchedDescription": "Skip the date selection modal and use the current time when marking movies as watched",
     "showListIndicators": "Show list indicators",

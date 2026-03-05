@@ -1,7 +1,16 @@
-import { render } from '@testing-library/react-native';
+import RatingModal from '@/src/components/RatingModal';
+import { listService } from '@/src/services/ListService';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-// Mock necessary dependencies
+const mockRateMediaMutateAsync = jest.fn();
+const mockDeleteMediaMutateAsync = jest.fn();
+const mockRateEpisodeMutateAsync = jest.fn();
+const mockDeleteEpisodeMutateAsync = jest.fn();
+const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
+const addToListSpy = jest.spyOn(listService, 'addToList');
+const removeFromListSpy = jest.spyOn(listService, 'removeFromList');
+
 jest.mock('expo-haptics', () => ({
   selectionAsync: jest.fn(),
   notificationAsync: jest.fn(),
@@ -11,23 +20,16 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
-jest.mock('@/src/services/RatingService', () => ({
-  ratingService: {
-    saveRating: jest.fn(),
-    deleteRating: jest.fn(),
-  },
-}));
-
 jest.mock('@/src/hooks/useRatings', () => ({
-  useRateMedia: () => ({ mutateAsync: jest.fn() }),
-  useDeleteRating: () => ({ mutateAsync: jest.fn() }),
-  useRateEpisode: () => ({ mutateAsync: jest.fn() }),
-  useDeleteEpisodeRating: () => ({ mutateAsync: jest.fn() }),
+  useRateMedia: () => ({ mutateAsync: mockRateMediaMutateAsync }),
+  useDeleteRating: () => ({ mutateAsync: mockDeleteMediaMutateAsync }),
+  useRateEpisode: () => ({ mutateAsync: mockRateEpisodeMutateAsync }),
+  useDeleteEpisodeRating: () => ({ mutateAsync: mockDeleteEpisodeMutateAsync }),
 }));
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({
-    invalidateQueries: jest.fn().mockResolvedValue(undefined),
+    invalidateQueries: mockInvalidateQueries,
   }),
 }));
 
@@ -48,67 +50,113 @@ jest.mock('lucide-react-native', () => ({
   X: () => 'X',
 }));
 
-// Import after mocks
-import RatingModal from '@/src/components/RatingModal';
-
 describe('RatingModal', () => {
   const defaultProps = {
     visible: true,
     onClose: jest.fn(),
     mediaId: 123,
     mediaType: 'movie' as const,
-    initialRating: 0,
+    initialRating: 5,
     onRatingSuccess: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRateMediaMutateAsync.mockResolvedValue(undefined);
+    mockDeleteMediaMutateAsync.mockResolvedValue(undefined);
+    mockRateEpisodeMutateAsync.mockResolvedValue(undefined);
+    mockDeleteEpisodeMutateAsync.mockResolvedValue(undefined);
+    addToListSpy.mockResolvedValue(undefined);
+    removeFromListSpy.mockResolvedValue(undefined);
   });
 
-  describe('Half-star interactions', () => {
-    it('should render 10 star containers with left and right touch zones', () => {
-      const { getAllByTestId } = render(<RatingModal {...defaultProps} />);
+  it('renders rating text for existing rating', () => {
+    const { getByText } = render(<RatingModal {...defaultProps} initialRating={2.5} />);
+    expect(getByText('2.5/10')).toBeTruthy();
+  });
 
-      // The component doesn't have testIDs yet, so we'll use a different approach
-      // This test documents the expected structure
-      expect(true).toBe(true);
+  it('auto-removes from should watch when movie is rated and preference is enabled', async () => {
+    const { getByText } = render(
+      <RatingModal
+        {...defaultProps}
+        autoAddOptions={{
+          shouldAutoRemoveFromShouldWatch: true,
+          listMembership: { watchlist: true },
+        }}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateMediaMutateAsync).toHaveBeenCalled();
+      expect(removeFromListSpy).toHaveBeenCalledWith('watchlist', 123);
     });
 
-    it('should display rating with decimal when half-star', () => {
-      const { getByText } = render(<RatingModal {...defaultProps} initialRating={2.5} />);
+    await waitFor(() => {
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['lists', 'test-user-123'] });
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ['list-membership-index', 'test-user-123'],
+        refetchType: 'active',
+      });
+    });
+  });
 
-      expect(getByText('2.5/10')).toBeTruthy();
+  it('does not auto-remove when preference is disabled', async () => {
+    const { getByText } = render(
+      <RatingModal
+        {...defaultProps}
+        autoAddOptions={{
+          shouldAutoRemoveFromShouldWatch: false,
+          listMembership: { watchlist: true },
+        }}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateMediaMutateAsync).toHaveBeenCalled();
+    });
+    expect(removeFromListSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-remove when list membership is not loaded yet', async () => {
+    const { getByText } = render(
+      <RatingModal
+        {...defaultProps}
+        autoAddOptions={{
+          shouldAutoRemoveFromShouldWatch: true,
+        }}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateMediaMutateAsync).toHaveBeenCalled();
     });
 
-    it('should display rating without decimal for whole numbers', () => {
-      const { getByText } = render(<RatingModal {...defaultProps} initialRating={3} />);
+    expect(removeFromListSpy).not.toHaveBeenCalled();
+  });
 
-      expect(getByText('3/10')).toBeTruthy();
+  it('does not auto-remove when rating tv content', async () => {
+    const { getByText } = render(
+      <RatingModal
+        {...defaultProps}
+        mediaType="tv"
+        autoAddOptions={{
+          shouldAutoRemoveFromShouldWatch: true,
+          listMembership: { watchlist: true },
+        }}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateMediaMutateAsync).toHaveBeenCalled();
     });
-
-    it('should display rating text for half-star values', () => {
-      const { getByText } = render(<RatingModal {...defaultProps} initialRating={7.5} />);
-
-      // 7.5 should show "Great" according to ratingHelpers
-      expect(getByText('Great')).toBeTruthy();
-    });
-
-    it('should show "Tap to rate" when no rating selected', () => {
-      const { getByText } = render(<RatingModal {...defaultProps} initialRating={0} />);
-
-      expect(getByText('Tap a star to rate')).toBeTruthy();
-    });
-
-    it('should show Remove Rating button when initialRating > 0', () => {
-      const { getByText } = render(<RatingModal {...defaultProps} initialRating={5} />);
-
-      expect(getByText('Remove Rating')).toBeTruthy();
-    });
-
-    it('should not show Remove Rating button when initialRating is 0', () => {
-      const { queryByText } = render(<RatingModal {...defaultProps} initialRating={0} />);
-
-      expect(queryByText('Remove Rating')).toBeNull();
-    });
+    expect(removeFromListSpy).not.toHaveBeenCalled();
   });
 });

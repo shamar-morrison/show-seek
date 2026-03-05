@@ -29,6 +29,7 @@ export interface HomeScreenListItem {
 export interface UserPreferences {
   autoAddToWatching: boolean;
   autoAddToAlreadyWatched: boolean;
+  autoRemoveFromShouldWatch: boolean; // Remove movies from Should Watch when rated or marked as watched
   blurPlotSpoilers: boolean; // Android only - blur movie/TV plot summaries
   showListIndicators: boolean; // Show bookmark badge on cards when item is in a list
   copyInsteadOfMove: boolean; // Bulk add behavior on list detail screens (true = copy, false = move)
@@ -47,6 +48,7 @@ export interface UserPreferences {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   autoAddToWatching: true,
   autoAddToAlreadyWatched: true,
+  autoRemoveFromShouldWatch: true,
   blurPlotSpoilers: false,
   showListIndicators: false, // Off by default for new users
   copyInsteadOfMove: false, // Off by default - bulk add moves items from source list

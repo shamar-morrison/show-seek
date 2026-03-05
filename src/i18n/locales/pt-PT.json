@@ -708,6 +708,8 @@
     "autoAddToWatchingDescription": "Adicionar automaticamente as séries à sua lista A ver quando marcar um episódio como visto",
     "autoAddToAlreadyWatched": "Adicionar auto a Já vistos",
     "autoAddToAlreadyWatchedDescription": "Adicionar automaticamente os filmes à sua lista Já vistos quando os avaliar ou marcar como vistos",
+    "autoRemoveFromShouldWatch": "Remover auto de Pendentes",
+    "autoRemoveFromShouldWatchDescription": "Remover automaticamente os filmes da sua lista Pendentes quando os avaliar ou marcar como vistos",
     "quickMarkAsWatched": "Marcar rápido como visto",
     "quickMarkAsWatchedDescription": "Ignorar a seleção de data e usar a hora atual ao marcar filmes como vistos",
     "markPreviousEpisodes": "Marcar episódios anteriores",
