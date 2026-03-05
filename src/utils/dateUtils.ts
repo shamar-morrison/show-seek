@@ -48,6 +48,36 @@ export function formatTmdbDate(
 }
 
 /**
+ * Calculate age from TMDB date strings without timezone shifts.
+ *
+ * @param birthday - YYYY-MM-DD birthday string
+ * @param deathday - Optional YYYY-MM-DD deathday string
+ * @param referenceDate - Optional fallback end date when deathday is absent
+ * @returns Age in full years or null when birthday is missing
+ */
+export function calculateTmdbAge(
+  birthday: string | null,
+  deathday?: string | null,
+  referenceDate?: Date
+): number | null {
+  if (!birthday) return null;
+
+  const birthDate = parseTmdbDate(birthday);
+  const endDate = deathday ? parseTmdbDate(deathday) : (referenceDate ?? new Date());
+
+  let age = endDate.getFullYear() - birthDate.getFullYear();
+  const hasReachedBirthdayThisYear =
+    endDate.getMonth() > birthDate.getMonth() ||
+    (endDate.getMonth() === birthDate.getMonth() && endDate.getDate() >= birthDate.getDate());
+
+  if (!hasReachedBirthdayThisYear) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+/**
  * Convert a Date object to a YYYY-MM-DD string using local date methods.
  * This is the reverse of parseTmdbDate and avoids the timezone shift
  * that occurs with toISOString().split('T')[0].

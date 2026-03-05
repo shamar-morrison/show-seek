@@ -1,4 +1,5 @@
 import PersonDetailScreen from '@/src/screens/PersonDetailScreen';
+import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -8,6 +9,8 @@ const mockGetListsForMedia = jest.fn();
 const mockUseQuery = jest.fn();
 const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
+const mockFormatTmdbDate = jest.mocked(formatTmdbDate);
+const mockCalculateTmdbAge = jest.mocked(calculateTmdbAge);
 const mockAuthState = {
   user: { uid: 'user-1' } as { uid: string } | null,
   isGuest: false,
@@ -49,13 +52,13 @@ const mockTVShow = {
 const mockPerson = {
   id: 99,
   name: 'Test Person',
-  profile_path: null,
+  profile_path: null as string | null,
   known_for_department: 'Acting',
   popularity: 100,
   biography: 'Biography',
-  birthday: null,
-  deathday: null,
-  place_of_birth: null,
+  birthday: null as string | null,
+  deathday: null as string | null,
+  place_of_birth: null as string | null,
   also_known_as: [],
   external_ids: {
     facebook_id: null,
@@ -86,9 +89,15 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: (args: any) => mockUseQuery(args),
 }));
 
+jest.mock('@/src/utils/dateUtils', () => ({
+  formatTmdbDate: jest.fn(),
+  calculateTmdbAge: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: { count?: number }) =>
+      options?.count !== undefined ? `${key}:${options.count}` : key,
     i18n: { language: 'en-US' },
   }),
 }));
@@ -223,12 +232,7 @@ jest.mock('@/src/components/AddToListModal', () => {
 });
 
 describe('PersonDetailScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockAuthState.user = { uid: 'user-1' };
-    mockAuthState.isGuest = false;
-    latestAddToListModalOnDismiss = null;
-
+  const setupQueries = (personData = mockPerson) => {
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
       const creditKey = queryKey[2];
 
@@ -251,12 +255,22 @@ describe('PersonDetailScreen', () => {
       }
 
       return {
-        data: mockPerson,
+        data: personData,
         isLoading: false,
         isError: false,
         refetch: jest.fn(),
       };
     });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'user-1' };
+    mockAuthState.isGuest = false;
+    latestAddToListModalOnDismiss = null;
+    mockFormatTmdbDate.mockReturnValue('June 15, 1990');
+    mockCalculateTmdbAge.mockReturnValue(null);
+    setupQueries();
   });
 
   it('shows list indicators on known-for movie and TV cards when list membership exists', () => {
@@ -318,6 +332,27 @@ describe('PersonDetailScreen', () => {
 
     expect(() => rerender(<PersonDetailScreen />)).not.toThrow();
     expect(queryByText('Known Movie')).toBeTruthy();
+  });
+
+  it('renders birthday text using the shared formatter and age helper', () => {
+    const personWithBirthday = {
+      ...mockPerson,
+      birthday: '1990-06-15',
+      deathday: null,
+    };
+
+    mockCalculateTmdbAge.mockReturnValue(35);
+    setupQueries(personWithBirthday);
+
+    const { getByText } = render(<PersonDetailScreen />);
+
+    expect(mockFormatTmdbDate).toHaveBeenCalledWith('1990-06-15', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    expect(mockCalculateTmdbAge).toHaveBeenCalledWith('1990-06-15', null);
+    expect(getByText('June 15, 1990 person.ageYearsOld:35')).toBeTruthy();
   });
 
   it('opens AddToListModal for authenticated long press on known-for movie', async () => {

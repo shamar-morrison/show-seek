@@ -1,4 +1,4 @@
-import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
+import { calculateTmdbAge, formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
 
 describe('dateUtils', () => {
   describe('parseTmdbDate', () => {
@@ -77,6 +77,26 @@ describe('dateUtils', () => {
     it('should handle different months correctly', () => {
       expect(formatTmdbDate('2024-01-01')).toContain('Jan');
       expect(formatTmdbDate('2024-12-25')).toContain('Dec');
+    });
+  });
+
+  describe('calculateTmdbAge', () => {
+    it('should calculate age after the birthday in the reference year', () => {
+      const result = calculateTmdbAge('1990-06-15', null, new Date(2024, 5, 16));
+
+      expect(result).toBe(34);
+    });
+
+    it('should calculate age before the birthday in the reference year', () => {
+      const result = calculateTmdbAge('1990-06-15', null, new Date(2024, 5, 14));
+
+      expect(result).toBe(33);
+    });
+
+    it('should calculate age at death using the deathday', () => {
+      const result = calculateTmdbAge('1980-02-10', '2020-02-09', new Date(2030, 0, 1));
+
+      expect(result).toBe(39);
     });
   });
 });

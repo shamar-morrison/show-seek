@@ -23,6 +23,7 @@ import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -65,7 +66,7 @@ type SocialLink = {
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
   const { user, isGuest } = useAuth();
@@ -232,23 +233,6 @@ export default function PersonDetailScreen() {
 
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return t('common.unknown');
-    return new Date(dateString).toLocaleDateString(i18n.language, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const calculateAge = (birthday: string | null, deathday: string | null) => {
-    if (!birthday) return null;
-    const birth = new Date(birthday);
-    const end = deathday ? new Date(deathday) : new Date();
-    const age = end.getFullYear() - birth.getFullYear();
-    return age;
-  };
-
   const handleMoviePress = (id: number) => {
     navigateTo(`/movie/${id}`);
   };
@@ -315,7 +299,7 @@ export default function PersonDetailScreen() {
     })();
   };
 
-  const age = calculateAge(person.birthday, person.deathday);
+  const age = calculateTmdbAge(person.birthday, person.deathday);
   const getTrimmedExternalId = (id: string | null | undefined) => {
     const trimmed = id?.trim();
     return trimmed ? trimmed : null;
@@ -459,7 +443,11 @@ export default function PersonDetailScreen() {
                 <View style={styles.detailItem}>
                   <Calendar size={14} color={COLORS.textSecondary} />
                   <Text style={styles.detailText}>
-                    {formatDate(person.birthday)}
+                    {formatTmdbDate(person.birthday, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
                     {age !== null &&
                       ` ${t(person.deathday ? 'person.ageAtDeath' : 'person.ageYearsOld', {
                         count: age,
