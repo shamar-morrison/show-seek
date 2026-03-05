@@ -1,6 +1,5 @@
 import type { Movie } from '@/src/api/tmdb';
-import { MovieCard } from '@/src/components/cards/MovieCard';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
@@ -10,7 +9,7 @@ const mockResolvePosterPath = jest.fn();
 
 jest.mock('expo-router', () => ({
   router: {
-    push: mockPush,
+    push: (...args: unknown[]) => mockPush(...args),
   },
 }));
 
@@ -45,6 +44,8 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
 jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
   ListMembershipBadge: () => null,
 }));
+
+const { MovieCard } = require('@/src/components/cards/MovieCard');
 
 describe('MovieCard', () => {
   const movie: Movie = {
@@ -129,5 +130,26 @@ describe('MovieCard', () => {
     render(<MovieCard movie={movie} showListBadge={false} posterPathOverride="/override.jpg" />);
 
     expect(mockResolvePosterPath).not.toHaveBeenCalled();
+  });
+
+  it('forwards long press with the movie payload', () => {
+    const onLongPress = jest.fn();
+    const { UNSAFE_getByType } = render(
+      <MovieCard movie={movie} showListBadge={false} onLongPress={onLongPress} />
+    );
+    const touchable = UNSAFE_getByType(TouchableOpacity);
+
+    fireEvent(touchable, 'longPress');
+
+    expect(onLongPress).toHaveBeenCalledWith(movie);
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.press(touchable);
+
+    expect(mockPush).not.toHaveBeenCalled();
+
+    fireEvent.press(touchable);
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/home/movie/123');
   });
 });

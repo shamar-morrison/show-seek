@@ -3,6 +3,7 @@ import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -22,10 +23,11 @@ interface TVShowCardProps {
   showListBadge?: boolean;
   /** Optional pre-resolved poster path to avoid stale list cells */
   posterPathOverride?: string | null;
+  onLongPress?: (show: TVShow) => void;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
-  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
+  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride, onLongPress }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
@@ -47,14 +49,25 @@ export const TVShowCard = memo<TVShowCardProps>(
     const listIds = showListBadge ? getListsForMedia(show.id, 'tv') : [];
     const showBadge = listIds.length > 0;
 
-    const handlePress = useCallback(() => {
+    const handleNavigate = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/tv/${show.id}` : `/tv/${show.id}`;
       router.push(path as any);
     }, [currentTab, show.id]);
 
+    const handleCardLongPress = useCallback(() => {
+      onLongPress?.(show);
+    }, [onLongPress, show]);
+
+    const { handlePress, handleLongPress, handlePressOut } = useLongPressPressGuard({
+      onPress: handleNavigate,
+      onLongPress: onLongPress ? handleCardLongPress : undefined,
+    });
+
     return (
       <TouchableOpacity
         onPress={handlePress}
+        onPressOut={handlePressOut}
+        onLongPress={onLongPress ? handleLongPress : undefined}
         style={[styles.container, { width }, containerStyle]}
         activeOpacity={ACTIVE_OPACITY}
       >

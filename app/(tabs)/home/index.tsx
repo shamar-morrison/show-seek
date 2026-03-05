@@ -1,3 +1,5 @@
+import type { Movie, TVShow } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { HomeDrawer } from '@/src/components/HomeDrawer';
 import { HomeListSection } from '@/src/components/HomeListSection';
 import HomeScreenCustomizationModal, {
@@ -12,10 +14,12 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Menu, Settings2 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +28,11 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
   const toastRef = useRef<ToastRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
   const queryClient = useQueryClient();
   const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
   const { user } = useAuth();
@@ -58,6 +66,40 @@ export default function HomeScreen() {
   const handleShowToast = useCallback((message: string) => {
     toastRef.current?.show(message);
   }, []);
+
+  const handleMediaLongPress = useCallback(
+    (item: Movie | TVShow, mediaType: 'movie' | 'tv') => {
+      if (isAccountRequired()) return;
+
+      const title = mediaType === 'movie' ? (item as Movie).title : (item as TVShow).name || '';
+      const name = mediaType === 'tv' ? (item as TVShow).name : undefined;
+      const releaseDate =
+        mediaType === 'movie'
+          ? (item as Movie).release_date || ''
+          : (item as TVShow).first_air_date || '';
+      const firstAirDate = mediaType === 'tv' ? (item as TVShow).first_air_date : undefined;
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: mediaType,
+        title,
+        name,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average || 0,
+        release_date: releaseDate,
+        first_air_date: firstAirDate,
+        genre_ids: item.genre_ids,
+      });
+    },
+    [isAccountRequired]
+  );
+
+  useEffect(() => {
+    if (selectedMediaItem) {
+      void addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
 
   const handleOpenCustomization = () => {
     if (isAccountRequired()) return;
@@ -110,13 +152,18 @@ export default function HomeScreen() {
         ) : (
           <>
             {homeScreenLists.map((config) => (
-              <HomeListSection key={config.id} config={config} />
+              <HomeListSection
+                key={config.id}
+                config={config}
+                onMediaLongPress={handleMediaLongPress}
+              />
             ))}
 
             {/* Show Top Rated at the end when Latest Trailers is unavailable */}
             {showTopRatedAtEnd && (
               <HomeListSection
                 config={{ id: 'top-rated-movies', type: 'tmdb', label: t('home.topRated') }}
+                onMediaLongPress={handleMediaLongPress}
               />
             )}
           </>
@@ -127,6 +174,14 @@ export default function HomeScreen() {
 
       <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
       <HomeDrawer visible={drawerVisible} onClose={handleCloseDrawer} />
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onShowToast={handleShowToast}
+          onDismiss={() => setSelectedMediaItem(null)}
+        />
+      )}
       <Toast ref={toastRef} />
     </SafeAreaView>
   );

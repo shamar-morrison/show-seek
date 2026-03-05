@@ -33,6 +33,7 @@ const LIST_LABEL_KEYS: Record<string, string> = {
 
 interface HomeListSectionProps {
   config: HomeScreenListItem;
+  onMediaLongPress?: (item: Movie | TVShow, mediaType: 'movie' | 'tv') => void;
 }
 
 function useSectionFocusState() {
@@ -94,7 +95,15 @@ const TMDB_QUERY_MAP: Record<
 /**
  * TMDB List Section - fetches data from TMDB API with infinite scroll
  */
-function TMDBListSection({ id, label }: { id: string; label: string }) {
+function TMDBListSection({
+  id,
+  label,
+  onMediaLongPress,
+}: {
+  id: string;
+  label: string;
+  onMediaLongPress?: (item: Movie | TVShow, mediaType: 'movie' | 'tv') => void;
+}) {
   const config = TMDB_QUERY_MAP[id];
   const { resolvePosterPath, overrides } = usePosterOverrides();
   const isFocused = useSectionFocusState();
@@ -157,9 +166,21 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
           renderItem={({ item }) => {
             const posterPathOverride = resolvePosterPath(config.mediaType, item.id, item.poster_path);
             return isTV ? (
-              <TVShowCard show={item as TVShow} posterPathOverride={posterPathOverride} />
+              <TVShowCard
+                show={item as TVShow}
+                posterPathOverride={posterPathOverride}
+                onLongPress={
+                  onMediaLongPress ? (show) => onMediaLongPress(show, 'tv') : undefined
+                }
+              />
             ) : (
-              <MovieCard movie={item as Movie} posterPathOverride={posterPathOverride} />
+              <MovieCard
+                movie={item as Movie}
+                posterPathOverride={posterPathOverride}
+                onLongPress={
+                  onMediaLongPress ? (movie) => onMediaLongPress(movie, 'movie') : undefined
+                }
+              />
             );
           }}
           keyExtractor={(item) => item.id.toString()}
@@ -179,7 +200,15 @@ function TMDBListSection({ id, label }: { id: string; label: string }) {
 /**
  * User List Section - displays items from user's default or custom lists
  */
-function UserListSection({ listId, label }: { listId: string; label: string }) {
+function UserListSection({
+  listId,
+  label,
+  onMediaLongPress,
+}: {
+  listId: string;
+  label: string;
+  onMediaLongPress?: (item: Movie | TVShow, mediaType: 'movie' | 'tv') => void;
+}) {
   const { t } = useTranslation();
   const { data: lists, isLoading } = useLists();
   const { resolvePosterPath, overrides } = usePosterOverrides();
@@ -233,43 +262,57 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
         data={items}
         renderItem={({ item }) => {
           const posterPathOverride = resolvePosterPath(item.media_type, item.id, item.poster_path);
-          return item.media_type === 'tv' ? (
-            <TVShowCard
-              show={{
-                id: item.id,
-                name: item.name || item.title,
-                poster_path: item.poster_path,
-                vote_average: item.vote_average,
-                vote_count: 0,
-                first_air_date: item.first_air_date || item.release_date,
-                genre_ids: item.genre_ids || [],
-                overview: '',
-                popularity: 0,
-                backdrop_path: null,
-                original_name: item.name || item.title,
-                original_language: 'en',
-              }}
-              posterPathOverride={posterPathOverride}
-            />
-          ) : (
+          if (item.media_type === 'tv') {
+            const show: TVShow = {
+              id: item.id,
+              name: item.name || item.title,
+              poster_path: item.poster_path,
+              vote_average: item.vote_average,
+              vote_count: 0,
+              first_air_date: item.first_air_date || item.release_date,
+              genre_ids: item.genre_ids || [],
+              overview: '',
+              popularity: 0,
+              backdrop_path: null,
+              original_name: item.name || item.title,
+              original_language: 'en',
+            };
+
+            return (
+              <TVShowCard
+                show={show}
+                posterPathOverride={posterPathOverride}
+                onLongPress={
+                  onMediaLongPress ? (selectedShow) => onMediaLongPress(selectedShow, 'tv') : undefined
+                }
+              />
+            );
+          }
+
+          const movie: Movie = {
+            id: item.id,
+            title: item.title,
+            poster_path: item.poster_path,
+            vote_average: item.vote_average,
+            release_date: item.release_date,
+            genre_ids: item.genre_ids || [],
+            overview: '',
+            popularity: 0,
+            backdrop_path: null,
+            original_title: item.title,
+            original_language: 'en',
+            adult: false,
+            video: false,
+            vote_count: 0,
+          };
+
+          return (
             <MovieCard
-              movie={{
-                id: item.id,
-                title: item.title,
-                poster_path: item.poster_path,
-                vote_average: item.vote_average,
-                release_date: item.release_date,
-                genre_ids: item.genre_ids || [],
-                overview: '',
-                popularity: 0,
-                backdrop_path: null,
-                original_title: item.title,
-                original_language: 'en',
-                adult: false,
-                video: false,
-                vote_count: 0,
-              }}
+              movie={movie}
               posterPathOverride={posterPathOverride}
+              onLongPress={
+                onMediaLongPress ? (selectedMovie) => onMediaLongPress(selectedMovie, 'movie') : undefined
+              }
             />
           );
         }}
@@ -287,7 +330,7 @@ function UserListSection({ listId, label }: { listId: string; label: string }) {
 /**
  * Main HomeListSection component - routes to appropriate section based on type
  */
-export function HomeListSection({ config }: HomeListSectionProps) {
+export function HomeListSection({ config, onMediaLongPress }: HomeListSectionProps) {
   const { user } = useAuth();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
@@ -309,11 +352,17 @@ export function HomeListSection({ config }: HomeListSectionProps) {
   }
 
   if (config.type === 'tmdb') {
-    return <TMDBListSection id={config.id} label={translatedLabel} />;
+    return <TMDBListSection id={config.id} label={translatedLabel} onMediaLongPress={onMediaLongPress} />;
   }
 
   // Both 'default' and 'custom' types use UserListSection
-  return <UserListSection listId={config.id} label={translatedLabel} />;
+  return (
+    <UserListSection
+      listId={config.id}
+      label={translatedLabel}
+      onMediaLongPress={onMediaLongPress}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
