@@ -5,6 +5,11 @@ import React from 'react';
 const mockUseQuery = jest.fn();
 const mockToggleViewMode = jest.fn();
 const mockScrollToOffset = jest.fn();
+const mockGetThreeColumnGridMetrics = jest.fn((_windowWidth: number) => ({
+  itemWidth: 100,
+  itemHorizontalMargin: 8,
+  listPaddingHorizontal: 20,
+}));
 
 let mockViewMode: 'grid' | 'list' = 'list';
 let capturedFlashListProps: any = null;
@@ -19,6 +24,11 @@ jest.mock('@/src/hooks/useViewModeToggle', () => ({
     isLoadingPreference: false,
     toggleViewMode: mockToggleViewMode,
   }),
+}));
+
+jest.mock('@/src/utils/gridLayout', () => ({
+  GRID_COLUMN_COUNT: 3,
+  getThreeColumnGridMetrics: (windowWidth: number) => mockGetThreeColumnGridMetrics(windowWidth),
 }));
 
 jest.mock('@/src/components/ui/MediaImage', () => ({
@@ -61,6 +71,11 @@ describe('CastCrewScreen', () => {
     jest.clearAllMocks();
     capturedFlashListProps = null;
     mockViewMode = 'list';
+    mockGetThreeColumnGridMetrics.mockReturnValue({
+      itemWidth: 100,
+      itemHorizontalMargin: 8,
+      listPaddingHorizontal: 20,
+    });
 
     globalAny.requestAnimationFrame = (callback: (timestamp: number) => void) => {
       callback(0);
@@ -129,6 +144,18 @@ describe('CastCrewScreen', () => {
 
     expect(capturedFlashListProps.drawDistance).toBe(400);
     expect(capturedFlashListProps.removeClippedSubviews).toBe(true);
+  });
+
+  it('uses shared three-column grid metrics in grid mode', () => {
+    mockViewMode = 'grid';
+
+    render(<CastCrewScreen id={100} type="movie" mediaTitle="Sample" />);
+
+    expect(capturedFlashListProps.numColumns).toBe(3);
+    expect(Array.isArray(capturedFlashListProps.contentContainerStyle)).toBe(true);
+    expect(capturedFlashListProps.contentContainerStyle).toContainEqual({
+      paddingHorizontal: 20,
+    });
   });
 
   it('switches to crew tab and renders merged crew roles', () => {

@@ -9,6 +9,7 @@ import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { mergeCrewMembersByPerson } from '@/src/utils/credits';
+import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList, FlashListRef, ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -16,16 +17,14 @@ import { ArrowLeft, Grid3X3, List } from 'lucide-react-native';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
-  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
-  ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,28 +44,25 @@ interface DisplayCreditItem {
   profilePath: string | null;
 }
 
-const { width } = Dimensions.get('window');
-const COLUMN_COUNT = 3;
-const ITEM_WIDTH = (width - SPACING.l * 2 - SPACING.m * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
-
 const GridCreditCard = memo<{
   item: DisplayCreditItem;
+  itemWidth: number;
+  itemHorizontalMargin: number;
   onPress: (personId: number) => void;
-  style?: StyleProp<ViewStyle>;
-}>(({ item, onPress, style }) => {
+}>(({ item, itemWidth, itemHorizontalMargin, onPress }) => {
   const handlePress = useCallback(() => {
     onPress(item.id);
   }, [item.id, onPress]);
 
   return (
     <TouchableOpacity
-      style={[styles.card, style]}
+      style={[styles.gridCard, { width: itemWidth, marginHorizontal: itemHorizontalMargin }]}
       onPress={handlePress}
       activeOpacity={ACTIVE_OPACITY}
     >
       <MediaImage
         source={{ uri: getImageUrl(item.profilePath, TMDB_IMAGE_SIZES.profile.medium) }}
-        style={styles.profileImage}
+        style={[styles.profileImage, { width: itemWidth, height: itemWidth * 1.5 }]}
         contentFit="cover"
         placeholderType="person"
       />
@@ -124,11 +120,14 @@ ListCreditCard.displayName = 'ListCreditCard';
 export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
+  const { width: windowWidth } = useWindowDimensions();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const [activeTab, setActiveTab] = useState<TabType>('cast');
   const listRef = useRef<FlashListRef<DisplayCreditItem> | null>(null);
   const scrollOffsetsRef = useRef<Record<string, number>>({});
+  const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
+    getThreeColumnGridMetrics(windowWidth);
 
   const { viewMode, isLoadingPreference, toggleViewMode } = useViewModeToggle({
     storageKey: `cast-crew-view-${type}`,
@@ -214,17 +213,17 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
   }, []);
 
   const renderGridItem = useCallback(
-    ({ item, index }: ListRenderItemInfo<DisplayCreditItem>) => {
-      const isLastColumn = (index + 1) % COLUMN_COUNT === 0;
+    ({ item }: ListRenderItemInfo<DisplayCreditItem>) => {
       return (
         <GridCreditCard
           item={item}
+          itemWidth={itemWidth}
+          itemHorizontalMargin={itemHorizontalMargin}
           onPress={handlePersonPress}
-          style={[styles.gridCard, !isLastColumn && styles.gridCardWithRightMargin]}
         />
       );
     },
-    [handlePersonPress]
+    [handlePersonPress, itemHorizontalMargin, itemWidth]
   );
 
   const renderListItem = useCallback(
@@ -319,8 +318,12 @@ export default function CastCrewScreen({ id, type, mediaTitle }: CastCrewScreenP
         data={activeData}
         renderItem={viewMode === 'grid' ? renderGridItem : renderListItem}
         keyExtractor={keyExtractor}
-        contentContainerStyle={viewMode === 'grid' ? styles.gridContent : styles.listContent}
-        numColumns={viewMode === 'grid' ? COLUMN_COUNT : 1}
+        contentContainerStyle={
+          viewMode === 'grid'
+            ? [styles.gridContent, { paddingHorizontal: listPaddingHorizontal }]
+            : styles.listContent
+        }
+        numColumns={viewMode === 'grid' ? GRID_COLUMN_COUNT : 1}
         drawDistance={400}
         removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
@@ -383,7 +386,6 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   gridContent: {
-    paddingHorizontal: SPACING.l,
     paddingTop: SPACING.m,
     paddingBottom: SPACING.s,
   },
@@ -395,22 +397,12 @@ const styles = StyleSheet.create({
   gridCard: {
     marginBottom: SPACING.m,
   },
-  gridCardWithRightMargin: {
-    marginRight: SPACING.m,
-  },
-  card: {
-    width: ITEM_WIDTH,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.m,
-    overflow: 'hidden',
-  },
   profileImage: {
-    width: '100%',
-    aspectRatio: 2 / 3,
+    borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
   },
   cardInfo: {
-    padding: SPACING.s,
+    marginTop: SPACING.s,
   },
   name: {
     fontSize: FONT_SIZE.s,
