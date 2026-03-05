@@ -3,6 +3,7 @@ import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { useListMembership } from '@/src/hooks/useListMembership';
+import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { useCurrentTab } from '@/src/hooks/useNavigation';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -11,7 +12,7 @@ import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { Route, router } from 'expo-router';
 import { Star } from 'lucide-react-native';
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface MovieCardProps {
@@ -31,8 +32,6 @@ export const MovieCard = memo<MovieCardProps>(
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
     const { resolvePosterPath } = usePosterOverrides();
-    const longPressHandledRef = useRef(false);
-    const longPressResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const resolvedPosterPath = useMemo(
       () => posterPathOverride ?? resolvePosterPath('movie', movie.id, movie.poster_path),
       [movie.id, movie.poster_path, posterPathOverride, resolvePosterPath]
@@ -50,50 +49,19 @@ export const MovieCard = memo<MovieCardProps>(
     const listIds = showListBadge ? getListsForMedia(movie.id, 'movie') : [];
     const showBadge = listIds.length > 0;
 
-    const clearLongPressHandled = useCallback(() => {
-      if (longPressResetTimeoutRef.current) {
-        clearTimeout(longPressResetTimeoutRef.current);
-        longPressResetTimeoutRef.current = null;
-      }
-      longPressHandledRef.current = false;
-    }, []);
-
-    const scheduleLongPressReset = useCallback(() => {
-      if (longPressResetTimeoutRef.current) {
-        clearTimeout(longPressResetTimeoutRef.current);
-      }
-
-      longPressResetTimeoutRef.current = setTimeout(() => {
-        longPressHandledRef.current = false;
-        longPressResetTimeoutRef.current = null;
-      }, 0);
-    }, []);
-
-    useEffect(() => clearLongPressHandled, [clearLongPressHandled]);
-
-    const handlePress = useCallback(() => {
-      if (longPressHandledRef.current) {
-        clearLongPressHandled();
-        return;
-      }
-
+    const handleNavigate = useCallback(() => {
       const path = currentTab ? `/(tabs)/${currentTab}/movie/${movie.id}` : `/movie/${movie.id}`;
       router.push(path as Route);
-    }, [clearLongPressHandled, currentTab, movie.id]);
+    }, [currentTab, movie.id]);
 
-    const handleLongPress = useCallback(() => {
-      clearLongPressHandled();
-      longPressHandledRef.current = true;
+    const handleCardLongPress = useCallback(() => {
       onLongPress?.(movie);
-    }, [clearLongPressHandled, movie, onLongPress]);
+    }, [movie, onLongPress]);
 
-    const handlePressOut = useCallback(() => {
-      if (!longPressHandledRef.current) {
-        return;
-      }
-
-      scheduleLongPressReset();
-    }, [scheduleLongPressReset]);
+    const { handlePress, handleLongPress, handlePressOut } = useLongPressPressGuard({
+      onPress: handleNavigate,
+      onLongPress: onLongPress ? handleCardLongPress : undefined,
+    });
 
     return (
       <TouchableOpacity
