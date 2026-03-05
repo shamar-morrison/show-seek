@@ -172,6 +172,39 @@ const tryAutoAddToAlreadyWatched = async (params: {
   }
 };
 
+// Helper to auto-remove movie from "Should Watch" list
+const tryAutoRemoveFromShouldWatch = async (params: {
+  movieId: number;
+  movieTitle?: string;
+  membership: Record<string, boolean>;
+  userId?: string;
+  queryClient: QueryClient;
+}) => {
+  const { movieId, movieTitle, membership, userId, queryClient } = params;
+  const isInShouldWatch = !!membership.watchlist;
+
+  if (!isInShouldWatch) return;
+
+  try {
+    const { listService } = await import('../services/ListService');
+    await listService.removeFromList('watchlist', movieId);
+
+    if (userId) {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['lists', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+          refetchType: 'active',
+        }),
+      ]);
+    }
+
+    console.log('[MovieDetailScreen] Auto-removed from Should Watch list:', movieTitle ?? movieId);
+  } catch (autoRemoveError) {
+    console.error('[MovieDetailScreen] Auto-remove from Should Watch failed:', autoRemoveError);
+  }
+};
+
 export default function MovieDetailScreen() {
   const styles = useDetailStyles();
   const queryClient = useQueryClient();
@@ -539,6 +572,17 @@ export default function MovieDetailScreen() {
         userId,
         queryClient,
         t,
+      });
+    }
+
+    // Auto-remove from "Should Watch" list on any successful watch action.
+    if (preferences?.autoRemoveFromShouldWatch) {
+      await tryAutoRemoveFromShouldWatch({
+        movieId,
+        movieTitle: movie?.title,
+        membership,
+        userId,
+        queryClient,
       });
     }
   };
@@ -1004,6 +1048,7 @@ export default function MovieDetailScreen() {
             onShowToast={(message) => toastRef.current?.show(message)}
             autoAddOptions={{
               shouldAutoAdd: preferences?.autoAddToAlreadyWatched,
+              shouldAutoRemoveFromShouldWatch: preferences?.autoRemoveFromShouldWatch,
               listMembership: membership,
               mediaMetadata: {
                 title: movie.title,

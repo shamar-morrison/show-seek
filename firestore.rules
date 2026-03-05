@@ -50,6 +50,7 @@ service cloud.firestore {
           request.resource.data.preferences is map
           && (!('autoAddToWatching' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToWatching is bool)
           && (!('autoAddToAlreadyWatched' in request.resource.data.preferences) || request.resource.data.preferences.autoAddToAlreadyWatched is bool)
+          && (!('autoRemoveFromShouldWatch' in request.resource.data.preferences) || request.resource.data.preferences.autoRemoveFromShouldWatch is bool)
           && (!('blurPlotSpoilers' in request.resource.data.preferences) || request.resource.data.preferences.blurPlotSpoilers is bool)
           && (!('showListIndicators' in request.resource.data.preferences) || request.resource.data.preferences.showListIndicators is bool)
           && (!('showMediaPreviewCards' in request.resource.data.preferences) || request.resource.data.preferences.showMediaPreviewCards is bool)

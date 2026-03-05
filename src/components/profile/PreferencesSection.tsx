@@ -123,6 +123,15 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
+        label={t('profile.autoRemoveFromShouldWatch')}
+        subtitle={t('profile.autoRemoveFromShouldWatchDescription')}
+        value={!!preferences?.autoRemoveFromShouldWatch}
+        onValueChange={(value) => handleUpdate('autoRemoveFromShouldWatch', value)}
+        loading={isLoading || isItemUpdating('autoRemoveFromShouldWatch')}
+        disabled={isUpdating}
+      />
+
+      <PreferenceItem
         label={t('profile.showListIndicators')}
         subtitle={t('profile.showListIndicatorsDescription')}
         value={!!preferences?.showListIndicators}

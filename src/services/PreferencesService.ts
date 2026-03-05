@@ -16,6 +16,9 @@ class PreferencesService {
         data?.preferences?.autoAddToWatching ?? DEFAULT_PREFERENCES.autoAddToWatching,
       autoAddToAlreadyWatched:
         data?.preferences?.autoAddToAlreadyWatched ?? DEFAULT_PREFERENCES.autoAddToAlreadyWatched,
+      autoRemoveFromShouldWatch:
+        data?.preferences?.autoRemoveFromShouldWatch ??
+        DEFAULT_PREFERENCES.autoRemoveFromShouldWatch,
       blurPlotSpoilers: data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
       showListIndicators:
         data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
