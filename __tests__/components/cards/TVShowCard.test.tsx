@@ -1,6 +1,6 @@
 import type { TVShow } from '@/src/api/tmdb';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
 
@@ -105,5 +105,16 @@ describe('TVShowCard', () => {
     render(<TVShowCard show={show} showListBadge={false} posterPathOverride="/override.jpg" />);
 
     expect(mockResolvePosterPath).not.toHaveBeenCalled();
+  });
+
+  it('forwards long press with the TV show payload', () => {
+    const onLongPress = jest.fn();
+    const { UNSAFE_getByType } = render(
+      <TVShowCard show={show} showListBadge={false} onLongPress={onLongPress} />
+    );
+
+    fireEvent(UNSAFE_getByType(TouchableOpacity), 'longPress');
+
+    expect(onLongPress).toHaveBeenCalledWith(show);
   });
 });

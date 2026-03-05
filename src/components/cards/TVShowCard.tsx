@@ -22,10 +22,11 @@ interface TVShowCardProps {
   showListBadge?: boolean;
   /** Optional pre-resolved poster path to avoid stale list cells */
   posterPathOverride?: string | null;
+  onLongPress?: (show: TVShow) => void;
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
-  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
+  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride, onLongPress }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
@@ -52,9 +53,14 @@ export const TVShowCard = memo<TVShowCardProps>(
       router.push(path as any);
     }, [currentTab, show.id]);
 
+    const handleLongPress = useCallback(() => {
+      onLongPress?.(show);
+    }, [onLongPress, show]);
+
     return (
       <TouchableOpacity
         onPress={handlePress}
+        onLongPress={onLongPress ? handleLongPress : undefined}
         style={[styles.container, { width }, containerStyle]}
         activeOpacity={ACTIVE_OPACITY}
       >

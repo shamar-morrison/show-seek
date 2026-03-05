@@ -22,10 +22,11 @@ interface MovieCardProps {
   showListBadge?: boolean;
   /** Optional pre-resolved poster path to avoid stale list cells */
   posterPathOverride?: string | null;
+  onLongPress?: (movie: Movie) => void;
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, width = 140, containerStyle, showListBadge = true, posterPathOverride }) => {
+  ({ movie, width = 140, containerStyle, showListBadge = true, posterPathOverride, onLongPress }) => {
     const currentTab = useCurrentTab();
     const { getListsForMedia } = useListMembership();
     const { preferences } = usePreferences();
@@ -52,9 +53,14 @@ export const MovieCard = memo<MovieCardProps>(
       router.push(path as Route);
     }, [currentTab, movie.id]);
 
+    const handleLongPress = useCallback(() => {
+      onLongPress?.(movie);
+    }, [movie, onLongPress]);
+
     return (
       <TouchableOpacity
         onPress={handlePress}
+        onLongPress={onLongPress ? handleLongPress : undefined}
         style={[styles.container, { width }, containerStyle]}
         activeOpacity={ACTIVE_OPACITY}
       >
