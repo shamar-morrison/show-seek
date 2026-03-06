@@ -6,7 +6,7 @@ import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useContentFilter } from '@/src/hooks/useContentFilter';
+import { useContentFilterWithDiagnostics } from '@/src/hooks/useContentFilter';
 import { useLists } from '@/src/hooks/useLists';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { HomeScreenListItem } from '@/src/types/preferences';
@@ -106,6 +106,7 @@ function TMDBListSection({
 }) {
   const config = TMDB_QUERY_MAP[id];
   const { resolvePosterPath, overrides } = usePosterOverrides();
+  const { t } = useTranslation();
   const isFocused = useSectionFocusState();
   const listExtraData = useMemo(() => ({ overrides, isFocused }), [isFocused, overrides]);
 
@@ -130,8 +131,7 @@ function TMDBListSection({
     return query.data.pages.flatMap((page) => page.results);
   }, [query.data]);
 
-  // Filter out watched content from TMDB lists
-  const filteredItems = useContentFilter(items);
+  const { diagnostics, filteredItems } = useContentFilterWithDiagnostics(items);
 
   const handleLoadMore = () => {
     if (query.hasNextPage && !query.isFetchingNextPage) {
@@ -159,6 +159,14 @@ function TMDBListSection({
           removeClippedSubviews={true}
           drawDistance={400}
         />
+      ) : diagnostics.allItemsRemovedByPreferences ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>{t('home.contentHiddenByPreferences')}</Text>
+        </View>
+      ) : items.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>{t('home.noContentAvailable')}</Text>
+        </View>
       ) : (
         <FlashList
           horizontal

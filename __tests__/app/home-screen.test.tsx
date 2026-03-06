@@ -5,6 +5,16 @@ const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
 const mockPush = jest.fn();
 const mockInvalidateQueries = jest.fn();
+const mockRepairHomeScreenLists = jest.fn();
+const mockContentFilterState = {
+  diagnostics: {
+    allItemsRemovedByPreferences: false,
+    removedByPreferences: false,
+    removedByUnreleasedContent: false,
+    removedByWatchedContent: false,
+  },
+  filteredItems: null as any[] | null,
+};
 
 const mockAuthState = {
   user: { uid: 'user-1', isAnonymous: false } as null | { uid: string; isAnonymous?: boolean },
@@ -15,10 +25,19 @@ const mockPremiumState = {
   isPremium: true,
 };
 
-const mockPreferencesState = {
+const mockPreferencesState: {
+  homeScreenLists: Array<{ id: string; type: string; label: string }>;
+  isLoading: boolean;
+  preferences: Record<string, unknown> & {
+    homeScreenLists: Array<{ id: string; type: string; label: string }>;
+    showOriginalTitles: boolean;
+    dataSaver: boolean;
+  };
+} = {
   homeScreenLists: [{ id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' }],
   isLoading: false,
   preferences: {
+    homeScreenLists: [{ id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' }],
     showOriginalTitles: false,
     dataSaver: false,
   },
@@ -27,6 +46,7 @@ const mockPreferencesState = {
 const mockListsState = {
   data: [] as any[],
   isLoading: false,
+  isError: false,
 };
 
 let mockTmdbPages: any[] = [];
@@ -121,10 +141,18 @@ jest.mock('@/src/hooks/useAccountRequired', () => ({
 
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => mockPreferencesState,
+  useUpdateHomeScreenLists: () => ({
+    mutate: (...args: any[]) => mockRepairHomeScreenLists(...args),
+    isPending: false,
+  }),
 }));
 
 jest.mock('@/src/hooks/useContentFilter', () => ({
   useContentFilter: (items: any[]) => items,
+  useContentFilterWithDiagnostics: (items: any[]) => ({
+    diagnostics: mockContentFilterState.diagnostics,
+    filteredItems: mockContentFilterState.filteredItems ?? items,
+  }),
 }));
 
 jest.mock('@/src/hooks/useLists', () => ({
@@ -231,11 +259,20 @@ describe('HomeScreen long press add-to-list', () => {
     ];
     mockPreferencesState.isLoading = false;
     mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' }],
       showOriginalTitles: false,
       dataSaver: false,
     };
     mockListsState.data = [];
     mockListsState.isLoading = false;
+    mockListsState.isError = false;
+    mockContentFilterState.diagnostics = {
+      allItemsRemovedByPreferences: false,
+      removedByPreferences: false,
+      removedByUnreleasedContent: false,
+      removedByWatchedContent: false,
+    };
+    mockContentFilterState.filteredItems = null;
     mockTmdbPages = [
       {
         page: 1,
@@ -272,6 +309,11 @@ describe('HomeScreen long press add-to-list', () => {
 
   it('opens AddToListModal for authenticated long press on a user list home card', async () => {
     mockPreferencesState.homeScreenLists = [{ id: 'watchlist', type: 'default', label: 'Watchlist' }];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'watchlist', type: 'default', label: 'Watchlist' }],
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
     mockListsState.data = [
       {
         id: 'watchlist',
@@ -313,6 +355,108 @@ describe('HomeScreen long press add-to-list', () => {
       first_air_date: undefined,
       genre_ids: [35],
     });
+  });
+
+  it('filters stale deleted custom selections before rendering home sections', async () => {
+    mockPreferencesState.homeScreenLists = [
+      { id: 'deleted-custom', type: 'custom', label: 'Deleted Custom' },
+      { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
+    ];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [
+        { id: 'deleted-custom', type: 'custom', label: 'Deleted Custom' },
+        { id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' },
+      ],
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
+
+    const { getByText, queryByText } = render(<HomeScreen />);
+
+    expect(getByText('Trending Pick')).toBeTruthy();
+    expect(queryByText('Deleted Custom')).toBeNull();
+
+    await waitFor(() => {
+      expect(mockRepairHomeScreenLists).toHaveBeenCalledWith(
+        [{ id: 'trending-movies', type: 'tmdb', label: 'Trending Movies' }],
+        expect.objectContaining({
+          onError: expect.any(Function),
+        })
+      );
+    });
+  });
+
+  it('shows a warning when preferences hide all items in a home TMDB section', () => {
+    mockPreferencesState.homeScreenLists = [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }],
+      hideUnreleasedContent: true,
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
+    mockTmdbPages = [
+      {
+        page: 1,
+        total_pages: 1,
+        total_results: 1,
+        results: [
+          {
+            id: 505,
+            name: 'Future Show',
+            original_name: 'Future Show',
+            overview: 'Soon',
+            poster_path: '/future.jpg',
+            backdrop_path: null,
+            first_air_date: '2026-12-01',
+            vote_average: 7.2,
+            vote_count: 12,
+            popularity: 10,
+            genre_ids: [18],
+            original_language: 'en',
+          },
+        ],
+      },
+    ];
+    mockContentFilterState.filteredItems = [];
+    mockContentFilterState.diagnostics = {
+      allItemsRemovedByPreferences: true,
+      removedByPreferences: true,
+      removedByUnreleasedContent: true,
+      removedByWatchedContent: false,
+    };
+
+    const { getByText, queryByText } = render(<HomeScreen />);
+
+    expect(getByText('home.contentHiddenByPreferences')).toBeTruthy();
+    expect(queryByText('Future Show')).toBeNull();
+  });
+
+  it('shows an empty-state message when a home TMDB section has no results', () => {
+    mockPreferencesState.homeScreenLists = [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'upcoming-tv', type: 'tmdb', label: 'Upcoming TV Shows' }],
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
+    mockTmdbPages = [
+      {
+        page: 1,
+        total_pages: 1,
+        total_results: 0,
+        results: [],
+      },
+    ];
+    mockContentFilterState.filteredItems = [];
+    mockContentFilterState.diagnostics = {
+      allItemsRemovedByPreferences: false,
+      removedByPreferences: false,
+      removedByUnreleasedContent: false,
+      removedByWatchedContent: false,
+    };
+
+    const { getByText } = render(<HomeScreen />);
+
+    expect(getByText('home.noContentAvailable')).toBeTruthy();
   });
 
   it('blocks unauthenticated long press from opening AddToListModal', async () => {

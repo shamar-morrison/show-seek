@@ -136,13 +136,15 @@
     "airingToday": "No ar hoje",
     "onTheAir": "No ar",
     "latestTrailers": "Últimos trailers",
+    "noTrailersAvailable": "Sem trailers disponíveis",
     "trendingMovies": "Filmes em destaque",
     "trendingTV": "Séries em destaque",
     "upcomingTV": "Próximas séries",
+    "contentHiddenByPreferences": "Este conteúdo pode estar oculto pelas suas preferências",
+    "noContentAvailable": "Nada disponível de momento",
     "customizeSections": "Personalizar secções",
     "emptyHome": "O seu ecrã inicial está vazio",
-    "emptyHomeHint": "Adicione algumas secções para começar",
-    "noTrailersAvailable": "Sem trailers disponíveis"
+    "emptyHomeHint": "Adicione algumas secções para começar"
   },
   "discover": {
     "title": "Descobrir",

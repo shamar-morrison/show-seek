@@ -136,13 +136,15 @@
     "airingToday": "Diffusé aujourd'hui",
     "onTheAir": "En cours de diffusion",
     "latestTrailers": "Dernières bandes-annonces",
+    "noTrailersAvailable": "Aucune bande-annonce disponible",
     "trendingMovies": "Films du moment",
     "trendingTV": "Séries du moment",
     "upcomingTV": "Séries à venir",
+    "contentHiddenByPreferences": "Ce contenu peut être masqué par vos préférences",
+    "noContentAvailable": "Aucun contenu disponible pour le moment",
     "customizeSections": "Personnaliser les sections",
     "emptyHome": "Votre écran d'accueil est vide",
-    "emptyHomeHint": "Ajoutez des sections pour commencer",
-    "noTrailersAvailable": "Aucune bande-annonce disponible"
+    "emptyHomeHint": "Ajoutez des sections pour commencer"
   },
   "discover": {
     "title": "Découvrir",

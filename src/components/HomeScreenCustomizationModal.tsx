@@ -4,14 +4,14 @@ import {
   MAX_HOME_LISTS,
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
-import { filterCustomLists, WATCH_STATUS_LISTS } from '@/src/constants/lists';
+import { WATCH_STATUS_LISTS } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useLists } from '@/src/hooks/useLists';
-import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
+import { UserList } from '@/src/services/ListService';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -47,6 +47,8 @@ export interface HomeScreenCustomizationModalRef {
 
 interface HomeScreenCustomizationModalProps {
   onShowToast?: (message: string) => void;
+  resolvedHomeScreenLists: HomeScreenListItem[];
+  customLists: Pick<UserList, 'id' | 'name'>[];
 }
 
 interface ListItemProps {
@@ -61,7 +63,13 @@ interface ListItemProps {
 const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: ListItemProps) => {
   const { accentColor } = useAccentColor();
   return (
-    <Pressable style={styles.listItem} onPress={() => onToggle({ id, type, label })}>
+    <Pressable
+      testID={`home-customization-row-${id}`}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: isSelected }}
+      style={styles.listItem}
+      onPress={() => onToggle({ id, type, label })}
+    >
       <View
         style={[
           styles.checkbox,
@@ -79,11 +87,9 @@ const ListItem = ({ id, label, type, isSelected, onToggle, isPremiumLocked }: Li
 const HomeScreenCustomizationModal = forwardRef<
   HomeScreenCustomizationModalRef,
   HomeScreenCustomizationModalProps
->(({ onShowToast }, ref) => {
+>(({ onShowToast, resolvedHomeScreenLists, customLists }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
-  const { homeScreenLists } = usePreferences();
-  const { data: userLists } = useLists();
   const updateMutation = useUpdateHomeScreenLists();
   const { user } = useAuth();
   const { isPremium } = usePremium();
@@ -99,12 +105,10 @@ const HomeScreenCustomizationModal = forwardRef<
   const [pendingSelections, setPendingSelections] = useState<HomeScreenListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const customLists = userLists ? filterCustomLists(userLists) : [];
-
   const initializeSelections = useCallback(() => {
-    setPendingSelections([...homeScreenLists]);
+    setPendingSelections([...resolvedHomeScreenLists]);
     setError(null);
-  }, [homeScreenLists]);
+  }, [resolvedHomeScreenLists]);
 
   useImperativeHandle(ref, () => ({
     present: async () => {
@@ -182,7 +186,7 @@ const HomeScreenCustomizationModal = forwardRef<
       <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
         <View style={modalHeaderStyles.header}>
           <Text style={modalHeaderStyles.title}>{t('homeCustomization.title')}</Text>
-          <Text style={styles.subtitle}>
+          <Text testID="home-customization-selected-count" style={styles.subtitle}>
             {t('homeCustomization.selectedCount', {
               selected: pendingSelections.length,
               max: MAX_HOME_LISTS,

@@ -4,8 +4,11 @@ import React from 'react';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 
 const mockAddToList = jest.fn();
+const mockDeleteList = jest.fn();
 const mockGetUserLists = jest.fn();
+const mockFetchPreferences = jest.fn();
 const mockRemoveFromList = jest.fn();
+const mockUpdatePreference = jest.fn();
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
@@ -34,13 +37,27 @@ jest.mock('@/src/firebase/config', () => ({
 jest.mock('@/src/services/ListService', () => ({
   listService: {
     addToList: (...args: any[]) => mockAddToList(...args),
+    deleteList: (...args: any[]) => mockDeleteList(...args),
     getUserLists: (...args: any[]) => mockGetUserLists(...args),
     removeFromList: (...args: any[]) => mockRemoveFromList(...args),
   },
   DEFAULT_LISTS: [],
 }));
 
-import { PremiumLimitError, useAddToList, useMediaLists, useRemoveFromList } from '@/src/hooks/useLists';
+jest.mock('@/src/services/PreferencesService', () => ({
+  preferencesService: {
+    fetchPreferences: (...args: any[]) => mockFetchPreferences(...args),
+    updatePreference: (...args: any[]) => mockUpdatePreference(...args),
+  },
+}));
+
+import {
+  PremiumLimitError,
+  useAddToList,
+  useDeleteList,
+  useMediaLists,
+  useRemoveFromList,
+} from '@/src/hooks/useLists';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -84,8 +101,11 @@ describe('useAddToList', () => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
     mockAddToList.mockResolvedValue(undefined);
+    mockDeleteList.mockResolvedValue(undefined);
     mockGetUserLists.mockResolvedValue([]);
+    mockFetchPreferences.mockResolvedValue({});
     mockRemoveFromList.mockResolvedValue(undefined);
+    mockUpdatePreference.mockResolvedValue(undefined);
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
   });
@@ -226,6 +246,53 @@ describe('useRemoveFromList', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'],
         refetchType: 'active',
+      });
+    });
+  });
+});
+
+describe('useDeleteList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockDeleteList.mockResolvedValue(undefined);
+    mockGetUserLists.mockResolvedValue([
+      {
+        id: 'remaining-list',
+        name: 'Remaining List',
+        items: {},
+        createdAt: 2,
+      },
+    ]);
+    mockFetchPreferences.mockResolvedValue({
+      homeScreenLists: [
+        { id: 'deleted-list', type: 'custom', label: 'Deleted List' },
+        { id: 'remaining-list', type: 'custom', label: 'Old Remaining Name' },
+      ],
+    });
+    mockUpdatePreference.mockResolvedValue(undefined);
+  });
+
+  it('repairs home screen selections even when preferences are not cached', async () => {
+    const client = createQueryClient();
+
+    const { result } = renderHook(() => useDeleteList(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync('deleted-list');
+    });
+
+    await waitFor(() => {
+      expect(mockDeleteList).toHaveBeenCalledWith('deleted-list');
+      expect(mockFetchPreferences).toHaveBeenCalledWith('test-user-id');
+      expect(mockGetUserLists).toHaveBeenCalledWith('test-user-id');
+      expect(mockUpdatePreference).toHaveBeenCalledWith('homeScreenLists', [
+        { id: 'remaining-list', type: 'custom', label: 'Remaining List' },
+      ]);
+      expect(client.getQueryData(['preferences', 'test-user-id'])).toEqual({
+        homeScreenLists: [{ id: 'remaining-list', type: 'custom', label: 'Remaining List' }],
       });
     });
   });
