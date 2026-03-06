@@ -140,6 +140,8 @@
     "trendingMovies": "Trending Movies",
     "trendingTV": "Trending TV Shows",
     "upcomingTV": "Upcoming TV Shows",
+    "contentHiddenByPreferences": "Content may be hidden by your preferences",
+    "noContentAvailable": "Nothing available right now",
     "customizeSections": "Customize Sections",
     "emptyHome": "Your home screen is empty",
     "emptyHomeHint": "Add some sections to get started"

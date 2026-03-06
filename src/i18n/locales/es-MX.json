@@ -140,6 +140,8 @@
     "trendingMovies": "Películas en tendencia",
     "trendingTV": "Series en tendencia",
     "upcomingTV": "Próximas series",
+    "contentHiddenByPreferences": "Es posible que tu configuración esté ocultando este contenido",
+    "noContentAvailable": "No hay contenido disponible en este momento",
     "customizeSections": "Personalizar secciones",
     "emptyHome": "Tu pantalla de inicio está vacía",
     "emptyHomeHint": "Agrega algunas secciones para comenzar"

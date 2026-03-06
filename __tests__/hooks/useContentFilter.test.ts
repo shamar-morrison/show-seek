@@ -1,4 +1,7 @@
-import { useContentFilter } from '@/src/hooks/useContentFilter';
+import {
+  useContentFilter,
+  useContentFilterWithDiagnostics,
+} from '@/src/hooks/useContentFilter';
 import { renderHook } from '@testing-library/react-native';
 
 // Mock dependencies
@@ -120,6 +123,20 @@ describe('useContentFilter', () => {
       expect(noDateItem).toBeDefined();
       expect(noDateItem?.title).toBe('No Date Movie');
     });
+
+    it('reports diagnostics when unreleased filtering removes all items', () => {
+      const futureOnlyShows = [{ id: 11, name: 'Upcoming Show', first_air_date: '2026-01-01' }];
+
+      const { result } = renderHook(() => useContentFilterWithDiagnostics(futureOnlyShows));
+
+      expect(result.current.filteredItems).toEqual([]);
+      expect(result.current.diagnostics).toEqual({
+        allItemsRemovedByPreferences: true,
+        removedByPreferences: true,
+        removedByUnreleasedContent: true,
+        removedByWatchedContent: false,
+      });
+    });
   });
 
   describe('hideWatchedContent', () => {
@@ -147,6 +164,35 @@ describe('useContentFilter', () => {
       const { result } = renderHook(() => useContentFilter(mockMovies));
 
       expect(result.current).toEqual(mockMovies);
+    });
+
+    it('reports diagnostics when watched filtering removes all items', () => {
+      mockUseLists.mockReturnValue({
+        data: [
+          {
+            id: 'already-watched',
+            items: {
+              1: { addedAt: 123 },
+              4: { addedAt: 456 },
+            },
+          },
+        ],
+      });
+
+      const watchedOnlyMovies = [
+        { id: 1, title: 'Released Movie', release_date: '2025-01-15' },
+        { id: 4, title: 'Another Released', release_date: '2024-05-01' },
+      ];
+
+      const { result } = renderHook(() => useContentFilterWithDiagnostics(watchedOnlyMovies));
+
+      expect(result.current.filteredItems).toEqual([]);
+      expect(result.current.diagnostics).toEqual({
+        allItemsRemovedByPreferences: true,
+        removedByPreferences: true,
+        removedByUnreleasedContent: false,
+        removedByWatchedContent: true,
+      });
     });
   });
 
@@ -185,6 +231,22 @@ describe('useContentFilter', () => {
       const { result } = renderHook(() => useContentFilter(mockMovies));
 
       expect(result.current).toEqual(mockMovies);
+    });
+
+    it('leaves diagnostics clear when no filtering is applied', () => {
+      mockUsePreferences.mockReturnValue({
+        preferences: { hideUnreleasedContent: false, hideWatchedContent: false },
+      });
+
+      const { result } = renderHook(() => useContentFilterWithDiagnostics(mockMovies));
+
+      expect(result.current.filteredItems).toEqual(mockMovies);
+      expect(result.current.diagnostics).toEqual({
+        allItemsRemovedByPreferences: false,
+        removedByPreferences: false,
+        removedByUnreleasedContent: false,
+        removedByWatchedContent: false,
+      });
     });
   });
 });

@@ -13,9 +13,15 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
-import { usePreferences } from '@/src/hooks/usePreferences';
+import { useLists } from '@/src/hooks/useLists';
+import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
+import {
+  areHomeScreenSelectionsEqual,
+  normalizeHomeScreenSelections,
+} from '@/src/utils/homeScreenSelections';
+import { filterCustomLists } from '@/src/constants/lists';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Menu, Settings2 } from 'lucide-react-native';
@@ -30,16 +36,38 @@ export default function HomeScreen() {
   const modalRef = useRef<HomeScreenCustomizationModalRef>(null);
   const addToListModalRef = useRef<AddToListModalRef>(null);
   const toastRef = useRef<ToastRef>(null);
+  const lastRepairSignatureRef = useRef<string | null>(null);
   const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
     null
   );
   const queryClient = useQueryClient();
-  const { homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
   const { user } = useAuth();
+  const { preferences, homeScreenLists, isLoading: isLoadingPreferences } = usePreferences();
+  const { data: userLists, isLoading: isLoadingLists, isError: isListsError } = useLists({
+    enabled: !!user,
+  });
+  const repairHomeScreenLists = useUpdateHomeScreenLists();
   const isAccountRequired = useAccountRequired();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const storedHomeScreenLists = preferences.homeScreenLists;
+  const hasCustomSelections = storedHomeScreenLists?.some((item) => item.type === 'custom') ?? false;
+  const customLists = useMemo(() => filterCustomLists(userLists), [userLists]);
+  const resolvedHomeScreenLists = useMemo(() => {
+    if (hasCustomSelections && (isLoadingLists || isListsError)) {
+      return homeScreenLists;
+    }
+
+    return normalizeHomeScreenSelections(storedHomeScreenLists, customLists);
+  }, [
+    customLists,
+    hasCustomSelections,
+    homeScreenLists,
+    isListsError,
+    isLoadingLists,
+    storedHomeScreenLists,
+  ]);
 
   // Check if user can access Latest Trailers (signed in + premium)
   const canAccessTrailers = useMemo(() => {
@@ -48,8 +76,14 @@ export default function HomeScreen() {
 
   // Check if we need to show Top Rated at the end for users without trailer access.
   const showTopRatedAtEnd = useMemo(() => {
-    return !canAccessTrailers && homeScreenLists.some((config) => config.id === 'latest-trailers');
-  }, [canAccessTrailers, homeScreenLists]);
+    return (
+      !canAccessTrailers &&
+      resolvedHomeScreenLists.some((config) => config.id === 'latest-trailers')
+    );
+  }, [canAccessTrailers, resolvedHomeScreenLists]);
+
+  const isLoadingHomeSelections =
+    !!user && (isLoadingPreferences || (hasCustomSelections && isLoadingLists));
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -101,6 +135,55 @@ export default function HomeScreen() {
     }
   }, [selectedMediaItem]);
 
+  const { isPending: isRepairPending, mutate: mutateHomeScreenLists } = repairHomeScreenLists;
+
+  useEffect(() => {
+    if (!user || !storedHomeScreenLists) {
+      lastRepairSignatureRef.current = null;
+      return;
+    }
+
+    if (
+      isLoadingPreferences ||
+      isRepairPending ||
+      isListsError ||
+      (hasCustomSelections && isLoadingLists)
+    ) {
+      return;
+    }
+
+    if (areHomeScreenSelectionsEqual(storedHomeScreenLists, resolvedHomeScreenLists)) {
+      lastRepairSignatureRef.current = null;
+      return;
+    }
+
+    const repairSignature = JSON.stringify({
+      stored: storedHomeScreenLists,
+      resolved: resolvedHomeScreenLists,
+    });
+
+    if (lastRepairSignatureRef.current === repairSignature) {
+      return;
+    }
+
+    lastRepairSignatureRef.current = repairSignature;
+    mutateHomeScreenLists(resolvedHomeScreenLists, {
+      onError: () => {
+        lastRepairSignatureRef.current = null;
+      },
+    });
+  }, [
+    hasCustomSelections,
+    isRepairPending,
+    isListsError,
+    isLoadingLists,
+    isLoadingPreferences,
+    mutateHomeScreenLists,
+    resolvedHomeScreenLists,
+    storedHomeScreenLists,
+    user,
+  ]);
+
   const handleOpenCustomization = () => {
     if (isAccountRequired()) return;
     modalRef.current?.present();
@@ -142,7 +225,7 @@ export default function HomeScreen() {
       >
         {/* Show skeleton sections while preferences are loading for signed-in users */}
         {/* This prevents layout shift when user's customized list loads */}
-        {isLoadingPreferences && user ? (
+        {isLoadingHomeSelections ? (
           <>
             <HomeListSectionSkeleton />
             <HomeListSectionSkeleton />
@@ -151,7 +234,7 @@ export default function HomeScreen() {
           </>
         ) : (
           <>
-            {homeScreenLists.map((config) => (
+            {resolvedHomeScreenLists.map((config) => (
               <HomeListSection
                 key={config.id}
                 config={config}
@@ -172,7 +255,12 @@ export default function HomeScreen() {
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      <HomeScreenCustomizationModal ref={modalRef} onShowToast={handleShowToast} />
+      <HomeScreenCustomizationModal
+        ref={modalRef}
+        onShowToast={handleShowToast}
+        resolvedHomeScreenLists={resolvedHomeScreenLists}
+        customLists={customLists}
+      />
       <HomeDrawer visible={drawerVisible} onClose={handleCloseDrawer} />
       {selectedMediaItem && (
         <AddToListModal

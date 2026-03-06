@@ -1,5 +1,5 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
+import { filterCustomLists, MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
@@ -14,6 +14,10 @@ import {
 } from '../services/ListService';
 import { preferencesService } from '../services/PreferencesService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
+import {
+  areHomeScreenSelectionsEqual,
+  normalizeHomeScreenSelections,
+} from '../utils/homeScreenSelections';
 
 // Stale time for TV show details prefetch (same as useUpcomingReleases)
 const TV_DETAILS_STALE_TIME = 1000 * 60 * 30;
@@ -436,22 +440,50 @@ export const useDeleteList = () => {
       // Clean up home screen preferences to remove the deleted custom list
       if (!userId) return;
 
-      const preferences = queryClient.getQueryData<UserPreferences>(['preferences', userId]);
+      const preferencesQueryKey = ['preferences', userId] as const;
+      let preferences = queryClient.getQueryData<UserPreferences>(preferencesQueryKey);
+
+      if (!preferences) {
+        try {
+          preferences = await preferencesService.fetchPreferences(userId);
+          queryClient.setQueryData<UserPreferences>(preferencesQueryKey, preferences);
+        } catch (error) {
+          console.error('Failed to fetch preferences after deleting list:', error);
+        }
+      }
+
+      let lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
+      if (!lists) {
+        try {
+          lists = await listService.getUserLists(userId);
+          queryClient.setQueryData<UserList[]>(['lists', userId], lists);
+        } catch (error) {
+          console.error('Failed to fetch lists after deleting list:', error);
+        }
+      }
+
       const currentHomeScreenLists = preferences?.homeScreenLists;
 
       if (currentHomeScreenLists) {
-        // Filter out the deleted custom list
-        const updatedLists = currentHomeScreenLists.filter(
+        const filteredSelections = currentHomeScreenLists.filter(
           (item) => !(item.type === 'custom' && item.id === listId)
         );
+        const remainingCustomLists =
+          lists && lists.length > 0
+            ? filterCustomLists(lists.filter((list) => list.id !== listId)).map((list) => ({
+                id: list.id,
+                name: list.name,
+              }))
+            : filteredSelections
+                .filter((item) => item.type === 'custom')
+                .map((item) => ({ id: item.id, name: item.label }));
+        const updatedLists = normalizeHomeScreenSelections(filteredSelections, remainingCustomLists);
 
-        // Only update if the list was actually in home screen preferences
-        if (updatedLists.length !== currentHomeScreenLists.length) {
+        if (!areHomeScreenSelectionsEqual(updatedLists, currentHomeScreenLists)) {
           try {
             await preferencesService.updatePreference('homeScreenLists', updatedLists);
-            // Also update the query cache immediately for optimistic UI update
-            queryClient.setQueryData<UserPreferences>(['preferences', userId], (old) => ({
-              ...(old ?? DEFAULT_PREFERENCES),
+            queryClient.setQueryData<UserPreferences>(preferencesQueryKey, (old) => ({
+              ...(old ?? preferences ?? DEFAULT_PREFERENCES),
               homeScreenLists: updatedLists,
             }));
           } catch (error) {
