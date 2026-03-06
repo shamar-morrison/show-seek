@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
 
-const MAX_NOTE_LENGTH = 120;
+const MAX_NOTE_LENGTH = 200;
 
 export interface NoteModalRef {
   present: (params: {

@@ -149,9 +149,9 @@ service cloud.firestore {
           && request.resource.data.userId == userId
           // Validate mediaType is movie, tv, or episode
           && request.resource.data.mediaType in ['movie', 'tv', 'episode']
-          // Validate content is string with max 120 chars
+          // Validate content is string with max 200 chars
           && request.resource.data.content is string
-          && request.resource.data.content.size() <= 120
+          && request.resource.data.content.size() <= 200
           // Validate mediaId is an integer
           && request.resource.data.mediaId is int
           // Validate mediaTitle is a string
@@ -168,7 +168,7 @@ service cloud.firestore {
         allow update: if canWriteUserData(userId)
           && request.resource.data.userId == userId
           && request.resource.data.content is string
-          && request.resource.data.content.size() <= 120;
+          && request.resource.data.content.size() <= 200;
         allow delete: if canWriteUserData(userId);
       }
 
