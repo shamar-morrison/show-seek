@@ -132,6 +132,10 @@ export default function ImdbImportScreen() {
   const supportedRowCount = preparedImport?.stats.processedActions ?? 0;
   const selectedFileCount = preparedImport?.files.length ?? 0;
   const selectedChunkCount = preparedImport?.chunks.length ?? 0;
+  const finalSummaryDescriptionKey =
+    importedEntries.length > 0
+      ? 'imdbImport.completeBodyWithImported'
+      : 'imdbImport.completeBodyIssuesOnly';
 
   const handlePickFiles = async () => {
     if (isPickingFiles) {
@@ -235,7 +239,10 @@ export default function ImdbImportScreen() {
           <Text style={styles.heroSubtitle}>{t('imdbImport.description')}</Text>
         </View>
 
-        <StageCard title={t('imdbImport.selectStageTitle')} description={t('imdbImport.selectStageBody')}>
+        <StageCard
+          title={t('imdbImport.selectStageTitle')}
+          description={t('imdbImport.selectStageBody')}
+        >
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.primaryButton, styles.imdbButton]}
@@ -325,9 +332,7 @@ export default function ImdbImportScreen() {
                 </View>
               ) : null}
             </>
-          ) : (
-            <Text style={styles.helperText}>{t('imdbImport.emptyState')}</Text>
-          )}
+          ) : null}
         </StageCard>
 
         {preparedImport && !isImporting && !finalStats ? (
@@ -368,7 +373,10 @@ export default function ImdbImportScreen() {
         ) : null}
 
         {finalStats ? (
-          <StageCard title={t('imdbImport.finalSummaryTitle')} description={t('imdbImport.completeBody')}>
+          <StageCard
+            title={t('imdbImport.finalSummaryTitle')}
+            description={t(finalSummaryDescriptionKey)}
+          >
             <View style={styles.completeBadge}>
               <Check size={20} color={COLORS.white} />
             </View>
@@ -525,7 +533,7 @@ function createSummaryEntries(
 
 const styles = StyleSheet.create({
   actionRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: SPACING.s,
   },
   arrowIcon: {
@@ -567,11 +575,6 @@ const styles = StyleSheet.create({
   },
   fileSection: {
     gap: SPACING.s,
-  },
-  helperText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.m,
-    lineHeight: 22,
   },
   heroSection: {
     alignItems: 'center',
@@ -811,9 +814,9 @@ const styles = StyleSheet.create({
   primaryButton: {
     alignItems: 'center',
     borderRadius: BORDER_RADIUS.l,
-    flex: 1,
     justifyContent: 'center',
     minHeight: 52,
     paddingHorizontal: SPACING.m,
+    width: '100%',
   },
 });

@@ -202,6 +202,9 @@ describe('ImdbImportScreen', () => {
     );
 
     expect(await findByText('Import complete')).toBeTruthy();
+    expect(
+      getByText('This summary shows what was imported, plus anything that was skipped or ignored.')
+    ).toBeTruthy();
     expect(getByText('Rows with unresolved IMDb IDs')).toBeTruthy();
     expect(getByText('Rows with unsupported TMDB matches')).toBeTruthy();
     expect(getByText('IMDb item notes')).toBeTruthy();
@@ -210,5 +213,28 @@ describe('ImdbImportScreen', () => {
     await waitFor(() => {
       expect(mockInvalidateQueries).toHaveBeenCalled();
     });
+  });
+
+  it('uses issues-only copy when there are no imported totals to show', async () => {
+    mockRunPreparedImport.mockResolvedValue(
+      createStats({
+        processedActions: 8,
+        processedEntities: 8,
+        skipped: {
+          unresolved_imdb_id: 2,
+        },
+      })
+    );
+
+    const { findByText, getByText } = render(<ImdbImportScreen />);
+
+    fireEvent.press(getByText('Select CSV Files'));
+    await findByText('Ready to import');
+    fireEvent.press(getByText('Start Import'));
+
+    expect(await findByText('Import complete')).toBeTruthy();
+    expect(
+      getByText('This summary only shows items that were skipped or ignored during the import.')
+    ).toBeTruthy();
   });
 });
