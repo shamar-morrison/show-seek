@@ -728,6 +728,7 @@
     "unableToLoadPreferences": "Unable to load preferences",
     "checkConnection": "Please check your connection and try again",
     "sendFeedback": "Send Feedback",
+    "importFromImdb": "Import from IMDb",
     "exportData": "Export Data",
     "webApp": "ShowSeek Web App",
     "clearCache": "Clear Image Cache",
@@ -764,6 +765,65 @@
     },
     "defaultBulkAction": "Default bulk action: {{mode}}",
     "defaultBulkActionDescription": "Choose what happens when you bulk add items from a list."
+  },
+  "imdbImport": {
+    "title": "Import your IMDb data",
+    "description": "Bring in your IMDb ratings, watchlist, custom title lists, and check-ins without replacing the rest of your ShowSeek data.",
+    "supportedTitle": "What this supports",
+    "supportedBody": "Use IMDb CSV exports for ratings, watchlist, custom title lists, and check-ins. People, image, video, and item-note metadata are skipped and reported.",
+    "selectFiles": "Select CSV Files",
+    "replaceFiles": "Replace Selected Files",
+    "startImport": "Start Import",
+    "recognizedFilesTitle": "Recognized files",
+    "unsupportedFilesTitle": "Unsupported files",
+    "rowsCount": "{{count}} rows",
+    "preflightTitle": "Import summary",
+    "finalSummaryTitle": "Import complete",
+    "importedTitle": "Imported",
+    "skippedTitle": "Skipped",
+    "ignoredTitle": "Ignored metadata",
+    "progressTitle": "Import progress",
+    "progressBody": "{{completed}} of {{total}} chunks complete",
+    "emptyState": "Select one or more IMDb CSV exports to inspect them before importing.",
+    "nothingToImportTitle": "Nothing to import",
+    "nothingToImportMessage": "We couldn't find any supported IMDb rows in the selected files.",
+    "errors": {
+      "pickFailed": "We couldn't read the selected files. Please try again.",
+      "importFailedTitle": "Import failed",
+      "importFailedFallback": "The IMDb import failed. Please try again.",
+      "backendUnavailable": "IMDb import is not available yet. Please try again after the backend is deployed.",
+      "backendMisconfigured": "IMDb import is not configured correctly yet. Please try again later.",
+      "serviceUnavailable": "IMDb import is temporarily unavailable. Please try again in a moment.",
+      "premiumRequired": "IMDb import requires Premium.",
+      "signInRequired": "Please sign in to import your IMDb data."
+    },
+    "fileKinds": {
+      "ratings": "Ratings",
+      "watchlist": "Watchlist",
+      "list": "Custom list",
+      "checkins": "Check-ins"
+    },
+    "imported": {
+      "ratings": "Ratings",
+      "listItems": "List items",
+      "watchedMovies": "Movie watches",
+      "watchedShows": "Watched shows",
+      "watchedEpisodes": "Watched episodes",
+      "customListsCreated": "Custom lists created"
+    },
+    "skipped": {
+      "unsupportedFile": "Unsupported files",
+      "malformedRow": "Malformed rows",
+      "invalidRating": "Rows with invalid ratings",
+      "invalidDate": "Rows with invalid dates",
+      "unsupportedNonTitleRow": "People, image, or video rows",
+      "unsupportedListEpisode": "Episode rows from lists/watchlists",
+      "unresolvedImdbId": "Rows with unresolved IMDb IDs",
+      "unsupportedTmdbResult": "Rows with unsupported TMDB matches"
+    },
+    "ignored": {
+      "itemNotes": "IMDb item notes"
+    }
   },
   "guestAccess": {
     "body": "You need an account to do that. Please sign in.",
@@ -1209,6 +1269,10 @@
       "export-data": {
         "description": "Export your lists, ratings, notes, and more.",
         "title": "Export data"
+      },
+      "import-imdb": {
+        "description": "Bring your IMDb ratings, lists, and check-ins into ShowSeek.",
+        "title": "Import from IMDb"
       },
       "future-features": {
         "description": "Help fund future development.",

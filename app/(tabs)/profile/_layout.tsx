@@ -21,6 +21,15 @@ export default function ProfileLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="trakt-settings" />
       <Stack.Screen
+        name="imdb-import"
+        options={{
+          headerShown: true,
+          headerTitle: t('profile.importFromImdb'),
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.text,
+        }}
+      />
+      <Stack.Screen
         name="about"
         options={{
           headerShown: true,

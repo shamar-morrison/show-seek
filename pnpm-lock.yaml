@@ -54,6 +54,9 @@ dependencies:
   expo-device:
     specifier: ~8.0.10
     version: 8.0.10(expo@54.0.25)
+  expo-document-picker:
+    specifier: ~14.0.8
+    version: 14.0.8(expo@54.0.25)
   expo-file-system:
     specifier: ^19.0.21
     version: 19.0.21(expo@54.0.25)(react-native@0.81.5)
@@ -123,6 +126,9 @@ dependencies:
   lucide-react-native:
     specifier: ^0.554.0
     version: 0.554.0(react-native-svg@15.12.1)(react-native@0.81.5)(react@19.1.0)
+  papaparse:
+    specifier: ^5.5.3
+    version: 5.5.3
   react:
     specifier: 19.1.0
     version: 19.1.0
@@ -185,6 +191,9 @@ devDependencies:
   '@types/jest':
     specifier: ^29.5.14
     version: 29.5.14
+  '@types/papaparse':
+    specifier: ^5.5.2
+    version: 5.5.2
   '@types/react':
     specifier: ~19.1.10
     version: 19.1.10
@@ -3970,6 +3979,12 @@ packages:
     dependencies:
       undici-types: 7.16.0
 
+  /@types/papaparse@5.5.2:
+    resolution: {integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==}
+    dependencies:
+      '@types/node': 25.0.3
+    dev: true
+
   /@types/react@19.1.10:
     resolution: {integrity: sha512-EhBeSYX0Y6ye8pNebpKrwFJq7BoQ8J5SO6NlvNwwHjSj6adXJViPQrKlsyPw7hLBLvckEMO1yxeGdR82YBBlDg==}
     dependencies:
@@ -6742,6 +6757,14 @@ packages:
     dependencies:
       expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native@0.81.5)(react@19.1.0)
       ua-parser-js: 0.7.41
+    dev: false
+
+  /expo-document-picker@14.0.8(expo@54.0.25):
+    resolution: {integrity: sha512-3tyQKpPqWWFlI8p9RiMX1+T1Zge5mEKeBuXWp1h8PEItFMUDSiOJbQ112sfdC6Hxt8wSxreV9bCRl/NgBdt+fA==}
+    peerDependencies:
+      expo: '*'
+    dependencies:
+      expo: 54.0.25(@babel/core@7.25.2)(@expo/metro-runtime@6.1.2)(expo-router@6.0.19)(react-native@0.81.5)(react@19.1.0)
     dev: false
 
   /expo-eas-client@1.0.8:
@@ -10967,6 +10990,10 @@ packages:
   /package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
 
+  /papaparse@5.5.3:
+    resolution: {integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==}
+    dev: false
+
   /parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
     engines: {node: '>=6'}
@@ -11584,17 +11611,6 @@ packages:
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
-
-  /react-native-nitro-modules@0.31.10(react-native@0.81.5)(react@19.1.0):
-    resolution: {integrity: sha512-hcvjTu9YJE9fMmnAUvhG8CxvYLpOuMQ/2eyi/S6GyrecezF6Rmk/uRQEL6v09BRFWA/xRVZNQVulQPS+2HS3mQ==}
-    requiresBuild: true
-    peerDependencies:
-      react: '*'
-      react-native: '*'
-    dependencies:
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.25.2)(@types/react@19.1.10)(react@19.1.0)
-    dev: false
 
   /react-native-paper@5.14.5(react-native-safe-area-context@5.6.0)(react-native@0.81.5)(react@19.1.0):
     resolution: {integrity: sha512-eaIH5bUQjJ/mYm4AkI6caaiyc7BcHDwX6CqNDi6RIxfxfWxROsHpll1oBuwn/cFvknvA8uEAkqLk/vzVihI3AQ==}

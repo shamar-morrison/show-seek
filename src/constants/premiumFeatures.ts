@@ -139,6 +139,13 @@ export const PREMIUM_CATEGORIES: PremiumCategory[] = [
         titleKey: 'premiumFeatures.features.export-data.title',
         descriptionKey: 'premiumFeatures.features.export-data.description',
       },
+      {
+        id: 'import-imdb',
+        icon: 'cloud-upload-outline',
+        titleKey: 'premiumFeatures.features.import-imdb.title',
+        descriptionKey: 'premiumFeatures.features.import-imdb.description',
+        isNew: true,
+      },
     ],
   },
   {

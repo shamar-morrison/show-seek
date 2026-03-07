@@ -117,6 +117,17 @@ export function useProfileLogic() {
     ]);
   }, [isPremium, router, performExport, t]);
 
+  const handleImdbImport = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (!isPremium) {
+      router.push('/premium');
+      return;
+    }
+
+    router.push('/(tabs)/profile/imdb-import' as any);
+  }, [isPremium, router]);
+
   const handleClearCache = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -209,6 +220,7 @@ export function useProfileLogic() {
     handleOpenWebApp,
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
+    handleImdbImport,
     handleExportData,
     handleClearCache,
     handleSignOut,

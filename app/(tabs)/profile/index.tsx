@@ -54,6 +54,7 @@ export default function ProfileScreen() {
     handleOpenWebApp,
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
+    handleImdbImport,
     handleExportData,
     handleClearCache,
     handleSignOut,
@@ -155,6 +156,7 @@ export default function ProfileScreen() {
             isSigningOut={isSigningOut}
             onRateApp={handleRateApp}
             onFeedback={handleSendFeedback}
+            onImdbImport={handleImdbImport}
             onExportData={handleExportData}
             onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
