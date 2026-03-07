@@ -9,8 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 export interface IntegrationsSectionProps {
-  /** Whether user has premium */
-  isPremium: boolean;
   /** Whether Trakt is connected */
   isTraktConnected: boolean;
   /** Whether Trakt status is loading */
@@ -27,7 +25,6 @@ export interface IntegrationsSectionProps {
  * Profile section for third-party account and data integrations.
  */
 export function IntegrationsSection({
-  isPremium,
   isTraktConnected,
   isTraktLoading,
   onImdbImport,
@@ -56,8 +53,6 @@ export function IntegrationsSection({
           }
           label={t('profile.importFromImdb')}
           onPress={onImdbImport}
-          isPremiumFeature
-          isPremium={isPremium}
         />
         <ActionButton
           customIcon={<TraktLogo size={21} />}

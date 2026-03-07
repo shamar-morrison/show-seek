@@ -148,7 +148,6 @@ export default function ProfileScreen() {
       case 'integrations':
         return (
           <IntegrationsSection
-            isPremium={isPremium}
             isTraktConnected={isTraktConnected}
             isTraktLoading={isTraktLoading}
             onImdbImport={() => handleGuardedContentAction(handleImdbImport)}

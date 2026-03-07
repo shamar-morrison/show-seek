@@ -24,7 +24,6 @@ describe('IntegrationsSection', () => {
   const createProps = (
     overrides: Partial<IntegrationsSectionProps> = {}
   ): IntegrationsSectionProps => ({
-    isPremium: true,
     isTraktConnected: false,
     isTraktLoading: false,
     onImdbImport: jest.fn(),
@@ -56,10 +55,10 @@ describe('IntegrationsSection', () => {
     expect(props.onTraktPress).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the locked premium badge for IMDb import when the user is not premium', () => {
-    const { getByTestId } = render(<IntegrationsSection {...createProps({ isPremium: false })} />);
+  it('does not show a premium badge on the IMDb row for free users', () => {
+    const { queryByTestId } = render(<IntegrationsSection {...createProps()} />);
 
-    expect(getByTestId('premium-badge')).toBeTruthy();
+    expect(queryByTestId('premium-badge')).toBeNull();
   });
 
   it('shows the Trakt connected badge when connected', () => {

@@ -5,22 +5,33 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockBack = jest.fn();
+const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockPickRawFiles = jest.fn();
 const mockPrepareFiles = jest.fn();
 const mockRunPreparedImport = jest.fn();
 const mockRequireAccount = jest.fn(() => false);
+let mockIsPremium = true;
+let mockIsPremiumLoading = false;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: mockBack,
+    push: mockPush,
     replace: mockReplace,
   }),
 }));
 
 jest.mock('expo-image', () => ({
   Image: 'Image',
+}));
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'Light',
+  },
 }));
 
 jest.mock('react-native-safe-area-context', () => {
@@ -45,8 +56,8 @@ jest.mock('@/src/context/auth', () => ({
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => ({
-    isLoading: false,
-    isPremium: true,
+    isLoading: mockIsPremiumLoading,
+    isPremium: mockIsPremium,
   }),
 }));
 
@@ -84,6 +95,13 @@ jest.mock('@/src/components/ui/CollapsibleCategory', () => {
     ),
   };
 });
+
+jest.mock('@/src/components/ui/PremiumBadge', () => ({
+  PremiumBadge: () => {
+    const { Text } = require('react-native');
+    return <Text testID="premium-badge">Premium</Text>;
+  },
+}));
 
 jest.mock('@/src/services/ImdbImportService', () => ({
   imdbImportService: {
@@ -157,9 +175,25 @@ const emptyPreparedImport: PreparedImdbImport = {
 describe('ImdbImportScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsPremium = true;
+    mockIsPremiumLoading = false;
     mockRequireAccount.mockReturnValue(false);
     mockPickRawFiles.mockResolvedValue([{ fileName: 'ratings.csv', content: 'csv' }]);
     mockPrepareFiles.mockReturnValue(preparedImport);
+  });
+
+  it('renders for free users, shows the CTA premium badge, and routes to premium on select', () => {
+    mockIsPremium = false;
+
+    const { getByTestId, getByText } = render(<ImdbImportScreen />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(getByTestId('premium-badge')).toBeTruthy();
+
+    fireEvent.press(getByText('Select CSV Files'));
+
+    expect(mockPush).toHaveBeenCalledWith('/premium');
+    expect(mockPickRawFiles).not.toHaveBeenCalled();
   });
 
   it('renders the ready state after selecting files', async () => {

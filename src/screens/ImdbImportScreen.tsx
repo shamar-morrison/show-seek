@@ -8,6 +8,7 @@ import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   ACTIVE_OPACITY,
@@ -28,6 +29,7 @@ import { type PreparedImdbImport } from '@/src/utils/imdbImport';
 import { getImdbImportErrorCode, getImdbImportErrorMessageKey } from '@/src/utils/imdbImportError';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { AlertCircle, ArrowRight, Check, Info, Upload } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -103,15 +105,7 @@ export default function ImdbImportScreen() {
       router.back();
       return;
     }
-
-    if (isPremiumLoading) {
-      return;
-    }
-
-    if (!isPremium) {
-      router.replace('/premium');
-    }
-  }, [isPremium, isPremiumLoading, requireAccount, router]);
+  }, [requireAccount, router]);
 
   const runtimeStats = finalStats ?? progressStats;
   const progressPercent =
@@ -143,7 +137,13 @@ export default function ImdbImportScreen() {
       : 'imdbImport.completeBodyIssuesOnly';
 
   const handlePickFiles = async () => {
-    if (isPickingFiles) {
+    if (isPickingFiles || isImporting || isPremiumLoading) {
+      return;
+    }
+
+    if (!isPremium) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push('/premium');
       return;
     }
 
@@ -250,16 +250,17 @@ export default function ImdbImportScreen() {
               style={[styles.primaryButton, styles.imdbButton]}
               onPress={handlePickFiles}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={isPickingFiles || isImporting}
+              disabled={isPickingFiles || isImporting || isPremiumLoading}
             >
               {isPickingFiles ? (
                 <ActivityIndicator color={COLORS.black} />
               ) : (
-                <>
+                <View style={styles.imdbButtonContent}>
                   <Text style={styles.imdbButtonText}>
                     {preparedImport ? t('imdbImport.replaceFiles') : t('imdbImport.selectFiles')}
                   </Text>
-                </>
+                  {!isPremium ? <PremiumBadge /> : null}
+                </View>
               )}
             </TouchableOpacity>
 
@@ -608,6 +609,13 @@ const styles = StyleSheet.create({
   },
   imdbButton: {
     backgroundColor: IMDB_BRAND_COLOR,
+  },
+  imdbButtonContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.s,
+    justifyContent: 'center',
   },
   imdbButtonText: {
     color: COLORS.black,

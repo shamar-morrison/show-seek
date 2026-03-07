@@ -119,14 +119,8 @@ export function useProfileLogic() {
 
   const handleImdbImport = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (!isPremium) {
-      router.push('/premium');
-      return;
-    }
-
     router.push('/(tabs)/profile/imdb-import' as any);
-  }, [isPremium, router]);
+  }, [router]);
 
   const handleClearCache = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
