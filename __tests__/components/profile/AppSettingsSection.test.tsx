@@ -14,7 +14,6 @@ describe('AppSettingsSection', () => {
     onRateApp: jest.fn(),
     onFeedback: jest.fn(),
     onExportData: jest.fn(),
-    onImdbImport: jest.fn(),
     onClearCache: jest.fn(),
     onWebApp: jest.fn(),
     onAbout: jest.fn(),
@@ -40,15 +39,6 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-clear-image-cache'));
 
     expect(props.onClearCache).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls onImdbImport when import from IMDb is pressed', () => {
-    const props = createProps();
-    const { getByTestId } = render(<AppSettingsSection {...props} />);
-
-    fireEvent.press(getByTestId('action-button-import-from-imdb'));
-
-    expect(props.onImdbImport).toHaveBeenCalledTimes(1);
   });
 
   it('shows loading state and disables clear cache action while clearing', () => {
@@ -103,7 +93,6 @@ describe('AppSettingsSection', () => {
     const props = createProps({ isGuest: true });
     const { queryByText } = render(<AppSettingsSection {...props} />);
 
-    expect(queryByText('Import from IMDb')).toBeNull();
     expect(queryByText('Export Data')).toBeNull();
     expect(queryByText('Clear Image Cache')).toBeNull();
   });

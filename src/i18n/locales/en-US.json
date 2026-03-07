@@ -681,6 +681,7 @@
     "tabs": {
       "preferences": "Preferences",
       "content": "Content",
+      "integrations": "Integrations",
       "settings": "Settings"
     },
     "editProfile": "Edit Profile",
@@ -769,6 +770,15 @@
   "imdbImport": {
     "title": "Import your IMDb data",
     "description": "Bring in your IMDb ratings, watchlist, custom title lists, and check-ins without replacing the rest of your ShowSeek data.",
+    "selectStageTitle": "Select files",
+    "selectStageBody": "Choose one or more IMDb CSV exports from your device, then start the import when everything looks right.",
+    "readyTitle": "Ready to import",
+    "readyBody": "Your files have been recognized and are ready to merge into ShowSeek.",
+    "readyNote": "This import is non-destructive. Existing notes and other ShowSeek-only data stay untouched.",
+    "importingTitle": "Importing",
+    "progressPercent": "{{percent}}% complete",
+    "progressChunks": "{{completed}} of {{total}} upload batches finished",
+    "completeBody": "Here is a summary of what imported successfully and what was skipped.",
     "supportedTitle": "What this supports",
     "supportedBody": "Use IMDb CSV exports for ratings, watchlist, custom title lists, and check-ins. People, image, video, and item-note metadata are skipped and reported.",
     "selectFiles": "Select CSV Files",
@@ -787,6 +797,37 @@
     "emptyState": "Select one or more IMDb CSV exports to inspect them before importing.",
     "nothingToImportTitle": "Nothing to import",
     "nothingToImportMessage": "We couldn't find any supported IMDb rows in the selected files.",
+    "whatWillBeImportedTitle": "What will be imported",
+    "howItWorksTitle": "How it works",
+    "privacyNote": "We match titles by IMDb ID, import what ShowSeek supports, and report anything we skip so you can review the results afterward.",
+    "meta": {
+      "filesSelected": "Files selected",
+      "filesValue": "{{count}} files",
+      "supportedRows": "Supported rows",
+      "rowsValue": "{{count}} rows",
+      "uploadBatches": "Upload batches",
+      "batchesValue": "{{count}} batches"
+    },
+    "features": {
+      "ratingsTitle": "Ratings",
+      "ratingsDescription": "Movie, show, and supported episode ratings are imported when the IMDb rating is newer than what you already have.",
+      "listsTitle": "Watchlist and custom lists",
+      "listsDescription": "Watchlist items merge into your default watchlist, while other IMDb title-list CSVs create or reuse matching custom lists.",
+      "checkinsTitle": "Watched history and progress",
+      "checkinsDescription": "Check-ins add movie watches, mark shows watched where supported, and update episode progress when the row maps cleanly.",
+      "skipsTitle": "Skipped data is reported",
+      "skipsDescription": "Unsupported people, images, videos, malformed rows, unresolved IMDb IDs, and list episodes are skipped and counted in the final summary."
+    },
+    "howItWorks": {
+      "selectTitle": "Pick your IMDb CSV exports",
+      "selectDescription": "Select ratings, watchlist, custom list, or check-ins CSV files directly on your device.",
+      "matchTitle": "Match everything by IMDb ID",
+      "matchDescription": "ShowSeek resolves titles through TMDB using IMDb IDs instead of guessing from titles.",
+      "mergeTitle": "Merge without wiping your data",
+      "mergeDescription": "Imported ratings, lists, and watched history are merged into your existing library instead of replacing it.",
+      "summaryTitle": "Review the summary",
+      "summaryDescription": "When the import finishes, you get a grouped summary of what was imported, skipped, or ignored."
+    },
     "errors": {
       "pickFailed": "We couldn't read the selected files. Please try again.",
       "importFailedTitle": "Import failed",

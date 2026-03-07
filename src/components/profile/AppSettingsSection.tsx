@@ -1,6 +1,6 @@
 import { SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { Download, Globe, Import, Info, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
+import { Download, Globe, Info, LogOut, MessageCircle, Star, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -23,8 +23,6 @@ export interface AppSettingsSectionProps {
   onFeedback: () => void;
   /** Handler for Export Data button */
   onExportData: () => void;
-  /** Handler for Import from IMDb button */
-  onImdbImport: () => void;
   /** Handler for Clear Cache button */
   onClearCache: () => void;
   /** Handler for Web App button */
@@ -38,7 +36,7 @@ export interface AppSettingsSectionProps {
 }
 
 /**
- * App settings section with Rate App, Feedback, Export Data, Web App, and Sign Out.
+ * App settings section with app actions such as feedback, export, cache management, and sign-out.
  */
 export function AppSettingsSection({
   isGuest,
@@ -49,7 +47,6 @@ export function AppSettingsSection({
   onRateApp,
   onFeedback,
   onExportData,
-  onImdbImport,
   onClearCache,
   onWebApp,
   onAbout,
@@ -81,13 +78,6 @@ export function AppSettingsSection({
           </>
         ) : (
           <>
-            <ActionButton
-              icon={Import}
-              label={t('profile.importFromImdb')}
-              onPress={onImdbImport}
-              isPremiumFeature
-              isPremium={isPremium}
-            />
             <ActionButton
               icon={Download}
               label={t('profile.exportData')}
