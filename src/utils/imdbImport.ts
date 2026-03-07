@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import {
   IMDB_IMPORT_CHUNK_SIZE,
+  IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK,
   IMDB_RESERVED_FILE_STEMS,
   createEmptyImdbImportStats,
   incrementImportStat,
@@ -222,12 +223,59 @@ export function parseImdbDateToMs(value: string | null | undefined): number | nu
 
 function buildImdbImportChunks(entities: ImdbImportEntity[]): ImdbImportChunkRequest[] {
   const chunks: ImdbImportChunkRequest[] = [];
+  let currentEntities: ImdbImportEntity[] = [];
+  let currentActionCount = 0;
 
-  for (let index = 0; index < entities.length; index += IMDB_IMPORT_CHUNK_SIZE) {
+  const pushCurrentChunk = () => {
+    if (currentEntities.length === 0) {
+      return;
+    }
+
     chunks.push({
-      entities: entities.slice(index, index + IMDB_IMPORT_CHUNK_SIZE),
+      entities: currentEntities,
     });
-  }
+    currentEntities = [];
+    currentActionCount = 0;
+  };
+
+  entities.forEach((entity) => {
+    if (entity.actions.length === 0) {
+      if (currentEntities.length >= IMDB_IMPORT_CHUNK_SIZE) {
+        pushCurrentChunk();
+      }
+
+      currentEntities.push({
+        ...entity,
+        actions: [],
+      });
+      return;
+    }
+
+    let nextActionIndex = 0;
+    while (nextActionIndex < entity.actions.length) {
+      if (
+        currentEntities.length >= IMDB_IMPORT_CHUNK_SIZE ||
+        currentActionCount >= IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK
+      ) {
+        pushCurrentChunk();
+      }
+
+      const remainingActionCapacity = IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK - currentActionCount;
+      const actionSliceSize = Math.min(
+        entity.actions.length - nextActionIndex,
+        remainingActionCapacity
+      );
+
+      currentEntities.push({
+        ...entity,
+        actions: entity.actions.slice(nextActionIndex, nextActionIndex + actionSliceSize),
+      });
+      currentActionCount += actionSliceSize;
+      nextActionIndex += actionSliceSize;
+    }
+  });
+
+  pushCurrentChunk();
 
   return chunks;
 }

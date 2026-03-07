@@ -1,4 +1,5 @@
 export const IMDB_IMPORT_CHUNK_SIZE = 40;
+export const IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK = 1000;
 export const IMDB_RESERVED_FILE_STEMS = {
   checkins: 'checkins',
   watchlist: 'watchlist',

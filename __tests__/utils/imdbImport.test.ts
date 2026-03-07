@@ -1,4 +1,8 @@
 import {
+  IMDB_IMPORT_CHUNK_SIZE,
+  IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK,
+} from '@/functions/src/shared/imdbImport';
+import {
   detectImdbFileKind,
   formatImportedListName,
   parseImdbDateToMs,
@@ -82,5 +86,56 @@ describe('imdbImport utilities', () => {
     expect(prepared.stats.processedEntities).toBe(1);
     expect(prepared.chunks[0].entities).toHaveLength(1);
     expect(prepared.chunks[0].entities[0].actions).toHaveLength(2);
+  });
+
+  it('splits oversized grouped entities across chunks to respect the total action cap', () => {
+    const rows = [
+      'Const,Your Rating,Date Rated,Title,Title Type',
+      ...Array.from({ length: IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK + 1 }, (_, index) => {
+        const day = String((index % 28) + 1).padStart(2, '0');
+        return `tt0133093,9,2024-01-${day},The Matrix,movie`;
+      }),
+    ];
+
+    const prepared = prepareImdbImport([
+      {
+        fileName: 'ratings.csv',
+        content: rows.join('\n'),
+      },
+    ]);
+
+    expect(prepared.stats.processedActions).toBe(IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK + 1);
+    expect(prepared.stats.processedEntities).toBe(1);
+    expect(prepared.chunks).toHaveLength(2);
+    expect(prepared.chunks[0].entities).toHaveLength(1);
+    expect(prepared.chunks[0].entities[0].imdbId).toBe('tt0133093');
+    expect(prepared.chunks[0].entities[0].actions).toHaveLength(IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK);
+    expect(prepared.chunks[1].entities).toHaveLength(1);
+    expect(prepared.chunks[1].entities[0].imdbId).toBe('tt0133093');
+    expect(prepared.chunks[1].entities[0].actions).toHaveLength(1);
+  });
+
+  it('still caps chunks at the configured entity count when total actions stay low', () => {
+    const rows = [
+      'Const,Your Rating,Date Rated,Title,Title Type',
+      ...Array.from({ length: IMDB_IMPORT_CHUNK_SIZE + 1 }, (_, index) => {
+        const imdbId = `tt${String(index + 1).padStart(7, '0')}`;
+        return `${imdbId},8,2024-01-02,Movie ${index + 1},movie`;
+      }),
+    ];
+
+    const prepared = prepareImdbImport([
+      {
+        fileName: 'ratings.csv',
+        content: rows.join('\n'),
+      },
+    ]);
+
+    expect(prepared.chunks).toHaveLength(2);
+    expect(prepared.chunks[0].entities).toHaveLength(IMDB_IMPORT_CHUNK_SIZE);
+    expect(prepared.chunks[1].entities).toHaveLength(1);
+    expect(
+      prepared.chunks[0].entities.reduce((total, entity) => total + entity.actions.length, 0)
+    ).toBe(IMDB_IMPORT_CHUNK_SIZE);
   });
 });

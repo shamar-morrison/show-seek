@@ -21,6 +21,7 @@ jest.mock(
 );
 
 import { importImdbChunk } from '@/functions/src/imdbImport';
+import { IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK } from '@/functions/src/shared/imdbImport';
 
 type Store = Map<string, Record<string, unknown>>;
 
@@ -160,6 +161,111 @@ describe('importImdbChunk', () => {
     ).rejects.toMatchObject({
       code: 'unauthenticated',
     });
+  });
+
+  it.each([
+    {
+      message: 'entities[0].actions must be an array.',
+      name: 'missing actions arrays',
+      payload: {
+        entities: [
+          createImportEntity({
+            actions: undefined,
+          }),
+        ],
+      },
+    },
+    {
+      message: 'entities[0].imdbId must be a non-empty string.',
+      name: 'blank imdb ids',
+      payload: {
+        entities: [
+          createImportEntity({
+            imdbId: '   ',
+          }),
+        ],
+      },
+    },
+    {
+      message: 'entities[0].actions[0].kind must be one of rating, list, checkin.',
+      name: 'unknown action kinds',
+      payload: {
+        entities: [
+          createImportEntity({
+            actions: [
+              {
+                kind: 'note',
+                sourceFileName: 'notes.csv',
+              },
+            ],
+          }),
+        ],
+      },
+    },
+    {
+      message: 'entities[0].actions[0].rating must be an integer between 1 and 10.',
+      name: 'ratings outside the accepted range',
+      payload: {
+        entities: [
+          createImportEntity({
+            actions: [
+              createRatingAction({
+                rating: 11,
+              }),
+            ],
+          }),
+        ],
+      },
+    },
+    {
+      message: 'entities[0].actions[0].watchedAt must be a finite number.',
+      name: 'non-numeric watched timestamps',
+      payload: {
+        entities: [
+          createImportEntity({
+            actions: [
+              createCheckinAction({
+                watchedAt: 'nope',
+              }),
+            ],
+          }),
+        ],
+      },
+    },
+  ])('rejects $name before contacting Firestore or TMDB', async ({ message, payload }) => {
+    await expect(callImportImdbChunk(createAuthenticatedRequest(payload) as any)).rejects.toMatchObject(
+      {
+        code: 'invalid-argument',
+        message,
+      }
+    );
+
+    expect(firestoreFn).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  it('rejects chunks that exceed the supported total action count', async () => {
+    await expect(
+      callImportImdbChunk(
+        createAuthenticatedRequest({
+          entities: [
+            createImportEntity({
+              actions: Array.from({ length: IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK + 1 }, () =>
+                createRatingAction()
+              ),
+            }),
+          ],
+        }) as any
+      )
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: `entities[0].actions causes the chunk to exceed the supported maximum of ${IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK} actions.`,
+    });
+
+    expect(firestoreFn).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
   });
 
   it('rejects non-premium users before contacting TMDB', async () => {
@@ -624,6 +730,49 @@ function seedPremiumUser(userId: string) {
       isPremium: true,
     },
   });
+}
+
+function createAuthenticatedRequest(data: unknown) {
+  return {
+    auth: {
+      token: {
+        firebase: {
+          sign_in_provider: 'password',
+        },
+      },
+      uid: 'user-1',
+    },
+    data,
+  };
+}
+
+function createImportEntity(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    actions: [],
+    imdbId: 'tt0111161',
+    rawTitleType: 'movie',
+    title: 'The Movie',
+    ...overrides,
+  };
+}
+
+function createRatingAction(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    kind: 'rating',
+    ratedAt: 1_704_067_200_000,
+    rating: 8,
+    sourceFileName: 'ratings.csv',
+    ...overrides,
+  };
+}
+
+function createCheckinAction(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    kind: 'checkin',
+    sourceFileName: 'checkins.csv',
+    watchedAt: 1_704_067_200_000,
+    ...overrides,
+  };
 }
 
 function callImportImdbChunk(request: unknown): Promise<any> {

@@ -3,6 +3,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
   IMDB_IMPORT_CHUNK_SIZE,
+  IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK,
   createEmptyImdbImportStats,
   incrementImportStat,
   type ImdbImportAction,
@@ -142,7 +143,7 @@ export const importImdbChunk = onCall(
       throw new HttpsError('invalid-argument', 'Chunk size exceeds the supported maximum.');
     }
 
-    const entities = rawEntities as ImdbImportEntity[];
+    const entities = parseImdbImportEntities(rawEntities);
     const db = admin.firestore();
     await assertPremiumUser(db, userId);
 
@@ -202,6 +203,71 @@ export const importImdbChunk = onCall(
     return stats;
   }
 );
+
+function parseImdbImportEntities(rawEntities: unknown[]): ImdbImportEntity[] {
+  let totalActionCount = 0;
+
+  return rawEntities.map((rawEntity, entityIndex) => {
+    const entityPath = `entities[${entityIndex}]`;
+    const entity = parseObject(rawEntity, entityPath);
+    const imdbId = parseNonEmptyString(entity.imdbId, `${entityPath}.imdbId`);
+
+    if (!Array.isArray(entity.actions)) {
+      throw new HttpsError('invalid-argument', `${entityPath}.actions must be an array.`);
+    }
+
+    totalActionCount += entity.actions.length;
+    if (totalActionCount > IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK) {
+      throw new HttpsError(
+        'invalid-argument',
+        `${entityPath}.actions causes the chunk to exceed the supported maximum of ${IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK} actions.`
+      );
+    }
+
+    return {
+      actions: entity.actions.map((rawAction, actionIndex) =>
+        parseImdbImportAction(rawAction, `${entityPath}.actions[${actionIndex}]`)
+      ),
+      imdbId,
+      rawTitleType: typeof entity.rawTitleType === 'string' ? entity.rawTitleType : null,
+      title: typeof entity.title === 'string' ? entity.title : '',
+    };
+  });
+}
+
+function parseImdbImportAction(rawAction: unknown, actionPath: string): ImdbImportAction {
+  const action = parseObject(rawAction, actionPath);
+  const sourceFileName = typeof action.sourceFileName === 'string' ? action.sourceFileName : '';
+
+  switch (action.kind) {
+    case 'rating':
+      return {
+        kind: 'rating',
+        ratedAt: parseFiniteNumber(action.ratedAt, `${actionPath}.ratedAt`),
+        rating: parseIntegerInRange(action.rating, `${actionPath}.rating`, 1, 10),
+        sourceFileName,
+      };
+    case 'list':
+      return {
+        addedAt: parseFiniteNumber(action.addedAt, `${actionPath}.addedAt`),
+        isWatchlist: parseBoolean(action.isWatchlist, `${actionPath}.isWatchlist`),
+        kind: 'list',
+        listName: parseNonEmptyString(action.listName, `${actionPath}.listName`),
+        sourceFileName,
+      };
+    case 'checkin':
+      return {
+        kind: 'checkin',
+        sourceFileName,
+        watchedAt: parseFiniteNumber(action.watchedAt, `${actionPath}.watchedAt`),
+      };
+    default:
+      throw new HttpsError(
+        'invalid-argument',
+        `${actionPath}.kind must be one of rating, list, checkin.`
+      );
+  }
+}
 
 export const buildImportedMovieWatchDocId = (tmdbMovieId: string, watchedAt: number): string =>
   `imdb-${tmdbMovieId}-${watchedAt}`;
@@ -716,6 +782,49 @@ async function requestTmdb<T>(path: string, apiKey: string, attempt = 0): Promis
 
 function incrementSkipped(stats: ImdbImportStats, key: ImdbImportSkipReason): void {
   stats.skipped = incrementImportStat(stats.skipped, key);
+}
+
+function parseObject(value: unknown, path: string): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new HttpsError('invalid-argument', `${path} must be an object.`);
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function parseNonEmptyString(value: unknown, path: string): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new HttpsError('invalid-argument', `${path} must be a non-empty string.`);
+  }
+
+  return value.trim();
+}
+
+function parseFiniteNumber(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new HttpsError('invalid-argument', `${path} must be a finite number.`);
+  }
+
+  return value;
+}
+
+function parseIntegerInRange(value: unknown, path: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new HttpsError(
+      'invalid-argument',
+      `${path} must be an integer between ${min} and ${max}.`
+    );
+  }
+
+  return value;
+}
+
+function parseBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new HttpsError('invalid-argument', `${path} must be a boolean.`);
+  }
+
+  return value;
 }
 
 function removeUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
