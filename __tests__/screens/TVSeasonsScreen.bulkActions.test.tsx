@@ -7,6 +7,8 @@ const mockMarkEpisodeUnwatchedMutate = jest.fn();
 const mockMarkAllWatchedMutate = jest.fn();
 const mockMarkAllUnwatchedMutate = jest.fn();
 const mockUseQuery = jest.fn();
+const mockUseMediaLists = jest.fn();
+const mockUseLists = jest.fn();
 
 const mockShow = {
   id: 101,
@@ -16,6 +18,7 @@ const mockShow = {
   first_air_date: '2020-01-01',
   status: 'Returning Series',
   vote_average: 8.2,
+  genres: [{ id: 18 }, { id: 35 }],
 };
 
 const mockSeason = {
@@ -107,8 +110,8 @@ jest.mock('@/src/hooks/usePreferences', () => ({
 }));
 
 jest.mock('@/src/hooks/useLists', () => ({
-  useMediaLists: () => ({ membership: {} }),
-  useLists: () => ({ data: [] }),
+  useMediaLists: (...args: any[]) => mockUseMediaLists(...args),
+  useLists: (...args: any[]) => mockUseLists(...args),
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
@@ -206,6 +209,10 @@ describe('TVSeasonsScreen bulk-action deferral', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockUseMediaLists.mockReturnValue({ membership: {} });
+    mockUseLists.mockReturnValue({
+      data: [{ id: 'currently-watching', items: { 201: { id: 201 }, 202: { id: 202 } } }],
+    });
 
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (Array.isArray(queryKey) && queryKey[2] === 'all-seasons') {
@@ -247,6 +254,28 @@ describe('TVSeasonsScreen bulk-action deferral', () => {
     });
 
     expect(mockMarkAllWatchedMutate).toHaveBeenCalledTimes(1);
+    expect(mockMarkAllWatchedMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tvShowId: 101,
+        seasonNumber: 1,
+        episodes: mockSeason.episodes,
+        showMetadata: {
+          tvShowName: 'Mock Show',
+          posterPath: '/show.jpg',
+        },
+        autoAddOptions: {
+          showStatus: 'Returning Series',
+          shouldAutoAdd: true,
+          listMembership: {},
+          firstAirDate: '2020-01-01',
+          voteAverage: 8.2,
+          genreIds: [18, 35],
+          isPremium: false,
+          currentListCount: 2,
+        },
+      }),
+      expect.any(Object)
+    );
 
     const mutateOptions = mockMarkAllWatchedMutate.mock.calls[0][1];
     act(() => {

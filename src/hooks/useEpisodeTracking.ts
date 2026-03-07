@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
 import { auth } from '../firebase/config';
 import { episodeTrackingService } from '../services/EpisodeTrackingService';
+import { listService } from '../services/ListService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
 const getUserId = () => auth.currentUser?.uid;
@@ -49,24 +50,7 @@ export interface MarkEpisodeWatchedParams {
   /**
    * Optional auto-add configuration for adding show to Watching list
    */
-  autoAddOptions?: {
-    /** TV show status from TMDB (e.g., 'Returning Series', 'Ended', 'Canceled') */
-    showStatus?: string;
-    /** Whether auto-add is enabled (from user preferences) */
-    shouldAutoAdd?: boolean;
-    /** Cached list membership - map of listId to boolean */
-    listMembership?: Record<string, boolean>;
-    /** First air date for show metadata */
-    firstAirDate?: string;
-    /** Vote average for show metadata */
-    voteAverage?: number;
-    /** Genre IDs for show metadata */
-    genreIds?: number[];
-    /** Whether the user is a premium subscriber */
-    isPremium?: boolean;
-    /** Current number of items in the target list (for limit checking) */
-    currentListCount?: number;
-  };
+  autoAddOptions?: WatchingAutoAddOptions;
   /**
    * Optional configuration for marking previous episodes as watched
    */
@@ -87,6 +71,25 @@ export interface MarkEpisodeUnwatchedParams {
   episodeNumber: number;
 }
 
+export interface WatchingAutoAddOptions {
+  /** TV show status from TMDB (e.g., 'Returning Series', 'Ended', 'Canceled') */
+  showStatus?: string;
+  /** Whether auto-add is enabled (from user preferences) */
+  shouldAutoAdd?: boolean;
+  /** Cached list membership - map of listId to boolean */
+  listMembership?: Record<string, boolean>;
+  /** First air date for show metadata */
+  firstAirDate?: string;
+  /** Vote average for show metadata */
+  voteAverage?: number;
+  /** Genre IDs for show metadata */
+  genreIds?: number[];
+  /** Whether the user is a premium subscriber */
+  isPremium?: boolean;
+  /** Current number of items in the target list (for limit checking) */
+  currentListCount?: number;
+}
+
 /**
  * Parameters for marking all episodes in a season as watched
  */
@@ -98,6 +101,7 @@ export interface MarkAllEpisodesWatchedParams {
     tvShowName: string;
     posterPath: string | null;
   };
+  autoAddOptions?: WatchingAutoAddOptions;
 }
 
 /**
@@ -108,6 +112,61 @@ export interface MarkAllEpisodesUnwatchedParams {
   seasonNumber: number;
   episodes: Episode[];
 }
+
+const maybeAutoAddToWatching = async ({
+  tvShowId,
+  showMetadata,
+  autoAddOptions,
+  logPrefix,
+}: {
+  tvShowId: number;
+  showMetadata: {
+    tvShowName: string;
+    posterPath: string | null;
+  };
+  autoAddOptions?: WatchingAutoAddOptions;
+  logPrefix: 'useMarkEpisodeWatched' | 'useMarkAllEpisodesWatched';
+}) => {
+  const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
+
+  if (
+    !shouldAutoAdd ||
+    !autoAddOptions?.listMembership ||
+    autoAddOptions.listMembership['currently-watching']
+  ) {
+    return;
+  }
+
+  const isPremium = autoAddOptions.isPremium ?? false;
+  const currentCount = autoAddOptions.currentListCount ?? 0;
+  if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
+    console.log(`[${logPrefix}] Skipping auto-add: list limit reached for free user`);
+    return;
+  }
+
+  try {
+    await listService.addToList(
+      'currently-watching',
+      {
+        id: tvShowId,
+        title: showMetadata.tvShowName,
+        name: showMetadata.tvShowName,
+        poster_path: showMetadata.posterPath,
+        media_type: 'tv',
+        vote_average: autoAddOptions.voteAverage ?? 0,
+        release_date: autoAddOptions.firstAirDate ?? '',
+        first_air_date: autoAddOptions.firstAirDate,
+        genre_ids: autoAddOptions.genreIds,
+      },
+      'Watching'
+    );
+
+    console.log(`[${logPrefix}] Auto-added to Watching list:`, showMetadata.tvShowName);
+  } catch (autoAddError) {
+    // Log but don't throw - auto-add is non-critical
+    console.error(`[${logPrefix}] Auto-add to Watching list failed:`, autoAddError);
+  }
+};
 
 /**
  * Fetch episode tracking data for a specific TV show.
@@ -196,55 +255,12 @@ export const useMarkEpisodeWatched = () => {
       );
 
       // Then, handle auto-add to Watching list (non-blocking)
-      // Default shouldAutoAdd to true when undefined (for new users without preferences field)
-      const { autoAddOptions } = params;
-      const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
-      if (
-        shouldAutoAdd &&
-        autoAddOptions?.listMembership &&
-        !autoAddOptions.listMembership['currently-watching']
-      ) {
-        // Check list limit for free users before auto-adding
-        const isPremium = autoAddOptions.isPremium ?? false;
-        const currentCount = autoAddOptions.currentListCount ?? 0;
-        if (!isPremium && currentCount >= MAX_FREE_ITEMS_PER_LIST) {
-          console.log(
-            '[useMarkEpisodeWatched] Skipping auto-add: list limit reached for free user'
-          );
-        } else {
-          try {
-            // Dynamically import to avoid circular dependencies
-            const { listService } = await import('../services/ListService');
-
-            await listService.addToList(
-              'currently-watching',
-              {
-                id: params.tvShowId,
-                title: params.showMetadata.tvShowName,
-                name: params.showMetadata.tvShowName,
-                poster_path: params.showMetadata.posterPath,
-                media_type: 'tv',
-                vote_average: autoAddOptions.voteAverage ?? 0,
-                release_date: autoAddOptions.firstAirDate ?? '',
-                first_air_date: autoAddOptions.firstAirDate,
-                genre_ids: autoAddOptions.genreIds,
-              },
-              'Watching'
-            );
-
-            console.log(
-              '[useMarkEpisodeWatched] Auto-added to Watching list:',
-              params.showMetadata.tvShowName
-            );
-          } catch (autoAddError) {
-            // Log but don't throw - auto-add is non-critical
-            console.error(
-              '[useMarkEpisodeWatched] Auto-add to Watching list failed:',
-              autoAddError
-            );
-          }
-        }
-      }
+      await maybeAutoAddToWatching({
+        tvShowId: params.tvShowId,
+        showMetadata: params.showMetadata,
+        autoAddOptions: params.autoAddOptions,
+        logPrefix: 'useMarkEpisodeWatched',
+      });
 
       // Handle marking previous episodes as watched (non-blocking)
       const { previousEpisodesOptions } = params;
@@ -324,13 +340,21 @@ export const useMarkAllEpisodesWatched = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (params: MarkAllEpisodesWatchedParams) =>
-      episodeTrackingService.markAllEpisodesWatched(
+    mutationFn: async (params: MarkAllEpisodesWatchedParams) => {
+      await episodeTrackingService.markAllEpisodesWatched(
         params.tvShowId,
         params.seasonNumber,
         params.episodes,
         params.showMetadata
-      ),
+      );
+
+      await maybeAutoAddToWatching({
+        tvShowId: params.tvShowId,
+        showMetadata: params.showMetadata,
+        autoAddOptions: params.autoAddOptions,
+        logPrefix: 'useMarkAllEpisodesWatched',
+      });
+    },
     onSuccess: async (_result, params) => {
       const userId = getUserId();
       if (userId) {

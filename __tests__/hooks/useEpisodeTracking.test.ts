@@ -1,6 +1,7 @@
 import type { Episode } from '@/src/api/tmdb';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
+import { listService } from '@/src/services/ListService';
 import { useQuery } from '@tanstack/react-query';
 
 const mockInvalidateQueries = jest.fn();
@@ -80,6 +81,16 @@ describe('useMarkEpisodeWatched', () => {
   const mockShowMetadata = {
     tvShowName: 'Test Show',
     posterPath: '/test.jpg',
+  };
+  const mockWatchingAutoAddOptions = {
+    showStatus: 'Returning Series',
+    shouldAutoAdd: true,
+    listMembership: {},
+    firstAirDate: '2024-01-01',
+    voteAverage: 8.7,
+    genreIds: [18, 35],
+    isPremium: false,
+    currentListCount: 0,
   };
 
   const mockSeasonEpisodes: Episode[] = [
@@ -278,6 +289,55 @@ describe('useMarkEpisodeWatched', () => {
 
     // Should NOT mark previous episodes
     expect(episodeTrackingService.markAllEpisodesWatched).not.toHaveBeenCalled();
+  });
+
+  it('auto-adds the show to Watching after marking all season episodes watched', async () => {
+    const { result } = renderHook(() => useMarkAllEpisodesWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodes: mockSeasonEpisodes,
+        showMetadata: mockShowMetadata,
+        autoAddOptions: mockWatchingAutoAddOptions,
+      });
+    });
+
+    expect(listService.addToList).toHaveBeenCalledWith(
+      'currently-watching',
+      {
+        id: 123,
+        title: 'Test Show',
+        name: 'Test Show',
+        poster_path: '/test.jpg',
+        media_type: 'tv',
+        vote_average: 8.7,
+        release_date: '2024-01-01',
+        first_air_date: '2024-01-01',
+        genre_ids: [18, 35],
+      },
+      'Watching'
+    );
+  });
+
+  it('does not auto-add the show to Watching if it is already in the list', async () => {
+    const { result } = renderHook(() => useMarkAllEpisodesWatched());
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodes: mockSeasonEpisodes,
+        showMetadata: mockShowMetadata,
+        autoAddOptions: {
+          ...mockWatchingAutoAddOptions,
+          listMembership: { 'currently-watching': true },
+        },
+      });
+    });
+
+    expect(listService.addToList).not.toHaveBeenCalled();
   });
 
   it('should still mark current episode if markAllEpisodesWatched fails', async () => {

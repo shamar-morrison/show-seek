@@ -95,6 +95,13 @@ export default function TVSeasonsScreen() {
   const currentListCount = currentlyWatchingList
     ? Object.keys(currentlyWatchingList.items || {}).length
     : 0;
+  const show = tvQuery.data;
+  const showName = show?.name ?? '';
+  const showPosterPath = show?.poster_path ?? null;
+  const showStatus = show?.status;
+  const showFirstAirDate = show?.first_air_date;
+  const showVoteAverage = show?.vote_average;
+  const showGenreIds = show?.genres?.map((genre) => genre.id) || [];
 
   const { data: ratings } = useRatings();
   const isAccountRequired = useAccountRequired();
@@ -161,22 +168,48 @@ export default function TVSeasonsScreen() {
 
       deferredBulkActionTimeoutRef.current = setTimeout(() => {
         deferredBulkActionTimeoutRef.current = null;
-        markAllWatched.mutate(params, {
-          onSettled: () => {
-            setOptimisticBulkAction((current) => {
-              if (
-                current?.action === optimisticAction.action &&
-                current.seasonNumber === optimisticAction.seasonNumber
-              ) {
-                return null;
-              }
-              return current;
-            });
+        markAllWatched.mutate(
+          {
+            ...params,
+            autoAddOptions: {
+              showStatus,
+              shouldAutoAdd: preferences.autoAddToWatching,
+              listMembership,
+              firstAirDate: showFirstAirDate,
+              voteAverage: showVoteAverage,
+              genreIds: showGenreIds,
+              isPremium,
+              currentListCount,
+            },
           },
-        });
+          {
+            onSettled: () => {
+              setOptimisticBulkAction((current) => {
+                if (
+                  current?.action === optimisticAction.action &&
+                  current.seasonNumber === optimisticAction.seasonNumber
+                ) {
+                  return null;
+                }
+                return current;
+              });
+            },
+          }
+        );
       }, 0);
     },
-    [isAccountRequired, markAllWatched]
+    [
+      isAccountRequired,
+      markAllWatched,
+      showStatus,
+      preferences.autoAddToWatching,
+      listMembership,
+      showFirstAirDate,
+      showVoteAverage,
+      showGenreIds,
+      isPremium,
+      currentListCount,
+    ]
   );
 
   const handleMarkAllUnwatched = useCallback(
@@ -227,12 +260,6 @@ export default function TVSeasonsScreen() {
     [t]
   );
 
-  const show = tvQuery.data;
-  const showName = show?.name ?? '';
-  const showPosterPath = show?.poster_path ?? null;
-  const showStatus = show?.status;
-  const showFirstAirDate = show?.first_air_date;
-  const showVoteAverage = show?.vote_average;
   const displayShowTitle = show
     ? getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)
     : '';
