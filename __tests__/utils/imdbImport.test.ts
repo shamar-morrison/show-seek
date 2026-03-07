@@ -24,6 +24,8 @@ describe('imdbImport utilities', () => {
   it('parses common IMDb export date formats', () => {
     expect(parseImdbDateToMs('2024-01-02')).not.toBeNull();
     expect(parseImdbDateToMs('01/02/2024')).not.toBeNull();
+    expect(parseImdbDateToMs('Tue, 02 Jan 2024 00:00:00 GMT')).not.toBeNull();
+    expect(parseImdbDateToMs('2024-02-31')).toBeNull();
     expect(parseImdbDateToMs('')).toBeNull();
   });
 
@@ -59,5 +61,26 @@ describe('imdbImport utilities', () => {
     expect(prepared.stats.ignored.item_notes).toBe(1);
     expect(prepared.stats.skipped.unsupported_list_episode).toBe(1);
     expect(prepared.stats.skipped.unsupported_file).toBe(1);
+  });
+
+  it('tracks processed entities per file using unique IMDb ids while preserving actions', () => {
+    const prepared = prepareImdbImport([
+      {
+        fileName: 'ratings.csv',
+        content: [
+          'Const,Your Rating,Date Rated,Title,Title Type',
+          'tt0133093,9,2024-01-02,The Matrix,movie',
+          'tt0133093,8,2024-01-03,The Matrix,movie',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(prepared.files).toHaveLength(1);
+    expect(prepared.files[0].stats.processedActions).toBe(2);
+    expect(prepared.files[0].stats.processedEntities).toBe(1);
+    expect(prepared.stats.processedActions).toBe(2);
+    expect(prepared.stats.processedEntities).toBe(1);
+    expect(prepared.chunks[0].entities).toHaveLength(1);
+    expect(prepared.chunks[0].entities[0].actions).toHaveLength(2);
   });
 });

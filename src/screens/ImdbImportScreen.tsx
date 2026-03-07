@@ -1,4 +1,13 @@
-import { CollapsibleCategory, CollapsibleFeatureItem } from '@/src/components/ui/CollapsibleCategory';
+import type {
+  ImdbImportFileKind,
+  ImdbImportIgnoredMetadataKey,
+  ImdbImportSkipReason,
+  ImdbImportStats,
+} from '@/functions/src/shared/imdbImport';
+import {
+  CollapsibleCategory,
+  CollapsibleFeatureItem,
+} from '@/src/components/ui/CollapsibleCategory';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   ACTIVE_OPACITY,
@@ -15,15 +24,10 @@ import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { imdbImportService } from '@/src/services/ImdbImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getTechnicalErrorMessage } from '@/src/utils/errorPresentation';
-import { getImdbImportErrorCode, getImdbImportErrorMessageKey } from '@/src/utils/imdbImportError';
 import { type PreparedImdbImport } from '@/src/utils/imdbImport';
+import { getImdbImportErrorCode, getImdbImportErrorMessageKey } from '@/src/utils/imdbImportError';
 import { useQueryClient } from '@tanstack/react-query';
-import type {
-  ImdbImportFileKind,
-  ImdbImportIgnoredMetadataKey,
-  ImdbImportSkipReason,
-  ImdbImportStats,
-} from '@/functions/src/shared/imdbImport';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { AlertCircle, ArrowRight, Check, Info, Upload } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -31,7 +35,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -130,8 +133,10 @@ export default function ImdbImportScreen() {
   );
 
   const supportedRowCount = preparedImport?.stats.processedActions ?? 0;
-  const selectedFileCount = preparedImport?.files.length ?? 0;
+  const selectedFileCount =
+    (preparedImport?.files.length ?? 0) + (preparedImport?.unsupportedFiles.length ?? 0);
   const selectedChunkCount = preparedImport?.chunks.length ?? 0;
+  const hasImportableChunks = selectedChunkCount > 0;
   const finalSummaryDescriptionKey =
     importedEntries.length > 0
       ? 'imdbImport.completeBodyWithImported'
@@ -205,10 +210,7 @@ export default function ImdbImportScreen() {
         technicalMessage,
       });
 
-      Alert.alert(
-        t('imdbImport.errors.importFailedTitle'),
-        t(getImdbImportErrorMessageKey(error))
-      );
+      Alert.alert(t('imdbImport.errors.importFailedTitle'), t(getImdbImportErrorMessageKey(error)));
     } finally {
       setIsImporting(false);
     }
@@ -222,16 +224,16 @@ export default function ImdbImportScreen() {
             <View style={styles.imdbHeroCircle}>
               <Image
                 source={require('@/assets/images/imdb.png')}
+                contentFit="contain"
                 style={styles.imdbHeroLogo}
-                resizeMode="contain"
               />
             </View>
             <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
             <View style={styles.showSeekIconCircle}>
               <Image
                 source={require('@/assets/images/icon.png')}
+                contentFit="contain"
                 style={styles.showSeekIcon}
-                resizeMode="contain"
               />
             </View>
           </View>
@@ -267,12 +269,12 @@ export default function ImdbImportScreen() {
                 styles.startButton,
                 {
                   backgroundColor:
-                    preparedImport?.chunks.length && !isImporting ? accentColor : COLORS.surfaceLight,
+                    hasImportableChunks && !isImporting ? accentColor : COLORS.surfaceLight,
                 },
               ]}
               onPress={handleStartImport}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={!preparedImport?.chunks.length || isImporting}
+              disabled={!hasImportableChunks || isImporting}
             >
               {isImporting ? (
                 <ActivityIndicator color={COLORS.white} />
@@ -310,7 +312,9 @@ export default function ImdbImportScreen() {
                       <View style={styles.fileRowHeader}>
                         <Text style={styles.fileName}>{file.fileName}</Text>
                         <View style={styles.kindBadge}>
-                          <Text style={styles.kindBadgeText}>{t(FILE_KIND_LABEL_KEYS[file.kind])}</Text>
+                          <Text style={styles.kindBadgeText}>
+                            {t(FILE_KIND_LABEL_KEYS[file.kind])}
+                          </Text>
                         </View>
                       </View>
                       <Text style={styles.fileMeta}>
@@ -335,12 +339,21 @@ export default function ImdbImportScreen() {
           ) : null}
         </StageCard>
 
-        {preparedImport && !isImporting && !finalStats ? (
+        {preparedImport && hasImportableChunks && !isImporting && !finalStats ? (
           <StageCard title={t('imdbImport.readyTitle')} description={t('imdbImport.readyBody')}>
             <View style={styles.inlineNote}>
               <Info size={16} color={COLORS.textSecondary} />
               <Text style={styles.inlineNoteText}>{t('imdbImport.readyNote')}</Text>
             </View>
+          </StageCard>
+        ) : null}
+
+        {preparedImport && !hasImportableChunks && !isImporting && !finalStats ? (
+          <StageCard
+            title={t('imdbImport.nothingToImportTitle')}
+            description={t('imdbImport.nothingToImportMessage')}
+          >
+            {null}
           </StageCard>
         ) : null}
 
@@ -353,7 +366,9 @@ export default function ImdbImportScreen() {
             })}
           >
             <View style={styles.progressHeader}>
-              <Text style={styles.progressPercent}>{t('imdbImport.progressPercent', { percent: progressPercent })}</Text>
+              <Text style={styles.progressPercent}>
+                {t('imdbImport.progressPercent', { percent: progressPercent })}
+              </Text>
               <Text style={styles.progressChunks}>
                 {t('imdbImport.progressChunks', {
                   completed: completedChunks,
@@ -446,11 +461,6 @@ export default function ImdbImportScreen() {
             icon="analytics-outline"
           />
         </CollapsibleCategory>
-
-        <View style={styles.privacyNote}>
-          <Info size={16} color={COLORS.textSecondary} />
-          <Text style={styles.privacyNoteText}>{t('imdbImport.privacyNote')}</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -538,6 +548,7 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     marginHorizontal: SPACING.s,
+    marginLeft: SPACING.l,
   },
   completeBadge: {
     alignItems: 'center',
@@ -600,15 +611,6 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontSize: FONT_SIZE.m,
     fontWeight: '800',
-  },
-  imdbHeroCircle: {
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 35,
-    height: 70,
-    justifyContent: 'center',
-    overflow: 'hidden',
-    width: 70,
   },
   imdbHeroLogo: {
     height: 28,

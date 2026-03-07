@@ -1,11 +1,12 @@
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import { ActionButton } from '@/src/components/profile/ActionButton';
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
+import { Image } from 'expo-image';
 import { Check } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { ActionButton } from './ActionButton';
+import { StyleSheet, Text, View } from 'react-native';
 
 export interface IntegrationsSectionProps {
   /** Whether user has premium */
@@ -48,8 +49,8 @@ export function IntegrationsSection({
             <View style={styles.imdbLogoContainer} testID="integrations-imdb-icon">
               <Image
                 source={require('@/assets/images/imdb.png')}
+                contentFit="contain"
                 style={styles.imdbLogo}
-                resizeMode="contain"
               />
             </View>
           }
@@ -59,7 +60,7 @@ export function IntegrationsSection({
           isPremium={isPremium}
         />
         <ActionButton
-          customIcon={<TraktLogo size={20} />}
+          customIcon={<TraktLogo size={21} />}
           label={t('profile.traktIntegration')}
           onPress={onTraktPress}
           loading={isTraktLoading}
@@ -93,16 +94,15 @@ const styles = StyleSheet.create({
   },
   imdbLogoContainer: {
     alignItems: 'center',
-    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.s,
     justifyContent: 'center',
     minWidth: 26,
-    paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
+    marginRight: -SPACING.s,
   },
   imdbLogo: {
     height: 14,
-    width: 30,
+    width: 35,
   },
   traktConnectedBadge: {
     width: 18,

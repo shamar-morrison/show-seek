@@ -130,6 +130,10 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('importImdbChunk', () => {
   it('rejects unauthenticated or anonymous callers', async () => {
     await expect(
@@ -191,6 +195,112 @@ describe('importImdbChunk', () => {
     });
 
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('does not create custom lists with reserved default ids', async () => {
+    seedPremiumUser('user-1');
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('/find/tt0111161')) {
+        return createFetchResponse({
+          movie_results: [
+            {
+              genre_ids: [878],
+              id: 101,
+              poster_path: '/movie.jpg',
+              release_date: '1999-01-01',
+              title: 'The Movie',
+              vote_average: 8.5,
+            },
+          ],
+          person_results: [],
+          tv_episode_results: [],
+          tv_results: [],
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+
+    const result = await callImportImdbChunk({
+      auth: {
+        token: {
+          firebase: {
+            sign_in_provider: 'password',
+          },
+        },
+        uid: 'user-1',
+      },
+      data: {
+        entities: [
+          {
+            actions: [
+              {
+                addedAt: 1_704_067_200_000,
+                isWatchlist: false,
+                kind: 'list',
+                listName: 'Favorites',
+                sourceFileName: 'favorites.csv',
+              },
+            ],
+            imdbId: 'tt0111161',
+            rawTitleType: 'movie',
+            title: 'The Movie',
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.imported.customListsCreated).toBe(1);
+    expect(result.imported.listItems).toBe(1);
+    expect(getDirectDocPaths('users/user-1/lists')).toEqual(['users/user-1/lists/favorites-1']);
+    expect(getDoc('users/user-1/lists/favorites')).toBeUndefined();
+    expect(getDoc('users/user-1/lists/favorites-1')).toMatchObject({
+      name: 'Favorites',
+    });
+  });
+
+  it('times out hung TMDB requests with an unavailable error', async () => {
+    jest.useFakeTimers();
+    seedPremiumUser('user-1');
+    mockFetch.mockImplementation(
+      (_url: string, options?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener('abort', () => {
+            const abortError = new Error('aborted');
+            abortError.name = 'AbortError';
+            reject(abortError);
+          });
+        })
+    );
+
+    const pending = callImportImdbChunk({
+      auth: {
+        token: {
+          firebase: {
+            sign_in_provider: 'password',
+          },
+        },
+        uid: 'user-1',
+      },
+      data: {
+        entities: [
+          {
+            actions: [],
+            imdbId: 'tt0111161',
+            rawTitleType: 'movie',
+            title: 'The Movie',
+          },
+        ],
+      },
+    } as any);
+    const expectation = expect(pending).rejects.toMatchObject({
+      code: 'unavailable',
+      message: 'TMDB request timed out',
+    });
+
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    await expectation;
   });
 
   it('creates deterministic movie watches and preserves watched timestamps in already-watched', async () => {

@@ -19,6 +19,10 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
+jest.mock('expo-image', () => ({
+  Image: 'Image',
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   return {
@@ -106,7 +110,13 @@ const createStats = (overrides: Partial<ImdbImportStats> = {}): ImdbImportStats 
 });
 
 const preparedImport: PreparedImdbImport = {
-  chunks: [{ entities: [{ imdbId: 'tt0000001', rawTitleType: 'movie', title: 'Imported Movie', actions: [] }] }],
+  chunks: [
+    {
+      entities: [
+        { imdbId: 'tt0000001', rawTitleType: 'movie', title: 'Imported Movie', actions: [] },
+      ],
+    },
+  ],
   files: [
     {
       fileName: 'ratings.csv',
@@ -116,6 +126,31 @@ const preparedImport: PreparedImdbImport = {
     },
   ],
   stats: createStats({ processedActions: 8, processedEntities: 8 }),
+  unsupportedFiles: ['people.csv'],
+};
+
+const singularPreparedImport: PreparedImdbImport = {
+  chunks: [
+    {
+      entities: [{ imdbId: 'tt0000002', rawTitleType: 'movie', title: 'Only Movie', actions: [] }],
+    },
+  ],
+  files: [
+    {
+      fileName: 'watchlist.csv',
+      kind: 'watchlist',
+      stats: createStats({ processedActions: 1, processedEntities: 1 }),
+      totalRows: 1,
+    },
+  ],
+  stats: createStats({ processedActions: 1, processedEntities: 1 }),
+  unsupportedFiles: [],
+};
+
+const emptyPreparedImport: PreparedImdbImport = {
+  chunks: [],
+  files: [],
+  stats: createStats(),
   unsupportedFiles: ['people.csv'],
 };
 
@@ -133,9 +168,37 @@ describe('ImdbImportScreen', () => {
     fireEvent.press(getByText('Select CSV Files'));
 
     expect(await findByText('Ready to import')).toBeTruthy();
+    expect(getByText('2 files')).toBeTruthy();
     expect(getByText('ratings.csv')).toBeTruthy();
     expect(getByText(/people\.csv/)).toBeTruthy();
     expect(getByText('8 rows')).toBeTruthy();
+  });
+
+  it('shows singular count copy for one file, row, and batch', async () => {
+    mockPrepareFiles.mockReturnValue(singularPreparedImport);
+
+    const { getAllByText, getByText, findByText } = render(<ImdbImportScreen />);
+
+    fireEvent.press(getByText('Select CSV Files'));
+
+    expect(await findByText('Ready to import')).toBeTruthy();
+    expect(getByText('1 file')).toBeTruthy();
+    expect(getAllByText('1 row')).toHaveLength(2);
+    expect(getByText('1 batch')).toBeTruthy();
+  });
+
+  it('shows the nothing-to-import state when no chunks were prepared', async () => {
+    mockPrepareFiles.mockReturnValue(emptyPreparedImport);
+
+    const { findByText, getByText, queryByText } = render(<ImdbImportScreen />);
+
+    fireEvent.press(getByText('Select CSV Files'));
+
+    expect(await findByText('Nothing to import')).toBeTruthy();
+    expect(
+      getByText("We couldn't find any supported IMDb rows in the selected files.")
+    ).toBeTruthy();
+    expect(queryByText('Ready to import')).toBeNull();
   });
 
   it('shows progress and a grouped final summary after import', async () => {

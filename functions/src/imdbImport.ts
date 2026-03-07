@@ -14,6 +14,7 @@ import {
 
 const TMDB_API_KEY = defineSecret('TMDB_API_KEY');
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_REQUEST_TIMEOUT_MS = 15_000;
 const DEFAULT_LIST_NAMES = {
   alreadyWatched: 'Already Watched',
   watchlist: 'Should Watch',
@@ -388,7 +389,7 @@ async function ensureCustomList(
   let nextId = baseId;
   let attempt = 0;
 
-  while (context.listCache.has(nextId)) {
+  while (DEFAULT_LIST_IDS.has(nextId) || context.listCache.has(nextId)) {
     attempt += 1;
     nextId = `${baseId}-${attempt}`;
   }
@@ -676,20 +677,41 @@ async function resolveImportResult(
 
 async function requestTmdb<T>(path: string, apiKey: string, attempt = 0): Promise<T> {
   const separator = path.includes('?') ? '&' : '?';
-  const response = await fetch(`${TMDB_BASE_URL}${path}${separator}api_key=${encodeURIComponent(apiKey)}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, TMDB_REQUEST_TIMEOUT_MS);
 
-  if (response.status === 429 && attempt < 3) {
-    const retryAfter = Number(response.headers.get('retry-after') ?? 0);
-    const delayMs = retryAfter > 0 ? retryAfter * 1000 : 500 * 2 ** attempt;
-    await wait(delayMs);
-    return requestTmdb<T>(path, apiKey, attempt + 1);
+  try {
+    const response = await fetch(
+      `${TMDB_BASE_URL}${path}${separator}api_key=${encodeURIComponent(apiKey)}`,
+      {
+        signal: controller.signal,
+      }
+    );
+
+    if (response.status === 429 && attempt < 3) {
+      const retryAfter = Number(response.headers.get('retry-after') ?? 0);
+      const delayMs = retryAfter > 0 ? retryAfter * 1000 : 500 * 2 ** attempt;
+      clearTimeout(timeoutId);
+      await wait(delayMs);
+      return requestTmdb<T>(path, apiKey, attempt + 1);
+    }
+
+    if (!response.ok) {
+      throw new HttpsError('internal', `TMDB request failed with status ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new HttpsError('unavailable', 'TMDB request timed out');
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  if (!response.ok) {
-    throw new HttpsError('internal', `TMDB request failed with status ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
 }
 
 function incrementSkipped(stats: ImdbImportStats, key: ImdbImportSkipReason): void {
@@ -706,4 +728,14 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === 'AbortError') ||
+    (typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError')
+  );
 }

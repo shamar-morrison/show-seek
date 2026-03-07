@@ -2,6 +2,10 @@ import { IntegrationsSection, IntegrationsSectionProps } from '@/src/components/
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
+jest.mock('expo-image', () => ({
+  Image: 'Image',
+}));
+
 jest.mock('@/src/components/icons/TraktLogo', () => ({
   TraktLogo: () => {
     const { View } = require('react-native');

@@ -78,6 +78,10 @@ export function prepareImdbImport(files: RawImdbImportFile[]): PreparedImdbImpor
       });
     });
 
+    parsedFile.stats.processedEntities = new Set(
+      parsedFile.entities.map((entity) => entity.imdbId)
+    ).size;
+
     preparedFiles.push({
       fileName: file.fileName,
       kind: parsedFile.kind,
@@ -168,11 +172,6 @@ export function parseImdbDateToMs(value: string | null | undefined): number | nu
     return null;
   }
 
-  const directParse = Date.parse(raw);
-  if (!Number.isNaN(directParse)) {
-    return directParse;
-  }
-
   const isoDateOnly = /^(\d{4})-(\d{2})-(\d{2})$/;
   const monthFirstDateTime =
     /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
@@ -181,36 +180,44 @@ export function parseImdbDateToMs(value: string | null | undefined): number | nu
   let match = raw.match(isoDateOnly);
   if (match) {
     const [, year, month, day] = match;
-    return Date.UTC(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
+    return buildValidatedUtcTimestamp({
+      day: Number(day),
+      hour: 12,
+      minute: 0,
+      monthIndex: Number(month) - 1,
+      second: 0,
+      year: Number(year),
+    });
   }
 
   match = raw.match(monthFirstDateTime);
   if (match) {
     const [, month, day, year, hour = '12', minute = '0', second = '0'] = match;
-    return Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second)
-    );
+    return buildValidatedUtcTimestamp({
+      day: Number(day),
+      hour: Number(hour),
+      minute: Number(minute),
+      monthIndex: Number(month) - 1,
+      second: Number(second),
+      year: Number(year),
+    });
   }
 
   match = raw.match(isoDateTime);
   if (match) {
     const [, year, month, day, hour, minute, second = '0'] = match;
-    return Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second)
-    );
+    return buildValidatedUtcTimestamp({
+      day: Number(day),
+      hour: Number(hour),
+      minute: Number(minute),
+      monthIndex: Number(month) - 1,
+      second: Number(second),
+      year: Number(year),
+    });
   }
 
-  return null;
+  const directParse = Date.parse(raw);
+  return Number.isNaN(directParse) ? null : directParse;
 }
 
 function buildImdbImportChunks(entities: ImdbImportEntity[]): ImdbImportChunkRequest[] {
@@ -418,4 +425,36 @@ function isEpisodeTitleType(rawTitleType: string | null): boolean {
     .trim()
     .toLowerCase()
     .includes('episode');
+}
+
+function buildValidatedUtcTimestamp({
+  day,
+  hour,
+  minute,
+  monthIndex,
+  second,
+  year,
+}: {
+  day: number;
+  hour: number;
+  minute: number;
+  monthIndex: number;
+  second: number;
+  year: number;
+}): number | null {
+  const timestamp = Date.UTC(year, monthIndex, day, hour, minute, second);
+  const date = new Date(timestamp);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== monthIndex ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second
+  ) {
+    return null;
+  }
+
+  return timestamp;
 }

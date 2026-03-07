@@ -787,7 +787,8 @@
     "startImport": "Start Import",
     "recognizedFilesTitle": "Recognized files",
     "unsupportedFilesTitle": "Unsupported files",
-    "rowsCount": "{{count}} rows",
+    "rowsCount_one": "{{count}} row",
+    "rowsCount_other": "{{count}} rows",
     "preflightTitle": "Import summary",
     "finalSummaryTitle": "Import complete",
     "importedTitle": "Imported",
@@ -803,11 +804,14 @@
     "privacyNote": "We match titles by IMDb ID, import what ShowSeek supports, and report anything we skip so you can review the results afterward.",
     "meta": {
       "filesSelected": "Files selected",
-      "filesValue": "{{count}} files",
+      "filesValue_one": "{{count}} file",
+      "filesValue_other": "{{count}} files",
       "supportedRows": "Supported rows",
-      "rowsValue": "{{count}} rows",
+      "rowsValue_one": "{{count}} row",
+      "rowsValue_other": "{{count}} rows",
       "uploadBatches": "Upload batches",
-      "batchesValue": "{{count}} batches"
+      "batchesValue_one": "{{count}} batch",
+      "batchesValue_other": "{{count}} batches"
     },
     "features": {
       "ratingsTitle": "Ratings",
