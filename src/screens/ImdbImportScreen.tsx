@@ -221,7 +221,7 @@ export default function ImdbImportScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
           <View style={styles.syncIconsContainer}>
-            <View style={styles.imdbHeroCircle}>
+            <View>
               <Image
                 source={require('@/assets/images/imdb.png')}
                 contentFit="contain"
@@ -416,51 +416,53 @@ export default function ImdbImportScreen() {
           </StageCard>
         ) : null}
 
-        <CollapsibleCategory title={t('imdbImport.whatWillBeImportedTitle')} defaultExpanded>
-          <CollapsibleFeatureItem
-            text={t('imdbImport.features.ratingsTitle')}
-            description={t('imdbImport.features.ratingsDescription')}
-            icon="star-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.features.listsTitle')}
-            description={t('imdbImport.features.listsDescription')}
-            icon="bookmark-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.features.checkinsTitle')}
-            description={t('imdbImport.features.checkinsDescription')}
-            icon="checkmark-done-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.features.skipsTitle')}
-            description={t('imdbImport.features.skipsDescription')}
-            icon="information-circle-outline"
-          />
-        </CollapsibleCategory>
+        <View style={{ gap: 1 }}>
+          <CollapsibleCategory title={t('imdbImport.whatWillBeImportedTitle')} defaultExpanded>
+            <CollapsibleFeatureItem
+              text={t('imdbImport.features.ratingsTitle')}
+              description={t('imdbImport.features.ratingsDescription')}
+              icon="star-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.features.listsTitle')}
+              description={t('imdbImport.features.listsDescription')}
+              icon="bookmark-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.features.checkinsTitle')}
+              description={t('imdbImport.features.checkinsDescription')}
+              icon="checkmark-done-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.features.skipsTitle')}
+              description={t('imdbImport.features.skipsDescription')}
+              icon="information-circle-outline"
+            />
+          </CollapsibleCategory>
 
-        <CollapsibleCategory title={t('imdbImport.howItWorksTitle')}>
-          <CollapsibleFeatureItem
-            text={t('imdbImport.howItWorks.selectTitle')}
-            description={t('imdbImport.howItWorks.selectDescription')}
-            icon="document-text-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.howItWorks.matchTitle')}
-            description={t('imdbImport.howItWorks.matchDescription')}
-            icon="swap-horizontal-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.howItWorks.mergeTitle')}
-            description={t('imdbImport.howItWorks.mergeDescription')}
-            icon="shield-checkmark-outline"
-          />
-          <CollapsibleFeatureItem
-            text={t('imdbImport.howItWorks.summaryTitle')}
-            description={t('imdbImport.howItWorks.summaryDescription')}
-            icon="analytics-outline"
-          />
-        </CollapsibleCategory>
+          <CollapsibleCategory title={t('imdbImport.howItWorksTitle')}>
+            <CollapsibleFeatureItem
+              text={t('imdbImport.howItWorks.selectTitle')}
+              description={t('imdbImport.howItWorks.selectDescription')}
+              icon="document-text-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.howItWorks.matchTitle')}
+              description={t('imdbImport.howItWorks.matchDescription')}
+              icon="swap-horizontal-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.howItWorks.mergeTitle')}
+              description={t('imdbImport.howItWorks.mergeDescription')}
+              icon="shield-checkmark-outline"
+            />
+            <CollapsibleFeatureItem
+              text={t('imdbImport.howItWorks.summaryTitle')}
+              description={t('imdbImport.howItWorks.summaryDescription')}
+              icon="analytics-outline"
+            />
+          </CollapsibleCategory>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
