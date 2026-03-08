@@ -459,7 +459,16 @@
     "removeItemsConfirm_other": "Remover {{count}} itens selecionados de {{listName}}?",
     "itemsRemoved": "{{count}} itens removidos",
     "itemsRemoved_one": "{{count}} item removido",
-    "itemsRemoved_other": "{{count}} itens removidos"
+    "itemsRemoved_other": "{{count}} itens removidos",
+    "removeRatings": "Remover avaliações",
+    "removingRatingsTitle": "Removendo avaliações",
+    "removingRatingsProgress": "Removendo avaliações {{current}} de {{total}}.",
+    "removeRatingsConfirm": "Remover {{count}} avaliações selecionadas?",
+    "removeRatingsConfirm_one": "Remover {{count}} avaliação selecionada?",
+    "removeRatingsConfirm_other": "Remover {{count}} avaliações selecionadas?",
+    "ratingsRemoved": "{{count}} avaliações removidas",
+    "ratingsRemoved_one": "{{count}} avaliação removida",
+    "ratingsRemoved_other": "{{count}} avaliações removidas"
   },
   "rating": {
     "title": "Avaliar",

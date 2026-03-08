@@ -10,10 +10,11 @@ export const DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT = 176;
 
 interface MultiSelectActionBarProps {
   selectedCount: number;
-  onAddToList: () => void;
+  onAddToList?: () => void;
   onCancel: () => void;
   onRemoveItems: () => void;
-  bulkPrimaryLabel: string;
+  bulkPrimaryLabel?: string;
+  removeLabel?: string;
   onHeightChange?: (height: number) => void;
 }
 
@@ -23,11 +24,13 @@ export function MultiSelectActionBar({
   onCancel,
   onRemoveItems,
   bulkPrimaryLabel,
+  removeLabel,
   onHeightChange,
 }: MultiSelectActionBarProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const insets = useSafeAreaInsets();
+  const showPrimaryAction = !!onAddToList && !!bulkPrimaryLabel;
   const handleLayout = (event: LayoutChangeEvent) => {
     onHeightChange?.(event.nativeEvent.layout.height);
   };
@@ -43,25 +46,30 @@ export function MultiSelectActionBar({
           {t('library.selectedItemsCount', { count: selectedCount })}
         </Text>
 
-        <View style={styles.buttonsRow} testID="multi-select-top-row">
+        <View
+          style={[styles.buttonsRow, !showPrimaryAction && styles.singleButtonRow]}
+          testID="multi-select-top-row"
+        >
           <Pressable style={styles.cancelButton} onPress={onCancel} testID="multi-select-cancel-button">
             <X size={18} color={COLORS.textSecondary} />
             <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </Pressable>
 
-          <Pressable
-            style={[
-              styles.addButton,
-              { backgroundColor: accentColor },
-              selectedCount === 0 && styles.addButtonDisabled,
-            ]}
-            onPress={onAddToList}
-            disabled={selectedCount === 0}
-            testID="multi-select-primary-button"
-          >
-            <Check size={18} color={COLORS.white} />
-            <Text style={styles.addButtonText}>{bulkPrimaryLabel}</Text>
-          </Pressable>
+          {showPrimaryAction && (
+            <Pressable
+              style={[
+                styles.addButton,
+                { backgroundColor: accentColor },
+                selectedCount === 0 && styles.addButtonDisabled,
+              ]}
+              onPress={onAddToList}
+              disabled={selectedCount === 0}
+              testID="multi-select-primary-button"
+            >
+              <Check size={18} color={COLORS.white} />
+              <Text style={styles.addButtonText}>{bulkPrimaryLabel}</Text>
+            </Pressable>
+          )}
         </View>
 
         <Pressable
@@ -71,7 +79,7 @@ export function MultiSelectActionBar({
           testID="multi-select-remove-button"
         >
           <Trash2 size={18} color={COLORS.error} />
-          <Text style={styles.removeButtonText}>{t('library.removeItems')}</Text>
+          <Text style={styles.removeButtonText}>{removeLabel ?? t('library.removeItems')}</Text>
         </Pressable>
       </View>
     </View>
@@ -101,6 +109,9 @@ const styles = StyleSheet.create({
   buttonsRow: {
     flexDirection: 'row',
     gap: SPACING.s,
+  },
+  singleButtonRow: {
+    flexDirection: 'column',
   },
   cancelButton: {
     flexDirection: 'row',

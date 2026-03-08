@@ -15,6 +15,32 @@ export interface EnrichedTVRating {
   tvShow: TVShow | null;
 }
 
+function buildPlaceholderEnrichedRatings<
+  TItem extends { rating: RatingItem },
+  TEnriched extends TItem,
+>(
+  currentRatings: RatingItem[],
+  previousData: TEnriched[] | undefined,
+  createFallbackItem: (rating: RatingItem) => TEnriched
+): TEnriched[] | undefined {
+  if (!previousData) return undefined;
+  if (currentRatings.length === 0) return [];
+
+  const previousById = new Map(previousData.map((item) => [item.rating.id, item]));
+
+  return currentRatings.flatMap((rating) => {
+    const previousItem = previousById.get(rating.id);
+    return previousItem ? [{ ...previousItem, rating }] : [createFallbackItem(rating)];
+  });
+}
+
+function hasRenderableEnrichedItems<TEnriched>(
+  data: TEnriched[] | undefined,
+  getMedia: (item: TEnriched) => Movie | TVShow | null
+): data is TEnriched[] {
+  return Array.isArray(data) && data.some((item) => item != null && getMedia(item) !== null);
+}
+
 /**
  * Batch fetch movies in chunks to avoid rate limits
  */
@@ -110,15 +136,26 @@ export function useEnrichedMovieRatings() {
         movie: moviesMap.get(parseInt(rating.id, 10)) || null,
       }));
     },
+    placeholderData: (previousData) =>
+      buildPlaceholderEnrichedRatings(movieRatings, previousData, (rating) => ({
+        rating,
+        movie: null,
+      })),
     enabled: !isLoadingRatings && movieRatings.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  const queryData = !isLoadingRatings && movieRatings.length === 0 ? [] : query.data;
+  const hasUsableData =
+    queryData !== undefined &&
+    (queryData.length === 0 || hasRenderableEnrichedItems(queryData, (item) => item.movie));
+  const data = hasUsableData ? queryData : undefined;
+
   return {
     ...query,
-    data: !isLoadingRatings && movieRatings.length === 0 ? [] : query.data,
-    isLoading: isLoadingRatings || query.isLoading,
+    data,
+    isLoading: !hasUsableData && (isLoadingRatings || query.isPending),
     error: ratingsError || query.error,
     refetch: async () => {
       await ratingsRefetch();
@@ -159,15 +196,26 @@ export function useEnrichedTVRatings() {
         tvShow: tvShowsMap.get(parseInt(rating.id, 10)) || null,
       }));
     },
+    placeholderData: (previousData) =>
+      buildPlaceholderEnrichedRatings(tvRatings, previousData, (rating) => ({
+        rating,
+        tvShow: null,
+      })),
     enabled: !isLoadingRatings && tvRatings.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
+  const queryData = !isLoadingRatings && tvRatings.length === 0 ? [] : query.data;
+  const hasUsableData =
+    queryData !== undefined &&
+    (queryData.length === 0 || hasRenderableEnrichedItems(queryData, (item) => item.tvShow));
+  const data = hasUsableData ? queryData : undefined;
+
   return {
     ...query,
-    data: !isLoadingRatings && tvRatings.length === 0 ? [] : query.data,
-    isLoading: isLoadingRatings || query.isLoading,
+    data,
+    isLoading: !hasUsableData && (isLoadingRatings || query.isPending),
     error: ratingsError || query.error,
     refetch: async () => {
       await ratingsRefetch();

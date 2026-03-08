@@ -13,4 +13,19 @@ describe('BulkRemoveProgressModal', () => {
     expect(getByText('Removing items')).toBeTruthy();
     expect(getByText('Removing items 2 of 6.')).toBeTruthy();
   });
+
+  it('renders caller-provided title and progress text overrides', () => {
+    const { getByText } = render(
+      <BulkRemoveProgressModal
+        visible={true}
+        current={1}
+        total={3}
+        title="Removing ratings"
+        progressText="Removing ratings 1 of 3."
+      />
+    );
+
+    expect(getByText('Removing ratings')).toBeTruthy();
+    expect(getByText('Removing ratings 1 of 3.')).toBeTruthy();
+  });
 });

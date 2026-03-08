@@ -1,30 +1,41 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MovieRatingListCard } from '@/src/components/library/MovieRatingListCard';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { RatingsEmptyState } from '@/src/components/library/RatingsEmptyState';
 import ListActionsModal from '@/src/components/ListActionsModal';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedMovieRating, useEnrichedMovieRatings } from '@/src/hooks/useEnrichedRatings';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import {
+  RatingMultiSelectTarget,
+  useRatingMultiSelectActions,
+} from '@/src/hooks/useRatingMultiSelectActions';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
+import { useDeleteRating } from '@/src/hooks/useRatings';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Search, Star } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,20 +43,36 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 const VIEW_MODE_STORAGE_KEY = 'movieRatingsViewMode';
 
 const getMovieFromItem = (item: EnrichedMovieRating) => item.movie;
+type MovieRatingSelectionTarget = Extract<RatingMultiSelectTarget, { mediaType: 'movie' }>;
+
+function getReleaseYear(releaseDate?: string | null): number | null {
+  if (!releaseDate) {
+    return null;
+  }
+
+  try {
+    return parseTmdbDate(releaseDate).getFullYear();
+  } catch {
+    return null;
+  }
+}
 
 export default function MovieRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const {
     data: enrichedRatings,
     isLoading,
     error,
     refetch,
   } = useEnrichedMovieRatings();
+  const deleteRatingMutation = useDeleteRating();
   const { t } = useTranslation();
   const { resolvePosterPath } = usePosterOverrides();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const toastRef = useRef<ToastRef>(null);
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
     getThreeColumnGridMetrics(windowWidth);
@@ -71,6 +98,67 @@ export default function MovieRatingsScreen() {
     }),
     [activateSearch, searchQuery.length]
   );
+
+  const handleShowToast = useCallback((message: string) => {
+    toastRef.current?.show(message);
+  }, []);
+
+  const handleNavigate = useCallback(
+    (item: EnrichedMovieRating) => {
+      if (!item.movie) return;
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!currentTab) {
+        console.warn('Cannot navigate to movie: currentTab is null');
+        return;
+      }
+      const path = `/(tabs)/${currentTab}/movie/${item.movie.id}`;
+      router.push(path as any);
+    },
+    [currentTab, router]
+  );
+
+  const getSelectionTarget = useCallback(
+    (item: EnrichedMovieRating): MovieRatingSelectionTarget | null =>
+      item.movie
+        ? {
+            id: item.rating.id,
+            mediaType: 'movie',
+            mediaId: item.movie.id,
+          }
+        : null,
+    []
+  );
+
+  const removeRating = useCallback(
+    (target: MovieRatingSelectionTarget) =>
+      deleteRatingMutation.mutateAsync({ mediaId: target.mediaId, mediaType: target.mediaType }),
+    [deleteRatingMutation]
+  );
+
+  const {
+    handleItemPress,
+    handleLongPress,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleRemoveSelectedItems,
+    bulkRemoveProgress,
+    isBulkRemoving,
+  } = useRatingMultiSelectActions<EnrichedMovieRating, MovieRatingSelectionTarget>({
+    isLoading,
+    isRemoving: deleteRatingMutation.isPending,
+    getSelectionTarget,
+    onNavigate: handleNavigate,
+    showToast: handleShowToast,
+    removeRating,
+    isSearchActive,
+    deactivateSearch,
+    insetsBottom: insets.bottom,
+  });
 
   const {
     sortState,
@@ -101,6 +189,7 @@ export default function MovieRatingsScreen() {
       onClose: deactivateSearch,
       placeholder: t('library.searchMoviesPlaceholder'),
     },
+    isSelectionMode,
   });
 
   // Filter items based on search query
@@ -113,23 +202,13 @@ export default function MovieRatingsScreen() {
     });
   }, [sortedData, searchQuery]);
 
-  const handleItemPress = useCallback(
-    (movieId: number) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      if (!currentTab) {
-        console.warn('Cannot navigate to movie: currentTab is null');
-        return;
-      }
-      const path = `/(tabs)/${currentTab}/movie/${movieId}`;
-      router.push(path as any);
-    },
-    [currentTab, router]
-  );
-
   const renderGridItem = useCallback(
     ({ item }: { item: EnrichedMovieRating }) => {
       if (!item.movie) return null;
+
       const posterPath = resolvePosterPath('movie', item.movie.id, item.movie.poster_path);
+      const isSelected = isItemSelected(item);
+      const releaseYear = getReleaseYear(item.movie.release_date);
 
       return (
         <Pressable
@@ -138,26 +217,46 @@ export default function MovieRatingsScreen() {
             { width: itemWidth, marginHorizontal: itemHorizontalMargin },
             pressed && styles.mediaCardPressed,
           ]}
-          onPress={() => handleItemPress(item.movie!.id)}
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
         >
-          <MediaImage
-            source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
-            style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
-            contentFit="cover"
-          />
-          <View style={styles.ratingBadgeContainer}>
-            <RatingBadge rating={item.rating.rating} size="medium" />
+          <View style={styles.posterContainer}>
+            <MediaImage
+              source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium) }}
+              style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
+              contentFit="cover"
+            />
+            {isSelectionMode && (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.selectionOverlay,
+                  isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
+                ]}
+              />
+            )}
+            <View style={styles.ratingBadgeContainer}>
+              <RatingBadge rating={item.rating.rating} size="medium" />
+            </View>
+            {isSelectionMode && (
+              <View
+                style={[
+                  styles.selectionBadge,
+                  isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+                ]}
+              >
+                <AnimatedCheck visible={isSelected} />
+              </View>
+            )}
           </View>
           {item.movie && (
             <View style={mediaCardStyles.info}>
               <Text style={mediaCardStyles.title} numberOfLines={1}>
                 {item.movie.title}
               </Text>
-              {item.movie.release_date && (
+              {releaseYear && (
                 <View style={mediaMetaStyles.yearRatingContainer}>
-                  <Text style={mediaMetaStyles.year}>
-                    {new Date(item.movie.release_date).getFullYear()}
-                  </Text>
+                  <Text style={mediaMetaStyles.year}>{releaseYear}</Text>
                   {item.movie.vote_average > 0 && (
                     <>
                       <Text style={mediaMetaStyles.separator}> • </Text>
@@ -174,14 +273,29 @@ export default function MovieRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress, itemHorizontalMargin, itemWidth, resolvePosterPath]
+    [
+      accentColor,
+      handleItemPress,
+      handleLongPress,
+      isItemSelected,
+      isSelectionMode,
+      itemHorizontalMargin,
+      itemWidth,
+      resolvePosterPath,
+    ]
   );
 
   const renderListItem = useCallback(
     ({ item }: { item: EnrichedMovieRating }) => (
-      <MovieRatingListCard item={item} onPress={handleItemPress} />
+      <MovieRatingListCard
+        item={item}
+        onPress={() => handleItemPress(item)}
+        onLongPress={handleLongPress}
+        selectionMode={isSelectionMode}
+        isSelected={isItemSelected(item)}
+      />
     ),
-    [handleItemPress]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
   const keyExtractor = useCallback((item: EnrichedMovieRating) => item.rating.id, []);
@@ -204,7 +318,7 @@ export default function MovieRatingsScreen() {
     );
   }
 
-  if (sortedData.length === 0 && !hasActiveFilterState) {
+  if (sortedData.length === 0 && !hasActiveFilterState && !isSelectionMode && !isBulkRemoving) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
@@ -232,8 +346,10 @@ export default function MovieRatingsScreen() {
             contentContainerStyle={[
               styles.gridListContent,
               { paddingHorizontal: listPaddingHorizontal },
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
             ]}
             showsVerticalScrollIndicator={false}
+            extraData={isItemSelected}
             ListEmptyComponent={
               <RatingsEmptyState
                 searchQuery={searchQuery}
@@ -250,8 +366,12 @@ export default function MovieRatingsScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={libraryListStyles.listContent}
+            contentContainerStyle={[
+              libraryListStyles.listContent,
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
+            extraData={isItemSelected}
             ListEmptyComponent={
               <RatingsEmptyState
                 searchQuery={searchQuery}
@@ -286,6 +406,29 @@ export default function MovieRatingsScreen() {
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      <Toast ref={toastRef} />
+
+      <BulkRemoveProgressModal
+        visible={isBulkRemoving}
+        current={bulkRemoveProgress?.processed ?? 0}
+        total={bulkRemoveProgress?.total ?? 0}
+        title={t('library.removingRatingsTitle')}
+        progressText={t('library.removingRatingsProgress', {
+          current: bulkRemoveProgress?.processed ?? 0,
+          total: bulkRemoveProgress?.total ?? 0,
+        })}
+      />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onRemoveItems={handleRemoveSelectedItems}
+          onHeightChange={handleActionBarHeightChange}
+          removeLabel={t('library.removeRatings')}
+        />
+      )}
     </>
   );
 }
@@ -300,6 +443,9 @@ const styles = StyleSheet.create({
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
   },
+  posterContainer: {
+    position: 'relative',
+  },
   poster: {
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
@@ -308,5 +454,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.xs,
     right: SPACING.xs,
+  },
+  selectionOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: SPACING.xs,
+    left: SPACING.xs,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.white,
+    backgroundColor: COLORS.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

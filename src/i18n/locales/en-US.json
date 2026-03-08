@@ -460,7 +460,16 @@
     "removeItemsConfirm_other": "Remove {{count}} selected items from {{listName}}?",
     "itemsRemoved": "{{count}} items removed",
     "itemsRemoved_one": "{{count}} item removed",
-    "itemsRemoved_other": "{{count}} items removed"
+    "itemsRemoved_other": "{{count}} items removed",
+    "removeRatings": "Remove ratings",
+    "removingRatingsTitle": "Removing ratings",
+    "removingRatingsProgress": "Removing ratings {{current}} of {{total}}.",
+    "removeRatingsConfirm": "Remove {{count}} selected ratings?",
+    "removeRatingsConfirm_one": "Remove {{count}} selected rating?",
+    "removeRatingsConfirm_other": "Remove {{count}} selected ratings?",
+    "ratingsRemoved": "{{count}} ratings removed",
+    "ratingsRemoved_one": "{{count}} rating removed",
+    "ratingsRemoved_other": "{{count}} ratings removed"
   },
   "rating": {
     "title": "Rate",

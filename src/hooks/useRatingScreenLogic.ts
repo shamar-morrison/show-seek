@@ -58,6 +58,8 @@ export interface UseRatingScreenLogicOptions<TItem extends BaseEnrichedRating> {
     onClose: () => void;
     placeholder?: string;
   };
+  /** Whether a ratings multi-select session is currently active */
+  isSelectionMode?: boolean;
 }
 
 /**
@@ -112,6 +114,7 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   getMediaFromItem,
   searchButton,
   searchState,
+  isSelectionMode = false,
 }: UseRatingScreenLogicOptions<TItem>): UseRatingScreenLogicReturn<TItem> {
   const { t } = useTranslation();
 
@@ -152,10 +155,18 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
   const { viewMode, isLoadingPreference } = useViewModeToggle({
     storageKey,
     showSortButton: false,
-    actionButton,
-    searchButton,
-    searchState,
+    actionButton: isSelectionMode ? undefined : actionButton,
+    searchButton: isSelectionMode ? undefined : searchButton,
+    searchState: isSelectionMode ? undefined : searchState,
   });
+  const searchOnClose = searchState?.onClose;
+
+  useEffect(() => {
+    if (isSelectionMode) {
+      listActionsModalRef.current?.dismiss();
+      searchOnClose?.();
+    }
+  }, [isSelectionMode, searchOnClose]);
 
   // Scroll to top after sort/filter state changes (but not on initial mount)
   useEffect(() => {
