@@ -1,6 +1,7 @@
 import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { AppSettingsSection } from '@/src/components/profile/AppSettingsSection';
 import { ContentSettingsSection } from '@/src/components/profile/ContentSettingsSection';
+import { IntegrationsSection } from '@/src/components/profile/IntegrationsSection';
 import { PreferencesSection } from '@/src/components/profile/PreferencesSection';
 import { UserInfoSection } from '@/src/components/profile/UserInfoSection';
 import { WebAppModal } from '@/src/components/profile/WebAppModal';
@@ -29,7 +30,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type ProfileTab = 'preferences' | 'content' | 'settings';
+type ProfileTab = 'preferences' | 'content' | 'integrations' | 'settings';
 
 interface TabConfig {
   id: ProfileTab;
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
     handleOpenWebApp,
     handleConfirmOpenWebApp,
     handleCloseWebAppModal,
+    handleImdbImport,
     handleExportData,
     handleClearCache,
     handleSignOut,
@@ -84,6 +86,7 @@ export default function ProfileScreen() {
     () => [
       { id: 'preferences', label: t('profile.tabs.preferences') },
       { id: 'content', label: t('profile.tabs.content') },
+      { id: 'integrations', label: t('profile.tabs.integrations') },
       { id: 'settings', label: t('profile.tabs.settings') },
     ],
     [t]
@@ -135,12 +138,19 @@ export default function ProfileScreen() {
             language={language}
             region={region}
             preferences={preferences}
-            isTraktConnected={isTraktConnected}
-            isTraktLoading={isTraktLoading}
             onLanguagePress={() => handleGuardedContentAction(handleLanguagePress)}
             onRegionPress={() => handleGuardedContentAction(handleRegionPress)}
             onColorPress={() => handleGuardedContentAction(handleColorPress)}
             onLaunchScreenPress={() => handleGuardedContentAction(handleLaunchScreenPress)}
+            showTitle={false}
+          />
+        );
+      case 'integrations':
+        return (
+          <IntegrationsSection
+            isTraktConnected={isTraktConnected}
+            isTraktLoading={isTraktLoading}
+            onImdbImport={() => handleGuardedContentAction(handleImdbImport)}
             onTraktPress={() => handleGuardedContentAction(handleTraktPress)}
             showTitle={false}
           />

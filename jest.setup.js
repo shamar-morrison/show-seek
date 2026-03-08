@@ -7,7 +7,14 @@ jest.mock('react-i18next', () => {
 
   // Helper to get nested translation value
   const getNestedValue = (obj, path, params) => {
-    const value = path.split('.').reduce((current, key) => current?.[key], obj);
+    const pluralizedPath =
+      typeof params?.count === 'number'
+        ? `${path}_${params.count === 1 ? 'one' : 'other'}`
+        : null;
+    const value =
+      (pluralizedPath
+        ? pluralizedPath.split('.').reduce((current, key) => current?.[key], obj)
+        : undefined) ?? path.split('.').reduce((current, key) => current?.[key], obj);
     if (typeof value !== 'string') return path; // Return key if not found
 
     // Handle interpolation like {{count}}, {{number}}, etc.

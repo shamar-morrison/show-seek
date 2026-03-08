@@ -36,7 +36,7 @@ export interface AppSettingsSectionProps {
 }
 
 /**
- * App settings section with Rate App, Feedback, Export Data, Web App, and Sign Out.
+ * App settings section with app actions such as feedback, export, cache management, and sign-out.
  */
 export function AppSettingsSection({
   isGuest,

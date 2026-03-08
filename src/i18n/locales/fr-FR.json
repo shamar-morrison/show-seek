@@ -680,6 +680,7 @@
     "tabs": {
       "preferences": "Préférences",
       "content": "Contenu",
+      "integrations": "Intégrations",
       "settings": "Paramètres"
     },
     "editProfile": "Modifier le profil",
@@ -719,6 +720,7 @@
     "markPreviousEpisodes": "Marquer les épisodes précédents",
     "markPreviousEpisodesDescription": "Marque automatiquement les épisodes précédents d'une saison comme vus lorsque vous marquez un épisode",
     "sendFeedback": "Envoyer des commentaires",
+    "importFromImdb": "Importer depuis IMDb",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web",
     "hideTabLabels": "Masquer les libellés des onglets",
@@ -757,6 +759,111 @@
     "webAppModal": {
       "description": "Continuer vers l’application web ShowSeek ?",
       "title": "Ouvrir l’application web"
+    }
+  },
+  "imdbImport": {
+    "title": "Importez vos données IMDb",
+    "description": "Importez vos notes IMDb, votre watchlist, vos listes personnalisées et vos check-ins sans remplacer le reste de vos données ShowSeek.",
+    "selectStageTitle": "Sélectionner des fichiers",
+    "selectStageBody": "Choisissez un ou plusieurs exports CSV IMDb depuis votre appareil, puis lancez l’importation lorsque tout vous convient.",
+    "readyTitle": "Prêt à importer",
+    "readyBody": "Vos fichiers ont été reconnus et sont prêts à être fusionnés dans ShowSeek.",
+    "readyNote": "Cette importation est non destructive. Vos notes existantes et les autres données propres à ShowSeek restent intactes.",
+    "importingTitle": "Importation en cours",
+    "progressPercent": "{{percent}}% terminé",
+    "progressChunks": "{{completed}} / {{total}} lots d’envoi terminés",
+    "completeBodyWithImported": "Ce résumé montre ce qui a été importé, ainsi que tout ce qui a été ignoré ou passé.",
+    "completeBodyIssuesOnly": "Ce résumé montre uniquement les éléments ignorés ou passés pendant l’importation.",
+    "supportedTitle": "Ce qui est pris en charge",
+    "supportedBody": "Utilisez les exports CSV IMDb pour les notes, la watchlist, les listes personnalisées et les check-ins. Les métadonnées de personnes, d’images, de vidéos et de notes d’éléments sont ignorées et signalées.",
+    "selectFiles": "Sélectionner des fichiers CSV",
+    "replaceFiles": "Remplacer les fichiers sélectionnés",
+    "startImport": "Lancer l’importation",
+    "backToFiles": "Retour aux fichiers",
+    "recognizedFilesTitle": "Fichiers reconnus",
+    "unsupportedFilesTitle": "Fichiers non pris en charge",
+    "rowsCount_one": "{{count}} ligne",
+    "rowsCount_other": "{{count}} lignes",
+    "preflightTitle": "Résumé de l’importation",
+    "finalSummaryTitle": "Importation terminée",
+    "importedTitle": "Importé",
+    "skippedTitle": "Passé",
+    "ignoredTitle": "Métadonnées ignorées",
+    "progressTitle": "Progression de l’importation",
+    "progressBody": "{{completed}} / {{total}} lots d’envoi terminés",
+    "emptyState": "Sélectionnez un ou plusieurs exports CSV IMDb pour les examiner avant l’importation.",
+    "nothingToImportTitle": "Rien à importer",
+    "nothingToImportMessage": "Nous n’avons trouvé aucune ligne IMDb prise en charge dans les fichiers sélectionnés.",
+    "whatWillBeImportedTitle": "Ce qui sera importé",
+    "howItWorksTitle": "Comment ça fonctionne",
+    "privacyNote": "Nous faisons correspondre les titres par ID IMDb, nous importons ce que ShowSeek prend en charge et nous signalons ce que nous ignorons afin que vous puissiez vérifier les résultats ensuite.",
+    "meta": {
+      "filesSelected": "Fichiers sélectionnés",
+      "filesValue_one": "{{count}} fichier",
+      "filesValue_other": "{{count}} fichiers",
+      "supportedRows": "Lignes prises en charge",
+      "rowsValue_one": "{{count}} ligne",
+      "rowsValue_other": "{{count}} lignes",
+      "uploadBatches": "Lots d’envoi",
+      "batchesValue_one": "{{count}} lot",
+      "batchesValue_other": "{{count}} lots"
+    },
+    "features": {
+      "ratingsTitle": "Notes",
+      "ratingsDescription": "Les notes de films, de séries et d’épisodes pris en charge sont importées lorsque la note IMDb est plus récente que celle que vous avez déjà.",
+      "listsTitle": "Watchlist et listes personnalisées",
+      "listsDescription": "Les éléments de la watchlist sont fusionnés avec votre watchlist par défaut, tandis que les autres CSV de listes IMDb créent ou réutilisent des listes personnalisées correspondantes.",
+      "checkinsTitle": "Historique de visionnage et progression",
+      "checkinsDescription": "Les check-ins ajoutent des vues de films, marquent des séries comme vues lorsque c’est pris en charge et mettent à jour la progression des épisodes quand la ligne est correctement associée.",
+      "skipsTitle": "Les données ignorées sont signalées",
+      "skipsDescription": "Les personnes, images et vidéos non prises en charge, les lignes mal formées, les ID IMDb introuvables et les épisodes présents dans des listes sont ignorés et comptabilisés dans le résumé final."
+    },
+    "howItWorks": {
+      "selectTitle": "Choisissez vos exports CSV IMDb",
+      "selectDescription": "Sélectionnez directement sur votre appareil des fichiers CSV de notes, de watchlist, de listes personnalisées ou de check-ins.",
+      "matchTitle": "Faites correspondre chaque élément par ID IMDb",
+      "matchDescription": "ShowSeek résout les titres via TMDB en utilisant les ID IMDb au lieu de deviner à partir des titres.",
+      "mergeTitle": "Fusionnez sans effacer vos données",
+      "mergeDescription": "Les notes, listes et historiques importés sont fusionnés avec votre bibliothèque existante au lieu de la remplacer.",
+      "summaryTitle": "Consultez le résumé",
+      "summaryDescription": "Une fois l’importation terminée, vous obtenez un résumé groupé de ce qui a été importé, ignoré ou passé."
+    },
+    "errors": {
+      "pickFailed": "Nous n’avons pas pu lire les fichiers sélectionnés. Veuillez réessayer.",
+      "importFailedTitle": "Échec de l’importation",
+      "importFailedFallback": "L’importation IMDb a échoué. Veuillez réessayer.",
+      "backendUnavailable": "L’importation IMDb n’est pas encore disponible. Réessayez après le déploiement du backend.",
+      "backendMisconfigured": "L’importation IMDb n’est pas encore correctement configurée. Veuillez réessayer plus tard.",
+      "serviceUnavailable": "L’importation IMDb est temporairement indisponible. Veuillez réessayer dans un instant.",
+      "premiumRequired": "L’importation IMDb nécessite Premium.",
+      "signInRequired": "Veuillez vous connecter pour importer vos données IMDb."
+    },
+    "fileKinds": {
+      "ratings": "Notes",
+      "watchlist": "Watchlist",
+      "list": "Liste personnalisée",
+      "checkins": "Check-ins"
+    },
+    "imported": {
+      "ratings": "Notes",
+      "listItems": "Éléments de liste",
+      "watchedMovies": "Vues de films",
+      "watchedShows": "Séries vues",
+      "watchedEpisodes": "Épisodes vus",
+      "customListsCreated": "Listes personnalisées créées"
+    },
+    "skipped": {
+      "unsupportedFile": "Fichiers non pris en charge",
+      "malformedRow": "Lignes mal formées",
+      "invalidRating": "Lignes avec des notes invalides",
+      "invalidDate": "Lignes avec des dates invalides",
+      "unsupportedNonTitleRow": "Lignes de personnes, d’images ou de vidéos",
+      "unsupportedListEpisode": "Lignes d’épisodes provenant de listes/watchlists",
+      "unresolvedImdbId": "Lignes avec des ID IMDb introuvables",
+      "unsupportedTmdbResult": "Lignes avec des correspondances TMDB non prises en charge"
+    },
+    "ignored": {
+      "itemNotes": "Notes d’éléments IMDb"
     }
   },
   "guestAccess": {
@@ -1235,6 +1342,10 @@
       "export-data": {
         "description": "Exportez vos listes, notes, évaluations et plus.",
         "title": "Exporter les données"
+      },
+      "import-imdb": {
+        "description": "Importez vos notes, listes et check-ins IMDb dans ShowSeek.",
+        "title": "Importer depuis IMDb"
       },
       "future-features": {
         "description": "Aidez à financer les futures fonctionnalités.",

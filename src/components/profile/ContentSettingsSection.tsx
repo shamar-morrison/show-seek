@@ -1,4 +1,3 @@
-import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { getAccentColorName } from '@/src/constants/accentColors';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -7,7 +6,7 @@ import { SUPPORTED_LANGUAGES } from '@/src/context/LanguageProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
-import { Check, Languages, LayoutIcon, MapPin, Palette } from 'lucide-react-native';
+import { Languages, LayoutIcon, MapPin, Palette } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
@@ -20,10 +19,6 @@ export interface ContentSettingsSectionProps {
   region: string;
   /** User preferences (for default launch screen) */
   preferences: UserPreferences | null;
-  /** Whether Trakt is connected */
-  isTraktConnected: boolean;
-  /** Whether Trakt status is loading */
-  isTraktLoading: boolean;
   /** Handler for language button press */
   onLanguagePress: () => void;
   /** Handler for region button press */
@@ -32,26 +27,21 @@ export interface ContentSettingsSectionProps {
   onColorPress: () => void;
   /** Handler for launch screen button press */
   onLaunchScreenPress: () => void;
-  /** Handler for Trakt settings button press */
-  onTraktPress: () => void;
   /** Whether to show section title (default: true) */
   showTitle?: boolean;
 }
 
 /**
- * Content settings section with Language, Region, Launch Screen, and Trakt integration.
+ * Content settings section with language, region, accent color, and launch screen controls.
  */
 export function ContentSettingsSection({
   language,
   region,
   preferences,
-  isTraktConnected,
-  isTraktLoading,
   onLanguagePress,
   onRegionPress,
   onColorPress,
   onLaunchScreenPress,
-  onTraktPress,
   showTitle = true,
 }: ContentSettingsSectionProps) {
   const { t } = useTranslation();
@@ -137,22 +127,6 @@ export function ContentSettingsSection({
             </View>
           }
         />
-        <ActionButton
-          customIcon={<TraktLogo size={20} />}
-          label={t('profile.traktIntegration')}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onTraktPress();
-          }}
-          loading={isTraktLoading}
-          badge={
-            isTraktConnected ? (
-              <View style={styles.traktConnectedBadge}>
-                <Check size={12} color={COLORS.white} />
-              </View>
-            ) : null
-          }
-        />
       </View>
     </View>
   );
@@ -194,14 +168,5 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     fontWeight: '600',
-  },
-  traktConnectedBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: COLORS.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: SPACING.xs,
   },
 });
