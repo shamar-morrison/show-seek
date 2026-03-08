@@ -459,7 +459,16 @@
     "removeItemsConfirm_other": "¿Quitar {{count}} elementos seleccionados de {{listName}}?",
     "itemsRemoved": "{{count}} elementos quitados",
     "itemsRemoved_one": "{{count}} elemento quitado",
-    "itemsRemoved_other": "{{count}} elementos quitados"
+    "itemsRemoved_other": "{{count}} elementos quitados",
+    "removeRatings": "Quitar calificaciones",
+    "removingRatingsTitle": "Quitando calificaciones",
+    "removingRatingsProgress": "Quitando calificaciones {{current}} de {{total}}.",
+    "removeRatingsConfirm": "¿Quitar {{count}} calificaciones seleccionadas?",
+    "removeRatingsConfirm_one": "¿Quitar {{count}} calificación seleccionada?",
+    "removeRatingsConfirm_other": "¿Quitar {{count}} calificaciones seleccionadas?",
+    "ratingsRemoved": "{{count}} calificaciones quitadas",
+    "ratingsRemoved_one": "{{count}} calificación quitada",
+    "ratingsRemoved_other": "{{count}} calificaciones quitadas"
   },
   "rating": {
     "title": "Calificar",

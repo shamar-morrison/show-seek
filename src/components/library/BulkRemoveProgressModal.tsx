@@ -10,9 +10,17 @@ interface BulkRemoveProgressModalProps {
   visible: boolean;
   current: number;
   total: number;
+  title?: string;
+  progressText?: string;
 }
 
-export function BulkRemoveProgressModal({ visible, current, total }: BulkRemoveProgressModalProps) {
+export function BulkRemoveProgressModal({
+  visible,
+  current,
+  total,
+  title,
+  progressText,
+}: BulkRemoveProgressModalProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,9 +34,9 @@ export function BulkRemoveProgressModal({ visible, current, total }: BulkRemoveP
       <View style={modalLayoutStyles.container} testID="bulk-remove-progress-modal">
         <ModalBackground />
         <View style={styles.content}>
-          <Text style={styles.title}>{t('library.removingItemsTitle')}</Text>
+          <Text style={styles.title}>{title ?? t('library.removingItemsTitle')}</Text>
           <Text style={styles.progressText} testID="bulk-remove-progress-text">
-            {t('library.removingItemsProgress', { current, total })}
+            {progressText ?? t('library.removingItemsProgress', { current, total })}
           </Text>
           <ProgressBar current={current} total={total} height={8} />
         </View>

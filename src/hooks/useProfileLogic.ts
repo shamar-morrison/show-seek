@@ -8,7 +8,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking } from 'react-native';
 
-const SHOWSEEK_WEB_URL = 'https://show-seek-web.vercel.app';
+const SHOWSEEK_WEB_URL = 'https://show-seek-web.shamar-webdev.workers.dev';
 const PACKAGE_ID = 'app.horizon.showseek';
 const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 
@@ -79,19 +79,22 @@ export function useProfileLogic() {
     setShowWebAppModal(false);
   }, []);
 
-  const performExport = useCallback(async (format: 'csv' | 'markdown') => {
-    setIsExporting(true);
-    try {
-      await exportUserData(format);
-    } catch (error) {
-      console.error('Export failed:', error);
-      const message =
-        error instanceof Error ? error.message : t('profile.exportFailedFallbackMessage');
-      Alert.alert(t('profile.exportFailedTitle'), message);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [t]);
+  const performExport = useCallback(
+    async (format: 'csv' | 'markdown') => {
+      setIsExporting(true);
+      try {
+        await exportUserData(format);
+      } catch (error) {
+        console.error('Export failed:', error);
+        const message =
+          error instanceof Error ? error.message : t('profile.exportFailedFallbackMessage');
+        Alert.alert(t('profile.exportFailedTitle'), message);
+      } finally {
+        setIsExporting(false);
+      }
+    },
+    [t]
+  );
 
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

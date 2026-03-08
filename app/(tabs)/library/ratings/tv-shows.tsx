@@ -1,21 +1,31 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { RatingsEmptyState } from '@/src/components/library/RatingsEmptyState';
 import { TVShowRatingListCard } from '@/src/components/library/TVShowRatingListCard';
 import ListActionsModal from '@/src/components/ListActionsModal';
 import { RATING_SCREEN_SORT_OPTIONS } from '@/src/components/MediaSortModal';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
+import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
+import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { EnrichedTVRating, useEnrichedTVRatings } from '@/src/hooks/useEnrichedRatings';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import {
+  RatingMultiSelectTarget,
+  useRatingMultiSelectActions,
+} from '@/src/hooks/useRatingMultiSelectActions';
 import { useRatingScreenLogic } from '@/src/hooks/useRatingScreenLogic';
+import { useDeleteRating } from '@/src/hooks/useRatings';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
@@ -24,8 +34,8 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Search, SlidersHorizontal, Star } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import { Search, Star } from 'lucide-react-native';
+import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Pressable,
@@ -40,20 +50,24 @@ const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 
 // Memoized media extractor for performance
 const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
+type TVRatingSelectionTarget = Extract<RatingMultiSelectTarget, { mediaType: 'tv' }>;
 
 export default function TVShowRatingsScreen() {
   const router = useRouter();
   const currentTab = useCurrentTab();
+  const { accentColor } = useAccentColor();
   const {
     data: enrichedRatings,
     isLoading,
     error,
     refetch,
   } = useEnrichedTVRatings();
+  const deleteRatingMutation = useDeleteRating();
   const { t } = useTranslation();
   const { resolvePosterPath } = usePosterOverrides();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const toastRef = useRef<ToastRef>(null);
   const emptyStateHeight = windowHeight - insets.top - insets.bottom - 150;
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
     getThreeColumnGridMetrics(windowWidth);
@@ -62,13 +76,69 @@ export default function TVShowRatingsScreen() {
   const {
     searchQuery,
     isSearchActive,
-    filteredItems,
     deactivateSearch,
     setSearchQuery,
     searchButton,
   } = useHeaderSearch({
     items: [] as EnrichedTVRating[],
     getSearchableText: (item) => item.tvShow?.name || '',
+  });
+
+  const handleShowToast = useCallback((message: string) => {
+    toastRef.current?.show(message);
+  }, []);
+
+  const handleNavigate = useCallback(
+    (item: EnrichedTVRating) => {
+      if (!item.tvShow) return;
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+      router.push(`${basePath}/tv/${item.tvShow.id}` as any);
+    },
+    [currentTab, router]
+  );
+
+  const getSelectionTarget = useCallback(
+    (item: EnrichedTVRating): TVRatingSelectionTarget | null =>
+      item.tvShow
+        ? {
+            id: item.rating.id,
+            mediaType: 'tv',
+            mediaId: item.tvShow.id,
+          }
+        : null,
+    []
+  );
+
+  const removeRating = useCallback(
+    (target: TVRatingSelectionTarget) =>
+      deleteRatingMutation.mutateAsync({ mediaId: target.mediaId, mediaType: target.mediaType }),
+    [deleteRatingMutation]
+  );
+
+  const {
+    handleItemPress,
+    handleLongPress,
+    selectedCount,
+    isSelectionMode,
+    isItemSelected,
+    clearSelection,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleRemoveSelectedItems,
+    bulkRemoveProgress,
+    isBulkRemoving,
+  } = useRatingMultiSelectActions<EnrichedTVRating, TVRatingSelectionTarget>({
+    isLoading,
+    isRemoving: deleteRatingMutation.isPending,
+    getSelectionTarget,
+    onNavigate: handleNavigate,
+    showToast: handleShowToast,
+    removeRating,
+    isSearchActive,
+    deactivateSearch,
+    insetsBottom: insets.bottom,
   });
 
   // Use shared rating screen logic with search integration
@@ -101,6 +171,7 @@ export default function TVShowRatingsScreen() {
       onClose: deactivateSearch,
       placeholder: t('library.searchTVShowsPlaceholder'),
     },
+    isSelectionMode,
   });
 
   // Filter sortedData based on search query (useHeaderSearch's filtering won't work
@@ -114,19 +185,12 @@ export default function TVShowRatingsScreen() {
     });
   }, [sortedData, searchQuery]);
 
-  const handleItemPress = useCallback(
-    (tvShowId: number) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
-      router.push(`${basePath}/tv/${tvShowId}` as any);
-    },
-    [currentTab, router]
-  );
-
   const renderGridItem = useCallback(
     ({ item }: { item: EnrichedTVRating }) => {
       if (!item.tvShow) return null;
+
       const posterPath = resolvePosterPath('tv', item.tvShow.id, item.tvShow.poster_path);
+      const isSelected = isItemSelected(item);
 
       return (
         <Pressable
@@ -135,17 +199,39 @@ export default function TVShowRatingsScreen() {
             { width: itemWidth, marginHorizontal: itemHorizontalMargin },
             pressed && styles.mediaCardPressed,
           ]}
-          onPress={() => handleItemPress(item.tvShow!.id)}
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
         >
-          <MediaImage
-            source={{
-              uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium),
-            }}
-            style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
-            contentFit="cover"
-          />
-          <View style={styles.ratingBadgeContainer}>
-            <RatingBadge rating={item.rating.rating} size="medium" />
+          <View style={styles.posterContainer}>
+            <MediaImage
+              source={{
+                uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium),
+              }}
+              style={[styles.poster, { width: itemWidth, height: itemWidth * 1.5 }]}
+              contentFit="cover"
+            />
+            {isSelectionMode && (
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.selectionOverlay,
+                  isSelected && { borderColor: accentColor, backgroundColor: COLORS.overlaySubtle },
+                ]}
+              />
+            )}
+            <View style={styles.ratingBadgeContainer}>
+              <RatingBadge rating={item.rating.rating} size="medium" />
+            </View>
+            {isSelectionMode && (
+              <View
+                style={[
+                  styles.selectionBadge,
+                  isSelected && { backgroundColor: accentColor, borderColor: accentColor },
+                ]}
+              >
+                <AnimatedCheck visible={isSelected} />
+              </View>
+            )}
           </View>
           {item.tvShow && (
             <View style={mediaCardStyles.info}>
@@ -173,14 +259,29 @@ export default function TVShowRatingsScreen() {
         </Pressable>
       );
     },
-    [handleItemPress, itemHorizontalMargin, itemWidth, resolvePosterPath]
+    [
+      accentColor,
+      handleItemPress,
+      handleLongPress,
+      isItemSelected,
+      isSelectionMode,
+      itemHorizontalMargin,
+      itemWidth,
+      resolvePosterPath,
+    ]
   );
 
   const renderListItem = useCallback(
     ({ item }: { item: EnrichedTVRating }) => (
-      <TVShowRatingListCard item={item} onPress={handleItemPress} />
+      <TVShowRatingListCard
+        item={item}
+        onPress={() => handleItemPress(item)}
+        onLongPress={handleLongPress}
+        selectionMode={isSelectionMode}
+        isSelected={isItemSelected(item)}
+      />
     ),
-    [handleItemPress]
+    [handleItemPress, handleLongPress, isItemSelected, isSelectionMode]
   );
 
   const keyExtractor = useCallback((item: EnrichedTVRating) => item.rating.id, []);
@@ -203,7 +304,7 @@ export default function TVShowRatingsScreen() {
     );
   }
 
-  if (sortedData.length === 0 && !hasActiveFilterState) {
+  if (sortedData.length === 0 && !hasActiveFilterState && !isSelectionMode && !isBulkRemoving) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
@@ -231,8 +332,10 @@ export default function TVShowRatingsScreen() {
             contentContainerStyle={[
               styles.gridListContent,
               { paddingHorizontal: listPaddingHorizontal },
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
             ]}
             showsVerticalScrollIndicator={false}
+            extraData={isItemSelected}
             ListEmptyComponent={
               <RatingsEmptyState
                 searchQuery={searchQuery}
@@ -249,8 +352,12 @@ export default function TVShowRatingsScreen() {
             data={displayItems}
             renderItem={renderListItem}
             keyExtractor={keyExtractor}
-            contentContainerStyle={libraryListStyles.listContent}
+            contentContainerStyle={[
+              libraryListStyles.listContent,
+              selectionContentBottomPadding > 0 && { paddingBottom: selectionContentBottomPadding },
+            ]}
             showsVerticalScrollIndicator={false}
+            extraData={isItemSelected}
             ListEmptyComponent={
               <RatingsEmptyState
                 searchQuery={searchQuery}
@@ -285,6 +392,29 @@ export default function TVShowRatingsScreen() {
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      <Toast ref={toastRef} />
+
+      <BulkRemoveProgressModal
+        visible={isBulkRemoving}
+        current={bulkRemoveProgress?.processed ?? 0}
+        total={bulkRemoveProgress?.total ?? 0}
+        title={t('library.removingRatingsTitle')}
+        progressText={t('library.removingRatingsProgress', {
+          current: bulkRemoveProgress?.processed ?? 0,
+          total: bulkRemoveProgress?.total ?? 0,
+        })}
+      />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onRemoveItems={handleRemoveSelectedItems}
+          onHeightChange={handleActionBarHeightChange}
+          removeLabel={t('library.removeRatings')}
+        />
+      )}
     </>
   );
 }
@@ -299,6 +429,9 @@ const styles = StyleSheet.create({
   mediaCardPressed: {
     opacity: ACTIVE_OPACITY,
   },
+  posterContainer: {
+    position: 'relative',
+  },
   poster: {
     borderRadius: BORDER_RADIUS.m,
     backgroundColor: COLORS.surfaceLight,
@@ -307,5 +440,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.xs,
     right: SPACING.xs,
+  },
+  selectionOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: SPACING.xs,
+    left: SPACING.xs,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.white,
+    backgroundColor: COLORS.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

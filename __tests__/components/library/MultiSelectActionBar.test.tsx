@@ -54,6 +54,31 @@ describe('MultiSelectActionBar', () => {
     expect(onRemoveItems).toHaveBeenCalledTimes(1);
   });
 
+  it('renders only cancel and remove when the primary action is omitted', () => {
+    const { getByTestId, queryByTestId, getByText } = render(
+      <MultiSelectActionBar selectedCount={2} onCancel={jest.fn()} onRemoveItems={jest.fn()} />
+    );
+
+    expect(getByTestId('multi-select-top-row')).toBeTruthy();
+    expect(getByTestId('multi-select-cancel-button')).toBeTruthy();
+    expect(getByTestId('multi-select-remove-button')).toBeTruthy();
+    expect(queryByTestId('multi-select-primary-button')).toBeNull();
+    expect(getByText('Remove items')).toBeTruthy();
+  });
+
+  it('uses a custom remove label when provided', () => {
+    const { getByText } = render(
+      <MultiSelectActionBar
+        selectedCount={1}
+        onCancel={jest.fn()}
+        onRemoveItems={jest.fn()}
+        removeLabel="Remove ratings"
+      />
+    );
+
+    expect(getByText('Remove ratings')).toBeTruthy();
+  });
+
   it('reports rendered height when layout changes', () => {
     const onHeightChange = jest.fn();
 

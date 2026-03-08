@@ -459,7 +459,16 @@
     "removeItemsConfirm_other": "¿Quitar {{count}} elementos seleccionados de {{listName}}?",
     "itemsRemoved": "{{count}} elementos quitados",
     "itemsRemoved_one": "{{count}} elemento quitado",
-    "itemsRemoved_other": "{{count}} elementos quitados"
+    "itemsRemoved_other": "{{count}} elementos quitados",
+    "removeRatings": "Quitar puntuaciones",
+    "removingRatingsTitle": "Quitando puntuaciones",
+    "removingRatingsProgress": "Quitando puntuaciones {{current}} de {{total}}.",
+    "removeRatingsConfirm": "¿Quitar {{count}} puntuaciones seleccionadas?",
+    "removeRatingsConfirm_one": "¿Quitar {{count}} puntuación seleccionada?",
+    "removeRatingsConfirm_other": "¿Quitar {{count}} puntuaciones seleccionadas?",
+    "ratingsRemoved": "{{count}} puntuaciones quitadas",
+    "ratingsRemoved_one": "{{count}} puntuación quitada",
+    "ratingsRemoved_other": "{{count}} puntuaciones quitadas"
   },
   "rating": {
     "title": "Puntuar",
