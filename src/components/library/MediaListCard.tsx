@@ -1,7 +1,9 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
@@ -19,6 +21,8 @@ interface MediaListCardProps {
   subtitle?: string;
   /** Hide the media type label (Movie/TV Show) */
   hideMediaType?: boolean;
+  /** Optional list ids for poster badge rendering */
+  listIds?: string[];
   /** Whether list is currently in multi-select mode */
   selectionMode?: boolean;
   /** Whether this item is selected in multi-select mode */
@@ -34,6 +38,7 @@ export const MediaListCard = memo<MediaListCardProps>(
     onLongPress,
     subtitle,
     hideMediaType,
+    listIds = [],
     selectionMode = false,
     isSelected = false,
     movieLabel,
@@ -48,6 +53,11 @@ export const MediaListCard = memo<MediaListCardProps>(
     const handleLongPress = useCallback(() => {
       onLongPress?.(item);
     }, [onLongPress, item]);
+    const { handlePress: handleCardPress, handleLongPress: handleCardLongPress, handlePressOut } =
+      useLongPressPressGuard({
+        onPress: handlePress,
+        onLongPress: onLongPress ? handleLongPress : undefined,
+      });
 
     const year = item.release_date
       ? new Date(item.release_date).getFullYear()
@@ -68,8 +78,9 @@ export const MediaListCard = memo<MediaListCardProps>(
           selectionMode && styles.selectionEnabledContainer,
           isSelected && { borderColor: accentColor, backgroundColor: COLORS.surfaceLight },
         ]}
-        onPress={handlePress}
-        onLongPress={handleLongPress}
+        onPress={handleCardPress}
+        onLongPress={onLongPress ? handleCardLongPress : undefined}
+        onPressOut={handlePressOut}
       >
         {selectionMode && (
           <View
@@ -82,11 +93,14 @@ export const MediaListCard = memo<MediaListCardProps>(
             <AnimatedCheck visible={isSelected} />
           </View>
         )}
-        <MediaImage
-          source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
-          style={listCardStyles.poster}
-          contentFit="cover"
-        />
+        <View style={styles.posterContainer}>
+          <MediaImage
+            source={{ uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small) }}
+            style={listCardStyles.poster}
+            contentFit="cover"
+          />
+          {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+        </View>
         <View style={listCardStyles.info}>
           <Text style={styles.title} numberOfLines={2}>
             {item.title || item.name}
@@ -122,6 +136,9 @@ MediaListCard.displayName = 'MediaListCard';
 const styles = StyleSheet.create({
   container: {
     marginBottom: SPACING.m,
+  },
+  posterContainer: {
+    position: 'relative',
   },
   selectionEnabledContainer: {
     borderWidth: 1,

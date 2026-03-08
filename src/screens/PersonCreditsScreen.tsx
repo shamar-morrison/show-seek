@@ -7,6 +7,7 @@ import {
   TVCrewCredit,
   TVShow,
 } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import ListActionsModal, {
@@ -16,13 +17,17 @@ import ListActionsModal, {
 import { SortState } from '@/src/components/MediaSortModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
+import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAllGenres } from '@/src/hooks/useGenres';
+import { useListMembership } from '@/src/hooks/useListMembership';
+import { useLongPressPressGuard } from '@/src/hooks/useLongPressPressGuard';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useViewModeToggle } from '@/src/hooks/useViewModeToggle';
@@ -54,6 +59,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 const DEFAULT_CREDITS_SORT: SortState = {
   option: 'rating',
@@ -66,6 +72,76 @@ interface CreditItem extends ListMediaItem {
   popularity?: number;
 }
 
+interface GridCreditCardProps {
+  item: CreditItem;
+  itemWidth: number;
+  itemHorizontalMargin: number;
+  listIds: string[];
+  onPress: (item: CreditItem) => void;
+  onLongPress: (item: CreditItem) => void;
+}
+
+const GridCreditCard = React.memo<GridCreditCardProps>(
+  ({ item, itemWidth, itemHorizontalMargin, listIds, onPress, onLongPress }) => {
+    const handlePress = useCallback(() => {
+      onPress(item);
+    }, [item, onPress]);
+
+    const handleLongPress = useCallback(() => {
+      onLongPress(item);
+    }, [item, onLongPress]);
+
+    const { handlePress: handleCardPress, handleLongPress: handleCardLongPress, handlePressOut } =
+      useLongPressPressGuard({
+        onPress: handlePress,
+        onLongPress: handleLongPress,
+      });
+
+    const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.gridCard,
+          { width: itemWidth, marginHorizontal: itemHorizontalMargin },
+          pressed && styles.cardPressed,
+        ]}
+        onPress={handleCardPress}
+        onLongPress={handleCardLongPress}
+        onPressOut={handlePressOut}
+      >
+        <View style={styles.gridPosterContainer}>
+          <MediaImage
+            source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
+            style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
+            contentFit="cover"
+          />
+          {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+        </View>
+        <View style={styles.gridInfo}>
+          <Text style={styles.gridTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          {item.release_date && (
+            <View style={mediaMetaStyles.yearRatingContainer}>
+              <Text style={mediaMetaStyles.year}>{year}</Text>
+              {item.vote_average > 0 && (
+                <>
+                  <Text style={mediaMetaStyles.separator}> • </Text>
+                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
+                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
+);
+
+GridCreditCard.displayName = 'GridCreditCard';
+
 export default function PersonCreditsScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -74,7 +150,9 @@ export default function PersonCreditsScreen() {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const { preferences } = usePreferences();
+  const requireAccount = useAccountRequired();
   const { resolvePosterPath } = usePosterOverrides();
+  const { getListsForMedia, showIndicators } = useListMembership();
   const movieLabel = t('media.movie');
   const tvShowLabel = t('media.tvShow');
   const { id, name, mediaType, creditType } = useLocalSearchParams<{
@@ -109,6 +187,10 @@ export default function PersonCreditsScreen() {
     DEFAULT_WATCH_STATUS_FILTERS
   );
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
 
   const { data: genreMap = {} } = useAllGenres();
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } =
@@ -195,10 +277,12 @@ export default function PersonCreditsScreen() {
       (credit): CreditItem => ({
         id: credit.id,
         title: getDisplayMediaTitle(credit, !!preferences?.showOriginalTitles),
+        name: 'name' in credit ? credit.name : undefined,
         poster_path: resolvePosterPath(mediaType, credit.id, credit.poster_path),
         media_type: mediaType as 'movie' | 'tv',
         vote_average: credit.vote_average || 0,
         release_date: 'first_air_date' in credit ? credit.first_air_date : credit.release_date,
+        first_air_date: 'first_air_date' in credit ? credit.first_air_date : undefined,
         addedAt: 0,
         genre_ids: credit.genre_ids,
         character: 'character' in credit ? credit.character : undefined,
@@ -254,6 +338,34 @@ export default function PersonCreditsScreen() {
     [currentTab, router]
   );
 
+  const handleItemLongPress = useCallback(
+    (item: CreditItem) => {
+      if (requireAccount()) {
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: item.media_type,
+        title: item.title,
+        name: item.name,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        release_date: item.release_date,
+        first_air_date: item.first_air_date,
+        genre_ids: item.genre_ids,
+      });
+    },
+    [requireAccount]
+  );
+
+  React.useEffect(() => {
+    if (selectedMediaItem) {
+      void addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
+
   const listActions = useMemo(
     () => [
       {
@@ -272,40 +384,28 @@ export default function PersonCreditsScreen() {
   );
 
   const renderGridItem = useCallback(
-    ({ item }: { item: CreditItem }) => (
-      <Pressable
-        style={({ pressed }) => [
-          styles.gridCard,
-          { width: itemWidth, marginHorizontal: itemHorizontalMargin },
-          pressed && styles.cardPressed,
-        ]}
-        onPress={() => handleItemPress(item)}
-      >
-        <MediaImage
-          source={{ uri: getImageUrl(item.poster_path, TMDB_IMAGE_SIZES.poster.medium) }}
-          style={[styles.gridPoster, { width: itemWidth, height: itemWidth * 1.5 }]}
-          contentFit="cover"
+    ({ item }: { item: CreditItem }) => {
+      const listIds = showIndicators ? getListsForMedia(item.id, item.media_type) : [];
+
+      return (
+        <GridCreditCard
+          item={item}
+          itemWidth={itemWidth}
+          itemHorizontalMargin={itemHorizontalMargin}
+          listIds={listIds}
+          onPress={handleItemPress}
+          onLongPress={handleItemLongPress}
         />
-        <View style={styles.gridInfo}>
-          <Text style={styles.gridTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          {item.release_date && (
-            <View style={mediaMetaStyles.yearRatingContainer}>
-              <Text style={mediaMetaStyles.year}>{new Date(item.release_date).getFullYear()}</Text>
-              {item.vote_average > 0 && (
-                <>
-                  <Text style={mediaMetaStyles.separator}> • </Text>
-                  <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
-                  <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
-                </>
-              )}
-            </View>
-          )}
-        </View>
-      </Pressable>
-    ),
-    [handleItemPress, itemHorizontalMargin, itemWidth]
+      );
+    },
+    [
+      getListsForMedia,
+      handleItemLongPress,
+      handleItemPress,
+      itemHorizontalMargin,
+      itemWidth,
+      showIndicators,
+    ]
   );
 
   const renderListItem = useCallback(
@@ -313,13 +413,22 @@ export default function PersonCreditsScreen() {
       <MediaListCard
         item={item}
         onPress={handleItemPress}
+        onLongPress={handleItemLongPress}
         subtitle={item.character || item.job}
         hideMediaType
+        listIds={showIndicators ? getListsForMedia(item.id, item.media_type) : []}
         movieLabel={movieLabel}
         tvShowLabel={tvShowLabel}
       />
     ),
-    [handleItemPress, movieLabel, tvShowLabel]
+    [
+      getListsForMedia,
+      handleItemLongPress,
+      handleItemPress,
+      movieLabel,
+      showIndicators,
+      tvShowLabel,
+    ]
   );
 
   if (creditsQuery.isLoading || isLoadingPreference) {
@@ -412,6 +521,14 @@ export default function PersonCreditsScreen() {
       />
 
       <ListActionsModal ref={listActionsModalRef} actions={listActions} />
+
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onDismiss={() => setSelectedMediaItem(null)}
+        />
+      )}
     </>
   );
 }
@@ -452,6 +569,9 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     marginBottom: SPACING.m,
+  },
+  gridPosterContainer: {
+    position: 'relative',
   },
   gridPoster: {
     borderRadius: BORDER_RADIUS.m,

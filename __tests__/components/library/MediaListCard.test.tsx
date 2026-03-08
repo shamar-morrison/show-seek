@@ -1,6 +1,6 @@
 import { MediaListCard } from '@/src/components/library/MediaListCard';
 import { ListMediaItem } from '@/src/services/ListService';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('react-native', () => {
@@ -16,6 +16,7 @@ jest.mock('react-native', () => {
         disabled,
         onPress: disabled ? undefined : onPress,
         onLongPress: disabled ? undefined : onLongPress,
+        onPressOut: disabled ? undefined : props.onPressOut,
       },
       children
     );
@@ -34,6 +35,10 @@ jest.mock('react-native', () => {
 jest.mock('@/src/components/ui/AnimatedCheck', () => ({
   AnimatedCheck: ({ visible }: { visible: boolean }) =>
     visible ? require('react').createElement('View', { testID: 'animated-check-visible' }) : null,
+}));
+
+jest.mock('@/src/components/ui/ListMembershipBadge', () => ({
+  ListMembershipBadge: () => require('react').createElement('View', { testID: 'list-membership-badge' }),
 }));
 
 jest.mock('@/src/components/ui/MediaImage', () => ({
@@ -107,5 +112,56 @@ describe('MediaListCard', () => {
     );
 
     expect(queryByTestId('media-list-card-selection-badge')).toBeNull();
+  });
+
+  it('renders a list membership badge when list ids are provided', () => {
+    const { getByTestId } = render(
+      <MediaListCard
+        item={item}
+        onPress={jest.fn()}
+        onLongPress={jest.fn()}
+        listIds={['watchlist']}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+      />
+    );
+
+    expect(getByTestId('list-membership-badge')).toBeTruthy();
+  });
+
+  it('suppresses press after long press until press out resets the guard', () => {
+    jest.useFakeTimers();
+
+    const onPress = jest.fn();
+    const onLongPress = jest.fn();
+    const { UNSAFE_getByType } = render(
+      <MediaListCard
+        item={item}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        movieLabel="Movie"
+        tvShowLabel="TV Show"
+      />
+    );
+    const { Pressable } = require('react-native');
+    const pressable = UNSAFE_getByType(Pressable);
+
+    fireEvent(pressable, 'longPress');
+    fireEvent(pressable, 'press');
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+
+    fireEvent(pressable, 'pressOut');
+
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    fireEvent(pressable, 'press');
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+
+    jest.useRealTimers();
   });
 });
