@@ -759,6 +759,9 @@
     "defaultBulkAction": "Acción masiva predeterminada: {{mode}}",
     "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista."
   },
+  "imdbImport": {
+    "backToFiles": "Volver a los archivos"
+  },
   "guestAccess": {
     "body": "Necesitas una cuenta para hacer eso. Inicia sesión.",
     "okLetsGo": "Ok vamos",

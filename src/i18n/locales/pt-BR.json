@@ -759,6 +759,9 @@
     "defaultBulkAction": "Ação padrão em massa: {{mode}}",
     "defaultBulkActionDescription": "Escolha o que acontece quando você adiciona itens em massa a partir de uma lista."
   },
+  "imdbImport": {
+    "backToFiles": "Voltar aos arquivos"
+  },
   "guestAccess": {
     "body": "Você precisa de uma conta para fazer isso. Faça login.",
     "okLetsGo": "Ok, vamos lá",

@@ -1,16 +1,15 @@
 import type { PreparedImdbImport } from '@/src/utils/imdbImport';
 import type { ImdbImportStats } from '@/functions/src/shared/imdbImport';
+import { ImdbImportFlowProvider } from '@/src/context/ImdbImportFlowContext';
 import ImdbImportScreen from '@/src/screens/ImdbImportScreen';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
-const mockInvalidateQueries = jest.fn();
 const mockPickRawFiles = jest.fn();
 const mockPrepareFiles = jest.fn();
-const mockRunPreparedImport = jest.fn();
 const mockRequireAccount = jest.fn(() => false);
 let mockIsPremium = true;
 let mockIsPremiumLoading = false;
@@ -41,18 +40,6 @@ jest.mock('react-native-safe-area-context', () => {
       React.createElement(React.Fragment, null, children),
   };
 });
-
-jest.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({
-    invalidateQueries: mockInvalidateQueries,
-  }),
-}));
-
-jest.mock('@/src/context/auth', () => ({
-  useAuth: () => ({
-    user: { uid: 'user-123' },
-  }),
-}));
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => ({
@@ -107,7 +94,6 @@ jest.mock('@/src/services/ImdbImportService', () => ({
   imdbImportService: {
     pickRawFiles: (...args: unknown[]) => mockPickRawFiles(...args),
     prepareFiles: (...args: unknown[]) => mockPrepareFiles(...args),
-    runPreparedImport: (...args: unknown[]) => mockRunPreparedImport(...args),
   },
 }));
 
@@ -172,6 +158,14 @@ const emptyPreparedImport: PreparedImdbImport = {
   unsupportedFiles: ['people.csv'],
 };
 
+function renderScreen() {
+  return render(
+    <ImdbImportFlowProvider>
+      <ImdbImportScreen />
+    </ImdbImportFlowProvider>
+  );
+}
+
 describe('ImdbImportScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -185,9 +179,8 @@ describe('ImdbImportScreen', () => {
   it('renders for free users, shows the CTA premium badge, and routes to premium on select', () => {
     mockIsPremium = false;
 
-    const { getByTestId, getByText } = render(<ImdbImportScreen />);
+    const { getByTestId, getByText } = renderScreen();
 
-    expect(mockReplace).not.toHaveBeenCalled();
     expect(getByTestId('premium-badge')).toBeTruthy();
 
     fireEvent.press(getByText('Select CSV Files'));
@@ -197,7 +190,7 @@ describe('ImdbImportScreen', () => {
   });
 
   it('renders the ready state after selecting files', async () => {
-    const { getByText, findByText } = render(<ImdbImportScreen />);
+    const { getByText, findByText } = renderScreen();
 
     fireEvent.press(getByText('Select CSV Files'));
 
@@ -211,7 +204,7 @@ describe('ImdbImportScreen', () => {
   it('shows singular count copy for one file, row, and batch', async () => {
     mockPrepareFiles.mockReturnValue(singularPreparedImport);
 
-    const { getAllByText, getByText, findByText } = render(<ImdbImportScreen />);
+    const { getAllByText, getByText, findByText } = renderScreen();
 
     fireEvent.press(getByText('Select CSV Files'));
 
@@ -224,7 +217,7 @@ describe('ImdbImportScreen', () => {
   it('shows the nothing-to-import state when no chunks were prepared', async () => {
     mockPrepareFiles.mockReturnValue(emptyPreparedImport);
 
-    const { findByText, getByText, queryByText } = render(<ImdbImportScreen />);
+    const { findByText, getByText, queryByText } = renderScreen();
 
     fireEvent.press(getByText('Select CSV Files'));
 
@@ -235,103 +228,13 @@ describe('ImdbImportScreen', () => {
     expect(queryByText('Ready to import')).toBeNull();
   });
 
-  it('shows progress and a grouped final summary after import', async () => {
-    let resolveImport!: (value: ImdbImportStats) => void;
-
-    mockRunPreparedImport.mockImplementation(
-      (_prepared: PreparedImdbImport, onProgress?: (progress: any) => void) => {
-        onProgress?.({
-          completedChunks: 1,
-          totalChunks: 4,
-          stats: createStats({
-            imported: {
-              customListsCreated: 0,
-              listItems: 2,
-              ratings: 1,
-              watchedEpisodes: 0,
-              watchedMovies: 0,
-              watchedShows: 0,
-            },
-            processedActions: 8,
-            processedEntities: 8,
-            skipped: {
-              unresolved_imdb_id: 2,
-            },
-          }),
-        });
-
-        return new Promise((resolve) => {
-          resolveImport = resolve;
-        });
-      }
-    );
-
-    const { findByText, getByTestId, getByText } = render(<ImdbImportScreen />);
+  it('navigates to the dedicated progress screen when starting the import', async () => {
+    const { findByText, getByText } = renderScreen();
 
     fireEvent.press(getByText('Select CSV Files'));
     await findByText('Ready to import');
     fireEvent.press(getByText('Start Import'));
 
-    expect(await findByText('25% complete')).toBeTruthy();
-    expect(getByText('1 of 4 upload batches finished')).toBeTruthy();
-    expect(getByTestId('imdb-import-progress-bar')).toBeTruthy();
-
-    resolveImport(
-      createStats({
-        imported: {
-          customListsCreated: 1,
-          listItems: 4,
-          ratings: 3,
-          watchedEpisodes: 0,
-          watchedMovies: 1,
-          watchedShows: 0,
-        },
-        processedActions: 8,
-        processedEntities: 8,
-        skipped: {
-          unresolved_imdb_id: 2,
-          unsupported_tmdb_result: 1,
-        },
-        ignored: {
-          item_notes: 1,
-        },
-      })
-    );
-
-    expect(await findByText('Import complete')).toBeTruthy();
-    expect(
-      getByText('This summary shows what was imported, plus anything that was skipped or ignored.')
-    ).toBeTruthy();
-    expect(getByText('Rows with unresolved IMDb IDs')).toBeTruthy();
-    expect(getByText('Rows with unsupported TMDB matches')).toBeTruthy();
-    expect(getByText('IMDb item notes')).toBeTruthy();
-    expect(getByText('Movie watches')).toBeTruthy();
-
-    await waitFor(() => {
-      expect(mockInvalidateQueries).toHaveBeenCalled();
-    });
-  });
-
-  it('uses issues-only copy when there are no imported totals to show', async () => {
-    mockRunPreparedImport.mockResolvedValue(
-      createStats({
-        processedActions: 8,
-        processedEntities: 8,
-        skipped: {
-          unresolved_imdb_id: 2,
-        },
-      })
-    );
-
-    const { findByText, getByText } = render(<ImdbImportScreen />);
-
-    fireEvent.press(getByText('Select CSV Files'));
-    await findByText('Ready to import');
-    fireEvent.press(getByText('Start Import'));
-
-    expect(await findByText('Import complete')).toBeTruthy();
-    expect(
-      getByText('This summary only shows items that were skipped or ignored during the import.')
-    ).toBeTruthy();
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/profile/imdb-import-progress');
   });
 });

@@ -759,6 +759,9 @@
       "title": "Ouvrir l’application web"
     }
   },
+  "imdbImport": {
+    "backToFiles": "Retour aux fichiers"
+  },
   "guestAccess": {
     "body": "Vous avez besoin d'un compte pour faire cela. Veuillez vous connecter.",
     "okLetsGo": "Ok, allons-y",

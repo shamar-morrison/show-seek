@@ -1,15 +1,9 @@
-import type {
-  ImdbImportFileKind,
-  ImdbImportIgnoredMetadataKey,
-  ImdbImportSkipReason,
-  ImdbImportStats,
-} from '@/functions/src/shared/imdbImport';
+import type { ImdbImportFileKind } from '@/functions/src/shared/imdbImport';
 import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
-import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   ACTIVE_OPACITY,
   BORDER_RADIUS,
@@ -19,20 +13,16 @@ import {
   hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { useAuth } from '@/src/context/auth';
+import { useImdbImportFlow } from '@/src/context/ImdbImportFlowContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { imdbImportService } from '@/src/services/ImdbImportService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { getTechnicalErrorMessage } from '@/src/utils/errorPresentation';
-import { type PreparedImdbImport } from '@/src/utils/imdbImport';
-import { getImdbImportErrorCode, getImdbImportErrorMessageKey } from '@/src/utils/imdbImportError';
-import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { AlertCircle, ArrowRight, Check, Info, Upload } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Info, Upload } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -54,90 +44,29 @@ const FILE_KIND_LABEL_KEYS: Record<ImdbImportFileKind, string> = {
   watchlist: 'imdbImport.fileKinds.watchlist',
 };
 
-const SKIPPED_REASON_LABEL_KEYS: Record<ImdbImportSkipReason, string> = {
-  invalid_date: 'imdbImport.skipped.invalidDate',
-  invalid_rating: 'imdbImport.skipped.invalidRating',
-  malformed_row: 'imdbImport.skipped.malformedRow',
-  unresolved_imdb_id: 'imdbImport.skipped.unresolvedImdbId',
-  unsupported_file: 'imdbImport.skipped.unsupportedFile',
-  unsupported_list_episode: 'imdbImport.skipped.unsupportedListEpisode',
-  unsupported_non_title_row: 'imdbImport.skipped.unsupportedNonTitleRow',
-  unsupported_tmdb_result: 'imdbImport.skipped.unsupportedTmdbResult',
-};
-
-const IGNORED_METADATA_LABEL_KEYS: Record<ImdbImportIgnoredMetadataKey, string> = {
-  item_notes: 'imdbImport.ignored.itemNotes',
-};
-
-const IMPORTED_LABEL_KEYS = {
-  customListsCreated: 'imdbImport.imported.customListsCreated',
-  listItems: 'imdbImport.imported.listItems',
-  ratings: 'imdbImport.imported.ratings',
-  watchedEpisodes: 'imdbImport.imported.watchedEpisodes',
-  watchedMovies: 'imdbImport.imported.watchedMovies',
-  watchedShows: 'imdbImport.imported.watchedShows',
-} as const;
-
-type SummaryEntry = {
-  key: string;
-  label: string;
-  value: number;
-};
-
 export default function ImdbImportScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
   const requireAccount = useAccountRequired();
   const { isLoading: isPremiumLoading, isPremium } = usePremium();
   const { accentColor } = useAccentColor();
-  const [preparedImport, setPreparedImport] = useState<PreparedImdbImport | null>(null);
+  const { preparedImport, setPreparedImport } = useImdbImportFlow();
   const [isPickingFiles, setIsPickingFiles] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [completedChunks, setCompletedChunks] = useState(0);
-  const [totalChunks, setTotalChunks] = useState(0);
-  const [progressStats, setProgressStats] = useState<ImdbImportStats | null>(null);
-  const [finalStats, setFinalStats] = useState<ImdbImportStats | null>(null);
 
   useEffect(() => {
     if (requireAccount()) {
       router.back();
-      return;
     }
   }, [requireAccount, router]);
-
-  const runtimeStats = finalStats ?? progressStats;
-  const progressPercent =
-    totalChunks > 0 ? Math.min(100, Math.round((completedChunks / totalChunks) * 100)) : 0;
-
-  const importedEntries = useMemo(
-    () => createSummaryEntries(runtimeStats?.imported ?? {}, IMPORTED_LABEL_KEYS, t),
-    [runtimeStats, t]
-  );
-
-  const skippedEntries = useMemo(
-    () => createSummaryEntries(runtimeStats?.skipped ?? {}, SKIPPED_REASON_LABEL_KEYS, t),
-    [runtimeStats, t]
-  );
-
-  const ignoredEntries = useMemo(
-    () => createSummaryEntries(runtimeStats?.ignored ?? {}, IGNORED_METADATA_LABEL_KEYS, t),
-    [runtimeStats, t]
-  );
 
   const supportedRowCount = preparedImport?.stats.processedActions ?? 0;
   const selectedFileCount =
     (preparedImport?.files.length ?? 0) + (preparedImport?.unsupportedFiles.length ?? 0);
   const selectedChunkCount = preparedImport?.chunks.length ?? 0;
   const hasImportableChunks = selectedChunkCount > 0;
-  const finalSummaryDescriptionKey =
-    importedEntries.length > 0
-      ? 'imdbImport.completeBodyWithImported'
-      : 'imdbImport.completeBodyIssuesOnly';
 
   const handlePickFiles = async () => {
-    if (isPickingFiles || isImporting || isPremiumLoading) {
+    if (isPickingFiles || isPremiumLoading) {
       return;
     }
 
@@ -155,10 +84,6 @@ export default function ImdbImportScreen() {
       }
 
       setPreparedImport(imdbImportService.prepareFiles(rawFiles));
-      setFinalStats(null);
-      setProgressStats(null);
-      setCompletedChunks(0);
-      setTotalChunks(0);
     } catch (error) {
       console.error('[ImdbImportScreen] Failed to pick files:', error);
       Alert.alert(t('common.errorTitle'), t('imdbImport.errors.pickFailed'));
@@ -167,8 +92,8 @@ export default function ImdbImportScreen() {
     }
   };
 
-  const handleStartImport = async () => {
-    if (!preparedImport || isImporting) {
+  const handleStartImport = () => {
+    if (!preparedImport) {
       return;
     }
 
@@ -177,43 +102,7 @@ export default function ImdbImportScreen() {
       return;
     }
 
-    setIsImporting(true);
-    setFinalStats(null);
-    setProgressStats(preparedImport.stats);
-    setCompletedChunks(0);
-    setTotalChunks(preparedImport.chunks.length);
-
-    try {
-      const stats = await imdbImportService.runPreparedImport(preparedImport, (progress) => {
-        setCompletedChunks(progress.completedChunks);
-        setTotalChunks(progress.totalChunks);
-        setProgressStats(progress.stats);
-      });
-      setFinalStats(stats);
-      setProgressStats(stats);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['lists', user?.uid] }),
-        queryClient.invalidateQueries({
-          queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user?.uid],
-        }),
-        queryClient.invalidateQueries({ queryKey: ['ratings', user?.uid] }),
-        queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
-        queryClient.invalidateQueries({ queryKey: ['watchedMovies', user?.uid] }),
-      ]);
-    } catch (error) {
-      const errorCode = getImdbImportErrorCode(error);
-      const technicalMessage = getTechnicalErrorMessage(error);
-
-      console.error('[ImdbImportScreen] Import failed:', {
-        error,
-        errorCode,
-        technicalMessage,
-      });
-
-      Alert.alert(t('imdbImport.errors.importFailedTitle'), t(getImdbImportErrorMessageKey(error)));
-    } finally {
-      setIsImporting(false);
-    }
+    router.push('/(tabs)/profile/imdb-import-progress' as any);
   };
 
   return (
@@ -250,7 +139,7 @@ export default function ImdbImportScreen() {
               style={[styles.primaryButton, styles.imdbButton]}
               onPress={handlePickFiles}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={isPickingFiles || isImporting || isPremiumLoading}
+              disabled={isPickingFiles || isPremiumLoading}
             >
               {isPickingFiles ? (
                 <ActivityIndicator color={COLORS.black} />
@@ -270,21 +159,15 @@ export default function ImdbImportScreen() {
                 styles.startButton,
                 {
                   backgroundColor:
-                    hasImportableChunks && !isImporting ? accentColor : COLORS.surfaceLight,
+                    hasImportableChunks && !isPickingFiles ? accentColor : COLORS.surfaceLight,
                 },
               ]}
               onPress={handleStartImport}
               activeOpacity={ACTIVE_OPACITY}
-              disabled={!hasImportableChunks || isImporting}
+              disabled={!hasImportableChunks || isPickingFiles}
             >
-              {isImporting ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <>
-                  <Upload size={18} color={COLORS.white} />
-                  <Text style={styles.startButtonText}>{t('imdbImport.startImport')}</Text>
-                </>
-              )}
+              <Upload size={18} color={COLORS.white} />
+              <Text style={styles.startButtonText}>{t('imdbImport.startImport')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -340,7 +223,7 @@ export default function ImdbImportScreen() {
           ) : null}
         </StageCard>
 
-        {preparedImport && hasImportableChunks && !isImporting && !finalStats ? (
+        {preparedImport && hasImportableChunks ? (
           <StageCard title={t('imdbImport.readyTitle')} description={t('imdbImport.readyBody')}>
             <View style={styles.inlineNote}>
               <Info size={16} color={COLORS.textSecondary} />
@@ -349,71 +232,12 @@ export default function ImdbImportScreen() {
           </StageCard>
         ) : null}
 
-        {preparedImport && !hasImportableChunks && !isImporting && !finalStats ? (
+        {preparedImport && !hasImportableChunks ? (
           <StageCard
             title={t('imdbImport.nothingToImportTitle')}
             description={t('imdbImport.nothingToImportMessage')}
           >
             {null}
-          </StageCard>
-        ) : null}
-
-        {isImporting ? (
-          <StageCard
-            title={t('imdbImport.importingTitle')}
-            description={t('imdbImport.progressBody', {
-              completed: completedChunks,
-              total: totalChunks,
-            })}
-          >
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressPercent}>
-                {t('imdbImport.progressPercent', { percent: progressPercent })}
-              </Text>
-              <Text style={styles.progressChunks}>
-                {t('imdbImport.progressChunks', {
-                  completed: completedChunks,
-                  total: totalChunks,
-                })}
-              </Text>
-            </View>
-            <View style={styles.progressTrack} testID="imdb-import-progress-bar">
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${progressPercent}%`, backgroundColor: accentColor },
-                ]}
-              />
-            </View>
-          </StageCard>
-        ) : null}
-
-        {finalStats ? (
-          <StageCard
-            title={t('imdbImport.finalSummaryTitle')}
-            description={t(finalSummaryDescriptionKey)}
-          >
-            <View style={styles.completeBadge}>
-              <Check size={20} color={COLORS.white} />
-            </View>
-            <ResultGroup
-              title={t('imdbImport.importedTitle')}
-              entries={importedEntries}
-              color={COLORS.success}
-              icon={<Check size={18} color={COLORS.success} />}
-            />
-            <ResultGroup
-              title={t('imdbImport.skippedTitle')}
-              entries={skippedEntries}
-              color={COLORS.warning}
-              icon={<AlertCircle size={18} color={COLORS.warning} />}
-            />
-            <ResultGroup
-              title={t('imdbImport.ignoredTitle')}
-              entries={ignoredEntries}
-              color={accentColor}
-              icon={<Info size={18} color={accentColor} />}
-            />
           </StageCard>
         ) : null}
 
@@ -496,54 +320,6 @@ function MetaPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ResultGroup({
-  color,
-  entries,
-  icon,
-  title,
-}: {
-  color: string;
-  entries: SummaryEntry[];
-  icon: React.ReactNode;
-  title: string;
-}) {
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return (
-    <View style={[styles.resultCard, { backgroundColor: hexToRGBA(color, 0.12) }]}>
-      <View style={styles.resultHeader}>
-        <View style={styles.resultTitleRow}>
-          {icon}
-          <Text style={styles.resultTitle}>{title}</Text>
-        </View>
-      </View>
-      {entries.map((entry) => (
-        <View key={entry.key} style={styles.resultRow}>
-          <Text style={styles.resultLabel}>{entry.label}</Text>
-          <Text style={styles.resultValue}>{entry.value}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function createSummaryEntries(
-  stats: object,
-  labelMap: Record<string, string>,
-  t: (key: string, options?: Record<string, unknown>) => string
-): SummaryEntry[] {
-  return Object.entries(stats as Record<string, number>)
-    .filter(([, value]) => (value ?? 0) > 0)
-    .map(([key, value]) => ({
-      key,
-      label: t(labelMap[key]),
-      value: value ?? 0,
-    }))
-    .sort((left, right) => right.value - left.value);
-}
-
 const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'column',
@@ -552,16 +328,6 @@ const styles = StyleSheet.create({
   arrowIcon: {
     marginHorizontal: SPACING.s,
     marginLeft: SPACING.l,
-  },
-  completeBadge: {
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: COLORS.success,
-    borderRadius: BORDER_RADIUS.round,
-    height: 44,
-    justifyContent: 'center',
-    marginBottom: SPACING.s,
-    width: 44,
   },
   fileList: {
     gap: SPACING.s,
@@ -676,77 +442,13 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     fontWeight: '700',
   },
-  privacyNote: {
-    alignItems: 'flex-start',
-    backgroundColor: COLORS.surfaceLight,
+  primaryButton: {
+    alignItems: 'center',
     borderRadius: BORDER_RADIUS.l,
-    flexDirection: 'row',
-    gap: SPACING.s,
-    padding: SPACING.m,
-  },
-  privacyNoteText: {
-    color: COLORS.textSecondary,
-    flex: 1,
-    fontSize: FONT_SIZE.s,
-    lineHeight: 18,
-  },
-  progressChunks: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-  },
-  progressFill: {
-    borderRadius: BORDER_RADIUS.round,
-    height: '100%',
-  },
-  progressHeader: {
-    gap: SPACING.xs,
-  },
-  progressPercent: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.l,
-    fontWeight: '800',
-  },
-  progressTrack: {
-    backgroundColor: COLORS.surfaceLight,
-    borderRadius: BORDER_RADIUS.round,
-    height: 10,
-    overflow: 'hidden',
-  },
-  resultCard: {
-    borderRadius: BORDER_RADIUS.l,
-    gap: SPACING.s,
-    padding: SPACING.m,
-  },
-  resultHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  resultLabel: {
-    color: COLORS.textSecondary,
-    flex: 1,
-    fontSize: FONT_SIZE.s,
-    marginRight: SPACING.m,
-  },
-  resultRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  resultTitle: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '700',
-  },
-  resultTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: SPACING.s,
-  },
-  resultValue: {
-    color: COLORS.text,
-    fontSize: FONT_SIZE.m,
-    fontWeight: '800',
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: SPACING.m,
+    width: '100%',
   },
   scrollContent: {
     gap: SPACING.l,
@@ -822,13 +524,5 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: FONT_SIZE.s,
     fontWeight: '700',
-  },
-  primaryButton: {
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.l,
-    justifyContent: 'center',
-    minHeight: 52,
-    paddingHorizontal: SPACING.m,
-    width: '100%',
   },
 });

@@ -785,6 +785,7 @@
     "selectFiles": "Select CSV Files",
     "replaceFiles": "Replace Selected Files",
     "startImport": "Start Import",
+    "backToFiles": "Back to Files",
     "recognizedFilesTitle": "Recognized files",
     "unsupportedFilesTitle": "Unsupported files",
     "rowsCount_one": "{{count}} row",
