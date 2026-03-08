@@ -22,20 +22,10 @@ export function useProfileLogic() {
   const { isPremium } = usePremium();
   const router = useRouter();
 
-  const [showSupportModal, setShowSupportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [showWebAppModal, setShowWebAppModal] = useState(false);
-
-  const handleSupportDevelopment = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShowSupportModal(true);
-  }, []);
-
-  const handleCloseSupportModal = useCallback(() => {
-    setShowSupportModal(false);
-  }, []);
 
   const handleRateApp = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -86,10 +76,7 @@ export function useProfileLogic() {
         await exportUserData(format);
       } catch (error) {
         console.error('Export failed:', error);
-        Alert.alert(
-          t('profile.exportFailedTitle'),
-          t('profile.exportFailedFallbackMessage')
-        );
+        Alert.alert(t('profile.exportFailedTitle'), t('profile.exportFailedFallbackMessage'));
       } finally {
         setIsExporting(false);
       }
@@ -204,15 +191,12 @@ export function useProfileLogic() {
     isPremium,
 
     // Modal states
-    showSupportModal,
     isExporting,
     isSigningOut,
     isClearingCache,
     showWebAppModal,
 
     // Handlers
-    handleSupportDevelopment,
-    handleCloseSupportModal,
     handleRateApp,
     handleSendFeedback,
     handleOpenWebApp,
