@@ -12,6 +12,7 @@ import {
   SPACING,
   hexToRGBA,
 } from '@/src/constants/theme';
+import { IMDB_IMPORT_ROUTE } from '@/src/constants/imdbImportRoutes';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useImdbImportFlow } from '@/src/context/ImdbImportFlowContext';
@@ -95,7 +96,7 @@ export default function ImdbImportProgressScreen() {
 
   useEffect(() => {
     if (!preparedImport || preparedImport.chunks.length === 0) {
-      router.replace('/(tabs)/profile/imdb-import' as any);
+      router.replace(IMDB_IMPORT_ROUTE);
     }
   }, [preparedImport, router]);
 
@@ -152,7 +153,7 @@ export default function ImdbImportProgressScreen() {
 
   const runImport = useCallback(async () => {
     if (!preparedImport || preparedImport.chunks.length === 0) {
-      router.replace('/(tabs)/profile/imdb-import' as any);
+      router.replace(IMDB_IMPORT_ROUTE);
       return;
     }
 

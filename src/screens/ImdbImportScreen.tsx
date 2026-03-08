@@ -12,6 +12,7 @@ import {
   SPACING,
   hexToRGBA,
 } from '@/src/constants/theme';
+import { IMDB_IMPORT_PROGRESS_ROUTE } from '@/src/constants/imdbImportRoutes';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useImdbImportFlow } from '@/src/context/ImdbImportFlowContext';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -102,7 +103,7 @@ export default function ImdbImportScreen() {
       return;
     }
 
-    router.push('/(tabs)/profile/imdb-import-progress' as any);
+    router.push(IMDB_IMPORT_PROGRESS_ROUTE);
   };
 
   return (

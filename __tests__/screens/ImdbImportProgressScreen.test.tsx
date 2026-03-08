@@ -167,11 +167,11 @@ describe('ImdbImportProgressScreen', () => {
       }
     );
 
-    const { findByText, getByTestId, getByText } = renderScreen();
+    const { findByText, getAllByText, getByTestId, getByText } = renderScreen();
 
     expect(mockRunPreparedImport).toHaveBeenCalledTimes(1);
     expect(await findByText('25% complete')).toBeTruthy();
-    expect(getByText('1 of 4 upload batches finished')).toBeTruthy();
+    expect(getAllByText('1 / 4 upload batches finished')).toHaveLength(2);
     expect(getByTestId('imdb-import-progress-bar')).toBeTruthy();
     expect(getByText('flow-ready')).toBeTruthy();
 

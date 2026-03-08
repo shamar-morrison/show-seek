@@ -760,7 +760,109 @@
     "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista."
   },
   "imdbImport": {
-    "backToFiles": "Volver a los archivos"
+    "title": "Importa tus datos de IMDb",
+    "description": "Trae tus valoraciones de IMDb, watchlist, listas personalizadas y check-ins sin reemplazar el resto de tus datos de ShowSeek.",
+    "selectStageTitle": "Seleccionar archivos",
+    "selectStageBody": "Elige una o varias exportaciones CSV de IMDb desde tu dispositivo y, cuando todo esté correcto, inicia la importación.",
+    "readyTitle": "Listo para importar",
+    "readyBody": "Tus archivos se han reconocido y están listos para fusionarse con ShowSeek.",
+    "readyNote": "Esta importación no es destructiva. Tus notas existentes y otros datos exclusivos de ShowSeek no se tocan.",
+    "importingTitle": "Importando",
+    "progressPercent": "{{percent}}% completado",
+    "progressChunks": "{{completed}} / {{total}} lotes de carga completados",
+    "completeBodyWithImported": "Este resumen muestra lo que se importó, además de cualquier elemento omitido o ignorado.",
+    "completeBodyIssuesOnly": "Este resumen solo muestra los elementos que se omitieron o ignoraron durante la importación.",
+    "supportedTitle": "Qué admite",
+    "supportedBody": "Usa exportaciones CSV de IMDb para valoraciones, watchlist, listas personalizadas y check-ins. Los metadatos de personas, imágenes, vídeos y notas de elementos se omiten y se informan.",
+    "selectFiles": "Seleccionar archivos CSV",
+    "replaceFiles": "Reemplazar archivos seleccionados",
+    "startImport": "Iniciar importación",
+    "backToFiles": "Volver a los archivos",
+    "recognizedFilesTitle": "Archivos reconocidos",
+    "unsupportedFilesTitle": "Archivos no compatibles",
+    "rowsCount_one": "{{count}} fila",
+    "rowsCount_other": "{{count}} filas",
+    "preflightTitle": "Resumen de la importación",
+    "finalSummaryTitle": "Importación completada",
+    "importedTitle": "Importado",
+    "skippedTitle": "Omitido",
+    "ignoredTitle": "Metadatos ignorados",
+    "progressTitle": "Progreso de la importación",
+    "progressBody": "{{completed}} / {{total}} lotes de carga completados",
+    "emptyState": "Selecciona una o varias exportaciones CSV de IMDb para revisarlas antes de importar.",
+    "nothingToImportTitle": "Nada que importar",
+    "nothingToImportMessage": "No hemos encontrado filas de IMDb compatibles en los archivos seleccionados.",
+    "whatWillBeImportedTitle": "Qué se importará",
+    "howItWorksTitle": "Cómo funciona",
+    "privacyNote": "Hacemos coincidir los títulos por ID de IMDb, importamos lo que ShowSeek admite y te mostramos cualquier dato omitido para que puedas revisar los resultados después.",
+    "meta": {
+      "filesSelected": "Archivos seleccionados",
+      "filesValue_one": "{{count}} archivo",
+      "filesValue_other": "{{count}} archivos",
+      "supportedRows": "Filas compatibles",
+      "rowsValue_one": "{{count}} fila",
+      "rowsValue_other": "{{count}} filas",
+      "uploadBatches": "Lotes de carga",
+      "batchesValue_one": "{{count}} lote",
+      "batchesValue_other": "{{count}} lotes"
+    },
+    "features": {
+      "ratingsTitle": "Valoraciones",
+      "ratingsDescription": "Las valoraciones de películas, series y episodios compatibles se importan cuando la valoración de IMDb es más reciente que la que ya tienes.",
+      "listsTitle": "Watchlist y listas personalizadas",
+      "listsDescription": "Los elementos de la watchlist se fusionan con tu watchlist predeterminada, mientras que otros CSV de listas de títulos de IMDb crean o reutilizan listas personalizadas coincidentes.",
+      "checkinsTitle": "Historial y progreso de visionado",
+      "checkinsDescription": "Los check-ins añaden visionados de películas, marcan series como vistas cuando es compatible y actualizan el progreso de episodios cuando la fila se puede asociar correctamente.",
+      "skipsTitle": "Se informa de los datos omitidos",
+      "skipsDescription": "Las personas, imágenes y vídeos no compatibles, las filas mal formadas, los ID de IMDb sin resolver y los episodios de listas se omiten y se contabilizan en el resumen final."
+    },
+    "howItWorks": {
+      "selectTitle": "Elige tus exportaciones CSV de IMDb",
+      "selectDescription": "Selecciona directamente en tu dispositivo archivos CSV de valoraciones, watchlist, listas personalizadas o check-ins.",
+      "matchTitle": "Relaciona todo por ID de IMDb",
+      "matchDescription": "ShowSeek resuelve los títulos a través de TMDB usando los ID de IMDb en lugar de adivinar por el título.",
+      "mergeTitle": "Fusiona sin borrar tus datos",
+      "mergeDescription": "Las valoraciones, listas e historial importados se fusionan con tu biblioteca existente en lugar de reemplazarla.",
+      "summaryTitle": "Revisa el resumen",
+      "summaryDescription": "Cuando termina la importación, obtienes un resumen agrupado de lo que se importó, se omitió o se ignoró."
+    },
+    "errors": {
+      "pickFailed": "No hemos podido leer los archivos seleccionados. Inténtalo de nuevo.",
+      "importFailedTitle": "La importación ha fallado",
+      "importFailedFallback": "La importación de IMDb ha fallado. Inténtalo de nuevo.",
+      "backendUnavailable": "La importación de IMDb aún no está disponible. Inténtalo de nuevo cuando el backend esté desplegado.",
+      "backendMisconfigured": "La importación de IMDb todavía no está configurada correctamente. Inténtalo más tarde.",
+      "serviceUnavailable": "La importación de IMDb no está disponible temporalmente. Inténtalo de nuevo dentro de un momento.",
+      "premiumRequired": "La importación de IMDb requiere Premium.",
+      "signInRequired": "Inicia sesión para importar tus datos de IMDb."
+    },
+    "fileKinds": {
+      "ratings": "Valoraciones",
+      "watchlist": "Watchlist",
+      "list": "Lista personalizada",
+      "checkins": "Check-ins"
+    },
+    "imported": {
+      "ratings": "Valoraciones",
+      "listItems": "Elementos de lista",
+      "watchedMovies": "Visionados de películas",
+      "watchedShows": "Series vistas",
+      "watchedEpisodes": "Episodios vistos",
+      "customListsCreated": "Listas personalizadas creadas"
+    },
+    "skipped": {
+      "unsupportedFile": "Archivos no compatibles",
+      "malformedRow": "Filas mal formadas",
+      "invalidRating": "Filas con valoraciones no válidas",
+      "invalidDate": "Filas con fechas no válidas",
+      "unsupportedNonTitleRow": "Filas de personas, imágenes o vídeos",
+      "unsupportedListEpisode": "Filas de episodios en listas/watchlists",
+      "unresolvedImdbId": "Filas con ID de IMDb sin resolver",
+      "unsupportedTmdbResult": "Filas con coincidencias de TMDB no compatibles"
+    },
+    "ignored": {
+      "itemNotes": "Notas de elementos de IMDb"
+    }
   },
   "guestAccess": {
     "body": "Necesitas una cuenta para hacer eso. Inicia sesión.",
