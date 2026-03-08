@@ -1,4 +1,3 @@
-import SupportDevelopmentModal from '@/src/components/SupportDevelopmentModal';
 import { AppSettingsSection } from '@/src/components/profile/AppSettingsSection';
 import { ContentSettingsSection } from '@/src/components/profile/ContentSettingsSection';
 import { IntegrationsSection } from '@/src/components/profile/IntegrationsSection';
@@ -10,11 +9,11 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { useRegion } from '@/src/context/RegionProvider';
-import { useAccountRequired } from '@/src/hooks/useAccountRequired';
-import { screenStyles } from '@/src/styles/screenStyles';
 import { useTrakt } from '@/src/context/TraktContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
+import { screenStyles } from '@/src/styles/screenStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,12 +43,10 @@ export default function ProfileScreen() {
   const isAccountRequired = useAccountRequired();
   const {
     isPremium,
-    showSupportModal,
     isExporting,
     isSigningOut,
     isClearingCache,
     showWebAppModal,
-    handleCloseSupportModal,
     handleRateApp,
     handleSendFeedback,
     handleOpenWebApp,
@@ -79,8 +76,9 @@ export default function ProfileScreen() {
     refetch: refetchPreferences,
   } = usePreferences();
   const updatePreference = useUpdatePreference();
-  const [updatingPreferenceKey, setUpdatingPreferenceKey] =
-    useState<keyof UserPreferences | null>(null);
+  const [updatingPreferenceKey, setUpdatingPreferenceKey] = useState<keyof UserPreferences | null>(
+    null
+  );
 
   const tabs: TabConfig[] = useMemo(
     () => [
@@ -230,9 +228,6 @@ export default function ProfileScreen() {
           {renderTabContent()}
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* Support Development Modal */}
-      <SupportDevelopmentModal visible={showSupportModal} onClose={handleCloseSupportModal} />
 
       {/* Web App Navigation Modal */}
       <WebAppModal
