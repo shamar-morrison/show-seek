@@ -1128,7 +1128,7 @@
     "whatsIncluded": "What's Included",
     "yearlyPlanBilling": "Billed yearly",
     "yearlyPlanName": "Yearly",
-    "yearlyPriceFallback": "$15.00"
+    "yearlyPriceFallback": "$30.00"
   },
   "relativeTime": {
     "daysAgo": "{{count}} days ago",

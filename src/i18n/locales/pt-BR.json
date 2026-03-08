@@ -1204,7 +1204,7 @@
     "subscribeButton": "Assinar Premium",
     "yearlyPlanBilling": "Cobrado anualmente",
     "yearlyPlanName": "Anual",
-    "yearlyPriceFallback": "$15.00"
+    "yearlyPriceFallback": "$30.00"
   },
   "premiumFeature": {
     "title": "Recurso Premium",
