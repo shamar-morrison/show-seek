@@ -30,6 +30,7 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -51,6 +52,18 @@ const VIEW_MODE_STORAGE_KEY = 'tvShowRatingsViewMode';
 // Memoized media extractor for performance
 const getTVShowFromItem = (item: EnrichedTVRating) => item.tvShow;
 type TVRatingSelectionTarget = Extract<RatingMultiSelectTarget, { mediaType: 'tv' }>;
+
+function getFirstAirYear(firstAirDate?: string | null): number | null {
+  if (!firstAirDate) {
+    return null;
+  }
+
+  try {
+    return parseTmdbDate(firstAirDate).getFullYear();
+  } catch {
+    return null;
+  }
+}
 
 export default function TVShowRatingsScreen() {
   const router = useRouter();
@@ -92,8 +105,13 @@ export default function TVShowRatingsScreen() {
     (item: EnrichedTVRating) => {
       if (!item.tvShow) return;
 
+      if (!currentTab) {
+        console.warn('Cannot navigate to tv show: currentTab is null');
+        return;
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const basePath = currentTab ? `/(tabs)/${currentTab}` : '';
+      const basePath = `/(tabs)/${currentTab}`;
       router.push(`${basePath}/tv/${item.tvShow.id}` as any);
     },
     [currentTab, router]
@@ -191,6 +209,7 @@ export default function TVShowRatingsScreen() {
 
       const posterPath = resolvePosterPath('tv', item.tvShow.id, item.tvShow.poster_path);
       const isSelected = isItemSelected(item);
+      const firstAirYear = getFirstAirYear(item.tvShow.first_air_date);
 
       return (
         <Pressable
@@ -238,11 +257,9 @@ export default function TVShowRatingsScreen() {
               <Text style={mediaCardStyles.title} numberOfLines={1}>
                 {item.tvShow.name}
               </Text>
-              {item.tvShow.first_air_date && (
+              {firstAirYear !== null && (
                 <View style={mediaMetaStyles.yearRatingContainer}>
-                  <Text style={mediaMetaStyles.year}>
-                    {new Date(item.tvShow.first_air_date).getFullYear()}
-                  </Text>
+                  <Text style={mediaMetaStyles.year}>{firstAirYear}</Text>
                   {item.tvShow.vote_average > 0 && (
                     <>
                       <Text style={mediaMetaStyles.separator}> • </Text>
