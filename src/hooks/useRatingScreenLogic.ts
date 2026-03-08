@@ -159,12 +159,14 @@ export function useRatingScreenLogic<TItem extends BaseEnrichedRating>({
     searchButton: isSelectionMode ? undefined : searchButton,
     searchState: isSelectionMode ? undefined : searchState,
   });
+  const searchOnClose = searchState?.onClose;
 
   useEffect(() => {
     if (isSelectionMode) {
       listActionsModalRef.current?.dismiss();
+      searchOnClose?.();
     }
-  }, [isSelectionMode]);
+  }, [isSelectionMode, searchOnClose]);
 
   // Scroll to top after sort/filter state changes (but not on initial mount)
   useEffect(() => {

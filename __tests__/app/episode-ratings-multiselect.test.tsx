@@ -38,6 +38,7 @@ jest.mock('@shopify/flash-list', () => {
       </View>
     );
   });
+  FlashList.displayName = 'FlashList';
 
   return { FlashList };
 });
@@ -72,6 +73,18 @@ jest.mock('@/src/hooks/useRatings', () => ({
         tvShowName: 'Show Two',
         episodeName: 'Arrival',
         posterPath: '/two.jpg',
+      },
+      {
+        id: 'episode-303-missing-season',
+        mediaType: 'episode',
+        rating: 6,
+        ratedAt: 50,
+        tvShowId: 303,
+        seasonNumber: null,
+        episodeNumber: 2,
+        tvShowName: 'Broken Show',
+        episodeName: 'Unknown',
+        posterPath: '/three.jpg',
       },
     ],
     isLoading: false,
@@ -150,5 +163,28 @@ describe('EpisodeRatingsScreen multi-select', () => {
       expect(getByTestId('multi-select-action-bar')).toBeTruthy();
       expect(getByTestId('episode-card-episode-202-1-1')).toBeTruthy();
     });
+  });
+
+  it('does not navigate when an episode rating is missing route params', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { getByTestId } = renderWithProviders(<EpisodeRatingsScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('episode-card-episode-303-missing-season')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('episode-card-episode-303-missing-season'));
+
+    await waitFor(() => {
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith('Cannot navigate to episode: missing route params', {
+        id: 'episode-303-missing-season',
+        tvShowId: 303,
+        seasonNumber: null,
+        episodeNumber: 2,
+      });
+    });
+
+    warnSpy.mockRestore();
   });
 });

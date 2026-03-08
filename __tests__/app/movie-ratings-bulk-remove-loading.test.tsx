@@ -39,6 +39,7 @@ jest.mock('@shopify/flash-list', () => {
       )
     );
   });
+  FlashList.displayName = 'FlashList';
 
   return { FlashList };
 });
@@ -125,17 +126,21 @@ jest.mock('@/src/components/library/RatingsEmptyState', () => ({
 
 jest.mock('@/src/components/ListActionsModal', () => {
   const React = require('react');
+  const ListActionsModal = React.forwardRef(() => null);
+  ListActionsModal.displayName = 'ListActionsModal';
   return {
     __esModule: true,
-    default: React.forwardRef(() => null),
+    default: ListActionsModal,
   };
 });
 
 jest.mock('@/src/components/ui/Toast', () => {
   const React = require('react');
+  const Toast = React.forwardRef(() => null);
+  Toast.displayName = 'Toast';
   return {
     __esModule: true,
-    default: React.forwardRef(() => null),
+    default: Toast,
   };
 });
 
@@ -179,7 +184,7 @@ describe('MovieRatingsScreen bulk remove loading state', () => {
   };
 
   let enrichedState: {
-    data: Array<typeof movieOne>;
+    data: typeof movieOne[];
     isLoading: boolean;
     error: Error | null;
     refetch: typeof refetch;

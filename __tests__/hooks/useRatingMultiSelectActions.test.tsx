@@ -70,7 +70,7 @@ function createParams(overrides: Partial<HookParams> = {}): HookParams {
 
 function getConfirmButton() {
   const alertCall = (Alert.alert as jest.Mock).mock.calls[0];
-  const buttons = alertCall?.[2] as Array<{ style?: string; onPress?: () => unknown }>;
+  const buttons = alertCall?.[2] as { style?: string; onPress?: () => unknown }[];
   const confirmButton = buttons.find((button) => button.style === 'destructive');
 
   if (!confirmButton?.onPress) {
@@ -154,7 +154,7 @@ describe('useRatingMultiSelectActions', () => {
   });
 
   it('tracks bulk removal progress and removes movie, tv, and episode targets', async () => {
-    const resolvers: Array<() => void> = [];
+    const resolvers: (() => void)[] = [];
     const removeRating = jest.fn(
       () =>
         new Promise<void>((resolve) => {
@@ -261,6 +261,9 @@ describe('useRatingMultiSelectActions', () => {
     });
 
     expect(showToast).toHaveBeenCalledWith('Changes failed to save');
-    expect(result.current.isSelectionMode).toBe(false);
+    expect(result.current.isSelectionMode).toBe(true);
+    expect(result.current.selectedCount).toBe(1);
+    expect(result.current.isItemSelected(movieItem)).toBe(false);
+    expect(result.current.isItemSelected(tvItem)).toBe(true);
   });
 });

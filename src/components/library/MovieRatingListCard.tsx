@@ -6,6 +6,7 @@ import { EnrichedMovieRating } from '@/src/hooks/useEnrichedRatings';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import { metaTextStyles } from '@/src/styles/metaTextStyles';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { Star } from 'lucide-react-native';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -18,6 +19,18 @@ interface MovieRatingListCardProps {
   onLongPress?: (item: EnrichedMovieRating) => void;
   selectionMode?: boolean;
   isSelected?: boolean;
+}
+
+function getReleaseYear(releaseDate?: string | null): number | null {
+  if (!releaseDate) {
+    return null;
+  }
+
+  try {
+    return parseTmdbDate(releaseDate).getFullYear();
+  } catch {
+    return null;
+  }
 }
 
 export const MovieRatingListCard = memo<MovieRatingListCardProps>(
@@ -46,7 +59,7 @@ export const MovieRatingListCard = memo<MovieRatingListCardProps>(
     if (!item.movie) return null;
     const movie = item.movie;
 
-    const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
+    const year = getReleaseYear(movie.release_date);
 
     return (
       <Pressable

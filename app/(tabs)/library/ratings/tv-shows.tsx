@@ -34,7 +34,7 @@ import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLa
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Search, Star } from 'lucide-react-native';
+import { Star } from 'lucide-react-native';
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {

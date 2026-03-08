@@ -41,7 +41,7 @@ export function useProfileLogic() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       await Linking.openURL(PLAY_STORE_URL);
-    } catch (_error) {
+    } catch {
       try {
         await Linking.openURL(`https://play.google.com/store/apps/details?id=${PACKAGE_ID}`);
       } catch {
@@ -86,9 +86,10 @@ export function useProfileLogic() {
         await exportUserData(format);
       } catch (error) {
         console.error('Export failed:', error);
-        const message =
-          error instanceof Error ? error.message : t('profile.exportFailedFallbackMessage');
-        Alert.alert(t('profile.exportFailedTitle'), message);
+        Alert.alert(
+          t('profile.exportFailedTitle'),
+          t('profile.exportFailedFallbackMessage')
+        );
       } finally {
         setIsExporting(false);
       }

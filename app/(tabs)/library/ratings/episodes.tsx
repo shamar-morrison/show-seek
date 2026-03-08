@@ -116,12 +116,26 @@ export default function EpisodeRatingsScreen() {
     (rating: RatingItem) => {
       if (rating.mediaType !== 'episode') return;
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
       if (!currentTab) {
         console.warn('Cannot navigate to episode: currentTab is null');
         return;
       }
+
+      if (
+        rating.tvShowId == null ||
+        rating.seasonNumber == null ||
+        rating.episodeNumber == null
+      ) {
+        console.warn('Cannot navigate to episode: missing route params', {
+          id: rating.id,
+          tvShowId: rating.tvShowId,
+          seasonNumber: rating.seasonNumber,
+          episodeNumber: rating.episodeNumber,
+        });
+        return;
+      }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       const path = `/(tabs)/${currentTab}/tv/${rating.tvShowId}/season/${rating.seasonNumber}/episode/${rating.episodeNumber}`;
       router.push(path as any);

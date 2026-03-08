@@ -34,6 +34,13 @@ function buildPlaceholderEnrichedRatings<
   });
 }
 
+function hasRenderableEnrichedItems<TEnriched>(
+  data: TEnriched[] | undefined,
+  getMedia: (item: TEnriched) => Movie | TVShow | null
+): data is TEnriched[] {
+  return Array.isArray(data) && data.some((item) => item != null && getMedia(item) !== null);
+}
+
 /**
  * Batch fetch movies in chunks to avoid rate limits
  */
@@ -139,8 +146,11 @@ export function useEnrichedMovieRatings() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  const data = !isLoadingRatings && movieRatings.length === 0 ? [] : query.data;
-  const hasUsableData = data !== undefined;
+  const queryData = !isLoadingRatings && movieRatings.length === 0 ? [] : query.data;
+  const hasUsableData =
+    queryData !== undefined &&
+    (queryData.length === 0 || hasRenderableEnrichedItems(queryData, (item) => item.movie));
+  const data = hasUsableData ? queryData : undefined;
 
   return {
     ...query,
@@ -196,8 +206,11 @@ export function useEnrichedTVRatings() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  const data = !isLoadingRatings && tvRatings.length === 0 ? [] : query.data;
-  const hasUsableData = data !== undefined;
+  const queryData = !isLoadingRatings && tvRatings.length === 0 ? [] : query.data;
+  const hasUsableData =
+    queryData !== undefined &&
+    (queryData.length === 0 || hasRenderableEnrichedItems(queryData, (item) => item.tvShow));
+  const data = hasUsableData ? queryData : undefined;
 
   return {
     ...query,

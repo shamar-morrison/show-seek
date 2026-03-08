@@ -207,4 +207,62 @@ describe('useEnrichedRatings placeholder behavior', () => {
     expect(result.current.data?.map((item) => item.rating.id)).toEqual(['20', '10']);
     expect(result.current.isLoading).toBe(false);
   });
+
+  it('keeps movie ratings loading when placeholder data has no renderable movies', () => {
+    const currentRatings = [createRating({ id: '4', mediaType: 'movie', rating: 7, ratedAt: 300 })];
+
+    mockUseRatings.mockReturnValue({
+      data: currentRatings,
+      isLoading: false,
+      error: null,
+      refetch: ratingsRefetch,
+    });
+
+    mockUseQuery.mockImplementation((options: any) => ({
+      data: options.placeholderData?.([
+        {
+          rating: createRating({ id: '4', mediaType: 'movie', rating: 6, ratedAt: 200 }),
+          movie: null,
+        },
+      ]),
+      isLoading: true,
+      isPending: true,
+      error: null,
+      refetch: enrichedRefetch,
+    }));
+
+    const { result } = renderHook(() => useEnrichedMovieRatings());
+
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(true);
+  });
+
+  it('keeps TV ratings loading when placeholder data has no renderable shows', () => {
+    const currentRatings = [createRating({ id: '40', mediaType: 'tv', rating: 7, ratedAt: 300 })];
+
+    mockUseRatings.mockReturnValue({
+      data: currentRatings,
+      isLoading: false,
+      error: null,
+      refetch: ratingsRefetch,
+    });
+
+    mockUseQuery.mockImplementation((options: any) => ({
+      data: options.placeholderData?.([
+        {
+          rating: createRating({ id: '40', mediaType: 'tv', rating: 6, ratedAt: 200 }),
+          tvShow: null,
+        },
+      ]),
+      isLoading: true,
+      isPending: true,
+      error: null,
+      refetch: enrichedRefetch,
+    }));
+
+    const { result } = renderHook(() => useEnrichedTVRatings());
+
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isLoading).toBe(true);
+  });
 });

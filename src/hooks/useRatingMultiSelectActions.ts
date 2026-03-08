@@ -151,6 +151,7 @@ export function useRatingMultiSelectActions<TItem, TTarget extends RatingMultiSe
         style: 'destructive',
         onPress: async () => {
           const total = selectedRatingTargets.length;
+          const failedTargets: TTarget[] = [];
           let failed = 0;
           let processed = 0;
 
@@ -163,6 +164,7 @@ export function useRatingMultiSelectActions<TItem, TTarget extends RatingMultiSe
                 await removeRating(target);
               } catch {
                 failed += 1;
+                failedTargets.push(target);
               } finally {
                 processed += 1;
                 setBulkRemoveProgress({ processed, total });
@@ -175,7 +177,16 @@ export function useRatingMultiSelectActions<TItem, TTarget extends RatingMultiSe
               showToast(t('library.changesFailedToSave', { failed, total }));
             }
           } finally {
-            clearSelection();
+            if (failedTargets.length === 0) {
+              clearSelection();
+            } else {
+              setSelectedTargets(
+                Object.fromEntries(failedTargets.map((target) => [target.id, target])) as Record<
+                  string,
+                  TTarget
+                >
+              );
+            }
             setIsBulkRemoving(false);
             setBulkRemoveProgress(null);
           }

@@ -29,6 +29,7 @@ import { libraryListStyles } from '@/src/styles/libraryListStyles';
 import { mediaCardStyles } from '@/src/styles/mediaCardStyles';
 import { mediaMetaStyles } from '@/src/styles/mediaMetaStyles';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { getThreeColumnGridMetrics, GRID_COLUMN_COUNT } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
@@ -43,6 +44,18 @@ const VIEW_MODE_STORAGE_KEY = 'movieRatingsViewMode';
 
 const getMovieFromItem = (item: EnrichedMovieRating) => item.movie;
 type MovieRatingSelectionTarget = Extract<RatingMultiSelectTarget, { mediaType: 'movie' }>;
+
+function getReleaseYear(releaseDate?: string | null): number | null {
+  if (!releaseDate) {
+    return null;
+  }
+
+  try {
+    return parseTmdbDate(releaseDate).getFullYear();
+  } catch {
+    return null;
+  }
+}
 
 export default function MovieRatingsScreen() {
   const router = useRouter();
@@ -195,6 +208,7 @@ export default function MovieRatingsScreen() {
 
       const posterPath = resolvePosterPath('movie', item.movie.id, item.movie.poster_path);
       const isSelected = isItemSelected(item);
+      const releaseYear = getReleaseYear(item.movie.release_date);
 
       return (
         <Pressable
@@ -240,11 +254,9 @@ export default function MovieRatingsScreen() {
               <Text style={mediaCardStyles.title} numberOfLines={1}>
                 {item.movie.title}
               </Text>
-              {item.movie.release_date && (
+              {releaseYear && (
                 <View style={mediaMetaStyles.yearRatingContainer}>
-                  <Text style={mediaMetaStyles.year}>
-                    {new Date(item.movie.release_date).getFullYear()}
-                  </Text>
+                  <Text style={mediaMetaStyles.year}>{releaseYear}</Text>
                   {item.movie.vote_average > 0 && (
                     <>
                       <Text style={mediaMetaStyles.separator}> • </Text>
