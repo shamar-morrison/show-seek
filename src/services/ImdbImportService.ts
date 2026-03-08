@@ -7,8 +7,6 @@ import {
 } from '@/functions/src/shared/imdbImport';
 import { functions } from '@/src/firebase/config';
 import { prepareImdbImport, type PreparedImdbImport, type RawImdbImportFile } from '@/src/utils/imdbImport';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { httpsCallable } from 'firebase/functions';
 
 export interface ImdbImportProgress {
@@ -17,14 +15,21 @@ export interface ImdbImportProgress {
   totalChunks: number;
 }
 
+type DocumentPickerModule = typeof import('expo-document-picker');
+type FileSystemModule = typeof import('expo-file-system/legacy');
+
 class ImdbImportService {
   private readonly importCallable = httpsCallable<ImdbImportChunkRequest, ImdbImportChunkResult>(
     functions,
     'importImdbChunk'
   );
+  private documentPickerModulePromise: Promise<DocumentPickerModule> | null = null;
+  private fileSystemModulePromise: Promise<FileSystemModule> | null = null;
 
   async pickRawFiles(): Promise<RawImdbImportFile[]> {
-    const result = await DocumentPicker.getDocumentAsync({
+    const documentPicker = await this.getDocumentPickerModule();
+    const result = await documentPicker.getDocumentAsync({
+      base64: false,
       copyToCacheDirectory: true,
       multiple: true,
       type: ['text/csv', 'text/plain'],
@@ -34,9 +39,11 @@ class ImdbImportService {
       return [];
     }
 
+    const fileSystem = await this.getFileSystemModule();
+
     return Promise.all(
       result.assets.map(async (asset) => ({
-        content: await FileSystem.readAsStringAsync(asset.uri),
+        content: await fileSystem.readAsStringAsync(asset.uri),
         fileName: asset.name || 'imdb-import.csv',
       }))
     );
@@ -73,6 +80,26 @@ class ImdbImportService {
 
     return combineImportStats(preparedImport.stats, runtimeStats);
   }
+
+  private getDocumentPickerModule(): Promise<DocumentPickerModule> {
+    if (!this.documentPickerModulePromise) {
+      this.documentPickerModulePromise = shouldUseRequireForLazyImports()
+        ? Promise.resolve(require('expo-document-picker') as DocumentPickerModule)
+        : import('expo-document-picker');
+    }
+
+    return this.documentPickerModulePromise;
+  }
+
+  private getFileSystemModule(): Promise<FileSystemModule> {
+    if (!this.fileSystemModulePromise) {
+      this.fileSystemModulePromise = shouldUseRequireForLazyImports()
+        ? Promise.resolve(require('expo-file-system/legacy') as FileSystemModule)
+        : import('expo-file-system/legacy');
+    }
+
+    return this.fileSystemModulePromise;
+  }
 }
 
 export const imdbImportService = new ImdbImportService();
@@ -88,4 +115,8 @@ function combineImportStats(
     processedActions: preparedStats.processedActions,
     processedEntities: preparedStats.processedEntities,
   };
+}
+
+function shouldUseRequireForLazyImports(): boolean {
+  return typeof process !== 'undefined' && typeof process.env.JEST_WORKER_ID === 'string';
 }
