@@ -17,14 +17,24 @@ function collectKeys(value: unknown, prefix = ''): string[] {
 
 describe('IMDb import locale coverage', () => {
   const referenceKeys = collectKeys(enUS.imdbImport);
+  const referenceIntegrationTabKeys = collectKeys(enUS.profile.tabs.integrations);
+  const referenceImportFromImdbKeys = collectKeys(enUS.profile.importFromImdb);
+  const referencePremiumImportImdbKeys = collectKeys(
+    enUS.premiumFeatures.features['import-imdb']
+  );
 
   it.each([
-    ['es-ES', esES.imdbImport],
-    ['es-MX', esMX.imdbImport],
-    ['fr-FR', frFR.imdbImport],
-    ['pt-BR', ptBR.imdbImport],
-    ['pt-PT', ptPT.imdbImport],
-  ])('%s mirrors the en-US imdbImport key shape', (_locale, imdbImport) => {
+    ['es-ES', esES.imdbImport, esES],
+    ['es-MX', esMX.imdbImport, esMX],
+    ['fr-FR', frFR.imdbImport, frFR],
+    ['pt-BR', ptBR.imdbImport, ptBR],
+    ['pt-PT', ptPT.imdbImport, ptPT],
+  ])('%s mirrors the en-US IMDb import key shape', (_locale, imdbImport, locale) => {
     expect(collectKeys(imdbImport)).toEqual(referenceKeys);
+    expect(collectKeys(locale.profile.tabs.integrations)).toEqual(referenceIntegrationTabKeys);
+    expect(collectKeys(locale.profile.importFromImdb)).toEqual(referenceImportFromImdbKeys);
+    expect(collectKeys(locale.premiumFeatures.features['import-imdb'])).toEqual(
+      referencePremiumImportImdbKeys
+    );
   });
 });

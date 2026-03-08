@@ -680,6 +680,7 @@
     "tabs": {
       "preferences": "Préférences",
       "content": "Contenu",
+      "integrations": "Intégrations",
       "settings": "Paramètres"
     },
     "editProfile": "Modifier le profil",
@@ -719,6 +720,7 @@
     "markPreviousEpisodes": "Marquer les épisodes précédents",
     "markPreviousEpisodesDescription": "Marque automatiquement les épisodes précédents d'une saison comme vus lorsque vous marquez un épisode",
     "sendFeedback": "Envoyer des commentaires",
+    "importFromImdb": "Importer depuis IMDb",
     "exportData": "Exporter les données",
     "webApp": "ShowSeek Web",
     "hideTabLabels": "Masquer les libellés des onglets",
@@ -1340,6 +1342,10 @@
       "export-data": {
         "description": "Exportez vos listes, notes, évaluations et plus.",
         "title": "Exporter les données"
+      },
+      "import-imdb": {
+        "description": "Importez vos notes, listes et check-ins IMDb dans ShowSeek.",
+        "title": "Importer depuis IMDb"
       },
       "future-features": {
         "description": "Aidez à financer les futures fonctionnalités.",
