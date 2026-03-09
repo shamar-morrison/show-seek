@@ -216,6 +216,7 @@ export default function TVDetailScreen() {
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,
+    noteExists: hasNote,
     ensureNoteLoadedForEdit,
     isAccountRequired,
     noteSheetRef,

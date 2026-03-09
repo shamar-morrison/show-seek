@@ -371,7 +371,7 @@ describe('EpisodeDetailScreen', () => {
     });
   });
 
-  it('alerts and still opens the note editor when preload fails without existing note content', async () => {
+  it('alerts and opens a blank note editor when preload fails for a new note', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockEnsureNoteLoadedForEdit.mockRejectedValueOnce(new Error('Failed to load note'));
 

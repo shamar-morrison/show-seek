@@ -208,6 +208,7 @@ export default function EpisodeDetailScreen() {
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,
+    noteExists: hasNote,
     ensureNoteLoadedForEdit,
     isAccountRequired,
     noteSheetRef,

@@ -14,8 +14,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  orderBy,
-  query,
   setDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -39,6 +37,112 @@ export interface RatingItem {
   tvShowName?: string;
 }
 
+type RatingMediaType = RatingItem['mediaType'];
+
+const VALID_MEDIA_TYPES: readonly RatingMediaType[] = ['movie', 'tv', 'episode'];
+
+const toFiniteNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  if (
+    value &&
+    typeof value === 'object' &&
+    'toMillis' in value &&
+    typeof value.toMillis === 'function'
+  ) {
+    const parsed = value.toMillis();
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+};
+
+const getValidMediaType = (value: unknown): RatingMediaType | null => {
+  return VALID_MEDIA_TYPES.includes(value as RatingMediaType) ? (value as RatingMediaType) : null;
+};
+
+const getNormalizedRatingId = (
+  candidateId: unknown,
+  fallbackDocId: string,
+  mediaType: RatingMediaType
+): string | null => {
+  if (typeof candidateId === 'string' && candidateId.trim() !== '') {
+    return candidateId;
+  }
+
+  if (!fallbackDocId) {
+    return null;
+  }
+
+  if (mediaType === 'episode') {
+    return fallbackDocId;
+  }
+
+  const prefixedId = `${mediaType}-`;
+  return fallbackDocId.startsWith(prefixedId)
+    ? fallbackDocId.slice(prefixedId.length)
+    : fallbackDocId;
+};
+
+export function normalizeRatingItem(
+  raw: unknown,
+  fallbackDocId: string,
+  source = 'RatingService'
+): RatingItem | null {
+  if (!raw || typeof raw !== 'object') {
+    console.warn(`[${source}] Skipping invalid rating doc ${fallbackDocId}: expected object data.`);
+    return null;
+  }
+
+  const data = raw as Record<string, unknown>;
+  const mediaType = getValidMediaType(data.mediaType);
+  const rating = toFiniteNumber(data.rating);
+  const ratedAt = toFiniteNumber(data.ratedAt);
+
+  if (!mediaType || rating === null || ratedAt === null) {
+    console.warn(
+      `[${source}] Skipping invalid rating doc ${fallbackDocId}: missing valid mediaType, rating, or ratedAt.`
+    );
+    return null;
+  }
+
+  const id = getNormalizedRatingId(data.id, fallbackDocId, mediaType);
+  if (!id) {
+    console.warn(`[${source}] Skipping invalid rating doc ${fallbackDocId}: missing valid id.`);
+    return null;
+  }
+
+  return {
+    id,
+    mediaType,
+    rating,
+    ratedAt,
+    ...(typeof data.title === 'string' && { title: data.title }),
+    ...((typeof data.posterPath === 'string' || data.posterPath === null) && {
+      posterPath: data.posterPath as string | null,
+    }),
+    ...((typeof data.releaseDate === 'string' || data.releaseDate === null) && {
+      releaseDate: data.releaseDate as string | null,
+    }),
+    ...(toFiniteNumber(data.tvShowId) !== null && { tvShowId: toFiniteNumber(data.tvShowId)! }),
+    ...(toFiniteNumber(data.seasonNumber) !== null && {
+      seasonNumber: toFiniteNumber(data.seasonNumber)!,
+    }),
+    ...(toFiniteNumber(data.episodeNumber) !== null && {
+      episodeNumber: toFiniteNumber(data.episodeNumber)!,
+    }),
+    ...(typeof data.episodeName === 'string' && { episodeName: data.episodeName }),
+    ...(typeof data.tvShowName === 'string' && { tvShowName: data.tvShowName }),
+  };
+}
+
 class RatingService {
   private logDebug = createServiceLogger('RatingService');
 
@@ -52,7 +156,6 @@ class RatingService {
 
   async getUserRatings(userId: string): Promise<RatingItem[]> {
     const ratingsRef = this.getUserRatingsCollection(userId);
-    const q = query(ratingsRef, orderBy('ratedAt', 'desc'));
 
     try {
       this.logDebug('getUserRatings:start', {
@@ -61,17 +164,19 @@ class RatingService {
       });
 
       const snapshot = await raceWithTimeout(
-        auditedGetDocs(q, {
+        auditedGetDocs(ratingsRef, {
           path: `users/${userId}/ratings`,
           queryKey: 'ratings',
           callsite: 'RatingService.getUserRatings',
         }),
       );
 
-      const ratings = snapshot.docs.map((ratingDoc) => ({
-        id: ratingDoc.id,
-        ...ratingDoc.data(),
-      })) as RatingItem[];
+      const ratings = snapshot.docs
+        .map((ratingDoc) =>
+          normalizeRatingItem(ratingDoc.data(), ratingDoc.id, 'RatingService.getUserRatings')
+        )
+        .filter((rating): rating is RatingItem => rating !== null)
+        .sort((a, b) => b.ratedAt - a.ratedAt);
 
       this.logDebug('getUserRatings:result', {
         userId,
@@ -166,15 +271,12 @@ class RatingService {
       );
 
       if (docSnap.exists()) {
-        const rating = {
-          id: docSnap.id,
-          ...docSnap.data(),
-        } as RatingItem;
+        const rating = normalizeRatingItem(docSnap.data(), docSnap.id, 'RatingService.getRating');
         this.logDebug('getRating:result', {
           userId: user.uid,
           mediaId,
           mediaType,
-          exists: true,
+          exists: rating !== null,
         });
         return rating;
       }
@@ -323,16 +425,17 @@ class RatingService {
       );
 
       if (docSnap.exists()) {
-        const rating = {
-          id: docSnap.id,
-          ...docSnap.data(),
-        } as RatingItem;
+        const rating = normalizeRatingItem(
+          docSnap.data(),
+          docSnap.id,
+          'RatingService.getEpisodeRating'
+        );
         this.logDebug('getEpisodeRating:result', {
           userId: user.uid,
           tvShowId,
           seasonNumber,
           episodeNumber,
-          exists: true,
+          exists: rating !== null,
         });
         return rating;
       }

@@ -97,6 +97,20 @@ describe('MovieCard', () => {
     expect(queryByText('Localized Movie')).toBeNull();
   });
 
+  it('does not render NaN for an invalid release date and still shows the rating', () => {
+    const invalidDateMovie = {
+      ...movie,
+      release_date: 'not-a-date',
+    };
+
+    const { getByText, queryByText } = render(
+      <MovieCard movie={invalidDateMovie} showListBadge={false} />
+    );
+
+    expect(queryByText('NaN')).toBeNull();
+    expect(getByText('8.2')).toBeTruthy();
+  });
+
   it('applies container style overrides after defaults', () => {
     const { UNSAFE_getByType } = render(
       <MovieCard

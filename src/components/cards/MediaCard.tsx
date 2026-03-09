@@ -31,6 +31,15 @@ const isMovie = (item: MediaCardItem): item is Movie => {
   return 'title' in item;
 };
 
+const parseReleaseYear = (releaseDate?: string | null): number | null => {
+  if (!releaseDate) {
+    return null;
+  }
+
+  const parsedDate = new Date(releaseDate);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.getFullYear();
+};
+
 function MediaCardComponent<T extends MediaCardItem>({
   item,
   mediaType,
@@ -76,6 +85,9 @@ function MediaCardComponent<T extends MediaCardItem>({
   });
 
   const releaseDate = isMovie(item) ? item.release_date : item.first_air_date;
+  const releaseYear = parseReleaseYear(releaseDate);
+  const hasVoteAverage = item.vote_average > 0;
+  const showMeta = releaseYear !== null || hasVoteAverage;
 
   return (
     <TouchableOpacity
@@ -97,12 +109,12 @@ function MediaCardComponent<T extends MediaCardItem>({
         <Text style={mediaCardStyles.title} numberOfLines={2}>
           {displayTitle}
         </Text>
-        {releaseDate && (
+        {showMeta && (
           <View style={mediaMetaStyles.yearRatingContainer}>
-            <Text style={mediaMetaStyles.year}>{new Date(releaseDate).getFullYear()}</Text>
-            {item.vote_average > 0 && (
+            {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
+            {releaseYear !== null && hasVoteAverage && <Text style={mediaMetaStyles.separator}> • </Text>}
+            {hasVoteAverage && (
               <>
-                <Text style={mediaMetaStyles.separator}> • </Text>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
                 <Text style={mediaMetaStyles.rating}>{item.vote_average.toFixed(1)}</Text>
               </>

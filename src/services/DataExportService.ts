@@ -2,7 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { auth, db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { ListMediaItem } from '@/src/services/ListService';
-import { RatingItem } from '@/src/services/RatingService';
+import { normalizeRatingItem, type RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import { createTimeout } from '@/src/utils/timeout';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -22,12 +22,14 @@ interface EnrichedRating {
   title: string;
 }
 
+type RawExportRating = Partial<RatingItem> & { id: string };
+
 /**
  * Fetch all user data directly from Firestore using getDocs (one-time fetch)
  */
 async function fetchAllUserData(): Promise<{
   lists: UserList[];
-  ratings: RatingItem[];
+  ratings: RawExportRating[];
   favoritePersons: FavoritePerson[];
 }> {
   const user = auth.currentUser;
@@ -56,10 +58,14 @@ async function fetchAllUserData(): Promise<{
       ...doc.data(),
     })) as UserList[];
 
-    const ratings: RatingItem[] = ratingsSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as RatingItem[];
+    const ratings: RawExportRating[] = ratingsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      const storedId = typeof data.id === 'string' && data.id.trim() !== '' ? data.id : doc.id;
+      return {
+        ...data,
+        id: storedId,
+      } as RawExportRating;
+    });
 
     const favoritePersons: FavoritePerson[] = favoritePersonsSnapshot.docs.map((doc) => ({
       id: Number(doc.id),
@@ -78,10 +84,16 @@ async function fetchAllUserData(): Promise<{
  * Fetch movie/TV details for ratings to get titles (with timeout protection)
  * Individual TMDB calls have 10s timeout, entire process has 30s global timeout
  */
-async function enrichRatingsWithTitles(ratings: RatingItem[]): Promise<EnrichedRating[]> {
-  const movieRatings = ratings.filter((r) => r.mediaType === 'movie');
-  const tvRatings = ratings.filter((r) => r.mediaType === 'tv');
-  const episodeRatings = ratings.filter((r) => r.mediaType === 'episode');
+async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<EnrichedRating[]> {
+  const validRatings = ratings
+    .map((rating) =>
+      normalizeRatingItem(rating, rating.id, 'DataExportService.enrichRatingsWithTitles')
+    )
+    .filter((rating): rating is RatingItem => rating !== null);
+
+  const movieRatings = validRatings.filter((r) => r.mediaType === 'movie');
+  const tvRatings = validRatings.filter((r) => r.mediaType === 'tv');
+  const episodeRatings = validRatings.filter((r) => r.mediaType === 'episode');
 
   // Episodes already have metadata stored (no API calls needed)
   const episodeEnriched = episodeRatings.map((rating) => {

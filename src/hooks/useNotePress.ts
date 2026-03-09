@@ -5,6 +5,7 @@ import { useCallback, useState, type RefObject } from 'react';
 
 interface UseNotePressParams {
   note: Note | null;
+  noteExists: boolean;
   ensureNoteLoadedForEdit: () => Promise<Note | null>;
   isAccountRequired: () => boolean;
   noteSheetRef: RefObject<NoteModalRef | null>;
@@ -16,6 +17,7 @@ interface UseNotePressParams {
 
 export const useNotePress = ({
   note,
+  noteExists,
   ensureNoteLoadedForEdit,
   isAccountRequired,
   noteSheetRef,
@@ -42,15 +44,16 @@ export const useNotePress = ({
 
     try {
       const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-      openNoteEditor(resolvedNote?.content);
+      openNoteEditor(resolvedNote?.content ?? '');
     } catch (error) {
       onLoadError(error);
+      Alert.alert(alertTitle, alertMessage);
 
-      if (!note?.content) {
-        Alert.alert(alertTitle, alertMessage);
+      if (noteExists) {
+        return;
       }
 
-      openNoteEditor(note?.content ?? '');
+      openNoteEditor('');
     } finally {
       setIsOpeningNote(false);
     }
@@ -61,6 +64,7 @@ export const useNotePress = ({
     isAccountRequired,
     isOpeningNote,
     note,
+    noteExists,
     onLoadError,
     openNoteEditor,
   ]);

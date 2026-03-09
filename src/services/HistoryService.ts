@@ -4,7 +4,7 @@ import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTrac
 import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
 import type { UserList } from './ListService';
-import type { RatingItem } from './RatingService';
+import { normalizeRatingItem, type RatingItem } from './RatingService';
 
 /** Episode with show metadata for history display */
 interface EnrichedWatchedEpisode extends WatchedEpisode {
@@ -96,10 +96,11 @@ class HistoryService {
     const result = await fetchUserCollection(
       ['ratings'],
       (snapshot) =>
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as RatingItem[],
+        snapshot.docs
+          .map((doc) =>
+            normalizeRatingItem(doc.data(), doc.id, 'HistoryService.fetchRatings')
+          )
+          .filter((rating): rating is RatingItem => rating !== null),
       { errorContext: 'HistoryService.fetchRatings' }
     );
     return result ?? [];

@@ -344,6 +344,7 @@ export default function MovieDetailScreen() {
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,
+    noteExists: hasNote,
     ensureNoteLoadedForEdit,
     isAccountRequired,
     noteSheetRef,
