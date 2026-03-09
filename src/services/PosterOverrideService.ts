@@ -1,4 +1,4 @@
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { requireSignedInUser, rethrowFirestoreError } from '@/src/services/serviceSupport';
 import {
   buildPosterOverrideKey,
   POSTER_OVERRIDE_MAX_ENTRIES,
@@ -6,7 +6,7 @@ import {
 } from '@/src/utils/posterOverrides';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '@/src/firebase/config';
+import { db } from '@/src/firebase/config';
 
 class PosterOverrideService {
   private getUserDocRef(userId: string) {
@@ -21,10 +21,7 @@ class PosterOverrideService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) {
-        throw new Error('Please sign in to continue');
-      }
+      const user = requireSignedInUser();
 
       const key = buildPosterOverrideKey(mediaType, mediaId);
       const userDocRef = this.getUserDocRef(user.uid);
@@ -56,9 +53,7 @@ class PosterOverrideService {
         timeout.promise,
       ]);
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[PosterOverrideService] setPosterOverride error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('PosterOverrideService.setPosterOverride', error);
     } finally {
       timeout.cancel();
     }
@@ -68,10 +63,7 @@ class PosterOverrideService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) {
-        throw new Error('Please sign in to continue');
-      }
+      const user = requireSignedInUser();
 
       const key = buildPosterOverrideKey(mediaType, mediaId);
       const userDocRef = this.getUserDocRef(user.uid);
@@ -83,9 +75,7 @@ class PosterOverrideService {
         timeout.promise,
       ]);
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[PosterOverrideService] clearPosterOverride error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('PosterOverrideService.clearPosterOverride', error);
     } finally {
       timeout.cancel();
     }

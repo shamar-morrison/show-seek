@@ -1,11 +1,14 @@
-import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
 } from '@/src/services/firestoreReadAudit';
+import {
+  createServiceLogger,
+  requireMatchingUser,
+  rethrowFirestoreError,
+} from '@/src/services/serviceSupport';
 import { Note, NoteInput } from '@/src/types/note';
-import { createTimeout } from '@/src/utils/timeout';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -15,20 +18,10 @@ import {
   setDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 
 class NoteService {
-  private isDebugLoggingEnabled() {
-    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
-  }
-
-  private logDebug(event: string, payload: Record<string, unknown>) {
-    if (!this.isDebugLoggingEnabled()) {
-      return;
-    }
-
-    console.log(`[NoteService.${event}]`, payload);
-  }
+  private logDebug = createServiceLogger('NoteService');
 
   /**
    * Generate note document ID
@@ -93,10 +86,7 @@ class NoteService {
 
   async getUserNotes(userId: string): Promise<Note[]> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       this.logDebug('getUserNotes:start', {
         userId,
@@ -105,14 +95,13 @@ class NoteService {
 
       const notesRef = this.getNotesCollection(userId);
       const q = query(notesRef, orderBy('createdAt', 'desc'));
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDocs(q, {
           path: `users/${userId}/notes`,
           queryKey: 'notes',
           callsite: 'NoteService.getUserNotes',
         }),
-        createTimeout(),
-      ]);
+      );
 
       const notes = snapshot.docs.map((noteDoc) => this.mapDocToNote(noteDoc));
       this.logDebug('getUserNotes:result', {
@@ -126,9 +115,7 @@ class NoteService {
         userId,
         error,
       });
-      const message = getFirestoreErrorMessage(error);
-      console.error('[NoteService] getUserNotes error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('NoteService.getUserNotes', error);
     }
   }
 
@@ -137,10 +124,7 @@ class NoteService {
    */
   async saveNote(userId: string, noteData: NoteInput): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const noteRef = this.getNoteRef(
         userId,
@@ -149,14 +133,13 @@ class NoteService {
         noteData.seasonNumber,
         noteData.episodeNumber
       );
-      const existingNote = await Promise.race([
+      const existingNote = await raceWithTimeout(
         auditedGetDoc(noteRef, {
           path: `users/${userId}/notes/${noteRef.id}`,
           queryKey: 'noteById',
           callsite: 'NoteService.saveNote',
         }),
-        createTimeout(),
-      ]);
+      );
 
       const now = Timestamp.now();
       const noteDocument = {
@@ -174,11 +157,9 @@ class NoteService {
         ...(noteData.showId !== undefined && { showId: noteData.showId }),
       };
 
-      await Promise.race([setDoc(noteRef, noteDocument), createTimeout()]);
+      await raceWithTimeout(setDoc(noteRef, noteDocument));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[NoteService] saveNote error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('NoteService.saveNote', error);
     }
   }
 
@@ -193,10 +174,7 @@ class NoteService {
     episode?: number
   ): Promise<Note | null> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
       this.logDebug('getNote:start', {
@@ -208,14 +186,13 @@ class NoteService {
         path: `users/${userId}/notes/${noteRef.id}`,
       });
 
-      const docSnap = await Promise.race([
+      const docSnap = await raceWithTimeout(
         auditedGetDoc(noteRef, {
           path: `users/${userId}/notes/${noteRef.id}`,
           queryKey: 'noteById',
           callsite: 'NoteService.getNote',
         }),
-        createTimeout(),
-      ]);
+      );
 
       if (docSnap.exists()) {
         const note = this.mapDocToNote(docSnap);
@@ -245,9 +222,7 @@ class NoteService {
         episode: episode ?? null,
         error,
       });
-      const message = getFirestoreErrorMessage(error);
-      console.error('[NoteService] getNote error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('NoteService.getNote', error);
     }
   }
 
@@ -262,18 +237,13 @@ class NoteService {
     episode?: number
   ): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
 
-      await Promise.race([deleteDoc(noteRef), createTimeout()]);
+      await raceWithTimeout(deleteDoc(noteRef));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[NoteService] deleteNote error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('NoteService.deleteNote', error);
     }
   }
 }

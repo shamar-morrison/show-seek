@@ -1,8 +1,14 @@
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
+import {
+  getSignedInUser,
+  requireSignedInUser,
+  rethrowFirestoreError,
+  toFirestoreError,
+} from '@/src/services/serviceSupport';
 import { sanitizePosterOverrides } from '@/src/utils/posterOverrides';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 class PreferencesService {
@@ -53,7 +59,7 @@ class PreferencesService {
     callback: (preferences: UserPreferences) => void,
     onError?: (error: Error) => void
   ) {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) {
       callback(DEFAULT_PREFERENCES);
       return () => {};
@@ -73,9 +79,8 @@ class PreferencesService {
       },
       (error) => {
         console.error('[PreferencesService] Subscription error:', error);
-        const message = getFirestoreErrorMessage(error);
         if (onError) {
-          onError(new Error(message));
+          onError(toFirestoreError(error));
         }
         // Graceful degradation: return defaults on error
         callback(DEFAULT_PREFERENCES);
@@ -90,19 +95,15 @@ class PreferencesService {
 
   async fetchPreferences(userId: string): Promise<UserPreferences> {
     const userRef = this.getUserDocRef(userId);
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Request timed out')), 10000);
-    });
 
     try {
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDoc(userRef, {
           path: `users/${userId}`,
           queryKey: 'preferences',
           callsite: 'PreferencesService.fetchPreferences',
         }),
-        timeoutPromise,
-      ]);
+      );
 
       if (!snapshot.exists()) {
         return DEFAULT_PREFERENCES;
@@ -110,8 +111,7 @@ class PreferencesService {
 
       return this.mapPreferencesFromUserDoc(snapshot.data());
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      throw new Error(message);
+      throw toFirestoreError(error);
     }
   }
 
@@ -124,16 +124,11 @@ class PreferencesService {
     value: UserPreferences[K]
   ): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const userRef = this.getUserDocRef(user.uid);
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([
+      await raceWithTimeout(
         setDoc(
           userRef,
           {
@@ -143,12 +138,9 @@ class PreferencesService {
           },
           { merge: true }
         ),
-        timeoutPromise,
-      ]);
+      );
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[PreferencesService] updatePreference error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('PreferencesService.updatePreference', error);
     }
   }
 
@@ -157,7 +149,7 @@ class PreferencesService {
    * Returns defaults if not available
    */
   async getPreferences(): Promise<UserPreferences> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) {
       return DEFAULT_PREFERENCES;
     }

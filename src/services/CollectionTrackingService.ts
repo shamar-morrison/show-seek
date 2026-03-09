@@ -1,5 +1,10 @@
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import {
+  getSignedInUser,
+  requireSignedInUser,
+  rethrowFirestoreError,
+  toFirestoreError,
+} from '@/src/services/serviceSupport';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   arrayRemove,
@@ -12,7 +17,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 import type { TrackedCollection } from '../types/collectionTracking';
 
 /**
@@ -47,7 +52,7 @@ class CollectionTrackingService {
   }
 
   async getCollectionTracking(collectionId: number): Promise<TrackedCollection | null> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return null;
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
@@ -79,7 +84,7 @@ class CollectionTrackingService {
         lastUpdated: data.lastUpdated,
       };
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     }
   }
 
@@ -87,7 +92,7 @@ class CollectionTrackingService {
    * Check if a collection is being tracked (one-time check)
    */
   async isCollectionTracked(collectionId: number): Promise<boolean> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return false;
 
     const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
@@ -103,7 +108,7 @@ class CollectionTrackingService {
    * Get the count of currently tracked collections (for premium limit check)
    */
   async getTrackedCollectionCount(): Promise<number> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return 0;
 
     const collectionRef = this.getCollectionTrackingCollectionRef(user.uid);
@@ -122,7 +127,7 @@ class CollectionTrackingService {
       });
       return snapshot.docs.length;
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     }
   }
 
@@ -130,8 +135,8 @@ class CollectionTrackingService {
    * Resolve which collection movies were already watched before tracking started.
    */
   async getPreviouslyWatchedMovieIds(movieIds: number[]): Promise<number[]> {
-    const user = auth.currentUser;
-    if (!user || user.isAnonymous) return [];
+    const user = getSignedInUser();
+    if (!user) return [];
 
     const uniqueMovieIds: number[] = [];
     const seenMovieIds = new Set<number>();
@@ -193,7 +198,7 @@ class CollectionTrackingService {
 
       return watchedMovieIds;
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     }
   }
 
@@ -208,8 +213,7 @@ class CollectionTrackingService {
   ): Promise<void> {
     const timeout = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       const now = Date.now();
@@ -225,7 +229,7 @@ class CollectionTrackingService {
 
       await Promise.race([setDoc(trackingRef, data), timeout.promise]);
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     } finally {
       timeout.cancel();
     }
@@ -239,8 +243,7 @@ class CollectionTrackingService {
     const getDocTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     const deleteTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
 
@@ -262,7 +265,7 @@ class CollectionTrackingService {
 
       return watchedMovieIds;
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     } finally {
       getDocTimeoutHelper.cancel();
       deleteTimeoutHelper.cancel();
@@ -276,8 +279,7 @@ class CollectionTrackingService {
   async addWatchedMovie(collectionId: number, movieId: number): Promise<void> {
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       try {
@@ -297,7 +299,7 @@ class CollectionTrackingService {
         throw error;
       }
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     } finally {
       updateTimeoutHelper.cancel();
     }
@@ -310,8 +312,7 @@ class CollectionTrackingService {
   async removeWatchedMovie(collectionId: number, movieId: number): Promise<void> {
     const updateTimeoutHelper = createTimeoutWithCleanup(TIMEOUT_MS);
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const trackingRef = this.getCollectionTrackingRef(user.uid, collectionId);
       try {
@@ -331,7 +332,7 @@ class CollectionTrackingService {
         throw error;
       }
     } catch (error) {
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     } finally {
       updateTimeoutHelper.cancel();
     }
@@ -341,7 +342,7 @@ class CollectionTrackingService {
    * Get all tracked collections (one-time fetch)
    */
   async getAllTrackedCollections(): Promise<TrackedCollection[]> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return [];
 
     const collectionRef = this.getCollectionTrackingCollectionRef(user.uid);
@@ -371,8 +372,7 @@ class CollectionTrackingService {
         };
       });
     } catch (error) {
-      console.error('[CollectionTrackingService] Error fetching collections:', error);
-      throw new Error(getFirestoreErrorMessage(error));
+      return rethrowFirestoreError('CollectionTrackingService.getAllTrackedCollections', error);
     }
   }
 }

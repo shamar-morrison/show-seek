@@ -1,10 +1,15 @@
-import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
 } from '@/src/services/firestoreReadAudit';
-import { createTimeoutWithCleanup } from '@/src/utils/timeout';
+import {
+  createServiceLogger,
+  getSignedInUser,
+  requireSignedInUser,
+  rethrowFirestoreError,
+  toFirestoreError,
+} from '@/src/services/serviceSupport';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import {
   collection,
   deleteDoc,
@@ -13,7 +18,7 @@ import {
   query,
   setDoc,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 
 export interface RatingItem {
   id: string; // mediaId for movies/TV, composite ID for episodes
@@ -35,17 +40,7 @@ export interface RatingItem {
 }
 
 class RatingService {
-  private isDebugLoggingEnabled() {
-    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
-  }
-
-  private logDebug(event: string, payload: Record<string, unknown>) {
-    if (!this.isDebugLoggingEnabled()) {
-      return;
-    }
-
-    console.log(`[RatingService.${event}]`, payload);
-  }
+  private logDebug = createServiceLogger('RatingService');
 
   private getUserRatingRef(userId: string, mediaType: 'movie' | 'tv', mediaId: string) {
     return doc(db, 'users', userId, 'ratings', `${mediaType}-${mediaId}`);
@@ -58,7 +53,6 @@ class RatingService {
   async getUserRatings(userId: string): Promise<RatingItem[]> {
     const ratingsRef = this.getUserRatingsCollection(userId);
     const q = query(ratingsRef, orderBy('ratedAt', 'desc'));
-    const timeout = createTimeoutWithCleanup();
 
     try {
       this.logDebug('getUserRatings:start', {
@@ -66,14 +60,13 @@ class RatingService {
         path: `users/${userId}/ratings`,
       });
 
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDocs(q, {
           path: `users/${userId}/ratings`,
           queryKey: 'ratings',
           callsite: 'RatingService.getUserRatings',
         }),
-        timeout.promise,
-      ]);
+      );
 
       const ratings = snapshot.docs.map((ratingDoc) => ({
         id: ratingDoc.id,
@@ -92,10 +85,7 @@ class RatingService {
         userId,
         error,
       });
-      const message = getFirestoreErrorMessage(error);
-      throw new Error(message);
-    } finally {
-      timeout.cancel();
+      throw toFirestoreError(error);
     }
   }
 
@@ -112,11 +102,8 @@ class RatingService {
       releaseDate: string | null;
     }
   ): Promise<RatingItem> {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
@@ -132,14 +119,10 @@ class RatingService {
         }),
       };
 
-      await Promise.race([setDoc(ratingRef, ratingData), timeout.promise]);
+      await raceWithTimeout(setDoc(ratingRef, ratingData));
       return ratingData;
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[RatingService] saveRating error:', error);
-      throw new Error(message);
-    } finally {
-      timeout.cancel();
+      return rethrowFirestoreError('RatingService.saveRating', error);
     }
   }
 
@@ -147,21 +130,14 @@ class RatingService {
    * Delete a rating for a media item
    */
   async deleteRating(mediaId: number, mediaType: 'movie' | 'tv') {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
 
-      await Promise.race([deleteDoc(ratingRef), timeout.promise]);
+      await raceWithTimeout(deleteDoc(ratingRef));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[RatingService] deleteRating error:', error);
-      throw new Error(message);
-    } finally {
-      timeout.cancel();
+      return rethrowFirestoreError('RatingService.deleteRating', error);
     }
   }
 
@@ -169,10 +145,8 @@ class RatingService {
    * Get a single rating for a media item
    */
   async getRating(mediaId: number, mediaType: 'movie' | 'tv'): Promise<RatingItem | null> {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
+      const user = getSignedInUser();
       if (!user) return null;
 
       const ratingRef = this.getUserRatingRef(user.uid, mediaType, mediaId.toString());
@@ -183,14 +157,13 @@ class RatingService {
         path: `users/${user.uid}/ratings/${mediaType}-${mediaId}`,
       });
 
-      const docSnap = await Promise.race([
+      const docSnap = await raceWithTimeout(
         auditedGetDoc(ratingRef, {
           path: `users/${user.uid}/ratings/${mediaType}-${mediaId}`,
           queryKey: 'ratingByMedia',
           callsite: 'RatingService.getRating',
         }),
-        timeout.promise,
-      ]);
+      );
 
       if (docSnap.exists()) {
         const rating = {
@@ -222,8 +195,6 @@ class RatingService {
       });
       console.error('[RatingService] getRating error:', error);
       return null;
-    } finally {
-      timeout.cancel();
     }
   }
 
@@ -265,11 +236,8 @@ class RatingService {
       posterPath: string | null;
     }
   ): Promise<RatingItem> {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,
@@ -293,14 +261,10 @@ class RatingService {
         posterPath: episodeMetadata.posterPath,
       };
 
-      await Promise.race([setDoc(ratingRef, ratingData), timeout.promise]);
+      await raceWithTimeout(setDoc(ratingRef, ratingData));
       return ratingData;
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[RatingService] saveEpisodeRating error:', error);
-      throw new Error(message);
-    } finally {
-      timeout.cancel();
+      return rethrowFirestoreError('RatingService.saveEpisodeRating', error);
     }
   }
 
@@ -308,11 +272,8 @@ class RatingService {
    * Delete a rating for an episode
    */
   async deleteEpisodeRating(tvShowId: number, seasonNumber: number, episodeNumber: number) {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const ratingRef = this.getUserEpisodeRatingRef(
         user.uid,
@@ -321,13 +282,9 @@ class RatingService {
         episodeNumber
       );
 
-      await Promise.race([deleteDoc(ratingRef), timeout.promise]);
+      await raceWithTimeout(deleteDoc(ratingRef));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[RatingService] deleteEpisodeRating error:', error);
-      throw new Error(message);
-    } finally {
-      timeout.cancel();
+      return rethrowFirestoreError('RatingService.deleteEpisodeRating', error);
     }
   }
 
@@ -339,10 +296,8 @@ class RatingService {
     seasonNumber: number,
     episodeNumber: number
   ): Promise<RatingItem | null> {
-    const timeout = createTimeoutWithCleanup();
-
     try {
-      const user = auth.currentUser;
+      const user = getSignedInUser();
       if (!user) return null;
 
       const ratingRef = this.getUserEpisodeRatingRef(
@@ -359,14 +314,13 @@ class RatingService {
         path: `users/${user.uid}/ratings/episode-${tvShowId}-${seasonNumber}-${episodeNumber}`,
       });
 
-      const docSnap = await Promise.race([
+      const docSnap = await raceWithTimeout(
         auditedGetDoc(ratingRef, {
           path: `users/${user.uid}/ratings/episode-${tvShowId}-${seasonNumber}-${episodeNumber}`,
           queryKey: 'ratingByEpisode',
           callsite: 'RatingService.getEpisodeRating',
         }),
-        timeout.promise,
-      ]);
+      );
 
       if (docSnap.exists()) {
         const rating = {
@@ -401,8 +355,6 @@ class RatingService {
       });
       console.error('[RatingService] getEpisodeRating error:', error);
       return null;
-    } finally {
-      timeout.cancel();
     }
   }
 }

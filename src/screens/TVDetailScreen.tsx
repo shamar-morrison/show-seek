@@ -43,6 +43,7 @@ import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
+import { useNotePress } from '@/src/hooks/useNotePress';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -71,7 +72,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Animated, RefreshControl, Text, View } from 'react-native';
+import { Animated, RefreshControl, Text, View } from 'react-native';
 
 export default function TVDetailScreen() {
   const styles = useDetailStyles();
@@ -95,7 +96,6 @@ export default function TVDetailScreen() {
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const { isPremium } = usePremium();
@@ -200,6 +200,32 @@ export default function TVDetailScreen() {
     queryFn: () => tmdbApi.getRecommendedTV(tvId),
     enabled: !!tvId && shouldLoadRecommendations,
   });
+  const showData = tvQuery.data;
+  const resolvedShowPosterPath = showData
+    ? resolvePosterPath('tv', showData.id, showData.poster_path)
+    : null;
+  const buildNotePresentParams = useCallback(
+    (initialNote?: string) => ({
+      mediaType: 'tv' as const,
+      mediaId: tvId,
+      posterPath: resolvedShowPosterPath,
+      mediaTitle: showData?.name ?? '',
+      initialNote,
+    }),
+    [resolvedShowPosterPath, showData?.name, tvId]
+  );
+  const { handleNotePress, isOpeningNote } = useNotePress({
+    note,
+    ensureNoteLoadedForEdit,
+    isAccountRequired,
+    noteSheetRef,
+    buildPresentParams: buildNotePresentParams,
+    onLoadError: useCallback((error: unknown) => {
+      console.error('[TVDetailScreen] Failed to load note before opening editor:', error);
+    }, []),
+    alertTitle: t('common.error'),
+    alertMessage: t('common.tryAgain'),
+  });
 
   const navigateTo = useCallback(
     (path: string) => {
@@ -274,7 +300,6 @@ export default function TVDetailScreen() {
   }
 
   const show = tvQuery.data;
-  const resolvedShowPosterPath = resolvePosterPath('tv', show.id, show.poster_path);
   const displayShowTitle = getDisplayMediaTitle(show, !!preferences?.showOriginalTitles);
   const cast = creditsQuery.data?.cast.slice(0, 10) || [];
   const creators = show.created_by || [];
@@ -317,45 +342,6 @@ export default function TVDetailScreen() {
     navigateTo(path);
   };
 
-  const handleNotePress = async () => {
-    if (isAccountRequired()) {
-      return;
-    }
-
-    if (isOpeningNote) {
-      return;
-    }
-
-    setIsOpeningNote(true);
-
-    try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-
-      noteSheetRef.current?.present({
-        mediaType: 'tv',
-        mediaId: tvId,
-        posterPath: resolvedShowPosterPath,
-        mediaTitle: show.name,
-        initialNote: resolvedNote?.content,
-      });
-    } catch (error) {
-      console.error('[TVDetailScreen] Failed to load note before opening editor:', error);
-
-      if (!note?.content) {
-        Alert.alert(t('common.error'), t('common.tryAgain'));
-      }
-
-      noteSheetRef.current?.present({
-        mediaType: 'tv',
-        mediaId: tvId,
-        posterPath: resolvedShowPosterPath,
-        mediaTitle: show.name,
-        initialNote: note?.content ?? '',
-      });
-    } finally {
-      setIsOpeningNote(false);
-    }
-  };
 
   const handleCastViewAll = () => {
     navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(displayShowTitle)}`);

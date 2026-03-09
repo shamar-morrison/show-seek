@@ -18,14 +18,10 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
-const mockTimeoutCancel = jest.fn();
-const mockCreateTimeoutWithCleanup = jest.fn(() => ({
-  promise: new Promise<never>(() => {}),
-  cancel: mockTimeoutCancel,
-}));
+const mockRaceWithTimeout = jest.fn((promise: Promise<unknown>) => promise);
 
 jest.mock('@/src/utils/timeout', () => ({
-  createTimeoutWithCleanup: () => mockCreateTimeoutWithCleanup(),
+  raceWithTimeout: (promise: Promise<unknown>) => mockRaceWithTimeout(promise),
 }));
 
 import { ratingService } from '@/src/services/RatingService';
@@ -35,6 +31,7 @@ describe('RatingService', () => {
     jest.clearAllMocks();
     // Reset current user to authenticated state
     mockUserId = 'test-user-id';
+    mockRaceWithTimeout.mockImplementation((promise: Promise<unknown>) => promise);
   });
 
   describe('saveRating', () => {
@@ -236,19 +233,18 @@ describe('RatingService', () => {
     });
   });
 
-  describe('timeout cleanup', () => {
-    it('cancels write timeout after saveRating resolves', async () => {
+  describe('shared timeout wrapper', () => {
+    it('wraps writes with the shared timeout helper', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/movie-321' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (setDoc as jest.Mock).mockResolvedValue(undefined);
 
       await ratingService.saveRating(321, 'movie', 8);
 
-      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
-      expect(mockTimeoutCancel).toHaveBeenCalled();
+      expect(mockRaceWithTimeout).toHaveBeenCalled();
     });
 
-    it('cancels read timeout after getRating resolves', async () => {
+    it('wraps reads with the shared timeout helper', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/movie-654' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({
@@ -257,8 +253,7 @@ describe('RatingService', () => {
 
       await ratingService.getRating(654, 'movie');
 
-      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
-      expect(mockTimeoutCancel).toHaveBeenCalled();
+      expect(mockRaceWithTimeout).toHaveBeenCalled();
     });
   });
 });

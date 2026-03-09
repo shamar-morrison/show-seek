@@ -34,3 +34,24 @@ export const createTimeout = (
     setTimeout(() => reject(new Error(message)), ms);
   });
 };
+
+interface TimeoutOptions {
+  ms?: number;
+  message?: string;
+}
+
+/**
+ * Wrap an async operation with a timeout and ensure the timer is always cleared.
+ */
+export const raceWithTimeout = async <T>(
+  operation: Promise<T>,
+  options?: TimeoutOptions
+): Promise<T> => {
+  const timeout = createTimeoutWithCleanup(options?.ms, options?.message);
+
+  try {
+    return await Promise.race([operation, timeout.promise]);
+  } finally {
+    timeout.cancel();
+  }
+};
