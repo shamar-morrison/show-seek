@@ -73,6 +73,20 @@ describe('TVShowCard', () => {
     });
   });
 
+  it('does not render NaN for an invalid release date and still shows the rating', () => {
+    const invalidDateShow = {
+      ...show,
+      first_air_date: 'not-a-date',
+    };
+
+    const { getByText, queryByText } = render(
+      <TVShowCard show={invalidDateShow} showListBadge={false} />
+    );
+
+    expect(queryByText('NaN')).toBeNull();
+    expect(getByText('7.5')).toBeTruthy();
+  });
+
   it('applies container style overrides after defaults', () => {
     const { UNSAFE_getByType } = render(
       <TVShowCard

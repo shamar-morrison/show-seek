@@ -1,24 +1,9 @@
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking, Platform } from 'react-native';
-
-/**
- * Creates a promise that rejects after the specified timeout
- */
-const createTimeout = (ms: number): Promise<never> => {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Operation timed out')), ms);
-  });
-};
-
-/**
- * Wraps an async operation with a timeout guard
- */
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
-  return Promise.race([promise, createTimeout(timeoutMs)]);
-};
 
 export const useNotificationPermissions = () => {
   const { t } = useTranslation();
@@ -32,7 +17,10 @@ export const useNotificationPermissions = () => {
 
   const checkPermission = async () => {
     try {
-      const { status } = await withTimeout(Notifications.getPermissionsAsync(), 5000);
+      const { status } = await raceWithTimeout(Notifications.getPermissionsAsync(), {
+        ms: 5000,
+        message: 'Operation timed out',
+      });
       setPermissionStatus(status);
     } catch (error) {
       console.error('[useNotificationPermissions] Failed to check permission:', error);
@@ -59,9 +47,12 @@ export const useNotificationPermissions = () => {
     }
 
     try {
-      const { status: existingStatus } = await withTimeout(
+      const { status: existingStatus } = await raceWithTimeout(
         Notifications.getPermissionsAsync(),
-        5000
+        {
+          ms: 5000,
+          message: 'Operation timed out',
+        }
       );
 
       if (existingStatus === 'granted') {
@@ -93,7 +84,10 @@ export const useNotificationPermissions = () => {
 
       // Request permission
       try {
-        const { status } = await withTimeout(Notifications.requestPermissionsAsync(), 5000);
+        const { status } = await raceWithTimeout(Notifications.requestPermissionsAsync(), {
+          ms: 5000,
+          message: 'Operation timed out',
+        });
         setPermissionStatus(status);
 
         if (status !== 'granted') {

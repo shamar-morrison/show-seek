@@ -54,6 +54,7 @@ import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
+import { useNotePress } from '@/src/hooks/useNotePress';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -214,7 +215,6 @@ export default function MovieDetailScreen() {
   const [shareCardModalVisible, setShareCardModalVisible] = useState(false);
   const [openWithDrawerVisible, setOpenWithDrawerVisible] = useState(false);
   const [isSavingWatch, setIsSavingWatch] = useState(false);
-  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
   const isAccountRequired = useAccountRequired();
@@ -328,6 +328,33 @@ export default function MovieDetailScreen() {
     queryFn: () => tmdbApi.getRecommendedMovies(movieId),
     enabled: !!movieId && shouldLoadRecommendations,
   });
+  const movieData = movieQuery.data;
+  const resolvedMoviePosterPath = movieData
+    ? resolvePosterPath('movie', movieData.id, movieData.poster_path)
+    : null;
+  const buildNotePresentParams = useCallback(
+    (initialNote?: string) => ({
+      mediaType: 'movie' as const,
+      mediaId: movieId,
+      posterPath: resolvedMoviePosterPath,
+      mediaTitle: movieData?.title ?? '',
+      initialNote,
+    }),
+    [movieData?.title, movieId, resolvedMoviePosterPath]
+  );
+  const { handleNotePress, isOpeningNote } = useNotePress({
+    note,
+    noteExists: hasNote,
+    ensureNoteLoadedForEdit,
+    isAccountRequired,
+    noteSheetRef,
+    buildPresentParams: buildNotePresentParams,
+    onLoadError: useCallback((error: unknown) => {
+      console.error('[MovieDetailScreen] Failed to load note before opening editor:', error);
+    }, []),
+    alertTitle: t('common.error'),
+    alertMessage: t('common.tryAgain'),
+  });
 
   const navigateTo = useCallback(
     (path: string) => {
@@ -378,7 +405,6 @@ export default function MovieDetailScreen() {
   }
 
   const movie = movieQuery.data;
-  const resolvedMoviePosterPath = resolvePosterPath('movie', movie.id, movie.poster_path);
   const displayMovieTitle = getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles);
   // Get region-specific release date
   const displayReleaseDate = getRegionalReleaseDate(movie, region);
@@ -418,43 +444,6 @@ export default function MovieDetailScreen() {
     if (trailer) {
       setSelectedVideo(trailer);
       setTrailerModalVisible(true);
-    }
-  };
-
-  const handleNotePress = async () => {
-    if (isAccountRequired()) {
-      return;
-    }
-
-    if (isOpeningNote) {
-      return;
-    }
-
-    setIsOpeningNote(true);
-
-    const openNoteEditor = (initialNote?: string) => {
-      noteSheetRef.current?.present({
-        mediaType: 'movie',
-        mediaId: movieId,
-        posterPath: resolvedMoviePosterPath,
-        mediaTitle: movie.title,
-        initialNote,
-      });
-    };
-
-    try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-      openNoteEditor(resolvedNote?.content);
-    } catch (error) {
-      console.error('[MovieDetailScreen] Failed to load note before opening editor:', error);
-
-      if (!note?.content) {
-        Alert.alert(t('common.error'), t('common.tryAgain'));
-      }
-
-      openNoteEditor(note?.content ?? '');
-    } finally {
-      setIsOpeningNote(false);
     }
   };
 

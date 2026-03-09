@@ -23,17 +23,19 @@ import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler'
 const MAX_NOTE_LENGTH = 200;
 
 export interface NoteModalRef {
-  present: (params: {
-    mediaType: 'movie' | 'tv' | 'episode';
-    mediaId: number;
-    posterPath: string | null;
-    mediaTitle: string;
-    initialNote?: string;
-    seasonNumber?: number;
-    episodeNumber?: number;
-    showId?: number;
-  }) => Promise<void>;
+  present: (params: NoteModalPresentParams) => Promise<void>;
   dismiss: () => Promise<void>;
+}
+
+export interface NoteModalPresentParams {
+  mediaType: 'movie' | 'tv' | 'episode';
+  mediaId: number;
+  posterPath: string | null;
+  mediaTitle: string;
+  initialNote?: string;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  showId?: number;
 }
 
 interface NoteModalProps {

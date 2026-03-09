@@ -40,6 +40,8 @@ import {
 import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/useFavoriteEpisodes';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
+import { useNotePress } from '@/src/hooks/useNotePress';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
@@ -66,7 +68,6 @@ import {
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   ActivityIndicator,
   Animated,
   RefreshControl,
@@ -102,7 +103,6 @@ export default function EpisodeDetailScreen() {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
-  const [isOpeningNote, setIsOpeningNote] = useState(false);
   const noteSheetRef = useRef<NoteModalRef>(null);
   const toastRef = React.useRef<ToastRef>(null);
 
@@ -125,6 +125,7 @@ export default function EpisodeDetailScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
 
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const { membership: listMembership } = useMediaLists(tvId);
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
@@ -186,6 +187,9 @@ export default function EpisodeDetailScreen() {
   });
 
   const tvShow = tvShowQuery.data;
+  const resolvedShowPosterPath = tvShow
+    ? resolvePosterPath('tv', tvShow.id, tvShow.poster_path)
+    : null;
   const displayShowTitle = tvShow
     ? getDisplayMediaTitle(tvShow, !!preferences?.showOriginalTitles)
     : '';
@@ -194,6 +198,32 @@ export default function EpisodeDetailScreen() {
   const credits = episodeCreditsQuery.data;
   const videos = episodeVideosQuery.data || [];
   const images = episodeImagesQuery.data;
+  const buildNotePresentParams = useCallback(
+    (initialNote?: string) => ({
+      mediaType: 'episode' as const,
+      mediaId: tvId,
+      seasonNumber,
+      episodeNumber,
+      posterPath: resolvedShowPosterPath,
+      mediaTitle: episode?.name ?? '',
+      initialNote,
+      showId: tvId,
+    }),
+    [episode?.name, episodeNumber, resolvedShowPosterPath, seasonNumber, tvId]
+  );
+  const { handleNotePress, isOpeningNote } = useNotePress({
+    note,
+    noteExists: hasNote,
+    ensureNoteLoadedForEdit,
+    isAccountRequired,
+    noteSheetRef,
+    buildPresentParams: buildNotePresentParams,
+    onLoadError: useCallback((error: unknown) => {
+      console.error('[EpisodeDetailScreen] Failed to load note before opening editor:', error);
+    }, []),
+    alertTitle: t('common.error'),
+    alertMessage: t('common.tryAgain'),
+  });
   const lightboxImages = (images?.stills || [])
     .map((img) => getImageUrl(img.file_path, TMDB_IMAGE_SIZES.backdrop.original))
     .filter((url): url is string => url !== null);
@@ -421,41 +451,6 @@ export default function EpisodeDetailScreen() {
   const headerSubtitle = t('media.seasonEpisode', { season: seasonNumber, episode: episodeNumber });
   const isNoteActionLoading = isLoadingNote || isOpeningNote;
 
-  const handleNotePress = async () => {
-    if (isAccountRequired()) return;
-    if (isOpeningNote) return;
-
-    setIsOpeningNote(true);
-
-    const openNoteEditor = (initialNote?: string) => {
-      noteSheetRef.current?.present({
-        mediaType: 'episode',
-        mediaId: tvId,
-        seasonNumber,
-        episodeNumber,
-        posterPath: tvShow?.poster_path || null,
-        mediaTitle: episode.name,
-        initialNote,
-        showId: tvId,
-      });
-    };
-
-    try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-      openNoteEditor(resolvedNote?.content);
-    } catch (error) {
-      console.error('[EpisodeDetailScreen] Failed to load note before opening editor:', error);
-
-      if (!note?.content) {
-        Alert.alert(t('common.error'), t('common.tryAgain'));
-      }
-
-      openNoteEditor(note?.content ?? '');
-    } finally {
-      setIsOpeningNote(false);
-    }
-  };
-
   return (
     <SafeAreaView style={screenStyles.container} edges={['top']}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -585,6 +580,7 @@ export default function EpisodeDetailScreen() {
                 onPress={handleNotePress}
                 disabled={isNoteActionLoading}
                 activeOpacity={ACTIVE_OPACITY}
+                testID="episode-note-action"
               >
                 <View style={styles.iconButton}>
                   {isNoteActionLoading ? (

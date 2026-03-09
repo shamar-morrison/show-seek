@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
@@ -18,23 +18,25 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
-const mockTimeoutCancel = jest.fn();
-const mockCreateTimeoutWithCleanup = jest.fn(() => ({
-  promise: new Promise<never>(() => {}),
-  cancel: mockTimeoutCancel,
-}));
+const mockRaceWithTimeout = jest.fn((promise: Promise<unknown>) => promise);
 
 jest.mock('@/src/utils/timeout', () => ({
-  createTimeoutWithCleanup: () => mockCreateTimeoutWithCleanup(),
+  raceWithTimeout: (promise: Promise<unknown>) => mockRaceWithTimeout(promise),
 }));
 
 import { ratingService } from '@/src/services/RatingService';
+
+const buildSnapshotDoc = (id: string, data: Record<string, unknown>) => ({
+  id,
+  data: () => data,
+});
 
 describe('RatingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset current user to authenticated state
     mockUserId = 'test-user-id';
+    mockRaceWithTimeout.mockImplementation((promise: Promise<unknown>) => promise);
   });
 
   describe('saveRating', () => {
@@ -159,6 +161,29 @@ describe('RatingService', () => {
       });
     });
 
+    it('falls back to the document id when stored id is missing', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/movie-123' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        id: 'movie-123',
+        data: () => ({
+          mediaType: 'movie',
+          rating: '8',
+          ratedAt: '1234567890',
+        }),
+      });
+
+      const result = await ratingService.getRating(123, 'movie');
+
+      expect(result).toEqual({
+        id: '123',
+        mediaType: 'movie',
+        rating: 8,
+        ratedAt: 1234567890,
+      });
+    });
+
     it('should return null when document does not exist', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/movie-999' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
@@ -191,6 +216,100 @@ describe('RatingService', () => {
       expect(result).toBeNull();
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
+    });
+
+    it('returns null when the stored rating document is invalid', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/movie-123' };
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        id: 'movie-123',
+        data: () => ({
+          mediaType: 'movie',
+          rating: 8,
+        }),
+      });
+
+      const result = await ratingService.getRating(123, 'movie');
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('getUserRatings', () => {
+    it('normalizes legacy docs, skips invalid entries, and sorts by ratedAt descending', async () => {
+      const mockCollectionRef = { path: 'users/test-user-id/ratings' };
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (collection as jest.Mock).mockReturnValue(mockCollectionRef);
+      (getDocs as jest.Mock).mockResolvedValue({
+        size: 3,
+        docs: [
+          buildSnapshotDoc('movie-123', {
+            mediaType: 'movie',
+            rating: '8',
+            ratedAt: '1700000000000',
+            title: 'Normalized Movie',
+          }),
+          buildSnapshotDoc('episode-10-1-2', {
+            mediaType: 'episode',
+            rating: 9,
+            ratedAt: 1700000001000,
+            episodeName: 'Pilot',
+            tvShowName: 'Show Name',
+          }),
+          buildSnapshotDoc('tv-456', {
+            mediaType: 'tv',
+            rating: 7,
+          }),
+        ],
+      });
+
+      const result = await ratingService.getUserRatings('test-user-id');
+
+      expect(result).toEqual([
+        {
+          id: 'episode-10-1-2',
+          mediaType: 'episode',
+          rating: 9,
+          ratedAt: 1700000001000,
+          episodeName: 'Pilot',
+          tvShowName: 'Show Name',
+        },
+        {
+          id: '123',
+          mediaType: 'movie',
+          rating: 8,
+          ratedAt: 1700000000000,
+          title: 'Normalized Movie',
+        },
+      ]);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('getEpisodeRating', () => {
+    it('returns null when the stored episode rating is invalid', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/episode-100-1-5' };
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        id: 'episode-100-1-5',
+        data: () => ({
+          mediaType: 'episode',
+          rating: 9,
+        }),
+      });
+
+      const result = await ratingService.getEpisodeRating(100, 1, 5);
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
   });
 
@@ -236,19 +355,18 @@ describe('RatingService', () => {
     });
   });
 
-  describe('timeout cleanup', () => {
-    it('cancels write timeout after saveRating resolves', async () => {
+  describe('shared timeout wrapper', () => {
+    it('wraps writes with the shared timeout helper', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/movie-321' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (setDoc as jest.Mock).mockResolvedValue(undefined);
 
       await ratingService.saveRating(321, 'movie', 8);
 
-      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
-      expect(mockTimeoutCancel).toHaveBeenCalled();
+      expect(mockRaceWithTimeout).toHaveBeenCalled();
     });
 
-    it('cancels read timeout after getRating resolves', async () => {
+    it('wraps reads with the shared timeout helper', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/movie-654' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({
@@ -257,8 +375,7 @@ describe('RatingService', () => {
 
       await ratingService.getRating(654, 'movie');
 
-      expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
-      expect(mockTimeoutCancel).toHaveBeenCalled();
+      expect(mockRaceWithTimeout).toHaveBeenCalled();
     });
   });
 });

@@ -1,8 +1,9 @@
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { getSignedInUser } from '@/src/services/serviceSupport';
 import { collection, DocumentData, QuerySnapshot } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 import { getFirestoreErrorMessage } from '../firebase/firestore';
-import { createTimeoutWithCleanup } from '../utils/timeout';
+import { raceWithTimeout } from '../utils/timeout';
 
 /**
  * Options for fetchCollectionWithTimeout
@@ -36,28 +37,25 @@ export async function fetchUserCollection<T>(
   mapFn: (snapshot: QuerySnapshot<DocumentData>) => T[],
   options?: FetchCollectionOptions
 ): Promise<T[] | null> {
-  const user = auth.currentUser;
+  const user = getSignedInUser();
   if (!user) return null;
 
   const { timeoutMs = 10000, errorContext = 'Firestore request' } = options ?? {};
-  const timeout = createTimeoutWithCleanup(timeoutMs, `${errorContext} timed out`);
 
   try {
     const ref = collection(db, 'users', user.uid, ...subcollectionPath);
-    const snapshot = await Promise.race([
+    const snapshot = await raceWithTimeout(
       auditedGetDocs(ref, {
         path: `users/${user.uid}/${subcollectionPath.join('/')}`,
         queryKey: subcollectionPath.join(':') || 'root',
         callsite: 'firestoreHelpers.fetchUserCollection',
       }),
-      timeout.promise,
-    ]);
+      { ms: timeoutMs, message: `${errorContext} timed out` }
+    );
     return mapFn(snapshot);
   } catch (error) {
     const message = getFirestoreErrorMessage(error);
     console.error(`[${errorContext}] Error:`, message);
     return [];
-  } finally {
-    timeout.cancel();
   }
 }

@@ -1,23 +1,17 @@
-import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
-import { auth, db } from '@/src/firebase/config';
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import {
+  createServiceLogger,
+  getSignedInUser,
+  requireMatchingUser,
+  rethrowFirestoreError,
+} from '@/src/services/serviceSupport';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
-import { createTimeout } from '@/src/utils/timeout';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import { collection, deleteDoc, doc, orderBy, query, setDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase/config';
 
 class FavoriteEpisodeService {
-  private isDebugLoggingEnabled() {
-    return __DEV__ && READ_OPTIMIZATION_FLAGS.enableServiceQueryDebugLogs;
-  }
-
-  private logDebug(event: string, payload: Record<string, unknown>) {
-    if (!this.isDebugLoggingEnabled()) {
-      return;
-    }
-
-    console.log(`[FavoriteEpisodeService.${event}]`, payload);
-  }
+  private logDebug = createServiceLogger('FavoriteEpisodeService');
 
   /**
    * Get reference to a specific favorite episode document
@@ -38,10 +32,7 @@ class FavoriteEpisodeService {
    */
   async addFavoriteEpisode(userId: string, episodeData: Omit<FavoriteEpisode, 'addedAt'>) {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const episodeRef = this.getFavoriteEpisodeRef(userId, episodeData.id);
       const favoriteData: FavoriteEpisode = {
@@ -49,11 +40,9 @@ class FavoriteEpisodeService {
         addedAt: Date.now(),
       };
 
-      await Promise.race([setDoc(episodeRef, favoriteData), createTimeout()]);
+      await raceWithTimeout(setDoc(episodeRef, favoriteData));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[FavoriteEpisodeService] addFavoriteEpisode error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('FavoriteEpisodeService.addFavoriteEpisode', error);
     }
   }
 
@@ -62,17 +51,12 @@ class FavoriteEpisodeService {
    */
   async removeFavoriteEpisode(userId: string, episodeId: string) {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const episodeRef = this.getFavoriteEpisodeRef(userId, episodeId);
-      await Promise.race([deleteDoc(episodeRef), createTimeout()]);
+      await raceWithTimeout(deleteDoc(episodeRef));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[FavoriteEpisodeService] removeFavoriteEpisode error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('FavoriteEpisodeService.removeFavoriteEpisode', error);
     }
   }
 
@@ -81,8 +65,8 @@ class FavoriteEpisodeService {
    */
   async getFavoriteEpisodes(userId: string): Promise<FavoriteEpisode[]> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
         return [];
       }
 
@@ -93,14 +77,13 @@ class FavoriteEpisodeService {
 
       const episodesRef = this.getFavoriteEpisodesCollection(userId);
       const q = query(episodesRef, orderBy('addedAt', 'desc'));
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDocs(q, {
           path: `users/${userId}/favorite_episodes`,
           queryKey: 'favoriteEpisodes',
           callsite: 'FavoriteEpisodeService.getFavoriteEpisodes',
         }),
-        createTimeout(),
-      ]);
+      );
 
       const episodes = snapshot.docs.map((doc) => doc.data() as FavoriteEpisode);
       this.logDebug('getFavoriteEpisodes:result', {
@@ -114,28 +97,25 @@ class FavoriteEpisodeService {
         userId,
         error,
       });
-      const message = getFirestoreErrorMessage(error);
-      console.error('[FavoriteEpisodeService] getFavoriteEpisodes error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('FavoriteEpisodeService.getFavoriteEpisodes', error);
     }
   }
 
   async getFavoriteEpisode(userId: string, episodeId: string): Promise<FavoriteEpisode | null> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
         return null;
       }
 
       const episodeRef = this.getFavoriteEpisodeRef(userId, episodeId);
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDoc(episodeRef, {
           path: `users/${userId}/favorite_episodes/${episodeId}`,
           queryKey: 'favoriteEpisodeById',
           callsite: 'FavoriteEpisodeService.getFavoriteEpisode',
         }),
-        createTimeout(),
-      ]);
+      );
 
       if (!snapshot.exists()) {
         return null;
@@ -143,9 +123,7 @@ class FavoriteEpisodeService {
 
       return snapshot.data() as FavoriteEpisode;
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[FavoriteEpisodeService] getFavoriteEpisode error:', error);
-      throw new Error(message);
+      return rethrowFirestoreError('FavoriteEpisodeService.getFavoriteEpisode', error);
     }
   }
 }

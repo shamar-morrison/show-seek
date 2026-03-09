@@ -412,7 +412,7 @@ describe('TVDetailScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/(tabs)/discover/tv/10/poster-picker');
   });
 
-  it('alerts and still opens note editor when note preload fails without note content', async () => {
+  it('alerts and opens a blank note editor when preload fails for a new note', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockEnsureNoteLoadedForEdit.mockRejectedValueOnce(new Error('Failed to load note'));
 
@@ -432,6 +432,28 @@ describe('TVDetailScreen', () => {
       );
     });
 
+    alertSpy.mockRestore();
+  });
+
+  it('alerts and does not open the note editor when a persisted note fails to load', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockUseMediaNoteValue = {
+      note: null,
+      hasNote: true,
+      isLoading: false,
+      ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
+    };
+    mockEnsureNoteLoadedForEdit.mockRejectedValueOnce(new Error('Failed to load note'));
+
+    const { getByTestId } = render(<TVDetailScreen />);
+
+    fireEvent.press(getByTestId('media-action-note'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalled();
+    });
+
+    expect(mockNoteModalPresent).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 });

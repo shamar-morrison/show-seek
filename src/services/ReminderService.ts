@@ -1,8 +1,15 @@
-import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import {
   auditedGetDoc,
   auditedGetDocs,
 } from '@/src/services/firestoreReadAudit';
+import {
+  getSignedInUser,
+  requireMatchingUser,
+  requireSignedInUser,
+  rethrowFirestoreError,
+  toFirestoreError,
+} from '@/src/services/serviceSupport';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import * as Notifications from 'expo-notifications';
 import {
   collection,
@@ -13,7 +20,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { Platform } from 'react-native';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 import {
   CreateReminderInput,
   NextEpisodeInfo,
@@ -51,33 +58,24 @@ class ReminderService {
 
   async getActiveReminders(userId: string): Promise<Reminder[]> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous || user.uid !== userId) {
-        throw new Error('Please sign in to continue');
-      }
+      requireMatchingUser(userId);
 
       const remindersRef = this.getRemindersCollection(userId);
       const q = query(remindersRef, where('status', '==', 'active'));
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      const snapshot = await Promise.race([
+      const snapshot = await raceWithTimeout(
         auditedGetDocs(q, {
           path: `users/${userId}/reminders`,
           queryKey: 'activeReminders',
           callsite: 'ReminderService.getActiveReminders',
         }),
-        timeoutPromise,
-      ]);
+      );
 
       return snapshot.docs.map((reminderDoc) => ({
         id: reminderDoc.id,
         ...reminderDoc.data(),
       })) as Reminder[];
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      throw new Error(message);
+      throw toFirestoreError(error);
     }
   }
 
@@ -255,8 +253,7 @@ class ReminderService {
    */
   async createReminder(input: CreateReminderInput): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       // Validate release date
       if (!input.releaseDate) {
@@ -307,15 +304,9 @@ class ReminderService {
         }),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(reminderRef, reminderData), timeoutPromise]);
+      await raceWithTimeout(setDoc(reminderRef, reminderData));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[ReminderService] createReminder error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('ReminderService.createReminder', error);
     }
   }
 
@@ -327,8 +318,7 @@ class ReminderService {
     opts?: { localNotificationId?: string | null }
   ): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
@@ -336,18 +326,13 @@ class ReminderService {
 
       // Fallback to fetching the reminder only when caller didn't provide local notification context.
       if (localNotificationId === undefined) {
-        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Request timed out')), 10000);
-        });
-
-        const reminderSnap = await Promise.race([
+        const reminderSnap = await raceWithTimeout(
           auditedGetDoc(reminderRef, {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.cancelReminder',
           }),
-          getDocTimeoutPromise,
-        ]);
+        );
         if (reminderSnap.exists()) {
           const reminder = reminderSnap.data() as Reminder;
           localNotificationId = reminder.localNotificationId;
@@ -358,15 +343,9 @@ class ReminderService {
         await Notifications.cancelScheduledNotificationAsync(localNotificationId);
       }
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([deleteDoc(reminderRef), timeoutPromise]);
+      await raceWithTimeout(deleteDoc(reminderRef));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[ReminderService] cancelReminder error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('ReminderService.cancelReminder', error);
     }
   }
 
@@ -379,25 +358,19 @@ class ReminderService {
     sourceReminder?: Reminder
   ): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
       let currentReminder = sourceReminder;
 
       if (!currentReminder) {
-        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Request timed out')), 10000);
-        });
-
-        const reminderSnap = await Promise.race([
+        const reminderSnap = await raceWithTimeout(
           auditedGetDoc(reminderRef, {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.updateReminder',
           }),
-          getDocTimeoutPromise,
-        ]);
+        );
 
         if (!reminderSnap.exists()) {
           throw new Error('Reminder not found');
@@ -426,15 +399,9 @@ class ReminderService {
         updatedAt: Date.now(),
       };
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(reminderRef, updatedData, { merge: true }), timeoutPromise]);
+      await raceWithTimeout(setDoc(reminderRef, updatedData, { merge: true }));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[ReminderService] updateReminder error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('ReminderService.updateReminder', error);
     }
   }
 
@@ -444,8 +411,7 @@ class ReminderService {
    */
   async updateReminderDetails(reminderId: string, updates: Partial<Reminder>): Promise<void> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
@@ -469,18 +435,13 @@ class ReminderService {
         }
       });
       if (allowedUpdates.releaseDate || allowedUpdates.reminderTiming) {
-        const getDocTimeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Request timed out')), 10000);
-        });
-
-        const reminderSnap = await Promise.race([
+        const reminderSnap = await raceWithTimeout(
           auditedGetDoc(reminderRef, {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.updateReminderDetails',
           }),
-          getDocTimeoutPromise,
-        ]);
+        );
         if (reminderSnap.exists()) {
           const current = reminderSnap.data() as Reminder;
           const timing = allowedUpdates.reminderTiming || current.reminderTiming;
@@ -505,15 +466,9 @@ class ReminderService {
       // Always update timestamp
       allowedUpdates.updatedAt = Date.now();
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      await Promise.race([setDoc(reminderRef, allowedUpdates, { merge: true }), timeoutPromise]);
+      await raceWithTimeout(setDoc(reminderRef, allowedUpdates, { merge: true }));
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
-      console.error('[ReminderService] updateReminderDetails error:', error);
-      throw new Error(message);
+      rethrowFirestoreError('ReminderService.updateReminderDetails', error);
     }
   }
 
@@ -522,24 +477,19 @@ class ReminderService {
    */
   async getReminder(mediaType: ReminderMediaType, mediaId: number): Promise<Reminder | null> {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) return null;
+      const user = getSignedInUser();
+      if (!user) return null;
 
       const reminderId = this.getReminderId(mediaType, mediaId);
       const reminderRef = this.getReminderRef(user.uid, reminderId);
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), 10000);
-      });
-
-      const docSnap = await Promise.race([
+      const docSnap = await raceWithTimeout(
         auditedGetDoc(reminderRef, {
           path: `users/${user.uid}/reminders/${reminderId}`,
           queryKey: 'reminderById',
           callsite: 'ReminderService.getReminder',
         }),
-        timeoutPromise,
-      ]);
+      );
 
       if (docSnap.exists()) {
         return {

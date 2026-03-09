@@ -4,6 +4,7 @@ import {
   auditedGetDoc,
   auditedGetDocs,
 } from '@/src/services/firestoreReadAudit';
+import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import {
   collection,
@@ -160,7 +161,7 @@ class ListService {
           error,
         });
       }
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     }
   }
 
@@ -229,7 +230,7 @@ class ListService {
           error,
         });
       }
-      throw new Error(getFirestoreErrorMessage(error));
+      throw toFirestoreError(error);
     }
   }
 
@@ -240,8 +241,7 @@ class ListService {
     let failureStage: 'update' | 'fallback-create' | null = null;
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const listRef = this.getUserListRef(user.uid, listId);
 
@@ -323,8 +323,7 @@ class ListService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       const listRef = this.getUserListRef(user.uid, listId);
 
@@ -357,8 +356,7 @@ class ListService {
    */
   async createList(listName: string, description?: string) {
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       // Generate a URL-friendly ID from the name
       const baseId = listName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -417,9 +415,8 @@ class ListService {
       if (error instanceof Error && error.message === 'List creation collision check timed out') {
         throw new Error('Unable to create list right now, please try again');
       }
-      const message = getFirestoreErrorMessage(error);
       console.error('[ListService] createList error:', error);
-      throw new Error(message);
+      throw toFirestoreError(error);
     }
   }
 
@@ -430,8 +427,7 @@ class ListService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       // Prevent deleting default lists
       if (DEFAULT_LISTS.some((l) => l.id === listId)) {
@@ -442,9 +438,8 @@ class ListService {
 
       await Promise.race([deleteDoc(listRef), timeout.promise]);
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
       console.error('[ListService] deleteList error:', error);
-      throw new Error(message);
+      throw toFirestoreError(error);
     } finally {
       timeout.cancel();
     }
@@ -457,8 +452,7 @@ class ListService {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
-      const user = auth.currentUser;
-      if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+      const user = requireSignedInUser();
 
       // Prevent renaming default lists
       if (DEFAULT_LISTS.some((l) => l.id === listId)) {
@@ -499,9 +493,8 @@ class ListService {
 
       await Promise.race([updateDoc(listRef, updateData), timeout.promise]);
     } catch (error) {
-      const message = getFirestoreErrorMessage(error);
       console.error('[ListService] renameList error:', error);
-      throw new Error(message);
+      throw toFirestoreError(error);
     } finally {
       timeout.cancel();
     }

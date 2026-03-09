@@ -83,4 +83,41 @@ describe('DataExportService', () => {
     const writtenContent = (FileSystem.writeAsStringAsync as jest.Mock).mock.calls[0][1];
     expect(writtenContent).toContain('List: My List,"Bad, ""Good""\nTitle",Movie,');
   });
+
+  it('skips invalid legacy ratings during export instead of producing malformed rows', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(true);
+    (getDocs as jest.Mock)
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({
+        docs: [
+          {
+            id: 'episode-10-1-2',
+            data: () => ({
+              mediaType: 'episode',
+              rating: 9,
+              ratedAt: 1700000000000,
+              tvShowName: 'Loaded Show',
+              episodeName: 'Pilot',
+            }),
+          },
+          {
+            id: 'movie-99',
+            data: () => ({
+              rating: 8,
+              ratedAt: 1700000000001,
+            }),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await exportUserData('csv');
+
+    const writtenContent = (FileSystem.writeAsStringAsync as jest.Mock).mock.calls[0][1];
+    expect(writtenContent).toContain('Rating,Loaded Show - Pilot,Episode,9');
+    expect(writtenContent).not.toContain('movie-99');
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });
