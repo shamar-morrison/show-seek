@@ -41,6 +41,7 @@ import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/use
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
 import { useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
+import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
@@ -124,6 +125,7 @@ export default function EpisodeDetailScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
 
   const { preferences } = usePreferences();
+  const { resolvePosterPath } = usePosterOverrides();
   const { membership: listMembership } = useMediaLists(tvId);
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
@@ -185,6 +187,9 @@ export default function EpisodeDetailScreen() {
   });
 
   const tvShow = tvShowQuery.data;
+  const resolvedShowPosterPath = tvShow
+    ? resolvePosterPath('tv', tvShow.id, tvShow.poster_path)
+    : null;
   const displayShowTitle = tvShow
     ? getDisplayMediaTitle(tvShow, !!preferences?.showOriginalTitles)
     : '';
@@ -199,12 +204,12 @@ export default function EpisodeDetailScreen() {
       mediaId: tvId,
       seasonNumber,
       episodeNumber,
-      posterPath: tvShow?.poster_path ?? null,
+      posterPath: resolvedShowPosterPath,
       mediaTitle: episode?.name ?? '',
       initialNote,
       showId: tvId,
     }),
-    [episode?.name, episodeNumber, seasonNumber, tvId, tvShow?.poster_path]
+    [episode?.name, episodeNumber, resolvedShowPosterPath, seasonNumber, tvId]
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,

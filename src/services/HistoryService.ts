@@ -1,10 +1,10 @@
-import { auth } from '../firebase/config';
 import i18n from '../i18n';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
 import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
 import type { UserList } from './ListService';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
+import { getSignedInUser } from './serviceSupport';
 
 /** Episode with show metadata for history display */
 interface EnrichedWatchedEpisode extends WatchedEpisode {
@@ -450,7 +450,7 @@ class HistoryService {
     month: string,
     genreMap: Record<number, string>
   ): Promise<MonthlyDetail | null> {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return null;
 
     // Parse month to get date range

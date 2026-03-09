@@ -105,6 +105,9 @@ export function normalizeRatingItem(
   const mediaType = getValidMediaType(data.mediaType);
   const rating = toFiniteNumber(data.rating);
   const ratedAt = toFiniteNumber(data.ratedAt);
+  const tvShowIdNum = toFiniteNumber(data.tvShowId);
+  const seasonNumberNum = toFiniteNumber(data.seasonNumber);
+  const episodeNumberNum = toFiniteNumber(data.episodeNumber);
 
   if (!mediaType || rating === null || ratedAt === null) {
     console.warn(
@@ -131,12 +134,12 @@ export function normalizeRatingItem(
     ...((typeof data.releaseDate === 'string' || data.releaseDate === null) && {
       releaseDate: data.releaseDate as string | null,
     }),
-    ...(toFiniteNumber(data.tvShowId) !== null && { tvShowId: toFiniteNumber(data.tvShowId)! }),
-    ...(toFiniteNumber(data.seasonNumber) !== null && {
-      seasonNumber: toFiniteNumber(data.seasonNumber)!,
+    ...(tvShowIdNum !== null && { tvShowId: tvShowIdNum }),
+    ...(seasonNumberNum !== null && {
+      seasonNumber: seasonNumberNum,
     }),
-    ...(toFiniteNumber(data.episodeNumber) !== null && {
-      episodeNumber: toFiniteNumber(data.episodeNumber)!,
+    ...(episodeNumberNum !== null && {
+      episodeNumber: episodeNumberNum,
     }),
     ...(typeof data.episodeName === 'string' && { episodeName: data.episodeName }),
     ...(typeof data.tvShowName === 'string' && { tvShowName: data.tvShowName }),

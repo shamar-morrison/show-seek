@@ -30,7 +30,7 @@ export const useNotePress = ({
 
   const openNoteEditor = useCallback(
     (initialNote?: string) => {
-      void noteSheetRef.current?.present(buildPresentParams(initialNote));
+      return noteSheetRef.current?.present(buildPresentParams(initialNote));
     },
     [buildPresentParams, noteSheetRef]
   );
@@ -42,9 +42,11 @@ export const useNotePress = ({
 
     setIsOpeningNote(true);
 
+    let initialNote = '';
+
     try {
       const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-      openNoteEditor(resolvedNote?.content ?? '');
+      initialNote = resolvedNote?.content ?? '';
     } catch (error) {
       onLoadError(error);
       Alert.alert(alertTitle, alertMessage);
@@ -52,8 +54,13 @@ export const useNotePress = ({
       if (noteExists) {
         return;
       }
+    }
 
-      openNoteEditor('');
+    try {
+      await openNoteEditor(initialNote);
+    } catch (error) {
+      onLoadError(error);
+      Alert.alert(alertTitle, alertMessage);
     } finally {
       setIsOpeningNote(false);
     }

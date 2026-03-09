@@ -9,6 +9,7 @@ const mockUseQuery = jest.fn();
 const mockIsAccountRequired = jest.fn(() => false);
 const mockEnsureNoteLoadedForEdit = jest.fn();
 const mockNoteModalPresent = jest.fn();
+const mockResolvePosterPath = jest.fn();
 let mockUseMediaNoteValue: any = {
   note: null,
   hasNote: false,
@@ -157,6 +158,12 @@ jest.mock('@/src/hooks/useNotes', () => ({
   useMediaNote: () => mockUseMediaNoteValue,
 }));
 
+jest.mock('@/src/hooks/usePosterOverrides', () => ({
+  usePosterOverrides: () => ({
+    resolvePosterPath: (...args: unknown[]) => mockResolvePosterPath(...args),
+  }),
+}));
+
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({
     preferences: {
@@ -255,6 +262,7 @@ jest.mock('@/src/components/detail/VideosSection', () => ({ VideosSection: () =>
 describe('EpisodeDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockResolvePosterPath.mockReturnValue('/resolved-show.jpg');
     mockUseMediaNoteValue = {
       note: null,
       hasNote: false,
@@ -363,6 +371,7 @@ describe('EpisodeDetailScreen', () => {
           mediaId: 10,
           seasonNumber: 1,
           episodeNumber: 2,
+          posterPath: '/resolved-show.jpg',
           mediaTitle: 'Pilot',
           initialNote: 'Loaded episode note',
           showId: 10,
@@ -394,6 +403,28 @@ describe('EpisodeDetailScreen', () => {
       );
     });
 
+    alertSpy.mockRestore();
+  });
+
+  it('alerts and does not open the note editor when a persisted note fails to load', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockUseMediaNoteValue = {
+      note: null,
+      hasNote: true,
+      isLoading: false,
+      ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
+    };
+    mockEnsureNoteLoadedForEdit.mockRejectedValueOnce(new Error('Failed to load note'));
+
+    const { getByTestId } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByTestId('episode-note-action'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalled();
+    });
+
+    expect(mockNoteModalPresent).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 });

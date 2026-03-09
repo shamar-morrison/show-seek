@@ -1,9 +1,15 @@
 import { historyService } from '@/src/services/HistoryService';
 
 const mockFetchUserCollection = jest.fn();
+const mockGetSignedInUser = jest.fn();
 
 jest.mock('@/src/services/firestoreHelpers', () => ({
   fetchUserCollection: (...args: any[]) => mockFetchUserCollection(...args),
+}));
+
+jest.mock('@/src/services/serviceSupport', () => ({
+  ...jest.requireActual('@/src/services/serviceSupport'),
+  getSignedInUser: (...args: any[]) => mockGetSignedInUser(...args),
 }));
 
 const buildSnapshotDoc = (id: string, data: Record<string, unknown>) => ({
@@ -18,6 +24,7 @@ describe('HistoryService', () => {
     jest.clearAllMocks();
     jest.useFakeTimers().setSystemTime(new Date('2026-03-09T12:00:00Z'));
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockGetSignedInUser.mockReturnValue({ uid: 'test-user-id' });
 
     const validRatedAt = new Date('2026-03-05T15:00:00Z').getTime();
 
@@ -95,5 +102,13 @@ describe('HistoryService', () => {
       })
     );
     expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns null for month detail when no signed-in user is available', async () => {
+    mockGetSignedInUser.mockReturnValueOnce(null);
+
+    const detail = await historyService.fetchMonthDetail('2026-03', {});
+
+    expect(detail).toBeNull();
   });
 });
