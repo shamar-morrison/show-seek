@@ -3,6 +3,7 @@ import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
+import { requireSignedInUser } from '@/src/services/serviceSupport';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { createTimeout } from '@/src/utils/timeout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +18,14 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { auth } from '../firebase/config';
+
+export interface AddWatchInput {
+  watchedAt: Date;
+  watchId: string;
+}
+
+export const createWatchId = (): string =>
+  `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
 /**
  * Fetch watch instances for a movie (one-time fetch for initial data)
@@ -120,12 +129,8 @@ export const useAddWatch = (movieId: number) => {
 
   return useMutation({
     mutationKey: ['addWatch', movieId],
-    mutationFn: async (watchedAt: Date) => {
-      const currentUserId = auth.currentUser?.uid;
-      if (!currentUserId) throw new Error('Please sign in to continue');
-
-      // Generate a unique ID using timestamp + random suffix
-      const watchId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    mutationFn: async ({ watchedAt, watchId }: AddWatchInput) => {
+      const currentUserId = requireSignedInUser().uid;
       const watchRef = doc(
         db,
         `users/${currentUserId}/watched_movies/${movieId}/watches/${watchId}`
@@ -138,16 +143,14 @@ export const useAddWatch = (movieId: number) => {
 
       return { id: watchId, watchedAt, movieId };
     },
-    // Optimistic update for instant UI feedback
-    onMutate: async (watchedAt) => {
+    onMutate: async ({ watchedAt, watchId }) => {
       const queryKey = ['watchedMovies', userId, movieId];
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
 
-      // Optimistically add the new watch
       const optimisticWatch: WatchInstance = {
-        id: `temp_${Date.now()}`,
+        id: watchId,
         watchedAt,
         movieId,
       };
@@ -160,13 +163,15 @@ export const useAddWatch = (movieId: number) => {
       return { previousData };
     },
     onError: (error, _variables, context) => {
-      // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useAddWatch] Error:', error);
       throw new Error(message);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['watchedMovies', userId, movieId] });
     },
   });
 };
@@ -181,8 +186,7 @@ export const useClearWatches = (movieId: number) => {
   return useMutation({
     mutationKey: ['clearWatches', movieId],
     mutationFn: async () => {
-      const currentUserId = auth.currentUser?.uid;
-      if (!currentUserId) throw new Error('Please sign in to continue');
+      const currentUserId = requireSignedInUser().uid;
 
       const watchesRef = collection(db, `users/${currentUserId}/watched_movies/${movieId}/watches`);
 
@@ -253,8 +257,7 @@ export const useDeleteWatch = (movieId: number) => {
   return useMutation({
     mutationKey: ['deleteWatch', movieId],
     mutationFn: async (instanceId: string) => {
-      const currentUserId = auth.currentUser?.uid;
-      if (!currentUserId) throw new Error('Please sign in to continue');
+      const currentUserId = requireSignedInUser().uid;
 
       const watchRef = doc(
         db,
@@ -318,8 +321,7 @@ export const useUpdateWatchDate = (movieId: number) => {
   return useMutation({
     mutationKey: ['updateWatchDate', movieId],
     mutationFn: async ({ instanceId, newDate }: { instanceId: string; newDate: Date }) => {
-      const currentUserId = auth.currentUser?.uid;
-      if (!currentUserId) throw new Error('Please sign in to continue');
+      const currentUserId = requireSignedInUser().uid;
 
       const watchRef = doc(
         db,

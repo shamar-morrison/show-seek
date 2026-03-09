@@ -67,7 +67,12 @@ import {
   useUpdateReminder,
 } from '@/src/hooks/useReminders';
 import { useTraktReviews } from '@/src/hooks/useTraktReviews';
-import { useAddWatch, useClearWatches, useWatchedMovies } from '@/src/hooks/useWatchedMovies';
+import {
+  createWatchId,
+  useAddWatch,
+  useClearWatches,
+  useWatchedMovies,
+} from '@/src/hooks/useWatchedMovies';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
@@ -568,7 +573,7 @@ export default function MovieDetailScreen() {
   // Handle marking the movie as watched with a specific date
   const handleMarkAsWatched = async (date: Date) => {
     const isFirstWatch = watchCount === 0;
-    await addWatchMutation.mutateAsync(date);
+    await addWatchMutation.mutateAsync({ watchedAt: date, watchId: createWatchId() });
     await runPostWatchActions(isFirstWatch);
   };
 
@@ -589,7 +594,10 @@ export default function MovieDetailScreen() {
       (async () => {
         try {
           const isFirstWatch = watchCount === 0;
-          await addWatchMutation.mutateAsync(new Date());
+          await addWatchMutation.mutateAsync({
+            watchedAt: new Date(),
+            watchId: createWatchId(),
+          });
           await runPostWatchActions(isFirstWatch);
 
           toastRef.current?.show(t('library.markedAsWatched'));
