@@ -6,7 +6,6 @@ import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
@@ -24,7 +23,8 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
-import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import { getDisplayMediaTitle, type MediaTitleFields } from '@/src/utils/mediaTitle';
+import { partitionMoviePersonCredits, partitionTVPersonCredits } from '@/src/utils/personCredits';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -61,6 +61,25 @@ type SocialLink = {
   label: string;
   url: string;
   icon: React.ReactNode;
+};
+
+type CreditPreviewItem = MediaTitleFields & {
+  id: number;
+  poster_path: string | null;
+  vote_average: number;
+  popularity: number;
+  release_date?: string;
+  first_air_date?: string;
+  genre_ids?: number[];
+};
+
+type CreditSection = {
+  key: string;
+  title: string;
+  mediaType: 'movie' | 'tv';
+  creditType: 'cast' | 'crew';
+  items: CreditPreviewItem[];
+  totalCount: number;
 };
 
 export default function PersonDetailScreen() {
@@ -120,8 +139,8 @@ export default function PersonDetailScreen() {
     (
       item: {
         id: number;
-        title?: string;
-        name?: string;
+        title?: string | null;
+        name?: string | null;
         poster_path: string | null;
         vote_average: number;
         release_date?: string;
@@ -140,7 +159,7 @@ export default function PersonDetailScreen() {
         id: item.id,
         media_type: mediaType,
         title: item.title || item.name || '',
-        name: item.name,
+        name: item.name ?? undefined,
         poster_path: item.poster_path,
         vote_average: item.vote_average || 0,
         release_date: item.release_date || item.first_air_date || '',
@@ -177,79 +196,59 @@ export default function PersonDetailScreen() {
   }
 
   const person = personQuery.data;
+  const movieCredits = partitionMoviePersonCredits(movieCreditsQuery.data);
+  const tvCredits = partitionTVPersonCredits(tvCreditsQuery.data);
 
-  const isCrewRole =
-    person.known_for_department === 'Directing' || person.known_for_department === 'Writing';
+  const getPreviewCredits = <T extends CreditPreviewItem>(credits: T[]) =>
+    [...credits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
 
-  // For directors/writers, show their crew credits (directed, written, created)
-  // For actors, show their cast credits
-  const relevantCrewJobs = [
-    'Director',
-    'Writer',
-    'Screenplay',
-    'Story',
-    'Creator',
-    'Executive Producer',
-  ];
+  const movieSections: CreditSection[] = [
+    {
+      key: 'movie-crew',
+      title: t('person.directedWrittenMovies'),
+      mediaType: 'movie' as const,
+      creditType: 'crew' as const,
+      items: getPreviewCredits(movieCredits.directedWritten),
+      totalCount: movieCredits.directedWritten.length,
+    },
+    {
+      key: 'movie-cast',
+      title: t('person.actingMovies'),
+      mediaType: 'movie' as const,
+      creditType: 'cast' as const,
+      items: getPreviewCredits(movieCredits.acting),
+      totalCount: movieCredits.acting.length,
+    },
+  ].filter((section) => section.items.length > 0);
 
-  // Filter and deduplicate crew credits (a person may have multiple roles on same project)
-  const getUniqueCredits = <T extends { id: number }>(credits: T[]): T[] => {
-    const uniqueMap = new Map<number, T>();
-    credits.forEach((credit) => {
-      if (!uniqueMap.has(credit.id)) {
-        uniqueMap.set(credit.id, credit);
-      }
-    });
-    return Array.from(uniqueMap.values());
-  };
-
-  const movieCredits = isCrewRole
-    ? getUniqueCredits(
-        (movieCreditsQuery.data?.crew || []).filter((credit) =>
-          relevantCrewJobs.some((job) => credit.job?.includes(job))
-        )
-      )
-    : movieCreditsQuery.data?.cast || [];
-
-  const tvCredits = isCrewRole
-    ? getUniqueCredits(
-        (tvCreditsQuery.data?.crew || []).filter((credit) =>
-          relevantCrewJobs.some((job) => credit.job?.includes(job))
-        )
-      )
-    : getUniqueCredits(tvCreditsQuery.data?.cast || []);
-
-  // Filter out non-scripted shows from TV credits
-  const filteredTVCredits = tvCredits.filter(
-    (show) => !show.genre_ids?.some((genreId) => EXCLUDED_TV_GENRE_IDS.includes(genreId))
-  );
-
-  // Sort by popularity and get top items
-  const knownForMovies = [...movieCredits].sort((a, b) => b.popularity - a.popularity).slice(0, 10);
-
-  const knownForTV = [...filteredTVCredits]
-    .sort((a, b) => b.popularity - a.popularity)
-    .slice(0, 10);
+  const tvSections: CreditSection[] = [
+    {
+      key: 'tv-crew',
+      title: t('person.directedWrittenTV'),
+      mediaType: 'tv' as const,
+      creditType: 'crew' as const,
+      items: getPreviewCredits(tvCredits.directedWritten),
+      totalCount: tvCredits.directedWritten.length,
+    },
+    {
+      key: 'tv-cast',
+      title: t('person.actingTV'),
+      mediaType: 'tv' as const,
+      creditType: 'cast' as const,
+      items: getPreviewCredits(tvCredits.acting),
+      totalCount: tvCredits.acting.length,
+    },
+  ].filter((section) => section.items.length > 0);
 
   const profileUrl = getImageUrl(person.profile_path, TMDB_IMAGE_SIZES.profile.large);
 
-  const handleMoviePress = (id: number) => {
-    navigateTo(`/movie/${id}`);
+  const handleCreditPress = (mediaType: 'movie' | 'tv', id: number) => {
+    navigateTo(`/${mediaType}/${id}`);
   };
 
-  const handleTVPress = (id: number) => {
-    navigateTo(`/tv/${id}`);
-  };
-
-  const handleViewAllMovies = () => {
+  const handleViewAllCredits = (mediaType: 'movie' | 'tv', creditType: 'cast' | 'crew') => {
     navigateTo(
-      `/person/${personId}/credits?name=${encodeURIComponent(person.name)}&mediaType=movie&creditType=${isCrewRole ? 'crew' : 'cast'}`
-    );
-  };
-
-  const handleViewAllTV = () => {
-    navigateTo(
-      `/person/${personId}/credits?name=${encodeURIComponent(person.name)}&mediaType=tv&creditType=${isCrewRole ? 'crew' : 'cast'}`
+      `/person/${personId}/credits?name=${encodeURIComponent(person.name)}&mediaType=${mediaType}&creditType=${creditType}`
     );
   };
 
@@ -367,6 +366,79 @@ export default function PersonDetailScreen() {
     } catch (error) {
       console.error('Failed to open social link:', error);
     }
+  };
+
+  const renderCreditSection = ({
+    key,
+    title,
+    mediaType,
+    creditType,
+    items,
+    totalCount,
+  }: CreditSection) => {
+    const showViewAll = totalCount > 10;
+
+    return (
+      <View key={key} style={styles.section}>
+        {showViewAll ? (
+          <TouchableOpacity
+            style={styles.sectionHeader}
+            onPress={() => handleViewAllCredits(mediaType, creditType)}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+          </View>
+        )}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {items.map((item, index) => {
+            const listIds = getListsForMedia(item.id, mediaType);
+            const posterPath = resolvePosterPath(mediaType, item.id, item.poster_path);
+            const year = mediaType === 'movie' ? item.release_date : item.first_air_date;
+
+            return (
+              <TouchableOpacity
+                key={`${mediaType}-${creditType}-${item.id}-${index}`}
+                style={styles.creditCard}
+                onPress={() => handleCreditPress(mediaType, item.id)}
+                onLongPress={() => handleKnownForLongPress(item, mediaType)}
+                activeOpacity={ACTIVE_OPACITY}
+              >
+                <View style={styles.creditPosterContainer}>
+                  <MediaImage
+                    source={{
+                      uri: getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.small),
+                    }}
+                    style={styles.creditPoster}
+                    contentFit="cover"
+                  />
+                  {listIds.length > 0 && <ListMembershipBadge listIds={listIds} />}
+                </View>
+                <Text style={styles.creditTitle} numberOfLines={2}>
+                  {getDisplayMediaTitle(item, !!preferences?.showOriginalTitles)}
+                </Text>
+                <View style={styles.creditMeta}>
+                  {year && <Text style={styles.creditYear}>{new Date(year).getFullYear()}</Text>}
+                  {item.vote_average > 0 && (
+                    <>
+                      {year && <Text style={styles.creditYear}> • </Text>}
+                      <View style={styles.creditRating}>
+                        <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
+                        <Text style={styles.creditRatingText}>{item.vote_average.toFixed(1)}</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
   };
 
   return (
@@ -509,147 +581,9 @@ export default function PersonDetailScreen() {
           </View>
         )}
 
-        {/* Known For - Movies */}
-        {knownForMovies.length > 0 && (
-          <View style={styles.section}>
-            {movieCredits.length > 10 ? (
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={handleViewAllMovies}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.sectionTitle}>
-                  {isCrewRole ? t('person.directedWrittenMovies') : t('person.knownForMovies')}
-                </Text>
-                <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {isCrewRole ? t('person.directedWrittenMovies') : t('person.knownForMovies')}
-                </Text>
-              </View>
-            )}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForMovies.map((movie, index) => {
-                const movieListIds = getListsForMedia(movie.id, 'movie');
-                const moviePosterPath = resolvePosterPath('movie', movie.id, movie.poster_path);
-                return (
-                  <TouchableOpacity
-                    key={`movie-${movie.id}-${index}`}
-                    style={styles.creditCard}
-                    onPress={() => handleMoviePress(movie.id)}
-                    onLongPress={() => handleKnownForLongPress(movie, 'movie')}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <View style={styles.creditPosterContainer}>
-                      <MediaImage
-                        source={{
-                          uri: getImageUrl(moviePosterPath, TMDB_IMAGE_SIZES.poster.small),
-                        }}
-                        style={styles.creditPoster}
-                        contentFit="cover"
-                      />
-                      {movieListIds.length > 0 && <ListMembershipBadge listIds={movieListIds} />}
-                    </View>
-                    <Text style={styles.creditTitle} numberOfLines={2}>
-                      {getDisplayMediaTitle(movie, !!preferences?.showOriginalTitles)}
-                    </Text>
-                    <View style={styles.creditMeta}>
-                      {movie.release_date && (
-                        <Text style={styles.creditYear}>
-                          {new Date(movie.release_date).getFullYear()}
-                        </Text>
-                      )}
-                      {movie.vote_average > 0 && (
-                        <>
-                          {movie.release_date && <Text style={styles.creditYear}> • </Text>}
-                          <View style={styles.creditRating}>
-                            <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-                            <Text style={styles.creditRatingText}>
-                              {movie.vote_average.toFixed(1)}
-                            </Text>
-                          </View>
-                        </>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
+        {movieSections.map(renderCreditSection)}
 
-        {/* Known For - TV Shows */}
-        {knownForTV.length > 0 && (
-          <View style={styles.section}>
-            {filteredTVCredits.length > 10 ? (
-              <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={handleViewAllTV}
-                activeOpacity={ACTIVE_OPACITY}
-              >
-                <Text style={styles.sectionTitle}>
-                  {isCrewRole ? t('person.directedWrittenTV') : t('person.knownForTV')}
-                </Text>
-                <ArrowRight size={23} color={accentColor} style={styles.viewAll} />
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {isCrewRole ? t('person.directedWrittenTV') : t('person.knownForTV')}
-                </Text>
-              </View>
-            )}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {knownForTV.map((show, index) => {
-                const showListIds = getListsForMedia(show.id, 'tv');
-                const showPosterPath = resolvePosterPath('tv', show.id, show.poster_path);
-                return (
-                  <TouchableOpacity
-                    key={`tv-${show.id}-${index}`}
-                    style={styles.creditCard}
-                    onPress={() => handleTVPress(show.id)}
-                    onLongPress={() => handleKnownForLongPress(show, 'tv')}
-                    activeOpacity={ACTIVE_OPACITY}
-                  >
-                    <View style={styles.creditPosterContainer}>
-                      <MediaImage
-                        source={{
-                          uri: getImageUrl(showPosterPath, TMDB_IMAGE_SIZES.poster.small),
-                        }}
-                        style={styles.creditPoster}
-                        contentFit="cover"
-                      />
-                      {showListIds.length > 0 && <ListMembershipBadge listIds={showListIds} />}
-                    </View>
-                    <Text style={styles.creditTitle} numberOfLines={2}>
-                      {getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)}
-                    </Text>
-                    <View style={styles.creditMeta}>
-                      {show.first_air_date && (
-                        <Text style={styles.creditYear}>
-                          {new Date(show.first_air_date).getFullYear()}
-                        </Text>
-                      )}
-                      {show.vote_average > 0 && (
-                        <>
-                          {show.first_air_date && <Text style={styles.creditYear}> • </Text>}
-                          <View style={styles.creditRating}>
-                            <Star size={12} fill={COLORS.warning} color={COLORS.warning} />
-                            <Text style={styles.creditRatingText}>
-                              {show.vote_average.toFixed(1)}
-                            </Text>
-                          </View>
-                        </>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
+        {tvSections.map(renderCreditSection)}
       </Animated.ScrollView>
 
       {selectedMediaItem && (

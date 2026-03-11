@@ -20,7 +20,6 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import WatchStatusFiltersModal from '@/src/components/WatchStatusFiltersModal';
-import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
@@ -43,6 +42,12 @@ import {
   WatchStatusFilterState,
 } from '@/src/utils/listFilters';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
+import {
+  partitionMoviePersonCredits,
+  partitionTVPersonCredits,
+  type PersonMovieCreditsResponse,
+  type PersonTVCreditsResponse,
+} from '@/src/utils/personCredits';
 import { getSortableTitle } from '@/src/utils/sortUtils';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
@@ -91,11 +96,14 @@ const GridCreditCard = React.memo<GridCreditCardProps>(
       onLongPress(item);
     }, [item, onLongPress]);
 
-    const { handlePress: handleCardPress, handleLongPress: handleCardLongPress, handlePressOut } =
-      useLongPressPressGuard({
-        onPress: handlePress,
-        onLongPress: handleLongPress,
-      });
+    const {
+      handlePress: handleCardPress,
+      handleLongPress: handleCardLongPress,
+      handlePressOut,
+    } = useLongPressPressGuard({
+      onPress: handlePress,
+      onLongPress: handleLongPress,
+    });
 
     const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
 
@@ -165,9 +173,14 @@ export default function PersonCreditsScreen() {
   const personId = Number(id);
   const isTVCredits = mediaType === 'tv';
   const isCrewCredits = creditType === 'crew';
-
-  // Compute screen title early for the header
-  const screenTitle = `${name || 'Credits'} ${isTVCredits ? 'TV Shows' : 'Movies'}`;
+  const sectionTitle = isCrewCredits
+    ? isTVCredits
+      ? t('person.directedWrittenTV')
+      : t('person.directedWrittenMovies')
+    : isTVCredits
+      ? t('person.actingTV')
+      : t('person.actingMovies');
+  const screenTitle = name ? `${name} - ${sectionTitle}` : sectionTitle;
 
   // Set header options synchronously before first paint to prevent status bar overlap
   useLayoutEffect(() => {
@@ -216,15 +229,13 @@ export default function PersonCreditsScreen() {
     actionButton,
   });
 
-  type CreditsResponse =
-    | { cast: Movie[]; crew: MovieCrewCredit[] }
-    | { cast: TVShow[]; crew: TVCrewCredit[] };
-
   type MovieCastCredit = Movie & { character?: string };
   type TVCastCredit = TVShow & { character?: string };
   type CastCredit = MovieCastCredit | TVCastCredit;
   type CrewCredit = MovieCrewCredit | TVCrewCredit;
   type RawCredit = CastCredit | CrewCredit;
+
+  type CreditsResponse = PersonMovieCreditsResponse | PersonTVCreditsResponse;
 
   const creditsQuery = useQuery<CreditsResponse>({
     queryKey: ['person', personId, `${mediaType}-credits`],
@@ -240,40 +251,14 @@ export default function PersonCreditsScreen() {
   const credits: CreditItem[] = useMemo(() => {
     if (!creditsQuery.data) return [];
 
+    const partitionedCredits = isTVCredits
+      ? partitionTVPersonCredits(creditsQuery.data as PersonTVCreditsResponse)
+      : partitionMoviePersonCredits(creditsQuery.data as PersonMovieCreditsResponse);
     const rawCredits: RawCredit[] = isCrewCredits
-      ? (creditsQuery.data.crew as CrewCredit[])
-      : (creditsQuery.data.cast as CastCredit[]);
+      ? (partitionedCredits.directedWritten as CrewCredit[])
+      : (partitionedCredits.acting as CastCredit[]);
 
-    const relevantCrewJobs = [
-      'Director',
-      'Writer',
-      'Screenplay',
-      'Story',
-      'Creator',
-      'Executive Producer',
-    ];
-
-    let filtered: RawCredit[] = isCrewCredits
-      ? rawCredits.filter((credit) =>
-          relevantCrewJobs.some((job) => (credit as CrewCredit).job?.includes(job))
-        )
-      : rawCredits;
-
-    if (isTVCredits) {
-      filtered = filtered.filter(
-        (item) => !item.genre_ids?.some((id) => EXCLUDED_TV_GENRE_IDS.includes(id))
-      );
-    }
-
-    // Deduplicate (a person may have multiple roles on same project)
-    const uniqueMap = new Map<number, RawCredit>();
-    filtered.forEach((credit) => {
-      if (!uniqueMap.has(credit.id)) {
-        uniqueMap.set(credit.id, credit);
-      }
-    });
-
-    const items: CreditItem[] = Array.from(uniqueMap.values()).map(
+    const items: CreditItem[] = rawCredits.map(
       (credit): CreditItem => ({
         id: credit.id,
         title: getDisplayMediaTitle(credit, !!preferences?.showOriginalTitles),

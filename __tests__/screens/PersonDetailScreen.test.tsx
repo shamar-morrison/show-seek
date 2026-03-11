@@ -49,6 +49,35 @@ const mockTVShow = {
   original_language: 'en',
 };
 
+const mockDirectedMovie = {
+  ...mockMovie,
+  id: 303,
+  title: 'Directed Movie',
+  original_title: 'Directed Movie',
+  popularity: 320,
+  job: 'Director',
+  department: 'Directing',
+};
+
+const mockDirectedTVShow = {
+  ...mockTVShow,
+  id: 404,
+  name: 'Directed TV Show',
+  original_name: 'Directed TV Show',
+  popularity: 280,
+  job: 'Director',
+  department: 'Directing',
+};
+
+const mockRealityTVShow = {
+  ...mockTVShow,
+  id: 505,
+  name: 'Reality TV Show',
+  original_name: 'Reality TV Show',
+  genre_ids: [10764],
+  popularity: 150,
+};
+
 const mockPerson = {
   id: 99,
   name: 'Test Person',
@@ -232,13 +261,22 @@ jest.mock('@/src/components/AddToListModal', () => {
 });
 
 describe('PersonDetailScreen', () => {
-  const setupQueries = (personData = mockPerson) => {
+  const setupQueries = (
+    personData = mockPerson,
+    {
+      movieCredits = { cast: [mockMovie], crew: [] },
+      tvCredits = { cast: [mockTVShow], crew: [] },
+    }: {
+      movieCredits?: { cast: (typeof mockMovie)[]; crew: (typeof mockDirectedMovie)[] };
+      tvCredits?: { cast: (typeof mockTVShow)[]; crew: (typeof mockDirectedTVShow)[] };
+    } = {}
+  ) => {
     mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
       const creditKey = queryKey[2];
 
       if (creditKey === 'movie-credits') {
         return {
-          data: { cast: [mockMovie], crew: [] },
+          data: movieCredits,
           isLoading: false,
           isError: false,
           refetch: jest.fn(),
@@ -247,7 +285,7 @@ describe('PersonDetailScreen', () => {
 
       if (creditKey === 'tv-credits') {
         return {
-          data: { cast: [mockTVShow], crew: [] },
+          data: tvCredits,
           isLoading: false,
           isError: false,
           refetch: jest.fn(),
@@ -353,6 +391,66 @@ describe('PersonDetailScreen', () => {
     });
     expect(mockCalculateTmdbAge).toHaveBeenCalledWith('1990-06-15', null);
     expect(getByText('June 15, 1990 person.ageYearsOld:35')).toBeTruthy();
+  });
+
+  it('shows separate directed/written and acting sections for acting-classified people and routes directed movies to crew credits', () => {
+    const directedMovies = Array.from({ length: 11 }, (_, index) => ({
+      ...mockDirectedMovie,
+      id: 300 + index,
+      title: `Directed Movie ${index}`,
+      original_title: `Directed Movie ${index}`,
+      popularity: 100 + index,
+    }));
+
+    const actingMovies = Array.from({ length: 11 }, (_, index) => ({
+      ...mockMovie,
+      id: 400 + index,
+      title: `Acting Movie ${index}`,
+      original_title: `Acting Movie ${index}`,
+      popularity: 200 + index,
+    }));
+
+    setupQueries(mockPerson, {
+      movieCredits: {
+        cast: actingMovies,
+        crew: directedMovies,
+      },
+    });
+
+    const { getByText, queryByText } = render(<PersonDetailScreen />);
+
+    expect(getByText('person.directedWrittenMovies')).toBeTruthy();
+    expect(getByText('person.actingMovies')).toBeTruthy();
+    expect(getByText('Directed Movie 10')).toBeTruthy();
+    expect(queryByText('Directed Movie 0')).toBeNull();
+    expect(getByText('Acting Movie 10')).toBeTruthy();
+
+    fireEvent.press(getByText('person.directedWrittenMovies'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/(tabs)/discover/person/99/credits?name=Test%20Person&mediaType=movie&creditType=crew'
+    );
+  });
+
+  it('shows separate TV sections and filters non-scripted acting credits', () => {
+    setupQueries(mockPerson, {
+      movieCredits: {
+        cast: [mockMovie],
+        crew: [mockDirectedMovie],
+      },
+      tvCredits: {
+        cast: [mockTVShow, mockRealityTVShow],
+        crew: [mockDirectedTVShow],
+      },
+    });
+
+    const { getByText, queryByText } = render(<PersonDetailScreen />);
+
+    expect(getByText('person.directedWrittenTV')).toBeTruthy();
+    expect(getByText('person.actingTV')).toBeTruthy();
+    expect(getByText('Directed TV Show')).toBeTruthy();
+    expect(getByText('Known TV Show')).toBeTruthy();
+    expect(queryByText('Reality TV Show')).toBeNull();
   });
 
   it('opens AddToListModal for authenticated long press on known-for movie', async () => {

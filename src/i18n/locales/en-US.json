@@ -1289,6 +1289,8 @@
   },
   "person": {
     "addToFavoritePeople": "Add to Favorite People",
+    "actingMovies": "Acting (Movies)",
+    "actingTV": "Acting (TV)",
     "ageAtDeath": "({{count}} years old at death)",
     "ageAtDeath_one": "({{count}} year old at death)",
     "ageAtDeath_other": "({{count}} years old at death)",

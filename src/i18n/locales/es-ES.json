@@ -1131,6 +1131,8 @@
   },
   "person": {
     "addToFavoritePeople": "Añadir a personas favoritas",
+    "actingMovies": "Actuación (Películas)",
+    "actingTV": "Actuación (Series)",
     "ageAtDeath": "({{count}} años al fallecer)",
     "ageAtDeath_one": "({{count}} año al fallecer)",
     "ageAtDeath_other": "({{count}} años al fallecer)",

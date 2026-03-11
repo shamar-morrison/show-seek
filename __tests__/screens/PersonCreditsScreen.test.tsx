@@ -60,6 +60,16 @@ const mockTVCredit = {
   character: 'Host',
 };
 
+const mockDirectedMovieCredit = {
+  ...mockMovieCredit,
+  id: 303,
+  title: 'Directed Movie',
+  original_title: 'Directed Movie',
+  popularity: 320,
+  job: 'Director',
+  department: 'Directing',
+};
+
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockSearchParams,
   useNavigation: () => ({
@@ -236,12 +246,21 @@ jest.mock('@/src/utils/listActions', () => ({
   }),
 }));
 
-const setupCreditsQuery = () => {
+const setupCreditsQuery = (
+  creditsData:
+    | { cast: (typeof mockMovieCredit)[]; crew: (typeof mockDirectedMovieCredit)[] }
+    | {
+        cast: (typeof mockTVCredit)[];
+        crew: Array<typeof mockTVCredit & { job: string; department: string }>;
+      }
+    | undefined = undefined
+) => {
   mockUseQuery.mockImplementation(() => ({
     data:
-      mockSearchParams.mediaType === 'tv'
+      creditsData ??
+      (mockSearchParams.mediaType === 'tv'
         ? { cast: [mockTVCredit], crew: [] }
-        : { cast: [mockMovieCredit], crew: [] },
+        : { cast: [mockMovieCredit], crew: [] }),
     isLoading: false,
     isError: false,
     refetch: jest.fn(),
@@ -302,6 +321,49 @@ describe('PersonCreditsScreen', () => {
 
     expect(queryAllByTestId('list-membership-badge')).toHaveLength(0);
     expect(mockGetListsForMedia).not.toHaveBeenCalled();
+  });
+
+  it('shows exhaustive directed/written movie credits and sets the directed section title', () => {
+    mockSearchParams = {
+      ...mockSearchParams,
+      creditType: 'crew',
+    };
+
+    const directedMovies = Array.from({ length: 12 }, (_, index) => ({
+      ...mockDirectedMovieCredit,
+      id: 500 + index,
+      title: `Directed Movie ${index}`,
+      original_title: `Directed Movie ${index}`,
+    }));
+
+    setupCreditsQuery({
+      cast: [mockMovieCredit],
+      crew: directedMovies,
+    });
+
+    const { getByText, queryByText } = render(<PersonCreditsScreen />);
+
+    expect(mockSetOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Test Person - person.directedWrittenMovies' })
+    );
+    expect(getByText('Directed Movie 0')).toBeTruthy();
+    expect(getByText('Directed Movie 11')).toBeTruthy();
+    expect(queryByText('Known Movie')).toBeNull();
+  });
+
+  it('shows acting movie credits only and sets the acting section title for cast credits', () => {
+    setupCreditsQuery({
+      cast: [mockMovieCredit],
+      crew: [mockDirectedMovieCredit],
+    });
+
+    const { getByText, queryByText } = render(<PersonCreditsScreen />);
+
+    expect(mockSetOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Test Person - person.actingMovies' })
+    );
+    expect(getByText('Known Movie')).toBeTruthy();
+    expect(queryByText('Directed Movie')).toBeNull();
   });
 
   it('opens AddToListModal for authenticated long press in list mode', async () => {
