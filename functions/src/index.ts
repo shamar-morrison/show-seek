@@ -5,17 +5,12 @@ import { androidpublisher_v3 } from 'googleapis';
 import { getAndroidPublisherClientFromServiceAccountSecret } from './shared/playAuth';
 import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
 import {
-  fetchRevenueCatSubscriber,
-  isTransientRevenueCatError,
-  resolveRevenueCatPremiumState,
-  type RevenueCatResolvedPremiumState,
-} from './shared/revenuecatSubscriber';
-import {
   DEFAULT_LEGACY_LIFETIME_PRODUCT_ID,
   MONTHLY_SUBSCRIPTION_PRODUCT_ID,
   YEARLY_SUBSCRIPTION_PRODUCT_ID,
   isLegacyLifetimeProductId,
 } from './shared/premiumProducts';
+import { shouldBlockNoTokenPremiumDowngrade } from './shared/premiumSyncGuard';
 import {
   isDefinitiveSubscriptionError,
   isIdempotentAcknowledgeError,
@@ -25,7 +20,12 @@ import {
   resolveSubscriptionAcknowledgeId,
   shouldAcknowledgeSubscription,
 } from './shared/purchaseValidation';
-import { shouldBlockNoTokenPremiumDowngrade } from './shared/premiumSyncGuard';
+import {
+  fetchRevenueCatSubscriber,
+  isTransientRevenueCatError,
+  resolveRevenueCatPremiumState,
+  type RevenueCatResolvedPremiumState,
+} from './shared/revenuecatSubscriber';
 
 admin.initializeApp();
 
@@ -410,17 +410,15 @@ const validateLifetimeWithGoogle = async (
     token: purchaseToken,
   });
 
-  const lifetimePurchaseStateFailure = resolveLifetimePurchaseStateFailure(response.data.purchaseState);
+  const lifetimePurchaseStateFailure = resolveLifetimePurchaseStateFailure(
+    response.data.purchaseState
+  );
   if (lifetimePurchaseStateFailure) {
-    throw new HttpsError(
-      'failed-precondition',
-      lifetimePurchaseStateFailure.message,
-      {
-        purchaseState: response.data.purchaseState ?? null,
-        reason: lifetimePurchaseStateFailure.reason,
-        retryable: false,
-      }
-    );
+    throw new HttpsError('failed-precondition', lifetimePurchaseStateFailure.message, {
+      purchaseState: response.data.purchaseState ?? null,
+      reason: lifetimePurchaseStateFailure.reason,
+      retryable: false,
+    });
   }
 
   if (response.data.acknowledgementState === 0) {
@@ -942,10 +940,7 @@ export const reconcilePremiumStatus = onCall(
         userId,
       });
 
-      if (
-        subscriberLookup.statusCode === 401 ||
-        subscriberLookup.statusCode === 403
-      ) {
+      if (subscriberLookup.statusCode === 401 || subscriberLookup.statusCode === 403) {
         throw new HttpsError(
           'failed-precondition',
           'RevenueCat credentials are invalid for reconciliation.'
@@ -1186,5 +1181,5 @@ export const syncPremiumStatus = onCall(
   }
 );
 
-export { revenuecatWebhook } from './revenuecatWebhook';
 export { importImdbChunk } from './imdbImport';
+export { revenuecatWebhook } from './revenuecatWebhook';

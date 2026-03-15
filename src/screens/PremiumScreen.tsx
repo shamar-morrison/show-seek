@@ -9,6 +9,7 @@ import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
+import { trackPremiumPaywallView } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -46,6 +47,12 @@ export default function PremiumScreen() {
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const wasPremiumRef = React.useRef(isPremium);
+
+  React.useEffect(() => {
+    if (!isLoading && !isPremium) {
+      void trackPremiumPaywallView();
+    }
+  }, [isLoading, isPremium]);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');

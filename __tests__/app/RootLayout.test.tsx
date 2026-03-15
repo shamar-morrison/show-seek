@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 
-let mockSegments: string[] = ['(tabs)'];
+let mockSegments: string[] = ['(tabs)', 'home'];
 const mockReplace = jest.fn();
+const mockTrackScreen = jest.fn();
+const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 
 const mockAuthState = {
   user: null as null | { uid?: string },
@@ -98,6 +100,13 @@ jest.mock('@/src/utils/reminderSync', () => ({
   initializeReminderSync: jest.fn(() => Promise.resolve()),
 }));
 
+jest.mock('@/src/services/analytics', () => ({
+  getAnalyticsScreenName: (segments: string[]) =>
+    segments.filter((segment) => !segment.startsWith('(') && segment !== 'index').join('/') || null,
+  initializeAnalytics: () => mockInitializeAnalytics(),
+  trackScreen: (...args: unknown[]) => mockTrackScreen(...args),
+}));
+
 jest.mock('@/src/services/revenueCat', () => ({
   configureRevenueCat: jest.fn(() => Promise.resolve(false)),
 }));
@@ -123,7 +132,7 @@ afterAll(() => {
 describe('RootLayout routing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSegments = ['(tabs)'];
+    mockSegments = ['(tabs)', 'home'];
     mockAuthState.user = null;
     mockAuthState.loading = false;
     mockAuthState.hasCompletedOnboarding = true;
@@ -133,31 +142,33 @@ describe('RootLayout routing', () => {
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
     mockAuthState.hasCompletedOnboarding = false;
-    mockSegments = ['(tabs)'];
+    mockSegments = ['(tabs)', 'home'];
 
     render(<RootLayout />);
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/onboarding');
     });
+    expect(mockTrackScreen).not.toHaveBeenCalled();
   });
 
   it('redirects to sign-in when onboarded but not authenticated', async () => {
     mockAuthState.hasCompletedOnboarding = true;
     mockAuthState.user = null;
-    mockSegments = ['(tabs)'];
+    mockSegments = ['(tabs)', 'home'];
 
     render(<RootLayout />);
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
     });
+    expect(mockTrackScreen).not.toHaveBeenCalled();
   });
 
   it('redirects authenticated users in auth flow to preferred launch screen', async () => {
     mockAuthState.hasCompletedOnboarding = true;
     mockAuthState.user = { uid: 'user-1' };
-    mockSegments = ['(auth)'];
+    mockSegments = ['(auth)', 'sign-in'];
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/stats' };
 
     render(<RootLayout />);
@@ -165,15 +176,19 @@ describe('RootLayout routing', () => {
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/stats');
     });
+    expect(mockTrackScreen).not.toHaveBeenCalled();
   });
 
   it('redirects to sign-in when auth transitions from authenticated to unauthenticated on tabs', async () => {
     mockAuthState.hasCompletedOnboarding = true;
     mockAuthState.user = { uid: 'user-1' };
-    mockSegments = ['(tabs)'];
+    mockSegments = ['(tabs)', 'home'];
 
     const { rerender } = render(<RootLayout />);
 
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
     expect(mockReplace).not.toHaveBeenCalled();
 
     mockAuthState.user = null;
@@ -181,6 +196,23 @@ describe('RootLayout routing', () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
+    });
+  });
+
+  it('tracks a settled screen only once across rerenders', async () => {
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'discover'];
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'discover']);
+    });
+
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledTimes(1);
     });
   });
 });

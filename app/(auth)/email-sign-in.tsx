@@ -8,6 +8,7 @@ import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { auth } from '@/src/firebase/config';
+import { trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Link } from 'expo-router';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -51,6 +52,7 @@ export default function EmailSignIn() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      void trackLogin('email');
       // Router will automatically redirect in _layout.tsx based on auth state
     } catch (error: any) {
       let errorMessage = t('errors.generic');

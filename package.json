@@ -20,6 +20,8 @@
     "@nkzw/create-context-hook": "^1.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.6.0",
+    "@react-native-firebase/analytics": "^23.8.8",
+    "@react-native-firebase/app": "^23.8.8",
     "@shopify/flash-list": "2.2.0",
     "@tanstack/react-query": "^5.90.10",
     "axios": "^1.13.2",

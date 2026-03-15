@@ -3,6 +3,8 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import React from 'react';
 import { Alert } from 'react-native';
 
+const mockTrackLogin = jest.fn();
+
 jest.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: jest.fn(),
 }));
@@ -31,6 +33,10 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+}));
+
+jest.mock('@/src/services/analytics', () => ({
+  trackLogin: (...args: unknown[]) => mockTrackLogin(...args),
 }));
 
 import EmailSignIn from '@/app/(auth)/email-sign-in';
@@ -84,5 +90,23 @@ describe('EmailSignIn', () => {
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.tooManyAttempts');
     });
+    expect(mockTrackLogin).not.toHaveBeenCalled();
+  });
+
+  it('tracks email login after a successful sign-in', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: 'user-1' },
+    });
+
+    const { getByPlaceholderText, getAllByText } = render(<EmailSignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressPrimarySignIn(getAllByText);
+
+    await waitFor(() => {
+      expect(signInWithEmailAndPassword).toHaveBeenCalled();
+    });
+    expect(mockTrackLogin).toHaveBeenCalledWith('email');
   });
 });

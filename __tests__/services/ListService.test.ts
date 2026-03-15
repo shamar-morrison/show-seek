@@ -2,6 +2,8 @@ import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from '
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
+const mockTrackAddToList = jest.fn();
+const mockTrackCreateList = jest.fn();
 
 // Mock the firebase config using a getter that reads the mutable state
 jest.mock('@/src/firebase/config', () => ({
@@ -27,6 +29,15 @@ const mockCreateTimeoutWithCleanup = jest.fn((_ms?: number, _message?: string) =
 jest.mock('@/src/utils/timeout', () => ({
   createTimeoutWithCleanup: (ms?: number, message?: string) =>
     mockCreateTimeoutWithCleanup(ms, message),
+}));
+
+jest.mock('@/src/services/analytics', () => ({
+  normalizeListKind: (listId: string) =>
+    ['watchlist', 'currently-watching', 'already-watched', 'favorites', 'dropped'].includes(listId)
+      ? listId
+      : 'custom',
+  trackAddToList: (...args: unknown[]) => mockTrackAddToList(...args),
+  trackCreateList: (...args: unknown[]) => mockTrackCreateList(...args),
 }));
 
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
@@ -75,6 +86,10 @@ describe('ListService', () => {
       );
       expect(setDoc).not.toHaveBeenCalled();
       expect(getDoc).not.toHaveBeenCalled();
+      expect(mockTrackAddToList).toHaveBeenCalledWith({
+        listKind: 'watchlist',
+        mediaType: 'movie',
+      });
     });
 
     it('should fallback to setDoc with createdAt when updateDoc fails with not-found', async () => {
@@ -113,6 +128,10 @@ describe('ListService', () => {
         { merge: true }
       );
       expect(getDoc).not.toHaveBeenCalled();
+      expect(mockTrackAddToList).toHaveBeenCalledWith({
+        listKind: 'watchlist',
+        mediaType: 'movie',
+      });
     });
 
     it('should fallback to setDoc with createdAt when updateDoc fails with permission-denied', async () => {
@@ -252,6 +271,7 @@ describe('ListService', () => {
           isCustom: true,
         })
       );
+      expect(mockTrackCreateList).toHaveBeenCalledWith({ hasDescription: false });
     });
 
     it('should generate unique ID when collision occurs', async () => {
@@ -286,6 +306,18 @@ describe('ListService', () => {
         'List creation collision check timed out'
       );
       expect(collisionTimeoutCancel).toHaveBeenCalledTimes(1);
+      expect(mockTrackCreateList).not.toHaveBeenCalled();
+    });
+
+    it('does not track list creation when the write fails', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/broken-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
+      (setDoc as jest.Mock).mockRejectedValue(new Error('Write failed'));
+
+      await expect(listService.createList('Broken List')).rejects.toThrow('Write failed');
+
+      expect(mockTrackCreateList).not.toHaveBeenCalled();
     });
   });
 
@@ -332,7 +364,9 @@ describe('ListService', () => {
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
 
-      await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow('List not found');
+      await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow(
+        'List not found'
+      );
       expect(updateDoc).not.toHaveBeenCalled();
     });
 

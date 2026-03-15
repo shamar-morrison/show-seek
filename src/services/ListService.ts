@@ -1,19 +1,10 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { normalizeListKind, trackAddToList, trackCreateList } from '@/src/services/analytics';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
-import {
-  collection,
-  deleteDoc,
-  deleteField,
-  doc,
-  setDoc,
-  updateDoc,
-} from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 export interface ListMediaItem {
@@ -266,6 +257,10 @@ class ListService {
           }),
           updateTimeout.promise,
         ]);
+        void trackAddToList({
+          listKind: normalizeListKind(listId),
+          mediaType: mediaItem.media_type,
+        });
         return;
       } catch (error) {
         failureStage = 'update';
@@ -294,6 +289,10 @@ class ListService {
           ),
           createTimeout.promise,
         ]);
+        void trackAddToList({
+          listKind: normalizeListKind(listId),
+          mediaType: mediaItem.media_type,
+        });
       } catch (error) {
         failureStage = 'fallback-create';
         throw error;
@@ -398,6 +397,9 @@ class ListService {
               timeout.cancel();
             }
 
+            void trackCreateList({
+              hasDescription: Boolean(trimmedDescription),
+            });
             return listId;
           }
 

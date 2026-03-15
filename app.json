@@ -25,6 +25,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
+      "googleServicesFile": "./google-services.json",
       "package": "app.horizon.showseek",
       "permissions": ["NOTIFICATIONS", "android.permission.SCHEDULE_EXACT_ALARM"],
       "intentFilters": [
@@ -45,6 +46,7 @@
     },
     "plugins": [
       ["expo-router"],
+      "@react-native-firebase/app",
       "expo-font",
       "expo-web-browser",
       [
