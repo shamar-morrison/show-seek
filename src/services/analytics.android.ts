@@ -3,12 +3,14 @@ import analytics from '@react-native-firebase/analytics';
 import {
   getAnalyticsScreenName,
   type AnalyticsLoginMethod,
+  type TrackCreateListParams,
   type TrackAddToListParams,
   type TrackCreateReminderParams,
   type TrackSaveRatingParams,
 } from './analytics.shared';
 
 export type {
+  TrackCreateListParams,
   AnalyticsListKind,
   AnalyticsLoginMethod,
   AnalyticsMediaType,
@@ -79,15 +81,37 @@ export const trackAddToList = async ({
 };
 
 export const trackSaveRating = async ({
+  seasonNumber,
+  episodeNumber,
+  posterPath,
+  releaseDate,
   mediaType,
   rating,
 }: TrackSaveRatingParams): Promise<void> => {
   await initializeAnalytics();
   await runAnalyticsCall('save_rating', async () => {
-    await analytics().logEvent('save_rating', {
+    const params: Record<string, number | string> = {
       media_type: mediaType,
       rating_value: rating,
-    });
+    };
+
+    if (typeof seasonNumber === 'number') {
+      params.season_number = seasonNumber;
+    }
+
+    if (typeof episodeNumber === 'number') {
+      params.episode_number = episodeNumber;
+    }
+
+    if (posterPath !== undefined) {
+      params.has_poster = posterPath ? 1 : 0;
+    }
+
+    if (releaseDate !== undefined) {
+      params.has_release_date = releaseDate ? 1 : 0;
+    }
+
+    await analytics().logEvent('save_rating', params);
   });
 };
 
@@ -108,6 +132,15 @@ export const trackCreateReminder = async ({
     }
 
     await analytics().logEvent('create_reminder', params);
+  });
+};
+
+export const trackCreateList = async ({ hasDescription }: TrackCreateListParams): Promise<void> => {
+  await initializeAnalytics();
+  await runAnalyticsCall('create_list', async () => {
+    await analytics().logEvent('create_list', {
+      has_description: hasDescription ? 1 : 0,
+    });
   });
 };
 

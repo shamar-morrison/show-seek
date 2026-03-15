@@ -1,6 +1,6 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { normalizeListKind, trackAddToList } from '@/src/services/analytics';
+import { normalizeListKind, trackAddToList, trackCreateList } from '@/src/services/analytics';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
@@ -397,6 +397,9 @@ class ListService {
               timeout.cancel();
             }
 
+            void trackCreateList({
+              hasDescription: Boolean(trimmedDescription),
+            });
             return listId;
           }
 

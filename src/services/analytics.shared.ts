@@ -20,14 +20,27 @@ export interface TrackAddToListParams {
 }
 
 export interface TrackSaveRatingParams {
-  mediaType: Extract<AnalyticsMediaType, 'movie' | 'tv'>;
+  id: string;
+  mediaType: AnalyticsMediaType;
   rating: number;
+  posterPath?: string | null;
+  releaseDate?: string | null;
+  title?: string;
+  tvShowId?: number;
+  seasonNumber?: number;
+  episodeNumber?: number;
+  episodeName?: string;
+  tvShowName?: string;
 }
 
 export interface TrackCreateReminderParams {
   mediaType: Extract<AnalyticsMediaType, 'movie' | 'tv'>;
   reminderTiming: AnalyticsReminderTiming;
   tvFrequency?: AnalyticsTVFrequency;
+}
+
+export interface TrackCreateListParams {
+  hasDescription: boolean;
 }
 
 export const normalizeListKind = (listId: string): AnalyticsListKind => {
@@ -37,11 +50,15 @@ export const normalizeListKind = (listId: string): AnalyticsListKind => {
 };
 
 export const getAnalyticsScreenName = (segments: readonly string[]): string | null => {
-  const visibleSegments = segments
+  const normalizedSegments = segments
     .map((segment) => segment.trim())
     .filter(Boolean)
-    .filter((segment) => segment !== 'index')
     .filter((segment) => !GROUP_SEGMENT_PATTERN.test(segment));
 
+  if (normalizedSegments.length === 1 && normalizedSegments[0] === 'index') {
+    return 'index';
+  }
+
+  const visibleSegments = normalizedSegments.filter((segment) => segment !== 'index');
   return visibleSegments.length > 0 ? visibleSegments.join('/') : null;
 };

@@ -65,7 +65,9 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(mockCreateUserDocument).toHaveBeenCalledWith(user);
     });
-    expect(mockTrackLogin).toHaveBeenCalledWith('google');
+    await waitFor(() => {
+      expect(mockTrackLogin).toHaveBeenCalledWith('google');
+    });
   });
 
   it('tracks guest login after a successful guest sign-in', async () => {
@@ -78,6 +80,8 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(mockSignInAsGuest).toHaveBeenCalled();
     });
-    expect(mockTrackLogin).toHaveBeenCalledWith('guest');
+    await waitFor(() => {
+      expect(mockTrackLogin).toHaveBeenCalledWith('guest');
+    });
   });
 });

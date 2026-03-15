@@ -1,4 +1,5 @@
 export type {
+  TrackCreateListParams,
   AnalyticsListKind,
   AnalyticsLoginMethod,
   AnalyticsMediaType,
@@ -29,6 +30,10 @@ export const trackSaveRating = async (
 
 export const trackCreateReminder = async (
   _params: import('./analytics.shared').TrackCreateReminderParams
+): Promise<void> => {};
+
+export const trackCreateList = async (
+  _params: import('./analytics.shared').TrackCreateListParams
 ): Promise<void> => {};
 
 export const trackPremiumPaywallView = async (): Promise<void> => {};

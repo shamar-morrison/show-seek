@@ -69,10 +69,17 @@ describe('RatingService', () => {
           releaseDate: '2024-01-01',
         })
       );
-      expect(mockTrackSaveRating).toHaveBeenCalledWith({
-        mediaType: 'movie',
-        rating: 8,
-      });
+      expect(mockTrackSaveRating).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: '123',
+          mediaType: 'movie',
+          rating: 8,
+          ratedAt: expect.any(Number),
+          title: 'Test Movie',
+          posterPath: '/poster.jpg',
+          releaseDate: '2024-01-01',
+        })
+      );
     });
 
     it('should save rating without metadata', async () => {
@@ -95,6 +102,19 @@ describe('RatingService', () => {
       // Should not have metadata fields
       const callArgs = (setDoc as jest.Mock).mock.calls[0][1];
       expect(callArgs.title).toBeUndefined();
+
+      expect(mockTrackSaveRating).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: '456',
+          mediaType: 'movie',
+          rating: 7,
+          ratedAt: expect.any(Number),
+        })
+      );
+      const trackedRating = mockTrackSaveRating.mock.calls[0][0] as Record<string, unknown>;
+      expect(trackedRating.title).toBeUndefined();
+      expect(trackedRating.posterPath).toBeUndefined();
+      expect(trackedRating.releaseDate).toBeUndefined();
     });
 
     it('should throw error when user is not authenticated', async () => {
@@ -347,6 +367,20 @@ describe('RatingService', () => {
           tvShowName: 'Test Show',
           posterPath: '/poster.jpg',
           ratedAt: expect.any(Number),
+        })
+      );
+      expect(mockTrackSaveRating).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'episode-100-1-5',
+          mediaType: 'episode',
+          rating: 9,
+          ratedAt: expect.any(Number),
+          tvShowId: 100,
+          seasonNumber: 1,
+          episodeNumber: 5,
+          episodeName: 'Pilot',
+          tvShowName: 'Test Show',
+          posterPath: '/poster.jpg',
         })
       );
     });

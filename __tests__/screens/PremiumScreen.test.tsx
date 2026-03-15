@@ -72,6 +72,9 @@ describe('PremiumScreen', () => {
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
+    mockTrackPremiumPaywallView.mockReset();
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
     mockPremiumState.monthlyTrial = {
       isEligible: false,
       offerToken: null,
@@ -98,12 +101,20 @@ describe('PremiumScreen', () => {
     (global as { __DEV__?: boolean }).__DEV__ = originalDev;
   });
 
-  it('tracks a paywall view on mount', async () => {
+  it('tracks a paywall view on mount for non-premium users', async () => {
     render(<PremiumScreen />);
 
     await waitFor(() => {
       expect(mockTrackPremiumPaywallView).toHaveBeenCalled();
     });
+  });
+
+  it('does not track a paywall view for premium users', () => {
+    mockPremiumState.isPremium = true;
+
+    render(<PremiumScreen />);
+
+    expect(mockTrackPremiumPaywallView).not.toHaveBeenCalled();
   });
 
   it('defaults to yearly selection when subscribing', () => {

@@ -221,7 +221,7 @@ class RatingService {
       };
 
       await raceWithTimeout(setDoc(ratingRef, ratingData));
-      void trackSaveRating({ mediaType, rating });
+      void trackSaveRating(ratingData);
       return ratingData;
     } catch (error) {
       return rethrowFirestoreError('RatingService.saveRating', error);
@@ -361,6 +361,7 @@ class RatingService {
       };
 
       await raceWithTimeout(setDoc(ratingRef, ratingData));
+      void trackSaveRating(ratingData);
       return ratingData;
     } catch (error) {
       return rethrowFirestoreError('RatingService.saveEpisodeRating', error);

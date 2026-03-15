@@ -3,6 +3,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from '
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
 const mockTrackAddToList = jest.fn();
+const mockTrackCreateList = jest.fn();
 
 // Mock the firebase config using a getter that reads the mutable state
 jest.mock('@/src/firebase/config', () => ({
@@ -36,6 +37,7 @@ jest.mock('@/src/services/analytics', () => ({
       ? listId
       : 'custom',
   trackAddToList: (...args: unknown[]) => mockTrackAddToList(...args),
+  trackCreateList: (...args: unknown[]) => mockTrackCreateList(...args),
 }));
 
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
@@ -269,6 +271,7 @@ describe('ListService', () => {
           isCustom: true,
         })
       );
+      expect(mockTrackCreateList).toHaveBeenCalledWith({ hasDescription: false });
     });
 
     it('should generate unique ID when collision occurs', async () => {
@@ -303,6 +306,18 @@ describe('ListService', () => {
         'List creation collision check timed out'
       );
       expect(collisionTimeoutCancel).toHaveBeenCalledTimes(1);
+      expect(mockTrackCreateList).not.toHaveBeenCalled();
+    });
+
+    it('does not track list creation when the write fails', async () => {
+      const mockDocRef = { path: 'users/test-user-id/lists/broken-list' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
+      (setDoc as jest.Mock).mockRejectedValue(new Error('Write failed'));
+
+      await expect(listService.createList('Broken List')).rejects.toThrow('Write failed');
+
+      expect(mockTrackCreateList).not.toHaveBeenCalled();
     });
   });
 

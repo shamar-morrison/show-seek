@@ -49,8 +49,10 @@ export default function PremiumScreen() {
   const wasPremiumRef = React.useRef(isPremium);
 
   React.useEffect(() => {
-    void trackPremiumPaywallView();
-  }, []);
+    if (!isLoading && !isPremium) {
+      void trackPremiumPaywallView();
+    }
+  }, [isLoading, isPremium]);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
