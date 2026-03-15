@@ -4,6 +4,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { configureGoogleAuth, signInAsGuest, signInWithGoogle } from '@/src/firebase/auth';
 import { createUserDocument } from '@/src/firebase/user';
+import { trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
@@ -42,6 +43,7 @@ export default function SignIn() {
       const result = await signInWithGoogle();
 
       if (result.success) {
+        void trackLogin('google');
         // Create/update user document with Google profile info
         await createUserDocument(result.user);
         // Router will automatically redirect based on auth state
@@ -60,7 +62,9 @@ export default function SignIn() {
     setGuestLoading(true);
     try {
       const result = await signInAsGuest();
-      if (!result.success && result.error) {
+      if (result.success) {
+        void trackLogin('guest');
+      } else if (result.error) {
         Alert.alert(t('auth.signInFailed'), result.error);
       }
     } catch {

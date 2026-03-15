@@ -2,6 +2,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/fi
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
+const mockTrackSaveRating = jest.fn();
 
 // Mock the firebase config using a getter that reads the mutable state
 jest.mock('@/src/firebase/config', () => ({
@@ -22,6 +23,10 @@ const mockRaceWithTimeout = jest.fn((promise: Promise<unknown>) => promise);
 
 jest.mock('@/src/utils/timeout', () => ({
   raceWithTimeout: (promise: Promise<unknown>) => mockRaceWithTimeout(promise),
+}));
+
+jest.mock('@/src/services/analytics', () => ({
+  trackSaveRating: (...args: unknown[]) => mockTrackSaveRating(...args),
 }));
 
 import { ratingService } from '@/src/services/RatingService';
@@ -64,6 +69,10 @@ describe('RatingService', () => {
           releaseDate: '2024-01-01',
         })
       );
+      expect(mockTrackSaveRating).toHaveBeenCalledWith({
+        mediaType: 'movie',
+        rating: 8,
+      });
     });
 
     it('should save rating without metadata', async () => {

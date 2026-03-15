@@ -2,6 +2,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from '
 
 // Create module-level mutable mock state
 let mockUserId: string | null = 'test-user-id';
+const mockTrackAddToList = jest.fn();
 
 // Mock the firebase config using a getter that reads the mutable state
 jest.mock('@/src/firebase/config', () => ({
@@ -27,6 +28,14 @@ const mockCreateTimeoutWithCleanup = jest.fn((_ms?: number, _message?: string) =
 jest.mock('@/src/utils/timeout', () => ({
   createTimeoutWithCleanup: (ms?: number, message?: string) =>
     mockCreateTimeoutWithCleanup(ms, message),
+}));
+
+jest.mock('@/src/services/analytics', () => ({
+  normalizeListKind: (listId: string) =>
+    ['watchlist', 'currently-watching', 'already-watched', 'favorites', 'dropped'].includes(listId)
+      ? listId
+      : 'custom',
+  trackAddToList: (...args: unknown[]) => mockTrackAddToList(...args),
 }));
 
 import { DEFAULT_LISTS, listService } from '@/src/services/ListService';
@@ -75,6 +84,10 @@ describe('ListService', () => {
       );
       expect(setDoc).not.toHaveBeenCalled();
       expect(getDoc).not.toHaveBeenCalled();
+      expect(mockTrackAddToList).toHaveBeenCalledWith({
+        listKind: 'watchlist',
+        mediaType: 'movie',
+      });
     });
 
     it('should fallback to setDoc with createdAt when updateDoc fails with not-found', async () => {
@@ -113,6 +126,10 @@ describe('ListService', () => {
         { merge: true }
       );
       expect(getDoc).not.toHaveBeenCalled();
+      expect(mockTrackAddToList).toHaveBeenCalledWith({
+        listKind: 'watchlist',
+        mediaType: 'movie',
+      });
     });
 
     it('should fallback to setDoc with createdAt when updateDoc fails with permission-denied', async () => {
@@ -332,7 +349,9 @@ describe('ListService', () => {
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
 
-      await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow('List not found');
+      await expect(listService.renameList('missing-list', 'Renamed')).rejects.toThrow(
+        'List not found'
+      );
       expect(updateDoc).not.toHaveBeenCalled();
     });
 

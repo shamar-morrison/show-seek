@@ -3,6 +3,7 @@ import { deleteDoc, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
 let mockIsAnonymous = false;
+const mockTrackCreateReminder = jest.fn();
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
@@ -17,6 +18,10 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
+jest.mock('@/src/services/analytics', () => ({
+  trackCreateReminder: (...args: unknown[]) => mockTrackCreateReminder(...args),
+}));
+
 import { reminderService } from '@/src/services/ReminderService';
 
 describe('ReminderService', () => {
@@ -24,6 +29,42 @@ describe('ReminderService', () => {
     jest.clearAllMocks();
     mockUserId = 'test-user-id';
     mockIsAnonymous = false;
+  });
+
+  it('tracks reminder creation after a successful write', async () => {
+    const mockRef = { path: 'users/test-user-id/reminders/tv-555' };
+    (doc as jest.Mock).mockReturnValue(mockRef);
+    (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+    await reminderService.createReminder({
+      mediaType: 'tv',
+      mediaId: 555,
+      title: 'Test Show',
+      posterPath: null,
+      releaseDate: '2026-05-01',
+      reminderTiming: '1_day_before',
+      tvFrequency: 'every_episode',
+      nextEpisode: {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second Episode',
+        airDate: '2026-05-01',
+      },
+    });
+
+    expect(setDoc).toHaveBeenCalledWith(
+      mockRef,
+      expect.objectContaining({
+        mediaType: 'tv',
+        mediaId: 555,
+        reminderTiming: '1_day_before',
+      })
+    );
+    expect(mockTrackCreateReminder).toHaveBeenCalledWith({
+      mediaType: 'tv',
+      reminderTiming: '1_day_before',
+      tvFrequency: 'every_episode',
+    });
   });
 
   it('rejects creating a reminder with missing release date', async () => {
@@ -127,7 +168,9 @@ describe('ReminderService', () => {
     await reminderService.updateReminder('movie-123', '1_day_before', sourceReminder as any);
 
     expect(getDoc).not.toHaveBeenCalled();
-    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('old-notification-id');
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith(
+      'old-notification-id'
+    );
     expect(setDoc).toHaveBeenCalledWith(
       mockRef,
       expect.objectContaining({

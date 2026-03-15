@@ -1,7 +1,5 @@
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { trackCreateReminder } from '@/src/services/analytics';
 import {
   getSignedInUser,
   requireMatchingUser,
@@ -11,14 +9,7 @@ import {
 } from '@/src/services/serviceSupport';
 import { raceWithTimeout } from '@/src/utils/timeout';
 import * as Notifications from 'expo-notifications';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  query,
-  setDoc,
-  where,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, setDoc, where } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { db } from '../firebase/config';
 import {
@@ -67,7 +58,7 @@ class ReminderService {
           path: `users/${userId}/reminders`,
           queryKey: 'activeReminders',
           callsite: 'ReminderService.getActiveReminders',
-        }),
+        })
       );
 
       return snapshot.docs.map((reminderDoc) => ({
@@ -305,6 +296,13 @@ class ReminderService {
       };
 
       await raceWithTimeout(setDoc(reminderRef, reminderData));
+      void trackCreateReminder({
+        mediaType: input.mediaType,
+        reminderTiming: input.reminderTiming,
+        ...(input.mediaType === 'tv' && input.tvFrequency
+          ? { tvFrequency: input.tvFrequency }
+          : {}),
+      });
     } catch (error) {
       rethrowFirestoreError('ReminderService.createReminder', error);
     }
@@ -331,7 +329,7 @@ class ReminderService {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.cancelReminder',
-          }),
+          })
         );
         if (reminderSnap.exists()) {
           const reminder = reminderSnap.data() as Reminder;
@@ -369,7 +367,7 @@ class ReminderService {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.updateReminder',
-          }),
+          })
         );
 
         if (!reminderSnap.exists()) {
@@ -440,7 +438,7 @@ class ReminderService {
             path: `users/${user.uid}/reminders/${reminderId}`,
             queryKey: 'reminderById',
             callsite: 'ReminderService.updateReminderDetails',
-          }),
+          })
         );
         if (reminderSnap.exists()) {
           const current = reminderSnap.data() as Reminder;
@@ -488,7 +486,7 @@ class ReminderService {
           path: `users/${user.uid}/reminders/${reminderId}`,
           queryKey: 'reminderById',
           callsite: 'ReminderService.getReminder',
-        }),
+        })
       );
 
       if (docSnap.exists()) {

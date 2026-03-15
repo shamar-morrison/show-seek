@@ -6,6 +6,7 @@ const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockResetTestPurchase = jest.fn();
 const mockGetOfferings = jest.fn();
+const mockTrackPremiumPaywallView = jest.fn();
 
 const mockPremiumState = {
   isPremium: false,
@@ -57,6 +58,10 @@ jest.mock('react-native-purchases', () => ({
   },
 }));
 
+jest.mock('@/src/services/analytics', () => ({
+  trackPremiumPaywallView: (...args: unknown[]) => mockTrackPremiumPaywallView(...args),
+}));
+
 import PremiumScreen from '@/src/screens/PremiumScreen';
 
 describe('PremiumScreen', () => {
@@ -91,6 +96,14 @@ describe('PremiumScreen', () => {
 
   afterAll(() => {
     (global as { __DEV__?: boolean }).__DEV__ = originalDev;
+  });
+
+  it('tracks a paywall view on mount', async () => {
+    render(<PremiumScreen />);
+
+    await waitFor(() => {
+      expect(mockTrackPremiumPaywallView).toHaveBeenCalled();
+    });
   });
 
   it('defaults to yearly selection when subscribing', () => {
@@ -148,7 +161,9 @@ describe('PremiumScreen', () => {
     const { getByTestId, queryByTestId } = render(<PremiumScreen />);
     fireEvent.press(getByTestId('plan-monthly'));
 
-    expect(getByTestId('billing-helper-text')).toHaveTextContent('Eligible for a 7-day free trial.');
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      'Eligible for a 7-day free trial.'
+    );
     expect(queryByTestId('billing-helper-reason')).toBeNull();
   });
 

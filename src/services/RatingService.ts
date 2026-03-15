@@ -1,7 +1,5 @@
-import {
-  auditedGetDoc,
-  auditedGetDocs,
-} from '@/src/services/firestoreReadAudit';
+import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { trackSaveRating } from '@/src/services/analytics';
 import {
   createServiceLogger,
   getSignedInUser,
@@ -10,12 +8,7 @@ import {
   toFirestoreError,
 } from '@/src/services/serviceSupport';
 import { raceWithTimeout } from '@/src/utils/timeout';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  setDoc,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface RatingItem {
@@ -171,7 +164,7 @@ class RatingService {
           path: `users/${userId}/ratings`,
           queryKey: 'ratings',
           callsite: 'RatingService.getUserRatings',
-        }),
+        })
       );
 
       const ratings = snapshot.docs
@@ -228,6 +221,7 @@ class RatingService {
       };
 
       await raceWithTimeout(setDoc(ratingRef, ratingData));
+      void trackSaveRating({ mediaType, rating });
       return ratingData;
     } catch (error) {
       return rethrowFirestoreError('RatingService.saveRating', error);
@@ -270,7 +264,7 @@ class RatingService {
           path: `users/${user.uid}/ratings/${mediaType}-${mediaId}`,
           queryKey: 'ratingByMedia',
           callsite: 'RatingService.getRating',
-        }),
+        })
       );
 
       if (docSnap.exists()) {
@@ -424,7 +418,7 @@ class RatingService {
           path: `users/${user.uid}/ratings/episode-${tvShowId}-${seasonNumber}-${episodeNumber}`,
           queryKey: 'ratingByEpisode',
           callsite: 'RatingService.getEpisodeRating',
-        }),
+        })
       );
 
       if (docSnap.exists()) {

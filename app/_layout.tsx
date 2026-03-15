@@ -18,6 +18,7 @@ import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
+import { getAnalyticsScreenName, initializeAnalytics, trackScreen } from '@/src/services/analytics';
 import {
   clearFirestoreReadAuditEvents,
   logFirestoreReadAuditReport,
@@ -109,6 +110,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const previousUidRef = useRef<string | null>(user?.uid ?? null);
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
+  const lastTrackedScreenRef = useRef<string | null>(null);
   const [debugTimeoutTriggered, setDebugTimeoutTriggered] = useState(false);
   const [debugForceContinue, setDebugForceContinue] = useState(false);
   const [debugSnapshot, setDebugSnapshot] = useState<InitDebugSnapshot | null>(null);
@@ -243,6 +245,49 @@ function RootLayoutNav() {
       console.error('[NotificationChannel] Failed to create default channel', error);
     });
   }, [accentColor]);
+
+  useEffect(() => {
+    const waitingForPreferences = !!user && preferencesLoading;
+
+    if (
+      loading ||
+      hasCompletedOnboarding === null ||
+      !isLanguageReady ||
+      !isRegionReady ||
+      !isAccentReady ||
+      waitingForPreferences
+    ) {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+    const isOnboarding = segments[0] === 'onboarding';
+    const shouldRedirect =
+      (!hasCompletedOnboarding && !isOnboarding) ||
+      (hasCompletedOnboarding && !user && !inAuthGroup) ||
+      (!!user && (inAuthGroup || isOnboarding));
+
+    if (shouldRedirect) {
+      return;
+    }
+
+    const nextScreenName = getAnalyticsScreenName(segments.map(String));
+    if (!nextScreenName || lastTrackedScreenRef.current === nextScreenName) {
+      return;
+    }
+
+    lastTrackedScreenRef.current = nextScreenName;
+    void trackScreen(segments.map(String));
+  }, [
+    segments,
+    user,
+    loading,
+    hasCompletedOnboarding,
+    isLanguageReady,
+    isRegionReady,
+    isAccentReady,
+    preferencesLoading,
+  ]);
 
   useEffect(() => {
     const currentUid = user?.uid ?? null;
@@ -501,6 +546,7 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
+    void initializeAnalytics();
     void configureRevenueCat().catch((error) => {
       console.error('[RootLayout] RevenueCat configuration failed', error);
     });
@@ -516,7 +562,9 @@ export default function RootLayout() {
                 <LanguageProvider>
                   <RegionProvider>
                     <AccentColorProvider>
-                      <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.background }}>
+                      <GestureHandlerRootView
+                        style={{ flex: 1, backgroundColor: COLORS.background }}
+                      >
                         <RootLayoutNav />
                       </GestureHandlerRootView>
                     </AccentColorProvider>
