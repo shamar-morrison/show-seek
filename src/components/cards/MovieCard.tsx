@@ -15,7 +15,14 @@ interface MovieCardProps {
 }
 
 export const MovieCard = memo<MovieCardProps>(
-  ({ movie, width = 140, containerStyle, showListBadge = true, posterPathOverride, onLongPress }) => {
+  ({
+    movie,
+    width = 140,
+    containerStyle,
+    showListBadge = true,
+    posterPathOverride,
+    onLongPress,
+  }) => {
     return (
       <MediaCard
         item={movie}

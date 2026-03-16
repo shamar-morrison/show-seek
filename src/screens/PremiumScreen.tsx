@@ -180,6 +180,8 @@ export default function PremiumScreen() {
               planName={t('premium.monthlyPlanName')}
               planPrice={monthlyPrice}
               planPeriod={t('premium.perMonth')}
+              badgeText={monthlyTrial.isEligible ? t('premium.trialBadge') : undefined}
+              badgeTestID="plan-monthly-badge"
               isSelected={selectedPlan === 'monthly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('monthly')}
@@ -191,6 +193,7 @@ export default function PremiumScreen() {
               planPrice={yearlyPrice}
               planPeriod={t('premium.perYear')}
               badgeText={t('premium.bestValueBadge')}
+              badgeTestID="plan-yearly-badge"
               isSelected={selectedPlan === 'yearly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('yearly')}
@@ -310,6 +313,7 @@ function FeatureCategorySection({
 function PlanOptionCard({
   accentColor,
   badgeText,
+  badgeTestID,
   disabled,
   isSelected,
   onPress,
@@ -321,6 +325,7 @@ function PlanOptionCard({
 }: {
   accentColor: string;
   badgeText?: string;
+  badgeTestID?: string;
   disabled?: boolean;
   isSelected: boolean;
   onPress: () => void;
@@ -367,7 +372,7 @@ function PlanOptionCard({
       </View>
       {badgeText ? (
         <View style={[styles.badge, { backgroundColor: accentColor }]}>
-          <Text testID="plan-yearly-badge" style={styles.badgeText}>
+          <Text testID={badgeTestID} style={styles.badgeText}>
             {badgeText}
           </Text>
         </View>

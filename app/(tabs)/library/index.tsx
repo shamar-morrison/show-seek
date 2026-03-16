@@ -168,8 +168,7 @@ export default function LibraryScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: NavigationItem }) => {
-      const isPremiumFeature =
-        item.id === 'reminders' || item.id === 'notes' || item.id === 'widgets';
+      const isPremiumFeature = item.id === 'widgets';
       const showPremiumBadge = isPremiumFeature && !isPremium;
 
       const handlePress = () => {

@@ -34,7 +34,6 @@ import UserRating from '@/src/components/UserRating';
 import TrailerPlayer from '@/src/components/VideoPlayerModal';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { useAnimatedScrollHeader } from '@/src/hooks/useAnimatedScrollHeader';
@@ -42,7 +41,7 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useMediaLists } from '@/src/hooks/useLists';
-import { useMediaNote } from '@/src/hooks/useNotes';
+import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -50,6 +49,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
+  useCanCreateReminder,
   useCancelReminder,
   useCreateReminder,
   useMediaReminder,
@@ -65,7 +65,6 @@ import {
 } from '@/src/utils/listIcons';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { hasWatchProviders } from '@/src/utils/mediaUtils';
-import { showPremiumAlert } from '@/src/utils/premiumAlert';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -98,7 +97,6 @@ export default function TVDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const toastRef = React.useRef<ToastRef>(null);
   const { scrollY, scrollViewProps } = useAnimatedScrollHeader();
-  const { isPremium } = usePremium();
   const isAccountRequired = useAccountRequired();
 
   // Long-press handler for similar/recommended media
@@ -141,10 +139,12 @@ export default function TVDetailScreen() {
     isLoading: isLoadingNote,
     ensureNoteLoadedForEdit,
   } = useMediaNote('tv', tvId);
+  const canCreateNote = useCanCreateNote();
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
   const updateReminderMutation = useUpdateReminder();
+  const canCreateReminder = useCanCreateReminder();
 
   // Trakt reviews
   const {
@@ -219,6 +219,10 @@ export default function TVDetailScreen() {
     note,
     noteExists: hasNote,
     ensureNoteLoadedForEdit,
+    beforeCreate: useCallback(
+      () => canCreateNote({ mediaType: 'tv', mediaId: tvId }),
+      [canCreateNote, tvId]
+    ),
     isAccountRequired,
     noteSheetRef,
     buildPresentParams: buildNotePresentParams,
@@ -252,6 +256,26 @@ export default function TVDetailScreen() {
   const handleToast = useCallback((message: string) => {
     toastRef.current?.show(message);
   }, []);
+
+  const handleReminderPress = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const canOpenReminder = await canCreateReminder({ mediaType: 'tv', mediaId: tvId });
+        if (!canOpenReminder) {
+          return;
+        }
+
+        setReminderModalVisible(true);
+      } catch (error) {
+        console.error('[TVDetailScreen] Failed to validate reminder limit:', error);
+        handleToast(error instanceof Error ? error.message : t('reminder.failedToSet'));
+      }
+    })();
+  }, [canCreateReminder, handleToast, isAccountRequired, t, tvId]);
 
   const {
     nextEpisodeInfo: originalNextEpisode,
@@ -344,7 +368,6 @@ export default function TVDetailScreen() {
     navigateTo(path);
   };
 
-
   const handleCastViewAll = () => {
     navigateTo(`/tv/${tvId}/cast?title=${encodeURIComponent(displayShowTitle)}`);
   };
@@ -435,16 +458,7 @@ export default function TVDetailScreen() {
               show.status === 'In Production' ||
               show.status === 'Planned' ||
               show.status === 'Pilot'
-                ? () => {
-                    if (isAccountRequired()) {
-                      return;
-                    }
-                    if (!isPremium) {
-                      showPremiumAlert('premiumFeature.features.reminders');
-                      return;
-                    }
-                    setReminderModalVisible(true);
-                  }
+                ? handleReminderPress
                 : undefined
             }
             onNote={handleNotePress}
@@ -459,9 +473,9 @@ export default function TVDetailScreen() {
             hasReminder={hasReminder}
             isLoadingReminder={isLoadingReminder}
             hasNote={hasNote}
-            isLoadingNote={isLoadingNote || isOpeningNote}
-            hasTrailer={!!trailer}
-          />
+          isLoadingNote={isLoadingNote || isOpeningNote}
+          hasTrailer={!!trailer}
+        />
 
           {userRating > 0 && <UserRating rating={userRating} />}
 

@@ -38,6 +38,7 @@ describe('useNotePress', () => {
         note: null,
         noteExists: false,
         ensureNoteLoadedForEdit,
+        beforeCreate: undefined,
         isAccountRequired: () => false,
         noteSheetRef,
         buildPresentParams: (initialNote?: string) => ({
@@ -70,5 +71,93 @@ describe('useNotePress', () => {
     expect(alertSpy).toHaveBeenCalledWith('Error', 'Try again');
 
     alertSpy.mockRestore();
+  });
+
+  it('does not open a new note editor when beforeCreate blocks creation', async () => {
+    const ensureNoteLoadedForEdit = jest.fn().mockResolvedValue(null);
+    const beforeCreate = jest.fn().mockResolvedValue(false);
+    const present = jest.fn();
+    const noteSheetRef = {
+      current: {
+        present,
+        dismiss: jest.fn(),
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useNotePress({
+        note: null,
+        noteExists: false,
+        ensureNoteLoadedForEdit,
+        beforeCreate,
+        isAccountRequired: () => false,
+        noteSheetRef,
+        buildPresentParams: (initialNote?: string) => ({
+          mediaType: 'movie',
+          mediaId: 10,
+          posterPath: '/poster.jpg',
+          mediaTitle: 'Loaded Movie',
+          initialNote,
+        }),
+        onLoadError: jest.fn(),
+        alertTitle: 'Error',
+        alertMessage: 'Try again',
+      })
+    );
+
+    await act(async () => {
+      await expect(result.current.handleNotePress()).resolves.toBeUndefined();
+    });
+
+    expect(ensureNoteLoadedForEdit).toHaveBeenCalledTimes(1);
+    expect(beforeCreate).toHaveBeenCalledTimes(1);
+    expect(present).not.toHaveBeenCalled();
+  });
+
+  it('skips beforeCreate when opening an existing note', async () => {
+    const loadedNote = createNote('Loaded note');
+    const ensureNoteLoadedForEdit = jest.fn().mockResolvedValue(loadedNote);
+    const beforeCreate = jest.fn().mockResolvedValue(false);
+    const present = jest.fn().mockResolvedValue(undefined);
+    const noteSheetRef = {
+      current: {
+        present,
+        dismiss: jest.fn(),
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useNotePress({
+        note: null,
+        noteExists: true,
+        ensureNoteLoadedForEdit,
+        beforeCreate,
+        isAccountRequired: () => false,
+        noteSheetRef,
+        buildPresentParams: (initialNote?: string) => ({
+          mediaType: 'movie',
+          mediaId: 10,
+          posterPath: '/poster.jpg',
+          mediaTitle: 'Loaded Movie',
+          initialNote,
+        }),
+        onLoadError: jest.fn(),
+        alertTitle: 'Error',
+        alertMessage: 'Try again',
+      })
+    );
+
+    await act(async () => {
+      await expect(result.current.handleNotePress()).resolves.toBeUndefined();
+    });
+
+    expect(beforeCreate).not.toHaveBeenCalled();
+    expect(present).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mediaType: 'movie',
+        mediaId: 10,
+        initialNote: 'Loaded note',
+      })
+    );
   });
 });

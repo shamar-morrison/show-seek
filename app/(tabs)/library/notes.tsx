@@ -18,8 +18,6 @@ import {
   HIT_SLOP,
   SPACING,
 } from '@/src/constants/theme';
-import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { usePremium } from '@/src/context/PremiumContext';
 import { useCurrentTab } from '@/src/context/TabContext';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
 import { useDeleteNote, useNotes } from '@/src/hooks/useNotes';
@@ -55,7 +53,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -119,9 +116,7 @@ export default function NotesScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
   const currentTab = useCurrentTab();
-  const { isPremium } = usePremium();
   const { t, i18n } = useTranslation();
-  const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
   const { data: notes, isLoading, error, refetch } = useNotes();
   const deleteNoteMutation = useDeleteNote();
@@ -226,8 +221,6 @@ export default function NotesScreen() {
 
   // Set up header buttons
   useLayoutEffect(() => {
-    if (!isPremium) return;
-
     if (isSearchActive) {
       // Show search header
       navigation.setOptions(
@@ -270,7 +263,6 @@ export default function NotesScreen() {
     }
   }, [
     navigation,
-    isPremium,
     viewMode,
     toggleViewMode,
     hasActiveSort,
@@ -435,27 +427,6 @@ export default function NotesScreen() {
   );
 
   const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
-
-  // Premium gate
-  if (!isPremium) {
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom']}>
-        <View style={libraryListStyles.divider} />
-        <View style={styles.premiumGate}>
-          <StickyNote size={60} color={COLORS.textSecondary} />
-          <Text style={styles.premiumTitle}>{t('premiumFeature.title')}</Text>
-          <Text style={styles.premiumDescription}>{t('notes.premiumDescription')}</Text>
-          <TouchableOpacity
-            style={[styles.upgradeButton, { backgroundColor: accentColor }]}
-            onPress={() => router.push('/premium' as any)}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={styles.upgradeButtonText}>{t('profile.upgradeToPremium')}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   // Loading state
   if (isLoading || isLoadingPreference) {

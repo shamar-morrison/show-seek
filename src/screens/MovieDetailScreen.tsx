@@ -53,7 +53,7 @@ import { useContentFilter } from '@/src/hooks/useContentFilter';
 import { useDetailLongPress } from '@/src/hooks/useDetailLongPress';
 import { useExternalRatings } from '@/src/hooks/useExternalRatings';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
-import { useMediaNote } from '@/src/hooks/useNotes';
+import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
 import { useNotificationPermissions } from '@/src/hooks/useNotificationPermissions';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -61,6 +61,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useMediaRating } from '@/src/hooks/useRatings';
 import {
+  useCanCreateReminder,
   useCancelReminder,
   useCreateReminder,
   useMediaReminder,
@@ -269,10 +270,12 @@ export default function MovieDetailScreen() {
     isLoading: isLoadingNote,
     ensureNoteLoadedForEdit,
   } = useMediaNote('movie', movieId);
+  const canCreateNote = useCanCreateNote();
   const { requestPermission } = useNotificationPermissions();
   const createReminderMutation = useCreateReminder();
   const cancelReminderMutation = useCancelReminder();
   const updateReminderMutation = useUpdateReminder();
+  const canCreateReminder = useCanCreateReminder();
 
   // Watched movies feature
   const { count: watchCount, isLoading: isLoadingWatched } = useWatchedMovies(movieId);
@@ -352,6 +355,10 @@ export default function MovieDetailScreen() {
     note,
     noteExists: hasNote,
     ensureNoteLoadedForEdit,
+    beforeCreate: useCallback(
+      () => canCreateNote({ mediaType: 'movie', mediaId: movieId }),
+      [canCreateNote, movieId]
+    ),
     isAccountRequired,
     noteSheetRef,
     buildPresentParams: buildNotePresentParams,
@@ -381,6 +388,26 @@ export default function MovieDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigateTo(`/movie/${movieId}/poster-picker`);
   }, [isAccountRequired, movieId, navigateTo]);
+
+  const handleReminderPress = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const canOpenReminder = await canCreateReminder({ mediaType: 'movie', mediaId: movieId });
+        if (!canOpenReminder) {
+          return;
+        }
+
+        setReminderModalVisible(true);
+      } catch (error) {
+        console.error('[MovieDetailScreen] Failed to validate reminder limit:', error);
+        toastRef.current?.show(error instanceof Error ? error.message : t('reminder.failedToSet'));
+      }
+    })();
+  }, [canCreateReminder, isAccountRequired, movieId, t]);
 
   // Progressive rendering: defer heavy component tree by one tick on cache hit
   const { isReady } = useProgressiveRender();
@@ -790,12 +817,7 @@ export default function MovieDetailScreen() {
             }}
             onReminder={
               canShowReminder(displayReleaseDate)
-                ? () => {
-                    if (isAccountRequired()) {
-                      return;
-                    }
-                    setReminderModalVisible(true);
-                  }
+                ? handleReminderPress
                 : undefined
             }
             onNote={handleNotePress}

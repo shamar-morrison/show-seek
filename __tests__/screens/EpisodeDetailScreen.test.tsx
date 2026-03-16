@@ -155,6 +155,7 @@ jest.mock('@/src/hooks/useLists', () => ({
 }));
 
 jest.mock('@/src/hooks/useNotes', () => ({
+  useCanCreateNote: () => jest.fn(async () => true),
   useMediaNote: () => mockUseMediaNoteValue,
 }));
 

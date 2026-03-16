@@ -8,13 +8,22 @@ const mockGetNote = jest.fn();
 const mockSaveNote = jest.fn();
 const mockDeleteNote = jest.fn();
 const mockCanUseNonCriticalRead = jest.fn();
+const mockShowFreemiumLimitAlert = jest.fn();
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
 };
+const mockPremiumState = {
+  isPremium: false,
+  isLoading: false,
+};
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/context/PremiumContext', () => ({
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('@/src/services/NoteService', () => ({
@@ -30,7 +39,12 @@ jest.mock('@/src/services/ReadBudgetGuard', () => ({
   canUseNonCriticalRead: (...args: unknown[]) => mockCanUseNonCriticalRead(...args),
 }));
 
-import { useDeleteNote, useMediaNote, useSaveNote } from '@/src/hooks/useNotes';
+jest.mock('@/src/utils/premiumAlert', () => ({
+  showFreemiumLimitAlert: (...args: unknown[]) => mockShowFreemiumLimitAlert(...args),
+}));
+
+import { useCanCreateNote, useDeleteNote, useMediaNote, useSaveNote } from '@/src/hooks/useNotes';
+import { FreemiumLimitError } from '@/src/utils/freemiumLimits';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -111,6 +125,8 @@ describe('useNotes optimistic cache behavior', () => {
     jest.clearAllMocks();
     mockCanUseNonCriticalRead.mockReturnValue(true);
     mockAuthState.user = { uid: 'test-user-id' };
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
     mockGetUserNotes.mockResolvedValue([]);
     mockGetNote.mockResolvedValue(null);
     mockSaveNote.mockResolvedValue(undefined);
@@ -479,5 +495,370 @@ describe('useNotes optimistic cache behavior', () => {
 
     expect(result.current.hasNote).toBe(false);
     expect(result.current.note).toBeNull();
+  });
+
+  it('blocks creating a new note when a free user already has 15 notes', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    client.setQueryData(getNotesKey(), existingNotes);
+    mockGetUserNotes.mockResolvedValueOnce(existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryData(getMovieNoteKey(999))).toBeUndefined();
+  });
+
+  it('preserves an existing null detail query when save preflight fails before rollback context exists', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+    const detailKey = getMovieNoteKey(999);
+
+    client.setQueryData(detailKey, null);
+    client.setQueryData(getNotesKey(), existingNotes);
+    mockGetUserNotes.mockResolvedValueOnce(existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(client.getQueryState(detailKey)).toBeDefined();
+    expect(client.getQueryData(detailKey)).toBeNull();
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryState(detailKey)).toBeDefined();
+    expect(client.getQueryData(detailKey)).toBeNull();
+  });
+
+  it('allows editing an existing note when a free user is already at the note limit', async () => {
+    const client = createQueryClient();
+    const existingNote = createNote({
+      id: 'movie-123',
+      mediaType: 'movie',
+      mediaId: 123,
+      content: 'Existing content',
+      mediaTitle: 'Movie 123',
+    });
+    const additionalNotes = Array.from({ length: 14 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Other note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    client.setQueryData(getMovieNoteKey(123), existingNote);
+    client.setQueryData(getNotesKey(), [existingNote, ...additionalNotes]);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 123,
+          content: 'Updated existing content',
+          posterPath: null,
+          mediaTitle: 'Movie 123',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not apply the note limit to premium users', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    mockPremiumState.isPremium = true;
+    client.setQueryData(getNotesKey(), existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Premium note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks creating a new note while premium status is still loading', async () => {
+    const client = createQueryClient();
+    mockPremiumState.isLoading = true;
+    client.setQueryData(getNotesKey(), []);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked while loading',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'PREMIUM_STATUS_PENDING',
+      });
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryData(getMovieNoteKey(999))).toBeUndefined();
+  });
+
+  it('allows editing an existing note while premium status is still loading', async () => {
+    const client = createQueryClient();
+    const existingNote = createNote({
+      id: 'movie-123',
+      mediaType: 'movie',
+      mediaId: 123,
+      content: 'Existing content',
+      mediaTitle: 'Movie 123',
+    });
+
+    mockPremiumState.isLoading = true;
+    client.setQueryData(getMovieNoteKey(123), existingNote);
+    client.setQueryData(getNotesKey(), [existingNote]);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 123,
+          content: 'Updated while loading',
+          posterPath: null,
+          mediaTitle: 'Movie 123',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a single preflight note read before saving a new note', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Fresh note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-checks invalidated cached notes through fetchQuery before enforcing limits', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    client.setQueryData(getNotesKey(), []);
+    mockGetUserNotes.mockResolvedValueOnce(
+      Array.from({ length: 15 }, (_, index) =>
+        createNote({
+          id: `movie-${index + 1}`,
+          mediaType: 'movie',
+          mediaId: index + 1,
+          content: `Existing note ${index + 1}`,
+          mediaTitle: `Movie ${index + 1}`,
+        })
+      )
+    );
+
+    await client.invalidateQueries({ queryKey: getNotesKey() });
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
+    expect(mockSaveNote).not.toHaveBeenCalled();
+  });
+
+  it('re-fetches fresh cached notes before enforcing limits', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    client.setQueryData(getNotesKey(), []);
+    mockGetUserNotes.mockResolvedValueOnce(
+      Array.from({ length: 15 }, (_, index) =>
+        createNote({
+          id: `movie-${index + 1}`,
+          mediaType: 'movie',
+          mediaId: index + 1,
+          content: `Existing note ${index + 1}`,
+          mediaTitle: `Movie ${index + 1}`,
+        })
+      )
+    );
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(fetchQuerySpy.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        queryKey: getNotesKey(),
+        staleTime: 0,
+      })
+    );
+    expect(fetchQuerySpy.mock.calls[0]?.[0]).not.toHaveProperty('gcTime');
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
+    expect(mockSaveNote).not.toHaveBeenCalled();
+  });
+
+  it('uses the thrown freemium limit when showing the note alert', async () => {
+    const client = createQueryClient();
+    mockGetUserNotes.mockRejectedValueOnce(
+      new FreemiumLimitError({
+        feature: 'notes',
+        maxFreeCount: 7,
+        currentCount: 7,
+      })
+    );
+
+    const { result } = renderHook(() => useCanCreateNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    let canCreateNote: boolean | undefined;
+
+    await act(async () => {
+      canCreateNote = await result.current({
+        mediaType: 'movie',
+        mediaId: 999,
+      });
+    });
+
+    expect(canCreateNote).toBe(false);
+    expect(mockShowFreemiumLimitAlert).toHaveBeenCalledTimes(1);
+    expect(mockShowFreemiumLimitAlert).toHaveBeenCalledWith('notes', 7);
   });
 });

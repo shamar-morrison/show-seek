@@ -493,7 +493,9 @@
     "noteDeleted": "Nota eliminada",
     "confirmDeleteNote": "¿Eliminar esta nota?",
     "privateNote": "Solo tú puedes ver esta nota",
-    "premiumDescription": "Las notas son una función Premium. Actualiza para desbloquear y añadir notas personales a tus películas y series.",
+    "premiumDescription": "Guarda notas personales para películas, series y episodios.",
+    "limitReachedTitle": "Límite alcanzado",
+    "limitReachedMessage": "Los usuarios gratuitos pueden guardar hasta {{max}} notas. Actualiza a Premium para notas ilimitadas.",
     "searchPlaceholder": "Buscar notas..."
   },
   "reminder": {
@@ -525,6 +527,8 @@
     "devBanner": "MODO DEV: Los horarios de recordatorio se aceleran para pruebas.",
     "editTimingTitle": "Editar hora del recordatorio",
     "failedToSet": "No se pudo configurar el recordatorio",
+    "limitReachedTitle": "Límite alcanzado",
+    "limitReachedMessage": "Los usuarios gratuitos pueden configurar hasta {{max}} recordatorios. Actualiza a Premium para recordatorios ilimitados.",
     "nextEpisode": "Próximo episodio: S{{season}}E{{episode}} · {{title}}",
     "noReleaseDate": "Sin fecha de estreno",
     "noUpcomingEpisodes": "No hay episodios próximos",
@@ -1194,10 +1198,11 @@
     "successMessage": "¡Gracias por apoyar ShowSeek! Premium ya está activo.",
     "successTitle": "Premium desbloqueado",
     "unlockButton": "Desbloquear Premium",
-    "unlockSubtitle": "Consigue listas ilimitadas, recordatorios, widgets y más.",
+    "unlockSubtitle": "Consigue listas, notas, recordatorios y widgets ilimitados, y más.",
     "unlockTitle": "Desbloquear Premium",
     "whatsIncluded": "Qué incluye",
     "bestValueBadge": "Mejor valor",
+    "trialBadge": "Prueba de 7 días",
     "monthlyPlanBilling": "Facturado mensualmente",
     "monthlyPlanName": "Mensual",
     "monthlyPriceFallback": "$3.00",
@@ -1235,12 +1240,12 @@
         "description": "Añade películas y series ilimitadas a tus listas."
       },
       "personal-notes": {
-        "title": "Notas personales",
-        "description": "Añade notas personales a películas y series."
+        "title": "Notas ilimitadas",
+        "description": "Guarda todas las notas personales que quieras."
       },
       "release-reminders": {
-        "title": "Recordatorios de estrenos",
-        "description": "Recibe avisos cuando se estrenen películas y episodios."
+        "title": "Recordatorios ilimitados",
+        "description": "Configura todos los recordatorios de estreno que quieras."
       },
       "widgets": {
         "title": "Widgets",

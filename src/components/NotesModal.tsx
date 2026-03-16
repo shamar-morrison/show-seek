@@ -1,9 +1,13 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { usePremium } from '@/src/context/PremiumContext';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
-import { showPremiumAlert } from '@/src/utils/premiumAlert';
+import {
+  isFreemiumLimitError,
+  isPremiumStatusPendingError,
+  MAX_FREE_NOTES,
+} from '@/src/utils/freemiumLimits';
+import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Trash2, X } from 'lucide-react-native';
@@ -47,7 +51,6 @@ interface NoteModalProps {
 const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
   const { width } = useWindowDimensions();
-  const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const saveNoteMutation = useSaveNote();
@@ -117,12 +120,6 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const handleSave = async () => {
     if (!canSave) return;
 
-    // Premium check
-    if (!isPremium) {
-      showPremiumAlert('premiumFeature.features.notes');
-      return;
-    }
-
     setError(null);
 
     try {
@@ -141,6 +138,15 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       onSave?.();
       await handleClose();
     } catch (err) {
+      if (isPremiumStatusPendingError(err)) {
+        return;
+      }
+
+      if (isFreemiumLimitError(err)) {
+        showFreemiumLimitAlert('notes', MAX_FREE_NOTES);
+        return;
+      }
+
       console.error('Failed to save note:', err);
       setError(err instanceof Error ? err.message : t('errors.saveFailed'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

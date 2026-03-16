@@ -15,7 +15,14 @@ interface TVShowCardProps {
 }
 
 export const TVShowCard = memo<TVShowCardProps>(
-  ({ show, width = 140, containerStyle, showListBadge = true, posterPathOverride, onLongPress }) => {
+  ({
+    show,
+    width = 140,
+    containerStyle,
+    showListBadge = true,
+    posterPathOverride,
+    onLongPress,
+  }) => {
     return (
       <MediaCard
         item={show}
