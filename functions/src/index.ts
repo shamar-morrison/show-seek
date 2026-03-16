@@ -40,6 +40,8 @@ const ENTITLED_SUBSCRIPTION_STATES = new Set<string>([
   'SUBSCRIPTION_STATE_CANCELED',
 ]);
 
+console.log('test');
+
 /**
  * Deep-clone an error object and strip fields that may contain tokens,
  * credentials, or other sensitive data (e.g. axios/googleapis config).
