@@ -80,6 +80,7 @@ const createNote = (params: {
   mediaId: number;
   content: string;
   mediaTitle: string;
+  originalTitle?: string;
   seasonNumber?: number;
   episodeNumber?: number;
 }): Note => ({
@@ -90,6 +91,7 @@ const createNote = (params: {
   content: params.content,
   posterPath: null,
   mediaTitle: params.mediaTitle,
+  ...(params.originalTitle !== undefined && { originalTitle: params.originalTitle }),
   createdAt: new Date('2024-01-01T00:00:00.000Z'),
   updatedAt: new Date('2024-01-01T00:00:00.000Z'),
   ...(params.seasonNumber !== undefined && { seasonNumber: params.seasonNumber }),
@@ -141,12 +143,14 @@ describe('useNotes optimistic cache behavior', () => {
         content: 'First note',
         posterPath: null,
         mediaTitle: 'Movie 123',
+        originalTitle: 'Movie 123 Original',
       });
     });
 
     await waitFor(() => {
       expect(result.current.mediaNote.hasNote).toBe(true);
       expect(result.current.mediaNote.note?.content).toBe('First note');
+      expect(result.current.mediaNote.note?.originalTitle).toBe('Movie 123 Original');
     });
 
     await act(async () => {

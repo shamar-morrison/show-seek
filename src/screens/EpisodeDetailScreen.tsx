@@ -206,10 +206,11 @@ export default function EpisodeDetailScreen() {
       episodeNumber,
       posterPath: resolvedShowPosterPath,
       mediaTitle: episode?.name ?? '',
+      originalTitle: tvShow?.original_name,
       initialNote,
       showId: tvId,
     }),
-    [episode?.name, episodeNumber, resolvedShowPosterPath, seasonNumber, tvId]
+    [episode?.name, episodeNumber, resolvedShowPosterPath, seasonNumber, tvId, tvShow?.original_name]
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,

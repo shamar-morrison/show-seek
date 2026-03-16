@@ -210,9 +210,10 @@ export default function TVDetailScreen() {
       mediaId: tvId,
       posterPath: resolvedShowPosterPath,
       mediaTitle: showData?.name ?? '',
+      originalTitle: showData?.original_name,
       initialNote,
     }),
-    [resolvedShowPosterPath, showData?.name, tvId]
+    [resolvedShowPosterPath, showData?.name, showData?.original_name, tvId]
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,

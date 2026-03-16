@@ -76,6 +76,7 @@ class NoteService {
       content: data.content as string,
       posterPath: (data.posterPath as string | null) ?? null,
       mediaTitle: data.mediaTitle as string,
+      originalTitle: data.originalTitle as string | undefined,
       createdAt: (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
       updatedAt: (data.updatedAt as { toDate?: () => Date })?.toDate?.() || new Date(),
       seasonNumber: data.seasonNumber as number | undefined,
@@ -149,6 +150,7 @@ class NoteService {
         content: noteData.content,
         posterPath: noteData.posterPath ?? null,
         mediaTitle: noteData.mediaTitle,
+        ...(noteData.originalTitle !== undefined && { originalTitle: noteData.originalTitle }),
         createdAt: existingNote.exists() ? existingNote.data().createdAt : now,
         updatedAt: now,
         // Optional episode fields

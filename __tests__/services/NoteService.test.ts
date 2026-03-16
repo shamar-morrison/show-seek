@@ -26,7 +26,7 @@ describe('NoteService', () => {
   });
 
   describe('saveNote', () => {
-    it('should save a movie note', async () => {
+    it('should save a movie note with originalTitle when provided', async () => {
       const mockDocRef = { path: 'users/test-user-id/notes/movie-123' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
@@ -37,6 +37,7 @@ describe('NoteService', () => {
         mediaId: 123,
         content: 'Great movie!',
         mediaTitle: 'Inception',
+        originalTitle: 'Inception Original',
         posterPath: '/path.jpg',
       };
 
@@ -55,11 +56,12 @@ describe('NoteService', () => {
           mediaType: 'movie',
           content: 'Great movie!',
           mediaTitle: 'Inception',
+          originalTitle: 'Inception Original',
         })
       );
     });
 
-    it('should save an episode note with metadata', async () => {
+    it('should save an episode note with metadata and originalTitle', async () => {
       const mockDocRef = { path: 'users/test-user-id/notes/episode-123-1-5' };
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (getDoc as jest.Mock).mockResolvedValue({ exists: () => false });
@@ -70,6 +72,7 @@ describe('NoteService', () => {
         mediaId: 123,
         content: 'Epic episode!',
         mediaTitle: 'Pilot',
+        originalTitle: 'Pilot Original',
         posterPath: '/path.jpg',
         seasonNumber: 1,
         episodeNumber: 5,
@@ -93,18 +96,20 @@ describe('NoteService', () => {
           episodeNumber: 5,
           showId: 123,
           content: 'Epic episode!',
+          originalTitle: 'Pilot Original',
         })
       );
     });
   });
 
   describe('getNote', () => {
-    it('should return note for an episode', async () => {
+    it('should return note for an episode with originalTitle when present', async () => {
       const mockNoteData = {
         mediaType: 'episode',
         mediaId: 123,
         content: 'Test note',
         mediaTitle: 'Episode Title',
+        originalTitle: 'Episode Title Original',
         seasonNumber: 1,
         episodeNumber: 1,
         createdAt: Timestamp.now(),
@@ -121,9 +126,35 @@ describe('NoteService', () => {
       expect(result).toMatchObject({
         mediaType: 'episode',
         content: 'Test note',
+        originalTitle: 'Episode Title Original',
         seasonNumber: 1,
         episodeNumber: 1,
       });
+    });
+
+    it('should return legacy notes without originalTitle', async () => {
+      const mockNoteData = {
+        mediaType: 'movie',
+        mediaId: 550,
+        content: 'Legacy note',
+        mediaTitle: 'Fight Club',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        data: () => mockNoteData,
+      });
+
+      const result = await noteService.getNote('test-user-id', 'movie', 550);
+
+      expect(result).toMatchObject({
+        mediaType: 'movie',
+        content: 'Legacy note',
+        mediaTitle: 'Fight Club',
+      });
+      expect(result?.originalTitle).toBeUndefined();
     });
   });
 

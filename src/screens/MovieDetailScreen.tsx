@@ -343,9 +343,10 @@ export default function MovieDetailScreen() {
       mediaId: movieId,
       posterPath: resolvedMoviePosterPath,
       mediaTitle: movieData?.title ?? '',
+      originalTitle: movieData?.original_title,
       initialNote,
     }),
-    [movieData?.title, movieId, resolvedMoviePosterPath]
+    [movieData?.original_title, movieData?.title, movieId, resolvedMoviePosterPath]
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,

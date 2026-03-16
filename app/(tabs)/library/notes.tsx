@@ -335,6 +335,7 @@ export default function NotesScreen() {
       mediaId: note.mediaId,
       posterPath: note.posterPath,
       mediaTitle: note.mediaTitle,
+      originalTitle: note.originalTitle,
       initialNote: note.content,
       seasonNumber: note.seasonNumber,
       episodeNumber: note.episodeNumber,

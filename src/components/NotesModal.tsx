@@ -32,6 +32,7 @@ export interface NoteModalPresentParams {
   mediaId: number;
   posterPath: string | null;
   mediaTitle: string;
+  originalTitle?: string;
   initialNote?: string;
   seasonNumber?: number;
   episodeNumber?: number;
@@ -56,6 +57,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
   const [mediaId, setMediaId] = useState(0);
   const [posterPath, setPosterPath] = useState<string | null>(null);
   const [mediaTitle, setMediaTitle] = useState('');
+  const [originalTitle, setOriginalTitle] = useState<string | undefined>();
   const [noteContent, setNoteContent] = useState('');
   const [initialContent, setInitialContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +79,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       mediaId: id,
       posterPath: poster,
       mediaTitle: title,
+      originalTitle: original,
       initialNote,
       seasonNumber: sNum,
       episodeNumber: eNum,
@@ -86,6 +89,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       setMediaId(id);
       setPosterPath(poster);
       setMediaTitle(title);
+      setOriginalTitle(original);
       setNoteContent(initialNote || '');
       setInitialContent(initialNote || '');
       setSeasonNumber(sNum);
@@ -101,6 +105,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
     setNoteContent('');
     setInitialContent('');
     setMediaTitle('');
+    setOriginalTitle(undefined);
     setMediaId(0);
     setPosterPath(null);
     setSeasonNumber(undefined);
@@ -127,6 +132,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
         content: noteContent.trim(),
         posterPath,
         mediaTitle,
+        originalTitle,
         seasonNumber,
         episodeNumber,
         showId,

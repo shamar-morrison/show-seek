@@ -214,6 +214,7 @@ export const useSaveNote = () => {
         content: noteData.content,
         posterPath: noteData.posterPath ?? null,
         mediaTitle: noteData.mediaTitle,
+        ...(noteData.originalTitle !== undefined && { originalTitle: noteData.originalTitle }),
         createdAt: previousDetailNote?.createdAt ?? now,
         updatedAt: now,
         ...(noteData.seasonNumber !== undefined && { seasonNumber: noteData.seasonNumber }),

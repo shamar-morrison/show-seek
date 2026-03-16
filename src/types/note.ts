@@ -10,6 +10,7 @@ export interface Note {
   content: string;
   posterPath: string | null;
   mediaTitle: string;
+  originalTitle?: string;
   createdAt: Date;
   updatedAt: Date;
   // Episode specific fields
@@ -24,6 +25,7 @@ export interface NoteInput {
   content: string;
   posterPath: string | null;
   mediaTitle: string;
+  originalTitle?: string;
   // Episode specific fields
   seasonNumber?: number;
   episodeNumber?: number;
