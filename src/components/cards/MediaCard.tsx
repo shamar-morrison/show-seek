@@ -71,7 +71,9 @@ function MediaCardComponent<T extends MediaCardItem>({
   const showBadge = listIds.length > 0;
 
   const handleNavigate = useCallback(() => {
-    const path = currentTab ? `/(tabs)/${currentTab}/${mediaType}/${item.id}` : `/${mediaType}/${item.id}`;
+    const path = currentTab
+      ? `/(tabs)/${currentTab}/${mediaType}/${item.id}`
+      : `/${mediaType}/${item.id}`;
     router.push(path as Route);
   }, [currentTab, item.id, mediaType]);
 
@@ -112,7 +114,9 @@ function MediaCardComponent<T extends MediaCardItem>({
         {showMeta && (
           <View style={mediaMetaStyles.yearRatingContainer}>
             {releaseYear !== null && <Text style={mediaMetaStyles.year}>{releaseYear}</Text>}
-            {releaseYear !== null && hasVoteAverage && <Text style={mediaMetaStyles.separator}> • </Text>}
+            {releaseYear !== null && hasVoteAverage && (
+              <Text style={mediaMetaStyles.separator}> • </Text>
+            )}
             {hasVoteAverage && (
               <>
                 <Star size={10} fill={COLORS.warning} color={COLORS.warning} />
