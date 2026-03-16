@@ -7,6 +7,7 @@ interface UseNotePressParams {
   note: Note | null;
   noteExists: boolean;
   ensureNoteLoadedForEdit: () => Promise<Note | null>;
+  beforeCreate?: () => Promise<boolean> | boolean;
   isAccountRequired: () => boolean;
   noteSheetRef: RefObject<NoteModalRef | null>;
   buildPresentParams: (initialNote?: string) => NoteModalPresentParams;
@@ -19,6 +20,7 @@ export const useNotePress = ({
   note,
   noteExists,
   ensureNoteLoadedForEdit,
+  beforeCreate,
   isAccountRequired,
   noteSheetRef,
   buildPresentParams,
@@ -42,21 +44,29 @@ export const useNotePress = ({
 
     setIsOpeningNote(true);
 
+    let resolvedNote = note;
     let initialNote = '';
 
     try {
-      const resolvedNote = note ?? (await ensureNoteLoadedForEdit());
-      initialNote = resolvedNote?.content ?? '';
-    } catch (error) {
-      onLoadError(error);
-      Alert.alert(alertTitle, alertMessage);
+      try {
+        resolvedNote = note ?? (await ensureNoteLoadedForEdit());
+        initialNote = resolvedNote?.content ?? '';
+      } catch (error) {
+        onLoadError(error);
+        Alert.alert(alertTitle, alertMessage);
 
-      if (noteExists) {
-        return;
+        if (noteExists) {
+          return;
+        }
       }
-    }
 
-    try {
+      if (!resolvedNote && beforeCreate) {
+        const canCreate = await beforeCreate();
+        if (!canCreate) {
+          return;
+        }
+      }
+
       await openNoteEditor(initialNote);
     } catch (error) {
       onLoadError(error);
@@ -67,6 +77,7 @@ export const useNotePress = ({
   }, [
     alertMessage,
     alertTitle,
+    beforeCreate,
     ensureNoteLoadedForEdit,
     isAccountRequired,
     isOpeningNote,

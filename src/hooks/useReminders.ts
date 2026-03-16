@@ -1,7 +1,14 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { usePremium } from '@/src/context/PremiumContext';
+import {
+  FreemiumLimitError,
+  isFreemiumLimitError,
+  MAX_FREE_REMINDERS,
+} from '@/src/utils/freemiumLimits';
+import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { auth } from '../firebase/config';
 import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { reminderService } from '../services/ReminderService';
@@ -14,6 +21,10 @@ import {
 
 const getStatusReadsEnabled = () =>
   !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
+
+type ReminderTarget = Pick<CreateReminderInput, 'mediaType' | 'mediaId'>;
+
+const getReminderId = ({ mediaType, mediaId }: ReminderTarget) => `${mediaType}-${mediaId}`;
 
 const parseReminderId = (reminderId: string): { mediaType: ReminderMediaType; mediaId: number } | null => {
   const [rawType, rawMediaId] = reminderId.split('-');
@@ -32,6 +43,62 @@ const parseReminderId = (reminderId: string): { mediaType: ReminderMediaType; me
   };
 };
 
+const loadRemindersForLimitCheck = async (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string
+): Promise<Reminder[]> => {
+  const queryKey = ['reminders', userId] as const;
+  const cachedReminders = queryClient.getQueryData<Reminder[]>(queryKey);
+
+  if (cachedReminders) {
+    return cachedReminders;
+  }
+
+  return queryClient.fetchQuery({
+    queryKey,
+    queryFn: () => reminderService.getActiveReminders(userId),
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+  });
+};
+
+const assertCanCreateReminder = async ({
+  queryClient,
+  userId,
+  isPremium,
+  isPremiumLoading,
+  reminderTarget,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  userId: string | undefined;
+  isPremium: boolean;
+  isPremiumLoading: boolean;
+  reminderTarget: ReminderTarget;
+}): Promise<void> => {
+  if (!userId) {
+    throw new Error('Please sign in to continue');
+  }
+
+  if (isPremium || isPremiumLoading) {
+    return;
+  }
+
+  const reminders = await loadRemindersForLimitCheck(queryClient, userId);
+  const reminderId = getReminderId(reminderTarget);
+
+  if (reminders.some((reminder) => reminder.id === reminderId)) {
+    return;
+  }
+
+  if (reminders.length >= MAX_FREE_REMINDERS) {
+    throw new FreemiumLimitError({
+      feature: 'reminders',
+      maxFreeCount: MAX_FREE_REMINDERS,
+      currentCount: reminders.length,
+    });
+  }
+};
+
 /**
  * Hook to get all active reminders for current user
  */
@@ -42,7 +109,7 @@ export const useReminders = () => {
     queryKey: ['reminders', userId],
     queryFn: () => reminderService.getActiveReminders(userId!),
     enabled: !!userId,
-    initialData: [] as Reminder[],
+    placeholderData: [] as Reminder[],
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
     refetchOnMount: false,
@@ -216,9 +283,19 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
 export const useCreateReminder = () => {
   const queryClient = useQueryClient();
   const userId = auth.currentUser?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: (input: CreateReminderInput) => reminderService.createReminder(input),
+    mutationFn: async (input: CreateReminderInput) => {
+      await assertCanCreateReminder({
+        queryClient,
+        userId,
+        isPremium,
+        isPremiumLoading,
+        reminderTarget: input,
+      });
+      return reminderService.createReminder(input);
+    },
     onSuccess: async (_data, variables) => {
       if (!userId) return;
 
@@ -230,6 +307,35 @@ export const useCreateReminder = () => {
       ]);
     },
   });
+};
+
+export const useCanCreateReminder = () => {
+  const queryClient = useQueryClient();
+  const userId = auth.currentUser?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
+
+  return useCallback(
+    async (reminderTarget: ReminderTarget): Promise<boolean> => {
+      try {
+        await assertCanCreateReminder({
+          queryClient,
+          userId,
+          isPremium,
+          isPremiumLoading,
+          reminderTarget,
+        });
+        return true;
+      } catch (error) {
+        if (isFreemiumLimitError(error)) {
+          showFreemiumLimitAlert('reminders', MAX_FREE_REMINDERS);
+          return false;
+        }
+
+        throw error;
+      }
+    },
+    [isPremium, isPremiumLoading, queryClient, userId]
+  );
 };
 
 /**

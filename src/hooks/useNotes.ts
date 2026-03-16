@@ -1,6 +1,13 @@
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { usePremium } from '@/src/context/PremiumContext';
 import { Note, NoteInput } from '@/src/types/note';
+import {
+  FreemiumLimitError,
+  isFreemiumLimitError,
+  MAX_FREE_NOTES,
+} from '@/src/utils/freemiumLimits';
 import { getMediaNoteQueryKey, getNotesQueryKey } from '@/src/utils/noteQueries';
+import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/auth';
@@ -10,6 +17,8 @@ import { noteService } from '../services/NoteService';
 const getStatusReadsEnabled = () =>
   !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
 export { getMediaNoteQueryKey };
+
+type NoteTarget = Pick<NoteInput, 'mediaType' | 'mediaId' | 'seasonNumber' | 'episodeNumber'>;
 
 const getNoteId = (
   mediaType: 'movie' | 'tv' | 'episode',
@@ -50,6 +59,80 @@ const isSameMediaNote = (
   }
 
   return note.seasonNumber === seasonNumber && note.episodeNumber === episodeNumber;
+};
+
+const loadNotesForLimitCheck = async (
+  queryClient: ReturnType<typeof useQueryClient>,
+  userId: string
+): Promise<Note[]> => {
+  const listKey = getNotesQueryKey(userId);
+  const cachedNotes = queryClient.getQueryData<Note[]>(listKey);
+
+  if (cachedNotes) {
+    return cachedNotes;
+  }
+
+  return queryClient.fetchQuery({
+    queryKey: listKey,
+    queryFn: () => noteService.getUserNotes(userId),
+    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
+    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+  });
+};
+
+const assertCanCreateNote = async ({
+  queryClient,
+  userId,
+  isPremium,
+  isPremiumLoading,
+  noteTarget,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  userId: string | undefined;
+  isPremium: boolean;
+  isPremiumLoading: boolean;
+  noteTarget: NoteTarget;
+}): Promise<void> => {
+  if (!userId) {
+    throw new Error('Please sign in to continue');
+  }
+
+  if (isPremium || isPremiumLoading) {
+    return;
+  }
+
+  const detailKey = getMediaNoteQueryKey(
+    userId,
+    noteTarget.mediaType,
+    noteTarget.mediaId,
+    noteTarget.seasonNumber,
+    noteTarget.episodeNumber
+  );
+  const existingDetailNote = queryClient.getQueryData<Note | null>(detailKey);
+
+  if (existingDetailNote) {
+    return;
+  }
+
+  const notes = await loadNotesForLimitCheck(queryClient, userId);
+  const noteId = getNoteId(
+    noteTarget.mediaType,
+    noteTarget.mediaId,
+    noteTarget.seasonNumber,
+    noteTarget.episodeNumber
+  );
+
+  if (notes.some((note) => note.id === noteId)) {
+    return;
+  }
+
+  if (notes.length >= MAX_FREE_NOTES) {
+    throw new FreemiumLimitError({
+      feature: 'notes',
+      maxFreeCount: MAX_FREE_NOTES,
+      currentCount: notes.length,
+    });
+  }
 };
 
 /**
@@ -173,16 +256,32 @@ export const useSaveNote = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: (noteData: NoteInput) => {
+    mutationFn: async (noteData: NoteInput) => {
       if (!userId) throw new Error('Please sign in to continue');
+      await assertCanCreateNote({
+        queryClient,
+        userId,
+        isPremium,
+        isPremiumLoading,
+        noteTarget: noteData,
+      });
       return noteService.saveNote(userId, noteData);
     },
     onMutate: async (noteData) => {
       if (!userId) {
         throw new Error('Please sign in to continue');
       }
+
+      await assertCanCreateNote({
+        queryClient,
+        userId,
+        isPremium,
+        isPremiumLoading,
+        noteTarget: noteData,
+      });
 
       const detailKey = getMediaNoteQueryKey(
         userId,
@@ -200,6 +299,7 @@ export const useSaveNote = () => {
 
       const previousDetailNote = queryClient.getQueryData<Note | null>(detailKey);
       const previousNotes = queryClient.getQueryData<Note[]>(listKey);
+      const hadPreviousDetailQuery = queryClient.getQueryState(detailKey) !== undefined;
       const now = new Date();
       const optimisticNote: Note = {
         id: getNoteId(
@@ -230,7 +330,7 @@ export const useSaveNote = () => {
         );
       }
 
-      return { previousDetailNote, previousNotes };
+      return { hadPreviousDetailQuery, previousDetailNote, previousNotes };
     },
     onError: (_error, noteData, context) => {
       if (!userId) return;
@@ -244,7 +344,11 @@ export const useSaveNote = () => {
       );
       const listKey = getNotesQueryKey(userId);
 
-      queryClient.setQueryData<Note | null>(detailKey, context?.previousDetailNote ?? null);
+      if (context?.hadPreviousDetailQuery) {
+        queryClient.setQueryData<Note | null>(detailKey, context.previousDetailNote ?? null);
+      } else {
+        queryClient.removeQueries({ queryKey: detailKey, exact: true });
+      }
 
       if (context?.previousNotes) {
         queryClient.setQueryData<Note[]>(listKey, context.previousNotes);
@@ -267,6 +371,36 @@ export const useSaveNote = () => {
       ]);
     },
   });
+};
+
+export const useCanCreateNote = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
+
+  return useCallback(
+    async (noteTarget: NoteTarget): Promise<boolean> => {
+      try {
+        await assertCanCreateNote({
+          queryClient,
+          userId,
+          isPremium,
+          isPremiumLoading,
+          noteTarget,
+        });
+        return true;
+      } catch (error) {
+        if (isFreemiumLimitError(error)) {
+          showFreemiumLimitAlert('notes', MAX_FREE_NOTES);
+          return false;
+        }
+
+        throw error;
+      }
+    },
+    [isPremium, isPremiumLoading, queryClient, userId]
+  );
 };
 
 /**

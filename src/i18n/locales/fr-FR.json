@@ -493,7 +493,9 @@
     "noteDeleted": "Note supprimée",
     "confirmDeleteNote": "Supprimer cette note ?",
     "privateNote": "Vous seul pouvez voir cette note",
-    "premiumDescription": "Les notes sont une fonctionnalité Premium. Passez à Premium pour déverrouiller et ajouter des notes personnelles à vos films et séries.",
+    "premiumDescription": "Enregistrez des notes personnelles pour vos films, séries et épisodes.",
+    "limitReachedTitle": "Limite atteinte",
+    "limitReachedMessage": "Les utilisateurs gratuits peuvent enregistrer jusqu'à {{max}} notes. Passez à Premium pour des notes illimitées.",
     "searchPlaceholder": "Rechercher des notes..."
   },
   "reminder": {
@@ -525,6 +527,8 @@
     "devBanner": "MODE DEV : les horaires de rappel sont accélérés pour les tests.",
     "editTimingTitle": "Modifier le timing du rappel",
     "failedToSet": "Échec de la définition du rappel",
+    "limitReachedTitle": "Limite atteinte",
+    "limitReachedMessage": "Les utilisateurs gratuits peuvent créer jusqu'à {{max}} rappels. Passez à Premium pour des rappels illimités.",
     "nextEpisode": "Prochain épisode : S{{season}}E{{episode}} · {{title}}",
     "noReleaseDate": "Aucune date de sortie disponible",
     "noUpcomingEpisodes": "Aucun épisode à venir",
@@ -974,7 +978,7 @@
     "successMessage": "Merci de soutenir ShowSeek ! Premium est maintenant actif.",
     "successTitle": "Premium déverrouillé",
     "unlockButton": "Déverrouiller Premium",
-    "unlockSubtitle": "Obtenez des listes, rappels, widgets illimités et plus encore.",
+    "unlockSubtitle": "Obtenez des listes, notes, rappels, widgets illimités et plus encore.",
     "unlockTitle": "Obtenez un accès illimité.",
     "yearlyPlanBilling": "Facturé annuellement",
     "yearlyPlanName": "Annuel",
@@ -1375,8 +1379,8 @@
         "title": "Dernières bandes-annonces"
       },
       "personal-notes": {
-        "description": "Ajoutez des notes personnelles à vos films et séries.",
-        "title": "Notes personnelles"
+        "description": "Conservez autant de notes personnelles que vous le souhaitez.",
+        "title": "Notes illimitées"
       },
       "release-calendar": {
         "description": "Suivez les prochaines sorties dans votre calendrier.",
@@ -1387,8 +1391,8 @@
         "title": "Où regarder"
       },
       "release-reminders": {
-        "description": "Recevez une notification à la sortie des films et épisodes.",
-        "title": "Rappels de sortie"
+        "description": "Créez autant de rappels de sortie que vous le souhaitez.",
+        "title": "Rappels illimités"
       },
       "streaming-filter": {
         "description": "Filtrez Découvrir par service de streaming.",

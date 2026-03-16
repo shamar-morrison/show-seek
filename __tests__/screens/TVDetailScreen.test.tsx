@@ -129,6 +129,7 @@ jest.mock('@/src/hooks/useLists', () => ({
 
 jest.mock('@/src/hooks/useNotes', () => ({
   useMediaNote: () => mockUseMediaNoteValue,
+  useCanCreateNote: () => jest.fn(async () => true),
 }));
 
 jest.mock('@/src/hooks/useNotificationPermissions', () => ({
@@ -156,6 +157,7 @@ jest.mock('@/src/hooks/useRatings', () => ({
 }));
 
 jest.mock('@/src/hooks/useReminders', () => ({
+  useCanCreateReminder: () => jest.fn(async () => true),
   useMediaReminder: () => ({ reminder: null, hasReminder: false, isLoading: false }),
   useCreateReminder: () => ({ mutateAsync: jest.fn() }),
   useCancelReminder: () => ({ mutateAsync: jest.fn() }),

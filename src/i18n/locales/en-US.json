@@ -494,7 +494,9 @@
     "noteDeleted": "Note deleted",
     "confirmDeleteNote": "Delete this note?",
     "privateNote": "Only you can see this note",
-    "premiumDescription": "Notes are a premium feature. Upgrade to unlock and add personal notes to your movies and TV shows.",
+    "premiumDescription": "Save personal notes for movies, shows, and episodes.",
+    "limitReachedTitle": "Limit Reached",
+    "limitReachedMessage": "Free users can save up to {{max}} notes. Upgrade to Premium for unlimited notes.",
     "searchPlaceholder": "Search notes..."
   },
   "reminder": {
@@ -526,6 +528,8 @@
     "devBanner": "DEV MODE: Reminder times are accelerated for testing.",
     "editTimingTitle": "Edit Reminder Timing",
     "failedToSet": "Failed to set reminder",
+    "limitReachedTitle": "Limit Reached",
+    "limitReachedMessage": "Free users can set up to {{max}} reminders. Upgrade to Premium for unlimited reminders.",
     "nextEpisode": "Next episode: S{{season}}E{{episode}} · {{title}}",
     "noReleaseDate": "No release date available",
     "noUpcomingEpisodes": "No upcoming episodes",
@@ -1123,7 +1127,7 @@
     "successMessage": "Thanks for supporting ShowSeek! Premium is now active.",
     "successTitle": "Premium Unlocked",
     "unlockButton": "Unlock Premium",
-    "unlockSubtitle": "Get unlimited lists, reminders, widgets, and more.",
+    "unlockSubtitle": "Get unlimited lists, notes, reminders, widgets, and more.",
     "unlockTitle": "Get unlimited access.",
     "whatsIncluded": "What's Included",
     "yearlyPlanBilling": "Billed yearly",
@@ -1349,8 +1353,8 @@
         "title": "Latest trailers"
       },
       "personal-notes": {
-        "description": "Add personal notes to movies and TV shows.",
-        "title": "Personal notes"
+        "description": "Keep as many personal notes as you want.",
+        "title": "Unlimited notes"
       },
       "release-calendar": {
         "description": "Track upcoming releases in your calendar.",
@@ -1361,8 +1365,8 @@
         "title": "Where to Watch"
       },
       "release-reminders": {
-        "description": "Get notified when movies and episodes release.",
-        "title": "Release reminders"
+        "description": "Set as many release reminders as you want.",
+        "title": "Unlimited reminders"
       },
       "streaming-filter": {
         "description": "Filter Discover by streaming service.",

@@ -12,9 +12,17 @@ const mockCanUseNonCriticalRead = jest.fn();
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
 };
+const mockPremiumState = {
+  isPremium: false,
+  isLoading: false,
+};
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/context/PremiumContext', () => ({
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('@/src/services/NoteService', () => ({
@@ -111,6 +119,8 @@ describe('useNotes optimistic cache behavior', () => {
     jest.clearAllMocks();
     mockCanUseNonCriticalRead.mockReturnValue(true);
     mockAuthState.user = { uid: 'test-user-id' };
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
     mockGetUserNotes.mockResolvedValue([]);
     mockGetNote.mockResolvedValue(null);
     mockSaveNote.mockResolvedValue(undefined);
@@ -479,5 +489,114 @@ describe('useNotes optimistic cache behavior', () => {
 
     expect(result.current.hasNote).toBe(false);
     expect(result.current.note).toBeNull();
+  });
+
+  it('blocks creating a new note when a free user already has 15 notes', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    client.setQueryData(getNotesKey(), existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toThrow('Free users can save up to 15 notes');
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryData(getMovieNoteKey(999))).toBeUndefined();
+  });
+
+  it('allows editing an existing note when a free user is already at the note limit', async () => {
+    const client = createQueryClient();
+    const existingNote = createNote({
+      id: 'movie-123',
+      mediaType: 'movie',
+      mediaId: 123,
+      content: 'Existing content',
+      mediaTitle: 'Movie 123',
+    });
+    const additionalNotes = Array.from({ length: 14 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Other note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    client.setQueryData(getMovieNoteKey(123), existingNote);
+    client.setQueryData(getNotesKey(), [existingNote, ...additionalNotes]);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 123,
+          content: 'Updated existing content',
+          posterPath: null,
+          mediaTitle: 'Movie 123',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not apply the note limit to premium users', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+
+    mockPremiumState.isPremium = true;
+    client.setQueryData(getNotesKey(), existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Premium note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
   });
 });

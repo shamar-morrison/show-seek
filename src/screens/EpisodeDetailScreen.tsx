@@ -39,7 +39,7 @@ import {
 } from '@/src/hooks/useEpisodeTracking';
 import { useIsEpisodeFavorited, useToggleFavoriteEpisode } from '@/src/hooks/useFavoriteEpisodes';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
-import { useMediaNote } from '@/src/hooks/useNotes';
+import { useCanCreateNote, useMediaNote } from '@/src/hooks/useNotes';
 import { useNotePress } from '@/src/hooks/useNotePress';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
@@ -143,6 +143,7 @@ export default function EpisodeDetailScreen() {
     isLoading: isLoadingNote,
     ensureNoteLoadedForEdit,
   } = useMediaNote('episode', tvId, seasonNumber, episodeNumber);
+  const canCreateNote = useCanCreateNote();
 
   // Calculate current count for 'currently-watching' list
   const currentlyWatchingList = lists?.find((l) => l.id === 'currently-watching');
@@ -216,6 +217,16 @@ export default function EpisodeDetailScreen() {
     note,
     noteExists: hasNote,
     ensureNoteLoadedForEdit,
+    beforeCreate: useCallback(
+      () =>
+        canCreateNote({
+          mediaType: 'episode',
+          mediaId: tvId,
+          seasonNumber,
+          episodeNumber,
+        }),
+      [canCreateNote, episodeNumber, seasonNumber, tvId]
+    ),
     isAccountRequired,
     noteSheetRef,
     buildPresentParams: buildNotePresentParams,

@@ -12,6 +12,8 @@ import {
 import { COLORS } from '@/src/constants/theme';
 import { ReminderTiming } from '@/src/types/reminder';
 import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { isFreemiumLimitError, MAX_FREE_REMINDERS } from '@/src/utils/freemiumLimits';
+import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { isNotificationTimeInPast, isReleaseToday } from '@/src/utils/reminderHelpers';
 import { Calendar } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -88,6 +90,11 @@ export default function ReminderModal({
       onShowToast?.(t('reminder.setSuccess'));
       onClose();
     } catch (error) {
+      if (isFreemiumLimitError(error)) {
+        showFreemiumLimitAlert('reminders', MAX_FREE_REMINDERS);
+        return;
+      }
+
       onShowToast?.(error instanceof Error ? error.message : t('reminder.failedToSet'));
     } finally {
       setIsLoading(false);

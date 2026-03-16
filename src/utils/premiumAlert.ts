@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import i18n from '@/src/i18n';
+import { FreemiumLimitFeature } from '@/src/utils/freemiumLimits';
 
 /**
  * Shows a standardized premium feature alert with haptic feedback.
@@ -25,4 +26,30 @@ export function showPremiumAlert(featureNameKey: string, onDismiss?: () => void)
       onPress: () => router.push('/premium' as any),
     },
   ]);
+}
+
+export function showFreemiumLimitAlert(
+  feature: FreemiumLimitFeature,
+  max: number,
+  onDismiss?: () => void
+): void {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+  const keyPrefix = feature === 'notes' ? 'notes' : 'reminder';
+
+  Alert.alert(
+    i18n.t(`${keyPrefix}.limitReachedTitle`),
+    i18n.t(`${keyPrefix}.limitReachedMessage`, { max }),
+    [
+      {
+        text: i18n.t('common.cancel'),
+        style: 'cancel',
+        onPress: onDismiss,
+      },
+      {
+        text: i18n.t('profile.upgradeToPremium'),
+        onPress: () => router.push('/premium' as any),
+      },
+    ]
+  );
 }

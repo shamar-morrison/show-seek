@@ -493,7 +493,9 @@
     "noteDeleted": "Nota eliminada",
     "confirmDeleteNote": "¿Eliminar esta nota?",
     "privateNote": "Solo tú puedes ver esta nota",
-    "premiumDescription": "Las notas son una función Premium. Actualiza para desbloquear y añadir notas personales a tus películas y series.",
+    "premiumDescription": "Guarda notas personales para películas, series y episodios.",
+    "limitReachedTitle": "Límite alcanzado",
+    "limitReachedMessage": "Los usuarios gratuitos pueden guardar hasta {{max}} notas. Actualiza a Premium para notas ilimitadas.",
     "searchPlaceholder": "Buscar notas..."
   },
   "reminder": {
@@ -525,6 +527,8 @@
     "devBanner": "MODO DEV: Los horarios de recordatorio se aceleran para pruebas.",
     "editTimingTitle": "Editar hora del recordatorio",
     "failedToSet": "No se pudo configurar el recordatorio",
+    "limitReachedTitle": "Límite alcanzado",
+    "limitReachedMessage": "Los usuarios gratuitos pueden configurar hasta {{max}} recordatorios. Actualiza a Premium para recordatorios ilimitados.",
     "nextEpisode": "Próximo episodio: S{{season}}E{{episode}} · {{title}}",
     "noReleaseDate": "Sin fecha de estreno",
     "noUpcomingEpisodes": "No hay episodios próximos",
@@ -1194,7 +1198,7 @@
     "successMessage": "¡Gracias por apoyar ShowSeek! Premium ya está activo.",
     "successTitle": "Premium desbloqueado",
     "unlockButton": "Desbloquear Premium",
-    "unlockSubtitle": "Consigue listas ilimitadas, recordatorios, widgets y más.",
+    "unlockSubtitle": "Consigue listas, notas, recordatorios y widgets ilimitados, y más.",
     "unlockTitle": "Desbloquear Premium",
     "whatsIncluded": "Qué incluye",
     "bestValueBadge": "Mejor valor",
@@ -1255,8 +1259,8 @@
         "title": "Últimos tráilers"
       },
       "personal-notes": {
-        "description": "Añade notas personales a películas y series.",
-        "title": "Notas personales"
+        "description": "Guarda todas las notas personales que quieras.",
+        "title": "Notas ilimitadas"
       },
       "release-calendar": {
         "description": "Sigue los próximos estrenos en tu calendario.",
@@ -1267,8 +1271,8 @@
         "title": "Dónde ver"
       },
       "release-reminders": {
-        "description": "Recibe avisos cuando se estrenen películas y episodios.",
-        "title": "Recordatorios de estrenos"
+        "description": "Configura todos los recordatorios de estreno que quieras.",
+        "title": "Recordatorios ilimitados"
       },
       "streaming-filter": {
         "description": "Filtra Descubrir por servicio de streaming.",

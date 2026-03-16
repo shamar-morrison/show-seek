@@ -493,7 +493,9 @@
     "noteDeleted": "Nota eliminada",
     "confirmDeleteNote": "Eliminar esta nota?",
     "privateNote": "Só você pode ver esta nota",
-    "premiumDescription": "As notas são uma funcionalidade Premium. Atualize para desbloquear e adicionar notas pessoais aos seus filmes e séries.",
+    "premiumDescription": "Guarde notas pessoais para filmes, séries e episódios.",
+    "limitReachedTitle": "Limite atingido",
+    "limitReachedMessage": "Os utilizadores gratuitos podem guardar até {{max}} notas. Atualize para Premium para notas ilimitadas.",
     "searchPlaceholder": "Pesquisar notas..."
   },
   "reminder": {
@@ -525,6 +527,8 @@
     "devBanner": "MODO DEV: Os horários dos lembretes são acelerados para testes.",
     "editTimingTitle": "Editar horário do lembrete",
     "failedToSet": "Falha ao definir lembrete",
+    "limitReachedTitle": "Limite atingido",
+    "limitReachedMessage": "Os utilizadores gratuitos podem definir até {{max}} lembretes. Atualize para Premium para lembretes ilimitados.",
     "nextEpisode": "Próximo episódio: S{{season}}E{{episode}} · {{title}}",
     "noReleaseDate": "Nenhuma data de lançamento disponível",
     "noUpcomingEpisodes": "Nenhum episódio próximo",
@@ -1218,7 +1222,7 @@
     "successMessage": "Obrigado por apoiar o ShowSeek! Premium está agora ativo.",
     "successTitle": "Premium desbloqueado",
     "unlockButton": "Desbloquear Premium",
-    "unlockSubtitle": "Tenha listas, lembretes, widgets ilimitados e mais.",
+    "unlockSubtitle": "Tenha listas, notas, lembretes e widgets ilimitados, e muito mais.",
     "unlockTitle": "Desbloquear Premium",
     "whatsIncluded": "O que inclui",
     "bestValueBadge": "Melhor valor",
@@ -1288,8 +1292,8 @@
         "title": "Últimos trailers"
       },
       "personal-notes": {
-        "description": "Adicione notas pessoais a filmes e séries.",
-        "title": "Notas pessoais"
+        "description": "Guarde tantas notas pessoais quantas quiser.",
+        "title": "Notas ilimitadas"
       },
       "release-calendar": {
         "description": "Acompanhe próximos lançamentos no seu calendário.",
@@ -1300,8 +1304,8 @@
         "title": "Onde ver"
       },
       "release-reminders": {
-        "description": "Receba notificações quando filmes e episódios forem lançados.",
-        "title": "Lembretes de lançamento"
+        "description": "Defina tantos lembretes de estreia quantos quiser.",
+        "title": "Lembretes ilimitados"
       },
       "streaming-filter": {
         "description": "Filtre o Descobrir por serviço de streaming.",
