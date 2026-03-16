@@ -71,8 +71,7 @@ const loadNotesForLimitCheck = async (
   return queryClient.fetchQuery({
     queryKey: listKey,
     queryFn: () => noteService.getUserNotes(userId),
-    staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
-    gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
+    staleTime: 0,
   });
 };
 
@@ -391,7 +390,11 @@ export const useCanCreateNote = () => {
         }
 
         if (isFreemiumLimitError(error)) {
-          showFreemiumLimitAlert('notes', MAX_FREE_NOTES);
+          const limit =
+            typeof error.maxFreeCount === 'number' && Number.isFinite(error.maxFreeCount)
+              ? Number(error.maxFreeCount)
+              : MAX_FREE_NOTES;
+          showFreemiumLimitAlert('notes', limit);
           return false;
         }
 

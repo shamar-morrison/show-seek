@@ -8,6 +8,7 @@ const mockGetNote = jest.fn();
 const mockSaveNote = jest.fn();
 const mockDeleteNote = jest.fn();
 const mockCanUseNonCriticalRead = jest.fn();
+const mockShowFreemiumLimitAlert = jest.fn();
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
@@ -38,7 +39,12 @@ jest.mock('@/src/services/ReadBudgetGuard', () => ({
   canUseNonCriticalRead: (...args: unknown[]) => mockCanUseNonCriticalRead(...args),
 }));
 
-import { useDeleteNote, useMediaNote, useSaveNote } from '@/src/hooks/useNotes';
+jest.mock('@/src/utils/premiumAlert', () => ({
+  showFreemiumLimitAlert: (...args: unknown[]) => mockShowFreemiumLimitAlert(...args),
+}));
+
+import { useCanCreateNote, useDeleteNote, useMediaNote, useSaveNote } from '@/src/hooks/useNotes';
+import { FreemiumLimitError } from '@/src/utils/freemiumLimits';
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -504,6 +510,7 @@ describe('useNotes optimistic cache behavior', () => {
     );
 
     client.setQueryData(getNotesKey(), existingNotes);
+    mockGetUserNotes.mockResolvedValueOnce(existingNotes);
 
     const { result } = renderHook(() => useSaveNote(), {
       wrapper: createWrapper(client),
@@ -544,6 +551,7 @@ describe('useNotes optimistic cache behavior', () => {
 
     client.setQueryData(detailKey, null);
     client.setQueryData(getNotesKey(), existingNotes);
+    mockGetUserNotes.mockResolvedValueOnce(existingNotes);
 
     const { result } = renderHook(() => useSaveNote(), {
       wrapper: createWrapper(client),
@@ -775,5 +783,82 @@ describe('useNotes optimistic cache behavior', () => {
     expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
     expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
     expect(mockSaveNote).not.toHaveBeenCalled();
+  });
+
+  it('re-fetches fresh cached notes before enforcing limits', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    client.setQueryData(getNotesKey(), []);
+    mockGetUserNotes.mockResolvedValueOnce(
+      Array.from({ length: 15 }, (_, index) =>
+        createNote({
+          id: `movie-${index + 1}`,
+          mediaType: 'movie',
+          mediaId: index + 1,
+          content: `Existing note ${index + 1}`,
+          mediaTitle: `Movie ${index + 1}`,
+        })
+      )
+    );
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(fetchQuerySpy.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        queryKey: getNotesKey(),
+        staleTime: 0,
+      })
+    );
+    expect(fetchQuerySpy.mock.calls[0]?.[0]).not.toHaveProperty('gcTime');
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
+    expect(mockSaveNote).not.toHaveBeenCalled();
+  });
+
+  it('uses the thrown freemium limit when showing the note alert', async () => {
+    const client = createQueryClient();
+    mockGetUserNotes.mockRejectedValueOnce(
+      new FreemiumLimitError({
+        feature: 'notes',
+        maxFreeCount: 7,
+        currentCount: 7,
+      })
+    );
+
+    const { result } = renderHook(() => useCanCreateNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    let canCreateNote: boolean | undefined;
+
+    await act(async () => {
+      canCreateNote = await result.current({
+        mediaType: 'movie',
+        mediaId: 999,
+      });
+    });
+
+    expect(canCreateNote).toBe(false);
+    expect(mockShowFreemiumLimitAlert).toHaveBeenCalledTimes(1);
+    expect(mockShowFreemiumLimitAlert).toHaveBeenCalledWith('notes', 7);
   });
 });
