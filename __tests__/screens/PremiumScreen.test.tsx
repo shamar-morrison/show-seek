@@ -118,10 +118,11 @@ describe('PremiumScreen', () => {
   });
 
   it('defaults to yearly selection when subscribing', () => {
-    const { getByTestId, getByText } = render(<PremiumScreen />);
+    const { getByTestId, getByText, queryByTestId } = render(<PremiumScreen />);
 
     expect(getByText('ShowSeek Premium')).toBeTruthy();
     expect(getByTestId('plan-yearly-badge')).toBeTruthy();
+    expect(queryByTestId('plan-monthly-badge')).toBeNull();
 
     fireEvent.press(getByTestId('subscribe-button'));
 
@@ -170,6 +171,9 @@ describe('PremiumScreen', () => {
     };
 
     const { getByTestId, queryByTestId } = render(<PremiumScreen />);
+
+    expect(getByTestId('plan-monthly-badge')).toHaveTextContent('7-day trial');
+
     fireEvent.press(getByTestId('plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
@@ -186,12 +190,29 @@ describe('PremiumScreen', () => {
     };
 
     const { getByTestId, queryByTestId } = render(<PremiumScreen />);
+
+    expect(queryByTestId('plan-monthly-badge')).toBeNull();
+
     fireEvent.press(getByTestId('plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
       'Free trial not available for this account.'
     );
     expect(queryByTestId('billing-helper-reason')).toBeNull();
+  });
+
+  it('shows monthly trial badge before the user selects the monthly plan', () => {
+    mockPremiumState.monthlyTrial = {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+
+    const { getByTestId, queryByTestId } = render(<PremiumScreen />);
+
+    expect(getByTestId('plan-monthly-badge')).toHaveTextContent('7-day trial');
+    expect(getByTestId('plan-yearly-badge')).toBeTruthy();
+    expect(queryByTestId('billing-helper-text')).toBeNull();
   });
 
   it('runs manual offerings fetch from the dev debug button', async () => {

@@ -950,6 +950,7 @@
     "restorePendingMessage": "Votre achat apparaît encore comme en attente dans Google Play. Attendez qu’il soit finalisé puis réessayez la restauration.",
     "noPurchasesTitle": "Aucun achat trouvé",
     "bestValueBadge": "Meilleur rapport qualité-prix",
+    "trialBadge": "Essai de 7 jours",
     "monthlyPlanBilling": "Facturé mensuellement",
     "monthlyPlanName": "Mensuel",
     "monthlyPriceFallback": "$3.00",
