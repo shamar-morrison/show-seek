@@ -529,6 +529,50 @@ describe('useNotes optimistic cache behavior', () => {
     expect(client.getQueryData(getMovieNoteKey(999))).toBeUndefined();
   });
 
+  it('preserves an existing null detail query when save preflight fails before rollback context exists', async () => {
+    const client = createQueryClient();
+    const existingNotes = Array.from({ length: 15 }, (_, index) =>
+      createNote({
+        id: `movie-${index + 1}`,
+        mediaType: 'movie',
+        mediaId: index + 1,
+        content: `Existing note ${index + 1}`,
+        mediaTitle: `Movie ${index + 1}`,
+      })
+    );
+    const detailKey = getMovieNoteKey(999);
+
+    client.setQueryData(detailKey, null);
+    client.setQueryData(getNotesKey(), existingNotes);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(client.getQueryState(detailKey)).toBeDefined();
+    expect(client.getQueryData(detailKey)).toBeNull();
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryState(detailKey)).toBeDefined();
+    expect(client.getQueryData(detailKey)).toBeNull();
+  });
+
   it('allows editing an existing note when a free user is already at the note limit', async () => {
     const client = createQueryClient();
     const existingNote = createNote({

@@ -337,10 +337,12 @@ export const useSaveNote = () => {
       );
       const listKey = getNotesQueryKey(userId);
 
-      if (context?.hadPreviousDetailQuery) {
-        queryClient.setQueryData<Note | null>(detailKey, context.previousDetailNote ?? null);
-      } else {
-        queryClient.removeQueries({ queryKey: detailKey, exact: true });
+      if (context) {
+        if (context.hadPreviousDetailQuery) {
+          queryClient.setQueryData<Note | null>(detailKey, context.previousDetailNote ?? null);
+        } else {
+          queryClient.removeQueries({ queryKey: detailKey, exact: true });
+        }
       }
 
       if (context?.previousNotes) {
