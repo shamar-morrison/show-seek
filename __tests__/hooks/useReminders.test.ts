@@ -50,7 +50,7 @@ jest.mock('@/src/api/tmdb', () => ({
   },
 }));
 
-import { useCreateReminder, useMediaReminder } from '@/src/hooks/useReminders';
+import { useCanCreateReminder, useCreateReminder, useMediaReminder } from '@/src/hooks/useReminders';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -191,7 +191,11 @@ describe('useReminders hooks', () => {
             releaseDate: '2026-06-01',
             reminderTiming: 'on_release_day',
           })
-        ).rejects.toThrow('Free users can set up to 3 reminders');
+        ).rejects.toMatchObject({
+          code: 'FREEMIUM_LIMIT',
+          feature: 'reminders',
+          maxFreeCount: 3,
+        });
       });
 
       expect(mockCreateReminder).not.toHaveBeenCalled();
@@ -247,6 +251,125 @@ describe('useReminders hooks', () => {
             posterPath: null,
             releaseDate: '2026-06-01',
             reminderTiming: 'on_release_day',
+          })
+        ).resolves.toBeUndefined();
+      });
+
+      expect(mockCreateReminder).toHaveBeenCalledTimes(1);
+    });
+
+    it('refetches stale cached reminders through fetchQuery before enforcing limits', async () => {
+      const client = createQueryClient();
+      const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+      client.setQueryData(['reminders', 'test-user-id'], [
+        createReminder({ id: 'movie-1', mediaId: 1, title: 'Cached Reminder' }),
+      ]);
+      await client.invalidateQueries({ queryKey: ['reminders', 'test-user-id'] });
+
+      mockGetActiveReminders.mockResolvedValueOnce([
+        createReminder({ id: 'movie-1', mediaId: 1, title: 'One' }),
+        createReminder({ id: 'movie-2', mediaId: 2, title: 'Two' }),
+        createReminder({ id: 'tv-3', mediaType: 'tv', mediaId: 3, title: 'Three' }),
+      ]);
+
+      const { result } = renderHook(() => useCreateReminder(), {
+        wrapper: createWrapper(client),
+      });
+
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+            mediaType: 'movie',
+            mediaId: 999,
+            title: 'Blocked Reminder',
+            posterPath: null,
+            releaseDate: '2026-06-01',
+            reminderTiming: 'on_release_day',
+          })
+        ).rejects.toMatchObject({
+          code: 'FREEMIUM_LIMIT',
+          feature: 'reminders',
+          maxFreeCount: 3,
+        });
+      });
+
+      expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+      expect(mockGetActiveReminders).toHaveBeenCalledTimes(1);
+      expect(mockCreateReminder).not.toHaveBeenCalled();
+    });
+
+    it('blocks creating a new reminder while premium status is still loading', async () => {
+      const client = createQueryClient();
+      mockPremiumState.isLoading = true;
+      mockGetActiveReminders.mockResolvedValueOnce([]);
+
+      const { result } = renderHook(() => useCreateReminder(), {
+        wrapper: createWrapper(client),
+      });
+
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+            mediaType: 'movie',
+            mediaId: 999,
+            title: 'Blocked Reminder',
+            posterPath: null,
+            releaseDate: '2026-06-01',
+            reminderTiming: 'on_release_day',
+          })
+        ).rejects.toMatchObject({
+          code: 'PREMIUM_STATUS_PENDING',
+        });
+      });
+
+      expect(mockCreateReminder).not.toHaveBeenCalled();
+    });
+
+    it('allows opening an existing reminder while premium status is still loading', async () => {
+      const client = createQueryClient();
+      mockPremiumState.isLoading = true;
+      client.setQueryData(['reminders', 'test-user-id'], [
+        createReminder({ id: 'movie-1', mediaId: 1, title: 'One' }),
+        createReminder({ id: 'movie-200', mediaId: 200, title: 'Existing Reminder' }),
+        createReminder({ id: 'tv-3', mediaType: 'tv', mediaId: 3, title: 'Three' }),
+      ]);
+
+      const { result } = renderHook(() => useCanCreateReminder(), {
+        wrapper: createWrapper(client),
+      });
+
+      await act(async () => {
+        await expect(result.current({ mediaType: 'movie', mediaId: 200 })).resolves.toBe(true);
+      });
+
+      expect(mockGetActiveReminders).not.toHaveBeenCalled();
+      expect(mockCreateReminder).not.toHaveBeenCalled();
+    });
+
+    it('allows recreating a reminder during premium loading when caller provides the prior id', async () => {
+      const client = createQueryClient();
+      mockPremiumState.isLoading = true;
+      mockGetActiveReminders.mockResolvedValueOnce([
+        createReminder({ id: 'movie-1', mediaId: 1, title: 'One' }),
+        createReminder({ id: 'movie-2', mediaId: 2, title: 'Two' }),
+      ]);
+
+      const { result } = renderHook(() => useCreateReminder(), {
+        wrapper: createWrapper(client),
+      });
+
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+            mediaType: 'tv',
+            mediaId: 200,
+            title: 'Existing TV Reminder',
+            posterPath: null,
+            releaseDate: '2026-06-01',
+            reminderTiming: '1_day_before',
+            tvFrequency: 'season_premiere',
+            existingReminderId: 'tv-200',
           })
         ).resolves.toBeUndefined();
       });

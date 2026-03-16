@@ -13,7 +13,11 @@ import {
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { NextEpisodeInfo, ReminderTiming, TVReminderFrequency } from '@/src/types/reminder';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
-import { isFreemiumLimitError, MAX_FREE_REMINDERS } from '@/src/utils/freemiumLimits';
+import {
+  isFreemiumLimitError,
+  isPremiumStatusPendingError,
+  MAX_FREE_REMINDERS,
+} from '@/src/utils/freemiumLimits';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import {
   hasEpisodeChanged,
@@ -143,6 +147,10 @@ export default function TVReminderModal({
       onShowToast?.(t('reminder.setSuccess'));
       onClose();
     } catch (error) {
+      if (isPremiumStatusPendingError(error)) {
+        return;
+      }
+
       if (isFreemiumLimitError(error)) {
         showFreemiumLimitAlert('reminders', MAX_FREE_REMINDERS);
         return;

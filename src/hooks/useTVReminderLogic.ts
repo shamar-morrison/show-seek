@@ -187,6 +187,7 @@ export function useTVReminderLogic({
               reminderTiming: timing,
               tvFrequency: frequency,
               nextEpisode,
+              existingReminderId: reminder.id,
             });
           } else {
             await createReminderMutation.mutateAsync({
@@ -197,6 +198,7 @@ export function useTVReminderLogic({
               releaseDate,
               reminderTiming: timing,
               tvFrequency: frequency,
+              existingReminderId: reminder.id,
               ...(nextEpisode && { nextEpisode }),
             });
           }

@@ -2,7 +2,11 @@ import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/const
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
-import { isFreemiumLimitError, MAX_FREE_NOTES } from '@/src/utils/freemiumLimits';
+import {
+  isFreemiumLimitError,
+  isPremiumStatusPendingError,
+  MAX_FREE_NOTES,
+} from '@/src/utils/freemiumLimits';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -134,6 +138,10 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       onSave?.();
       await handleClose();
     } catch (err) {
+      if (isPremiumStatusPendingError(err)) {
+        return;
+      }
+
       if (isFreemiumLimitError(err)) {
         showFreemiumLimitAlert('notes', MAX_FREE_NOTES);
         return;

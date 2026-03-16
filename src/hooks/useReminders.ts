@@ -4,7 +4,9 @@ import { usePremium } from '@/src/context/PremiumContext';
 import {
   FreemiumLimitError,
   isFreemiumLimitError,
+  isPremiumStatusPendingError,
   MAX_FREE_REMINDERS,
+  PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +25,7 @@ const getStatusReadsEnabled = () =>
   !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
 
 type ReminderTarget = Pick<CreateReminderInput, 'mediaType' | 'mediaId'>;
+type ReminderMutationInput = CreateReminderInput & { existingReminderId?: string | null };
 
 const getReminderId = ({ mediaType, mediaId }: ReminderTarget) => `${mediaType}-${mediaId}`;
 
@@ -48,12 +51,6 @@ const loadRemindersForLimitCheck = async (
   userId: string
 ): Promise<Reminder[]> => {
   const queryKey = ['reminders', userId] as const;
-  const cachedReminders = queryClient.getQueryData<Reminder[]>(queryKey);
-
-  if (cachedReminders) {
-    return cachedReminders;
-  }
-
   return queryClient.fetchQuery({
     queryKey,
     queryFn: () => reminderService.getActiveReminders(userId),
@@ -68,26 +65,47 @@ const assertCanCreateReminder = async ({
   isPremium,
   isPremiumLoading,
   reminderTarget,
+  existingReminderId,
 }: {
   queryClient: ReturnType<typeof useQueryClient>;
   userId: string | undefined;
   isPremium: boolean;
   isPremiumLoading: boolean;
   reminderTarget: ReminderTarget;
+  existingReminderId?: string | null;
 }): Promise<void> => {
   if (!userId) {
     throw new Error('Please sign in to continue');
   }
 
-  if (isPremium || isPremiumLoading) {
+  if (isPremium) {
+    return;
+  }
+
+  const reminderId = getReminderId(reminderTarget);
+  const queryKey = ['reminders', userId] as const;
+  const cachedReminders = queryClient.getQueryData<Reminder[]>(queryKey) ?? [];
+
+  if (cachedReminders.some((reminder) => reminder.id === reminderId)) {
+    return;
+  }
+
+  if (isPremiumLoading && existingReminderId === reminderId) {
     return;
   }
 
   const reminders = await loadRemindersForLimitCheck(queryClient, userId);
-  const reminderId = getReminderId(reminderTarget);
 
   if (reminders.some((reminder) => reminder.id === reminderId)) {
     return;
+  }
+
+  if (existingReminderId === reminderId) {
+    return;
+  }
+
+  if (isPremiumLoading) {
+    throw new PremiumStatusPendingError();
   }
 
   if (reminders.length >= MAX_FREE_REMINDERS) {
@@ -286,13 +304,14 @@ export const useCreateReminder = () => {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
-    mutationFn: async (input: CreateReminderInput) => {
+    mutationFn: async (input: ReminderMutationInput) => {
       await assertCanCreateReminder({
         queryClient,
         userId,
         isPremium,
         isPremiumLoading,
         reminderTarget: input,
+        existingReminderId: input.existingReminderId,
       });
       return reminderService.createReminder(input);
     },
@@ -326,6 +345,10 @@ export const useCanCreateReminder = () => {
         });
         return true;
       } catch (error) {
+        if (isPremiumStatusPendingError(error)) {
+          return false;
+        }
+
         if (isFreemiumLimitError(error)) {
           showFreemiumLimitAlert('reminders', MAX_FREE_REMINDERS);
           return false;

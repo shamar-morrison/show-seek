@@ -4,7 +4,9 @@ import { Note, NoteInput } from '@/src/types/note';
 import {
   FreemiumLimitError,
   isFreemiumLimitError,
+  isPremiumStatusPendingError,
   MAX_FREE_NOTES,
+  PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
 import { getMediaNoteQueryKey, getNotesQueryKey } from '@/src/utils/noteQueries';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
@@ -97,7 +99,7 @@ const assertCanCreateNote = async ({
     throw new Error('Please sign in to continue');
   }
 
-  if (isPremium || isPremiumLoading) {
+  if (isPremium) {
     return;
   }
 
@@ -124,6 +126,10 @@ const assertCanCreateNote = async ({
 
   if (notes.some((note) => note.id === noteId)) {
     return;
+  }
+
+  if (isPremiumLoading) {
+    throw new PremiumStatusPendingError();
   }
 
   if (notes.length >= MAX_FREE_NOTES) {
@@ -261,13 +267,6 @@ export const useSaveNote = () => {
   return useMutation({
     mutationFn: async (noteData: NoteInput) => {
       if (!userId) throw new Error('Please sign in to continue');
-      await assertCanCreateNote({
-        queryClient,
-        userId,
-        isPremium,
-        isPremiumLoading,
-        noteTarget: noteData,
-      });
       return noteService.saveNote(userId, noteData);
     },
     onMutate: async (noteData) => {
@@ -391,6 +390,10 @@ export const useCanCreateNote = () => {
         });
         return true;
       } catch (error) {
+        if (isPremiumStatusPendingError(error)) {
+          return false;
+        }
+
         if (isFreemiumLimitError(error)) {
           showFreemiumLimitAlert('notes', MAX_FREE_NOTES);
           return false;

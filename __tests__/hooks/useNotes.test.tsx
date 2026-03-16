@@ -518,7 +518,11 @@ describe('useNotes optimistic cache behavior', () => {
           posterPath: null,
           mediaTitle: 'Movie 999',
         })
-      ).rejects.toThrow('Free users can save up to 15 notes');
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
     });
 
     expect(mockSaveNote).not.toHaveBeenCalled();
@@ -597,6 +601,91 @@ describe('useNotes optimistic cache behavior', () => {
       ).resolves.toBeUndefined();
     });
 
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks creating a new note while premium status is still loading', async () => {
+    const client = createQueryClient();
+    mockPremiumState.isLoading = true;
+    client.setQueryData(getNotesKey(), []);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked while loading',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'PREMIUM_STATUS_PENDING',
+      });
+    });
+
+    expect(mockSaveNote).not.toHaveBeenCalled();
+    expect(client.getQueryData(getMovieNoteKey(999))).toBeUndefined();
+  });
+
+  it('allows editing an existing note while premium status is still loading', async () => {
+    const client = createQueryClient();
+    const existingNote = createNote({
+      id: 'movie-123',
+      mediaType: 'movie',
+      mediaId: 123,
+      content: 'Existing content',
+      mediaTitle: 'Movie 123',
+    });
+
+    mockPremiumState.isLoading = true;
+    client.setQueryData(getMovieNoteKey(123), existingNote);
+    client.setQueryData(getNotesKey(), [existingNote]);
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 123,
+          content: 'Updated while loading',
+          posterPath: null,
+          mediaTitle: 'Movie 123',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(mockSaveNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a single preflight note read before saving a new note', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Fresh note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).resolves.toBeUndefined();
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
     expect(mockSaveNote).toHaveBeenCalledTimes(1);
   });
 });
