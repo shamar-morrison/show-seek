@@ -688,4 +688,48 @@ describe('useNotes optimistic cache behavior', () => {
     expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
     expect(mockSaveNote).toHaveBeenCalledTimes(1);
   });
+
+  it('re-checks invalidated cached notes through fetchQuery before enforcing limits', async () => {
+    const client = createQueryClient();
+    const fetchQuerySpy = jest.spyOn(client, 'fetchQuery');
+
+    client.setQueryData(getNotesKey(), []);
+    mockGetUserNotes.mockResolvedValueOnce(
+      Array.from({ length: 15 }, (_, index) =>
+        createNote({
+          id: `movie-${index + 1}`,
+          mediaType: 'movie',
+          mediaId: index + 1,
+          content: `Existing note ${index + 1}`,
+          mediaTitle: `Movie ${index + 1}`,
+        })
+      )
+    );
+
+    await client.invalidateQueries({ queryKey: getNotesKey() });
+
+    const { result } = renderHook(() => useSaveNote(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          mediaType: 'movie',
+          mediaId: 999,
+          content: 'Blocked note',
+          posterPath: null,
+          mediaTitle: 'Movie 999',
+        })
+      ).rejects.toMatchObject({
+        code: 'FREEMIUM_LIMIT',
+        feature: 'notes',
+        maxFreeCount: 15,
+      });
+    });
+
+    expect(fetchQuerySpy).toHaveBeenCalledTimes(1);
+    expect(mockGetUserNotes).toHaveBeenCalledTimes(1);
+    expect(mockSaveNote).not.toHaveBeenCalled();
+  });
 });

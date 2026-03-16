@@ -68,12 +68,6 @@ const loadNotesForLimitCheck = async (
   userId: string
 ): Promise<Note[]> => {
   const listKey = getNotesQueryKey(userId);
-  const cachedNotes = queryClient.getQueryData<Note[]>(listKey);
-
-  if (cachedNotes) {
-    return cachedNotes;
-  }
-
   return queryClient.fetchQuery({
     queryKey: listKey,
     queryFn: () => noteService.getUserNotes(userId),
