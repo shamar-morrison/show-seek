@@ -143,16 +143,18 @@ export default function OnboardingContainer() {
     updateProgress(prevIndex);
   }, [currentStepIndex, isFirstStep, updateProgress]);
 
-  const handlePersonalizingComplete = useCallback(async () => {
+  const handleSaveOnboarding = useCallback(async () => {
     try {
       await onboardingService.saveOnboarding(selections);
     } catch (e) {
       console.error('[OnboardingContainer] Save failed:', e);
     }
+  }, [selections]);
 
+  const handlePersonalizingDone = useCallback(async () => {
     await completePersonalOnboarding();
     router.replace('/(tabs)/home' as any);
-  }, [completePersonalOnboarding, router, selections]);
+  }, [completePersonalOnboarding, router]);
 
   // Initialize progress on first render
   React.useEffect(() => {
@@ -196,7 +198,7 @@ export default function OnboardingContainer() {
   }
 
   if (isPersonalizing) {
-    return <PersonalizingScreen onComplete={handlePersonalizingComplete} />;
+    return <PersonalizingScreen onComplete={handleSaveOnboarding} onDone={handlePersonalizingDone} />;
   }
 
   if (currentStep?.id === 'premium-paywall') {

@@ -13,6 +13,7 @@ import Animated, {
 
 interface PersonalizingScreenProps {
   onComplete: () => Promise<void>;
+  onDone: () => void;
 }
 
 const PHRASES_KEYS = [
@@ -23,10 +24,10 @@ const PHRASES_KEYS = [
   'personalOnboarding.personalizing.almostThere',
 ];
 
-const MIN_DURATION_MS = 3500;
+const MIN_DURATION_MS = 5000;
 const PHRASE_INTERVAL_MS = 700;
 
-export default function PersonalizingScreen({ onComplete }: PersonalizingScreenProps) {
+export default function PersonalizingScreen({ onComplete, onDone }: PersonalizingScreenProps) {
   const { t } = useTranslation();
   const [currentPhraseIndex, setPhraseIndex] = useState(0);
   const progressWidth = useSharedValue(0);
@@ -80,6 +81,12 @@ export default function PersonalizingScreen({ onComplete }: PersonalizingScreenP
 
       // Run save and wait in parallel
       await Promise.all([onComplete(), waitPromise]);
+
+      // Only navigate after both the save and the minimum duration have elapsed
+      if (!hasCompleted.current) {
+        hasCompleted.current = true;
+        onDone();
+      }
     };
 
     doComplete().catch((e) => {
