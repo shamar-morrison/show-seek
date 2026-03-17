@@ -56,7 +56,8 @@ export type OnboardingStepId =
   | 'tv-shows'
   | 'movies'
   | 'actors'
-  | 'accent-color';
+  | 'accent-color'
+  | 'premium-paywall';
 
 /**
  * Step configuration
@@ -76,4 +77,5 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'movies', titleKey: 'personalOnboarding.moviesTitle' },
   { id: 'actors', titleKey: 'personalOnboarding.actorsTitle' },
   { id: 'accent-color', titleKey: 'personalOnboarding.accentColorTitle' },
+  { id: 'premium-paywall', titleKey: 'premium.unlockTitle' },
 ];

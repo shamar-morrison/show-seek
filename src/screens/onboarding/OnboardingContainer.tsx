@@ -1,6 +1,7 @@
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, hexToRGBA } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { onboardingService } from '@/src/services/OnboardingService';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
@@ -29,6 +30,7 @@ import TVShowsStep from './TVShowsStep';
 import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
 import AccentColorStep from './AccentColorStep';
+import OnboardingPaywallStep from './OnboardingPaywallStep';
 import PersonalizingScreen from './PersonalizingScreen';
 import WelcomeIntroScreen from './WelcomeIntroScreen';
 import { ChevronLeft } from 'lucide-react-native';
@@ -39,6 +41,7 @@ export default function OnboardingContainer() {
   const { completePersonalOnboarding } = useAuth();
   const { setRegion } = useRegion();
   const { setAccentColor } = useAccentColor();
+  const { isPremium } = usePremium();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selections, setSelections] = useState<OnboardingSelections>({
@@ -108,11 +111,11 @@ export default function OnboardingContainer() {
   }, []);
 
   const handleNext = useCallback(() => {
+    if (currentStep?.id === 'accent-color' && selections.accentColor) {
+      setAccentColor(selections.accentColor);
+    }
+
     if (isLastStep) {
-      // Apply accent color if selected
-      if (selections.accentColor) {
-        setAccentColor(selections.accentColor);
-      }
       setIsPersonalizing(true);
       return;
     }
@@ -120,7 +123,14 @@ export default function OnboardingContainer() {
     const nextIndex = currentStepIndex + 1;
     setCurrentStepIndex(nextIndex);
     updateProgress(nextIndex);
-  }, [currentStepIndex, isLastStep, selections.accentColor, setAccentColor, updateProgress]);
+  }, [
+    currentStep?.id,
+    currentStepIndex,
+    isLastStep,
+    selections.accentColor,
+    setAccentColor,
+    updateProgress,
+  ]);
 
   const handleSkip = useCallback(() => {
     handleNext();
@@ -175,12 +185,22 @@ export default function OnboardingContainer() {
     }
   }, [currentStep?.id, selections]);
 
+  React.useEffect(() => {
+    if (!isPersonalizing && currentStep?.id === 'premium-paywall' && isPremium) {
+      setIsPersonalizing(true);
+    }
+  }, [currentStep?.id, isPersonalizing, isPremium]);
+
   if (showWelcome) {
     return <WelcomeIntroScreen onComplete={() => setShowWelcome(false)} />;
   }
 
   if (isPersonalizing) {
     return <PersonalizingScreen onComplete={handlePersonalizingComplete} />;
+  }
+
+  if (currentStep?.id === 'premium-paywall') {
+    return <OnboardingPaywallStep onClose={handleNext} />;
   }
 
   const renderStep = () => {

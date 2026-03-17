@@ -1,21 +1,12 @@
 import { legal } from '@/app/(auth)/legal';
-import {
-  CollapsibleCategory,
-  CollapsibleFeatureItem,
-} from '@/src/components/ui/CollapsibleCategory';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
-import { PREMIUM_CATEGORIES, PremiumCategory } from '@/src/constants/premiumFeatures';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
-import { trackPremiumPaywallView } from '@/src/services/analytics';
-import { screenStyles } from '@/src/styles/screenStyles';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { BadgeCheck } from 'lucide-react-native';
+import { BadgeCheck, X } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,31 +19,26 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function PremiumScreen() {
+interface OnboardingPaywallStepProps {
+  onClose: () => void;
+}
+
+export default function OnboardingPaywallStep({ onClose }: OnboardingPaywallStepProps) {
+  const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
   const {
     isPremium,
     isLoading,
     monthlyTrial,
     purchasePremium,
     restorePurchases,
-    resetTestPurchase,
     prices,
   } = usePremium();
-  const router = useRouter();
-  const { t } = useTranslation();
-  const { accentColor } = useAccentColor();
-  const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
+  const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
-
-  React.useEffect(() => {
-    if (!isLoading && !isPremium) {
-      void trackPremiumPaywallView();
-    }
-  }, [isLoading, isPremium]);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
@@ -61,22 +47,19 @@ export default function PremiumScreen() {
       ? t('premium.freeTrialEligibleMessage')
       : null;
 
-  // Watch for premium status change to show success
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
       Alert.alert(t('premium.successTitle'), t('premium.successMessage'), [
-        { text: t('common.ok'), onPress: () => router.back() },
+        { text: t('common.ok'), onPress: onClose },
       ]);
     }
     wasPremiumRef.current = isPremium;
-  }, [isPremium, router, t]);
+  }, [isPremium, onClose, t]);
 
   const handlePurchase = async () => {
     try {
       await purchasePremium(selectedPlan);
-      // Success is handled by the listener updating isPremium state
     } catch (error: any) {
-      // Only show error for real errors, not cancellations
       const code = String(error?.code || '').toLowerCase();
       const message = String(error?.message || '').toLowerCase();
       const isUserCanceled =
@@ -109,38 +92,8 @@ export default function PremiumScreen() {
     }
   };
 
-  const testOfferings = async () => {
-    try {
-      const offerings = await Purchases.getOfferings();
-      const premiumPackageCount = offerings.all.Premium?.availablePackages?.length ?? 0;
-      Alert.alert('Offerings', JSON.stringify(premiumPackageCount));
-    } catch (error) {
-      console.error('[RevenueCat Debug] Test fetch failed:', error);
-      Alert.alert('Error', String(error));
-    }
-  };
-
   if (isLoading) {
     return <FullScreenLoading />;
-  }
-
-  // If already premium, show status
-  if (isPremium) {
-    return (
-      <SafeAreaView style={screenStyles.container}>
-        <View style={styles.content}>
-          <Ionicons name="checkmark-circle" size={80} color={accentColor} />
-          <Text style={styles.title}>{t('premium.alreadyPremiumTitle')}</Text>
-          <Text style={styles.description}>{t('premium.alreadyPremiumDescription')}</Text>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: accentColor }]}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.buttonText}>{t('common.goBack')}</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
   }
 
   return (
@@ -160,6 +113,15 @@ export default function PremiumScreen() {
       />
 
       <SafeAreaView style={styles.mainContent} edges={['top']}>
+        <TouchableOpacity
+          onPress={onClose}
+          activeOpacity={ACTIVE_OPACITY}
+          style={styles.closeButton}
+          testID="onboarding-paywall-close-button"
+        >
+          <X size={22} color={COLORS.white} />
+        </TouchableOpacity>
+
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
             <Text style={[styles.premiumLabel, { color: accentColor }]}>ShowSeek Premium</Text>
@@ -174,48 +136,36 @@ export default function PremiumScreen() {
 
           <View style={styles.planList}>
             <PlanOptionCard
-              testID="plan-monthly"
+              testID="onboarding-plan-monthly"
               planName={t('premium.monthlyPlanName')}
               planPrice={monthlyPrice}
               planPeriod={t('premium.perMonth')}
               badgeText={monthlyTrial.isEligible ? t('premium.trialBadge') : undefined}
-              badgeTestID="plan-monthly-badge"
+              badgeTestID="onboarding-plan-monthly-badge"
               isSelected={selectedPlan === 'monthly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('monthly')}
             />
 
             <PlanOptionCard
-              testID="plan-yearly"
+              testID="onboarding-plan-yearly"
               planName={t('premium.yearlyPlanName')}
               planPrice={yearlyPrice}
               planPeriod={t('premium.perYear')}
               badgeText={t('premium.bestValueBadge')}
-              badgeTestID="plan-yearly-badge"
+              badgeTestID="onboarding-plan-yearly-badge"
               isSelected={selectedPlan === 'yearly'}
               accentColor={accentColor}
               onPress={() => setSelectedPlan('yearly')}
             />
           </View>
-
-          <Text style={styles.featuresTitle}>{t('premium.whatsIncluded')}</Text>
-          <View style={styles.features}>
-            {PREMIUM_CATEGORIES.map((category, index) => (
-              <FeatureCategorySection
-                key={category.id}
-                category={category}
-                defaultExpanded={index === 0}
-              />
-            ))}
-          </View>
-
         </ScrollView>
       </SafeAreaView>
 
       <SafeAreaView style={styles.footerSafeArea} edges={['bottom']}>
         <View style={styles.footerContent}>
           <TouchableOpacity
-            testID="subscribe-button"
+            testID="onboarding-subscribe-button"
             style={[styles.button, { backgroundColor: accentColor }]}
             onPress={handlePurchase}
             activeOpacity={ACTIVE_OPACITY}
@@ -229,9 +179,9 @@ export default function PremiumScreen() {
             </TouchableOpacity>
             <Text style={styles.legalDot}>•</Text>
             <TouchableOpacity
-              style={isRestoring ? { opacity: ACTIVE_OPACITY } : undefined}
               onPress={handleRestore}
               disabled={isRestoring}
+              style={isRestoring ? { opacity: ACTIVE_OPACITY } : undefined}
             >
               {isRestoring ? (
                 <ActivityIndicator size="small" color={COLORS.textSecondary} />
@@ -244,68 +194,9 @@ export default function PremiumScreen() {
               <Text style={styles.legalLinkText}>{t('settings.privacy')}</Text>
             </TouchableOpacity>
           </View>
-
-          {/* DEV ONLY: RevenueCat diagnostics + reset controls */}
-          {__DEV__ && (
-            <>
-              <TouchableOpacity
-                testID="test-offerings-button"
-                style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
-                onPress={() => {
-                  void testOfferings();
-                }}
-              >
-                <Text style={styles.restoreButtonText}>Test Offerings (Dev)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.restoreButton, { marginTop: 10, opacity: ACTIVE_OPACITY }]}
-                onPress={async () => {
-                  Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
-                    { text: t('common.cancel'), style: 'cancel' },
-                    {
-                      text: t('common.reset'),
-                      style: 'destructive',
-                      onPress: async () => {
-                        if (resetTestPurchase) await resetTestPurchase();
-                      },
-                    },
-                  ]);
-                }}
-              >
-                <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
-              </TouchableOpacity>
-            </>
-          )}
         </View>
       </SafeAreaView>
     </View>
-  );
-}
-
-/**
- * Collapsible category section showing a group of premium features
- */
-function FeatureCategorySection({
-  category,
-  defaultExpanded = false,
-}: {
-  category: PremiumCategory;
-  defaultExpanded?: boolean;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <CollapsibleCategory title={t(category.titleKey)} defaultExpanded={defaultExpanded}>
-      {category.features.map((feature) => (
-        <CollapsibleFeatureItem
-          key={feature.id}
-          text={t(feature.titleKey)}
-          icon={feature.icon}
-          description={feature.descriptionKey ? t(feature.descriptionKey) : undefined}
-          isNew={feature.isNew}
-        />
-      ))}
-    </CollapsibleCategory>
   );
 }
 
@@ -402,16 +293,19 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
+  closeButton: {
+    position: 'absolute',
+    right: SPACING.l,
+    top: SPACING.s,
+    zIndex: 10,
+    padding: SPACING.s,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: SPACING.l,
-    paddingBottom: 50,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+    paddingBottom: 40,
   },
   header: {
     width: '100%',
@@ -440,24 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginTop: SPACING.s,
-  },
-  description: {
-    fontSize: 18,
-    color: COLORS.text,
-    textAlign: 'center',
-    marginTop: SPACING.m,
-    marginBottom: SPACING.xl,
-  },
-  features: {
-    width: '100%',
-    marginBottom: SPACING.xl,
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-    color: COLORS.text,
-    marginBottom: SPACING.m,
   },
   planList: {
     width: '100%',
@@ -529,14 +405,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  restoreButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  restoreButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-  },
   footerSafeArea: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.12)',
@@ -552,6 +420,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: SPACING.m,
+    gap: SPACING.s,
   },
   legalLinkText: {
     color: COLORS.textSecondary,
@@ -560,7 +429,6 @@ const styles = StyleSheet.create({
   },
   legalDot: {
     color: COLORS.textSecondary,
-    marginHorizontal: SPACING.s,
     fontSize: 14,
   },
 });

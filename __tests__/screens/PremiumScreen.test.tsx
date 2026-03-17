@@ -182,7 +182,7 @@ describe('PremiumScreen', () => {
     expect(queryByTestId('billing-helper-reason')).toBeNull();
   });
 
-  it('shows monthly ineligible text when monthly trial is unavailable', () => {
+  it('does not show helper text when monthly trial is unavailable', () => {
     mockPremiumState.monthlyTrial = {
       isEligible: false,
       offerToken: null,
@@ -195,9 +195,7 @@ describe('PremiumScreen', () => {
 
     fireEvent.press(getByTestId('plan-monthly'));
 
-    expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      'Free trial not available for this account.'
-    );
+    expect(queryByTestId('billing-helper-text')).toBeNull();
     expect(queryByTestId('billing-helper-reason')).toBeNull();
   });
 
@@ -232,7 +230,7 @@ describe('PremiumScreen', () => {
     mockRestorePurchases.mockRejectedValueOnce({});
     const { getByText } = render(<PremiumScreen />);
 
-    fireEvent.press(getByText('Restore Purchases'));
+    fireEvent.press(getByText('Restore'));
 
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Restore Failed', 'Something went wrong');
