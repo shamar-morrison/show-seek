@@ -911,7 +911,8 @@
     "getStarted": "Get Started"
   },
   "personalOnboarding": {
-    "welcomeTitle": "Welcome to ShowSeek",
+    "welcomePrefix": "Welcome to ",
+    "welcomeAppName": "ShowSeek 🍿",
     "welcomeSubtitle": "Let's customize your experience",
     "regionTitle": "Where are you from?",
     "regionSubtitle": "This helps us show you content available in your area.",
