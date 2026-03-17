@@ -470,7 +470,6 @@ const styles = StyleSheet.create({
   legalLinkText: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    textDecorationLine: 'underline',
   },
   legalDot: {
     color: COLORS.textSecondary,
