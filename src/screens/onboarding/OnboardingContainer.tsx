@@ -29,6 +29,7 @@ import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
 import AccentColorStep from './AccentColorStep';
 import PersonalizingScreen from './PersonalizingScreen';
+import WelcomeIntroScreen from './WelcomeIntroScreen';
 import { ChevronLeft } from 'lucide-react-native';
 
 export default function OnboardingContainer() {
@@ -43,6 +44,7 @@ export default function OnboardingContainer() {
     ...EMPTY_ONBOARDING_SELECTIONS,
   });
   const [isPersonalizing, setIsPersonalizing] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const progressWidth = useSharedValue(0);
 
@@ -165,6 +167,10 @@ export default function OnboardingContainer() {
         return false;
     }
   }, [currentStep?.id, selections]);
+
+  if (showWelcome) {
+    return <WelcomeIntroScreen onComplete={() => setShowWelcome(false)} />;
+  }
 
   if (isPersonalizing) {
     return <PersonalizingScreen onComplete={handlePersonalizingComplete} />;
