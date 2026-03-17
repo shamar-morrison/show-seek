@@ -1,11 +1,16 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockConfigureGoogleAuth = jest.fn(() => Promise.resolve());
 const mockSignInWithGoogle = jest.fn();
 const mockSignInAsGuest = jest.fn();
 const mockCreateUserDocument = jest.fn((_: unknown) => Promise.resolve());
 const mockTrackLogin = jest.fn();
+const mockFetchSignInMethodsForEmail = jest.fn();
+const mockSignInWithEmailAndPassword = jest.fn();
+const mockCreateUserWithEmailAndPassword = jest.fn();
 
 jest.mock('@/src/firebase/auth', () => ({
   configureGoogleAuth: () => mockConfigureGoogleAuth(),
@@ -21,6 +26,22 @@ jest.mock('@/src/services/analytics', () => ({
   trackLogin: (...args: unknown[]) => mockTrackLogin(...args),
 }));
 
+jest.mock('firebase/auth', () => ({
+  createUserWithEmailAndPassword: jest.fn((...args: unknown[]) =>
+    mockCreateUserWithEmailAndPassword(...args)
+  ),
+  fetchSignInMethodsForEmail: jest.fn((...args: unknown[]) =>
+    mockFetchSignInMethodsForEmail(...args)
+  ),
+  signInWithEmailAndPassword: jest.fn((...args: unknown[]) =>
+    mockSignInWithEmailAndPassword(...args)
+  ),
+}));
+
+jest.mock('@/src/firebase/config', () => ({
+  auth: {},
+}));
+
 jest.mock('@/src/components/auth/AnimatedBackground', () => ({
   AnimatedBackground: () => null,
 }));
@@ -33,26 +54,53 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('expo-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => children,
-}));
-
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#ff0000' }),
 }));
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: { email?: string; provider?: string }) => {
+      if (key === 'auth.emailCreateAccountMessage') {
+        return `auth.emailCreateAccountMessage:${options?.email ?? ''}`;
+      }
+      if (key === 'auth.emailAlreadyLinkedWithProvider') {
+        return `auth.emailAlreadyLinkedWithProvider:${options?.provider ?? ''}`;
+      }
+
+      return key;
+    },
   }),
 }));
 
 import SignIn from '@/app/(auth)/sign-in';
 
+type AlertButton = {
+  text?: string;
+  style?: string;
+  onPress?: () => unknown;
+};
+
+function getLastAlertButtons(): AlertButton[] {
+  const calls = (Alert.alert as jest.Mock).mock.calls;
+  const lastCall = calls[calls.length - 1];
+  return (lastCall?.[2] ?? []) as AlertButton[];
+}
+
 describe('SignIn', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue([]);
   });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const pressEmailContinue = (getByText: (text: string) => unknown) => {
+    fireEvent.press(getByText('auth.continueWithEmailPassword'));
+  };
 
   it('tracks Google login after a successful sign-in', async () => {
     const user = { uid: 'user-1' };
@@ -83,5 +131,132 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(mockTrackLogin).toHaveBeenCalledWith('guest');
     });
+  });
+
+  it('shows emailRequired when email is empty', () => {
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.emailRequired');
+    expect(fetchSignInMethodsForEmail).not.toHaveBeenCalled();
+  });
+
+  it('shows passwordRequired when password is empty', () => {
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    pressEmailContinue(getByText);
+
+    expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.passwordRequired');
+    expect(fetchSignInMethodsForEmail).not.toHaveBeenCalled();
+  });
+
+  it('tracks email login after a successful sign-in', async () => {
+    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue(['password']);
+    (signInWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: 'user-1' },
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'user@example.com',
+        'secret123'
+      );
+    });
+    await waitFor(() => {
+      expect(mockCreateUserDocument).toHaveBeenCalledWith({ uid: 'user-1' });
+    });
+    expect(mockTrackLogin).toHaveBeenCalledWith('email');
+  });
+
+  it('prompts before creating a new account when no email account exists', async () => {
+    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue([]);
+    (createUserWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: 'new-user' },
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), '  new-user@example.com  ');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'auth.emailCreateAccountTitle',
+        'auth.emailCreateAccountMessage:new-user@example.com',
+        expect.any(Array)
+      );
+    });
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+
+    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    if (!confirmButton?.onPress) {
+      throw new Error('Expected create account confirm button');
+    }
+
+    await act(async () => {
+      await confirmButton.onPress?.();
+    });
+
+    await waitFor(() => {
+      expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'new-user@example.com',
+        'secret123'
+      );
+    });
+    await waitFor(() => {
+      expect(mockCreateUserDocument).toHaveBeenCalledWith({ uid: 'new-user' });
+    });
+    expect(mockTrackLogin).toHaveBeenCalledWith('email');
+  });
+
+  it('shows provider guidance when the email belongs to Google', async () => {
+    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue(['google.com']);
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'auth.emailAlreadyInUseTitle',
+        'auth.emailAlreadyLinkedWithProvider:Google'
+      );
+    });
+
+    expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+  });
+
+  it('shows an error when fetching sign-in methods fails', async () => {
+    (fetchSignInMethodsForEmail as jest.Mock).mockRejectedValue({
+      code: 'auth/too-many-requests',
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.tooManyAttempts');
+    });
+    expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+    expect(mockTrackLogin).not.toHaveBeenCalled();
   });
 });

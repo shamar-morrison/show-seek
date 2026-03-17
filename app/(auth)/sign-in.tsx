@@ -1,5 +1,6 @@
 import { legal } from '@/app/(auth)/legal';
 import { AnimatedBackground } from '@/src/components/auth/AnimatedBackground';
+import EmailAuthSection from '@/src/components/auth/EmailAuthSection';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { configureGoogleAuth, signInAsGuest, signInWithGoogle } from '@/src/firebase/auth';
@@ -7,7 +8,6 @@ import { createUserDocument } from '@/src/firebase/user';
 import { trackLogin } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +31,7 @@ export default function SignIn() {
   const { accentColor } = useAccentColor();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // Configure Google Auth on mount
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function SignIn() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.glassCard}>
               <View style={styles.header}>
                 <View style={styles.logoContainer}>
@@ -97,7 +98,7 @@ export default function SignIn() {
                 <TouchableOpacity
                   style={styles.googleButton}
                   onPress={handleGoogleSignIn}
-                  disabled={googleLoading || guestLoading}
+                  disabled={googleLoading || guestLoading || emailLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {googleLoading ? (
@@ -116,7 +117,7 @@ export default function SignIn() {
                 <TouchableOpacity
                   style={styles.guestButton}
                   onPress={handleGuestSignIn}
-                  disabled={googleLoading || guestLoading}
+                  disabled={googleLoading || guestLoading || emailLoading}
                   activeOpacity={ACTIVE_OPACITY}
                 >
                   {guestLoading ? (
@@ -129,15 +130,13 @@ export default function SignIn() {
                   )}
                 </TouchableOpacity>
 
-                <View style={styles.legacyLinkContainer}>
-                  <Link href="/(auth)/email-sign-in" asChild>
-                    <TouchableOpacity activeOpacity={ACTIVE_OPACITY}>
-                      <Text style={[styles.link, { color: accentColor }]}>
-                        {t('auth.continueWithEmailPassword')}
-                      </Text>
-                    </TouchableOpacity>
-                  </Link>
+                <View style={styles.sectionDivider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>{t('auth.orContinueWith')}</Text>
+                  <View style={styles.dividerLine} />
                 </View>
+
+                <EmailAuthSection disabled={googleLoading || guestLoading} onLoadingChange={setEmailLoading} />
 
                 <Text style={styles.termsText}>
                   {t('auth.bySigningIn')}{' '}
@@ -257,13 +256,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: FONT_SIZE.m,
   },
-  legacyLinkContainer: {
+  sectionDivider: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.s,
   },
-  link: {
-    fontWeight: '600',
-    fontSize: FONT_SIZE.s,
-    textAlign: 'center',
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  dividerText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   termsText: {
     textAlign: 'center',
