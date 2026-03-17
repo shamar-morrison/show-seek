@@ -24,6 +24,7 @@ import RegionStep from './RegionStep';
 import DisplayNameStep from './DisplayNameStep';
 import StreamingProvidersStep from './StreamingProvidersStep';
 import FavoriteListsStep from './FavoriteListsStep';
+import GenresStep from './GenresStep';
 import TVShowsStep from './TVShowsStep';
 import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
@@ -102,6 +103,10 @@ export default function OnboardingContainer() {
     setSelections((prev) => ({ ...prev, displayName: name }));
   }, []);
 
+  const handleGenresSelect = useCallback((genreIds: number[]) => {
+    setSelections((prev) => ({ ...prev, selectedGenreIds: genreIds }));
+  }, []);
+
   const handleNext = useCallback(() => {
     if (isLastStep) {
       // Apply accent color if selected
@@ -155,6 +160,8 @@ export default function OnboardingContainer() {
         return true; // Always allow continuing — this step is purely aesthetic
       case 'favorite-lists':
         return selections.homeScreenLists.length > 0;
+      case 'genres':
+        return selections.selectedGenreIds.length > 0;
       case 'tv-shows':
         return selections.selectedTVShows.length > 0;
       case 'movies':
@@ -201,6 +208,13 @@ export default function OnboardingContainer() {
             onSelect={handleListsSelect}
           />
         );
+      case 'genres':
+        return (
+          <GenresStep
+            selectedGenreIds={selections.selectedGenreIds}
+            onSelect={handleGenresSelect}
+          />
+        );
       case 'tv-shows':
         return (
           <TVShowsStep
@@ -213,6 +227,7 @@ export default function OnboardingContainer() {
           <MoviesStep
             selectedMovies={selections.selectedMovies}
             onSelect={handleMoviesSelect}
+            genreIds={selections.selectedGenreIds}
           />
         );
       case 'actors':

@@ -18,6 +18,8 @@ export interface OnboardingSelections {
   displayName: string;
   /** Selected home screen list items */
   homeScreenLists: HomeScreenListItem[];
+  /** Selected favorite genre IDs (max 3) */
+  selectedGenreIds: number[];
   /** TV shows the user is currently watching */
   selectedTVShows: TVShow[];
   /** Movies the user loves */
@@ -35,6 +37,7 @@ export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
   region: null,
   displayName: '',
   homeScreenLists: [],
+  selectedGenreIds: [],
   selectedTVShows: [],
   selectedMovies: [],
   selectedActors: [],
@@ -49,6 +52,7 @@ export type OnboardingStepId =
   | 'display-name'
   | 'streaming-providers'
   | 'favorite-lists'
+  | 'genres'
   | 'tv-shows'
   | 'movies'
   | 'actors'
@@ -67,6 +71,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'display-name', titleKey: 'personalOnboarding.displayNameTitle' },
   { id: 'streaming-providers', titleKey: 'personalOnboarding.streamingProvidersTitle' },
   { id: 'favorite-lists', titleKey: 'personalOnboarding.listsTitle' },
+  { id: 'genres', titleKey: 'personalOnboarding.genresTitle' },
   { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },
   { id: 'movies', titleKey: 'personalOnboarding.moviesTitle' },
   { id: 'actors', titleKey: 'personalOnboarding.actorsTitle' },

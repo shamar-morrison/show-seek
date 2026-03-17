@@ -1,37 +1,45 @@
-import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, type Movie } from '@/src/api/tmdb';
+import { getImageUrl, TMDB_IMAGE_SIZES, tmdbApi, type Movie } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+import { Check } from 'lucide-react-native';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 interface MoviesStepProps {
   selectedMovies: Movie[];
   onSelect: (movies: Movie[]) => void;
+  genreIds?: number[];
 }
 
-export default function MoviesStep({ selectedMovies, onSelect }: MoviesStepProps) {
+export default function MoviesStep({ selectedMovies, onSelect, genreIds }: MoviesStepProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
 
   const currentYear = new Date().getFullYear();
+  const genreFilter = genreIds && genreIds.length > 0 ? genreIds.join(',') : undefined;
 
   const thisYearQuery = useQuery({
-    queryKey: ['onboarding', 'discoverMovies', currentYear],
-    queryFn: () => tmdbApi.discoverMovies({ year: currentYear, sortBy: 'popularity.desc' }),
+    queryKey: ['onboarding', 'discoverMovies', currentYear, genreFilter],
+    queryFn: () =>
+      tmdbApi.discoverMovies({ year: currentYear, sortBy: 'popularity.desc', genre: genreFilter }),
     staleTime: 1000 * 60 * 30,
   });
 
   const lastYearQuery = useQuery({
-    queryKey: ['onboarding', 'discoverMovies', currentYear - 1],
-    queryFn: () => tmdbApi.discoverMovies({ year: currentYear - 1, sortBy: 'popularity.desc' }),
-    staleTime: 1000 * 60 * 30,
+    queryKey: ['onboarding', 'discoverMovies', currentYear - 1, genreFilter],
+    queryFn: () =>
+      tmdbApi.discoverMovies({
+        year: currentYear - 1,
+        sortBy: 'popularity.desc',
+        genre: genreFilter,
+      }),
+    staleTime: 1000 * 60 * 60, // 1 hour
   });
 
   const isLoading = thisYearQuery.isLoading || lastYearQuery.isLoading;
