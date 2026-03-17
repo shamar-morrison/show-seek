@@ -8,6 +8,7 @@ import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native
 interface CollapsibleCategoryProps {
   title: string;
   defaultExpanded?: boolean;
+  testID?: string;
   children: React.ReactNode;
 }
 
@@ -17,6 +18,7 @@ interface CollapsibleCategoryProps {
 export function CollapsibleCategory({
   title,
   defaultExpanded = false,
+  testID,
   children,
 }: CollapsibleCategoryProps) {
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
@@ -27,7 +29,7 @@ export function CollapsibleCategory({
   };
 
   return (
-    <View style={styles.categoryContainer}>
+    <View style={styles.categoryContainer} testID={testID}>
       <Pressable style={styles.categoryHeader} onPress={toggleExpanded}>
         <Text style={styles.categoryTitle}>{title}</Text>
         <Ionicons

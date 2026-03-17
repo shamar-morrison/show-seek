@@ -1,4 +1,4 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
 
@@ -121,12 +121,25 @@ describe('PremiumScreen', () => {
     const { getByTestId, getByText, queryByTestId } = render(<PremiumScreen />);
 
     expect(getByText('ShowSeek Premium')).toBeTruthy();
+    expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
     expect(getByTestId('plan-yearly-badge')).toBeTruthy();
     expect(queryByTestId('plan-monthly-badge')).toBeNull();
 
     fireEvent.press(getByTestId('subscribe-button'));
 
     expect(mockPurchasePremium).toHaveBeenCalledWith('yearly');
+  });
+
+  it('renders the pricing controls inside the sticky footer', () => {
+    const { getByText, getByTestId } = render(<PremiumScreen />);
+
+    expect(getByText('ShowSeek Premium')).toBeTruthy();
+    expect(getByText('Subscribe')).toBeTruthy();
+
+    const footer = getByTestId('premium-footer');
+    expect(within(footer).getByTestId('plan-monthly')).toBeTruthy();
+    expect(within(footer).getByTestId('plan-yearly')).toBeTruthy();
+    expect(within(footer).getByTestId('subscribe-button')).toBeTruthy();
   });
 
   it('subscribes to monthly plan when monthly is selected', () => {
