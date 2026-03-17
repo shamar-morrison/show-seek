@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-const TMDB_LOGO_BASE = 'https://image.tmdb.org/t/p/w154';
+const TMDB_LOGO_BASE = 'https://image.tmdb.org/t/p/w342';
 
 export default function StreamingProvidersStep() {
   const { t } = useTranslation();
