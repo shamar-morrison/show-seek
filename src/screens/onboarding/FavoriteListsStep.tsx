@@ -53,7 +53,7 @@ export default function FavoriteListsStep({ selectedLists, onSelect }: FavoriteL
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {AVAILABLE_TMDB_LISTS.map((listItem, index) => {
+        {AVAILABLE_TMDB_LISTS.filter((item) => item.id !== 'latest-trailers').map((listItem, index) => {
           const isSelected = selectedLists.some((l) => l.id === listItem.id);
 
           return (
