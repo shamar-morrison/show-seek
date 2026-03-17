@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import RegionStep from './RegionStep';
+import StreamingProvidersStep from './StreamingProvidersStep';
 import FavoriteListsStep from './FavoriteListsStep';
 import TVShowsStep from './TVShowsStep';
 import MoviesStep from './MoviesStep';
@@ -132,6 +133,8 @@ export default function OnboardingContainer() {
     switch (currentStep?.id) {
       case 'region':
         return selections.region !== null;
+      case 'streaming-providers':
+        return true; // Always allow continuing — this step is purely aesthetic
       case 'favorite-lists':
         return selections.homeScreenLists.length > 0;
       case 'tv-shows':
@@ -160,6 +163,8 @@ export default function OnboardingContainer() {
             onSelect={handleRegionSelect}
           />
         );
+      case 'streaming-providers':
+        return <StreamingProvidersStep />;
       case 'favorite-lists':
         return (
           <FavoriteListsStep

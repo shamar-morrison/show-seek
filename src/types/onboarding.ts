@@ -43,6 +43,7 @@ export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
  */
 export type OnboardingStepId =
   | 'region'
+  | 'streaming-providers'
   | 'favorite-lists'
   | 'tv-shows'
   | 'movies'
@@ -59,6 +60,7 @@ export interface OnboardingStep {
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'region', titleKey: 'personalOnboarding.regionTitle' },
+  { id: 'streaming-providers', titleKey: 'personalOnboarding.streamingProvidersTitle' },
   { id: 'favorite-lists', titleKey: 'personalOnboarding.listsTitle' },
   { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },
   { id: 'movies', titleKey: 'personalOnboarding.moviesTitle' },
