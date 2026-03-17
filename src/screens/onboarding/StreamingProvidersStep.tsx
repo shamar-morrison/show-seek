@@ -1,15 +1,15 @@
-import { tmdbApi, type WatchProvider, getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { tmdbApi, type WatchProvider } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
+import { Check } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Check } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
 
 const TMDB_LOGO_BASE = 'https://image.tmdb.org/t/p/w154';
 
@@ -22,27 +22,24 @@ export default function StreamingProvidersStep() {
   const { data, isLoading } = useQuery({
     queryKey: ['onboarding', 'watchProviders'],
     queryFn: () => tmdbApi.getWatchProviders('movie'),
-    staleTime: 1000 * 60 * 60, // 1 hour — providers rarely change
+    staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days - providers rarely change
   });
 
   // Take top ~30 providers sorted by display priority
   const providers = (data ?? []).slice(0, 30);
 
-  const handleToggle = useCallback(
-    (provider: WatchProvider) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(provider.provider_id)) {
-          next.delete(provider.provider_id);
-        } else {
-          next.add(provider.provider_id);
-        }
-        return next;
-      });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    },
-    []
-  );
+  const handleToggle = useCallback((provider: WatchProvider) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(provider.provider_id)) {
+        next.delete(provider.provider_id);
+      } else {
+        next.add(provider.provider_id);
+      }
+      return next;
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: WatchProvider }) => {
@@ -54,11 +51,7 @@ export default function StreamingProvidersStep() {
           style={[styles.providerCard, isSelected && { borderColor: accentColor }]}
           onPress={() => handleToggle(item)}
         >
-          <MediaImage
-            source={{ uri: logoUri }}
-            style={styles.providerLogo}
-            contentFit="cover"
-          />
+          <MediaImage source={{ uri: logoUri }} style={styles.providerLogo} contentFit="cover" />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
               <Check size={12} color={COLORS.white} />

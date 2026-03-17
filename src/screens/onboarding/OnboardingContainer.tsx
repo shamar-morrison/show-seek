@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import RegionStep from './RegionStep';
+import DisplayNameStep from './DisplayNameStep';
 import StreamingProvidersStep from './StreamingProvidersStep';
 import FavoriteListsStep from './FavoriteListsStep';
 import TVShowsStep from './TVShowsStep';
@@ -28,6 +29,7 @@ import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
 import AccentColorStep from './AccentColorStep';
 import PersonalizingScreen from './PersonalizingScreen';
+import { ChevronLeft } from 'lucide-react-native';
 
 export default function OnboardingContainer() {
   const { t } = useTranslation();
@@ -47,6 +49,7 @@ export default function OnboardingContainer() {
   const totalSteps = ONBOARDING_STEPS.length;
   const currentStep = ONBOARDING_STEPS[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
+  const isFirstStep = currentStepIndex === 0;
 
   // Determine accent color for UI (use selected or default)
   const displayAccentColor = selections.accentColor || COLORS.primary;
@@ -93,6 +96,10 @@ export default function OnboardingContainer() {
     setSelections((prev) => ({ ...prev, accentColor: color }));
   }, []);
 
+  const handleDisplayNameChange = useCallback((name: string) => {
+    setSelections((prev) => ({ ...prev, displayName: name }));
+  }, []);
+
   const handleNext = useCallback(() => {
     if (isLastStep) {
       // Apply accent color if selected
@@ -111,6 +118,13 @@ export default function OnboardingContainer() {
   const handleSkip = useCallback(() => {
     handleNext();
   }, [handleNext]);
+
+  const handleBack = useCallback(() => {
+    if (isFirstStep) return;
+    const prevIndex = currentStepIndex - 1;
+    setCurrentStepIndex(prevIndex);
+    updateProgress(prevIndex);
+  }, [currentStepIndex, isFirstStep, updateProgress]);
 
   const handlePersonalizingComplete = useCallback(async () => {
     try {
@@ -133,6 +147,8 @@ export default function OnboardingContainer() {
     switch (currentStep?.id) {
       case 'region':
         return selections.region !== null;
+      case 'display-name':
+        return true; // Allow continuing even with empty name (fallback to Auth name)
       case 'streaming-providers':
         return true; // Always allow continuing — this step is purely aesthetic
       case 'favorite-lists':
@@ -161,6 +177,13 @@ export default function OnboardingContainer() {
           <RegionStep
             selectedRegion={selections.region}
             onSelect={handleRegionSelect}
+          />
+        );
+      case 'display-name':
+        return (
+          <DisplayNameStep
+            displayName={selections.displayName}
+            onChangeDisplayName={handleDisplayNameChange}
           />
         );
       case 'streaming-providers':
@@ -235,9 +258,16 @@ export default function OnboardingContainer() {
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
-        <Pressable style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
-        </Pressable>
+        {isFirstStep ? (
+          <Pressable style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.backButton} onPress={handleBack}>
+            <ChevronLeft size={20} color={COLORS.textSecondary} />
+            <Text style={styles.backText}>{t('personalOnboarding.back')}</Text>
+          </Pressable>
+        )}
 
         <Pressable
           style={[
@@ -302,6 +332,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.s,
   },
   skipText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.m,
+    gap: 2,
+  },
+  backText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',

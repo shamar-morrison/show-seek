@@ -14,6 +14,8 @@ import type { HomeScreenListItem } from '@/src/types/preferences';
 export interface OnboardingSelections {
   /** Selected region code (e.g., 'US', 'GB') */
   region: string | null;
+  /** User's chosen display name */
+  displayName: string;
   /** Selected home screen list items */
   homeScreenLists: HomeScreenListItem[];
   /** TV shows the user is currently watching */
@@ -31,6 +33,7 @@ export interface OnboardingSelections {
  */
 export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
   region: null,
+  displayName: '',
   homeScreenLists: [],
   selectedTVShows: [],
   selectedMovies: [],
@@ -43,6 +46,7 @@ export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
  */
 export type OnboardingStepId =
   | 'region'
+  | 'display-name'
   | 'streaming-providers'
   | 'favorite-lists'
   | 'tv-shows'
@@ -60,6 +64,7 @@ export interface OnboardingStep {
 
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'region', titleKey: 'personalOnboarding.regionTitle' },
+  { id: 'display-name', titleKey: 'personalOnboarding.displayNameTitle' },
   { id: 'streaming-providers', titleKey: 'personalOnboarding.streamingProvidersTitle' },
   { id: 'favorite-lists', titleKey: 'personalOnboarding.listsTitle' },
   { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },

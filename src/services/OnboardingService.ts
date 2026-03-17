@@ -2,6 +2,10 @@ import { DEFAULT_HOME_LISTS } from '@/src/constants/homeScreenLists';
 import { favoritePersonsService } from '@/src/services/FavoritePersonsService';
 import { listService, type ListMediaItem } from '@/src/services/ListService';
 import { preferencesService } from '@/src/services/PreferencesService';
+import { auth, db } from '@/src/firebase/config';
+import { mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
+import { updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 
@@ -20,6 +24,24 @@ class OnboardingService {
    */
   async saveOnboarding(selections: OnboardingSelections): Promise<void> {
     const tasks: Promise<unknown>[] = [];
+
+    // 0. Display Name — update Firebase Auth profile + Firestore user doc
+    const trimmedDisplayName = selections.displayName.trim();
+    if (trimmedDisplayName && auth.currentUser) {
+      const currentUser = auth.currentUser;
+      tasks.push(
+        (async () => {
+          try {
+            await updateProfile(currentUser, { displayName: trimmedDisplayName });
+            const userRef = doc(db, 'users', currentUser.uid);
+            await setDoc(userRef, { displayName: trimmedDisplayName }, { merge: true });
+            mergeUserDocumentCache(currentUser.uid, { displayName: trimmedDisplayName });
+          } catch (e) {
+            console.error('[OnboardingService] Failed to save display name:', e);
+          }
+        })()
+      );
+    }
 
     // 1. Home Screen Lists
     if (selections.homeScreenLists.length > 0) {
