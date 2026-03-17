@@ -347,9 +347,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   logo: {
-    width: 70,
-    height: 70,
-    borderRadius: 18,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   title: {
     fontSize: FONT_SIZE.xxl,
