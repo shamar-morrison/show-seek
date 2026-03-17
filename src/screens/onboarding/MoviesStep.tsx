@@ -22,7 +22,8 @@ export default function MoviesStep({ selectedMovies, onSelect, genreIds }: Movie
   const { accentColor } = useAccentColor();
 
   const currentYear = new Date().getFullYear();
-  const genreFilter = genreIds && genreIds.length > 0 ? genreIds.join(',') : undefined;
+  // Use pipe-separated IDs for OR logic — movies matching ANY selected genre
+  const genreFilter = genreIds && genreIds.length > 0 ? genreIds.join('|') : undefined;
 
   const thisYearQuery = useQuery({
     queryKey: ['onboarding', 'discoverMovies', currentYear, genreFilter],
