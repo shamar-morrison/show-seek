@@ -42,18 +42,22 @@ export default function PersonalizingScreen({ onComplete }: PersonalizingScreenP
     opacity: phraseOpacity.value,
   }));
 
-  // Rotate phrases
+  // Rotate phrases once, then pause on the last one
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (currentPhraseIndex >= PHRASES_KEYS.length - 1) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
       phraseOpacity.value = withTiming(0, { duration: 200 }, () => {
         phraseOpacity.value = withDelay(50, withTiming(1, { duration: 300 }));
       });
 
-      setPhraseIndex((prev) => (prev + 1) % PHRASES_KEYS.length);
+      setPhraseIndex((prev) => Math.min(prev + 1, PHRASES_KEYS.length - 1));
     }, PHRASE_INTERVAL_MS);
 
-    return () => clearInterval(interval);
-  }, [phraseOpacity]);
+    return () => clearTimeout(timeout);
+  }, [currentPhraseIndex, phraseOpacity]);
 
   // Animate progress bar
   useEffect(() => {
