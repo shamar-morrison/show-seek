@@ -1,9 +1,10 @@
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, type TVShow } from '@/src/api/tmdb';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -20,13 +21,52 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['onboarding', 'trendingTV'],
-    queryFn: () => tmdbApi.getTrendingTV('week'),
-    staleTime: 1000 * 60 * 30, // 30 min
+  const page1Query = useQuery({
+    queryKey: ['onboarding', 'trendingTV', 1],
+    queryFn: () => tmdbApi.getTrendingTV('week', 1),
+    staleTime: 1000 * 60 * 30,
   });
 
-  const shows = data?.results ?? [];
+  const page2Query = useQuery({
+    queryKey: ['onboarding', 'trendingTV', 2],
+    queryFn: () => tmdbApi.getTrendingTV('week', 2),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const isLoading = page1Query.isLoading || page2Query.isLoading;
+
+  const shows = useMemo(() => {
+    const p1 = page1Query.data?.results ?? [];
+    const p2 = page2Query.data?.results ?? [];
+    const merged = [...p1, ...p2];
+    // Deduplicate by id
+    const seen = new Set<number>();
+    const unique = merged.filter((s) => {
+      if (seen.has(s.id)) return false;
+      seen.add(s.id);
+      return true;
+    });
+    // Exclude non-scripted content (talk shows, news, reality/awards shows)
+    const noExcludedGenres = unique.filter(
+      (s) => !s.genre_ids.some((gid) => EXCLUDED_TV_GENRE_IDS.includes(gid))
+    );
+    // Exclude award shows by name that may slip through genre filters
+    const EXCLUDED_NAME_PATTERNS = [
+      /\boscar/i,
+      /\bacademy\s*award/i,
+      /\bemmy/i,
+      /\bgrammy/i,
+      /\bgolden\s*globe/i,
+      /\bbafta/i,
+      /\bsag\s*award/i,
+      /\bscreen\s*actors?\s*guild/i,
+      /\btonys?\b/i,
+      /\btony\s*award/i,
+    ];
+    return noExcludedGenres.filter(
+      (s) => !EXCLUDED_NAME_PATTERNS.some((pattern) => pattern.test(s.name))
+    );
+  }, [page1Query.data, page2Query.data]);
 
   const selectedIds = new Set(selectedShows.map((s) => s.id));
 
