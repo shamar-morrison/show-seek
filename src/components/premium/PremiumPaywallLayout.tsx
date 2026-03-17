@@ -402,7 +402,8 @@ const styles = StyleSheet.create({
   planCard: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: SPACING.l,
+    paddingVertical: 18,
+    paddingHorizontal: SPACING.l,
     overflow: 'visible',
   },
   planHeaderRow: {
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    paddingVertical: SPACING.m,
+    paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
   },
