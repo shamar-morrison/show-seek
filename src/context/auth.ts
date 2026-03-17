@@ -1,15 +1,17 @@
-import { auth } from '@/src/firebase/config';
+import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+  const [hasCompletedPersonalOnboarding, setHasCompletedPersonalOnboarding] = useState<boolean | null>(null);
   const signOutInFlight = useRef<Promise<void> | null>(null);
 
   const persistUserId = (userId: string) => {
@@ -83,16 +85,31 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Monitor auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         clearPersistedUserId();
         setUser(null);
+        setHasCompletedPersonalOnboarding(null);
         setLoading(false);
         return;
       }
 
       persistUserId(currentUser.uid);
       setUser(currentUser);
+
+      // Check personal onboarding status from Firestore
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userData = userDoc.data();
+        setHasCompletedPersonalOnboarding(
+          userData?.hasCompletedPersonalOnboarding === true
+        );
+      } catch (e) {
+        console.error('[Auth] Personal onboarding check failed, defaulting to true:', e);
+        // Default to true on error so user isn't stuck in onboarding
+        setHasCompletedPersonalOnboarding(true);
+      }
+
       setLoading(false);
     });
     return unsubscribe;
@@ -162,12 +179,31 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     setHasCompletedOnboarding(true);
   };
 
+  const completePersonalOnboarding = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    try {
+      await setDoc(
+        doc(db, 'users', currentUser.uid),
+        { hasCompletedPersonalOnboarding: true },
+        { merge: true }
+      );
+    } catch (e) {
+      console.error('[Auth] Failed to persist personal onboarding completion:', e);
+    }
+
+    setHasCompletedPersonalOnboarding(true);
+  };
+
   return {
     user,
     isGuest: !!user?.isAnonymous,
     loading,
     hasCompletedOnboarding,
+    hasCompletedPersonalOnboarding,
     completeOnboarding,
+    completePersonalOnboarding,
     signOut,
   };
 });

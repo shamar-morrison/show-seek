@@ -907,6 +907,16 @@ export const tmdbApi = {
   },
 
   /**
+   * Get popular people (actors, directors, etc.)
+   */
+  getPopularPeople: async (page: number = 1) => {
+    const { data } = await tmdbClient.get<PaginatedResponse<Person>>('/person/popular', {
+      params: { page },
+    });
+    return data;
+  },
+
+  /**
    * Get external IDs for a movie (IMDB ID, etc.)
    */
   getMovieExternalIds: async (id: number) => {

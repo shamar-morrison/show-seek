@@ -101,7 +101,7 @@ interface InitDebugSnapshot {
 }
 
 function RootLayoutNav() {
-  const { loading, user, hasCompletedOnboarding } = useAuth();
+  const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
@@ -262,10 +262,12 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
+    const isPersonalOnboarding = segments[0] === 'personalized-onboarding';
     const shouldRedirect =
       (!hasCompletedOnboarding && !isOnboarding) ||
       (hasCompletedOnboarding && !user && !inAuthGroup) ||
-      (!!user && (inAuthGroup || isOnboarding));
+      (!!user && (inAuthGroup || isOnboarding)) ||
+      (!!user && hasCompletedPersonalOnboarding === false && !isPersonalOnboarding);
 
     if (shouldRedirect) {
       return;
@@ -424,6 +426,7 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
+    const isPersonalOnboarding = segments[0] === 'personalized-onboarding';
 
     if (!hasCompletedOnboarding && !isOnboarding) {
       // If not onboarded, go to onboarding
@@ -431,6 +434,9 @@ function RootLayoutNav() {
     } else if (hasCompletedOnboarding && !user && !inAuthGroup) {
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
+    } else if (user && hasCompletedPersonalOnboarding === false && !isPersonalOnboarding) {
+      // If logged in but hasn't completed personal onboarding, go there
+      router.replace('/personalized-onboarding');
     } else if (user && (inAuthGroup || isOnboarding)) {
       // If logged in and in auth/onboarding, go to preferred launch screen
       const destination = preferences?.defaultLaunchScreen || '/(tabs)/home';
@@ -440,6 +446,7 @@ function RootLayoutNav() {
     user,
     loading,
     hasCompletedOnboarding,
+    hasCompletedPersonalOnboarding,
     segments,
     router,
     isLanguageReady,
@@ -539,6 +546,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="personalized-onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </>
   );
