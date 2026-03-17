@@ -258,16 +258,16 @@ export default function OnboardingContainer() {
 
       {/* Footer Buttons */}
       <View style={styles.footer}>
-        {isFirstStep ? (
-          <Pressable style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
-          </Pressable>
-        ) : (
+        {!isFirstStep && (
           <Pressable style={styles.backButton} onPress={handleBack}>
             <ChevronLeft size={20} color={COLORS.textSecondary} />
             <Text style={styles.backText}>{t('personalOnboarding.back')}</Text>
           </Pressable>
         )}
+
+        <Pressable style={styles.skipButton} onPress={handleSkip}>
+          <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
+        </Pressable>
 
         <Pressable
           style={[
@@ -275,7 +275,8 @@ export default function OnboardingContainer() {
             { backgroundColor: displayAccentColor },
             !hasSelection && styles.continueButtonDisabled,
           ]}
-          onPress={handleNext}
+          onPress={hasSelection ? handleNext : undefined}
+          disabled={!hasSelection}
         >
           <Text style={styles.continueText}>
             {isLastStep ? t('personalOnboarding.letsGo') : t('personalOnboarding.continue')}
