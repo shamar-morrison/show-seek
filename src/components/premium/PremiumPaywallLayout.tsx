@@ -3,8 +3,8 @@ import {
   CollapsibleCategory,
   CollapsibleFeatureItem,
 } from '@/src/components/ui/CollapsibleCategory';
-import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { PREMIUM_CATEGORIES, type PremiumCategory } from '@/src/constants/premiumFeatures';
+import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BadgeCheck, X } from 'lucide-react-native';
@@ -13,11 +13,11 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Linking,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -210,11 +210,7 @@ export function PremiumFeaturesSection({
   );
 }
 
-function PremiumFeatureCategorySection({
-  category,
-}: {
-  category: PremiumCategory;
-}) {
+function PremiumFeatureCategorySection({ category }: { category: PremiumCategory }) {
   const { t } = useTranslation();
 
   return (
@@ -320,7 +316,7 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: SPACING.l,
-    top: SPACING.s,
+    top: SPACING.xxl,
     zIndex: 10,
     padding: SPACING.s,
     borderRadius: BORDER_RADIUS.round,
