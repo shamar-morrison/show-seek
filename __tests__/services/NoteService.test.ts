@@ -2,13 +2,16 @@ import { noteService } from '@/src/services/NoteService';
 import { deleteDoc, doc, getDoc, getDocs, setDoc, Timestamp } from 'firebase/firestore';
 
 // Create module-level mutable mock state
-let mockUserId: string | null = 'test-user-id';
+let mockCurrentUser: { uid: string; isAnonymous: boolean } | null = {
+  uid: 'test-user-id',
+  isAnonymous: false,
+};
 
 // Mock the firebase config
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
-      return mockUserId ? { uid: mockUserId } : null;
+      return mockCurrentUser;
     },
   },
   db: {},
@@ -22,7 +25,10 @@ jest.mock('@/src/firebase/firestore', () => ({
 describe('NoteService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUserId = 'test-user-id';
+    mockCurrentUser = {
+      uid: 'test-user-id',
+      isAnonymous: false,
+    };
   });
 
   describe('saveNote', () => {
@@ -156,24 +162,66 @@ describe('NoteService', () => {
       });
       expect(result?.originalTitle).toBeUndefined();
     });
+
+    it('returns null when user is not authenticated', async () => {
+      mockCurrentUser = null;
+
+      const result = await noteService.getNote('test-user-id', 'movie', 550);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns null when user is anonymous', async () => {
+      mockCurrentUser = {
+        uid: 'test-user-id',
+        isAnonymous: true,
+      };
+
+      const result = await noteService.getNote('test-user-id', 'movie', 550);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns null when user does not match requested userId', async () => {
+      mockCurrentUser = {
+        uid: 'another-user-id',
+        isAnonymous: false,
+      };
+
+      const result = await noteService.getNote('test-user-id', 'movie', 550);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
   });
 
   describe('getUserNotes', () => {
-    it('rejects when user is not authenticated', async () => {
-      mockUserId = null;
+    it('returns an empty array when user is not authenticated', async () => {
+      mockCurrentUser = null;
 
-      await expect(noteService.getUserNotes('test-user-id')).rejects.toThrow(
-        'Please sign in to continue'
-      );
+      await expect(noteService.getUserNotes('test-user-id')).resolves.toEqual([]);
       expect(getDocs).not.toHaveBeenCalled();
     });
 
-    it('rejects when user does not match requested userId', async () => {
-      mockUserId = 'another-user-id';
+    it('returns an empty array when user is anonymous', async () => {
+      mockCurrentUser = {
+        uid: 'test-user-id',
+        isAnonymous: true,
+      };
 
-      await expect(noteService.getUserNotes('test-user-id')).rejects.toThrow(
-        'Please sign in to continue'
-      );
+      await expect(noteService.getUserNotes('test-user-id')).resolves.toEqual([]);
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty array when user does not match requested userId', async () => {
+      mockCurrentUser = {
+        uid: 'another-user-id',
+        isAnonymous: false,
+      };
+
+      await expect(noteService.getUserNotes('test-user-id')).resolves.toEqual([]);
       expect(getDocs).not.toHaveBeenCalled();
     });
   });
