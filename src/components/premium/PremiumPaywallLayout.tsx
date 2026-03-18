@@ -68,7 +68,7 @@ export function PremiumPaywallScreenShell({
   closeButtonTestID,
   closeButtonFadeDurationMs = 0,
   closeButtonRevealDelayMs = 0,
-  contentBottomPadding = 152,
+  contentBottomPadding = SPACING.xl,
   footer,
   onClose,
   subtitle,

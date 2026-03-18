@@ -160,7 +160,6 @@ export default function PremiumScreen() {
   return (
     <PremiumPaywallScreenShell
       closeButtonTestID="premium-close-button"
-      contentBottomPadding={180}
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}

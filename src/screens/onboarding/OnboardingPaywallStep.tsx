@@ -117,7 +117,6 @@ export default function OnboardingPaywallStep({
       closeButtonTestID="onboarding-paywall-close-button"
       closeButtonFadeDurationMs={450}
       closeButtonRevealDelayMs={3000}
-      contentBottomPadding={180}
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
