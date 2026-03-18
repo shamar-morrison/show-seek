@@ -121,6 +121,56 @@ describe('AuthProvider', () => {
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('userId', anonymousUser.uid);
     });
 
+    it('should reset personal onboarding state and keep loading true while re-reading Firestore for a signed-in user', async () => {
+      const anonymousUser = { uid: 'anon-1', isAnonymous: true };
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      let resolveGetDoc: ((value: { data: () => { hasCompletedPersonalOnboarding: boolean } }) => void) | null =
+        null;
+
+      mockCurrentUser = anonymousUser;
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(anonymousUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+
+      (getDoc as jest.Mock).mockImplementation(
+        () =>
+          new Promise<{ data: () => { hasCompletedPersonalOnboarding: boolean } }>((resolve) => {
+            resolveGetDoc = resolve;
+          })
+      );
+
+      mockCurrentUser = mockUser;
+
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+
+      expect(result.current.loading).toBe(true);
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+      expect(getDoc).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveGetDoc?.({
+          data: () => ({ hasCompletedPersonalOnboarding: true }),
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+    });
+
     it('should keep auth state transition when persisting userId fails', async () => {
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();

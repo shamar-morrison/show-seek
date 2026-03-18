@@ -91,6 +91,9 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
         <Pressable
           style={[styles.posterCard, isSelected && { borderColor: accentColor }]}
           onPress={() => handleToggle(item)}
+          accessibilityRole="button"
+          accessibilityLabel={item.name}
+          accessibilityState={{ selected: isSelected }}
         >
           <MediaImage
             source={uri ? { uri } : undefined}

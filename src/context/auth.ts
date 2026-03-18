@@ -105,6 +105,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         return;
       }
 
+      setHasCompletedPersonalOnboarding(false);
+      setLoading(true);
+
       const uid = currentUser.uid;
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const timeoutPromise = new Promise<never>((_, reject) => {
