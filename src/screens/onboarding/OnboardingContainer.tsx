@@ -8,6 +8,8 @@ import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboa
 import type { OnboardingSelections, OnboardingStepId } from '@/src/types/onboarding';
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
+import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,10 +40,11 @@ import { ChevronLeft } from 'lucide-react-native';
 export default function OnboardingContainer() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { completePersonalOnboarding } = useAuth();
+  const { user, completePersonalOnboarding } = useAuth();
   const { setRegion } = useRegion();
   const { setAccentColor } = useAccentColor();
   const { isPremium } = usePremium();
+  const queryClient = useQueryClient();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selections, setSelections] = useState<OnboardingSelections>({
@@ -161,13 +164,15 @@ export default function OnboardingContainer() {
       return;
     }
 
+    seedHomeScreenListsCache(queryClient, user?.uid, selections.homeScreenLists);
+
     try {
       await completePersonalOnboarding();
       router.replace('/(tabs)/home' as any);
     } catch (e) {
       console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
     }
-  }, [completePersonalOnboarding, handleSaveOnboarding, router]);
+  }, [completePersonalOnboarding, handleSaveOnboarding, queryClient, router, selections.homeScreenLists, user?.uid]);
 
   // Initialize progress on first render
   React.useEffect(() => {

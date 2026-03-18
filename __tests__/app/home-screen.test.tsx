@@ -307,6 +307,26 @@ describe('HomeScreen long press add-to-list', () => {
     });
   });
 
+  it('renders only the seeded top rated section when onboarding saves a single TMDB list', () => {
+    mockPreferencesState.homeScreenLists = [
+      { id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' },
+    ];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'top-rated-movies', type: 'tmdb', label: 'Top Rated' }],
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
+
+    const { getByText, queryByText } = render(<HomeScreen />);
+
+    expect(getByText('home.topRated')).toBeTruthy();
+    expect(queryByText('home.trendingMovies')).toBeNull();
+    expect(queryByText('home.trendingTV')).toBeNull();
+    expect(queryByText('home.popularMovies')).toBeNull();
+    expect(queryByText('home.upcomingMovies')).toBeNull();
+    expect(queryByText('home.upcomingTV')).toBeNull();
+  });
+
   it('opens AddToListModal for authenticated long press on a user list home card', async () => {
     mockPreferencesState.homeScreenLists = [{ id: 'watchlist', type: 'default', label: 'Watchlist' }];
     mockPreferencesState.preferences = {
