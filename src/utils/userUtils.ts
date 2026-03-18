@@ -3,6 +3,29 @@
  */
 
 /**
+ * Resolve the best available display name for UI and persistence.
+ * Prefers explicit names, then an alternate auth name, then the email prefix.
+ */
+export function resolvePreferredDisplayName(
+  primaryName: string | null | undefined,
+  secondaryName: string | null | undefined,
+  email: string | null | undefined
+): string {
+  const trimmedPrimaryName = primaryName?.trim() ?? '';
+  if (trimmedPrimaryName) {
+    return trimmedPrimaryName;
+  }
+
+  const trimmedSecondaryName = secondaryName?.trim() ?? '';
+  if (trimmedSecondaryName) {
+    return trimmedSecondaryName;
+  }
+
+  const emailPrefix = email?.split('@')[0]?.trim() ?? '';
+  return emailPrefix;
+}
+
+/**
  * Extract initials from display name or email
  * @param displayName - User's display name
  * @param email - User's email address

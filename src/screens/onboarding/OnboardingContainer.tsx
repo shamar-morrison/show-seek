@@ -9,6 +9,7 @@ import type { OnboardingSelections, OnboardingStepId } from '@/src/types/onboard
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
 import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -61,6 +62,11 @@ export default function OnboardingContainer() {
   const currentStep = ONBOARDING_STEPS[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isFirstStep = currentStepIndex === 0;
+  const paywallDisplayName = resolvePreferredDisplayName(
+    selections.displayName,
+    user?.displayName,
+    user?.email
+  );
 
   // Determine accent color for UI (use selected or default)
   const displayAccentColor = selections.accentColor || COLORS.primary;
@@ -222,7 +228,7 @@ export default function OnboardingContainer() {
   }
 
   if (currentStep?.id === 'premium-paywall') {
-    return <OnboardingPaywallStep displayName={selections.displayName} onClose={handleNext} />;
+    return <OnboardingPaywallStep displayName={paywallDisplayName} onClose={handleNext} />;
   }
 
   const renderStep = () => {

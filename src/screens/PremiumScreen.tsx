@@ -12,6 +12,7 @@ import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -50,9 +51,9 @@ export default function PremiumScreen() {
     selectedPlan === 'monthly' && monthlyTrial.isEligible
       ? t('premium.freeTrialEligibleMessage')
       : null;
-  const trimmedDisplayName = user?.displayName?.trim() ?? '';
-  const readyTitle = trimmedDisplayName
-    ? t('premium.readyTitle', { name: trimmedDisplayName })
+  const resolvedDisplayName = resolvePreferredDisplayName(user?.displayName, null, user?.email);
+  const readyTitle = resolvedDisplayName
+    ? t('premium.readyTitle', { name: resolvedDisplayName })
     : t('premium.readyTitleFallback');
 
   React.useEffect(() => {

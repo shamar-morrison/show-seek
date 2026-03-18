@@ -5,6 +5,12 @@ const mockReplace = jest.fn();
 const mockCompletePersonalOnboarding = jest.fn();
 const mockSetRegion = jest.fn();
 const mockSetAccentColor = jest.fn();
+let mockAuthUser = {
+  uid: 'user-1',
+  displayName: null as string | null,
+  email: 'fallback.user@example.com',
+  isAnonymous: false,
+};
 
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
@@ -41,7 +47,7 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
-    user: { uid: 'user-1', displayName: null, isAnonymous: false },
+    user: mockAuthUser,
     completePersonalOnboarding: mockCompletePersonalOnboarding,
   }),
 }));
@@ -203,6 +209,12 @@ import OnboardingContainer from '@/src/screens/onboarding/OnboardingContainer';
 describe('OnboardingContainer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = {
+      uid: 'user-1',
+      displayName: null,
+      email: 'fallback.user@example.com',
+      isAnonymous: false,
+    };
   });
 
   it('passes the collected display name to the onboarding paywall step', async () => {
@@ -219,6 +231,24 @@ describe('OnboardingContainer', () => {
 
     await waitFor(() => {
       expect(getByTestId('mock-onboarding-paywall-display-name')).toHaveTextContent('Jordan');
+    });
+  });
+
+  it('falls back to the email prefix on the onboarding paywall when step 2 is skipped', async () => {
+    const { getByText, getByTestId } = render(<OnboardingContainer />);
+
+    fireEvent.press(getByText('Begin onboarding'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Continue'));
+
+    for (let stepIndex = 0; stepIndex < 7; stepIndex += 1) {
+      fireEvent.press(getByText('Skip'));
+    }
+
+    await waitFor(() => {
+      expect(getByTestId('mock-onboarding-paywall-display-name')).toHaveTextContent(
+        'fallback.user'
+      );
     });
   });
 });

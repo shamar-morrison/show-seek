@@ -4,7 +4,8 @@
 
 import { db } from '@/src/firebase/config';
 import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
-import { User } from 'firebase/auth';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
+import { updateProfile, User } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 export interface UserDocument {
@@ -20,17 +21,7 @@ function normalizeEmail(email: string | null): string {
 }
 
 function normalizeDisplayName(displayName: string | null, email: string): string {
-  const trimmedDisplayName = displayName?.trim() ?? '';
-  if (trimmedDisplayName) {
-    return trimmedDisplayName;
-  }
-
-  const emailPrefix = email.split('@')[0]?.trim() ?? '';
-  if (emailPrefix) {
-    return emailPrefix;
-  }
-
-  return 'User';
+  return resolvePreferredDisplayName(displayName, null, email) || 'User';
 }
 
 function normalizePhotoURL(photoURL: string | null): string | null {
@@ -50,10 +41,19 @@ export async function createUserDocument(user: User): Promise<void> {
 
   const userRef = doc(db, 'users', user.uid);
   const normalizedEmail = normalizeEmail(user.email);
+  const resolvedAuthDisplayName = resolvePreferredDisplayName(user.displayName, null, normalizedEmail);
   const normalizedDisplayName = normalizeDisplayName(user.displayName, normalizedEmail);
   const normalizedPhotoURL = normalizePhotoURL(user.photoURL);
 
   try {
+    if (!(user.displayName?.trim()) && resolvedAuthDisplayName) {
+      try {
+        await updateProfile(user, { displayName: resolvedAuthDisplayName });
+      } catch (error) {
+        console.warn('Failed to backfill auth displayName:', error);
+      }
+    }
+
     const existingData = await getCachedUserDocument(user.uid, {
       callsite: 'createUserDocument',
     });

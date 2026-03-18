@@ -8,7 +8,7 @@ const mockAddToList = jest.fn();
 const mockAddFavoritePerson = jest.fn();
 const mockMergeUserDocumentCache = jest.fn();
 
-let mockCurrentUser: { uid: string } | null = null;
+let mockCurrentUser: { uid: string; displayName: string | null; email: string | null } | null = null;
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
@@ -91,7 +91,11 @@ describe('OnboardingService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockCurrentUser = { uid: 'test-user-id' };
+    mockCurrentUser = {
+      uid: 'test-user-id',
+      displayName: null,
+      email: 'fallback.user@example.com',
+    };
     mockUpdateProfile.mockResolvedValue(undefined);
     mockSetDoc.mockResolvedValue(undefined);
     mockUpdatePreference.mockResolvedValue(undefined);
@@ -134,5 +138,27 @@ describe('OnboardingService', () => {
     );
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('backfills a fallback display name from the auth email when the onboarding input is blank', async () => {
+    await expect(
+      onboardingService.saveOnboarding({
+        ...selections,
+        displayName: '   ',
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: 'test-user-id' }),
+      { displayName: 'fallback.user' }
+    );
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id' },
+      { displayName: 'fallback.user' },
+      { merge: true }
+    );
+    expect(mockMergeUserDocumentCache).toHaveBeenCalledWith('test-user-id', {
+      displayName: 'fallback.user',
+    });
   });
 });

@@ -3,6 +3,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calendar, ChevronRight, LogOut, Palette, Sparkles, Tv2 } from 'lucide-react-native';
@@ -50,7 +51,9 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
   const translateX = useSharedValue(-DRAWER_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
-  const displayName = isGuest ? t('profile.guestUser') : user?.displayName || t('profile.user');
+  const displayName = isGuest
+    ? t('profile.guestUser')
+    : resolvePreferredDisplayName(user?.displayName, null, user?.email) || t('profile.user');
   const email = user?.email || t('profile.noEmail');
 
   useEffect(() => {

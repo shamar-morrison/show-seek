@@ -12,7 +12,8 @@ const mockRouterBack = jest.fn();
 const mockAuthState = {
   user: {
     displayName: 'Taylor',
-  } as { displayName: string | null } | null,
+    email: 'taylor@example.com',
+  } as { displayName: string | null; email?: string | null } | null,
 };
 
 const mockPremiumState = {
@@ -91,7 +92,7 @@ describe('PremiumScreen', () => {
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
     mockTrackPremiumPaywallView.mockReset();
-    mockAuthState.user = { displayName: 'Taylor' };
+    mockAuthState.user = { displayName: 'Taylor', email: 'taylor@example.com' };
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockPremiumState.monthlyTrial = {
@@ -195,8 +196,18 @@ describe('PremiumScreen', () => {
     expect(queryByTestId('billing-helper-text')).toBeNull();
   });
 
-  it('falls back to the generic ready title when the auth display name is blank', () => {
-    mockAuthState.user = { displayName: '   ' };
+  it('falls back to the email prefix when the auth display name is blank', () => {
+    mockAuthState.user = { displayName: '   ', email: 'fallback.user@example.com' };
+
+    const { getByText, queryByText } = render(<PremiumScreen />);
+
+    expect(getByText("fallback.user, you're all set.")).toBeTruthy();
+    expect(queryByText("You're all set.")).toBeNull();
+    expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
+  });
+
+  it('falls back to the generic ready title when both auth display name and email are blank', () => {
+    mockAuthState.user = { displayName: '   ', email: null };
 
     const { getByText, queryByText } = render(<PremiumScreen />);
 

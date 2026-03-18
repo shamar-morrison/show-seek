@@ -1,6 +1,7 @@
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -19,9 +20,9 @@ export default function DisplayNameStep({
   const { accentColor } = useAccentColor();
   const { user } = useAuth();
 
-  // The placeholder shows the existing Auth display name or email prefix
   const placeholder =
-    user?.displayName || user?.email?.split('@')[0] || t('personalOnboarding.displayNamePlaceholder');
+    resolvePreferredDisplayName(user?.displayName, null, user?.email) ||
+    t('personalOnboarding.displayNamePlaceholder');
 
   return (
     <View style={styles.container}>

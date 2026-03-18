@@ -8,7 +8,7 @@ This document describes the current authentication model used in Show Seek.
 - Primary entry is `/(auth)/sign-in`.
 - Legacy email/password deep links now resolve to the main auth screen through `/(auth)/email-sign-in`.
 - The `/(auth)/sign-up` route has been removed.
-- User profile bootstrap normalizes required `users/{uid}` fields (`uid`, `displayName`, `email`, `photoURL`, `createdAt`) with safe fallbacks.
+- User profile bootstrap normalizes required `users/{uid}` fields (`uid`, `displayName`, `email`, `photoURL`, `createdAt`) with safe fallbacks and backfills Firebase Auth `displayName` from the email prefix when the auth profile name is blank.
 
 ## Auth Routes
 
@@ -30,6 +30,7 @@ This document describes the current authentication model used in Show Seek.
    - `email`: `user.email ?? ''`
    - `displayName`: trimmed `user.displayName`, else email prefix, else `'User'`
    - `photoURL`: `user.photoURL ?? null`
+   - If Firebase Auth `displayName` is blank and the email prefix is usable, the app also backfills the auth profile `displayName`.
 4. Premium bootstrap also calls `createUserDocument(user)` before `syncPremiumStatus()` so profile fields exist before premium writes.
 5. Root layout redirects authenticated users into tabs.
 
@@ -38,6 +39,7 @@ This document describes the current authentication model used in Show Seek.
 1. User taps **Continue with Email** on the main auth screen.
 2. App attempts `signInWithEmailAndPassword` directly using the entered email and password.
 3. If sign-in succeeds, the app calls `createUserDocument(user)` and `trackLogin('email')`.
+   - This also backfills Firebase Auth `displayName` from the email prefix when the auth profile name is blank.
 4. If Firebase returns `auth/user-not-found` or `auth/invalid-credential`, the app offers to create a new account with the entered password.
 5. If Firebase returns `auth/wrong-password`, the app shows an invalid-credentials alert and does not open the create-account modal.
 6. If the user confirms account creation, the app calls `createUserWithEmailAndPassword`, then `createUserDocument(user)` and `trackLogin('email')` on success.
