@@ -47,7 +47,9 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-import OnboardingPaywallStep from '@/src/screens/onboarding/OnboardingPaywallStep';
+import OnboardingPaywallStep, {
+  ONBOARDING_PAYWALL_CLOSE_REVEAL_DELAY_MS,
+} from '@/src/screens/onboarding/OnboardingPaywallStep';
 
 function collectTestIds(node: any, ids: string[] = []): string[] {
   if (!node) return ids;
@@ -143,7 +145,7 @@ describe('OnboardingPaywallStep', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(2499);
+      jest.advanceTimersByTime(ONBOARDING_PAYWALL_CLOSE_REVEAL_DELAY_MS - 1);
     });
 
     expect(getByTestId('onboarding-paywall-close-button').props.disabled).toBe(true);
