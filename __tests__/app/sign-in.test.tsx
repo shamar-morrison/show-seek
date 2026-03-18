@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import React from 'react';
 import { Alert } from 'react-native';
 
@@ -8,7 +8,6 @@ const mockSignInWithGoogle = jest.fn();
 const mockSignInAsGuest = jest.fn();
 const mockCreateUserDocument = jest.fn((_: unknown) => Promise.resolve());
 const mockTrackLogin = jest.fn();
-const mockFetchSignInMethodsForEmail = jest.fn();
 const mockSignInWithEmailAndPassword = jest.fn();
 const mockCreateUserWithEmailAndPassword = jest.fn();
 
@@ -29,9 +28,6 @@ jest.mock('@/src/services/analytics', () => ({
 jest.mock('firebase/auth', () => ({
   createUserWithEmailAndPassword: jest.fn((...args: unknown[]) =>
     mockCreateUserWithEmailAndPassword(...args)
-  ),
-  fetchSignInMethodsForEmail: jest.fn((...args: unknown[]) =>
-    mockFetchSignInMethodsForEmail(...args)
   ),
   signInWithEmailAndPassword: jest.fn((...args: unknown[]) =>
     mockSignInWithEmailAndPassword(...args)
@@ -60,16 +56,7 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { email?: string; provider?: string }) => {
-      if (key === 'auth.emailCreateAccountMessage') {
-        return `auth.emailCreateAccountMessage:${options?.email ?? ''}`;
-      }
-      if (key === 'auth.emailAlreadyLinkedWithProvider') {
-        return `auth.emailAlreadyLinkedWithProvider:${options?.provider ?? ''}`;
-      }
-
-      return key;
-    },
+    t: (key: string) => key,
   }),
 }));
 
@@ -91,7 +78,6 @@ describe('SignIn', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -140,7 +126,6 @@ describe('SignIn', () => {
     pressEmailContinue(getByText);
 
     expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.emailRequired');
-    expect(fetchSignInMethodsForEmail).not.toHaveBeenCalled();
   });
 
   it('shows passwordRequired when password is empty', () => {
@@ -150,11 +135,9 @@ describe('SignIn', () => {
     pressEmailContinue(getByText);
 
     expect(Alert.alert).toHaveBeenCalledWith('common.error', 'auth.passwordRequired');
-    expect(fetchSignInMethodsForEmail).not.toHaveBeenCalled();
   });
 
-  it('tracks email login after a successful sign-in', async () => {
-    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue(['password']);
+  it('signs in directly with existing password accounts without checking sign-in methods', async () => {
     (signInWithEmailAndPassword as jest.Mock).mockResolvedValue({
       user: { uid: 'user-1' },
     });
@@ -178,8 +161,10 @@ describe('SignIn', () => {
     expect(mockTrackLogin).toHaveBeenCalledWith('email');
   });
 
-  it('prompts before creating a new account when no email account exists', async () => {
-    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue([]);
+  it('prompts to create an account when sign-in fails for a missing account', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue({
+      code: 'auth/user-not-found',
+    });
     (createUserWithEmailAndPassword as jest.Mock).mockResolvedValue({
       user: { uid: 'new-user' },
     });
@@ -191,9 +176,16 @@ describe('SignIn', () => {
     pressEmailContinue(getByText);
 
     await waitFor(() => {
+      expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'new-user@example.com',
+        'secret123'
+      );
+    });
+    await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
         'auth.emailCreateAccountTitle',
-        'auth.emailCreateAccountMessage:new-user@example.com',
+        'auth.emailCreateAccountMessage',
         expect.any(Array)
       );
     });
@@ -221,8 +213,85 @@ describe('SignIn', () => {
     expect(mockTrackLogin).toHaveBeenCalledWith('email');
   });
 
-  it('shows provider guidance when the email belongs to Google', async () => {
-    (fetchSignInMethodsForEmail as jest.Mock).mockResolvedValue(['google.com']);
+  it('prompts to create an account when sign-in fails with invalid-credential', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue({
+      code: 'auth/invalid-credential',
+    });
+    (createUserWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: 'new-user' },
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'brand-new@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'brand-new@example.com',
+        'secret123'
+      );
+    });
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'auth.emailCreateAccountTitle',
+        'auth.emailCreateAccountMessage',
+        expect.any(Array)
+      );
+    });
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+
+    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    if (!confirmButton?.onPress) {
+      throw new Error('Expected create account confirm button');
+    }
+
+    await act(async () => {
+      await confirmButton.onPress?.();
+    });
+
+    await waitFor(() => {
+      expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'brand-new@example.com',
+        'secret123'
+      );
+    });
+    await waitFor(() => {
+      expect(mockCreateUserDocument).toHaveBeenCalledWith({ uid: 'new-user' });
+    });
+    expect(mockTrackLogin).toHaveBeenCalledWith('email');
+  });
+
+  it('shows invalid credentials when sign-in fails with wrong password', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue({
+      code: 'auth/wrong-password',
+    });
+
+    const { getByPlaceholderText, getByText } = render(<SignIn />);
+
+    fireEvent.changeText(getByPlaceholderText('auth.email'), 'user@example.com');
+    fireEvent.changeText(getByPlaceholderText('auth.password'), 'secret123');
+    pressEmailContinue(getByText);
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.invalidCredentials');
+    });
+
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+    expect(mockTrackLogin).not.toHaveBeenCalled();
+  });
+
+  it('shows the existing-account alert when account creation is rejected as already in use', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue({
+      code: 'auth/user-not-found',
+    });
+    (createUserWithEmailAndPassword as jest.Mock).mockRejectedValue({
+      code: 'auth/email-already-in-use',
+    });
 
     const { getByPlaceholderText, getByText } = render(<SignIn />);
 
@@ -232,17 +301,39 @@ describe('SignIn', () => {
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
-        'auth.emailAlreadyInUseTitle',
-        'auth.emailAlreadyLinkedWithProvider:Google'
+        'auth.emailCreateAccountTitle',
+        'auth.emailCreateAccountMessage',
+        expect.any(Array)
       );
     });
 
-    expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
-    expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
+    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    if (!confirmButton?.onPress) {
+      throw new Error('Expected create account confirm button');
+    }
+
+    await act(async () => {
+      await confirmButton.onPress?.();
+    });
+
+    await waitFor(() => {
+      expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'user@example.com',
+        'secret123'
+      );
+    });
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('auth.emailAlreadyInUseTitle', 'auth.emailAlreadyInUseMessage');
+    });
+
+    expect(mockCreateUserDocument).not.toHaveBeenCalled();
+    expect(mockTrackLogin).not.toHaveBeenCalled();
   });
 
-  it('shows an error when fetching sign-in methods fails', async () => {
-    (fetchSignInMethodsForEmail as jest.Mock).mockRejectedValue({
+  it('shows an error when sign-in is rate limited', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue({
       code: 'auth/too-many-requests',
     });
 
@@ -255,7 +346,6 @@ describe('SignIn', () => {
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith('auth.signInFailed', 'auth.tooManyAttempts');
     });
-    expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
     expect(mockTrackLogin).not.toHaveBeenCalled();
   });

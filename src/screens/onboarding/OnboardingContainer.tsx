@@ -9,7 +9,7 @@ import type { OnboardingSelections, OnboardingStepId } from '@/src/types/onboard
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +50,7 @@ export default function OnboardingContainer() {
   const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const saveOnboardingPromiseRef = useRef<Promise<void> | null>(null);
 
   const progressWidth = useSharedValue(0);
 
@@ -145,23 +146,28 @@ export default function OnboardingContainer() {
     updateProgress(prevIndex);
   }, [currentStepIndex, isFirstStep, updateProgress]);
 
-  const handleSaveOnboarding = useCallback(async () => {
-    try {
-      await onboardingService.saveOnboarding(selections);
-    } catch (e) {
-      console.error('[OnboardingContainer] Save failed:', e);
-    }
+  const handleSaveOnboarding = useCallback(() => {
+    const savePromise =
+      saveOnboardingPromiseRef.current ?? onboardingService.saveOnboarding(selections);
+    saveOnboardingPromiseRef.current = savePromise;
+
+    return savePromise;
   }, [selections]);
 
   const handlePersonalizingDone = useCallback(async () => {
     try {
+      await handleSaveOnboarding();
+    } catch {
+      return;
+    }
+
+    try {
       await completePersonalOnboarding();
+      router.replace('/(tabs)/home' as any);
     } catch (e) {
       console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
-    } finally {
-      router.replace('/(tabs)/home' as any);
     }
-  }, [completePersonalOnboarding, router]);
+  }, [completePersonalOnboarding, handleSaveOnboarding, router]);
 
   // Initialize progress on first render
   React.useEffect(() => {

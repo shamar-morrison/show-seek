@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -50,11 +51,14 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
     }
 
     const timeout = setTimeout(() => {
-      phraseOpacity.value = withTiming(0, { duration: 200 }, () => {
-        phraseOpacity.value = withDelay(50, withTiming(1, { duration: 300 }));
-      });
+      phraseOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
+        if (!finished) {
+          return;
+        }
 
-      setPhraseIndex((prev) => Math.min(prev + 1, PHRASES_KEYS.length - 1));
+        phraseOpacity.value = withDelay(50, withTiming(1, { duration: 300 }));
+        runOnJS(setPhraseIndex)((prev) => Math.min(prev + 1, PHRASES_KEYS.length - 1));
+      });
     }, PHRASE_INTERVAL_MS);
 
     return () => clearTimeout(timeout);

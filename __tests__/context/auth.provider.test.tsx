@@ -56,6 +56,7 @@ describe('AuthProvider', () => {
   describe('auth state subscription', () => {
     it('should update user state when onAuthStateChanged fires with user', async () => {
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      mockCurrentUser = mockUser;
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -77,6 +78,7 @@ describe('AuthProvider', () => {
 
     it('should update user state to null when user signs out', async () => {
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      mockCurrentUser = mockUser;
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -123,6 +125,7 @@ describe('AuthProvider', () => {
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('set failed'));
+      mockCurrentUser = mockUser;
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -336,10 +339,38 @@ describe('AuthProvider', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should still mark personal onboarding complete when Firestore write fails', async () => {
+    it('should keep personal onboarding incomplete when Firestore write fails', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       mockCurrentUser = { uid: 'test-user-123', isAnonymous: false };
       (setDoc as jest.Mock).mockRejectedValueOnce(new Error('firestore write failed'));
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockCurrentUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+      });
+
+      await act(async () => {
+        await expect(result.current.completePersonalOnboarding()).rejects.toThrow(
+          'firestore write failed'
+        );
+      });
+
+      expect(setDoc).toHaveBeenCalled();
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[Auth] Failed to persist personal onboarding completion:',
+        expect.any(Error)
+      );
+      consoleSpy.mockRestore();
+    });
+
+    it('should mark personal onboarding complete after Firestore write succeeds', async () => {
+      mockCurrentUser = { uid: 'test-user-123', isAnonymous: false };
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -357,11 +388,6 @@ describe('AuthProvider', () => {
 
       expect(setDoc).toHaveBeenCalled();
       expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Auth] Failed to persist personal onboarding completion:',
-        expect.any(Error)
-      );
-      consoleSpy.mockRestore();
     });
   });
 });

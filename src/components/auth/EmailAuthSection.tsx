@@ -5,7 +5,6 @@ import { createUserDocument } from '@/src/firebase/user';
 import { trackLogin } from '@/src/services/analytics';
 import {
   createUserWithEmailAndPassword,
-  fetchSignInMethodsForEmail,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
@@ -21,27 +20,9 @@ import {
   View,
 } from 'react-native';
 
-const PROVIDER_LABELS: Record<string, string> = {
-  'google.com': 'Google',
-  'facebook.com': 'Facebook',
-  'github.com': 'GitHub',
-  'microsoft.com': 'Microsoft',
-  'apple.com': 'Apple',
-  'twitter.com': 'X',
-  password: 'Email and Password',
-};
-
 interface EmailAuthSectionProps {
   disabled?: boolean;
   onLoadingChange?: (loading: boolean) => void;
-}
-
-function getProviderLabel(method: string | undefined): string {
-  if (!method) {
-    return '';
-  }
-
-  return PROVIDER_LABELS[method] ?? method.replace(/\.(com|net|org)$/, '');
 }
 
 export default function EmailAuthSection({
@@ -78,20 +59,12 @@ export default function EmailAuthSection({
     void trackLogin('email');
   };
 
-  const showExistingAccountMessage = async (normalizedEmail: string, methods?: string[]) => {
-    try {
-      const signInMethods = methods ?? (await fetchSignInMethodsForEmail(auth, normalizedEmail));
-      const providerLabel = getProviderLabel(signInMethods[0]);
+  const showExistingAccountMessage = () => {
+    Alert.alert(t('auth.emailAlreadyInUseTitle'), t('auth.emailAlreadyInUseMessage'));
+  };
 
-      Alert.alert(
-        t('auth.emailAlreadyInUseTitle'),
-        providerLabel
-          ? t('auth.emailAlreadyLinkedWithProvider', { provider: providerLabel })
-          : t('auth.emailAlreadyInUseMessage')
-      );
-    } catch {
-      Alert.alert(t('auth.emailAlreadyInUseTitle'), t('auth.emailAlreadyInUseMessage'));
-    }
+  const showInvalidCredentialsMessage = () => {
+    Alert.alert(t('auth.signInFailed'), t('auth.invalidCredentials'));
   };
 
   const handleCreateAccount = async (normalizedEmail: string, enteredPassword: string) => {
@@ -106,7 +79,7 @@ export default function EmailAuthSection({
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
-        await showExistingAccountMessage(normalizedEmail);
+        showExistingAccountMessage();
         return;
       }
 
@@ -129,10 +102,29 @@ export default function EmailAuthSection({
           errorMessage = t('auth.signInFailed');
       }
 
-      Alert.alert(t('auth.signInFailed'), errorMessage);
+      Alert.alert(t('auth.signUpFailed'), errorMessage);
     } finally {
       updateLoading(false);
     }
+  };
+
+  const promptCreateAccount = (normalizedEmail: string, enteredPassword: string) => {
+    Alert.alert(
+      t('auth.emailCreateAccountTitle'),
+      t('auth.emailCreateAccountMessage'),
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('auth.createAccount'),
+          onPress: () => {
+            void handleCreateAccount(normalizedEmail, enteredPassword);
+          },
+        },
+      ]
+    );
   };
 
   const handleEmailContinue = async () => {
@@ -156,38 +148,16 @@ export default function EmailAuthSection({
     updateLoading(true);
 
     try {
-      const signInMethods = await fetchSignInMethodsForEmail(auth, normalizedEmail);
-
-      if (signInMethods.includes('password')) {
-        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-        await completeEmailAuth(userCredential.user);
-        return;
-      }
-
-      if (signInMethods.length > 0) {
-        await showExistingAccountMessage(normalizedEmail, signInMethods);
-        return;
-      }
-
-      Alert.alert(
-        t('auth.emailCreateAccountTitle'),
-        t('auth.emailCreateAccountMessage', { email: normalizedEmail }),
-        [
-          {
-            text: t('common.cancel'),
-            style: 'cancel',
-          },
-          {
-            text: t('auth.createAccount'),
-            onPress: () => {
-              void handleCreateAccount(normalizedEmail, password);
-            },
-          },
-        ]
-      );
+      const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+      await completeEmailAuth(userCredential.user);
     } catch (error: any) {
-      if (error?.code === 'auth/email-already-in-use') {
-        await showExistingAccountMessage(normalizedEmail);
+      if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-credential') {
+        promptCreateAccount(normalizedEmail, password);
+        return;
+      }
+
+      if (error?.code === 'auth/wrong-password') {
+        showInvalidCredentialsMessage();
         return;
       }
 
@@ -205,11 +175,6 @@ export default function EmailAuthSection({
           break;
         case 'auth/network-request-failed':
           errorMessage = t('errors.networkError');
-          break;
-        case 'auth/wrong-password':
-        case 'auth/user-not-found':
-        case 'auth/invalid-credential':
-          errorMessage = t('auth.signInFailed');
           break;
         default:
           errorMessage = t('auth.signInFailed');
@@ -265,6 +230,8 @@ export default function EmailAuthSection({
           onPress={() => setShowPassword((current) => !current)}
           disabled={isDisabled}
           activeOpacity={ACTIVE_OPACITY}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
         >
           {showPassword ? (
             <EyeOff size={20} color={COLORS.textSecondary} />

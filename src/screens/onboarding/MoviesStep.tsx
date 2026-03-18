@@ -90,6 +90,9 @@ export default function MoviesStep({ selectedMovies, onSelect, genreIds }: Movie
         <Pressable
           style={[styles.posterCard, isSelected && { borderColor: accentColor }]}
           onPress={() => handleToggle(item)}
+          accessibilityRole="button"
+          accessibilityLabel={item.title}
+          accessibilityState={{ selected: isSelected }}
         >
           <MediaImage source={uri ? { uri } : undefined} style={styles.posterImage} contentFit="cover" />
           {isSelected && (

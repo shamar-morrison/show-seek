@@ -61,7 +61,6 @@ export default function RegionStep({ selectedRegion, selectedViaOther, onSelect 
       <FlashListAny
         style={styles.list}
         data={regions}
-        estimatedItemSize={64}
         keyExtractor={(item: RegionItem) => item.code}
         renderItem={({ item: region, index }: { item: RegionItem; index: number }) => {
           const selected = isSelected(region.code);

@@ -19,7 +19,7 @@ jest.mock('@/src/components/ui/MediaImage', () => ({
   MediaImage: () => null,
 }));
 
-jest.mock('react-native-reanimated/mock', () => {
+jest.mock('react-native-reanimated', () => {
   const React = require('react');
   const { View } = require('react-native');
 
@@ -35,7 +35,12 @@ jest.mock('react-native-reanimated/mock', () => {
 });
 
 jest.mock('@shopify/flash-list', () => ({
-  FlashList: () => null,
+  FlashList: ({ children, ...props }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+
+    return React.createElement(View, { ...props, testID: 'mock-flash-list' }, children);
+  },
 }));
 
 import StreamingProvidersStep from '@/src/screens/onboarding/StreamingProvidersStep';

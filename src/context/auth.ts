@@ -85,6 +85,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Monitor auth state
   useEffect(() => {
+    let isMounted = true;
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         clearPersistedUserId();
@@ -103,22 +105,46 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         return;
       }
 
+      const uid = currentUser.uid;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Personal onboarding check timed out'));
+        }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+      });
+
+      const isCurrentSession = () => isMounted && auth.currentUser?.uid === uid;
+
       // Check personal onboarding status from Firestore
       try {
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        const userDoc = await Promise.race([getDoc(doc(db, 'users', uid)), timeoutPromise]);
+        if (!isCurrentSession()) {
+          return;
+        }
         const userData = userDoc.data();
         setHasCompletedPersonalOnboarding(
           userData?.hasCompletedPersonalOnboarding === true
         );
       } catch (e) {
+        if (!isCurrentSession()) {
+          return;
+        }
         console.error('[Auth] Personal onboarding check failed, defaulting to true:', e);
         // Default to true on error so user isn't stuck in onboarding
         setHasCompletedPersonalOnboarding(true);
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (isCurrentSession()) {
+          setLoading(false);
+        }
       }
-
-      setLoading(false);
     });
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -202,10 +228,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         { hasCompletedPersonalOnboarding: true },
         { merge: true }
       );
+      setHasCompletedPersonalOnboarding(true);
     } catch (e) {
       console.error('[Auth] Failed to persist personal onboarding completion:', e);
-    } finally {
-      setHasCompletedPersonalOnboarding(true);
+      throw e;
     }
   };
 

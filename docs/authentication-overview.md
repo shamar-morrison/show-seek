@@ -36,12 +36,13 @@ This document describes the current authentication model used in Show Seek.
 ### Email/Password Flow
 
 1. User taps **Continue with Email** on the main auth screen.
-2. App calls `fetchSignInMethodsForEmail` to check whether the email already has a password account.
-3. If a password account exists, app authenticates via `signInWithEmailAndPassword`.
-4. If no account exists, app shows a native confirmation alert explaining that a new account will be created and then calls `createUserWithEmailAndPassword` if the user continues.
-5. If the email is already tied to another provider, app shows provider-specific guidance instead of creating a duplicate account.
-6. Successful email sign-in or account creation both call `createUserDocument(user)` and `trackLogin('email')`.
-7. Root layout redirects authenticated users into tabs.
+2. App attempts `signInWithEmailAndPassword` directly using the entered email and password.
+3. If sign-in succeeds, the app calls `createUserDocument(user)` and `trackLogin('email')`.
+4. If Firebase returns `auth/user-not-found` or `auth/invalid-credential`, the app offers to create a new account with the entered password.
+5. If Firebase returns `auth/wrong-password`, the app shows an invalid-credentials alert and does not open the create-account modal.
+6. If the user confirms account creation, the app calls `createUserWithEmailAndPassword`, then `createUserDocument(user)` and `trackLogin('email')` on success.
+7. If account creation fails because the email is already in use, the app shows the generic existing-account alert.
+8. Root layout redirects authenticated users into tabs.
 
 ### Sign-Out
 
