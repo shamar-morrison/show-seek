@@ -3,9 +3,9 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import { collection, getDocs } from 'firebase/firestore';
 import React from 'react';
 
-const mockPreferences = {
-  showListIndicators: true,
-};
+import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
+
+const mockPreferences: { showListIndicators?: boolean } = {};
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
@@ -35,10 +35,10 @@ describe('useListMembership', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     clearFirestoreReadAuditEvents();
-    mockPreferences.showListIndicators = true;
+    delete mockPreferences.showListIndicators;
   });
 
-  it('shares a single membership-index fetch across consumers and exposes membership map', async () => {
+  it('shares a single membership-index fetch across consumers when the preference uses the default', async () => {
     const mockCollectionRef = { path: 'users/test-user-id/lists' };
     (collection as jest.Mock).mockReturnValue(mockCollectionRef);
     (getDocs as jest.Mock).mockResolvedValue({
@@ -86,6 +86,9 @@ describe('useListMembership', () => {
     );
 
     await waitFor(() => {
+      expect(result.current.membershipA.showIndicators).toBe(
+        DEFAULT_PREFERENCES.showListIndicators
+      );
       expect(result.current.membershipA.getListsForMedia(101, 'movie')).toEqual([
         'watchlist',
         'favorites',

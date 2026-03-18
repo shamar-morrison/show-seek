@@ -50,7 +50,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   autoAddToAlreadyWatched: true,
   autoRemoveFromShouldWatch: true,
   blurPlotSpoilers: false,
-  showListIndicators: false, // Off by default for new users
+  showListIndicators: true, // On by default for new users
   copyInsteadOfMove: false, // Off by default - bulk add moves items from source list
   quickMarkAsWatched: false, // Off by default - show date selection modal
   defaultLaunchScreen: '/(tabs)/home',
