@@ -211,7 +211,9 @@ export default function OnboardingContainer() {
   }
 
   if (isPersonalizing) {
-    return <PersonalizingScreen onComplete={handleSaveOnboarding} onDone={handlePersonalizingDone} />;
+    return (
+      <PersonalizingScreen onComplete={handleSaveOnboarding} onDone={handlePersonalizingDone} />
+    );
   }
 
   if (currentStep?.id === 'premium-paywall') {
@@ -253,10 +255,7 @@ export default function OnboardingContainer() {
         );
       case 'tv-shows':
         return (
-          <TVShowsStep
-            selectedShows={selections.selectedTVShows}
-            onSelect={handleTVShowsSelect}
-          />
+          <TVShowsStep selectedShows={selections.selectedTVShows} onSelect={handleTVShowsSelect} />
         );
       case 'movies':
         return (
@@ -268,10 +267,7 @@ export default function OnboardingContainer() {
         );
       case 'actors':
         return (
-          <ActorsStep
-            selectedActors={selections.selectedActors}
-            onSelect={handleActorsSelect}
-          />
+          <ActorsStep selectedActors={selections.selectedActors} onSelect={handleActorsSelect} />
         );
       case 'accent-color':
         return (
