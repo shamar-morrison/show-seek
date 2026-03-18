@@ -35,6 +35,9 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
   const phraseOpacity = useSharedValue(1);
   const hasCompleted = useRef(false);
   const saveStarted = useRef(false);
+  const updatePhraseIndex = React.useCallback((nextIndex: number) => {
+    setPhraseIndex(Math.min(nextIndex, PHRASES_KEYS.length - 1));
+  }, []);
 
   const progressAnimStyle = useAnimatedStyle(() => ({
     width: `${progressWidth.value}%`,
@@ -57,12 +60,12 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
         }
 
         phraseOpacity.value = withDelay(50, withTiming(1, { duration: 300 }));
-        runOnJS(setPhraseIndex)((prev) => Math.min(prev + 1, PHRASES_KEYS.length - 1));
+        runOnJS(updatePhraseIndex)(currentPhraseIndex + 1);
       });
     }, PHRASE_INTERVAL_MS);
 
     return () => clearTimeout(timeout);
-  }, [currentPhraseIndex, phraseOpacity]);
+  }, [currentPhraseIndex, phraseOpacity, updatePhraseIndex]);
 
   // Animate progress bar
   useEffect(() => {
