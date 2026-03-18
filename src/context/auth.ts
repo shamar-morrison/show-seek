@@ -1,15 +1,17 @@
-import { auth } from '@/src/firebase/config';
+import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+  const [hasCompletedPersonalOnboarding, setHasCompletedPersonalOnboarding] = useState<boolean | null>(null);
   const signOutInFlight = useRef<Promise<void> | null>(null);
 
   const persistUserId = (userId: string) => {
@@ -83,19 +85,69 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   // Monitor auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    let isMounted = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         clearPersistedUserId();
         setUser(null);
+        setHasCompletedPersonalOnboarding(null);
         setLoading(false);
         return;
       }
 
       persistUserId(currentUser.uid);
       setUser(currentUser);
-      setLoading(false);
+
+      if (currentUser.isAnonymous) {
+        setHasCompletedPersonalOnboarding(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasCompletedPersonalOnboarding(false);
+      setLoading(true);
+
+      const uid = currentUser.uid;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Personal onboarding check timed out'));
+        }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+      });
+
+      const isCurrentSession = () => isMounted && auth.currentUser?.uid === uid;
+
+      // Check personal onboarding status from Firestore
+      try {
+        const userDoc = await Promise.race([getDoc(doc(db, 'users', uid)), timeoutPromise]);
+        if (!isCurrentSession()) {
+          return;
+        }
+        const userData = userDoc.data();
+        setHasCompletedPersonalOnboarding(
+          userData?.hasCompletedPersonalOnboarding === true
+        );
+      } catch (e) {
+        if (!isCurrentSession()) {
+          return;
+        }
+        console.error('[Auth] Personal onboarding check failed, defaulting to true:', e);
+        // Default to true on error so user isn't stuck in onboarding
+        setHasCompletedPersonalOnboarding(true);
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        if (isCurrentSession()) {
+          setLoading(false);
+        }
+      }
     });
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -162,12 +214,38 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     setHasCompletedOnboarding(true);
   };
 
+  const completePersonalOnboarding = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      return;
+    }
+
+    if (currentUser.isAnonymous) {
+      setHasCompletedPersonalOnboarding(true);
+      return;
+    }
+
+    try {
+      await setDoc(
+        doc(db, 'users', currentUser.uid),
+        { hasCompletedPersonalOnboarding: true },
+        { merge: true }
+      );
+      setHasCompletedPersonalOnboarding(true);
+    } catch (e) {
+      console.error('[Auth] Failed to persist personal onboarding completion:', e);
+      throw e;
+    }
+  };
+
   return {
     user,
     isGuest: !!user?.isAnonymous,
     loading,
     hasCompletedOnboarding,
+    hasCompletedPersonalOnboarding,
     completeOnboarding,
+    completePersonalOnboarding,
     signOut,
   };
 });

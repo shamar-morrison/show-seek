@@ -1183,3 +1183,4 @@ export const syncPremiumStatus = onCall(
 
 export { importImdbChunk } from './imdbImport';
 export { revenuecatWebhook } from './revenuecatWebhook';
+export { backfillLegacyUsersOnboarding } from './backfillOnboarding';

@@ -34,11 +34,12 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if canWriteUserData(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region'])
+          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region', 'hasCompletedPersonalOnboarding'])
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
         && (!('accentColor' in request.resource.data) || request.resource.data.accentColor is string)
+        && (!('hasCompletedPersonalOnboarding' in request.resource.data) || request.resource.data.hasCompletedPersonalOnboarding is bool)
         && (!('region' in request.resource.data) || request.resource.data.region in [
           'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'FI', 'FR',
           'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX',
@@ -223,6 +224,11 @@ service cloud.firestore {
       match /favorite_persons/{personId} {
         allow read: if isOwner(userId);
         allow create: if canWriteUserData(userId)
+          && request.resource.data.keys().hasAll(['id', 'name', 'addedAt'])
+          && request.resource.data.id is int
+          && request.resource.data.name is string
+          && request.resource.data.addedAt is int;
+        allow update: if canWriteUserData(userId)
           && request.resource.data.keys().hasAll(['id', 'name', 'addedAt'])
           && request.resource.data.id is int
           && request.resource.data.name is string

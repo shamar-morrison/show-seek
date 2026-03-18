@@ -48,21 +48,30 @@ describe('FavoritePersonsService', () => {
       ]);
     });
 
-    it('rejects when the signed-in user does not match the requested user id', async () => {
-      mockUserId = 'another-user-id';
+    it('returns an empty array when no signed-in user is available', async () => {
+      mockUserId = null;
 
-      await expect(favoritePersonsService.getFavoritePersons('test-user-id')).rejects.toThrow(
-        'Please sign in to continue'
-      );
+      const result = await favoritePersonsService.getFavoritePersons('test-user-id');
+
+      expect(result).toEqual([]);
       expect(getDocs).not.toHaveBeenCalled();
     });
 
-    it('rejects when the user is anonymous', async () => {
+    it('returns an empty array when the user is anonymous', async () => {
       mockIsAnonymous = true;
 
-      await expect(favoritePersonsService.getFavoritePersons('test-user-id')).rejects.toThrow(
-        'Please sign in to continue'
-      );
+      const result = await favoritePersonsService.getFavoritePersons('test-user-id');
+
+      expect(result).toEqual([]);
+      expect(getDocs).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty array when the signed-in user does not match the requested user id', async () => {
+      mockUserId = 'another-user-id';
+
+      const result = await favoritePersonsService.getFavoritePersons('test-user-id');
+
+      expect(result).toEqual([]);
       expect(getDocs).not.toHaveBeenCalled();
     });
   });
@@ -92,6 +101,33 @@ describe('FavoritePersonsService', () => {
         name: 'Favorite Person',
         profilePath: '/favorite.jpg',
       });
+    });
+
+    it('returns null when no signed-in user is available', async () => {
+      mockUserId = null;
+
+      const result = await favoritePersonsService.getFavoritePerson('test-user-id', 101);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns null when the user is anonymous', async () => {
+      mockIsAnonymous = true;
+
+      const result = await favoritePersonsService.getFavoritePerson('test-user-id', 101);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('returns null when the signed-in user does not match the requested user id', async () => {
+      mockUserId = 'another-user-id';
+
+      const result = await favoritePersonsService.getFavoritePerson('test-user-id', 101);
+
+      expect(result).toBeNull();
+      expect(getDoc).not.toHaveBeenCalled();
     });
   });
 

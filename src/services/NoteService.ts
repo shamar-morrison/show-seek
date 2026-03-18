@@ -4,6 +4,7 @@ import {
 } from '@/src/services/firestoreReadAudit';
 import {
   createServiceLogger,
+  getSignedInUser,
   requireMatchingUser,
   rethrowFirestoreError,
 } from '@/src/services/serviceSupport';
@@ -87,7 +88,10 @@ class NoteService {
 
   async getUserNotes(userId: string): Promise<Note[]> {
     try {
-      requireMatchingUser(userId);
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
+        return [];
+      }
 
       this.logDebug('getUserNotes:start', {
         userId,
@@ -176,7 +180,10 @@ class NoteService {
     episode?: number
   ): Promise<Note | null> {
     try {
-      requireMatchingUser(userId);
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
+        return null;
+      }
 
       const noteRef = this.getNoteRef(userId, mediaType, mediaId, season, episode);
       this.logDebug('getNote:start', {

@@ -1,6 +1,7 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { useAuth } from '@/src/context/auth';
 import { ListMembershipIndex, listService } from '@/src/services/ListService';
+import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { usePreferences } from './usePreferences';
@@ -16,7 +17,7 @@ export function useListMembership() {
   const { preferences } = usePreferences();
   const { user } = useAuth();
   const userId = user?.uid;
-  const showIndicators = preferences?.showListIndicators ?? false;
+  const showIndicators = preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators;
   const cacheWindows = READ_QUERY_CACHE_WINDOWS as typeof READ_QUERY_CACHE_WINDOWS & {
     listIndicatorsStaleTimeMs?: number;
     listIndicatorsGcTimeMs?: number;
