@@ -1,4 +1,5 @@
 import { tmdbApi, getImageUrl, TMDB_IMAGE_SIZES, type TVShow } from '@/src/api/tmdb';
+import { AppErrorState } from '@/src/components/ui/AppErrorState';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { EXCLUDED_TV_GENRE_IDS } from '@/src/constants/genres';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
@@ -21,23 +22,39 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
 
-  const page1Query = useQuery({
+  const {
+    data: page1Data,
+    isLoading: isPage1Loading,
+    error: page1Error,
+    refetch: refetchPage1,
+  } = useQuery({
     queryKey: ['onboarding', 'trendingTV', 1],
     queryFn: () => tmdbApi.getTrendingTV('week', 1),
     staleTime: 1000 * 60 * 30,
   });
 
-  const page2Query = useQuery({
+  const {
+    data: page2Data,
+    isLoading: isPage2Loading,
+    error: page2Error,
+    refetch: refetchPage2,
+  } = useQuery({
     queryKey: ['onboarding', 'trendingTV', 2],
     queryFn: () => tmdbApi.getTrendingTV('week', 2),
     staleTime: 1000 * 60 * 30,
   });
 
-  const isLoading = page1Query.isLoading || page2Query.isLoading;
+  const isLoading = isPage1Loading || isPage2Loading;
+  const queryError = page1Error ?? page2Error;
+  const hasQueryError = Boolean(queryError);
 
   const shows = useMemo(() => {
-    const p1 = page1Query.data?.results ?? [];
-    const p2 = page2Query.data?.results ?? [];
+    if (!page1Data && !page2Data) {
+      return undefined;
+    }
+
+    const p1 = page1Data?.results ?? [];
+    const p2 = page2Data?.results ?? [];
     const merged = [...p1, ...p2];
     // Deduplicate by id
     const seen = new Set<number>();
@@ -66,7 +83,7 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
     return noExcludedGenres.filter(
       (s) => !EXCLUDED_NAME_PATTERNS.some((pattern) => pattern.test(s.name))
     );
-  }, [page1Query.data, page2Query.data]);
+  }, [page1Data, page2Data]);
 
   const selectedIds = useMemo(() => new Set(selectedShows.map((s) => s.id)), [selectedShows]);
 
@@ -124,7 +141,23 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
         )}
       </Animated.View>
 
-      {isLoading ? (
+      {hasQueryError ? (
+        <AppErrorState
+          error={queryError}
+          title={t('common.error')}
+          message={t('errors.loadingFailed')}
+          onRetry={() => {
+            if (page1Error) {
+              void refetchPage1();
+            }
+            if (page2Error) {
+              void refetchPage2();
+            }
+          }}
+          retryLabel={t('common.retry')}
+          accentColor={accentColor}
+        />
+      ) : isLoading || shows === undefined ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={accentColor} />
         </View>
