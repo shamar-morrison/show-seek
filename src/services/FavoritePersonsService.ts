@@ -1,7 +1,7 @@
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import {
   createServiceLogger,
-  requireMatchingUser,
+  getSignedInUser,
   requireSignedInUser,
   rethrowFirestoreError,
 } from '@/src/services/serviceSupport';
@@ -23,7 +23,10 @@ class FavoritePersonsService {
 
   async getFavoritePersons(userId: string): Promise<FavoritePerson[]> {
     try {
-      requireMatchingUser(userId);
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
+        return [];
+      }
 
       this.logDebug('getFavoritePersons:start', {
         userId,
@@ -61,7 +64,10 @@ class FavoritePersonsService {
 
   async getFavoritePerson(userId: string, personId: number): Promise<FavoritePerson | null> {
     try {
-      requireMatchingUser(userId);
+      const user = getSignedInUser();
+      if (!user || user.uid !== userId) {
+        return null;
+      }
 
       const personRef = this.getUserFavoritePersonRef(userId, personId.toString());
       const snapshot = await raceWithTimeout(

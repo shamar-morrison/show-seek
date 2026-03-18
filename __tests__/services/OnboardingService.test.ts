@@ -100,11 +100,23 @@ describe('OnboardingService', () => {
     mockMergeUserDocumentCache.mockReturnValue(undefined);
   });
 
-  it('surfaces a summary when the favorite-person write fails but the save flow continues', async () => {
+  it('resolves when every onboarding write succeeds', async () => {
+    await expect(onboardingService.saveOnboarding(selections)).resolves.toBeUndefined();
+
+    expect(mockUpdateProfile).toHaveBeenCalledTimes(1);
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    expect(mockUpdatePreference).toHaveBeenCalledTimes(1);
+    expect(mockAddToList).toHaveBeenCalledTimes(3);
+    expect(mockAddFavoritePerson).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects when a onboarding write fails after logging the summary', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockAddFavoritePerson.mockRejectedValueOnce(new Error('permission denied'));
 
-    await expect(onboardingService.saveOnboarding(selections)).resolves.toBeUndefined();
+    await expect(onboardingService.saveOnboarding(selections)).rejects.toThrow(
+      '[OnboardingService] Failed onboarding operations: actor-3'
+    );
 
     expect(mockUpdateProfile).toHaveBeenCalledTimes(1);
     expect(mockSetDoc).toHaveBeenCalledTimes(1);

@@ -13,8 +13,13 @@ import type { OnboardingSelections } from '@/src/types/onboarding';
  * OnboardingService
  *
  * Orchestrates all data persistence for the personalized onboarding flow.
- * Runs writes in parallel and surfaces a summary if any operation fails.
+ * Runs writes in parallel and rejects after logging a summary if any operation fails.
  */
+type OnboardingFailure = {
+  label: string;
+  reason: unknown;
+};
+
 class OnboardingService {
   /**
    * Save all onboarding selections in parallel.
@@ -114,6 +119,12 @@ class OnboardingService {
 
     if (failures.length > 0) {
       console.error('[OnboardingService] Failed onboarding operations:', failures);
+      const failureLabels = failures.map(({ label }) => label).join(', ');
+      const error = new Error(
+        `[OnboardingService] Failed onboarding operations: ${failureLabels}`
+      ) as Error & { failures: OnboardingFailure[] };
+      error.failures = failures;
+      throw error;
     }
   }
 }
