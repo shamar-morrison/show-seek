@@ -222,7 +222,7 @@ export default function OnboardingContainer() {
   }
 
   if (currentStep?.id === 'premium-paywall') {
-    return <OnboardingPaywallStep onClose={handleNext} />;
+    return <OnboardingPaywallStep displayName={selections.displayName} onClose={handleNext} />;
   }
 
   const renderStep = () => {

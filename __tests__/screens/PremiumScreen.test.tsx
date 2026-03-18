@@ -7,6 +7,13 @@ const mockRestorePurchases = jest.fn();
 const mockResetTestPurchase = jest.fn();
 const mockGetOfferings = jest.fn();
 const mockTrackPremiumPaywallView = jest.fn();
+const mockRouterBack = jest.fn();
+
+const mockAuthState = {
+  user: {
+    displayName: 'Taylor',
+  } as { displayName: string | null } | null,
+};
 
 const mockPremiumState = {
   isPremium: false,
@@ -28,6 +35,16 @@ const mockPremiumState = {
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
+}));
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => mockAuthState,
+}));
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    back: mockRouterBack,
+  }),
 }));
 
 jest.mock('@expo/vector-icons', () => ({
@@ -69,10 +86,12 @@ describe('PremiumScreen', () => {
 
   beforeEach(() => {
     (global as { __DEV__?: boolean }).__DEV__ = true;
+    mockRouterBack.mockReset();
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
     mockTrackPremiumPaywallView.mockReset();
+    mockAuthState.user = { displayName: 'Taylor' };
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockPremiumState.monthlyTrial = {
@@ -120,7 +139,7 @@ describe('PremiumScreen', () => {
   it('defaults to yearly selection when subscribing', () => {
     const { getByTestId, getByText, queryByTestId } = render(<PremiumScreen />);
 
-    expect(getByText('ShowSeek Premium')).toBeTruthy();
+    expect(getByText("Taylor, you're all set.")).toBeTruthy();
     expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
     expect(getByTestId('plan-yearly-badge')).toBeTruthy();
     expect(queryByTestId('plan-monthly-badge')).toBeNull();
@@ -133,7 +152,7 @@ describe('PremiumScreen', () => {
   it('renders the pricing controls inside the sticky footer', () => {
     const { getByText, getByTestId } = render(<PremiumScreen />);
 
-    expect(getByText('ShowSeek Premium')).toBeTruthy();
+    expect(getByText("Taylor, you're all set.")).toBeTruthy();
     expect(getByText('Subscribe')).toBeTruthy();
 
     const footer = getByTestId('premium-footer');
@@ -174,6 +193,24 @@ describe('PremiumScreen', () => {
     const { queryByTestId } = render(<PremiumScreen />);
 
     expect(queryByTestId('billing-helper-text')).toBeNull();
+  });
+
+  it('falls back to the generic ready title when the auth display name is blank', () => {
+    mockAuthState.user = { displayName: '   ' };
+
+    const { getByText, queryByText } = render(<PremiumScreen />);
+
+    expect(getByText("You're all set.")).toBeTruthy();
+    expect(queryByText(/, you're all set\./)).toBeNull();
+    expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
+  });
+
+  it('keeps the close button immediately available on the regular premium screen', () => {
+    const { getByTestId } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('premium-close-button'));
+
+    expect(mockRouterBack).toHaveBeenCalledTimes(1);
   });
 
   it('shows monthly trial-eligible helper text when monthly is selected and eligible', () => {

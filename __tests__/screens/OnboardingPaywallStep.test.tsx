@@ -1,4 +1,4 @@
-import { fireEvent, render, within } from '@testing-library/react-native';
+import { act, fireEvent, render, within } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPurchasePremium = jest.fn();
@@ -83,11 +83,17 @@ describe('OnboardingPaywallStep', () => {
     };
   });
 
-  it('renders the hero and sticky footer controls', () => {
-    const { getByTestId, getByText } = render(<OnboardingPaywallStep onClose={jest.fn()} />);
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
-    expect(getByText('ShowSeek Premium')).toBeTruthy();
-    expect(getByText('Unlock a smoother way to use ShowSeek.')).toBeTruthy();
+  it('renders the personalized hero copy and sticky footer controls', () => {
+    const { getByTestId, getByText } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    expect(getByText("Taylor, you're all set.")).toBeTruthy();
+    expect(getByText('Unlock everything you just set up.')).toBeTruthy();
 
     const footer = getByTestId('premium-footer');
     expect(within(footer).getByTestId('onboarding-plan-monthly')).toBeTruthy();
@@ -97,7 +103,7 @@ describe('OnboardingPaywallStep', () => {
   });
 
   it('expands the feature accordions by default and keeps Lists last', () => {
-    const rendered = render(<OnboardingPaywallStep onClose={jest.fn()} />);
+    const rendered = render(<OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />);
 
     expect(rendered.getByTestId('premium-features-section')).toBeTruthy();
     expect(rendered.getByText('Unlimited lists')).toBeTruthy();
@@ -116,8 +122,46 @@ describe('OnboardingPaywallStep', () => {
     );
   });
 
+  it('falls back to the generic ready title when the onboarding name is blank', () => {
+    const { getByText, queryByText } = render(
+      <OnboardingPaywallStep displayName="   " onClose={jest.fn()} />
+    );
+
+    expect(getByText("You're all set.")).toBeTruthy();
+    expect(queryByText(/, you're all set\./)).toBeNull();
+  });
+
+  it('keeps the close button hidden and untappable until the reveal delay finishes', () => {
+    jest.useFakeTimers();
+    const onClose = jest.fn();
+    const { getByTestId } = render(<OnboardingPaywallStep displayName="Taylor" onClose={onClose} />);
+
+    const closeButton = getByTestId('onboarding-paywall-close-button');
+
+    expect(closeButton.props.disabled).toBe(true);
+    fireEvent.press(closeButton);
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(2499);
+    });
+
+    expect(getByTestId('onboarding-paywall-close-button').props.disabled).toBe(true);
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(getByTestId('onboarding-paywall-close-button').props.disabled).toBe(false);
+
+    fireEvent.press(getByTestId('onboarding-paywall-close-button'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('subscribes to the selected plan from the footer', () => {
-    const { getByTestId } = render(<OnboardingPaywallStep onClose={jest.fn()} />);
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
 
     fireEvent.press(getByTestId('onboarding-plan-monthly'));
     fireEvent.press(getByTestId('onboarding-subscribe-button'));

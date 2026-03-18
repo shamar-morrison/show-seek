@@ -12,6 +12,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Animated,
   Linking,
   ScrollView,
   StyleSheet,
@@ -37,6 +38,8 @@ export interface PremiumPaywallPlanOption {
 interface PremiumPaywallScreenShellProps {
   children: React.ReactNode;
   closeButtonTestID: string;
+  closeButtonFadeDurationMs?: number;
+  closeButtonRevealDelayMs?: number;
   footer: React.ReactNode;
   onClose: () => void;
   subtitle: string;
@@ -63,12 +66,54 @@ interface PremiumFeaturesSectionProps {
 export function PremiumPaywallScreenShell({
   children,
   closeButtonTestID,
+  closeButtonFadeDurationMs = 0,
+  closeButtonRevealDelayMs = 0,
   contentBottomPadding = 152,
   footer,
   onClose,
   subtitle,
   title,
 }: PremiumPaywallScreenShellProps) {
+  const closeButtonOpacity = React.useRef(
+    new Animated.Value(closeButtonRevealDelayMs > 0 ? 0 : 1)
+  ).current;
+  const [isCloseButtonInteractive, setIsCloseButtonInteractive] = React.useState(
+    closeButtonRevealDelayMs <= 0
+  );
+
+  React.useEffect(() => {
+    if (closeButtonRevealDelayMs <= 0) {
+      closeButtonOpacity.setValue(1);
+      setIsCloseButtonInteractive(true);
+      return;
+    }
+
+    closeButtonOpacity.setValue(0);
+    setIsCloseButtonInteractive(false);
+
+    const timer = setTimeout(() => {
+      setIsCloseButtonInteractive(true);
+
+      if (closeButtonFadeDurationMs <= 0) {
+        closeButtonOpacity.setValue(1);
+        return;
+      }
+
+      Animated.timing(closeButtonOpacity, {
+        toValue: 1,
+        duration: closeButtonFadeDurationMs,
+        useNativeDriver: true,
+      }).start();
+    }, closeButtonRevealDelayMs);
+
+    return () => {
+      clearTimeout(timer);
+      if (typeof closeButtonOpacity.stopAnimation === 'function') {
+        closeButtonOpacity.stopAnimation();
+      }
+    };
+  }, [closeButtonFadeDurationMs, closeButtonOpacity, closeButtonRevealDelayMs]);
+
   return (
     <View style={styles.screen}>
       <Image
@@ -86,14 +131,17 @@ export function PremiumPaywallScreenShell({
       />
 
       <SafeAreaView style={styles.mainContent} edges={['top']}>
-        <TouchableOpacity
-          onPress={onClose}
-          activeOpacity={ACTIVE_OPACITY}
-          style={styles.closeButton}
-          testID={closeButtonTestID}
-        >
-          <X size={22} color={COLORS.white} />
-        </TouchableOpacity>
+        <Animated.View style={[styles.closeButtonWrapper, { opacity: closeButtonOpacity }]}>
+          <TouchableOpacity
+            onPress={isCloseButtonInteractive ? onClose : undefined}
+            activeOpacity={ACTIVE_OPACITY}
+            disabled={!isCloseButtonInteractive}
+            style={styles.closeButton}
+            testID={closeButtonTestID}
+          >
+            <X size={22} color={COLORS.white} />
+          </TouchableOpacity>
+        </Animated.View>
 
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingBottom: contentBottomPadding }]}
@@ -317,11 +365,13 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
-  closeButton: {
+  closeButtonWrapper: {
     position: 'absolute',
     right: SPACING.l,
     top: SPACING.xxl,
     zIndex: 10,
+  },
+  closeButton: {
     padding: SPACING.s,
     borderRadius: BORDER_RADIUS.round,
     backgroundColor: 'rgba(0,0,0,0.45)',

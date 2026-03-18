@@ -7,6 +7,7 @@ import {
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
@@ -32,6 +33,7 @@ export default function PremiumScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { user } = useAuth();
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const wasPremiumRef = React.useRef(isPremium);
@@ -48,6 +50,10 @@ export default function PremiumScreen() {
     selectedPlan === 'monthly' && monthlyTrial.isEligible
       ? t('premium.freeTrialEligibleMessage')
       : null;
+  const trimmedDisplayName = user?.displayName?.trim() ?? '';
+  const readyTitle = trimmedDisplayName
+    ? t('premium.readyTitle', { name: trimmedDisplayName })
+    : t('premium.readyTitleFallback');
 
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
@@ -200,7 +206,7 @@ export default function PremiumScreen() {
       }
       onClose={() => router.back()}
       subtitle={t('premium.unlockSubtitle')}
-      title={t('premium.unlockTitle')}
+      title={readyTitle}
     >
       <PremiumFeaturesSection />
     </PremiumPaywallScreenShell>
