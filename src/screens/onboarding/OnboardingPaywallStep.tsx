@@ -1,10 +1,10 @@
-import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import {
   PremiumFeaturesSection,
   PremiumPaywallFooter,
   PremiumPaywallScreenShell,
   type PremiumPaywallPlanOption,
 } from '@/src/components/premium/PremiumPaywallLayout';
+import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -13,20 +13,18 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 interface OnboardingPaywallStepProps {
+  displayName: string;
   onClose: () => void;
 }
 
-export default function OnboardingPaywallStep({ onClose }: OnboardingPaywallStepProps) {
+export default function OnboardingPaywallStep({
+  displayName,
+  onClose,
+}: OnboardingPaywallStepProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const {
-    isPremium,
-    isLoading,
-    monthlyTrial,
-    purchasePremium,
-    restorePurchases,
-    prices,
-  } = usePremium();
+  const { isPremium, isLoading, monthlyTrial, purchasePremium, restorePurchases, prices } =
+    usePremium();
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
@@ -37,6 +35,10 @@ export default function OnboardingPaywallStep({ onClose }: OnboardingPaywallStep
     selectedPlan === 'monthly' && monthlyTrial.isEligible
       ? t('premium.freeTrialEligibleMessage')
       : null;
+  const trimmedDisplayName = displayName.trim();
+  const readyTitle = trimmedDisplayName
+    ? t('premium.readyTitle', { name: trimmedDisplayName })
+    : t('premium.readyTitleFallback');
 
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
@@ -113,7 +115,8 @@ export default function OnboardingPaywallStep({ onClose }: OnboardingPaywallStep
   return (
     <PremiumPaywallScreenShell
       closeButtonTestID="onboarding-paywall-close-button"
-      contentBottomPadding={180}
+      closeButtonFadeDurationMs={450}
+      closeButtonRevealDelayMs={3000}
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
@@ -127,8 +130,8 @@ export default function OnboardingPaywallStep({ onClose }: OnboardingPaywallStep
         />
       }
       onClose={onClose}
-      subtitle={t('premium.unlockSubtitle')}
-      title={t('premium.unlockTitle')}
+      subtitle={t('premium.onboardingUnlockSubtitle')}
+      title={readyTitle}
     >
       <PremiumFeaturesSection />
     </PremiumPaywallScreenShell>

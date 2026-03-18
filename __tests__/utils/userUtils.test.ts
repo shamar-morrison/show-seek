@@ -1,4 +1,4 @@
-import { getInitials } from '@/src/utils/userUtils';
+import { getInitials, resolvePreferredDisplayName } from '@/src/utils/userUtils';
 
 describe('getInitials', () => {
   describe('with display name', () => {
@@ -53,5 +53,27 @@ describe('getInitials', () => {
     it('should return US when display name is whitespace and email is empty', () => {
       expect(getInitials('   ', '')).toBe('US');
     });
+  });
+});
+
+describe('resolvePreferredDisplayName', () => {
+  it('prefers the explicit primary name when present', () => {
+    expect(resolvePreferredDisplayName('  Jordan  ', 'Taylor', 'jordan@example.com')).toBe(
+      'Jordan'
+    );
+  });
+
+  it('falls back to the secondary name when the primary name is blank', () => {
+    expect(resolvePreferredDisplayName('   ', '  Taylor  ', 'taylor@example.com')).toBe('Taylor');
+  });
+
+  it('falls back to the email prefix when both names are blank', () => {
+    expect(resolvePreferredDisplayName('', '   ', 'fallback.user@example.com')).toBe(
+      'fallback.user'
+    );
+  });
+
+  it('returns an empty string when no usable name exists', () => {
+    expect(resolvePreferredDisplayName(null, undefined, null)).toBe('');
   });
 });

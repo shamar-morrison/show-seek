@@ -7,10 +7,12 @@ import {
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAuth } from '@/src/context/auth';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -32,6 +34,7 @@ export default function PremiumScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { user } = useAuth();
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const wasPremiumRef = React.useRef(isPremium);
@@ -48,6 +51,10 @@ export default function PremiumScreen() {
     selectedPlan === 'monthly' && monthlyTrial.isEligible
       ? t('premium.freeTrialEligibleMessage')
       : null;
+  const resolvedDisplayName = resolvePreferredDisplayName(user?.displayName, null, user?.email);
+  const readyTitle = resolvedDisplayName
+    ? t('premium.readyTitle', { name: resolvedDisplayName })
+    : t('premium.readyTitleFallback');
 
   React.useEffect(() => {
     if (!wasPremiumRef.current && isPremium) {
@@ -153,7 +160,6 @@ export default function PremiumScreen() {
   return (
     <PremiumPaywallScreenShell
       closeButtonTestID="premium-close-button"
-      contentBottomPadding={180}
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
@@ -200,7 +206,7 @@ export default function PremiumScreen() {
       }
       onClose={() => router.back()}
       subtitle={t('premium.unlockSubtitle')}
-      title={t('premium.unlockTitle')}
+      title={readyTitle}
     >
       <PremiumFeaturesSection />
     </PremiumPaywallScreenShell>

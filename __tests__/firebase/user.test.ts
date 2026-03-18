@@ -1,17 +1,20 @@
 import { createUserDocument } from '@/src/firebase/user';
 import * as userDocumentCache from '@/src/services/UserDocumentCache';
+import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const mockDoc = doc as jest.Mock;
 const mockGetDoc = getDoc as jest.Mock;
 const mockSetDoc = setDoc as jest.Mock;
 const mockServerTimestamp = serverTimestamp as jest.Mock;
+const mockUpdateProfile = updateProfile as jest.Mock;
 
 describe('createUserDocument', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDoc.mockReturnValue('user-ref');
     mockServerTimestamp.mockReturnValue('__serverTimestamp__');
+    mockUpdateProfile.mockResolvedValue(undefined);
   });
 
   it('creates a new user document with fallback displayName from email prefix', async () => {
@@ -33,6 +36,10 @@ describe('createUserDocument', () => {
       photoURL: null,
       createdAt: '__serverTimestamp__',
     });
+    expect(mockUpdateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: 'uid-1' }),
+      { displayName: 'new.user' }
+    );
   });
 
   it('creates a new user document with empty email fallback when email is null', async () => {
@@ -54,6 +61,7 @@ describe('createUserDocument', () => {
       photoURL: 'https://image.example/avatar.png',
       createdAt: '__serverTimestamp__',
     });
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
   it('merges createdAt into cache immediately after creating a user document', async () => {
@@ -103,6 +111,7 @@ describe('createUserDocument', () => {
       },
       { merge: true }
     );
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
 
   it('does not write when existing document values are already normalized and unchanged', async () => {

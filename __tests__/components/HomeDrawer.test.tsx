@@ -15,13 +15,14 @@ jest.mock('react-native', () => {
 const mockSignOut = jest.fn();
 const mockOnClose = jest.fn();
 const mockPush = jest.fn();
+const mockAuthState = {
+  user: { uid: 'user-1', displayName: 'Test User', email: 'test@example.com' },
+  isGuest: false,
+  signOut: mockSignOut,
+};
 
 jest.mock('@/src/context/auth', () => ({
-  useAuth: () => ({
-    user: { uid: 'user-1', displayName: 'Test User', email: 'test@example.com' },
-    isGuest: false,
-    signOut: mockSignOut,
-  }),
+  useAuth: () => mockAuthState,
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
@@ -61,6 +62,12 @@ import { HomeDrawer } from '@/src/components/HomeDrawer';
 describe('HomeDrawer sign out flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.user = {
+      uid: 'user-1',
+      displayName: 'Test User',
+      email: 'test@example.com',
+    };
+    mockAuthState.isGuest = false;
   });
 
   it('keeps drawer open while signing out and closes after signOut completes', async () => {
@@ -113,5 +120,17 @@ describe('HomeDrawer sign out flow', () => {
 
     expect(mockOnClose).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/(tabs)/home/where-to-watch' });
+  });
+
+  it('falls back to the email prefix when the auth display name is blank', () => {
+    mockAuthState.user = {
+      uid: 'user-1',
+      displayName: '   ',
+      email: 'fallback.user@example.com',
+    };
+
+    const { getByText } = render(<HomeDrawer visible onClose={mockOnClose} />);
+
+    expect(getByText('fallback.user')).toBeTruthy();
   });
 });

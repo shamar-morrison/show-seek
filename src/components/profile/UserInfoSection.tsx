@@ -1,6 +1,7 @@
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { User } from 'firebase/auth';
 import { Crown } from 'lucide-react-native';
 import React from 'react';
@@ -33,7 +34,9 @@ export function UserInfoSection({
 }: UserInfoSectionProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const displayName = isGuest ? t('profile.guestUser') : user?.displayName || t('profile.user');
+  const displayName = isGuest
+    ? t('profile.guestUser')
+    : resolvePreferredDisplayName(user?.displayName, null, user?.email) || t('profile.user');
   const email = user?.email || t('profile.noEmail');
 
   return (

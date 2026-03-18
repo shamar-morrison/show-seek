@@ -3,6 +3,7 @@ import { listService, type ListMediaItem } from '@/src/services/ListService';
 import { preferencesService } from '@/src/services/PreferencesService';
 import { auth, db } from '@/src/firebase/config';
 import { mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
+import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import type { OnboardingSelections } from '@/src/types/onboarding';
@@ -28,16 +29,26 @@ class OnboardingService {
     const tasks: Array<{ label: string; promise: Promise<unknown> }> = [];
 
     // 0. Display Name — update Firebase Auth profile + Firestore user doc
-    const trimmedDisplayName = selections.displayName.trim();
-    if (trimmedDisplayName && auth.currentUser) {
+    if (auth.currentUser) {
       const currentUser = auth.currentUser;
+      const resolvedDisplayName = resolvePreferredDisplayName(
+        selections.displayName,
+        currentUser.displayName,
+        currentUser.email
+      );
       tasks.push({
         label: 'display-name',
         promise: (async () => {
-          await updateProfile(currentUser, { displayName: trimmedDisplayName });
+          const currentAuthDisplayName = currentUser.displayName?.trim() ?? '';
+          if (resolvedDisplayName && currentAuthDisplayName !== resolvedDisplayName) {
+            await updateProfile(currentUser, { displayName: resolvedDisplayName });
+          }
+
           const userRef = doc(db, 'users', currentUser.uid);
-          await setDoc(userRef, { displayName: trimmedDisplayName }, { merge: true });
-          mergeUserDocumentCache(currentUser.uid, { displayName: trimmedDisplayName });
+          if (resolvedDisplayName) {
+            await setDoc(userRef, { displayName: resolvedDisplayName }, { merge: true });
+            mergeUserDocumentCache(currentUser.uid, { displayName: resolvedDisplayName });
+          }
         })(),
       });
     }
