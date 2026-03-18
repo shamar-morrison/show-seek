@@ -1,5 +1,5 @@
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -74,25 +74,31 @@ export default function PersonalizingScreen({ onComplete, onDone }: Personalizin
     saveStarted.current = true;
 
     const doComplete = async () => {
-      // Wait minimum duration for the animation
       const waitPromise = new Promise<void>((resolve) =>
         setTimeout(resolve, MIN_DURATION_MS)
       );
 
-      // Run save and wait in parallel
-      await Promise.all([onComplete(), waitPromise]);
+      try {
+        const [saveResult] = await Promise.allSettled([
+          Promise.resolve().then(() => onComplete()),
+          waitPromise,
+        ]);
 
-      // Only navigate after both the save and the minimum duration have elapsed
-      if (!hasCompleted.current) {
-        hasCompleted.current = true;
-        onDone();
+        if (saveResult.status === 'rejected') {
+          console.error('[PersonalizingScreen] Error during completion:', saveResult.reason);
+        }
+      } catch (e) {
+        console.error('[PersonalizingScreen] Error during completion:', e);
+      } finally {
+        if (!hasCompleted.current) {
+          hasCompleted.current = true;
+          onDone();
+        }
       }
     };
 
-    doComplete().catch((e) => {
-      console.error('[PersonalizingScreen] Error during completion:', e);
-    });
-  }, [onComplete]);
+    void doComplete();
+  }, [onComplete, onDone]);
 
   return (
     <View style={styles.container}>

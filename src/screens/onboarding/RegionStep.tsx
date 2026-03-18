@@ -2,39 +2,43 @@ import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Check } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { FlashList } from '@shopify/flash-list';
 
 interface RegionStepProps {
   selectedRegion: string | null;
-  onSelect: (regionCode: string) => void;
+  selectedViaOther: boolean;
+  onSelect: (regionCode: string, options?: { viaOther?: boolean }) => void;
 }
 
 const OTHER_SENTINEL = '__OTHER__';
+const FlashListAny = FlashList as unknown as React.ComponentType<any>;
 
-export default function RegionStep({ selectedRegion, onSelect }: RegionStepProps) {
+type RegionItem = {
+  code: string;
+  name: string;
+  emoji: string;
+};
+
+export default function RegionStep({ selectedRegion, selectedViaOther, onSelect }: RegionStepProps) {
   const { t } = useTranslation();
 
-  const regions = useMemo(() => {
+  const regions = useMemo<RegionItem[]>(() => {
     return [
       ...SUPPORTED_REGIONS,
       { code: OTHER_SENTINEL, name: t('personalOnboarding.otherRegion'), emoji: '🌍' },
     ];
   }, [t]);
 
-  // Track if "Other" was the explicit choice (maps to US internally)
-  const [selectedViaOther, setSelectedViaOther] = React.useState(false);
-
   const handleSelect = useCallback(
     (code: string) => {
       if (code === OTHER_SENTINEL) {
-        setSelectedViaOther(true);
-        onSelect('US');
+        onSelect('US', { viaOther: true });
       } else {
-        setSelectedViaOther(false);
-        onSelect(code);
+        onSelect(code, { viaOther: false });
       }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
@@ -54,31 +58,35 @@ export default function RegionStep({ selectedRegion, onSelect }: RegionStepProps
         <Text style={styles.subtitle}>{t('personalOnboarding.regionSubtitle')}</Text>
       </Animated.View>
 
-      <ScrollView
+      <FlashListAny
         style={styles.list}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {regions.map((region) => {
+        data={regions}
+        estimatedItemSize={64}
+        keyExtractor={(item: RegionItem) => item.code}
+        renderItem={({ item: region, index }: { item: RegionItem; index: number }) => {
           const selected = isSelected(region.code);
 
           return (
-            <Pressable
-              key={region.code}
-              style={[styles.regionItem, selected && styles.regionItemSelected]}
-              onPress={() => handleSelect(region.code)}
-            >
-              <Text style={styles.emoji}>{region.emoji}</Text>
-              <Text style={styles.regionName}>{region.name}</Text>
-              {selected && (
-                <View style={styles.checkBadge}>
-                  <Check size={14} color={COLORS.white} />
-                </View>
-              )}
-            </Pressable>
+            <Animated.View entering={FadeInDown.duration(300).delay(index * 40)}>
+              <Pressable
+                style={[styles.regionItem, selected && styles.regionItemSelected]}
+                accessibilityState={{ selected }}
+                onPress={() => handleSelect(region.code)}
+              >
+                <Text style={styles.emoji}>{region.emoji}</Text>
+                <Text style={styles.regionName}>{region.name}</Text>
+                {selected && (
+                  <View style={styles.checkBadge}>
+                    <Check size={14} color={COLORS.white} />
+                  </View>
+                )}
+              </Pressable>
+            </Animated.View>
           );
-        })}
-      </ScrollView>
+        }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
@@ -120,7 +128,7 @@ const styles = StyleSheet.create({
   regionItemSelected: {
     backgroundColor: COLORS.surfaceLight,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: COLORS.primary,
   },
   emoji: {
     fontSize: 24,

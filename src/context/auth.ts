@@ -97,6 +97,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       persistUserId(currentUser.uid);
       setUser(currentUser);
 
+      if (currentUser.isAnonymous) {
+        setHasCompletedPersonalOnboarding(true);
+        setLoading(false);
+        return;
+      }
+
       // Check personal onboarding status from Firestore
       try {
         const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
@@ -181,7 +187,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const completePersonalOnboarding = async () => {
     const currentUser = auth.currentUser;
-    if (!currentUser) return;
+    if (!currentUser) {
+      return;
+    }
+
+    if (currentUser.isAnonymous) {
+      setHasCompletedPersonalOnboarding(true);
+      return;
+    }
 
     try {
       await setDoc(
@@ -191,9 +204,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       );
     } catch (e) {
       console.error('[Auth] Failed to persist personal onboarding completion:', e);
+    } finally {
+      setHasCompletedPersonalOnboarding(true);
     }
-
-    setHasCompletedPersonalOnboarding(true);
   };
 
   return {

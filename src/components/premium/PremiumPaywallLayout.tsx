@@ -192,11 +192,15 @@ export function PremiumFeaturesSection({
 }: PremiumFeaturesSectionProps) {
   const { t } = useTranslation();
 
-  const orderedCategories = [...categories].sort((a, b) => {
-    if (a.id === 'lists') return 1;
-    if (b.id === 'lists') return -1;
-    return 0;
-  });
+  const orderedCategories = React.useMemo(
+    () =>
+      [...categories].sort((a, b) => {
+        if (a.id === 'lists') return 1;
+        if (b.id === 'lists') return -1;
+        return 0;
+      }),
+    [categories]
+  );
 
   return (
     <View style={styles.featuresSection} testID="premium-features-section">

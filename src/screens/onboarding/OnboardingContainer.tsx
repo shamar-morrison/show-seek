@@ -47,6 +47,7 @@ export default function OnboardingContainer() {
   const [selections, setSelections] = useState<OnboardingSelections>({
     ...EMPTY_ONBOARDING_SELECTIONS,
   });
+  const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -75,8 +76,9 @@ export default function OnboardingContainer() {
   );
 
   const handleRegionSelect = useCallback(
-    (regionCode: string) => {
+    (regionCode: string, options?: { viaOther?: boolean }) => {
       setSelections((prev) => ({ ...prev, region: regionCode }));
+      setSelectedViaOther(Boolean(options?.viaOther));
       setRegion(regionCode);
     },
     [setRegion]
@@ -152,8 +154,13 @@ export default function OnboardingContainer() {
   }, [selections]);
 
   const handlePersonalizingDone = useCallback(async () => {
-    await completePersonalOnboarding();
-    router.replace('/(tabs)/home' as any);
+    try {
+      await completePersonalOnboarding();
+    } catch (e) {
+      console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
+    } finally {
+      router.replace('/(tabs)/home' as any);
+    }
   }, [completePersonalOnboarding, router]);
 
   // Initialize progress on first render
@@ -211,6 +218,7 @@ export default function OnboardingContainer() {
         return (
           <RegionStep
             selectedRegion={selections.region}
+            selectedViaOther={selectedViaOther}
             onSelect={handleRegionSelect}
           />
         );

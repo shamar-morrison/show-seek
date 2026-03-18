@@ -4,7 +4,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Check } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -26,11 +26,11 @@ export default function GenresStep({ selectedGenreIds, onSelect }: GenresStepPro
     staleTime: Infinity,
   });
 
-  const selectedSet = new Set(selectedGenreIds);
+  const selectedSet = useMemo(() => new Set(selectedGenreIds), [selectedGenreIds]);
 
   const handleToggle = useCallback(
     (genre: Genre) => {
-      if (selectedSet.has(genre.id)) {
+      if (selectedGenreIds.includes(genre.id)) {
         onSelect(selectedGenreIds.filter((id) => id !== genre.id));
       } else {
         if (selectedGenreIds.length >= MAX_GENRES) return;
@@ -38,7 +38,7 @@ export default function GenresStep({ selectedGenreIds, onSelect }: GenresStepPro
       }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-    [selectedGenreIds, selectedSet, onSelect]
+    [selectedGenreIds, onSelect]
   );
 
   return (

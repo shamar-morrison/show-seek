@@ -228,6 +228,11 @@ service cloud.firestore {
           && request.resource.data.id is int
           && request.resource.data.name is string
           && request.resource.data.addedAt is int;
+        allow update: if canWriteUserData(userId)
+          && request.resource.data.keys().hasAll(['id', 'name', 'addedAt'])
+          && request.resource.data.id is int
+          && request.resource.data.name is string
+          && request.resource.data.addedAt is int;
         allow delete: if canWriteUserData(userId);
       }
 

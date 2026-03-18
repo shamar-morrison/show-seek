@@ -3,7 +3,7 @@ import { MediaImage } from '@/src/components/ui/MediaImage';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useQuery } from '@tanstack/react-query';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -31,7 +31,7 @@ export default function ActorsStep({ selectedActors, onSelect }: ActorsStepProps
     (p) => p.known_for_department === 'Acting' && p.profile_path
   );
 
-  const selectedIds = new Set(selectedActors.map((a) => a.id));
+  const selectedIds = useMemo(() => new Set(selectedActors.map((a) => a.id)), [selectedActors]);
 
   const handleToggle = useCallback(
     (actor: Person) => {

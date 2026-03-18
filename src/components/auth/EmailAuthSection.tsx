@@ -9,7 +9,7 @@ import {
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -54,14 +54,19 @@ export default function EmailAuthSection({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const latestOnLoadingChangeRef = useRef(onLoadingChange);
 
   const isDisabled = disabled || loading;
 
   useEffect(() => {
-    return () => {
-      onLoadingChange?.(false);
-    };
+    latestOnLoadingChangeRef.current = onLoadingChange;
   }, [onLoadingChange]);
+
+  useEffect(() => {
+    return () => {
+      latestOnLoadingChangeRef.current?.(false);
+    };
+  }, []);
 
   const updateLoading = (nextLoading: boolean) => {
     setLoading(nextLoading);

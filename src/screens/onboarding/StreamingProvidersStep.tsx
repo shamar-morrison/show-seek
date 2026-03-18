@@ -1,4 +1,5 @@
 import { tmdbApi, type WatchProvider } from '@/src/api/tmdb';
+import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -19,7 +20,7 @@ export default function StreamingProvidersStep() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['onboarding', 'watchProviders'],
     queryFn: () => tmdbApi.getWatchProviders('movie'),
     staleTime: 1000 * 60 * 60 * 24 * 30, // 30 days - providers rarely change
@@ -82,6 +83,17 @@ export default function StreamingProvidersStep() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={accentColor} />
         </View>
+      ) : isError ? (
+        <AppErrorState
+          error={error}
+          title={t('common.error')}
+          message={t('errors.generic')}
+          onRetry={() => {
+            void refetch();
+          }}
+          retryLabel={t('common.retry')}
+          accentColor={accentColor}
+        />
       ) : (
         <FlashList
           data={providers}

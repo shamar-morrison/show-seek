@@ -67,7 +67,7 @@ export default function MoviesStep({ selectedMovies, onSelect, genreIds }: Movie
     });
   }, [thisYearQuery.data, lastYearQuery.data]);
 
-  const selectedIds = new Set(selectedMovies.map((m) => m.id));
+  const selectedIds = useMemo(() => new Set(selectedMovies.map((m) => m.id)), [selectedMovies]);
 
   const handleToggle = useCallback(
     (movie: Movie) => {
@@ -91,7 +91,7 @@ export default function MoviesStep({ selectedMovies, onSelect, genreIds }: Movie
           style={[styles.posterCard, isSelected && { borderColor: accentColor }]}
           onPress={() => handleToggle(item)}
         >
-          <MediaImage source={{ uri: uri! }} style={styles.posterImage} contentFit="cover" />
+          <MediaImage source={uri ? { uri } : undefined} style={styles.posterImage} contentFit="cover" />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
               <Check size={12} color={COLORS.white} />

@@ -68,18 +68,18 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
     );
   }, [page1Query.data, page2Query.data]);
 
-  const selectedIds = new Set(selectedShows.map((s) => s.id));
+  const selectedIds = useMemo(() => new Set(selectedShows.map((s) => s.id)), [selectedShows]);
 
   const handleToggle = useCallback(
     (show: TVShow) => {
-      if (selectedIds.has(show.id)) {
+      if (selectedShows.some((selectedShow) => selectedShow.id === show.id)) {
         onSelect(selectedShows.filter((s) => s.id !== show.id));
       } else {
         onSelect([...selectedShows, show]);
       }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-    [selectedShows, selectedIds, onSelect]
+    [selectedShows, onSelect]
   );
 
   const renderItem = useCallback(
@@ -92,7 +92,12 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
           style={[styles.posterCard, isSelected && { borderColor: accentColor }]}
           onPress={() => handleToggle(item)}
         >
-          <MediaImage source={{ uri: uri! }} style={styles.posterImage} contentFit="cover" />
+          <MediaImage
+            source={uri ? { uri } : undefined}
+            style={styles.posterImage}
+            contentFit="cover"
+            placeholderType="tv"
+          />
           {isSelected && (
             <View style={[styles.checkBadge, { backgroundColor: accentColor }]}>
               <Check size={12} color={COLORS.white} />
