@@ -99,7 +99,7 @@ describe('OnboardingPaywallStep', () => {
     expect(within(footer).getByTestId('onboarding-plan-monthly')).toBeTruthy();
     expect(within(footer).getByTestId('onboarding-plan-yearly')).toBeTruthy();
     expect(within(footer).getByTestId('onboarding-subscribe-button')).toBeTruthy();
-    expect(within(footer).getByText('Subscribe')).toBeTruthy();
+    expect(within(footer).getByText('Continue')).toBeTruthy();
   });
 
   it('expands the feature accordions by default and keeps Lists last', () => {
@@ -143,7 +143,7 @@ describe('OnboardingPaywallStep', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(2499);
+      jest.advanceTimersByTime(2999);
     });
 
     expect(getByTestId('onboarding-paywall-close-button').props.disabled).toBe(true);

@@ -141,7 +141,7 @@ describe('PremiumScreen', () => {
 
     expect(queryByTestId('subscribe-button')).toBeNull();
     expect(queryByTestId('premium-close-button')).toBeNull();
-    expect(queryByText('Subscribe')).toBeNull();
+    expect(queryByText('Continue')).toBeNull();
     expect(mockTrackPremiumPaywallView).not.toHaveBeenCalled();
   });
 
@@ -162,7 +162,7 @@ describe('PremiumScreen', () => {
     const { getByText, getByTestId } = render(<PremiumScreen />);
 
     expect(getByText("Taylor, you're all set.")).toBeTruthy();
-    expect(getByText('Subscribe')).toBeTruthy();
+    expect(getByText('Continue')).toBeTruthy();
 
     const footer = getByTestId('premium-footer');
     expect(within(footer).getByTestId('plan-monthly')).toBeTruthy();
