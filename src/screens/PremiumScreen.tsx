@@ -10,6 +10,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
@@ -34,16 +35,28 @@ export default function PremiumScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
-  const { user } = useAuth();
+  const { loading: isAuthLoading, user } = useAuth();
+  const requireAccount = useAccountRequired();
   const [isRestoring, setIsRestoring] = React.useState(false);
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const wasPremiumRef = React.useRef(isPremium);
+  const isGuestBlocked = !user || user.isAnonymous;
 
   React.useEffect(() => {
-    if (!isLoading && !isPremium) {
+    if (isAuthLoading || !isGuestBlocked) {
+      return;
+    }
+
+    if (requireAccount()) {
+      router.back();
+    }
+  }, [isAuthLoading, isGuestBlocked, requireAccount, router]);
+
+  React.useEffect(() => {
+    if (!isAuthLoading && !isGuestBlocked && !isLoading && !isPremium) {
       void trackPremiumPaywallView();
     }
-  }, [isLoading, isPremium]);
+  }, [isAuthLoading, isGuestBlocked, isLoading, isPremium]);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
@@ -112,8 +125,12 @@ export default function PremiumScreen() {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isLoading) {
     return <FullScreenLoading />;
+  }
+
+  if (isGuestBlocked) {
+    return null;
   }
 
   if (isPremium) {

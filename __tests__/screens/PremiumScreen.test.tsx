@@ -8,12 +8,15 @@ const mockResetTestPurchase = jest.fn();
 const mockGetOfferings = jest.fn();
 const mockTrackPremiumPaywallView = jest.fn();
 const mockRouterBack = jest.fn();
+const mockRequireAccount = jest.fn(() => false);
 
 const mockAuthState = {
   user: {
     displayName: 'Taylor',
     email: 'taylor@example.com',
-  } as { displayName: string | null; email?: string | null } | null,
+    isAnonymous: false,
+  } as { displayName: string | null; email?: string | null; isAnonymous?: boolean } | null,
+  loading: false,
 };
 
 const mockPremiumState = {
@@ -40,6 +43,10 @@ jest.mock('@/src/context/PremiumContext', () => ({
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockRequireAccount,
 }));
 
 jest.mock('expo-router', () => ({
@@ -92,7 +99,9 @@ describe('PremiumScreen', () => {
     mockRestorePurchases.mockReset().mockResolvedValue(false);
     mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
     mockTrackPremiumPaywallView.mockReset();
-    mockAuthState.user = { displayName: 'Taylor', email: 'taylor@example.com' };
+    mockRequireAccount.mockReset().mockReturnValue(false);
+    mockAuthState.user = { displayName: 'Taylor', email: 'taylor@example.com', isAnonymous: false };
+    mockAuthState.loading = false;
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockPremiumState.monthlyTrial = {
@@ -134,6 +143,27 @@ describe('PremiumScreen', () => {
 
     render(<PremiumScreen />);
 
+    expect(mockTrackPremiumPaywallView).not.toHaveBeenCalled();
+  });
+
+  it('blocks guest users from viewing the premium paywall', async () => {
+    mockAuthState.user = {
+      displayName: 'Taylor',
+      email: 'taylor@example.com',
+      isAnonymous: true,
+    };
+    mockRequireAccount.mockReturnValue(true);
+
+    const { queryByTestId, queryByText } = render(<PremiumScreen />);
+
+    await waitFor(() => {
+      expect(mockRequireAccount).toHaveBeenCalled();
+      expect(mockRouterBack).toHaveBeenCalledTimes(1);
+    });
+
+    expect(queryByTestId('subscribe-button')).toBeNull();
+    expect(queryByTestId('premium-close-button')).toBeNull();
+    expect(queryByText('Subscribe')).toBeNull();
     expect(mockTrackPremiumPaywallView).not.toHaveBeenCalled();
   });
 
@@ -197,7 +227,11 @@ describe('PremiumScreen', () => {
   });
 
   it('falls back to the email prefix when the auth display name is blank', () => {
-    mockAuthState.user = { displayName: '   ', email: 'fallback.user@example.com' };
+    mockAuthState.user = {
+      displayName: '   ',
+      email: 'fallback.user@example.com',
+      isAnonymous: false,
+    };
 
     const { getByText, queryByText } = render(<PremiumScreen />);
 
@@ -207,7 +241,7 @@ describe('PremiumScreen', () => {
   });
 
   it('falls back to the generic ready title when both auth display name and email are blank', () => {
-    mockAuthState.user = { displayName: '   ', email: null };
+    mockAuthState.user = { displayName: '   ', email: null, isAnonymous: false };
 
     const { getByText, queryByText } = render(<PremiumScreen />);
 

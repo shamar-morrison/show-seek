@@ -2,6 +2,7 @@ import { LibraryNavigationCard } from '@/src/components/library/LibraryNavigatio
 import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { useRouter } from 'expo-router';
@@ -41,6 +42,7 @@ type SectionData = {
 export default function LibraryScreen() {
   const router = useRouter();
   const { isPremium } = usePremium();
+  const isAccountRequired = useAccountRequired();
   const { t } = useTranslation();
 
   // Define sections with translation keys
@@ -172,11 +174,18 @@ export default function LibraryScreen() {
       const showPremiumBadge = isPremiumFeature && !isPremium;
 
       const handlePress = () => {
-        if (isPremiumFeature && !isPremium) {
-          router.push('/premium' as any);
-        } else {
-          handleNavigate(item.route);
+        if (isPremiumFeature) {
+          if (isAccountRequired()) {
+            return;
+          }
+
+          if (!isPremium) {
+            router.push('/premium' as any);
+            return;
+          }
         }
+
+        handleNavigate(item.route);
       };
 
       return (
@@ -190,7 +199,7 @@ export default function LibraryScreen() {
         />
       );
     },
-    [handleNavigate, isPremium]
+    [handleNavigate, isAccountRequired, isPremium, router]
   );
 
   const renderSectionHeader = useCallback(

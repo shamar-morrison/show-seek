@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPush = jest.fn();
+const mockRequireAccount = jest.fn(() => false);
 const mockPremiumState = {
   isPremium: false,
 };
@@ -21,6 +22,10 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
+}));
+
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockRequireAccount,
 }));
 
 jest.mock('@/src/context/AccentColorProvider', () => ({
@@ -79,6 +84,7 @@ describe('LibraryScreen premium access', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPremiumState.isPremium = false;
+    mockRequireAccount.mockReturnValue(false);
   });
 
   it('lets free users open notes and reminders while keeping widgets premium-locked', () => {
@@ -91,5 +97,26 @@ describe('LibraryScreen premium access', () => {
     expect(mockPush).toHaveBeenNthCalledWith(1, '/(tabs)/library/notes');
     expect(mockPush).toHaveBeenNthCalledWith(2, '/(tabs)/library/reminders');
     expect(mockPush).toHaveBeenNthCalledWith(3, '/premium');
+  });
+
+  it('blocks guest users from reaching premium through widgets', () => {
+    mockRequireAccount.mockReturnValue(true);
+
+    const { getByTestId } = render(<LibraryScreen />);
+
+    fireEvent.press(getByTestId('library-nav-widgets'));
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('lets premium users open the widgets screen', () => {
+    mockPremiumState.isPremium = true;
+
+    const { getByTestId } = render(<LibraryScreen />);
+
+    fireEvent.press(getByTestId('library-nav-widgets'));
+
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/widgets');
   });
 });
