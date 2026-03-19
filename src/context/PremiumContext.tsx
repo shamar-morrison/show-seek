@@ -6,7 +6,6 @@ import {
 } from '@/src/context/premiumBilling';
 import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
-import i18n from '@/src/i18n';
 import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
 import { configureRevenueCat } from '@/src/services/revenueCat';
 import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
@@ -15,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, AppState, Linking, Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import Purchases, {
   PURCHASES_ERROR_CODE,
   type CustomerInfo,
@@ -42,7 +41,6 @@ interface PremiumState {
   isLoading: boolean;
   purchasePremium: (plan: PremiumPlan, options?: { useTrial?: boolean }) => Promise<boolean>;
   restorePurchases: () => Promise<boolean>;
-  resetTestPurchase: () => Promise<void>;
   prices: PremiumPrices;
   monthlyTrial: MonthlyTrialAvailability;
   checkPremiumFeature: (featureName: string) => boolean;
@@ -511,43 +509,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
   }, [applyCustomerInfo, user]);
 
-  const resetTestPurchase = useCallback(async () => {
-    if (Platform.OS !== 'android') {
-      return;
-    }
-
-    try {
-      const configured = await configureRevenueCat();
-      if (!configured) {
-        throw new Error('RevenueCat SDK key is missing.');
-      }
-
-      const customerInfo = await Purchases.getCustomerInfo();
-      if (customerInfo.managementURL) {
-        await Linking.openURL(customerInfo.managementURL);
-        return;
-      }
-
-      Alert.alert(i18n.t('premium.noPurchaseFoundTitle'), i18n.t('premium.noPurchaseFoundMessage'));
-    } catch (err: unknown) {
-      console.error('Reset error:', err);
-      const rawResetErrorMessage =
-        (typeof (err as { message?: unknown } | null)?.message === 'string'
-          ? ((err as { message?: string }).message ?? '')
-          : '') ||
-        (typeof err === 'string' ? err : '') ||
-        (err != null ? String(err) : '');
-      const trimmedResetErrorMessage = rawResetErrorMessage.trim();
-      const resetErrorMessage =
-        !trimmedResetErrorMessage ||
-        trimmedResetErrorMessage === 'undefined' ||
-        trimmedResetErrorMessage === '[object Object]'
-          ? i18n.t('errors.generic')
-          : trimmedResetErrorMessage;
-      Alert.alert(i18n.t('premium.resetFailedTitle'), resetErrorMessage);
-    }
-  }, []);
-
   const isPremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
   const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
   const isLoading = isRevenueCatLoading || isFirestoreLoading;
@@ -584,7 +545,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     isLoading,
     purchasePremium,
     restorePurchases,
-    resetTestPurchase,
     prices,
     monthlyTrial,
     checkPremiumFeature: (_featureName: string) => isPremium,

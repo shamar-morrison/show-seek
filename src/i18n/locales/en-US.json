@@ -1128,16 +1128,8 @@
     }
   },
   "premium": {
-    "resetCompleteTitle": "Reset Complete",
-    "resetCompleteMessage": "Purchase consumed. You can now buy it again.",
-    "noPurchaseFoundTitle": "No Purchase Found",
-    "noPurchaseFoundMessage": "Could not find a purchase to consume.",
-    "resetFailedTitle": "Reset Failed",
     "alreadyPremiumDescription": "Thanks for supporting ShowSeek. Premium is already active on this account.",
     "alreadyPremiumTitle": "You're Premium",
-    "devResetButton": "Reset Purchase (Dev)",
-    "devResetMessage": "This will reset one-time purchases or open subscription management. Continue?",
-    "devResetTitle": "Reset Purchase (Dev)",
     "noPurchasesMessage": "We couldn't find any purchases to restore.",
     "restorePendingMessage": "Your purchase is still pending in Google Play. Please wait for completion and try restoring again.",
     "noPurchasesTitle": "No Purchases Found",

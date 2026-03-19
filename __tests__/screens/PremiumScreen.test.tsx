@@ -4,8 +4,6 @@ import { Alert } from 'react-native';
 
 const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
-const mockResetTestPurchase = jest.fn();
-const mockGetOfferings = jest.fn();
 const mockTrackPremiumPaywallView = jest.fn();
 const mockRouterBack = jest.fn();
 const mockRequireAccount = jest.fn(() => false);
@@ -24,7 +22,6 @@ const mockPremiumState = {
   isLoading: false,
   purchasePremium: mockPurchasePremium,
   restorePurchases: mockRestorePurchases,
-  resetTestPurchase: mockResetTestPurchase,
   prices: {
     monthly: '$3.00',
     yearly: '$12.00',
@@ -76,13 +73,6 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: 'SafeAreaView',
 }));
 
-jest.mock('react-native-purchases', () => ({
-  __esModule: true,
-  default: {
-    getOfferings: (...args: unknown[]) => mockGetOfferings(...args),
-  },
-}));
-
 jest.mock('@/src/services/analytics', () => ({
   trackPremiumPaywallView: (...args: unknown[]) => mockTrackPremiumPaywallView(...args),
 }));
@@ -97,7 +87,6 @@ describe('PremiumScreen', () => {
     mockRouterBack.mockReset();
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
-    mockResetTestPurchase.mockReset().mockResolvedValue(undefined);
     mockTrackPremiumPaywallView.mockReset();
     mockRequireAccount.mockReset().mockReturnValue(false);
     mockAuthState.user = { displayName: 'Taylor', email: 'taylor@example.com', isAnonymous: false };
@@ -113,17 +102,6 @@ describe('PremiumScreen', () => {
       monthly: '$3.00',
       yearly: '$12.00',
     };
-    mockGetOfferings.mockReset().mockResolvedValue({
-      all: {
-        Premium: {
-          availablePackages: [{ identifier: '$rc_monthly' }, { identifier: '$rc_annual' }],
-        },
-      },
-      current: {
-        availablePackages: [{ identifier: '$rc_monthly' }, { identifier: '$rc_annual' }],
-        identifier: 'Premium',
-      },
-    });
   });
 
   afterAll(() => {
@@ -190,6 +168,14 @@ describe('PremiumScreen', () => {
     expect(within(footer).getByTestId('plan-monthly')).toBeTruthy();
     expect(within(footer).getByTestId('plan-yearly')).toBeTruthy();
     expect(within(footer).getByTestId('subscribe-button')).toBeTruthy();
+  });
+
+  it('does not render dev-only paywall controls even in __DEV__ builds', () => {
+    const { queryByTestId, queryByText } = render(<PremiumScreen />);
+
+    expect(queryByTestId('test-offerings-button')).toBeNull();
+    expect(queryByText('Test Offerings (Dev)')).toBeNull();
+    expect(queryByText('Reset Purchase (Dev)')).toBeNull();
   });
 
   it('subscribes to monthly plan when monthly is selected', () => {
@@ -306,18 +292,6 @@ describe('PremiumScreen', () => {
     expect(getByTestId('plan-monthly-badge')).toHaveTextContent('7-day trial');
     expect(getByTestId('plan-yearly-badge')).toBeTruthy();
     expect(queryByTestId('billing-helper-text')).toBeNull();
-  });
-
-  it('runs manual offerings fetch from the dev debug button', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
-    const { getByTestId } = render(<PremiumScreen />);
-
-    fireEvent.press(getByTestId('test-offerings-button'));
-
-    await waitFor(() => {
-      expect(mockGetOfferings).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalledWith('Offerings', '2');
-    });
   });
 
   it('shows generic restore error message when restore fails without an error message', async () => {

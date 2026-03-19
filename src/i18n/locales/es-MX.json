@@ -1176,16 +1176,8 @@
     }
   },
   "premium": {
-    "resetCompleteTitle": "Restablecimiento completado",
-    "resetCompleteMessage": "Compra consumida. Ahora puedes comprarla de nuevo.",
-    "noPurchaseFoundTitle": "No se encontró la compra",
-    "noPurchaseFoundMessage": "No se pudo encontrar una compra para consumir.",
-    "resetFailedTitle": "Error al restablecer",
     "alreadyPremiumDescription": "Gracias por apoyar ShowSeek. Premium ya está activo en esta cuenta.",
     "alreadyPremiumTitle": "Ya eres Premium",
-    "devResetButton": "Restablecer compra (Dev)",
-    "devResetMessage": "Esto restablecerá compras únicas o abrirá la gestión de suscripciones. ¿Continuar?",
-    "devResetTitle": "Restablecer compra (Dev)",
     "noPurchasesMessage": "No hemos encontrado compras para restaurar.",
     "restorePendingMessage": "Tu compra aún aparece como pendiente en Google Play. Espera a que se complete y vuelve a intentar restaurar.",
     "noPurchasesTitle": "No se encontraron compras",

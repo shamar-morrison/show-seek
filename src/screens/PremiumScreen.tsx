@@ -19,7 +19,6 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PremiumScreen() {
@@ -29,7 +28,6 @@ export default function PremiumScreen() {
     monthlyTrial,
     purchasePremium,
     restorePurchases,
-    resetTestPurchase,
     prices,
   } = usePremium();
   const router = useRouter();
@@ -114,17 +112,6 @@ export default function PremiumScreen() {
     }
   };
 
-  const testOfferings = async () => {
-    try {
-      const offerings = await Purchases.getOfferings();
-      const premiumPackageCount = offerings.all.Premium?.availablePackages?.length ?? 0;
-      Alert.alert('Offerings', JSON.stringify(premiumPackageCount));
-    } catch (error) {
-      console.error('[RevenueCat Debug] Test fetch failed:', error);
-      Alert.alert('Error', String(error));
-    }
-  };
-
   if (isAuthLoading || isLoading) {
     return <FullScreenLoading />;
   }
@@ -180,38 +167,6 @@ export default function PremiumScreen() {
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
-          footerExtras={
-            __DEV__ ? (
-              <View>
-                <TouchableOpacity
-                  testID="test-offerings-button"
-                  style={[styles.restoreButton, { marginTop: 10, opacity: 0.9 }]}
-                  onPress={() => {
-                    void testOfferings();
-                  }}
-                >
-                  <Text style={styles.restoreButtonText}>Test Offerings (Dev)</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.restoreButton, { marginTop: 10, opacity: 0.9 }]}
-                  onPress={async () => {
-                    Alert.alert(t('premium.devResetTitle'), t('premium.devResetMessage'), [
-                      { text: t('common.cancel'), style: 'cancel' },
-                      {
-                        text: t('common.reset'),
-                        style: 'destructive',
-                        onPress: async () => {
-                          if (resetTestPurchase) await resetTestPurchase();
-                        },
-                      },
-                    ]);
-                  }}
-                >
-                  <Text style={styles.restoreButtonText}>{t('premium.devResetButton')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null
-          }
           isRestoring={isRestoring}
           monthlyTrialNote={monthlyTrialNote}
           onRestore={handleRestore}
@@ -262,13 +217,5 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  restoreButton: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  restoreButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
   },
 });

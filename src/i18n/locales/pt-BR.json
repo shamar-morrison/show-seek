@@ -1167,16 +1167,8 @@
     "noTVCreditsDescription": "Nenhum crédito de TV para mostrar."
   },
   "premium": {
-    "resetCompleteTitle": "Reset concluído",
-    "resetCompleteMessage": "Compra consumida. Agora você pode comprar novamente.",
-    "noPurchaseFoundTitle": "Nenhuma compra encontrada",
-    "noPurchaseFoundMessage": "Não foi possível encontrar uma compra para consumir.",
-    "resetFailedTitle": "Falha no reset",
     "alreadyPremiumDescription": "Obrigado por apoiar o ShowSeek. Premium já está ativo nesta conta.",
     "alreadyPremiumTitle": "Você é Premium",
-    "devResetButton": "Resetar compra (Dev)",
-    "devResetMessage": "Isto redefinirá compras avulsas ou abrirá o gerenciamento de assinaturas. Continuar?",
-    "devResetTitle": "Resetar compra (Dev)",
     "noPurchasesMessage": "Não encontramos nenhuma compra para restaurar.",
     "restorePendingMessage": "Sua compra ainda aparece como pendente no Google Play. Aguarde a conclusão e tente restaurar novamente.",
     "noPurchasesTitle": "Nenhuma compra encontrada",
