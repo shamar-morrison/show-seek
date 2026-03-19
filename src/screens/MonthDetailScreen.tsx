@@ -8,7 +8,7 @@ import { useCurrentTab } from '@/src/context/TabContext';
 import { useMonthDetail } from '@/src/hooks/useHistory';
 import { screenStyles } from '@/src/styles/screenStyles';
 import type { ListMediaItem } from '@/src/services/ListService';
-import type { ActivityItem } from '@/src/types/history';
+import type { ActivityItem, MonthWatchedItem } from '@/src/types/history';
 import { FlashList } from '@shopify/flash-list';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Calendar, Plus, Star, Tv } from 'lucide-react-native';
@@ -18,11 +18,6 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabType = 'watched' | 'rated' | 'added';
-
-/** Combined list item type for watched tab with mixed content */
-type WatchedListItem =
-  | { type: 'media'; data: ListMediaItem }
-  | { type: 'episode'; data: ActivityItem };
 
 /**
  * Tab button component
@@ -127,6 +122,21 @@ export default function MonthDetailScreen() {
     [currentTab, router]
   );
 
+  const handleWatchedItemPress = useCallback(
+    (item: MonthWatchedItem) => {
+      if (!currentTab) return;
+
+      const mediaId = extractNumericId(item.id);
+
+      if (item.mediaType === 'movie') {
+        router.push(`/(tabs)/${currentTab}/movie/${mediaId}` as any);
+      } else {
+        router.push(`/(tabs)/${currentTab}/tv/${mediaId}` as any);
+      }
+    },
+    [currentTab, router]
+  );
+
   const handleListItemPress = useCallback(
     (listItem: ListMediaItem) => {
       if (!currentTab) return;
@@ -157,48 +167,34 @@ export default function MonthDetailScreen() {
     );
   }, [monthDetail]);
 
-  const combinedWatchedItems = useMemo((): WatchedListItem[] => {
-    if (!monthDetail) return [];
-
-    const items: WatchedListItem[] = [];
-
-    // Add movies/TV shows as media items
-    const mediaItems = monthDetail.items.watched
-      .filter((item) => item.mediaType === 'movie' || item.mediaType === 'tv')
-      .map(
-        (item): ListMediaItem => ({
+  const watchedItems = useMemo(
+    () =>
+      monthDetail?.items.watched.map((item) => ({
+        item,
+        media: {
           id: extractNumericId(item.id),
           title: item.title,
           poster_path: item.posterPath,
-          media_type: item.mediaType as 'movie' | 'tv',
+          media_type: item.mediaType,
           vote_average: item.voteAverage || 0,
           release_date: item.releaseDate || '',
           addedAt: item.timestamp,
-          genre_ids: item.genreIds,
-        })
-      );
+        } satisfies ListMediaItem,
+        subtitle:
+          item.kind === 'episode-group'
+            ? t('media.numberOfEpisodes', { count: item.episodeCount })
+            : undefined,
+      })) ?? [],
+    [monthDetail, t]
+  );
 
-    mediaItems.forEach((media) => {
-      items.push({ type: 'media', data: media });
-    });
+  const currentItemCount = useMemo(() => {
+    if (!monthDetail) return 0;
 
-    // Add episodes
-    const episodes = monthDetail.items.watched.filter((item) => item.mediaType === 'episode');
-    episodes.forEach((episode) => {
-      items.push({ type: 'episode', data: episode });
-    });
-
-    // Sort by timestamp (most recent first), with secondary sort by ID for stability
-    return items.sort((a, b) => {
-      const timestampA = a.type === 'media' ? (a.data.addedAt ?? 0) : a.data.timestamp;
-      const timestampB = b.type === 'media' ? (b.data.addedAt ?? 0) : b.data.timestamp;
-      if (timestampB !== timestampA) {
-        return timestampB - timestampA;
-      }
-      // Secondary sort by ID for stable ordering when timestamps are equal
-      return String(a.data.id).localeCompare(String(b.data.id));
-    });
-  }, [monthDetail]);
+    if (activeTab === 'watched') return monthDetail.items.watched.length;
+    if (activeTab === 'rated') return monthDetail.items.rated.length;
+    return monthDetail.items.added.length;
+  }, [activeTab, monthDetail]);
 
   if (isLoading) {
     return <FullScreenLoading />;
@@ -232,9 +228,6 @@ export default function MonthDetailScreen() {
       </SafeAreaView>
     );
   }
-
-  // Get current items based on active tab
-  const currentItems = activeTab === 'watched' ? watched : activeTab === 'rated' ? rated : added;
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom']}>
@@ -272,7 +265,7 @@ export default function MonthDetailScreen() {
       <View style={styles.tabBar}>
         <TabButton
           label={t('stats.watched')}
-          count={watched.length}
+          count={monthDetail.stats.watched}
           isActive={activeTab === 'watched'}
           onPress={() => setActiveTab('watched')}
           icon={Tv}
@@ -297,7 +290,7 @@ export default function MonthDetailScreen() {
       </View>
 
       {/* Content based on active tab */}
-      {currentItems.length === 0 ? (
+      {currentItemCount === 0 ? (
         <View style={styles.emptyTabContent}>
           <Text style={styles.emptyTabText}>{t(`stats.monthDetail.emptyTab.${activeTab}`)}</Text>
         </View>
@@ -317,32 +310,17 @@ export default function MonthDetailScreen() {
         />
       ) : activeTab === 'watched' ? (
         <FlashList
-          data={combinedWatchedItems}
-          renderItem={({ item }) => {
-            if (item.type === 'media') {
-              return (
-                <MediaListCard
-                  item={item.data}
-                  onPress={handleListItemPress}
-                  movieLabel={movieLabel}
-                  tvShowLabel={tvShowLabel}
-                />
-              );
-            }
-            return <ActivityRatingCard item={item.data} onPress={handleItemPress} t={t} />;
-          }}
-          keyExtractor={(item, index) => {
-            if (item.type === 'media') {
-              return `${item.data.media_type}-${item.data.id}`;
-            }
-            const showId = item.data.tvShowId ?? 'unknown';
-            const season = item.data.seasonNumber ?? 0;
-            const episode = item.data.episodeNumber ?? 0;
-            if (!item.data.tvShowId && !item.data.seasonNumber && !item.data.episodeNumber) {
-              return `ep-${item.data.id}-${index}`;
-            }
-            return `ep-${showId}-${season}-${episode}`;
-          }}
+          data={watchedItems}
+          renderItem={({ item }) => (
+            <MediaListCard
+              item={item.media}
+              onPress={() => handleWatchedItemPress(item.item)}
+              subtitle={item.subtitle}
+              movieLabel={movieLabel}
+              tvShowLabel={tvShowLabel}
+            />
+          )}
+          keyExtractor={({ item }) => `${item.kind}-${item.mediaType}-${item.id}`}
           contentContainerStyle={styles.listContent}
         />
       ) : (

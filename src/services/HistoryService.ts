@@ -1,6 +1,12 @@
 import i18n from '../i18n';
 import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
-import type { ActivityItem, HistoryData, MonthlyDetail, MonthlyStats } from '../types/history';
+import type {
+  ActivityItem,
+  HistoryData,
+  MonthlyDetail,
+  MonthlyStats,
+  MonthWatchedItem,
+} from '../types/history';
 import { fetchUserCollection } from './firestoreHelpers';
 import type { UserList } from './ListService';
 import { normalizeRatingItem, type RatingItem } from './RatingService';
@@ -23,6 +29,16 @@ const TIME_OF_DAY = {
 } as const;
 
 class HistoryService {
+  private sortMonthWatchedItems(items: MonthWatchedItem[]): MonthWatchedItem[] {
+    return items.sort((a, b) => {
+      if (b.timestamp !== a.timestamp) {
+        return b.timestamp - a.timestamp;
+      }
+
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }
+
   /**
    * Format month string from timestamp
    */
@@ -502,28 +518,58 @@ class HistoryService {
       }
     });
 
-    // Convert to ActivityItems - start with episodes (now enriched with show metadata)
-    const watchedItems: ActivityItem[] = monthEpisodes.map((e) => ({
-      id: e.episodeId,
-      type: 'watched' as const,
-      mediaType: 'episode' as const,
-      title: e.episodeName,
-      posterPath: e.posterPath,
-      timestamp: e.watchedAt,
-      seasonNumber: e.seasonNumber,
-      episodeNumber: e.episodeNumber,
-      tvShowId: e.tvShowId,
-      tvShowName: e.tvShowName,
-    }));
+    const watchedItems: MonthWatchedItem[] = [];
+    let alreadyWatchedMediaCount = 0;
+
+    const episodesByShow = new Map<
+      number,
+      {
+        id: number;
+        mediaType: 'tv';
+        title: string;
+        posterPath: string | null;
+        timestamp: number;
+        episodeCount: number;
+      }
+    >();
+
+    monthEpisodes.forEach((episode) => {
+      const existing = episodesByShow.get(episode.tvShowId);
+
+      if (existing) {
+        existing.episodeCount += 1;
+        existing.timestamp = Math.max(existing.timestamp, episode.watchedAt);
+        return;
+      }
+
+      episodesByShow.set(episode.tvShowId, {
+        id: episode.tvShowId,
+        mediaType: 'tv',
+        title: episode.tvShowName,
+        posterPath: episode.posterPath,
+        timestamp: episode.watchedAt,
+        episodeCount: 1,
+      });
+    });
+
+    watchedItems.push(
+      ...[...episodesByShow.values()].map(
+        (item): MonthWatchedItem => ({
+          kind: 'episode-group',
+          ...item,
+        })
+      )
+    );
 
     // Also include movies and TV shows from the "already-watched" list
     const alreadyWatchedList = lists.find((l) => l.id === 'already-watched');
     if (alreadyWatchedList?.items) {
       Object.values(alreadyWatchedList.items).forEach((item) => {
         if (item.addedAt && item.addedAt >= startOfMonth && item.addedAt <= endOfMonth) {
+          alreadyWatchedMediaCount += 1;
           watchedItems.push({
+            kind: 'media',
             id: item.id,
-            type: 'watched' as const,
             mediaType: item.media_type,
             title: item.title || item.name || 'Unknown',
             posterPath: item.poster_path,
@@ -564,8 +610,7 @@ class HistoryService {
       };
     });
 
-    // Sort all items by timestamp (most recent first)
-    watchedItems.sort((a, b) => b.timestamp - a.timestamp);
+    this.sortMonthWatchedItems(watchedItems);
     ratedItems.sort((a, b) => b.timestamp - a.timestamp);
     monthListItems.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -591,7 +636,7 @@ class HistoryService {
       stats: {
         month,
         monthName: this.formatMonthName(month),
-        watched: watchedItems.length,
+        watched: monthEpisodes.length + alreadyWatchedMediaCount,
         rated: ratedItems.length,
         addedToLists: monthListItems.length,
         averageRating,

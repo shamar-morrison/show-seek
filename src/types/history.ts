@@ -27,6 +27,33 @@ export interface ActivityItem {
 }
 
 /**
+ * Display item for the monthly watched tab.
+ * Episode activity is grouped by show before reaching the UI.
+ */
+export type MonthWatchedItem =
+  | {
+      kind: 'media';
+      id: string | number;
+      mediaType: 'movie' | 'tv';
+      title: string;
+      posterPath: string | null;
+      timestamp: number;
+      releaseDate?: string | null;
+      voteAverage?: number;
+    }
+  | {
+      kind: 'episode-group';
+      id: string | number;
+      mediaType: 'tv';
+      title: string;
+      posterPath: string | null;
+      timestamp: number;
+      episodeCount: number;
+      releaseDate?: string | null;
+      voteAverage?: number;
+    };
+
+/**
  * Stats for a single month
  */
 export interface MonthlyStats {
@@ -60,7 +87,7 @@ export interface MonthlyDetail {
   monthName: string;
   stats: MonthlyStats;
   items: {
-    watched: ActivityItem[];
+    watched: MonthWatchedItem[];
     rated: ActivityItem[];
     added: ActivityItem[];
   };
