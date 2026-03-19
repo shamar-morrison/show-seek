@@ -136,6 +136,7 @@ export default function EpisodeDetailScreen() {
     episodeNumber
   );
   const toggleFavoriteMutation = useToggleFavoriteEpisode();
+  const isFavoriteActionLoading = isLoadingFavorite || toggleFavoriteMutation.isPending;
 
   const {
     note,
@@ -338,6 +339,7 @@ export default function EpisodeDetailScreen() {
   ]);
 
   const handleToggleFavorite = useCallback(() => {
+    if (isFavoriteActionLoading) return;
     if (isAccountRequired()) return;
     if (!episode || !tvShow) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -373,6 +375,7 @@ export default function EpisodeDetailScreen() {
     tvId,
     seasonNumber,
     episodeNumber,
+    isFavoriteActionLoading,
     t,
   ]);
 
@@ -571,18 +574,25 @@ export default function EpisodeDetailScreen() {
               <TouchableOpacity
                 style={styles.actionButtonWrapper}
                 onPress={handleToggleFavorite}
-                disabled={isLoadingFavorite}
+                disabled={isFavoriteActionLoading}
                 activeOpacity={ACTIVE_OPACITY}
+                testID="episode-favorite-action"
               >
                 <View style={styles.iconButton}>
-                  {isLoadingFavorite ? (
-                    <ActivityIndicator size="small" color={COLORS.text} />
-                  ) : (
-                    <Heart
-                      size={24}
-                      color={isFavorited ? accentColor : COLORS.text}
-                      fill={isFavorited ? accentColor : 'transparent'}
+                  {isFavoriteActionLoading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={COLORS.text}
+                      testID="episode-favorite-action-spinner"
                     />
+                  ) : (
+                    <View testID="episode-favorite-action-icon">
+                      <Heart
+                        size={24}
+                        color={isFavorited ? accentColor : COLORS.text}
+                        fill={isFavorited ? accentColor : 'transparent'}
+                      />
+                    </View>
                   )}
                 </View>
               </TouchableOpacity>

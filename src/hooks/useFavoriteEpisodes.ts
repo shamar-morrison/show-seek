@@ -5,6 +5,10 @@ import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
+const getFavoriteEpisodesQueryKey = (userId?: string) => ['favoriteEpisodes', userId] as const;
+const getFavoriteEpisodeQueryKey = (userId: string | undefined, episodeId: string) =>
+  ['favoriteEpisode', userId, episodeId] as const;
+
 export const useFavoriteEpisodes = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -14,13 +18,13 @@ export const useFavoriteEpisodes = () => {
   useEffect(() => {
     const previousUserId = previousUserIdRef.current;
     if (previousUserId && !userId) {
-      queryClient.removeQueries({ queryKey: ['favoriteEpisodes', previousUserId] });
+      queryClient.removeQueries({ queryKey: getFavoriteEpisodesQueryKey(previousUserId) });
     }
     previousUserIdRef.current = userId;
   }, [userId, queryClient]);
 
   const query = useQuery({
-    queryKey: ['favoriteEpisodes', userId],
+    queryKey: getFavoriteEpisodesQueryKey(userId),
     queryFn: () => favoriteEpisodeService.getFavoriteEpisodes(userId!),
     enabled: !!userId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
@@ -74,13 +78,68 @@ export const useToggleFavoriteEpisode = () => {
         await favoriteEpisodeService.addFavoriteEpisode(userId, episodeData);
       }
     },
-    onSuccess: async (_data, variables) => {
+    onMutate: async (variables) => {
+      if (!userId) {
+        throw new Error('Please sign in to continue');
+      }
+
+      const listQueryKey = getFavoriteEpisodesQueryKey(userId);
+      const detailQueryKey = getFavoriteEpisodeQueryKey(userId, variables.episodeData.id);
+
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: listQueryKey }),
+        queryClient.cancelQueries({ queryKey: detailQueryKey }),
+      ]);
+
+      const previousFavorites = queryClient.getQueryData<FavoriteEpisode[]>(listQueryKey);
+      const previousFavoriteEpisode = queryClient.getQueryData<FavoriteEpisode | null>(
+        detailQueryKey
+      );
+
+      const optimisticFavorite: FavoriteEpisode = {
+        ...variables.episodeData,
+        addedAt:
+          previousFavorites?.find((episode) => episode.id === variables.episodeData.id)?.addedAt ??
+          previousFavoriteEpisode?.addedAt ??
+          Date.now(),
+      };
+
+      queryClient.setQueryData<FavoriteEpisode[]>(listQueryKey, (current) => {
+        if (variables.isFavorited) {
+          return (current ?? []).filter((episode) => episode.id !== variables.episodeData.id);
+        }
+
+        const withoutExisting = (current ?? []).filter(
+          (episode) => episode.id !== optimisticFavorite.id
+        );
+        return [optimisticFavorite, ...withoutExisting];
+      });
+
+      queryClient.setQueryData<FavoriteEpisode | null>(
+        detailQueryKey,
+        variables.isFavorited ? null : optimisticFavorite
+      );
+
+      return {
+        listQueryKey,
+        detailQueryKey,
+        previousFavorites,
+        previousFavoriteEpisode,
+      };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData(context.listQueryKey, context.previousFavorites ?? []);
+      queryClient.setQueryData(context.detailQueryKey, context.previousFavoriteEpisode ?? null);
+    },
+    onSettled: async (_data, _error, variables) => {
       if (!userId) return;
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['favoriteEpisodes', userId] }),
+        queryClient.invalidateQueries({ queryKey: getFavoriteEpisodesQueryKey(userId) }),
         queryClient.invalidateQueries({
-          queryKey: ['favoriteEpisode', userId, variables.episodeData.id],
+          queryKey: getFavoriteEpisodeQueryKey(userId, variables.episodeData.id),
         }),
       ]);
     },

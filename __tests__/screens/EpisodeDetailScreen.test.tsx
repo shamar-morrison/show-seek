@@ -10,11 +10,22 @@ const mockIsAccountRequired = jest.fn(() => false);
 const mockEnsureNoteLoadedForEdit = jest.fn();
 const mockNoteModalPresent = jest.fn();
 const mockResolvePosterPath = jest.fn();
+const mockToggleFavoriteEpisodeMutate = jest.fn();
+const mockToggleFavoriteEpisodeMutateAsync = jest.fn();
 let mockUseMediaNoteValue: any = {
   note: null,
   hasNote: false,
   isLoading: false,
   ensureNoteLoadedForEdit: mockEnsureNoteLoadedForEdit,
+};
+let mockUseIsEpisodeFavoritedValue = {
+  isFavorited: false,
+  isLoading: false,
+};
+let mockToggleFavoriteEpisodeValue = {
+  mutate: mockToggleFavoriteEpisodeMutate,
+  mutateAsync: mockToggleFavoriteEpisodeMutateAsync,
+  isPending: false,
 };
 
 const mockTvShow = {
@@ -145,8 +156,8 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
 }));
 
 jest.mock('@/src/hooks/useFavoriteEpisodes', () => ({
-  useIsEpisodeFavorited: () => ({ isFavorited: false, isLoading: false }),
-  useToggleFavoriteEpisode: () => ({ mutate: jest.fn(), isPending: false }),
+  useIsEpisodeFavorited: () => mockUseIsEpisodeFavoritedValue,
+  useToggleFavoriteEpisode: () => mockToggleFavoriteEpisodeValue,
 }));
 
 jest.mock('@/src/hooks/useLists', () => ({
@@ -264,6 +275,15 @@ describe('EpisodeDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockResolvePosterPath.mockReturnValue('/resolved-show.jpg');
+    mockUseIsEpisodeFavoritedValue = {
+      isFavorited: false,
+      isLoading: false,
+    };
+    mockToggleFavoriteEpisodeValue = {
+      mutate: mockToggleFavoriteEpisodeMutate,
+      mutateAsync: mockToggleFavoriteEpisodeMutateAsync,
+      isPending: false,
+    };
     mockUseMediaNoteValue = {
       note: null,
       hasNote: false,
@@ -343,6 +363,28 @@ describe('EpisodeDetailScreen', () => {
         refetch: jest.fn(),
       };
     });
+  });
+
+  it('shows a spinner and disables the favorite button while the favorite mutation is pending', () => {
+    mockToggleFavoriteEpisodeValue = {
+      mutate: mockToggleFavoriteEpisodeMutate,
+      mutateAsync: mockToggleFavoriteEpisodeMutateAsync,
+      isPending: true,
+    };
+
+    const { getByTestId, queryByTestId } = render(<EpisodeDetailScreen />);
+
+    expect(getByTestId('episode-favorite-action').props.disabled).toBe(true);
+    expect(getByTestId('episode-favorite-action-spinner')).toBeTruthy();
+    expect(queryByTestId('episode-favorite-action-icon')).toBeNull();
+  });
+
+  it('renders the heart icon when the favorite action is idle', () => {
+    const { getByTestId, queryByTestId } = render(<EpisodeDetailScreen />);
+
+    expect(getByTestId('episode-favorite-action').props.disabled).toBe(false);
+    expect(getByTestId('episode-favorite-action-icon')).toBeTruthy();
+    expect(queryByTestId('episode-favorite-action-spinner')).toBeNull();
   });
 
   it('opens the note editor with preloaded note content', async () => {
