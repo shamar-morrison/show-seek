@@ -27,8 +27,8 @@ jest.mock('react-i18next', () => ({
       if (key === 'home.upcomingTV') return 'Upcoming TV';
       if (key === 'home.latestTrailers') return 'Latest Trailers';
       if (key === 'library.customLists') return 'Custom Lists';
-      if (key === 'lists.shouldWatch') return 'Watchlist';
-      if (key === 'lists.watching') return 'Watching';
+      if (key === 'lists.shouldWatch') return 'Should Watch';
+      if (key === 'lists.watching') return 'Currently Watching';
       if (key === 'lists.alreadyWatched') return 'Already Watched';
       if (key === 'lists.favorites') return 'Favorites';
       if (key === 'lists.dropped') return 'Dropped';

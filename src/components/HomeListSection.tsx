@@ -27,7 +27,8 @@ const LIST_LABEL_KEYS: Record<string, string> = {
   'upcoming-movies': 'home.upcomingMovies',
   'upcoming-tv': 'home.upcomingTV',
   // Default lists
-  watchlist: 'library.watchlist',
+  watchlist: 'lists.shouldWatch',
+  'currently-watching': 'lists.watching',
   favorites: 'library.favorites',
 };
 

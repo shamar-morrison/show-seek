@@ -54,7 +54,11 @@ let latestMediaItem: any = null;
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string) => {
+      if (key === 'lists.shouldWatch') return 'Should Watch';
+      if (key === 'lists.watching') return 'Currently Watching';
+      return key;
+    },
   }),
 }));
 
@@ -328,16 +332,18 @@ describe('HomeScreen long press add-to-list', () => {
   });
 
   it('opens AddToListModal for authenticated long press on a user list home card', async () => {
-    mockPreferencesState.homeScreenLists = [{ id: 'watchlist', type: 'default', label: 'Watchlist' }];
+    mockPreferencesState.homeScreenLists = [
+      { id: 'watchlist', type: 'default', label: 'Should Watch' },
+    ];
     mockPreferencesState.preferences = {
-      homeScreenLists: [{ id: 'watchlist', type: 'default', label: 'Watchlist' }],
+      homeScreenLists: [{ id: 'watchlist', type: 'default', label: 'Should Watch' }],
       showOriginalTitles: false,
       dataSaver: false,
     };
     mockListsState.data = [
       {
         id: 'watchlist',
-        name: 'Watchlist',
+        name: 'Should Watch',
         items: {
           202: {
             id: 202,
@@ -356,6 +362,7 @@ describe('HomeScreen long press add-to-list', () => {
 
     const { getByText, getByTestId } = render(<HomeScreen />);
 
+    expect(getByText('Should Watch')).toBeTruthy();
     fireEvent(getByText('Saved Movie'), 'longPress');
 
     await waitFor(() => {
@@ -374,6 +381,61 @@ describe('HomeScreen long press add-to-list', () => {
       release_date: '2023-08-12',
       first_air_date: undefined,
       genre_ids: [35],
+    });
+  });
+
+  it('renders Currently Watching for a stale watching-labeled home selection and preserves long press behavior', async () => {
+    mockPreferencesState.homeScreenLists = [
+      { id: 'currently-watching', type: 'default', label: 'Watching' },
+    ];
+    mockPreferencesState.preferences = {
+      homeScreenLists: [{ id: 'currently-watching', type: 'default', label: 'Watching' }],
+      showOriginalTitles: false,
+      dataSaver: false,
+    };
+    mockListsState.data = [
+      {
+        id: 'currently-watching',
+        name: 'Watching',
+        items: {
+          303: {
+            id: 303,
+            media_type: 'tv',
+            title: 'Current Show',
+            name: 'Current Show',
+            poster_path: '/current.jpg',
+            vote_average: 7.9,
+            release_date: '2024-02-20',
+            first_air_date: '2024-02-20',
+            addedAt: 20,
+            genre_ids: [18],
+          },
+        },
+        createdAt: 1,
+      },
+    ];
+
+    const { getByText, getByTestId } = render(<HomeScreen />);
+
+    expect(getByText('Currently Watching')).toBeTruthy();
+    fireEvent(getByText('Current Show'), 'longPress');
+
+    await waitFor(() => {
+      expect(getByTestId('add-to-list-modal')).toBeTruthy();
+      expect(mockPresent).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(latestMediaItem).toEqual({
+      id: 303,
+      media_type: 'tv',
+      title: 'Current Show',
+      name: 'Current Show',
+      poster_path: '/current.jpg',
+      vote_average: 7.9,
+      release_date: '2024-02-20',
+      first_air_date: '2024-02-20',
+      genre_ids: [18],
     });
   });
 
