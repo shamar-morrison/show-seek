@@ -88,6 +88,18 @@ async function deleteTraktAccountData(userId: string): Promise<void> {
       });
     }
 
+    if (error instanceof TypeError) {
+      throw new HttpsError(
+        'unavailable',
+        'Trakt account cleanup failed due to network error. Please retry.',
+        {
+          endpoint,
+          timeoutMs: TRAKT_DELETE_TIMEOUT_MS,
+          networkError: String(error),
+        }
+      );
+    }
+
     throw error;
   }
 

@@ -193,6 +193,27 @@ describe('deleteAccountHandler', () => {
     expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
+  it('returns a retryable unavailable error when Trakt cleanup fails due to a network TypeError', async () => {
+    mockFetch.mockRejectedValue(new TypeError('fetch failed'));
+
+    await expect(
+      deleteAccountHandler({
+        auth: { uid: 'user-1' },
+      })
+    ).rejects.toMatchObject({
+      code: 'unavailable',
+      message: 'Trakt account cleanup failed due to network error. Please retry.',
+      details: {
+        endpoint: 'https://trakt-proxy.example.com/api/trakt/delete-user',
+        timeoutMs: 15000,
+        networkError: 'TypeError: fetch failed',
+      },
+    });
+
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+  });
+
   it('treats an already-missing auth user as a successful retry', async () => {
     mockDeleteUser.mockRejectedValue({
       code: 'auth/user-not-found',
