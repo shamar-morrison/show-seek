@@ -45,6 +45,7 @@ export default function ProfileScreen() {
     isPremium,
     isExporting,
     isSigningOut,
+    isDeletingAccount,
     isClearingCache,
     showWebAppModal,
     handleRateApp,
@@ -55,6 +56,7 @@ export default function ProfileScreen() {
     handleImdbImport,
     handleExportData,
     handleClearCache,
+    handleDeleteAccount,
     handleSignOut,
     handleUpgradePress,
     handleLanguagePress,
@@ -161,12 +163,14 @@ export default function ProfileScreen() {
             isExporting={isExporting}
             isClearingCache={isClearingCache}
             isSigningOut={isSigningOut}
+            isDeletingAccount={isDeletingAccount}
             onRateApp={handleRateApp}
             onFeedback={handleSendFeedback}
             onExportData={handleExportData}
             onClearCache={handleClearCache}
             onWebApp={handleOpenWebApp}
             onAbout={handleAboutPress}
+            onDeleteAccount={handleDeleteAccount}
             onSignOut={handleSignOut}
             showTitle={false}
           />

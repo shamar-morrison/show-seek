@@ -17,6 +17,8 @@ export interface AppSettingsSectionProps {
   isClearingCache: boolean;
   /** Whether sign out is in progress */
   isSigningOut: boolean;
+  /** Whether account deletion is in progress */
+  isDeletingAccount: boolean;
   /** Handler for Rate App button */
   onRateApp: () => void;
   /** Handler for Send Feedback button */
@@ -29,6 +31,8 @@ export interface AppSettingsSectionProps {
   onWebApp: () => void;
   /** Handler for About button */
   onAbout: () => void;
+  /** Handler for Delete Account button */
+  onDeleteAccount: () => void;
   /** Handler for Sign Out button */
   onSignOut: () => void;
   /** Whether to show section title (default: true) */
@@ -44,12 +48,14 @@ export function AppSettingsSection({
   isExporting,
   isClearingCache,
   isSigningOut,
+  isDeletingAccount,
   onRateApp,
   onFeedback,
   onExportData,
   onClearCache,
   onWebApp,
   onAbout,
+  onDeleteAccount,
   onSignOut,
   showTitle = true,
 }: AppSettingsSectionProps) {
@@ -68,6 +74,13 @@ export function AppSettingsSection({
         {isGuest ? (
           <>
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              icon={Trash2}
+              label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
+              onPress={onDeleteAccount}
+              loading={isDeletingAccount}
+              variant="danger"
+            />
             <ActionButton
               icon={LogOut}
               label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}
@@ -94,6 +107,13 @@ export function AppSettingsSection({
             />
             <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
+            <ActionButton
+              icon={Trash2}
+              label={isDeletingAccount ? t('profile.deletingAccount') : t('profile.deleteAccount')}
+              onPress={onDeleteAccount}
+              loading={isDeletingAccount}
+              variant="danger"
+            />
             <ActionButton
               icon={LogOut}
               label={isSigningOut ? t('auth.signingOut') : t('auth.signOut')}

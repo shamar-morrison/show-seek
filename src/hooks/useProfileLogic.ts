@@ -1,6 +1,8 @@
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { accountDeletionService } from '@/src/services/AccountDeletionService';
 import { exportUserData } from '@/src/services/DataExportService';
+import { clearLocalAccountData } from '@/src/utils/accountDeletion';
 import { clearAppCache } from '@/src/utils/appCache';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -18,12 +20,13 @@ const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
  */
 export function useProfileLogic() {
   const { t } = useTranslation();
-  const { user, signOut } = useAuth();
+  const { user, resetSession, signOut } = useAuth();
   const { isPremium } = usePremium();
   const router = useRouter();
 
   const [isExporting, setIsExporting] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [showWebAppModal, setShowWebAppModal] = useState(false);
 
@@ -152,6 +155,67 @@ export function useProfileLogic() {
     }
   }, [signOut, t]);
 
+  const executeDeleteAccount = useCallback(async () => {
+    if (!user?.uid) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      await accountDeletionService.deleteAccount();
+      await clearLocalAccountData(user.uid);
+
+      try {
+        await signOut();
+      } catch (signOutError) {
+        console.warn('[profile] Failed to sign out after account deletion:', signOutError);
+        resetSession();
+      }
+
+      router.replace('/(auth)/sign-in');
+    } catch (error) {
+      console.error('[profile] Failed to delete account:', error);
+      Alert.alert(t('common.errorTitle'), t('profile.deleteAccountFailed'));
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }, [resetSession, router, signOut, t, user?.uid]);
+
+  const handleDeleteAccount = useCallback(() => {
+    if (!user?.uid || isDeletingAccount) {
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountMessage'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('profile.deleteAccountContinue'),
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(t('profile.deleteAccountFinalTitle'), t('profile.deleteAccountFinalMessage'), [
+            {
+              text: t('common.cancel'),
+              style: 'cancel',
+            },
+            {
+              text: t('profile.deleteAccountAction'),
+              style: 'destructive',
+              onPress: () => {
+                void executeDeleteAccount();
+              },
+            },
+          ]);
+        },
+      },
+    ]);
+  }, [executeDeleteAccount, isDeletingAccount, t, user?.uid]);
+
   const handleUpgradePress = useCallback(() => {
     router.push('/premium');
   }, [router]);
@@ -193,6 +257,7 @@ export function useProfileLogic() {
     // Modal states
     isExporting,
     isSigningOut,
+    isDeletingAccount,
     isClearingCache,
     showWebAppModal,
 
@@ -205,6 +270,7 @@ export function useProfileLogic() {
     handleImdbImport,
     handleExportData,
     handleClearCache,
+    handleDeleteAccount,
     handleSignOut,
     handleUpgradePress,
     handleLanguagePress,
