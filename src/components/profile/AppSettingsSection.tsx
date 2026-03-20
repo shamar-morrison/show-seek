@@ -105,7 +105,7 @@ export function AppSettingsSection({
               onPress={onClearCache}
               loading={isClearingCache}
             />
-            <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} />
+            {/* <ActionButton icon={Globe} label={t('profile.webApp')} onPress={onWebApp} /> */}
             <ActionButton icon={Info} label={t('settings.about')} onPress={onAbout} />
             <ActionButton
               icon={Trash2}
