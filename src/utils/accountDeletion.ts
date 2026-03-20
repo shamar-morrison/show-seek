@@ -42,7 +42,11 @@ export async function clearLocalAccountData(userId?: string): Promise<void> {
   }
 
   if (asyncStorageKeysToRemove.size > 0) {
-    await AsyncStorage.multiRemove([...asyncStorageKeysToRemove]);
+    try {
+      await AsyncStorage.multiRemove([...asyncStorageKeysToRemove]);
+    } catch (error) {
+      console.warn('[accountDeletion] Failed to remove AsyncStorage keys:', error);
+    }
   }
 
   await Promise.allSettled([

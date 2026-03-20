@@ -18,6 +18,7 @@ interface DeleteAccountRequest {
 }
 
 const TRAKT_DELETE_USER_PATH = '/api/trakt/delete-user';
+const TRAKT_DELETE_TIMEOUT_MS = 15_000;
 
 const trimSecret = (secretValue: string, secretName: string): string => {
   const trimmedValue = secretValue.trim();
@@ -31,19 +32,64 @@ const buildTraktDeleteUrl = (baseUrl: string): string => {
   return `${baseUrl.replace(/\/+$/, '')}${TRAKT_DELETE_USER_PATH}`;
 };
 
+const truncateResponseBody = (responseBody: string): string => responseBody.slice(0, 500);
+
+const getTimeoutResponseBody = (error: unknown): string | undefined => {
+  if (typeof error !== 'object' || error === null) {
+    return undefined;
+  }
+
+  const candidate = error as { responseBody?: unknown; body?: unknown };
+
+  if (typeof candidate.responseBody === 'string') {
+    return truncateResponseBody(candidate.responseBody);
+  }
+
+  if (typeof candidate.body === 'string') {
+    return truncateResponseBody(candidate.body);
+  }
+
+  return undefined;
+};
+
+const isAbortOrTimeoutError = (error: unknown): boolean => {
+  if (!(typeof error === 'object' && error !== null && 'name' in error)) {
+    return false;
+  }
+
+  const name = (error as { name?: string }).name;
+  return name === 'AbortError' || name === 'TimeoutError';
+};
+
 async function deleteTraktAccountData(userId: string): Promise<void> {
   const backendUrl = trimSecret(TRAKT_BACKEND_URL.value(), 'TRAKT_BACKEND_URL');
   const authToken = trimSecret(TRAKT_INTERNAL_DELETE_AUTH.value(), 'TRAKT_INTERNAL_DELETE_AUTH');
   const endpoint = buildTraktDeleteUrl(backendUrl);
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ userId }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+      signal: AbortSignal.timeout(TRAKT_DELETE_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (isAbortOrTimeoutError(error)) {
+      const responseBody = getTimeoutResponseBody(error);
+
+      throw new HttpsError('unavailable', 'Trakt account cleanup timed out. Please retry.', {
+        endpoint,
+        timeoutMs: TRAKT_DELETE_TIMEOUT_MS,
+        ...(responseBody ? { responseBody } : {}),
+      });
+    }
+
+    throw error;
+  }
 
   if (response.ok) {
     return;
@@ -61,7 +107,7 @@ async function deleteTraktAccountData(userId: string): Promise<void> {
     `Trakt account cleanup failed with status ${response.status}.`,
     {
       endpoint,
-      responseBody: responseBody.slice(0, 500),
+      responseBody: truncateResponseBody(responseBody),
       status: response.status,
     }
   );

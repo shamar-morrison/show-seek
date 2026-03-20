@@ -164,7 +164,15 @@ export function useProfileLogic() {
 
     try {
       await accountDeletionService.deleteAccount();
-      await clearLocalAccountData(user.uid);
+
+      try {
+        await clearLocalAccountData(user.uid);
+      } catch (cleanupError) {
+        console.warn(
+          '[profile] Failed to clear local account data after remote deletion:',
+          cleanupError
+        );
+      }
 
       try {
         await signOut();

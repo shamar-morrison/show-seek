@@ -3,6 +3,17 @@ import { clearLocalAccountData } from '@/src/utils/accountDeletion';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
+const mockWriteToSharedPreferences = jest.fn();
+const mockClearUserDocumentCache = jest.fn();
+
+jest.mock('@/src/services/sharedPreferencesService', () => ({
+  writeToSharedPreferences: (...args: any[]) => mockWriteToSharedPreferences(...args),
+}));
+
+jest.mock('@/src/services/UserDocumentCache', () => ({
+  clearUserDocumentCache: (...args: any[]) => mockClearUserDocumentCache(...args),
+}));
+
 describe('clearLocalAccountData', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -12,6 +23,7 @@ describe('clearLocalAccountData', () => {
       'showseek_language',
     ]);
     (AsyncStorage.multiRemove as jest.Mock).mockResolvedValue(undefined);
+    mockWriteToSharedPreferences.mockResolvedValue(undefined);
     jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
@@ -39,6 +51,22 @@ describe('clearLocalAccountData', () => {
       ])
     );
 
+    expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
+    expect(Notifications.dismissAllNotificationsAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('swallows async storage removal failures and continues the rest of local cleanup', async () => {
+    const storageError = new Error('multiRemove failed');
+    (AsyncStorage.multiRemove as jest.Mock).mockRejectedValue(storageError);
+
+    await clearLocalAccountData('user-1');
+
+    expect(console.warn).toHaveBeenCalledWith(
+      '[accountDeletion] Failed to remove AsyncStorage keys:',
+      storageError
+    );
+    expect(mockClearUserDocumentCache).toHaveBeenCalledWith('user-1');
+    expect(mockWriteToSharedPreferences).toHaveBeenCalledTimes(7);
     expect(Notifications.cancelAllScheduledNotificationsAsync).toHaveBeenCalledTimes(1);
     expect(Notifications.dismissAllNotificationsAsync).toHaveBeenCalledTimes(1);
   });

@@ -37,6 +37,12 @@ const mockBulkWriterDelete = jest.fn();
 const mockBulkWriterClose = jest.fn();
 const mockWhereGet = jest.fn();
 
+const createTimeoutError = () => {
+  const error = new Error('timed out');
+  error.name = 'TimeoutError';
+  return error;
+};
+
 beforeAll(() => {
   Object.defineProperty(global, 'fetch', {
     configurable: true,
@@ -114,14 +120,19 @@ describe('deleteAccountHandler', () => {
       })
     ).resolves.toEqual({ success: true });
 
-    expect(mockFetch).toHaveBeenCalledWith('https://trakt-proxy.example.com/api/trakt/delete-user', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer secret-token',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId: 'user-1' }),
-    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://trakt-proxy.example.com/api/trakt/delete-user',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer secret-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: 'user-1' }),
+        signal: expect.any(Object),
+      })
+    );
+    expect(mockFetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
     expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
     expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
     expect(mockFetch.mock.invocationCallOrder[0]).toBeLessThan(
@@ -156,6 +167,26 @@ describe('deleteAccountHandler', () => {
     ).rejects.toMatchObject({
       code: 'internal',
       message: 'Trakt account cleanup failed with status 500.',
+    });
+
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
+    expect(mockDeleteUser).not.toHaveBeenCalled();
+  });
+
+  it('returns a retryable timeout error when Trakt cleanup hangs and skips further deletion', async () => {
+    mockFetch.mockRejectedValue(createTimeoutError());
+
+    await expect(
+      deleteAccountHandler({
+        auth: { uid: 'user-1' },
+      })
+    ).rejects.toMatchObject({
+      code: 'unavailable',
+      message: 'Trakt account cleanup timed out. Please retry.',
+      details: {
+        endpoint: 'https://trakt-proxy.example.com/api/trakt/delete-user',
+        timeoutMs: 15000,
+      },
     });
 
     expect(mockRecursiveDelete).not.toHaveBeenCalled();
