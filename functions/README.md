@@ -48,3 +48,26 @@ Deploy the webhook function:
 ```bash
 firebase deploy --only functions:revenuecatWebhook --project showseek-app-2025
 ```
+
+## Account Deletion Secrets
+
+`deleteAccount` requires the Trakt backend URL plus a shared bearer token for the
+internal delete endpoint.
+
+- `TRAKT_BACKEND_URL`: base URL for the Trakt proxy/backend (for example
+  `https://trakt-proxy.vercel.app`)
+- `TRAKT_INTERNAL_DELETE_AUTH`: bearer token accepted by
+  `POST /api/trakt/delete-user`
+
+Set them with:
+
+```bash
+firebase functions:secrets:set TRAKT_BACKEND_URL --project showseek-app-2025
+firebase functions:secrets:set TRAKT_INTERNAL_DELETE_AUTH --project showseek-app-2025
+```
+
+Then deploy the callable:
+
+```bash
+firebase deploy --only functions:deleteAccount --project showseek-app-2025
+```

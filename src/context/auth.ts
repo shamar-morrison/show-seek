@@ -26,6 +26,13 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     });
   };
 
+  const resetSession = () => {
+    clearPersistedUserId();
+    setUser(null);
+    setHasCompletedPersonalOnboarding(null);
+    setLoading(false);
+  };
+
   // Check onboarding status
   useEffect(() => {
     let isMounted = true;
@@ -89,10 +96,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        clearPersistedUserId();
-        setUser(null);
-        setHasCompletedPersonalOnboarding(null);
-        setLoading(false);
+        resetSession();
         return;
       }
 
@@ -177,9 +181,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         });
 
         await Promise.race([guardedFirebasePromise, timeoutPromise]);
-        // Clear local state immediately after Firebase sign-out succeeds.
-        setUser(null);
-        setLoading(false);
+        resetSession();
       } catch (error) {
         timedOut = error instanceof Error && error.message === 'Sign out timed out';
         signOutError = error;
@@ -246,6 +248,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     hasCompletedPersonalOnboarding,
     completeOnboarding,
     completePersonalOnboarding,
+    resetSession,
     signOut,
   };
 });

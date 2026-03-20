@@ -11,12 +11,14 @@ describe('AppSettingsSection', () => {
     isExporting: false,
     isClearingCache: false,
     isSigningOut: false,
+    isDeletingAccount: false,
     onRateApp: jest.fn(),
     onFeedback: jest.fn(),
     onExportData: jest.fn(),
     onClearCache: jest.fn(),
     onWebApp: jest.fn(),
     onAbout: jest.fn(),
+    onDeleteAccount: jest.fn(),
     onSignOut: jest.fn(),
     ...overrides,
   });
@@ -59,6 +61,41 @@ describe('AppSettingsSection', () => {
     fireEvent.press(getByTestId('action-button-sign-out'));
 
     expect(props.onSignOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows delete account action for signed-in users', () => {
+    const props = createProps();
+    const { getByText } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Delete Account')).toBeTruthy();
+  });
+
+  it('shows delete account action for guest users', () => {
+    const props = createProps({ isGuest: true });
+    const { getByText } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Delete Account')).toBeTruthy();
+  });
+
+  it('calls onDeleteAccount when delete account action is pressed', () => {
+    const props = createProps();
+    const { getByTestId } = render(<AppSettingsSection {...props} />);
+
+    fireEvent.press(getByTestId('action-button-delete-account'));
+
+    expect(props.onDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows loading state and disables delete account action while deleting', () => {
+    const props = createProps({ isDeletingAccount: true });
+    const { getByText, getByTestId } = render(<AppSettingsSection {...props} />);
+
+    expect(getByText('Deleting Account...')).toBeTruthy();
+    expect(getByTestId('action-button-spinner')).toBeTruthy();
+
+    fireEvent.press(getByTestId('action-button-deleting-account...'));
+
+    expect(props.onDeleteAccount).not.toHaveBeenCalled();
   });
 
   it('renders about action button', () => {
