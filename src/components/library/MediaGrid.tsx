@@ -30,6 +30,8 @@ interface MediaGridProps {
   selectionMode?: boolean;
   isItemSelected?: (item: ListMediaItem) => boolean;
   contentBottomPadding?: number;
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }
 
 export interface MediaGridRef {
@@ -144,6 +146,8 @@ export const MediaGrid = memo(
         selectionMode = false,
         isItemSelected,
         contentBottomPadding = 0,
+        refreshing = false,
+        onRefresh,
       },
       ref
     ) => {
@@ -194,9 +198,25 @@ export const MediaGrid = memo(
       const contentContainerStyle = useMemo(
         () => ({
           paddingHorizontal: listPaddingHorizontal,
+          flexGrow: items.length === 0 ? 1 : undefined,
           ...(contentBottomPadding > 0 ? { paddingBottom: contentBottomPadding } : {}),
         }),
-        [contentBottomPadding, listPaddingHorizontal]
+        [contentBottomPadding, items.length, listPaddingHorizontal]
+      );
+
+      const listEmptyComponent = useMemo(
+        () => (
+          <View style={styles.emptyStateContainer}>
+            <EmptyState
+              icon={emptyState.icon}
+              title={emptyState.title}
+              description={emptyState.description}
+              actionLabel={emptyState.actionLabel}
+              onAction={emptyState.onAction}
+            />
+          </View>
+        ),
+        [emptyState]
       );
 
       if (isLoading) {
@@ -204,18 +224,6 @@ export const MediaGrid = memo(
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={accentColor} />
           </View>
-        );
-      }
-
-      if (items.length === 0) {
-        return (
-          <EmptyState
-            icon={emptyState.icon}
-            title={emptyState.title}
-            description={emptyState.description}
-            actionLabel={emptyState.actionLabel}
-            onAction={emptyState.onAction}
-          />
         );
       }
 
@@ -230,6 +238,9 @@ export const MediaGrid = memo(
           keyExtractor={keyExtractor}
           drawDistance={400}
           extraData={isItemSelected}
+          ListEmptyComponent={listEmptyComponent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       );
     }
@@ -243,6 +254,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
   },
   mediaCard: {
     marginBottom: SPACING.m,

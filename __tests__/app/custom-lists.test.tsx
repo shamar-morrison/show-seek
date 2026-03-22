@@ -1,12 +1,14 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 
 const mockSetOptions = jest.fn();
 const mockPush = jest.fn();
+const mockRefetch = jest.fn();
 
 const mockUseLists = jest.fn();
 const mockUsePremium = jest.fn();
 const mockUseHeaderSearch = jest.fn();
+let capturedFlashListProps: any = null;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -103,9 +105,12 @@ jest.mock('@/src/styles/iconBadgeStyles', () => ({
 }));
 
 jest.mock('@shopify/flash-list', () => ({
-  FlashList: ({ data, renderItem, ListEmptyComponent }: any) => {
+  FlashList: (props: any) => {
     const React = require('react');
     const { View } = require('react-native');
+    const { data, renderItem, ListEmptyComponent } = props;
+
+    capturedFlashListProps = props;
 
     if (!data || data.length === 0) {
       return React.createElement(View, { testID: 'flash-list-empty' }, ListEmptyComponent);
@@ -145,6 +150,8 @@ const customListsData = [
 describe('CustomListsScreen search', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    capturedFlashListProps = null;
+    mockRefetch.mockReset().mockResolvedValue(undefined);
 
     mockUsePremium.mockReturnValue({
       isPremium: true,
@@ -156,7 +163,7 @@ describe('CustomListsScreen search', () => {
       isLoading: false,
       isError: false,
       error: null,
-      refetch: jest.fn(),
+      refetch: mockRefetch,
     });
 
     mockUseHeaderSearch.mockReturnValue({
@@ -175,6 +182,19 @@ describe('CustomListsScreen search', () => {
 
     expect(getByText('Sci-Fi Queue')).toBeTruthy();
     expect(getByText('Comedy Night')).toBeTruthy();
+  });
+
+  it('wires FlashList pull to refresh to the lists refetch', async () => {
+    render(<CustomListsScreen />);
+
+    expect(capturedFlashListProps).toBeTruthy();
+    expect(capturedFlashListProps.refreshing).toBe(false);
+
+    await act(async () => {
+      await capturedFlashListProps.onRefresh();
+    });
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('renders filtered custom lists from useHeaderSearch results', () => {
@@ -216,7 +236,7 @@ describe('CustomListsScreen search', () => {
       isLoading: false,
       isError: false,
       error: null,
-      refetch: jest.fn(),
+      refetch: mockRefetch,
     });
 
     mockUseHeaderSearch.mockReturnValue({

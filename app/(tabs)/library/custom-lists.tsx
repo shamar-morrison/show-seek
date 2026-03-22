@@ -43,6 +43,7 @@ export default function CustomListsScreen() {
   const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
+  const [refreshing, setRefreshing] = useState(false);
 
   const ItemSeparator = () => <View style={styles.separator} />;
 
@@ -132,6 +133,15 @@ export default function CustomListsScreen() {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }, 100);
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   useLayoutEffect(() => {
     if (isSearchActive) {
@@ -228,6 +238,26 @@ export default function CustomListsScreen() {
 
   const keyExtractor = useCallback((item: UserList) => item.id, []);
 
+  const listEmptyComponent = useMemo(() => {
+    if (customLists.length === 0) {
+      return (
+        <EmptyState
+          icon={FolderPlus}
+          title={t('library.emptyLists')}
+          description={t('library.emptyListsHint')}
+          actionLabel={t('library.createList')}
+          onAction={handleCreateList}
+        />
+      );
+    }
+
+    if (searchQuery) {
+      return <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />;
+    }
+
+    return null;
+  }, [customLists.length, handleCreateList, insets.bottom, insets.top, searchQuery, t, windowHeight]);
+
   if (isLoading) {
     return <FullScreenLoading />;
   }
@@ -251,30 +281,21 @@ export default function CustomListsScreen() {
     <>
       <SafeAreaView style={screenStyles.container} edges={['bottom']}>
         <View style={libraryListStyles.divider} />
-        {customLists.length === 0 ? (
-          <EmptyState
-            icon={FolderPlus}
-            title={t('library.emptyLists')}
-            description={t('library.emptyListsHint')}
-            actionLabel={t('library.createList')}
-            onAction={handleCreateList}
-          />
-        ) : (
-          <FlashList
-            ref={listRef}
-            data={displayLists}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={libraryListStyles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
-            ListEmptyComponent={
-              searchQuery ? (
-                <SearchEmptyState height={windowHeight - insets.top - insets.bottom - 150} />
-              ) : null
-            }
-          />
-        )}
+        <FlashList
+          ref={listRef}
+          data={displayLists}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          contentContainerStyle={[
+            libraryListStyles.listContent,
+            displayLists.length === 0 ? styles.emptyListContent : null,
+          ]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={ItemSeparator}
+          ListEmptyComponent={listEmptyComponent}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+        />
       </SafeAreaView>
       <CreateListModal ref={createListModalRef} onSuccess={handleCreateSuccess} />
 
@@ -323,6 +344,9 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: SPACING.m,
+  },
+  emptyListContent: {
+    flexGrow: 1,
   },
   headerButtons: {
     flexDirection: 'row',

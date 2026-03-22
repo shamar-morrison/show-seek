@@ -1182,12 +1182,8 @@ export const syncPremiumStatus = onCall(
   }
 );
 
-export const deleteAccount = onCall(
-  {},
-  deleteAccountHandler
-);
+export const deleteAccount = onCall({}, deleteAccountHandler);
 
 export { importImdbChunk } from './imdbImport';
 export { revenuecatWebhook } from './revenuecatWebhook';
-export { backfillLegacyUsersOnboarding } from './backfillOnboarding';
 export { runTraktEnrichment, runTraktSync, traktApi, traktCallback } from './trakt';

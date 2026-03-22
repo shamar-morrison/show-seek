@@ -11,7 +11,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Bookmark, ChevronRight } from 'lucide-react-native';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ export default function WatchStatusScreen() {
   const router = useRouter();
   const { data: lists, isLoading, isError, error, refetch } = useLists();
   const { t } = useTranslation();
+  const [refreshing, setRefreshing] = useState(false);
 
   const ItemSeparator = () => <View style={styles.separator} />;
 
@@ -44,6 +45,15 @@ export default function WatchStatusScreen() {
     },
     [router]
   );
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const renderItem = useCallback(
     ({ item }: { item: (typeof watchStatusLists)[number] }) => {
@@ -119,6 +129,8 @@ export default function WatchStatusScreen() {
           contentContainerStyle={libraryListStyles.listContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
     </SafeAreaView>

@@ -62,6 +62,7 @@ export default function CustomListDetailScreen() {
     DEFAULT_WATCH_STATUS_FILTERS
   );
   const [shuffleModalVisible, setShuffleModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const renameModalRef = useRef<RenameListModalRef>(null);
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<React.ComponentRef<typeof FlashList<ListMediaItem>>>(null);
@@ -140,6 +141,15 @@ export default function CustomListDetailScreen() {
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const handleDeleteList = useCallback(() => {
     if (!list || !id || deleteMutation.isPending) return;
@@ -418,6 +428,8 @@ export default function CustomListDetailScreen() {
             ref={mediaGridRef}
             items={displayItems}
             isLoading={isLoading}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             emptyState={
               searchQuery
                 ? {
@@ -449,6 +461,8 @@ export default function CustomListDetailScreen() {
             ]}
             showsVerticalScrollIndicator={false}
             extraData={selectedMediaItems}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             ListEmptyComponent={
               <View
                 style={{

@@ -1,10 +1,11 @@
-import { render, waitFor } from '@testing-library/react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Text } from 'react-native';
 
 const mockPush = jest.fn();
 const mockRefetch = jest.fn();
 const mockSetOptions = jest.fn();
+let capturedFlashListProps: any = null;
 
 const mockListsState = {
   data: [
@@ -84,10 +85,12 @@ jest.mock('@shopify/flash-list', () => {
   const { View } = require('react-native');
 
   return {
-    FlashList: ({ data, renderItem, keyExtractor, ...rest }: any) =>
-      React.createElement(
+    FlashList: ({ data, renderItem, keyExtractor, ...rest }: any) => {
+      capturedFlashListProps = { data, renderItem, keyExtractor, ...rest };
+
+      return React.createElement(
         View,
-        rest,
+        { testID: 'flash-list' },
         data.map((item: any, index: number) =>
           React.createElement(
             View,
@@ -95,7 +98,8 @@ jest.mock('@shopify/flash-list', () => {
             renderItem({ item, index })
           )
         )
-      ),
+      );
+    },
   };
 });
 
@@ -108,6 +112,8 @@ import WatchStatusScreen from '@/app/(tabs)/library/watch-status';
 describe('WatchStatusScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    capturedFlashListProps = null;
+    mockRefetch.mockReset().mockResolvedValue(undefined);
     mockListsState.data = [
       {
         id: 'favorites',
@@ -180,5 +186,18 @@ describe('WatchStatusScreen', () => {
     render(<WatchStatusScreen />);
 
     expect(mockSetOptions).not.toHaveBeenCalled();
+  });
+
+  it('wires FlashList pull to refresh to the lists refetch', async () => {
+    render(<WatchStatusScreen />);
+
+    expect(capturedFlashListProps).toBeTruthy();
+    expect(capturedFlashListProps.refreshing).toBe(false);
+
+    await act(async () => {
+      await capturedFlashListProps.onRefresh();
+    });
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 });

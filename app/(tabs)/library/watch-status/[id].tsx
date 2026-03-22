@@ -60,6 +60,7 @@ export default function WatchStatusDetailScreen() {
     DEFAULT_WATCH_STATUS_FILTERS
   );
   const [shuffleModalVisible, setShuffleModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const mediaGridRef = useRef<MediaGridRef>(null);
   const listRef = useRef<React.ComponentRef<typeof FlashList<ListMediaItem>>>(null);
   const listActionsModalRef = useRef<ListActionsModalRef>(null);
@@ -128,6 +129,15 @@ export default function WatchStatusDetailScreen() {
   const handleApplySort = (newSortState: SortState) => {
     setSortState(newSortState);
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const hasActiveSort =
     sortState.option !== DEFAULT_SORT_STATE.option ||
@@ -351,6 +361,8 @@ export default function WatchStatusDetailScreen() {
             ref={mediaGridRef}
             items={displayItems}
             isLoading={isLoading}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             emptyState={
               searchQuery
                 ? {
@@ -382,6 +394,8 @@ export default function WatchStatusDetailScreen() {
             ]}
             showsVerticalScrollIndicator={false}
             extraData={selectedMediaItems}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             ListEmptyComponent={
               <View
                 style={{
