@@ -56,6 +56,7 @@ The Trakt integration now runs entirely from Firebase Functions:
 - `traktApi`: app-facing HTTP backend for OAuth start, sync, status, disconnect, and enrichment
 - `traktCallback`: Trakt OAuth callback page + token exchange
 - `runTraktSync`: Cloud Tasks-backed worker for durable sync execution
+- `runTraktEnrichment`: Cloud Tasks-backed worker for queued TMDB enrichment jobs
 
 These functions require the following secrets:
 
@@ -78,10 +79,14 @@ already configured for other functions in this project, set it as well:
 firebase functions:secrets:set TMDB_API_KEY --project showseek-app-2025
 ```
 
+When deploying `traktApi` for web callers, configure the runtime environment
+variable `TRAKT_ALLOWED_ORIGINS` with a comma-separated allowlist of trusted
+origins so CORS responses only reflect approved origins.
+
 Deploy the Trakt backend:
 
 ```bash
-firebase deploy --only functions:traktApi,functions:traktCallback,functions:runTraktSync --project showseek-app-2025
+firebase deploy --only functions:traktApi,functions:traktCallback,functions:runTraktSync,functions:runTraktEnrichment --project showseek-app-2025
 ```
 
 `deleteAccount` no longer depends on a separate Trakt backend or shared internal

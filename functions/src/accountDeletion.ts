@@ -13,6 +13,8 @@ interface DeleteAccountRequest {
   auth?: CallableAuth | null;
 }
 
+const QUERY_DELETE_BATCH_SIZE = 250;
+
 async function deleteRevenueCatWebhookEventsForUser(userId: string): Promise<void> {
   const db = admin.firestore();
   const snapshot = await db
@@ -33,11 +35,34 @@ async function deleteRevenueCatWebhookEventsForUser(userId: string): Promise<voi
   await bulkWriter.close();
 }
 
+async function deleteTraktOAuthStatesForUser(userId: string): Promise<void> {
+  const db = admin.firestore();
+
+  while (true) {
+    const snapshot = await db
+      .collection('traktOAuthStates')
+      .where('userId', '==', userId)
+      .limit(QUERY_DELETE_BATCH_SIZE)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const bulkWriter = db.bulkWriter();
+    snapshot.docs.forEach((documentSnapshot) => {
+      bulkWriter.delete(documentSnapshot.ref);
+    });
+    await bulkWriter.close();
+  }
+}
+
 async function deleteFirestoreUserTree(userId: string): Promise<void> {
   const db = admin.firestore();
   const userRef = db.collection('users').doc(userId);
   await db.recursiveDelete(userRef);
   await deleteRevenueCatWebhookEventsForUser(userId);
+  await deleteTraktOAuthStatesForUser(userId);
 }
 
 async function deleteAuthUserIfPresent(userId: string): Promise<void> {

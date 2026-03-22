@@ -155,6 +155,14 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
+// Mock expo-web-browser
+jest.mock('expo-web-browser', () => ({
+  WebBrowserResultType: {
+    DISMISS: 'dismiss',
+  },
+  openAuthSessionAsync: jest.fn(),
+}));
+
 // Mock react-native-svg (required for lucide-react-native icons)
 jest.mock('react-native-svg', () => {
   const React = require('react');

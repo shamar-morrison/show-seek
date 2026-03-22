@@ -18,8 +18,12 @@ import { deleteAccountHandler } from '@/functions/src/accountDeletion';
 const mockRecursiveDelete = jest.fn();
 const mockBulkWriterDelete = jest.fn();
 const mockBulkWriterClose = jest.fn();
-const mockWhereGet = jest.fn();
-const mockUsersDocRef = { path: 'users/user-1' };
+const mockRevenueCatWhereGet = jest.fn();
+const mockTraktOAuthStatesGet = jest.fn();
+const mockUsersDoc = jest.fn((id: string) => ({ path: `users/${id}` }));
+const mockTraktOAuthStatesLimit = jest.fn(() => ({
+  get: mockTraktOAuthStatesGet,
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -27,7 +31,11 @@ beforeEach(() => {
   mockDeleteUser.mockResolvedValue(undefined);
   mockRecursiveDelete.mockResolvedValue(undefined);
   mockBulkWriterClose.mockResolvedValue(undefined);
-  mockWhereGet.mockResolvedValue({
+  mockRevenueCatWhereGet.mockResolvedValue({
+    docs: [],
+    empty: true,
+  });
+  mockTraktOAuthStatesGet.mockResolvedValue({
     docs: [],
     empty: true,
   });
@@ -37,11 +45,16 @@ beforeEach(() => {
     delete: mockBulkWriterDelete,
   };
   const mockUsersCollection = {
-    doc: jest.fn(() => mockUsersDocRef),
+    doc: mockUsersDoc,
   };
   const mockWebhookCollection = {
     where: jest.fn(() => ({
-      get: mockWhereGet,
+      get: mockRevenueCatWhereGet,
+    })),
+  };
+  const mockTraktOAuthStatesCollection = {
+    where: jest.fn(() => ({
+      limit: mockTraktOAuthStatesLimit,
     })),
   };
 
@@ -54,6 +67,10 @@ beforeEach(() => {
 
       if (name === 'revenuecatWebhookEvents') {
         return mockWebhookCollection;
+      }
+
+      if (name === 'traktOAuthStates') {
+        return mockTraktOAuthStatesCollection;
       }
 
       throw new Error(`Unexpected collection ${name}`);
@@ -80,7 +97,10 @@ describe('deleteAccountHandler', () => {
     ).resolves.toEqual({ success: true });
 
     expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
-    expect(mockRecursiveDelete).toHaveBeenCalledWith(mockUsersDocRef);
+    expect(mockUsersDoc).toHaveBeenCalledWith('user-1');
+    expect(mockRecursiveDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/user-1' })
+    );
     expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
     expect(mockRecursiveDelete.mock.invocationCallOrder[0]).toBeLessThan(
       mockDeleteUser.mock.invocationCallOrder[0]
@@ -94,6 +114,9 @@ describe('deleteAccountHandler', () => {
       })
     ).resolves.toEqual({ success: true });
 
+    expect(mockRecursiveDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/anon-user' })
+    );
     expect(mockDeleteUser).toHaveBeenCalledWith('anon-user');
   });
 
@@ -141,7 +164,7 @@ describe('deleteAccountHandler', () => {
   it('deletes matching RevenueCat webhook event records alongside the account', async () => {
     const firstRef = { id: 'evt-1' };
     const secondRef = { id: 'evt-2' };
-    mockWhereGet.mockResolvedValue({
+    mockRevenueCatWhereGet.mockResolvedValue({
       docs: [{ ref: firstRef }, { ref: secondRef }],
       empty: false,
     });
@@ -155,5 +178,37 @@ describe('deleteAccountHandler', () => {
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(1, firstRef);
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondRef);
     expect(mockBulkWriterClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes trakt OAuth states in batches until none remain', async () => {
+    const firstStateRef = { id: 'state-1' };
+    const secondStateRef = { id: 'state-2' };
+    const thirdStateRef = { id: 'state-3' };
+
+    mockTraktOAuthStatesGet
+      .mockResolvedValueOnce({
+        docs: [{ ref: firstStateRef }, { ref: secondStateRef }],
+        empty: false,
+      })
+      .mockResolvedValueOnce({
+        docs: [{ ref: thirdStateRef }],
+        empty: false,
+      })
+      .mockResolvedValueOnce({
+        docs: [],
+        empty: true,
+      });
+
+    await expect(
+      deleteAccountHandler({
+        auth: { uid: 'user-1' },
+      })
+    ).resolves.toEqual({ success: true });
+
+    expect(mockTraktOAuthStatesGet).toHaveBeenCalledTimes(3);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(1, firstStateRef);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondStateRef);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(3, thirdStateRef);
+    expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
   });
 });

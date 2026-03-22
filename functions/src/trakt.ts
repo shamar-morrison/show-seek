@@ -35,6 +35,7 @@ const TRAKT_OAUTH_START_COOLDOWN_MS = 60 * 1000;
 const TRAKT_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const CORS_ALLOW_HEADERS = 'Authorization, Content-Type';
 const CORS_ALLOW_METHODS = 'GET, POST, OPTIONS';
+const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
 const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
 const TRAKT_SYNC_RECONNECT_MESSAGE =
@@ -433,14 +434,32 @@ const emptyEnrichmentCounts = (): EnrichmentCounts => ({
   lists: 0,
 });
 
-const applyCorsHeaders = (response: ExpressResponse): void => {
-  response.setHeader('Access-Control-Allow-Origin', '*');
+const getAllowedCorsOrigin = (request: Request): string | undefined => {
+  const origin = request.header('origin')?.trim();
+  if (!origin) {
+    return undefined;
+  }
+
+  const allowedOrigins = (process.env[CORS_ALLOWED_ORIGINS_ENV] ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return allowedOrigins.includes(origin) ? origin : undefined;
+};
+
+const applyCorsHeaders = (request: Request, response: ExpressResponse): void => {
+  const allowedOrigin = getAllowedCorsOrigin(request);
+  response.setHeader('Vary', 'Origin');
+  if (allowedOrigin) {
+    response.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  }
   response.setHeader('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS);
   response.setHeader('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
 };
 
-const sendCorsPreflight = (response: ExpressResponse): void => {
-  applyCorsHeaders(response);
+const sendCorsPreflight = (request: Request, response: ExpressResponse): void => {
+  applyCorsHeaders(request, response);
   response.status(204).send('');
 };
 
@@ -720,20 +739,21 @@ const verifyUser = async (request: Request): Promise<admin.auth.DecodedIdToken> 
 };
 
 const sendJsonError = (
+  request: Request,
   response: ExpressResponse,
   statusCode: number,
   payload: Record<string, unknown>
 ): void => {
-  applyCorsHeaders(response);
+  applyCorsHeaders(request, response);
   response.status(statusCode).json(payload);
 };
 
-const sendMethodNotAllowed = (response: ExpressResponse): void => {
-  sendJsonError(response, 405, { error: 'Method Not Allowed' });
+const sendMethodNotAllowed = (request: Request, response: ExpressResponse): void => {
+  sendJsonError(request, response, 405, { error: 'Method Not Allowed' });
 };
 
-const sendNotFound = (response: ExpressResponse): void => {
-  sendJsonError(response, 404, { error: 'Not Found' });
+const sendNotFound = (request: Request, response: ExpressResponse): void => {
+  sendJsonError(request, response, 404, { error: 'Not Found' });
 };
 
 const parseBody = <T extends Record<string, unknown>>(request: Request): T =>
@@ -1715,19 +1735,19 @@ const syncCustomLists = async (
         .collection('lists')
         .doc(`trakt_${traktList.ids.trakt}`)
         .set({
-          createdAt: new Date(traktList.created_at).getTime(),
+          createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
           description: traktList.description || '',
           isCustom: true,
           items,
           metadata: {
             itemCount: Object.keys(items).length,
-            lastUpdated: Date.now(),
+            lastUpdated: Timestamp.now(),
             needsEnrichment: true,
           },
           name: traktList.name,
           privacy: traktList.privacy === 'public' ? 'public' : 'private',
           traktId: traktList.ids.trakt,
-          updatedAt: new Date(traktList.updated_at).getTime(),
+          updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
         });
 
       count++;
@@ -2156,7 +2176,17 @@ const enrichEpisodeTracking = async (
         watchedAt = Timestamp.fromMillis(watchedAt);
       } else if (typeof watchedAt === 'string') {
         const parsedDate = new Date(watchedAt);
-        watchedAt = Number.isNaN(parsedDate.getTime()) ? Timestamp.now() : Timestamp.fromDate(parsedDate);
+        if (Number.isNaN(parsedDate.getTime())) {
+          console.warn('[TraktEnrichment] Invalid watchedAt string, defaulting to now.', {
+            episodeKey: key,
+            seasonNumber,
+            showId,
+            watchedAt,
+          });
+          watchedAt = Timestamp.now();
+        } else {
+          watchedAt = Timestamp.fromDate(parsedDate);
+        }
       }
 
       enrichedEpisodes[key] = {
@@ -2272,18 +2302,18 @@ const buildEnrichmentResponseBody = async (
 
 const handleOAuthStart = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'POST') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
   try {
     const decodedToken = await verifyUser(request);
     const result = await createOAuthState(decodedToken.uid);
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(200).json({ authUrl: result.authUrl } satisfies OAuthJsonResponse);
   } catch (error) {
     if (error instanceof TraktOAuthError && error.reason === 'rate_limited') {
-      applyCorsHeaders(response);
+      applyCorsHeaders(request, response);
       response.status(429).json({
         error: error.message,
         nextAllowedAt: new Date(Date.now() + TRAKT_OAUTH_START_COOLDOWN_MS).toISOString(),
@@ -2293,7 +2323,7 @@ const handleOAuthStart = async (request: Request, response: ExpressResponse): Pr
 
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2302,7 +2332,7 @@ const handleOAuthStart = async (request: Request, response: ExpressResponse): Pr
 
 const handleSyncPost = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'POST') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
@@ -2357,7 +2387,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
     });
 
     if (transactionResult.kind === 'active') {
-      applyCorsHeaders(response);
+      applyCorsHeaders(request, response);
       response.status(202).json({
         connected: true,
         synced: Boolean(transactionResult.status?.lastSyncedAt),
@@ -2367,7 +2397,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
     }
 
     if (transactionResult.kind === 'rate_limited') {
-      applyCorsHeaders(response);
+      applyCorsHeaders(request, response);
       response.status(429).json(
         buildRateLimitedSyncResponse(
           transactionResult.userData,
@@ -2406,7 +2436,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
       );
       await writeSyncStatus(userId, runId, failedStatus);
 
-      sendJsonError(response, 500, {
+      sendJsonError(request, response, 500, {
         connected: true,
         synced: Boolean(failedStatus.lastSyncedAt),
         ...serializeSyncStatus(failedStatus),
@@ -2415,7 +2445,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
       return;
     }
 
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(202).json({
       connected: true,
       synced: Boolean(transactionResult.status.lastSyncedAt),
@@ -2424,7 +2454,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
   } catch (error) {
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2433,7 +2463,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
 const handleSyncGet = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'GET') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
@@ -2442,12 +2472,12 @@ const handleSyncGet = async (request: Request, response: ExpressResponse): Promi
     const userSnapshot = await admin.firestore().collection('users').doc(decodedToken.uid).get();
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
 
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(200).json(getSyncResponseBody(userData));
   } catch (error) {
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2456,7 +2486,7 @@ const handleSyncGet = async (request: Request, response: ExpressResponse): Promi
 
 const handleDisconnect = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'POST') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
@@ -2476,12 +2506,12 @@ const handleDisconnect = async (request: Request, response: ExpressResponse): Pr
       { merge: true }
     );
 
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(200).json({ success: true });
   } catch (error) {
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2490,7 +2520,7 @@ const handleDisconnect = async (request: Request, response: ExpressResponse): Pr
 
 const handleEnrichPost = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'POST') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
@@ -2507,13 +2537,13 @@ const handleEnrichPost = async (request: Request, response: ExpressResponse): Pr
     const transactionResult = await prepareEnrichmentRun(userId, requestedLists, includeEpisodes);
 
     if (transactionResult.kind === 'active') {
-      applyCorsHeaders(response);
+      applyCorsHeaders(request, response);
       response.status(202).json(await buildEnrichmentResponseBody(userId, transactionResult.userData));
       return;
     }
 
     if (transactionResult.kind === 'rate_limited') {
-      applyCorsHeaders(response);
+      applyCorsHeaders(request, response);
       response.status(429).json(
         buildRateLimitedEnrichmentResponse(
           transactionResult.userData,
@@ -2529,14 +2559,14 @@ const handleEnrichPost = async (request: Request, response: ExpressResponse): Pr
       await dispatchEnrichmentRun(transactionResult.status);
     } catch {
       const failedResponse = await buildEnrichmentResponseBody(userId);
-      sendJsonError(response, 500, {
+      sendJsonError(request, response, 500, {
         ...failedResponse,
         error: failedResponse.errorMessage || 'Failed to enqueue TMDB enrichment.',
       });
       return;
     }
 
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(202).json(
       await buildEnrichmentResponseBody(userId, {
         traktEnrichmentStatus: transactionResult.status,
@@ -2545,7 +2575,7 @@ const handleEnrichPost = async (request: Request, response: ExpressResponse): Pr
   } catch (error) {
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2554,19 +2584,19 @@ const handleEnrichPost = async (request: Request, response: ExpressResponse): Pr
 
 const handleEnrichGet = async (request: Request, response: ExpressResponse): Promise<void> => {
   if (request.method !== 'GET') {
-    sendMethodNotAllowed(response);
+    sendMethodNotAllowed(request, response);
     return;
   }
 
   try {
     const decodedToken = await verifyUser(request);
     const userId = decodedToken.uid;
-    applyCorsHeaders(response);
+    applyCorsHeaders(request, response);
     response.status(200).json(await buildEnrichmentResponseBody(userId));
   } catch (error) {
     const normalizedError = normalizeSyncError(error);
     const statusCode = normalizedError.category === 'auth_invalid' ? 401 : 500;
-    sendJsonError(response, statusCode, {
+    sendJsonError(request, response, statusCode, {
       error: normalizedError.message,
       errorCategory: normalizedError.category,
     });
@@ -2582,7 +2612,7 @@ export const traktApi = onRequest(
   },
   async (request, response): Promise<void> => {
     if (request.method === 'OPTIONS') {
-      sendCorsPreflight(response);
+      sendCorsPreflight(request, response);
       return;
     }
 
@@ -2607,7 +2637,7 @@ export const traktApi = onRequest(
         await handleEnrichGet(request, response);
         return;
       default:
-        sendNotFound(response);
+        sendNotFound(request, response);
     }
   }
 );
@@ -2964,6 +2994,9 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 );
 
 export const __test__ = {
+  enrichEpisodeTracking,
+  getAllowedCorsOrigin,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
+  syncCustomLists,
 };

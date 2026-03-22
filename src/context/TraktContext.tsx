@@ -217,11 +217,9 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         setIsSyncing(false);
 
         if (status.status === 'completed') {
-          const syncDate = status.lastSyncedAt ? new Date(status.lastSyncedAt) : lastSyncedAt;
-          if (syncDate) {
-            setLastSyncedAt(syncDate);
-          }
-          await persistState(true, syncDate ?? null, status);
+          const syncDate = status.lastSyncedAt ? new Date(status.lastSyncedAt) : null;
+          setLastSyncedAt(syncDate);
+          await persistState(true, syncDate, status);
           console.log('[Trakt] Sync completed successfully');
 
           try {
@@ -256,7 +254,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     } catch (error) {
       console.error('[Trakt] Failed to poll sync status:', error);
     }
-  }, [user]);
+  }, [user, lastSyncedAt]);
 
   const pollEnrichmentStatus = useCallback(async () => {
     if (!user) return;
@@ -383,7 +381,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       console.error('[Trakt] Failed to disconnect:', error);
       throw error;
     }
-  }, [user, lastSyncedAt]);
+  }, [user]);
 
   const enrichData = useCallback(async () => {
     if (!user) {

@@ -145,6 +145,7 @@ beforeEach(() => {
   mockVerifyIdToken.mockResolvedValue({ uid: 'user-1' });
   mockEnqueue.mockResolvedValue(undefined);
   global.fetch = jest.fn() as any;
+  delete process.env.TRAKT_ALLOWED_ORIGINS;
 });
 
 describe('Trakt sync Firestore sanitization', () => {
@@ -584,5 +585,163 @@ describe('Trakt sync Firestore sanitization', () => {
       { merge: true }
     );
     expect(batchCommit).toHaveBeenCalledTimes(2);
+  });
+
+  it('writes Firestore timestamps for synced custom lists', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const usersCollection = {
+      doc: jest.fn(() => ({
+        collection: jest.fn((name: string) => {
+          if (name !== 'lists') {
+            throw new Error(`Unexpected subcollection ${name}`);
+          }
+
+          return {
+            doc: jest.fn(() => ({
+              set: listSet,
+            })),
+          };
+        }),
+      })),
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return usersCollection;
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      headers: {
+        get: () => null,
+      },
+      json: jest.fn().mockResolvedValue([
+        {
+          id: 1,
+          listed_at: '2024-01-03T00:00:00.000Z',
+          movie: {
+            ids: {
+              slug: 'movie-slug',
+              tmdb: 101,
+              trakt: 202,
+            },
+            title: 'Example Movie',
+            year: 2024,
+          },
+          rank: 1,
+          type: 'movie',
+        },
+      ]),
+      ok: true,
+      status: 200,
+      text: jest.fn(),
+    });
+
+    await (__test__ as any).syncCustomLists('user-1', 'access-token', 'showseek-user', [
+      {
+        created_at: '2024-01-01T00:00:00.000Z',
+        description: 'Custom list',
+        ids: {
+          slug: 'favorites',
+          trakt: 55,
+        },
+        name: 'Favorites',
+        privacy: 'public',
+        updated_at: '2024-01-02T00:00:00.000Z',
+      },
+    ]);
+
+    const payload = listSet.mock.calls[0][0];
+    expect(payload.createdAt.toMillis()).toBe(new Date('2024-01-01T00:00:00.000Z').getTime());
+    expect(payload.updatedAt.toMillis()).toBe(new Date('2024-01-02T00:00:00.000Z').getTime());
+    expect(payload.metadata.lastUpdated).toBeInstanceOf(MockTimestamp);
+  });
+
+  it('warns when episode watchedAt strings are invalid before falling back to now', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      headers: {
+        get: () => null,
+      },
+      json: jest.fn().mockResolvedValue({
+        episodes: [
+          {
+            air_date: '2020-01-01',
+            episode_number: 1,
+            id: 77,
+            name: 'Pilot',
+          },
+        ],
+      }),
+      ok: true,
+      status: 200,
+    });
+
+    const enrichedEpisodes = await (__test__ as any).enrichEpisodeTracking(99, {
+      '1_1': {
+        watchedAt: 'not-a-date',
+      },
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[TraktEnrichment] Invalid watchedAt string, defaulting to now.',
+      expect.objectContaining({
+        episodeKey: '1_1',
+        showId: 99,
+        watchedAt: 'not-a-date',
+      })
+    );
+    expect(enrichedEpisodes['1_1'].watchedAt.toMillis()).toBe(1_700_000_000_000);
+
+    warnSpy.mockRestore();
+    nowSpy.mockRestore();
+  });
+
+  it('reflects allowed origins for CORS preflight requests', async () => {
+    process.env.TRAKT_ALLOWED_ORIGINS = 'https://allowed.example, https://other.example';
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        header: (name: string) => (name.toLowerCase() === 'origin' ? 'https://allowed.example' : undefined),
+        method: 'OPTIONS',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Access-Control-Allow-Origin',
+      'https://allowed.example'
+    );
+    expect(response.setHeader).toHaveBeenCalledWith('Vary', 'Origin');
+    expect(response.status).toHaveBeenCalledWith(204);
+  });
+
+  it('omits Access-Control-Allow-Origin for disallowed origins on normal responses', async () => {
+    process.env.TRAKT_ALLOWED_ORIGINS = 'https://allowed.example';
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        header: (name: string) => (name.toLowerCase() === 'origin' ? 'https://blocked.example' : undefined),
+        method: 'GET',
+        path: '/missing',
+      },
+      response
+    );
+
+    expect(response.setHeader).not.toHaveBeenCalledWith(
+      'Access-Control-Allow-Origin',
+      expect.anything()
+    );
+    expect(response.setHeader).toHaveBeenCalledWith('Vary', 'Origin');
+    expect(response.status).toHaveBeenCalledWith(404);
   });
 });

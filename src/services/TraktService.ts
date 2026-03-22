@@ -27,6 +27,18 @@ const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
 const isActiveEnrichmentStatus = (status?: EnrichmentStatus['status']): boolean =>
   status === 'queued' || status === 'in_progress' || status === 'retrying';
 
+const SYNC_ERROR_CATEGORIES = new Set<SyncErrorCategory>([
+  'auth_invalid',
+  'internal',
+  'locked_account',
+  'rate_limited',
+  'upstream_blocked',
+  'upstream_unavailable',
+]);
+
+const isSyncErrorCategory = (value: unknown): value is SyncErrorCategory =>
+  typeof value === 'string' && SYNC_ERROR_CATEGORIES.has(value as SyncErrorCategory);
+
 const requireAuthenticatedUser = async () => {
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -88,10 +100,7 @@ const buildRequestError = async (
         : fallbackMessage;
 
   return new TraktRequestError(message, {
-    category:
-      typeof responseBody?.errorCategory === 'string'
-        ? (responseBody.errorCategory as SyncErrorCategory)
-        : undefined,
+    category: isSyncErrorCategory(responseBody?.errorCategory) ? responseBody.errorCategory : undefined,
     nextAllowedEnrichAt:
       typeof responseBody?.nextAllowedEnrichAt === 'string'
         ? responseBody.nextAllowedEnrichAt
@@ -203,7 +212,8 @@ export async function checkSyncStatus(): Promise<SyncStatus> {
       throw await buildRequestError(response, 'Failed to check sync status');
     }
 
-    return response.json();
+    const payload = (await response.json()) as SyncStatus;
+    return payload;
   } catch (error) {
     cancelTimeout();
     throw error;
@@ -310,7 +320,8 @@ export async function checkEnrichmentStatus(): Promise<EnrichmentStatus> {
       throw await buildRequestError(response, 'Failed to check enrichment status');
     }
 
-    return response.json();
+    const payload = (await response.json()) as EnrichmentStatus;
+    return payload;
   } catch (error) {
     cancelTimeout();
     throw error;
