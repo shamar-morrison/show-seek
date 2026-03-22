@@ -1,7 +1,7 @@
 /**
  * Trakt API Service
  *
- * Handles communication with the Trakt proxy backend for:
+ * Handles communication with the Firebase Functions Trakt backend for:
  * - OAuth authentication flow
  * - Triggering data sync
  * - Checking sync status
@@ -9,57 +9,111 @@
  */
 
 import { TRAKT_CONFIG } from '@/src/config/trakt';
-import type { EnrichmentOptions, EnrichmentStatus, SyncStatus } from '@/src/types/trakt';
+import { auth } from '@/src/firebase/config';
+import type {
+  EnrichmentOptions,
+  EnrichmentStatus,
+  SyncErrorCategory,
+  SyncStatus,
+} from '@/src/types/trakt';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import * as WebBrowser from 'expo-web-browser';
 
-const { BACKEND_URL, CLIENT_ID, REDIRECT_URI } = TRAKT_CONFIG;
+const { BACKEND_URL, REDIRECT_URI } = TRAKT_CONFIG;
 
-const validateUserId = (userId: string) => {
-  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-    throw new Error('Invalid userId: ID cannot be empty');
+const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
+  status === 'queued' || status === 'in_progress' || status === 'retrying';
+
+const isActiveEnrichmentStatus = (status?: EnrichmentStatus['status']): boolean =>
+  status === 'queued' || status === 'in_progress' || status === 'retrying';
+
+const requireAuthenticatedUser = async () => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Must be logged in to use Trakt');
+  }
+
+  const idToken = await currentUser.getIdToken();
+  return {
+    currentUser,
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+    },
+  };
+};
+
+const parseJsonSafely = async (response: Response): Promise<Record<string, unknown> | undefined> => {
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    return undefined;
   }
 };
 
-/**
- * Initiate OAuth flow by opening Trakt authorization page in browser
- * The backend handles the token exchange via callback
- */
-export async function initiateOAuthFlow(
-  userId: string
-): Promise<WebBrowser.WebBrowserAuthSessionResult> {
-  validateUserId(userId);
+export class TraktRequestError extends Error {
+  category?: SyncErrorCategory;
+  nextAllowedEnrichAt?: string;
+  nextAllowedSyncAt?: string;
+  responseBody?: Record<string, unknown>;
 
-  const authUrl =
-    `https://trakt.tv/oauth/authorize?` +
-    `response_type=code&` +
-    `client_id=${CLIENT_ID}&` +
-    `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-    `state=${userId}`;
-
-  console.log('[Trakt] Initiating OAuth for user:', userId);
-
-  return WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URI);
+  constructor(
+    message: string,
+    options: {
+      category?: SyncErrorCategory;
+      nextAllowedEnrichAt?: string;
+      nextAllowedSyncAt?: string;
+      responseBody?: Record<string, unknown>;
+    } = {}
+  ) {
+    super(message);
+    this.name = 'TraktRequestError';
+    this.category = options.category;
+    this.nextAllowedEnrichAt = options.nextAllowedEnrichAt;
+    this.nextAllowedSyncAt = options.nextAllowedSyncAt;
+    this.responseBody = options.responseBody;
+  }
 }
 
-/**
- * Trigger data sync from Trakt to Firestore
- * The backend will import the user's watch history, ratings, lists, etc.
- */
-export async function triggerSync(userId: string): Promise<void> {
-  validateUserId(userId);
-  console.log('[Trakt] Triggering sync for user:', userId);
+const buildRequestError = async (
+  response: Response,
+  fallbackMessage: string
+): Promise<TraktRequestError> => {
+  const responseBody = await parseJsonSafely(response);
+  const message =
+    typeof responseBody?.errorMessage === 'string'
+      ? responseBody.errorMessage
+      : typeof responseBody?.error === 'string'
+        ? responseBody.error
+        : fallbackMessage;
 
-  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
+  return new TraktRequestError(message, {
+    category:
+      typeof responseBody?.errorCategory === 'string'
+        ? (responseBody.errorCategory as SyncErrorCategory)
+        : undefined,
+    nextAllowedEnrichAt:
+      typeof responseBody?.nextAllowedEnrichAt === 'string'
+        ? responseBody.nextAllowedEnrichAt
+        : undefined,
+    nextAllowedSyncAt:
+      typeof responseBody?.nextAllowedSyncAt === 'string' ? responseBody.nextAllowedSyncAt : undefined,
+    responseBody,
+  });
+};
+
+/**
+ * Initiate OAuth flow by requesting an auth URL from the backend and opening it in a browser.
+ */
+export async function initiateOAuthFlow(): Promise<WebBrowser.WebBrowserAuthSessionResult> {
+  const { headers } = await requireAuthenticatedUser();
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
   try {
     const response = await Promise.race([
-      fetch(`${BACKEND_URL}/api/trakt/sync`, {
+      fetch(`${BACKEND_URL}/oauth/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
+        headers,
       }),
       timeoutPromise,
     ]);
@@ -67,9 +121,15 @@ export async function triggerSync(userId: string): Promise<void> {
     cancelTimeout();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Sync failed: ${errorText}`);
+      throw await buildRequestError(response, 'Failed to start Trakt OAuth');
     }
+
+    const payload = await response.json();
+    if (!payload?.authUrl || typeof payload.authUrl !== 'string') {
+      throw new Error('Missing Trakt OAuth URL from backend');
+    }
+
+    return WebBrowser.openAuthSessionAsync(payload.authUrl, REDIRECT_URI);
   } catch (error) {
     cancelTimeout();
     throw error;
@@ -77,25 +137,70 @@ export async function triggerSync(userId: string): Promise<void> {
 }
 
 /**
- * Check the current sync status for a user
+ * Trigger data sync from Trakt to Firestore.
  */
-export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
-  validateUserId(userId);
-  console.log('[Trakt] Checking sync status for user:', userId);
+export async function triggerSync(): Promise<void> {
+  const { currentUser, headers } = await requireAuthenticatedUser();
+  console.log('[Trakt] Triggering sync for user:', currentUser.uid);
 
-  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
 
   try {
     const response = await Promise.race([
-      fetch(`${BACKEND_URL}/api/trakt/sync?userId=${userId}`),
+      fetch(`${BACKEND_URL}/sync`, {
+        method: 'POST',
+        headers,
+      }),
       timeoutPromise,
     ]);
 
     cancelTimeout();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to check sync status: ${errorText}`);
+      throw await buildRequestError(response, 'Sync failed');
+    }
+  } catch (error) {
+    cancelTimeout();
+
+    if (error instanceof Error && error.message === 'Request timed out') {
+      try {
+        const status = await checkSyncStatus();
+        if (isActiveSyncStatus(status.status)) {
+          console.log('[Trakt] Sync request timed out locally, but backend already has an active run');
+          return;
+        }
+      } catch (statusError) {
+        console.warn('[Trakt] Failed to recover sync status after timeout:', statusError);
+      }
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Check the current sync status for the authenticated user.
+ */
+export async function checkSyncStatus(): Promise<SyncStatus> {
+  const { currentUser, headers } = await requireAuthenticatedUser();
+  console.log('[Trakt] Checking sync status for user:', currentUser.uid);
+
+  const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
+
+  try {
+    const response = await Promise.race([
+      fetch(`${BACKEND_URL}/sync`, {
+        headers: {
+          Authorization: headers.Authorization,
+        },
+      }),
+      timeoutPromise,
+    ]);
+
+    cancelTimeout();
+
+    if (!response.ok) {
+      throw await buildRequestError(response, 'Failed to check sync status');
     }
 
     return response.json();
@@ -106,23 +211,19 @@ export async function checkSyncStatus(userId: string): Promise<SyncStatus> {
 }
 
 /**
- * Disconnect Trakt account from the user's profile
- * Removes stored tokens but preserves synced data
+ * Disconnect Trakt account from the user's profile.
  */
-export async function disconnectTrakt(userId: string): Promise<void> {
-  validateUserId(userId);
-  console.log('[Trakt] Disconnecting for user:', userId);
+export async function disconnectTrakt(): Promise<void> {
+  const { currentUser, headers } = await requireAuthenticatedUser();
+  console.log('[Trakt] Disconnecting for user:', currentUser.uid);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
   try {
     const response = await Promise.race([
-      fetch(`${BACKEND_URL}/api/trakt/disconnect`, {
+      fetch(`${BACKEND_URL}/disconnect`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
+        headers,
       }),
       timeoutPromise,
     ]);
@@ -130,8 +231,7 @@ export async function disconnectTrakt(userId: string): Promise<void> {
     cancelTimeout();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Disconnect failed: ${errorText}`);
+      throw await buildRequestError(response, 'Disconnect failed');
     }
   } catch (error) {
     cancelTimeout();
@@ -140,29 +240,22 @@ export async function disconnectTrakt(userId: string): Promise<void> {
 }
 
 /**
- * Trigger TMDB enrichment for synced Trakt data
- * Fetches posters, ratings, and genres from TMDB
+ * Trigger TMDB enrichment for synced Trakt data.
  */
-export async function triggerEnrichment(
-  userId: string,
-  options?: EnrichmentOptions
-): Promise<void> {
-  validateUserId(userId);
-  console.log('[Trakt] Triggering enrichment for user:', userId);
+export async function triggerEnrichment(options?: EnrichmentOptions): Promise<void> {
+  const { currentUser, headers } = await requireAuthenticatedUser();
+  console.log('[Trakt] Triggering enrichment for user:', currentUser.uid);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(15000);
 
   try {
     const response = await Promise.race([
-      fetch(`${BACKEND_URL}/api/trakt/enrich`, {
+      fetch(`${BACKEND_URL}/enrich`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
-          userId,
-          lists: options?.lists || ['already-watched', 'watchlist', 'favorites'],
           includeEpisodes: options?.includeEpisodes || false,
+          lists: options?.lists || ['already-watched', 'watchlist', 'favorites'],
         }),
       }),
       timeoutPromise,
@@ -171,35 +264,50 @@ export async function triggerEnrichment(
     cancelTimeout();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Enrichment failed: ${errorText}`);
+      throw await buildRequestError(response, 'Enrichment failed');
     }
   } catch (error) {
     cancelTimeout();
+
+    if (error instanceof Error && error.message === 'Request timed out') {
+      try {
+        const status = await checkEnrichmentStatus();
+        if (isActiveEnrichmentStatus(status.status)) {
+          console.log('[Trakt] Enrichment request timed out locally, but backend already has an active run');
+          return;
+        }
+      } catch (statusError) {
+        console.warn('[Trakt] Failed to recover enrichment status after timeout:', statusError);
+      }
+    }
+
     throw error;
   }
 }
 
 /**
- * Check the current enrichment status for a user
+ * Check the current enrichment status for the authenticated user.
  */
-export async function checkEnrichmentStatus(userId: string): Promise<EnrichmentStatus> {
-  validateUserId(userId);
-  console.log('[Trakt] Checking enrichment status for user:', userId);
+export async function checkEnrichmentStatus(): Promise<EnrichmentStatus> {
+  const { currentUser, headers } = await requireAuthenticatedUser();
+  console.log('[Trakt] Checking enrichment status for user:', currentUser.uid);
 
   const { promise: timeoutPromise, cancel: cancelTimeout } = createTimeoutWithCleanup(10000);
 
   try {
     const response = await Promise.race([
-      fetch(`${BACKEND_URL}/api/trakt/enrich?userId=${userId}`),
+      fetch(`${BACKEND_URL}/enrich`, {
+        headers: {
+          Authorization: headers.Authorization,
+        },
+      }),
       timeoutPromise,
     ]);
 
     cancelTimeout();
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to check enrichment status: ${errorText}`);
+      throw await buildRequestError(response, 'Failed to check enrichment status');
     }
 
     return response.json();
