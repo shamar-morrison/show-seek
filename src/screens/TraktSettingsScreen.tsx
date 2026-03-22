@@ -26,9 +26,10 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useTrakt } from '@/src/context/TraktContext';
+import { TraktRequestError } from '@/src/services/TraktService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatDistanceToNow } from 'date-fns';
-import { enUS, es, pt, ptBR } from 'date-fns/locale';
+import { enUS, es, fr, pt, ptBR } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -86,6 +87,9 @@ export default function TraktSettingsScreen() {
       case 'es-ES':
       case 'es-MX':
         return es;
+      case 'fr':
+      case 'fr-FR':
+        return fr;
       case 'pt-BR':
         return ptBR;
       case 'pt-PT':
@@ -94,6 +98,11 @@ export default function TraktSettingsScreen() {
         return enUS;
     }
   }, [i18n.language]);
+
+  const getPreferredMessage = (translationKey: string, fallback?: string) => {
+    const translated = t(translationKey);
+    return translated !== translationKey ? translated : (fallback ?? translated);
+  };
 
   const handleConnect = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -114,6 +123,11 @@ export default function TraktSettingsScreen() {
       await syncNow();
     } catch (error) {
       console.error('Failed to sync:', error);
+      if (error instanceof TraktRequestError && error.category === 'rate_limited') {
+        Alert.alert(t('trakt.rateLimitedTitle'), getPreferredMessage('trakt.rateLimitedMessage', error.message));
+        return;
+      }
+
       Alert.alert(t('trakt.syncFailedTitle'), t('trakt.syncFailedMessage'));
     }
   }, [syncNow, t]);
@@ -146,6 +160,12 @@ export default function TraktSettingsScreen() {
       await enrichData();
     } catch (error) {
       console.error('Failed to enrich:', error);
+
+      if (error instanceof TraktRequestError && error.category === 'rate_limited') {
+        Alert.alert(t('trakt.rateLimitedTitle'), getPreferredMessage('trakt.rateLimitedMessage', error.message));
+        return;
+      }
+
       Alert.alert(t('trakt.enrichmentFailedTitle'), t('trakt.enrichmentFailedMessage'));
     }
   }, [enrichData, t]);
@@ -157,6 +177,56 @@ export default function TraktSettingsScreen() {
       </SafeAreaView>
     );
   }
+
+  const isLockedAccount = syncStatus?.errorCategory === 'locked_account';
+  const isRateLimited = syncStatus?.errorCategory === 'rate_limited';
+
+  const syncStatusBanner =
+    isLockedAccount ? (
+      <View
+        style={[
+          styles.errorsContainer,
+          styles.lockedStateContainer,
+          { backgroundColor: hexToRGBA(COLORS.error, 0.1) },
+        ]}
+      >
+        <View style={styles.lockedStateHeader}>
+          <AlertCircle size={18} color={COLORS.error} />
+          <Text style={styles.errorsTitle}>{t('trakt.lockedAccountTitle')}</Text>
+        </View>
+        <Text style={styles.errorText}>
+          {getPreferredMessage('trakt.lockedAccountMessage', syncStatus?.errorMessage)}
+        </Text>
+      </View>
+    ) : isRateLimited ? (
+      <View
+        style={[
+          styles.errorsContainer,
+          styles.lockedStateContainer,
+          { backgroundColor: hexToRGBA(COLORS.warning, 0.12) },
+        ]}
+      >
+        <View style={styles.lockedStateHeader}>
+          <AlertCircle size={18} color={COLORS.warning} />
+          <Text style={[styles.errorsTitle, { color: COLORS.warning }]}>
+            {t('trakt.rateLimitedTitle')}
+          </Text>
+        </View>
+        <Text style={[styles.errorText, { color: COLORS.warning }]}>
+          {getPreferredMessage('trakt.rateLimitedMessage', syncStatus?.errorMessage)}
+        </Text>
+        {syncStatus?.nextAllowedSyncAt && (
+          <Text style={[styles.errorText, { color: COLORS.warning }]}>
+            {t('trakt.rateLimitedRetryAt', {
+              time: formatDistanceToNow(new Date(syncStatus.nextAllowedSyncAt), {
+                addSuffix: true,
+                locale: distanceLocale,
+              }),
+            })}
+          </Text>
+        )}
+      </View>
+    ) : null;
 
   // State: Syncing
   if (isSyncing) {
@@ -330,6 +400,8 @@ export default function TraktSettingsScreen() {
             <Text style={styles.heroSubtitle}>{t('trakt.connectedSubtitle')}</Text>
           </View>
 
+          {syncStatusBanner}
+
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
             onPress={handleSync}
@@ -411,7 +483,9 @@ export default function TraktSettingsScreen() {
           </View>
         )}
 
-        {syncStatus?.errors && syncStatus.errors.length > 0 && (
+        {syncStatusBanner}
+
+        {!isLockedAccount && !isRateLimited && syncStatus?.errors && syncStatus.errors.length > 0 && (
           <View style={[styles.errorsContainer, { backgroundColor: hexToRGBA(accentColor, 0.1) }]}>
             <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
             {syncStatus.errors.slice(0, 3).map((error, index) => (
@@ -437,7 +511,7 @@ export default function TraktSettingsScreen() {
         </TouchableOpacity>
 
         {/* Enrichment Section - show if synced but not enriched yet, or always in dev mode */}
-        {lastSyncedAt && (!lastEnrichedAt || __DEV__) && (
+        {lastSyncedAt && (
           <View style={styles.enrichmentSection}>
             <View style={styles.enrichmentHeader}>
               <Sparkles size={24} color={COLORS.warning} />
@@ -724,6 +798,14 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.m,
     padding: SPACING.m,
     marginBottom: SPACING.l,
+  },
+  lockedStateContainer: {
+    gap: SPACING.s,
+  },
+  lockedStateHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.s,
   },
   errorsTitle: {
     fontSize: FONT_SIZE.s,

@@ -49,25 +49,45 @@ Deploy the webhook function:
 firebase deploy --only functions:revenuecatWebhook --project showseek-app-2025
 ```
 
-## Account Deletion Secrets
+## Trakt Functions Secrets
 
-`deleteAccount` requires the Trakt backend URL plus a shared bearer token for the
-internal delete endpoint.
+The Trakt integration now runs entirely from Firebase Functions:
 
-- `TRAKT_BACKEND_URL`: base URL for the Trakt proxy/backend (for example
-  `https://trakt-proxy.vercel.app`)
-- `TRAKT_INTERNAL_DELETE_AUTH`: bearer token accepted by
-  `POST /api/trakt/delete-user`
+- `traktApi`: app-facing HTTP backend for OAuth start, sync, status, disconnect, and enrichment
+- `traktCallback`: Trakt OAuth callback page + token exchange
+- `runTraktSync`: Cloud Tasks-backed worker for durable sync execution
+- `runTraktEnrichment`: Cloud Tasks-backed worker for queued TMDB enrichment jobs
+
+These functions require the following secrets:
+
+- `TRAKT_CLIENT_ID`
+- `TRAKT_CLIENT_SECRET`
+- `TRAKT_REDIRECT_URI`
 
 Set them with:
 
 ```bash
-firebase functions:secrets:set TRAKT_BACKEND_URL --project showseek-app-2025
-firebase functions:secrets:set TRAKT_INTERNAL_DELETE_AUTH --project showseek-app-2025
+firebase functions:secrets:set TRAKT_CLIENT_ID --project showseek-app-2025
+firebase functions:secrets:set TRAKT_CLIENT_SECRET --project showseek-app-2025
+firebase functions:secrets:set TRAKT_REDIRECT_URI --project showseek-app-2025
 ```
 
-Then deploy the callable:
+The Trakt enrichment endpoints also use TMDB metadata. If `TMDB_API_KEY` is not
+already configured for other functions in this project, set it as well:
 
 ```bash
-firebase deploy --only functions:deleteAccount --project showseek-app-2025
+firebase functions:secrets:set TMDB_API_KEY --project showseek-app-2025
 ```
+
+When deploying `traktApi` for web callers, configure the runtime environment
+variable `TRAKT_ALLOWED_ORIGINS` with a comma-separated allowlist of trusted
+origins so CORS responses only reflect approved origins.
+
+Deploy the Trakt backend:
+
+```bash
+firebase deploy --only functions:traktApi,functions:traktCallback,functions:runTraktSync,functions:runTraktEnrichment --project showseek-app-2025
+```
+
+`deleteAccount` no longer depends on a separate Trakt backend or shared internal
+delete token. It now deletes Firestore/Auth data directly within Firebase.

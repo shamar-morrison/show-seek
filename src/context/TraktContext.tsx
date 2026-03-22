@@ -12,6 +12,7 @@
 
 import { TRAKT_CONFIG, TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
 import { auth } from '@/src/firebase/config';
+import { TraktRequestError } from '@/src/services/TraktService';
 import * as TraktService from '@/src/services/TraktService';
 import type { SyncStatus, TraktContextValue } from '@/src/types/trakt';
 import createContextHook from '@nkzw/create-context-hook';
@@ -19,6 +20,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
+  status === 'queued' || status === 'in_progress' || status === 'retrying';
+
+const isActiveEnrichmentStatus = (
+  status?: 'idle' | 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed'
+): boolean => status === 'queued' || status === 'in_progress' || status === 'retrying';
+
+const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
+  status?.status === 'failed' && status.errorCategory === 'locked_account';
 
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const [isConnected, setIsConnected] = useState(false);
@@ -78,7 +89,14 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
   // Auto-sync on app launch if connected and cooldown has passed
   useEffect(() => {
-    if (!user || !isConnected || isLoading || hasAttemptedAutoSync.current) {
+    if (
+      !user ||
+      !isConnected ||
+      isLoading ||
+      hasAttemptedAutoSync.current ||
+      isLockedAccountStatus(syncStatus) ||
+      isActiveSyncStatus(syncStatus?.status)
+    ) {
       return;
     }
 
@@ -97,7 +115,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     } else {
       console.log('[Trakt] Skipping auto-sync (cooldown not passed or never synced)');
     }
-  }, [user, isConnected, isLoading, lastSyncedAt]);
+  }, [user, isConnected, isLoading, lastSyncedAt, syncStatus]);
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
@@ -135,9 +153,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     if (!user) return;
 
     try {
-      const status = await TraktService.checkSyncStatus(user.uid);
+      const status = await TraktService.checkSyncStatus();
       setSyncStatus(status);
       setIsConnected(status.connected);
+      setIsSyncing(isActiveSyncStatus(status.status));
 
       if (status.lastSyncedAt) {
         const syncDate = new Date(status.lastSyncedAt);
@@ -160,9 +179,12 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
 
     try {
-      const result = await TraktService.initiateOAuthFlow(user.uid);
+      const result = await TraktService.initiateOAuthFlow();
 
-      if (result.type === WebBrowser.WebBrowserResultType.DISMISS) {
+      if (
+        result.type === WebBrowser.WebBrowserResultType.DISMISS ||
+        result.type === 'success'
+      ) {
         // Wait for backend to process the callback
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -182,8 +204,9 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     if (!user) return;
 
     try {
-      const status = await TraktService.checkSyncStatus(user.uid);
+      const status = await TraktService.checkSyncStatus();
       setSyncStatus(status);
+      setIsSyncing(isActiveSyncStatus(status.status));
 
       if (status.status === 'completed' || status.status === 'failed') {
         if (pollIntervalRef.current) {
@@ -193,49 +216,98 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
         setIsSyncing(false);
 
-        if (status.status === 'completed' && status.lastSyncedAt) {
-          const syncDate = new Date(status.lastSyncedAt);
+        if (status.status === 'completed') {
+          const syncDate = status.lastSyncedAt ? new Date(status.lastSyncedAt) : null;
           setLastSyncedAt(syncDate);
           await persistState(true, syncDate, status);
           console.log('[Trakt] Sync completed successfully');
+
+          try {
+            const enrichmentStatus = await TraktService.checkEnrichmentStatus();
+            const enrichmentActive = isActiveEnrichmentStatus(enrichmentStatus.status);
+            setIsEnriching(enrichmentActive);
+
+            if (enrichmentActive && !enrichmentIntervalRef.current) {
+              enrichmentIntervalRef.current = setInterval(
+                pollEnrichmentStatus,
+                TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
+              );
+            } else if (enrichmentStatus.status === 'completed' && enrichmentStatus.completedAt) {
+              const enrichedDate = new Date(enrichmentStatus.completedAt);
+              setLastEnrichedAt(enrichedDate);
+              await AsyncStorage.setItem(
+                TRAKT_STORAGE_KEYS.LAST_ENRICHED,
+                enrichedDate.toISOString()
+              );
+            }
+          } catch (enrichmentError) {
+            console.warn(
+              '[Trakt] Failed to fetch enrichment status after sync completion:',
+              enrichmentError
+            );
+          }
         } else if (status.status === 'failed') {
+          await persistState(true, lastSyncedAt, status);
           console.error('[Trakt] Sync failed:', status.errors);
         }
       }
     } catch (error) {
       console.error('[Trakt] Failed to poll sync status:', error);
     }
-  }, [user]);
+  }, [user, lastSyncedAt]);
 
   const pollEnrichmentStatus = useCallback(async () => {
     if (!user) return;
 
     try {
-      const status = await TraktService.checkEnrichmentStatus(user.uid);
-      const hasPosters = Object.values(status.lists || {}).some((list) => list.hasPosters);
+      const status = await TraktService.checkEnrichmentStatus();
+      const enrichmentActive = isActiveEnrichmentStatus(status.status);
+      setIsEnriching(enrichmentActive);
 
-      if (hasPosters || status.status === 'completed' || status.status === 'failed') {
-        if (enrichmentIntervalRef.current) {
-          clearInterval(enrichmentIntervalRef.current);
-          enrichmentIntervalRef.current = null;
-        }
+      if (enrichmentActive) {
+        return;
+      }
 
-        setIsEnriching(false);
+      if (enrichmentIntervalRef.current) {
+        clearInterval(enrichmentIntervalRef.current);
+        enrichmentIntervalRef.current = null;
+      }
 
-        if (hasPosters || status.status === 'completed') {
-          const now = new Date();
-          setLastEnrichedAt(now);
-          await AsyncStorage.setItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED, now.toISOString());
-          console.log('[Trakt] Enrichment completed successfully');
-        } else if (status.status === 'failed') {
-          console.error('[Trakt] Enrichment failed:', status.errors);
-        }
+      if (status.status === 'completed') {
+        const enrichedDate = status.completedAt ? new Date(status.completedAt) : new Date();
+        setLastEnrichedAt(enrichedDate);
+        await AsyncStorage.setItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED, enrichedDate.toISOString());
+        console.log('[Trakt] Enrichment completed successfully');
+      } else if (status.status === 'failed') {
+        console.error('[Trakt] Enrichment failed:', status.errors);
       }
     } catch (error) {
       console.error('[Trakt] Failed to poll enrichment status:', error);
       // Don't stop polling on error, might be transient
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !syncStatus?.status) {
+      return;
+    }
+
+    if (isActiveSyncStatus(syncStatus.status)) {
+      setIsSyncing(true);
+
+      if (!pollIntervalRef.current) {
+        void pollSyncStatus();
+        pollIntervalRef.current = setInterval(
+          pollSyncStatus,
+          TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
+        );
+      }
+
+      return;
+    }
+
+    setIsSyncing(false);
+  }, [user, syncStatus?.status, pollSyncStatus]);
 
   const syncNow = useCallback(async () => {
     if (!user) {
@@ -249,18 +321,41 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
     try {
       setIsSyncing(true);
-      setSyncStatus({ connected: true, synced: false, status: 'in_progress' });
+      setSyncStatus((currentStatus) => ({
+        connected: true,
+        synced: Boolean(currentStatus?.lastSyncedAt),
+        ...(currentStatus ?? {}),
+        errorCategory: undefined,
+        errorMessage: undefined,
+        errors: undefined,
+        status: 'queued',
+      }));
 
-      await TraktService.triggerSync(user.uid);
+      await TraktService.triggerSync();
 
       // Start polling for status updates
-      pollIntervalRef.current = setInterval(
-        pollSyncStatus,
-        TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
-      );
+      if (!pollIntervalRef.current) {
+        pollIntervalRef.current = setInterval(
+          pollSyncStatus,
+          TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
+        );
+      }
     } catch (error) {
       console.error('[Trakt] Failed to trigger sync:', error);
       setIsSyncing(false);
+
+      if (error instanceof TraktRequestError && error.category === 'rate_limited') {
+        setSyncStatus((currentStatus) => ({
+          connected: true,
+          synced: Boolean(currentStatus?.lastSyncedAt),
+          ...(currentStatus ?? {}),
+          errorCategory: 'rate_limited',
+          errorMessage: error.message,
+          nextAllowedSyncAt: error.nextAllowedSyncAt,
+          status: 'failed',
+        }));
+      }
+
       throw error;
     }
   }, [user, isSyncing, pollSyncStatus]);
@@ -271,13 +366,15 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
 
     try {
-      await TraktService.disconnectTrakt(user.uid);
+      await TraktService.disconnectTrakt();
 
       setIsConnected(false);
       setLastSyncedAt(null);
+      setLastEnrichedAt(null);
       setSyncStatus(null);
 
       await persistState(false, null, null);
+      await AsyncStorage.removeItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED);
 
       console.log('[Trakt] Successfully disconnected');
     } catch (error) {
@@ -299,15 +396,17 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     try {
       setIsEnriching(true);
 
-      await TraktService.triggerEnrichment(user.uid, {
+      await TraktService.triggerEnrichment({
         includeEpisodes: true, // Include episodes in enrichment to test new backend cache
       });
 
       // Start polling for enrichment status
-      enrichmentIntervalRef.current = setInterval(
-        pollEnrichmentStatus,
-        TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
-      );
+      if (!enrichmentIntervalRef.current) {
+        enrichmentIntervalRef.current = setInterval(
+          pollEnrichmentStatus,
+          TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
+        );
+      }
     } catch (error) {
       console.error('[Trakt] Failed to trigger enrichment:', error);
       setIsEnriching(false);

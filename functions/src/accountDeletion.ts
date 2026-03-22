@@ -1,9 +1,5 @@
 import * as admin from 'firebase-admin';
-import { defineSecret } from 'firebase-functions/params';
 import { HttpsError } from 'firebase-functions/v2/https';
-
-export const TRAKT_BACKEND_URL = defineSecret('TRAKT_BACKEND_URL');
-export const TRAKT_INTERNAL_DELETE_AUTH = defineSecret('TRAKT_INTERNAL_DELETE_AUTH');
 
 export interface DeleteAccountResponse {
   success: true;
@@ -17,113 +13,7 @@ interface DeleteAccountRequest {
   auth?: CallableAuth | null;
 }
 
-const TRAKT_DELETE_USER_PATH = '/api/trakt/delete-user';
-const TRAKT_DELETE_TIMEOUT_MS = 15_000;
-
-const trimSecret = (secretValue: string, secretName: string): string => {
-  const trimmedValue = secretValue.trim();
-  if (!trimmedValue) {
-    throw new HttpsError('failed-precondition', `${secretName} is not configured.`);
-  }
-  return trimmedValue;
-};
-
-const buildTraktDeleteUrl = (baseUrl: string): string => {
-  return `${baseUrl.replace(/\/+$/, '')}${TRAKT_DELETE_USER_PATH}`;
-};
-
-const truncateResponseBody = (responseBody: string): string => responseBody.slice(0, 500);
-
-const getTimeoutResponseBody = (error: unknown): string | undefined => {
-  if (typeof error !== 'object' || error === null) {
-    return undefined;
-  }
-
-  const candidate = error as { responseBody?: unknown; body?: unknown };
-
-  if (typeof candidate.responseBody === 'string') {
-    return truncateResponseBody(candidate.responseBody);
-  }
-
-  if (typeof candidate.body === 'string') {
-    return truncateResponseBody(candidate.body);
-  }
-
-  return undefined;
-};
-
-const isAbortOrTimeoutError = (error: unknown): boolean => {
-  if (!(typeof error === 'object' && error !== null && 'name' in error)) {
-    return false;
-  }
-
-  const name = (error as { name?: string }).name;
-  return name === 'AbortError' || name === 'TimeoutError';
-};
-
-async function deleteTraktAccountData(userId: string): Promise<void> {
-  const backendUrl = trimSecret(TRAKT_BACKEND_URL.value(), 'TRAKT_BACKEND_URL');
-  const authToken = trimSecret(TRAKT_INTERNAL_DELETE_AUTH.value(), 'TRAKT_INTERNAL_DELETE_AUTH');
-  const endpoint = buildTraktDeleteUrl(backendUrl);
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId }),
-      signal: AbortSignal.timeout(TRAKT_DELETE_TIMEOUT_MS),
-    });
-  } catch (error) {
-    if (isAbortOrTimeoutError(error)) {
-      const responseBody = getTimeoutResponseBody(error);
-
-      throw new HttpsError('unavailable', 'Trakt account cleanup timed out. Please retry.', {
-        endpoint,
-        timeoutMs: TRAKT_DELETE_TIMEOUT_MS,
-        ...(responseBody ? { responseBody } : {}),
-      });
-    }
-
-    if (error instanceof TypeError) {
-      throw new HttpsError(
-        'unavailable',
-        'Trakt account cleanup failed due to network error. Please retry.',
-        {
-          endpoint,
-          timeoutMs: TRAKT_DELETE_TIMEOUT_MS,
-          networkError: String(error),
-        }
-      );
-    }
-
-    throw error;
-  }
-
-  if (response.ok) {
-    return;
-  }
-
-  let responseBody = '';
-  try {
-    responseBody = await response.text();
-  } catch {
-    responseBody = '';
-  }
-
-  throw new HttpsError(
-    'internal',
-    `Trakt account cleanup failed with status ${response.status}.`,
-    {
-      endpoint,
-      responseBody: truncateResponseBody(responseBody),
-      status: response.status,
-    }
-  );
-}
+const QUERY_DELETE_BATCH_SIZE = 250;
 
 async function deleteRevenueCatWebhookEventsForUser(userId: string): Promise<void> {
   const db = admin.firestore();
@@ -145,11 +35,34 @@ async function deleteRevenueCatWebhookEventsForUser(userId: string): Promise<voi
   await bulkWriter.close();
 }
 
+async function deleteTraktOAuthStatesForUser(userId: string): Promise<void> {
+  const db = admin.firestore();
+
+  while (true) {
+    const snapshot = await db
+      .collection('traktOAuthStates')
+      .where('userId', '==', userId)
+      .limit(QUERY_DELETE_BATCH_SIZE)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const bulkWriter = db.bulkWriter();
+    snapshot.docs.forEach((documentSnapshot) => {
+      bulkWriter.delete(documentSnapshot.ref);
+    });
+    await bulkWriter.close();
+  }
+}
+
 async function deleteFirestoreUserTree(userId: string): Promise<void> {
   const db = admin.firestore();
   const userRef = db.collection('users').doc(userId);
   await db.recursiveDelete(userRef);
   await deleteRevenueCatWebhookEventsForUser(userId);
+  await deleteTraktOAuthStatesForUser(userId);
 }
 
 async function deleteAuthUserIfPresent(userId: string): Promise<void> {
@@ -173,7 +86,6 @@ export async function deleteAccountHandler(
 
   const userId = request.auth.uid;
 
-  await deleteTraktAccountData(userId);
   await deleteFirestoreUserTree(userId);
   await deleteAuthUserIfPresent(userId);
 

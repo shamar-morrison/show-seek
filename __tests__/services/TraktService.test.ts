@@ -1,0 +1,74 @@
+const mockGetIdToken = jest.fn();
+const mockCreateTimeoutWithCleanup = jest.fn();
+
+jest.mock('@/src/firebase/config', () => ({
+  auth: {
+    currentUser: {
+      email: 'test@example.com',
+      getIdToken: () => mockGetIdToken(),
+      uid: 'user-1',
+    },
+  },
+}));
+
+jest.mock('@/src/utils/timeout', () => ({
+  createTimeoutWithCleanup: (...args: unknown[]) => mockCreateTimeoutWithCleanup(...args),
+}));
+
+import { checkEnrichmentStatus, checkSyncStatus } from '@/src/services/TraktService';
+
+const createTimeoutControls = () => {
+  const cancel = jest.fn();
+  mockCreateTimeoutWithCleanup.mockReturnValue({
+    cancel,
+    promise: new Promise(() => {}),
+  });
+  return cancel;
+};
+
+describe('TraktService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetIdToken.mockResolvedValue('token');
+    global.fetch = jest.fn() as never;
+  });
+
+  it('ignores unknown sync error categories from backend responses', async () => {
+    createTimeoutControls();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        errorCategory: 'unexpected_category',
+        errorMessage: 'Backend message',
+      }),
+      ok: false,
+    });
+
+    await expect(checkSyncStatus()).rejects.toMatchObject({
+      category: undefined,
+      message: 'Backend message',
+      name: 'TraktRequestError',
+    });
+  });
+
+  it('awaits sync status JSON parsing so parse failures are caught in the method', async () => {
+    const cancel = createTimeoutControls();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      json: jest.fn().mockRejectedValue(new Error('invalid sync json')),
+      ok: true,
+    });
+
+    await expect(checkSyncStatus()).rejects.toThrow('invalid sync json');
+    expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it('awaits enrichment status JSON parsing so parse failures are caught in the method', async () => {
+    const cancel = createTimeoutControls();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      json: jest.fn().mockRejectedValue(new Error('invalid enrichment json')),
+      ok: true,
+    });
+
+    await expect(checkEnrichmentStatus()).rejects.toThrow('invalid enrichment json');
+    expect(cancel).toHaveBeenCalledTimes(2);
+  });
+});

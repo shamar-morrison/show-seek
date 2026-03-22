@@ -2,11 +2,7 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { androidpublisher_v3 } from 'googleapis';
-import {
-  deleteAccountHandler,
-  TRAKT_BACKEND_URL,
-  TRAKT_INTERNAL_DELETE_AUTH,
-} from './accountDeletion';
+import { deleteAccountHandler } from './accountDeletion';
 import { getAndroidPublisherClientFromServiceAccountSecret } from './shared/playAuth';
 import { MONTHLY_TRIAL_OFFER_ID } from './shared/premiumOfferConstants';
 import {
@@ -1187,10 +1183,11 @@ export const syncPremiumStatus = onCall(
 );
 
 export const deleteAccount = onCall(
-  { secrets: [TRAKT_BACKEND_URL, TRAKT_INTERNAL_DELETE_AUTH] },
+  {},
   deleteAccountHandler
 );
 
 export { importImdbChunk } from './imdbImport';
 export { revenuecatWebhook } from './revenuecatWebhook';
 export { backfillLegacyUsersOnboarding } from './backfillOnboarding';
+export { runTraktEnrichment, runTraktSync, traktApi, traktCallback } from './trakt';

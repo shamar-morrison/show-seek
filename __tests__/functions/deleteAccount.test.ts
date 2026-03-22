@@ -1,21 +1,5 @@
-let secretValues: Record<string, string> = {
-  TRAKT_BACKEND_URL: 'https://trakt-proxy.example.com',
-  TRAKT_INTERNAL_DELETE_AUTH: 'secret-token',
-};
-
-const mockDefineSecret = jest.fn((name: string) => ({
-  value: () => secretValues[name] ?? '',
-}));
 const mockDeleteUser = jest.fn();
-const firestoreFn: any = jest.fn();
-
-jest.mock(
-  'firebase-functions/params',
-  () => ({
-    defineSecret: mockDefineSecret,
-  }),
-  { virtual: true }
-);
+const firestoreFn: jest.Mock = jest.fn();
 
 jest.mock(
   'firebase-admin',
@@ -31,42 +15,27 @@ jest.mock(
 
 import { deleteAccountHandler } from '@/functions/src/accountDeletion';
 
-const mockFetch = jest.fn();
 const mockRecursiveDelete = jest.fn();
 const mockBulkWriterDelete = jest.fn();
 const mockBulkWriterClose = jest.fn();
-const mockWhereGet = jest.fn();
-
-const createTimeoutError = () => {
-  const error = new Error('timed out');
-  error.name = 'TimeoutError';
-  return error;
-};
-
-beforeAll(() => {
-  Object.defineProperty(global, 'fetch', {
-    configurable: true,
-    value: mockFetch,
-    writable: true,
-  });
-});
+const mockRevenueCatWhereGet = jest.fn();
+const mockTraktOAuthStatesGet = jest.fn();
+const mockUsersDoc = jest.fn((id: string) => ({ path: `users/${id}` }));
+const mockTraktOAuthStatesLimit = jest.fn(() => ({
+  get: mockTraktOAuthStatesGet,
+}));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  secretValues = {
-    TRAKT_BACKEND_URL: 'https://trakt-proxy.example.com',
-    TRAKT_INTERNAL_DELETE_AUTH: 'secret-token',
-  };
 
-  mockFetch.mockResolvedValue({
-    ok: true,
-    status: 200,
-    text: jest.fn().mockResolvedValue(''),
-  });
   mockDeleteUser.mockResolvedValue(undefined);
   mockRecursiveDelete.mockResolvedValue(undefined);
   mockBulkWriterClose.mockResolvedValue(undefined);
-  mockWhereGet.mockResolvedValue({
+  mockRevenueCatWhereGet.mockResolvedValue({
+    docs: [],
+    empty: true,
+  });
+  mockTraktOAuthStatesGet.mockResolvedValue({
     docs: [],
     empty: true,
   });
@@ -75,14 +44,17 @@ beforeEach(() => {
     close: mockBulkWriterClose,
     delete: mockBulkWriterDelete,
   };
-
-  const mockUsersDocRef = { path: 'users/user-1' };
   const mockUsersCollection = {
-    doc: jest.fn(() => mockUsersDocRef),
+    doc: mockUsersDoc,
   };
   const mockWebhookCollection = {
     where: jest.fn(() => ({
-      get: mockWhereGet,
+      get: mockRevenueCatWhereGet,
+    })),
+  };
+  const mockTraktOAuthStatesCollection = {
+    where: jest.fn(() => ({
+      limit: mockTraktOAuthStatesLimit,
     })),
   };
 
@@ -97,6 +69,10 @@ beforeEach(() => {
         return mockWebhookCollection;
       }
 
+      if (name === 'traktOAuthStates') {
+        return mockTraktOAuthStatesCollection;
+      }
+
       throw new Error(`Unexpected collection ${name}`);
     }),
     recursiveDelete: mockRecursiveDelete,
@@ -109,35 +85,23 @@ describe('deleteAccountHandler', () => {
       code: 'unauthenticated',
     });
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockRecursiveDelete).not.toHaveBeenCalled();
     expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
-  it('deletes Trakt data, Firestore data, and the auth user for a member account', async () => {
+  it('deletes Firestore data and the auth user for a member account', async () => {
     await expect(
       deleteAccountHandler({
         auth: { uid: 'user-1' },
       })
     ).resolves.toEqual({ success: true });
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://trakt-proxy.example.com/api/trakt/delete-user',
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer secret-token',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: 'user-1' }),
-        signal: expect.any(Object),
-      })
-    );
-    expect(mockFetch.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
     expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
-    expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
-    expect(mockFetch.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRecursiveDelete.mock.invocationCallOrder[0]
+    expect(mockUsersDoc).toHaveBeenCalledWith('user-1');
+    expect(mockRecursiveDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/user-1' })
     );
+    expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
     expect(mockRecursiveDelete.mock.invocationCallOrder[0]).toBeLessThan(
       mockDeleteUser.mock.invocationCallOrder[0]
     );
@@ -150,67 +114,22 @@ describe('deleteAccountHandler', () => {
       })
     ).resolves.toEqual({ success: true });
 
+    expect(mockRecursiveDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'users/anon-user' })
+    );
     expect(mockDeleteUser).toHaveBeenCalledWith('anon-user');
   });
 
-  it('prevents Firestore and auth deletion when Trakt cleanup fails', async () => {
-    mockFetch.mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: jest.fn().mockResolvedValue('backend down'),
-    });
+  it('stops before auth deletion when recursive Firestore deletion fails', async () => {
+    const firestoreError = new Error('recursive delete failed');
+    mockRecursiveDelete.mockRejectedValue(firestoreError);
 
     await expect(
       deleteAccountHandler({
         auth: { uid: 'user-1' },
       })
-    ).rejects.toMatchObject({
-      code: 'internal',
-      message: 'Trakt account cleanup failed with status 500.',
-    });
+    ).rejects.toBe(firestoreError);
 
-    expect(mockRecursiveDelete).not.toHaveBeenCalled();
-    expect(mockDeleteUser).not.toHaveBeenCalled();
-  });
-
-  it('returns a retryable timeout error when Trakt cleanup hangs and skips further deletion', async () => {
-    mockFetch.mockRejectedValue(createTimeoutError());
-
-    await expect(
-      deleteAccountHandler({
-        auth: { uid: 'user-1' },
-      })
-    ).rejects.toMatchObject({
-      code: 'unavailable',
-      message: 'Trakt account cleanup timed out. Please retry.',
-      details: {
-        endpoint: 'https://trakt-proxy.example.com/api/trakt/delete-user',
-        timeoutMs: 15000,
-      },
-    });
-
-    expect(mockRecursiveDelete).not.toHaveBeenCalled();
-    expect(mockDeleteUser).not.toHaveBeenCalled();
-  });
-
-  it('returns a retryable unavailable error when Trakt cleanup fails due to a network TypeError', async () => {
-    mockFetch.mockRejectedValue(new TypeError('fetch failed'));
-
-    await expect(
-      deleteAccountHandler({
-        auth: { uid: 'user-1' },
-      })
-    ).rejects.toMatchObject({
-      code: 'unavailable',
-      message: 'Trakt account cleanup failed due to network error. Please retry.',
-      details: {
-        endpoint: 'https://trakt-proxy.example.com/api/trakt/delete-user',
-        timeoutMs: 15000,
-        networkError: 'TypeError: fetch failed',
-      },
-    });
-
-    expect(mockRecursiveDelete).not.toHaveBeenCalled();
     expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
@@ -229,10 +148,23 @@ describe('deleteAccountHandler', () => {
     expect(mockDeleteUser).toHaveBeenCalledWith('user-1');
   });
 
+  it('rethrows unexpected auth deletion errors', async () => {
+    const authError = new Error('auth delete failed');
+    mockDeleteUser.mockRejectedValue(authError);
+
+    await expect(
+      deleteAccountHandler({
+        auth: { uid: 'user-1' },
+      })
+    ).rejects.toBe(authError);
+
+    expect(mockRecursiveDelete).toHaveBeenCalledTimes(1);
+  });
+
   it('deletes matching RevenueCat webhook event records alongside the account', async () => {
     const firstRef = { id: 'evt-1' };
     const secondRef = { id: 'evt-2' };
-    mockWhereGet.mockResolvedValue({
+    mockRevenueCatWhereGet.mockResolvedValue({
       docs: [{ ref: firstRef }, { ref: secondRef }],
       empty: false,
     });
@@ -246,5 +178,37 @@ describe('deleteAccountHandler', () => {
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(1, firstRef);
     expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondRef);
     expect(mockBulkWriterClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes trakt OAuth states in batches until none remain', async () => {
+    const firstStateRef = { id: 'state-1' };
+    const secondStateRef = { id: 'state-2' };
+    const thirdStateRef = { id: 'state-3' };
+
+    mockTraktOAuthStatesGet
+      .mockResolvedValueOnce({
+        docs: [{ ref: firstStateRef }, { ref: secondStateRef }],
+        empty: false,
+      })
+      .mockResolvedValueOnce({
+        docs: [{ ref: thirdStateRef }],
+        empty: false,
+      })
+      .mockResolvedValueOnce({
+        docs: [],
+        empty: true,
+      });
+
+    await expect(
+      deleteAccountHandler({
+        auth: { uid: 'user-1' },
+      })
+    ).resolves.toEqual({ success: true });
+
+    expect(mockTraktOAuthStatesGet).toHaveBeenCalledTimes(3);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(1, firstStateRef);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(2, secondStateRef);
+    expect(mockBulkWriterDelete).toHaveBeenNthCalledWith(3, thirdStateRef);
+    expect(mockBulkWriterClose).toHaveBeenCalledTimes(2);
   });
 });

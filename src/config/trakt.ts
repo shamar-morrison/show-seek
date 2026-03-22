@@ -2,6 +2,10 @@
  * Trakt Integration Configuration
  */
 
+const FIREBASE_PROJECT_ID = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'showseek-app-2025';
+const FUNCTIONS_REGION = process.env.EXPO_PUBLIC_FIREBASE_FUNCTIONS_REGION || 'us-central1';
+const DEFAULT_FUNCTIONS_BASE_URL = `https://${FUNCTIONS_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+
 export const TRAKT_CONFIG = {
   /**
    * Your Trakt application Client ID
@@ -14,12 +18,12 @@ export const TRAKT_CONFIG = {
    */
   REDIRECT_URI:
     process.env.EXPO_PUBLIC_TRAKT_REDIRECT_URI ||
-    'https://trakt-proxy.vercel.app/api/trakt/callback',
+    `${DEFAULT_FUNCTIONS_BASE_URL}/traktCallback`,
 
   /**
    * Backend URL for the Trakt proxy server
    */
-  BACKEND_URL: process.env.EXPO_PUBLIC_TRAKT_BACKEND_URL || 'https://trakt-proxy.vercel.app',
+  BACKEND_URL: process.env.EXPO_PUBLIC_TRAKT_BACKEND_URL || `${DEFAULT_FUNCTIONS_BASE_URL}/traktApi`,
 
   /**
    * Minimum time (in milliseconds) between automatic syncs
