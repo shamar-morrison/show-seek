@@ -10,7 +10,6 @@ import {
 } from './shared/premiumProducts';
 
 export const REVENUECAT_WEBHOOK_AUTH = defineSecret('REVENUECAT_WEBHOOK_AUTH');
-export const REVENUECAT_API_KEY = defineSecret('REVENUECAT_API_KEY');
 
 const ACTIVE_EVENT_TYPES = new Set([
   'INITIAL_PURCHASE',
