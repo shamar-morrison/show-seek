@@ -1446,6 +1446,358 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(failedWrite?.nextAllowedSyncAt).toBeUndefined();
   });
 
+  it('omits undefined release_date from already-watched items when Trakt movies are missing year', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn((_data: Record<string, unknown>) => Promise.resolve(undefined));
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id = 'enrich-1') => ({
+              id,
+              path: `users/user-1/traktEnrichmentRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn().mockResolvedValue({
+        kind: 'active',
+        status: {
+          runId: 'enrich-1',
+          status: 'in_progress',
+        },
+        userData: {
+          traktEnrichmentStatus: {
+            runId: 'enrich-1',
+            status: 'in_progress',
+          },
+        },
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 576788,
+                  trakt: 201,
+                },
+                title: 'Movie Without Year',
+                year: 0,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (
+        url.endsWith('/sync/watched/shows?extended=full') ||
+        url.endsWith('/sync/ratings') ||
+        url.endsWith('/sync/watchlist') ||
+        url.endsWith('/sync/favorites') ||
+        url.endsWith('/users/tester/lists')
+      ) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const alreadyWatchedWrite = listSet.mock.calls.find(
+      ([data]) => data && typeof data === 'object' && data.id === 'already-watched'
+    )?.[0] as Record<string, unknown> | undefined;
+
+    expect(alreadyWatchedWrite).toBeDefined();
+    const movieEntry = (alreadyWatchedWrite?.items as Record<string, Record<string, unknown>>)?.['576788'];
+    expect(movieEntry).toEqual(
+      expect.objectContaining({
+        id: 576788,
+        media_type: 'movie',
+        title: 'Movie Without Year',
+      })
+    );
+    expect(movieEntry).not.toHaveProperty('release_date');
+  });
+
+  it('omits undefined traktId from custom list items before writing Firestore docs', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn((_data: Record<string, unknown>) => Promise.resolve(undefined));
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id = 'enrich-1') => ({
+              id,
+              path: `users/user-1/traktEnrichmentRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn().mockResolvedValue({
+        kind: 'active',
+        status: {
+          runId: 'enrich-1',
+          status: 'in_progress',
+        },
+        userData: {
+          traktEnrichmentStatus: {
+            runId: 'enrich-1',
+            status: 'in_progress',
+          },
+        },
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (
+        url.endsWith('/sync/watched/movies') ||
+        url.endsWith('/sync/watched/shows?extended=full') ||
+        url.endsWith('/sync/ratings') ||
+        url.endsWith('/sync/watchlist') ||
+        url.endsWith('/sync/favorites')
+      ) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/users/tester/lists')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              created_at: '2024-01-01T00:00:00.000Z',
+              description: '',
+              ids: {
+                slug: 'custom-list',
+                trakt: 701,
+              },
+              name: 'Custom List',
+              privacy: 'private',
+              updated_at: '2024-01-02T00:00:00.000Z',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 9001,
+              listed_at: '2024-01-03T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-no-trakt-id',
+                  tmdb: 333,
+                },
+                title: 'Movie Without Trakt Id',
+                year: 2024,
+              },
+              rank: 1,
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const customListWrite = listSet.mock.calls.find(
+      ([data]) => data && typeof data === 'object' && data.name === 'Custom List'
+    )?.[0] as Record<string, unknown> | undefined;
+
+    expect(customListWrite).toBeDefined();
+    const customItem = (customListWrite?.items as Record<string, Record<string, unknown>>)?.['333'];
+    expect(customItem).toEqual(
+      expect.objectContaining({
+        id: 333,
+        media_type: 'movie',
+        title: 'Movie Without Trakt Id',
+      })
+    );
+    expect(customItem).not.toHaveProperty('traktId');
+  });
+
   it('reflects allowed origins for CORS preflight requests', async () => {
     process.env.TRAKT_ALLOWED_ORIGINS = 'https://allowed.example, https://other.example';
     const response = createResponse();

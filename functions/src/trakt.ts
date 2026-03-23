@@ -1210,13 +1210,13 @@ const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, un
     return null;
   }
 
-  return {
+  return stripUndefinedDeep({
     addedAt: Timestamp.fromDate(new Date(traktMovie.last_watched_at)),
     id: traktMovie.movie.ids.tmdb,
     media_type: 'movie',
     release_date: traktMovie.movie.year ? `${traktMovie.movie.year}-01-01` : undefined,
     title: traktMovie.movie.title,
-  };
+  }) as Record<string, unknown>;
 };
 
 const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string, unknown> | null => {
@@ -1224,13 +1224,13 @@ const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string, unkno
     return null;
   }
 
-  return {
+  return stripUndefinedDeep({
     addedAt: Timestamp.fromDate(new Date(traktShow.last_watched_at)),
     first_air_date: traktShow.show.year ? `${traktShow.show.year}-01-01` : undefined,
     id: traktShow.show.ids.tmdb,
     media_type: 'tv',
     name: traktShow.show.title,
-  };
+  }) as Record<string, unknown>;
 };
 
 const transformRating = (traktRating: TraktRating): Record<string, unknown> | null => {
@@ -1289,12 +1289,18 @@ const transformListItem = (
     return null;
   }
 
-  return {
+  return stripUndefinedDeep({
     addedAt: Timestamp.fromDate(new Date(traktItem.listed_at)),
     mediaType,
     title,
     tmdbId,
     traktId,
+  }) as {
+    addedAt: FirebaseFirestore.Timestamp;
+    mediaType: 'movie' | 'tv';
+    title: string;
+    tmdbId: number;
+    traktId?: number;
   };
 };
 
@@ -1322,13 +1328,13 @@ const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, u
     return null;
   }
 
-  return {
+  return stripUndefinedDeep({
     addedAt: Timestamp.fromDate(new Date(traktItem.listed_at)),
     id: tmdbId,
     media_type: mediaType,
     release_date: releaseDate,
     title,
-  };
+  }) as Record<string, unknown>;
 };
 
 const transformFavorite = (traktFavorite: TraktFavorite): Record<string, unknown> | null => {
@@ -1738,7 +1744,8 @@ const syncItemsMap = async (
   listId: string,
   items: Record<string, unknown>
 ): Promise<number> => {
-  const count = Object.keys(items).length;
+  const sanitizedItems = stripUndefinedDeep(items, true) as Record<string, unknown> | undefined;
+  const count = Object.keys(sanitizedItems ?? {}).length;
   if (count === 0) {
     return 0;
   }
@@ -1750,14 +1757,17 @@ const syncItemsMap = async (
     .collection('lists')
     .doc(listId)
     .set(
-      {
-        items,
-        metadata: {
-          itemCount: count,
-          lastUpdated: Timestamp.now(),
-          needsEnrichment: true,
+      stripUndefinedDeep(
+        {
+          items: sanitizedItems ?? {},
+          metadata: {
+            itemCount: count,
+            lastUpdated: Timestamp.now(),
+            needsEnrichment: true,
+          },
         },
-      },
+        true
+      ) as FirebaseFirestore.DocumentData,
       { merge: true }
     );
 
@@ -1814,27 +1824,34 @@ const syncCustomLists = async (
         };
       }
 
+      const sanitizedItems = stripUndefinedDeep(items, true) as Record<string, unknown> | undefined;
+
       await admin
         .firestore()
         .collection('users')
         .doc(userId)
         .collection('lists')
         .doc(`trakt_${traktList.ids.trakt}`)
-        .set({
-          createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
-          description: traktList.description || '',
-          isCustom: true,
-          items,
-          metadata: {
-            itemCount: Object.keys(items).length,
-            lastUpdated: Timestamp.now(),
-            needsEnrichment: true,
-          },
-          name: traktList.name,
-          privacy: traktList.privacy === 'public' ? 'public' : 'private',
-          traktId: traktList.ids.trakt,
-          updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
-        });
+        .set(
+          stripUndefinedDeep(
+            {
+              createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
+              description: traktList.description || '',
+              isCustom: true,
+              items: sanitizedItems ?? {},
+              metadata: {
+                itemCount: Object.keys(sanitizedItems ?? {}).length,
+                lastUpdated: Timestamp.now(),
+                needsEnrichment: true,
+              },
+              name: traktList.name,
+              privacy: traktList.privacy === 'public' ? 'public' : 'private',
+              traktId: traktList.ids.trakt,
+              updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
+            },
+            true
+          ) as FirebaseFirestore.DocumentData
+        );
 
       count++;
     } catch (error) {
@@ -1867,23 +1884,30 @@ const syncTraktImport = async (userId: string, accessToken: string): Promise<Syn
   itemsSynced.episodes = watchedShowsResult.episodes;
   itemsSynced.shows = watchedShowsResult.shows;
 
+  const sanitizedAlreadyWatchedItems = stripUndefinedDeep(allAlreadyWatchedItems, true) as
+    | Record<string, unknown>
+    | undefined;
+
   await db
     .collection('users')
     .doc(userId)
     .collection('lists')
     .doc('already-watched')
     .set(
-      {
-        createdAt: Timestamp.now(),
-        id: 'already-watched',
-        items: allAlreadyWatchedItems,
-        metadata: {
-          itemCount: Object.keys(allAlreadyWatchedItems).length,
-          lastUpdated: Timestamp.now(),
-          needsEnrichment: true,
+      stripUndefinedDeep(
+        {
+          createdAt: Timestamp.now(),
+          id: 'already-watched',
+          items: sanitizedAlreadyWatchedItems ?? {},
+          metadata: {
+            itemCount: Object.keys(sanitizedAlreadyWatchedItems ?? {}).length,
+            lastUpdated: Timestamp.now(),
+            needsEnrichment: true,
+          },
+          name: 'Already Watched',
         },
-        name: 'Already Watched',
-      },
+        true
+      ) as FirebaseFirestore.DocumentData,
       { merge: true }
     );
 
