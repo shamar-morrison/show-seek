@@ -180,6 +180,27 @@ export default function TraktSettingsScreen() {
 
   const isLockedAccount = syncStatus?.errorCategory === 'locked_account';
   const isRateLimited = syncStatus?.errorCategory === 'rate_limited';
+  const isRetryingSync = syncStatus?.status === 'retrying';
+  const isInitialSyncFailure =
+    !lastSyncedAt && syncStatus?.status === 'failed' && !isLockedAccount && !isRateLimited;
+  const initialSyncFailureMessage =
+    syncStatus?.errorMessage ?? syncStatus?.errors?.[0] ?? t('trakt.firstImportFailedMessage');
+  const retryAttemptText =
+    syncStatus?.attempt && isRetryingSync
+      ? t('trakt.retryingAttempt', {
+          attempt: syncStatus.attempt,
+          maxAttempts: syncStatus.maxAttempts ?? 5,
+        })
+      : null;
+  const retryNextAttemptText =
+    syncStatus?.nextRetryAt && isRetryingSync
+      ? t('trakt.retryingNextAttempt', {
+          time: formatDistanceToNow(new Date(syncStatus.nextRetryAt), {
+            addSuffix: true,
+            locale: distanceLocale,
+          }),
+        })
+      : null;
 
   const syncStatusBanner =
     isLockedAccount ? (
@@ -236,18 +257,30 @@ export default function TraktSettingsScreen() {
           <TouchableOpacity onPress={() => router.back()} activeOpacity={ACTIVE_OPACITY}>
             <ArrowLeft size={24} color={COLORS.white} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('trakt.syncingHeader')}</Text>
+          <Text style={styles.headerTitle}>
+            {isRetryingSync ? t('trakt.retryingHeader') : t('trakt.syncingHeader')}
+          </Text>
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
             <RefreshCw size={48} color={TRAKT_COLOR} />
           </View>
-          <Text style={styles.syncingTitle}>{t('trakt.syncingTitle')}</Text>
-          <Text style={styles.syncingSubtitle}>{t('trakt.syncingSubtitle')}</Text>
+          <Text style={styles.syncingTitle}>
+            {isRetryingSync ? t('trakt.retryingTitle') : t('trakt.syncingTitle')}
+          </Text>
+          <Text style={styles.syncingSubtitle}>
+            {isRetryingSync ? t('trakt.retryingSubtitle') : t('trakt.syncingSubtitle')}
+          </Text>
           <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
-            <Text style={styles.estimateText}>{t('trakt.syncingEstimate')}</Text>
+            <Text style={styles.estimateText}>
+              {isRetryingSync ? t('trakt.retryingEstimate') : t('trakt.syncingEstimate')}
+            </Text>
+            {retryAttemptText ? <Text style={styles.retryMetaText}>{retryAttemptText}</Text> : null}
+            {retryNextAttemptText ? (
+              <Text style={styles.retryMetaText}>{retryNextAttemptText}</Text>
+            ) : null}
           </View>
         </View>
       </SafeAreaView>
@@ -401,6 +434,23 @@ export default function TraktSettingsScreen() {
           </View>
 
           {syncStatusBanner}
+
+          {isInitialSyncFailure ? (
+            <View
+              style={[
+                styles.errorsContainer,
+                styles.lockedStateContainer,
+                { backgroundColor: hexToRGBA(COLORS.error, 0.1) },
+              ]}
+            >
+              <View style={styles.lockedStateHeader}>
+                <AlertCircle size={18} color={COLORS.error} />
+                <Text style={styles.errorsTitle}>{t('trakt.firstImportFailedTitle')}</Text>
+              </View>
+              <Text style={styles.errorText}>{initialSyncFailureMessage}</Text>
+              <Text style={styles.retryHintText}>{t('trakt.firstImportFailedHint')}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
@@ -748,6 +798,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.textSecondary,
   },
+  retryMetaText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
+  },
   statusSection: {
     alignItems: 'center',
     marginBottom: SPACING.xl,
@@ -817,6 +873,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.s,
     color: COLORS.error,
     opacity: 0.8,
+    lineHeight: 18,
+  },
+  retryHintText: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
     lineHeight: 18,
   },
   enrichmentSection: {

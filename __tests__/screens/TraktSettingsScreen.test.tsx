@@ -14,11 +14,19 @@ const mockTraktState = {
   syncNow: jest.fn(),
   syncStatus: null as
     | {
+        attempt?: number;
         connected: boolean;
-        errorCategory?: 'locked_account' | 'rate_limited';
+        errorCategory?:
+          | 'locked_account'
+          | 'rate_limited'
+          | 'upstream_blocked'
+          | 'upstream_unavailable';
         errorMessage?: string;
+        errors?: string[];
+        maxAttempts?: number;
         nextAllowedSyncAt?: string;
-        status?: 'failed';
+        nextRetryAt?: string;
+        status?: 'failed' | 'retrying';
         synced: boolean;
       }
     | null,
@@ -62,6 +70,7 @@ import TraktSettingsScreen from '@/src/screens/TraktSettingsScreen';
 describe('TraktSettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockTraktState.isSyncing = false;
     mockTraktState.syncStatus = null;
     mockTraktState.lastSyncedAt = null;
   });
@@ -101,5 +110,45 @@ describe('TraktSettingsScreen', () => {
       )
     ).toBeTruthy();
     expect(queryByText('Server locked account message')).toBeNull();
+  });
+
+  it('keeps retrying syncs on the full-screen import view with retry details', () => {
+    mockTraktState.isSyncing = true;
+    mockTraktState.syncStatus = {
+      attempt: 2,
+      connected: true,
+      maxAttempts: 5,
+      nextRetryAt: new Date(Date.now() + 60_000).toISOString(),
+      status: 'retrying',
+      synced: false,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Retrying Import')).toBeTruthy();
+    expect(getByText('Retrying your import')).toBeTruthy();
+    expect(getByText('Retry 2 of 5.')).toBeTruthy();
+    expect(getByText(/Next retry/i)).toBeTruthy();
+    expect(queryByText('Connected!')).toBeNull();
+
+    mockTraktState.isSyncing = false;
+  });
+
+  it('shows an inline error and keeps import available when the first sync fails', () => {
+    mockTraktState.syncStatus = {
+      connected: true,
+      errorCategory: 'upstream_blocked',
+      errorMessage: 'Trakt blocked the request upstream.',
+      errors: ['Trakt blocked the request upstream.'],
+      status: 'failed',
+      synced: false,
+    };
+
+    const { getByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(getByText('Trakt blocked the request upstream.')).toBeTruthy();
+    expect(getByText('You can try again now without reconnecting Trakt.')).toBeTruthy();
+    expect(getByText('Import History')).toBeTruthy();
   });
 });

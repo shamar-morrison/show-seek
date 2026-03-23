@@ -296,7 +296,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setIsSyncing(true);
 
       if (!pollIntervalRef.current) {
-        void pollSyncStatus();
         pollIntervalRef.current = setInterval(
           pollSyncStatus,
           TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
@@ -325,13 +324,18 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         connected: true,
         synced: Boolean(currentStatus?.lastSyncedAt),
         ...(currentStatus ?? {}),
+        attempt: 0,
+        diagnostics: undefined,
         errorCategory: undefined,
         errorMessage: undefined,
         errors: undefined,
+        nextAllowedSyncAt: undefined,
+        nextRetryAt: undefined,
         status: 'queued',
       }));
 
       await TraktService.triggerSync();
+      await pollSyncStatus();
 
       // Start polling for status updates
       if (!pollIntervalRef.current) {

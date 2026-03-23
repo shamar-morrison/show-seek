@@ -94,7 +94,7 @@ jest.mock(
   { virtual: true }
 );
 
-import { __test__, runTraktSync, traktApi } from '@/functions/src/trakt';
+import { __test__, runTraktSync, traktApi, traktCallback } from '@/functions/src/trakt';
 import { runTraktEnrichment } from '@/functions/src/trakt';
 
 const emptyItemsSynced = () => ({
@@ -222,6 +222,158 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
+  it('allows a new sync after a non-rate-limited failure even if a cooldown timestamp still exists', async () => {
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + 60_000);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          errorCategory: 'upstream_unavailable',
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'failed-run',
+          status: 'failed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const runRef = {
+      id: 'run-1',
+      path: 'users/user-1/traktSyncRuns/run-1',
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? runRef.id,
+            path: `users/user-1/traktSyncRuns/${id ?? runRef.id}`,
+          })),
+        };
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      { runId: 'run-1', userId: 'user-1' },
+      expect.objectContaining({ id: 'run-1' })
+    );
+    expect(response.status).toHaveBeenCalledWith(202);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ runId: 'run-1', status: 'queued' }));
+
+    const userStatusWriteCall = transactionSet.mock.calls.find(
+      ([_ref, data]) => data && typeof data === 'object' && 'traktSyncStatus' in data
+    ) as [unknown, { traktSyncStatus: Record<string, unknown> }] | undefined;
+
+    expect(userStatusWriteCall?.[1].traktSyncStatus).toBeDefined();
+    expect(userStatusWriteCall?.[1].traktSyncStatus.nextAllowedSyncAt).toBeUndefined();
+  });
+
+  it('keeps the manual cooldown after a successful sync until the next allowed time', async () => {
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + 60_000);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'completed-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/user-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
+      })
+    );
+  });
+
   it('sanitizes failed worker status writes when optional diagnostics are absent', async () => {
     const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
     const batchCommit = jest.fn().mockResolvedValue(undefined);
@@ -276,6 +428,257 @@ describe('Trakt sync Firestore sanitization', () => {
 
     expect(batchSet).toHaveBeenCalledTimes(2);
     expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the shared User-Agent on authenticated sync API requests', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id = 'enrich-1') => ({
+              id,
+              path: `users/user-1/traktEnrichmentRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn().mockResolvedValue({
+        kind: 'active',
+        status: {
+          runId: 'enrich-1',
+          status: 'in_progress',
+        },
+        userData: {
+          traktEnrichmentStatus: {
+            runId: 'enrich-1',
+            status: 'in_progress',
+          },
+        },
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (
+        url.endsWith('/sync/watched/movies') ||
+        url.endsWith('/sync/watched/shows?extended=full') ||
+        url.endsWith('/sync/ratings') ||
+        url.endsWith('/sync/watchlist') ||
+        url.endsWith('/sync/favorites') ||
+        url.endsWith('/users/tester/lists')
+      ) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await (runTraktSync as any)({
+      data: { runId: 'run-1', userId: 'user-1' },
+      retryCount: 0,
+      retryReason: undefined,
+    });
+
+    expect((global.fetch as jest.Mock).mock.calls).not.toHaveLength(0);
+
+    const [, firstRequestInit] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> }
+    ];
+
+    expect(firstRequestInit.headers).toEqual(
+      expect.objectContaining({
+        Accept: 'application/json',
+        Authorization: 'Bearer token',
+        'User-Agent': 'ShowSeek-TraktFunctions/1.0',
+        'trakt-api-key': 'test-secret',
+        'trakt-api-version': '2',
+      })
+    );
+    expect(firstRequestInit.headers['Content-Type']).toBeUndefined();
+  });
+
+  it('sends the shared User-Agent on OAuth token exchange requests', async () => {
+    const userSet = jest.fn().mockResolvedValue(undefined);
+    const stateRef = {
+      id: 'state-1',
+      path: 'traktOAuthStates/state-1',
+    };
+    const userRef = {
+      path: 'users/user-1',
+      set: userSet,
+    };
+    const transactionGet = jest.fn().mockImplementation(async (ref) => {
+      if (ref === stateRef) {
+        return {
+          data: () => ({
+            expiresAt: MockTimestamp.fromMillis(Date.now() + 60_000),
+            used: false,
+            userId: 'user-1',
+          }),
+          exists: true,
+        };
+      }
+
+      throw new Error(`Unexpected transaction get for ${String(ref?.path ?? ref)}`);
+    });
+    const transactionSet = jest.fn();
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name === 'traktOAuthStates') {
+          return {
+            doc: jest.fn(() => stateRef),
+          };
+        }
+
+        if (name === 'users') {
+          return {
+            doc: jest.fn(() => userRef),
+          };
+        }
+
+        throw new Error(`Unexpected collection ${name}`);
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
+      },
+      ok: true,
+      status: 200,
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({
+          access_token: 'access-token',
+          created_at: Math.floor(Date.now() / 1000),
+          expires_in: 7200,
+          refresh_token: 'refresh-token',
+        })
+      ),
+    });
+
+    const response = createResponse();
+
+    await (traktCallback as any)(
+      {
+        method: 'GET',
+        query: {
+          code: 'code-1',
+          state: 'state-1',
+        },
+      },
+      response
+    );
+
+    const [, requestInit] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> }
+    ];
+
+    expect(requestInit.headers).toEqual(
+      expect.objectContaining({
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'ShowSeek-TraktFunctions/1.0',
+        'trakt-api-key': 'test-secret',
+        'trakt-api-version': '2',
+      })
+    );
+    expect(requestInit.headers.Authorization).toBeUndefined();
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(userSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        traktAccessToken: 'access-token',
+        traktConnected: true,
+        traktRefreshToken: 'refresh-token',
+      }),
+      { merge: true }
+    );
   });
 
   it('preserves completed timestamps while omitting empty diagnostics objects', () => {
@@ -701,6 +1104,90 @@ describe('Trakt sync Firestore sanitization', () => {
 
     warnSpy.mockRestore();
     nowSpy.mockRestore();
+  });
+
+  it('marks upstream blocked sync errors as retrying and rethrows for Cloud Tasks retries', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id: string) => ({
+            id,
+            path: `users/user-1/traktSyncRuns/${id}`,
+          })),
+        };
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      headers: {
+        get: (name: string) => {
+          const header = name.toLowerCase();
+          if (header === 'cf-ray') return 'ray-1';
+          if (header === 'content-type') return 'text/html';
+          return null;
+        },
+      },
+      ok: false,
+      status: 403,
+      text: jest.fn().mockResolvedValue('<html>cloudflare blocked cf-ray</html>'),
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: 'upstream-blocked',
+      })
+    ).rejects.toMatchObject({
+      category: 'upstream_blocked',
+      retryable: true,
+    });
+
+    expect(batchCommit).toHaveBeenCalledTimes(2);
+
+    const retryingWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'retrying') as Record<string, unknown> | undefined;
+
+    expect(retryingWrite).toMatchObject({
+      errorCategory: 'upstream_blocked',
+      status: 'retrying',
+    });
+    expect(retryingWrite?.nextAllowedSyncAt).toBeUndefined();
   });
 
   it('reflects allowed origins for CORS preflight requests', async () => {
