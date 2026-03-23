@@ -31,7 +31,7 @@ This document describes the current authentication model used in Show Seek.
    - `displayName`: trimmed `user.displayName`, else email prefix, else `'User'`
    - `photoURL`: `user.photoURL ?? null`
    - If Firebase Auth `displayName` is blank and the email prefix is usable, the app also backfills the auth profile `displayName`.
-4. Premium bootstrap also calls `createUserDocument(user)` before `syncPremiumStatus()` so profile fields exist before premium writes.
+4. Premium bootstrap also calls `createUserDocument(user)` before the RevenueCat user sync so profile fields exist before premium state is refreshed.
 5. Root layout redirects authenticated users into tabs.
 
 ### Email/Password Flow
