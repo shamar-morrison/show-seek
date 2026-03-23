@@ -31,6 +31,8 @@ const isActiveEnrichmentStatus = (
 const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
   status?.status === 'failed' && status.errorCategory === 'locked_account';
 
+const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user && !user.isAnonymous);
+
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -90,7 +92,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   // Auto-sync on app launch if connected and cooldown has passed
   useEffect(() => {
     if (
-      !user ||
+      !hasEligibleTraktUser(user) ||
       !isConnected ||
       isLoading ||
       hasAttemptedAutoSync.current ||
@@ -149,8 +151,19 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
   };
 
+  const ensureEligibleUser = useCallback(
+    (errorMessage: string): User => {
+      if (!hasEligibleTraktUser(user)) {
+        throw new Error(errorMessage);
+      }
+
+      return user;
+    },
+    [user]
+  );
+
   const checkSyncStatus = useCallback(async () => {
-    if (!user) return;
+    if (!hasEligibleTraktUser(user)) return;
 
     try {
       const status = await TraktService.checkSyncStatus();
@@ -174,9 +187,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   const connectTrakt = useCallback(async () => {
-    if (!user) {
-      throw new Error('Must be logged in to connect Trakt');
-    }
+    ensureEligibleUser('Must be logged in to connect Trakt');
 
     try {
       const result = await TraktService.initiateOAuthFlow();
@@ -198,10 +209,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       console.error('[Trakt] OAuth flow failed:', error);
       throw error;
     }
-  }, [user, checkSyncStatus]);
+  }, [ensureEligibleUser, checkSyncStatus]);
 
   const pollSyncStatus = useCallback(async () => {
-    if (!user) return;
+    if (!hasEligibleTraktUser(user)) return;
 
     try {
       const status = await TraktService.checkSyncStatus();
@@ -257,7 +268,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user, lastSyncedAt]);
 
   const pollEnrichmentStatus = useCallback(async () => {
-    if (!user) return;
+    if (!hasEligibleTraktUser(user)) return;
 
     try {
       const status = await TraktService.checkEnrichmentStatus();
@@ -288,7 +299,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   useEffect(() => {
-    if (!user || !syncStatus?.status) {
+    if (!hasEligibleTraktUser(user) || !syncStatus?.status) {
       return;
     }
 
@@ -296,7 +307,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setIsSyncing(true);
 
       if (!pollIntervalRef.current) {
-        void pollSyncStatus();
         pollIntervalRef.current = setInterval(
           pollSyncStatus,
           TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS
@@ -310,9 +320,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user, syncStatus?.status, pollSyncStatus]);
 
   const syncNow = useCallback(async () => {
-    if (!user) {
-      throw new Error('Must be logged in to sync');
-    }
+    ensureEligibleUser('Must be logged in to sync');
 
     if (isSyncing) {
       console.log('[Trakt] Sync already in progress');
@@ -325,13 +333,18 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         connected: true,
         synced: Boolean(currentStatus?.lastSyncedAt),
         ...(currentStatus ?? {}),
+        attempt: 0,
+        diagnostics: undefined,
         errorCategory: undefined,
         errorMessage: undefined,
         errors: undefined,
+        nextAllowedSyncAt: undefined,
+        nextRetryAt: undefined,
         status: 'queued',
       }));
 
       await TraktService.triggerSync();
+      await pollSyncStatus();
 
       // Start polling for status updates
       if (!pollIntervalRef.current) {
@@ -358,12 +371,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
       throw error;
     }
-  }, [user, isSyncing, pollSyncStatus]);
+  }, [ensureEligibleUser, isSyncing, pollSyncStatus]);
 
   const disconnectTrakt = useCallback(async () => {
-    if (!user) {
-      throw new Error('Must be logged in to disconnect');
-    }
+    ensureEligibleUser('Must be logged in to disconnect');
 
     try {
       await TraktService.disconnectTrakt();
@@ -381,12 +392,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       console.error('[Trakt] Failed to disconnect:', error);
       throw error;
     }
-  }, [user]);
+  }, [ensureEligibleUser]);
 
   const enrichData = useCallback(async () => {
-    if (!user) {
-      throw new Error('Must be logged in to enrich data');
-    }
+    ensureEligibleUser('Must be logged in to enrich data');
 
     if (isEnriching) {
       console.log('[Trakt] Enrichment already in progress');
@@ -412,7 +421,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setIsEnriching(false);
       throw error;
     }
-  }, [user, isEnriching, pollEnrichmentStatus]);
+  }, [ensureEligibleUser, isEnriching, pollEnrichmentStatus]);
 
   return {
     isConnected,

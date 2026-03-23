@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 
 import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
+import type { TaskOptions } from 'firebase-admin/functions';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
@@ -15,6 +16,7 @@ const TMDB_API_KEY = defineSecret('TMDB_API_KEY');
 
 const TRAKT_API_BASE = 'https://api.trakt.tv';
 const TRAKT_API_VERSION = '2';
+const TRAKT_APP_USER_AGENT = 'ShowSeek-TraktFunctions/1.0';
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const TRAKT_REQUEST_TIMEOUT_MS = 20_000;
 const TRAKT_OAUTH_TIMEOUT_MS = 15_000;
@@ -59,6 +61,11 @@ interface SyncTaskPayload {
 interface EnrichmentTaskPayload extends SyncTaskPayload {
   includeEpisodes?: unknown;
   lists?: unknown;
+}
+
+interface TraktTaskDispatchOptions {
+  scheduleDelaySeconds?: number;
+  taskId?: string;
 }
 
 interface SyncDiagnostics {
@@ -274,6 +281,12 @@ interface TraktRequestOptions {
   method?: 'GET' | 'POST';
 }
 
+interface TraktHeaderOptions {
+  accessToken?: string;
+  clientId: string;
+  hasJsonBody?: boolean;
+}
+
 interface TraktSyncErrorDetails {
   cfRay?: string;
   endpoint?: string;
@@ -414,6 +427,27 @@ class TraktOAuthError extends Error {
 const ACTIVE_RUN_STATUSES = new Set<SyncStatusState>(['queued', 'in_progress', 'retrying']);
 const DEFAULT_ENRICHMENT_LIST_IDS = ['already-watched', 'watchlist', 'favorites'] as const;
 
+const getManualSyncCooldownTimestamp = (
+  syncStatus?: Partial<TraktSyncStatus> | null
+): FirebaseFirestore.Timestamp | undefined => {
+  if (!(syncStatus?.nextAllowedSyncAt instanceof Timestamp)) {
+    return undefined;
+  }
+
+  const shouldEnforceCooldown =
+    syncStatus.status === 'completed' ||
+    (syncStatus.status === 'failed' && syncStatus.errorCategory === 'rate_limited');
+
+  return shouldEnforceCooldown ? syncStatus.nextAllowedSyncAt : undefined;
+};
+
+const getRateLimitedSyncCooldownTimestamp = (
+  error: TraktSyncError
+): FirebaseFirestore.Timestamp | undefined =>
+  error.category === 'rate_limited' && error.retryAfterSeconds
+    ? Timestamp.fromMillis(Date.now() + error.retryAfterSeconds * 1000)
+    : undefined;
+
 interface SecretLike {
   value(): string;
 }
@@ -433,6 +467,25 @@ const emptyEnrichmentCounts = (): EnrichmentCounts => ({
   items: 0,
   lists: 0,
 });
+
+const buildTaskDispatchOptions = ({
+  scheduleDelaySeconds,
+  taskId,
+}: TraktTaskDispatchOptions = {}): TaskOptions => {
+  const options: TaskOptions = {
+    dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
+  };
+
+  if (scheduleDelaySeconds !== undefined) {
+    options.scheduleDelaySeconds = scheduleDelaySeconds;
+  }
+
+  if (taskId) {
+    options.id = taskId;
+  }
+
+  return options;
+};
 
 const getAllowedCorsOrigin = (request: Request): string | undefined => {
   const origin = request.header('origin')?.trim();
@@ -765,6 +818,29 @@ const getOAuthConfig = (): { clientId: string; clientSecret: string; redirectUri
   redirectUri: trimSecret(TRAKT_REDIRECT_URI, 'TRAKT_REDIRECT_URI'),
 });
 
+const buildTraktHeaders = ({
+  accessToken,
+  clientId,
+  hasJsonBody = false,
+}: TraktHeaderOptions): Record<string, string> => {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'User-Agent': TRAKT_APP_USER_AGENT,
+    'trakt-api-key': clientId,
+    'trakt-api-version': TRAKT_API_VERSION,
+  };
+
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  if (hasJsonBody) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  return headers;
+};
+
 const requestOAuthToken = async (
   body: Record<string, string>,
   operation: 'exchange' | 'refresh'
@@ -775,13 +851,10 @@ const requestOAuthToken = async (
   try {
     response = await fetch(`${TRAKT_API_BASE}/oauth/token`, {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'User-Agent': 'ShowSeek-TraktFunctions/1.0',
-        'trakt-api-key': clientId,
-        'trakt-api-version': TRAKT_API_VERSION,
-      },
+      headers: buildTraktHeaders({
+        clientId,
+        hasJsonBody: true,
+      }),
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TRAKT_OAUTH_TIMEOUT_MS),
     });
@@ -968,17 +1041,17 @@ const traktRequest = async <T>({
 }: TraktRequestOptions): Promise<T> => {
   const { clientId } = getOAuthConfig();
   let response: globalThis.Response;
+  const hasJsonBody = body !== undefined;
 
   try {
     response = await fetch(`${TRAKT_API_BASE}${endpoint}`, {
       method,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'trakt-api-key': clientId,
-        'trakt-api-version': TRAKT_API_VERSION,
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      headers: buildTraktHeaders({
+        accessToken,
+        clientId,
+        hasJsonBody,
+      }),
+      body: hasJsonBody ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(TRAKT_REQUEST_TIMEOUT_MS),
     });
   } catch {
@@ -1026,7 +1099,7 @@ const traktRequest = async <T>({
   }
 
   if (isCloudflareBlockedResponse(response.status, contentType, rawBody, cfRay)) {
-    throw new TraktSyncError('Trakt blocked the request upstream.', 'upstream_blocked', false, {
+    throw new TraktSyncError('Trakt blocked the request upstream.', 'upstream_blocked', true, {
       cfRay,
       endpoint,
       snippet,
@@ -1345,13 +1418,13 @@ const writeSyncStatus = async (userId: string, runId: string, syncStatus: TraktS
   const batch = db.batch();
   const syncStatusForWrite = sanitizeSyncStatusForWrite(syncStatus);
 
-  batch.set(runRef, syncStatusForWrite, { merge: true });
+  batch.set(runRef, syncStatusForWrite);
   batch.set(
     userRef,
     {
       traktSyncStatus: syncStatusForWrite,
     },
-    { merge: true }
+    { mergeFields: ['traktSyncStatus'] }
   );
 
   await batch.commit();
@@ -1409,7 +1482,6 @@ const createQueuedSyncStatus = (
     itemsSynced: emptyItemsSynced(),
     lastSyncedAt: previousLastSyncedAt,
     maxAttempts: TRAKT_SYNC_QUEUE_MAX_ATTEMPTS,
-    nextAllowedSyncAt: Timestamp.fromMillis(Date.now() + TRAKT_SYNC_COOLDOWN_MS),
     runId,
     startedAt: now,
     status: 'queued',
@@ -1472,9 +1544,10 @@ const createFailureStatus = (
     itemsSynced,
     lastSyncedAt: previousLastSyncedAt,
     maxAttempts: TRAKT_SYNC_QUEUE_MAX_ATTEMPTS,
-    nextAllowedSyncAt,
+    nextAllowedSyncAt:
+      status === 'failed' && error.category === 'rate_limited' ? nextAllowedSyncAt : undefined,
     nextRetryAt:
-      status === 'retrying' && error.retryAfterSeconds
+      status === 'retrying' && error.retryAfterSeconds !== undefined
         ? Timestamp.fromMillis(Date.now() + error.retryAfterSeconds * 1000)
         : undefined,
     runId,
@@ -1520,7 +1593,7 @@ const createFailureEnrichmentStatus = (
     maxAttempts: TRAKT_ENRICHMENT_QUEUE_MAX_ATTEMPTS,
     nextAllowedEnrichAt,
     nextRetryAt:
-      status === 'retrying' && error.retryAfterSeconds
+      status === 'retrying' && error.retryAfterSeconds !== undefined
         ? Timestamp.fromMillis(Date.now() + error.retryAfterSeconds * 1000)
         : undefined,
     runId,
@@ -1545,7 +1618,10 @@ const normalizeSyncError = (error: unknown): TraktSyncError => {
           : error.reason === 'rate_limited'
             ? 'rate_limited'
             : 'auth_invalid';
-    const retryable = category === 'upstream_unavailable' || category === 'rate_limited';
+    const retryable =
+      category === 'upstream_blocked' ||
+      category === 'upstream_unavailable' ||
+      category === 'rate_limited';
     return new TraktSyncError(error.message, category, retryable, {
       cfRay: error.cfRay,
       snippet: error.snippet,
@@ -1879,25 +1955,15 @@ const prepareEnrichmentRun = async (
 
 const dispatchEnrichmentRun = async (status: TraktEnrichmentStatus): Promise<void> => {
   try {
-    await getFunctions()
-      .taskQueue<{
-        includeEpisodes: boolean;
-        lists: string[];
-        runId: string;
-        userId: string;
-      }>(TRAKT_ENRICHMENT_QUEUE_FUNCTION)
-      .enqueue(
-        {
-          includeEpisodes: status.includeEpisodes,
-          lists: status.lists,
-          runId: status.runId,
-          userId: status.userId,
-        },
-        {
-          dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
-          id: status.runId,
-        }
-      );
+    await enqueueEnrichmentRun(
+      {
+        includeEpisodes: status.includeEpisodes,
+        lists: status.lists,
+        runId: status.runId,
+        userId: status.userId,
+      },
+      { taskId: status.runId }
+    );
   } catch (error) {
     console.error('[Trakt] Failed to enqueue enrichment task:', error);
 
@@ -1956,6 +2022,34 @@ const parseEnrichmentTaskPayload = (
     runId,
     userId,
   };
+};
+
+const enqueueSyncRun = async (
+  payload: { runId: string; userId: string },
+  options?: TraktTaskDispatchOptions
+): Promise<void> => {
+  await getFunctions()
+    .taskQueue<{ runId: string; userId: string }>(TRAKT_SYNC_QUEUE_FUNCTION)
+    .enqueue(payload, buildTaskDispatchOptions(options));
+};
+
+const enqueueEnrichmentRun = async (
+  payload: {
+    includeEpisodes: boolean;
+    lists: string[];
+    runId: string;
+    userId: string;
+  },
+  options?: TraktTaskDispatchOptions
+): Promise<void> => {
+  await getFunctions()
+    .taskQueue<{
+      includeEpisodes: boolean;
+      lists: string[];
+      runId: string;
+      userId: string;
+    }>(TRAKT_ENRICHMENT_QUEUE_FUNCTION)
+    .enqueue(payload, buildTaskDispatchOptions(options));
 };
 
 const resolveEnrichmentListIds = async (
@@ -2360,7 +2454,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
         };
       }
 
-      const nextAllowedSyncAt = existingStatus?.nextAllowedSyncAt;
+      const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
       if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
         return {
           kind: 'rate_limited' as const,
@@ -2371,13 +2465,13 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
       const queuedStatus = createQueuedSyncStatus(userId, runRef.id, getPreviousLastSyncedAt(existingStatus));
       const queuedStatusForWrite = sanitizeSyncStatusForWrite(queuedStatus);
-      transaction.set(runRef, queuedStatusForWrite, { merge: true });
+      transaction.set(runRef, queuedStatusForWrite);
       transaction.set(
         userRef,
         {
           traktSyncStatus: queuedStatusForWrite,
         },
-        { merge: true }
+        { mergeFields: ['traktSyncStatus'] }
       );
 
       return {
@@ -2410,15 +2504,12 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
     const runId = transactionResult.status.runId;
     try {
-      await getFunctions().taskQueue<{ runId: string; userId: string }>(TRAKT_SYNC_QUEUE_FUNCTION).enqueue(
+      await enqueueSyncRun(
         {
           runId,
           userId,
         },
-        {
-          dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
-          id: runId,
-        }
+        { taskId: runId }
       );
     } catch (error) {
       console.error('[Trakt] Failed to enqueue sync task:', error);
@@ -2722,7 +2813,6 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
   },
   async (request): Promise<void> => {
     const { runId, userId } = parseTaskPayload(request.data);
-    const attempt = request.retryCount + 1;
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const userSnapshot = await userRef.get();
@@ -2733,11 +2823,9 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
 
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
     const currentSyncStatus = userData.traktSyncStatus;
+    const currentAttempt = typeof currentSyncStatus?.attempt === 'number' ? currentSyncStatus.attempt : 0;
+    const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousLastSyncedAt = getPreviousLastSyncedAt(currentSyncStatus);
-    const nextAllowedSyncAt =
-      currentSyncStatus?.nextAllowedSyncAt instanceof Timestamp
-        ? currentSyncStatus.nextAllowedSyncAt
-        : Timestamp.fromMillis(Date.now() + TRAKT_SYNC_COOLDOWN_MS);
 
     if (!userData.traktConnected) {
       await writeSyncStatus(
@@ -2750,9 +2838,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
           emptyItemsSynced(),
           attempt,
           'failed',
-          new TraktSyncError('Trakt is not connected for this user.', 'auth_invalid', false),
-          undefined,
-          nextAllowedSyncAt
+          new TraktSyncError('Trakt is not connected for this user.', 'auth_invalid', false)
         )
       );
       return;
@@ -2773,7 +2859,6 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       itemsSynced: emptyItemsSynced(),
       lastSyncedAt: previousLastSyncedAt,
       maxAttempts: TRAKT_SYNC_QUEUE_MAX_ATTEMPTS,
-      nextAllowedSyncAt,
       runId,
       startedAt,
       status: 'in_progress',
@@ -2795,6 +2880,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       }
 
       const completedAt = Timestamp.now();
+      const nextAllowedSyncAt = Timestamp.fromMillis(completedAt.toMillis() + TRAKT_SYNC_COOLDOWN_MS);
 
       await writeSyncStatus(userId, runId, {
         attempt,
@@ -2833,12 +2919,34 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
             attempt,
             'retrying',
             normalizedError,
-            request.retryReason,
-            nextAllowedSyncAt
+            request.retryReason
           )
         );
+
+        if (normalizedError.retryAfterSeconds !== undefined) {
+          try {
+            await enqueueSyncRun(
+              {
+                runId,
+                userId,
+              },
+              { scheduleDelaySeconds: normalizedError.retryAfterSeconds }
+            );
+            return;
+          } catch (enqueueError) {
+            console.error('[TraktSync] Failed to enqueue delayed retry task:', {
+              delaySeconds: normalizedError.retryAfterSeconds,
+              enqueueError,
+              runId,
+              userId,
+            });
+          }
+        }
+
         throw normalizedError;
       }
+
+      const nextAllowedSyncAt = getRateLimitedSyncCooldownTimestamp(normalizedError);
 
       await writeSyncStatus(
         userId,
@@ -2879,7 +2987,6 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
   },
   async (request): Promise<void> => {
     const { includeEpisodes, lists, runId, userId } = parseEnrichmentTaskPayload(request.data);
-    const attempt = request.retryCount + 1;
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const userSnapshot = await userRef.get();
@@ -2890,6 +2997,8 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
     const currentStatus = userData.traktEnrichmentStatus;
+    const currentAttempt = typeof currentStatus?.attempt === 'number' ? currentStatus.attempt : 0;
+    const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousCompletedAt = getPreviousEnrichmentCompletedAt(currentStatus);
     const nextAllowedEnrichAt =
       currentStatus?.nextAllowedEnrichAt instanceof Timestamp
@@ -2969,6 +3078,29 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
             nextAllowedEnrichAt
           )
         );
+
+        if (normalizedError.retryAfterSeconds !== undefined) {
+          try {
+            await enqueueEnrichmentRun(
+              {
+                includeEpisodes,
+                lists,
+                runId,
+                userId,
+              },
+              { scheduleDelaySeconds: normalizedError.retryAfterSeconds }
+            );
+            return;
+          } catch (enqueueError) {
+            console.error('[TraktEnrichment] Failed to enqueue delayed retry task:', {
+              delaySeconds: normalizedError.retryAfterSeconds,
+              enqueueError,
+              runId,
+              userId,
+            });
+          }
+        }
+
         throw normalizedError;
       }
 
