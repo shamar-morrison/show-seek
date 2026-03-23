@@ -2,6 +2,7 @@ import * as crypto from 'node:crypto';
 
 import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
+import type { TaskOptions } from 'firebase-admin/functions';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
@@ -60,6 +61,11 @@ interface SyncTaskPayload {
 interface EnrichmentTaskPayload extends SyncTaskPayload {
   includeEpisodes?: unknown;
   lists?: unknown;
+}
+
+interface TraktTaskDispatchOptions {
+  scheduleDelaySeconds?: number;
+  taskId?: string;
 }
 
 interface SyncDiagnostics {
@@ -461,6 +467,25 @@ const emptyEnrichmentCounts = (): EnrichmentCounts => ({
   items: 0,
   lists: 0,
 });
+
+const buildTaskDispatchOptions = ({
+  scheduleDelaySeconds,
+  taskId,
+}: TraktTaskDispatchOptions = {}): TaskOptions => {
+  const options: TaskOptions = {
+    dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
+  };
+
+  if (scheduleDelaySeconds !== undefined) {
+    options.scheduleDelaySeconds = scheduleDelaySeconds;
+  }
+
+  if (taskId) {
+    options.id = taskId;
+  }
+
+  return options;
+};
 
 const getAllowedCorsOrigin = (request: Request): string | undefined => {
   const origin = request.header('origin')?.trim();
@@ -1522,7 +1547,7 @@ const createFailureStatus = (
     nextAllowedSyncAt:
       status === 'failed' && error.category === 'rate_limited' ? nextAllowedSyncAt : undefined,
     nextRetryAt:
-      status === 'retrying' && error.retryAfterSeconds
+      status === 'retrying' && error.retryAfterSeconds !== undefined
         ? Timestamp.fromMillis(Date.now() + error.retryAfterSeconds * 1000)
         : undefined,
     runId,
@@ -1568,7 +1593,7 @@ const createFailureEnrichmentStatus = (
     maxAttempts: TRAKT_ENRICHMENT_QUEUE_MAX_ATTEMPTS,
     nextAllowedEnrichAt,
     nextRetryAt:
-      status === 'retrying' && error.retryAfterSeconds
+      status === 'retrying' && error.retryAfterSeconds !== undefined
         ? Timestamp.fromMillis(Date.now() + error.retryAfterSeconds * 1000)
         : undefined,
     runId,
@@ -1930,25 +1955,15 @@ const prepareEnrichmentRun = async (
 
 const dispatchEnrichmentRun = async (status: TraktEnrichmentStatus): Promise<void> => {
   try {
-    await getFunctions()
-      .taskQueue<{
-        includeEpisodes: boolean;
-        lists: string[];
-        runId: string;
-        userId: string;
-      }>(TRAKT_ENRICHMENT_QUEUE_FUNCTION)
-      .enqueue(
-        {
-          includeEpisodes: status.includeEpisodes,
-          lists: status.lists,
-          runId: status.runId,
-          userId: status.userId,
-        },
-        {
-          dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
-          id: status.runId,
-        }
-      );
+    await enqueueEnrichmentRun(
+      {
+        includeEpisodes: status.includeEpisodes,
+        lists: status.lists,
+        runId: status.runId,
+        userId: status.userId,
+      },
+      { taskId: status.runId }
+    );
   } catch (error) {
     console.error('[Trakt] Failed to enqueue enrichment task:', error);
 
@@ -2007,6 +2022,34 @@ const parseEnrichmentTaskPayload = (
     runId,
     userId,
   };
+};
+
+const enqueueSyncRun = async (
+  payload: { runId: string; userId: string },
+  options?: TraktTaskDispatchOptions
+): Promise<void> => {
+  await getFunctions()
+    .taskQueue<{ runId: string; userId: string }>(TRAKT_SYNC_QUEUE_FUNCTION)
+    .enqueue(payload, buildTaskDispatchOptions(options));
+};
+
+const enqueueEnrichmentRun = async (
+  payload: {
+    includeEpisodes: boolean;
+    lists: string[];
+    runId: string;
+    userId: string;
+  },
+  options?: TraktTaskDispatchOptions
+): Promise<void> => {
+  await getFunctions()
+    .taskQueue<{
+      includeEpisodes: boolean;
+      lists: string[];
+      runId: string;
+      userId: string;
+    }>(TRAKT_ENRICHMENT_QUEUE_FUNCTION)
+    .enqueue(payload, buildTaskDispatchOptions(options));
 };
 
 const resolveEnrichmentListIds = async (
@@ -2461,15 +2504,12 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
     const runId = transactionResult.status.runId;
     try {
-      await getFunctions().taskQueue<{ runId: string; userId: string }>(TRAKT_SYNC_QUEUE_FUNCTION).enqueue(
+      await enqueueSyncRun(
         {
           runId,
           userId,
         },
-        {
-          dispatchDeadlineSeconds: TRAKT_SYNC_QUEUE_DEADLINE_SECONDS,
-          id: runId,
-        }
+        { taskId: runId }
       );
     } catch (error) {
       console.error('[Trakt] Failed to enqueue sync task:', error);
@@ -2773,7 +2813,6 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
   },
   async (request): Promise<void> => {
     const { runId, userId } = parseTaskPayload(request.data);
-    const attempt = request.retryCount + 1;
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const userSnapshot = await userRef.get();
@@ -2784,6 +2823,8 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
 
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
     const currentSyncStatus = userData.traktSyncStatus;
+    const currentAttempt = typeof currentSyncStatus?.attempt === 'number' ? currentSyncStatus.attempt : 0;
+    const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousLastSyncedAt = getPreviousLastSyncedAt(currentSyncStatus);
 
     if (!userData.traktConnected) {
@@ -2881,6 +2922,27 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
             request.retryReason
           )
         );
+
+        if (normalizedError.retryAfterSeconds !== undefined) {
+          try {
+            await enqueueSyncRun(
+              {
+                runId,
+                userId,
+              },
+              { scheduleDelaySeconds: normalizedError.retryAfterSeconds }
+            );
+            return;
+          } catch (enqueueError) {
+            console.error('[TraktSync] Failed to enqueue delayed retry task:', {
+              delaySeconds: normalizedError.retryAfterSeconds,
+              enqueueError,
+              runId,
+              userId,
+            });
+          }
+        }
+
         throw normalizedError;
       }
 
@@ -2925,7 +2987,6 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
   },
   async (request): Promise<void> => {
     const { includeEpisodes, lists, runId, userId } = parseEnrichmentTaskPayload(request.data);
-    const attempt = request.retryCount + 1;
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const userSnapshot = await userRef.get();
@@ -2936,6 +2997,8 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
     const currentStatus = userData.traktEnrichmentStatus;
+    const currentAttempt = typeof currentStatus?.attempt === 'number' ? currentStatus.attempt : 0;
+    const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousCompletedAt = getPreviousEnrichmentCompletedAt(currentStatus);
     const nextAllowedEnrichAt =
       currentStatus?.nextAllowedEnrichAt instanceof Timestamp
@@ -3015,6 +3078,29 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
             nextAllowedEnrichAt
           )
         );
+
+        if (normalizedError.retryAfterSeconds !== undefined) {
+          try {
+            await enqueueEnrichmentRun(
+              {
+                includeEpisodes,
+                lists,
+                runId,
+                userId,
+              },
+              { scheduleDelaySeconds: normalizedError.retryAfterSeconds }
+            );
+            return;
+          } catch (enqueueError) {
+            console.error('[TraktEnrichment] Failed to enqueue delayed retry task:', {
+              delaySeconds: normalizedError.retryAfterSeconds,
+              enqueueError,
+              runId,
+              userId,
+            });
+          }
+        }
+
         throw normalizedError;
       }
 

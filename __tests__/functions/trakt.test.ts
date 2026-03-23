@@ -794,7 +794,7 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
-  it('retries enrichment when TMDB rate limits the worker', async () => {
+  it('schedules a delayed enrichment retry when TMDB returns Retry-After', async () => {
     const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
     const batchCommit = jest.fn().mockResolvedValue(undefined);
     const listRef = {
@@ -881,12 +881,33 @@ describe('Trakt sync Firestore sanitization', () => {
         retryCount: 0,
         retryReason: 'rate-limited',
       })
-    ).rejects.toMatchObject({
-      category: 'rate_limited',
-    });
+    ).resolves.toBeUndefined();
 
     expect(batchCommit).toHaveBeenCalledTimes(2);
     expect(listRef.set).not.toHaveBeenCalled();
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      {
+        includeEpisodes: false,
+        lists: ['watchlist'],
+        runId: 'run-1',
+        userId: 'user-1',
+      },
+      expect.objectContaining({
+        dispatchDeadlineSeconds: 1800,
+        scheduleDelaySeconds: 60,
+      })
+    );
+    expect(mockEnqueue.mock.calls[0][1]).not.toHaveProperty('id');
+
+    const retryingWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktEnrichmentStatus' in data ? data.traktEnrichmentStatus : data))
+      .find((data) => data?.status === 'retrying') as Record<string, unknown> | undefined;
+
+    expect(retryingWrite).toMatchObject({
+      errorCategory: 'rate_limited',
+      status: 'retrying',
+    });
+    expect(retryingWrite?.nextRetryAt).toBeDefined();
   });
 
   it('treats missing TMDB items as skips and still completes enrichment', async () => {
@@ -1188,6 +1209,91 @@ describe('Trakt sync Firestore sanitization', () => {
       status: 'retrying',
     });
     expect(retryingWrite?.nextAllowedSyncAt).toBeUndefined();
+  });
+
+  it('schedules a delayed sync retry when Trakt returns Retry-After', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id: string) => ({
+            id,
+            path: `users/user-1/traktSyncRuns/${id}`,
+          })),
+        };
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockResolvedValue({
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'retry-after' ? '60' : null),
+      },
+      ok: false,
+      status: 429,
+      text: jest.fn().mockResolvedValue('rate limited'),
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: 'rate-limited',
+      })
+    ).resolves.toBeUndefined();
+
+    expect(batchCommit).toHaveBeenCalledTimes(2);
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      { runId: 'run-1', userId: 'user-1' },
+      expect.objectContaining({
+        dispatchDeadlineSeconds: 1800,
+        scheduleDelaySeconds: 60,
+      })
+    );
+    expect(mockEnqueue.mock.calls[0][1]).not.toHaveProperty('id');
+
+    const retryingWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'retrying') as Record<string, unknown> | undefined;
+
+    expect(retryingWrite).toMatchObject({
+      errorCategory: 'rate_limited',
+      status: 'retrying',
+    });
+    expect(retryingWrite?.nextAllowedSyncAt).toBeUndefined();
+    expect(retryingWrite?.nextRetryAt).toBeDefined();
   });
 
   it('reflects allowed origins for CORS preflight requests', async () => {
