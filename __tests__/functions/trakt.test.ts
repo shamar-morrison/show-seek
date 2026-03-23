@@ -1296,6 +1296,156 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(retryingWrite?.nextRetryAt).toBeDefined();
   });
 
+  it('marks sync failures caused by Firestore index-entry limits as storage_limit without retrying', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const indexLimitError = new Error(
+      '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched'
+    );
+    const listSet = jest.fn((data: Record<string, unknown>) => {
+      if (data.id === 'already-watched') {
+        return Promise.reject(indexLimitError);
+      }
+
+      return Promise.resolve(undefined);
+    });
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/shows?extended=full')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: 'index-limit',
+      })
+    ).resolves.toBeUndefined();
+
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(batchCommit).toHaveBeenCalledTimes(2);
+
+    const failedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'failed') as Record<string, unknown> | undefined;
+
+    expect(failedWrite).toMatchObject({
+      errorCategory: 'storage_limit',
+      errorMessage: 'Your Trakt history is too large to import right now. Please try again later.',
+      status: 'failed',
+    });
+    expect((failedWrite?.diagnostics as Record<string, unknown> | undefined)?.snippet).toBe(
+      indexLimitError.message
+    );
+    expect(failedWrite?.nextRetryAt).toBeUndefined();
+    expect(failedWrite?.nextAllowedSyncAt).toBeUndefined();
+  });
+
   it('reflects allowed origins for CORS preflight requests', async () => {
     process.env.TRAKT_ALLOWED_ORIGINS = 'https://allowed.example, https://other.example';
     const response = createResponse();

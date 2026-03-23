@@ -31,6 +31,7 @@ const SYNC_ERROR_CATEGORIES = new Set<SyncErrorCategory>([
   'auth_invalid',
   'internal',
   'locked_account',
+  'storage_limit',
   'rate_limited',
   'upstream_blocked',
   'upstream_unavailable',

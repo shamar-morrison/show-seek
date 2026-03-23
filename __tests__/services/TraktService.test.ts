@@ -50,6 +50,23 @@ describe('TraktService', () => {
     });
   });
 
+  it('preserves the storage_limit sync error category from backend responses', async () => {
+    createTimeoutControls();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        errorCategory: 'storage_limit',
+        errorMessage: 'Friendly storage limit message',
+      }),
+      ok: false,
+    });
+
+    await expect(checkSyncStatus()).rejects.toMatchObject({
+      category: 'storage_limit',
+      message: 'Friendly storage limit message',
+      name: 'TraktRequestError',
+    });
+  });
+
   it('awaits sync status JSON parsing so parse failures are caught in the method', async () => {
     const cancel = createTimeoutControls();
     (global.fetch as jest.Mock).mockResolvedValue({

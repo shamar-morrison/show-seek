@@ -1050,6 +1050,7 @@
     },
     "firstImportFailedHint": "Vous pouvez réessayer maintenant sans reconnecter Trakt.",
     "firstImportFailedMessage": "Nous n’avons pas pu terminer l’importation de votre historique Trakt.",
+    "storageLimitMessage": "Votre historique Trakt est trop volumineux pour être importé pour le moment. Réessayez plus tard.",
     "firstImportFailedTitle": "L’importation n’a pas abouti",
     "howItWorksTitle": "Comment ça marche",
     "importButton": "Importer l’historique",

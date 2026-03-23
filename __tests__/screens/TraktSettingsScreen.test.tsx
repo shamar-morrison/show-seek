@@ -19,6 +19,7 @@ const mockTraktState = {
         errorCategory?:
           | 'locked_account'
           | 'rate_limited'
+          | 'storage_limit'
           | 'upstream_blocked'
           | 'upstream_unavailable';
         errorMessage?: string;
@@ -150,5 +151,31 @@ describe('TraktSettingsScreen', () => {
     expect(getByText('Trakt blocked the request upstream.')).toBeTruthy();
     expect(getByText('You can try again now without reconnecting Trakt.')).toBeTruthy();
     expect(getByText('Import History')).toBeTruthy();
+  });
+
+  it('prefers translated storage-limit copy over the raw Firestore error', () => {
+    mockTraktState.syncStatus = {
+      connected: true,
+      errorCategory: 'storage_limit',
+      errorMessage:
+        '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched',
+      errors: [
+        '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched',
+      ],
+      status: 'failed',
+      synced: false,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(
+      getByText('Your Trakt history is too large to import right now. Please try again later.')
+    ).toBeTruthy();
+    expect(
+      queryByText(
+        '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched'
+      )
+    ).toBeNull();
   });
 });

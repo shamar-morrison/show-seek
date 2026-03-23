@@ -181,10 +181,18 @@ export default function TraktSettingsScreen() {
   const isLockedAccount = syncStatus?.errorCategory === 'locked_account';
   const isRateLimited = syncStatus?.errorCategory === 'rate_limited';
   const isRetryingSync = syncStatus?.status === 'retrying';
+  const getSyncErrorMessage = (fallback?: string) => {
+    if (syncStatus?.errorCategory === 'storage_limit') {
+      return getPreferredMessage('trakt.storageLimitMessage', fallback);
+    }
+
+    return fallback ?? t('trakt.firstImportFailedMessage');
+  };
   const isInitialSyncFailure =
     !lastSyncedAt && syncStatus?.status === 'failed' && !isLockedAccount && !isRateLimited;
-  const initialSyncFailureMessage =
-    syncStatus?.errorMessage ?? syncStatus?.errors?.[0] ?? t('trakt.firstImportFailedMessage');
+  const initialSyncFailureMessage = getSyncErrorMessage(
+    syncStatus?.errorMessage ?? syncStatus?.errors?.[0]
+  );
   const retryAttemptText =
     syncStatus?.attempt && isRetryingSync
       ? t('trakt.retryingAttempt', {
@@ -540,7 +548,7 @@ export default function TraktSettingsScreen() {
             <Text style={styles.errorsTitle}>{t('trakt.syncErrorsTitle')}</Text>
             {syncStatus.errors.slice(0, 3).map((error, index) => (
               <Text key={index} style={styles.errorText}>
-                • {error}
+                • {getSyncErrorMessage(error)}
               </Text>
             ))}
             {syncStatus.errors.length > 3 && (

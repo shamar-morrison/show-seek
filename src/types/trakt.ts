@@ -16,6 +16,7 @@ export type SyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
   | 'locked_account'
+  | 'storage_limit'
   | 'rate_limited'
   | 'upstream_blocked'
   | 'upstream_unavailable';

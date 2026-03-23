@@ -999,6 +999,7 @@
     },
     "firstImportFailedHint": "Puedes intentarlo de nuevo ahora sin volver a conectar Trakt.",
     "firstImportFailedMessage": "No pudimos terminar de importar tu historial de Trakt.",
+    "storageLimitMessage": "Tu historial de Trakt es demasiado grande para importarlo ahora mismo. Vuelve a intentarlo más tarde.",
     "firstImportFailedTitle": "La importación no se completó",
     "howItWorksTitle": "Cómo funciona",
     "importButton": "Importar historial",

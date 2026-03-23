@@ -47,5 +47,16 @@
   //   },
   // ]
   "indexes": [],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "lists",
+      "fieldPath": "items",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "episode_tracking",
+      "fieldPath": "episodes",
+      "indexes": []
+    }
+  ]
 }

@@ -42,12 +42,16 @@ const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
 const TRAKT_SYNC_RECONNECT_MESSAGE =
   'Your Trakt connection is no longer valid. Disconnect and reconnect Trakt.';
+const TRAKT_SYNC_STORAGE_LIMIT_MESSAGE =
+  'Your Trakt history is too large to import right now. Please try again later.';
+const FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN = /too many index entries/i;
 
 type SyncStatusState = 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed';
 type TraktSyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
   | 'locked_account'
+  | 'storage_limit'
   | 'rate_limited'
   | 'upstream_blocked'
   | 'upstream_unavailable';
@@ -1630,6 +1634,12 @@ const normalizeSyncError = (error: unknown): TraktSyncError => {
   }
 
   if (error instanceof Error) {
+    if (FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN.test(error.message)) {
+      return new TraktSyncError(TRAKT_SYNC_STORAGE_LIMIT_MESSAGE, 'storage_limit', false, {
+        snippet: error.message,
+      });
+    }
+
     return new TraktSyncError(error.message, 'internal', false);
   }
 
