@@ -7,8 +7,8 @@ const mockTrackScreen = jest.fn();
 const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 const mockQueryClientClear = jest.fn();
 const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
-const mockHydratePersistedQueryCache = jest.fn(() => Promise.resolve(true));
-const mockSubscribeToPersistedQueryCache = jest.fn(() => jest.fn());
+const mockHydratePersistedQueryCache = jest.fn((_queryClient?: unknown) => Promise.resolve(true));
+const mockSubscribeToPersistedQueryCache = jest.fn((_queryClient?: unknown) => jest.fn());
 
 const mockAuthState = {
   user: null as null | { uid?: string },

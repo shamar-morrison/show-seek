@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import { Platform } from 'react-native';
 
@@ -212,6 +213,8 @@ describe('PremiumContext', () => {
     mockGetCachedUserDocument.mockResolvedValue({
       premium: { hasUsedTrial: false, isPremium: false },
     });
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     mockGetOfferings.mockResolvedValue(baseOfferings);
     mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(true));
     mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(true), created: false });
@@ -276,6 +279,104 @@ describe('PremiumContext', () => {
 
     await act(async () => {
       resolveConfigure?.(true);
+    });
+  });
+
+  it('uses cached premium during startup while live checks are still loading', async () => {
+    const configureDeferred = createDeferred<boolean>();
+    let snapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
+
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+    mockConfigureRevenueCat.mockImplementation(() => configureDeferred.promise);
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      snapshotCallback = onNext;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    expect(mockLogIn).not.toHaveBeenCalled();
+
+    await act(async () => {
+      snapshotCallback?.(createSnapshot({ hasUsedTrial: false, isPremium: true }));
+      configureDeferred.resolve(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  it('clears cached premium once live startup checks settle as non-premium', async () => {
+    let snapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
+
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue('true');
+    mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(false));
+    mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(false), created: false });
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      snapshotCallback = onNext;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(true);
+    });
+
+    await act(async () => {
+      snapshotCallback?.(createSnapshot({ hasUsedTrial: false, isPremium: false }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  it('keeps loading true until cache and live startup checks finish', async () => {
+    const cacheDeferred = createDeferred<string | null>();
+    let snapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
+
+    (AsyncStorage.getItem as jest.Mock).mockImplementation(() => cacheDeferred.promise);
+    mockConfigureRevenueCat.mockResolvedValue(false);
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      snapshotCallback = onNext;
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      cacheDeferred.resolve(null);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      snapshotCallback?.(createSnapshot({ hasUsedTrial: false, isPremium: false }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isPremium).toBe(false);
     });
   });
 
@@ -407,6 +508,78 @@ describe('PremiumContext', () => {
 
     expect(result.current.isPremium).toBe(false);
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('does not leak cached premium across users when auth changes during startup', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const userACache = createDeferred<string | null>();
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+    (AsyncStorage.getItem as jest.Mock).mockImplementation((key: string) => {
+      if (key === `isPremium_${userA.uid}`) {
+        return userACache.promise;
+      }
+
+      if (key === `isPremium_${userB.uid}`) {
+        return Promise.resolve('false');
+      }
+
+      return Promise.resolve(null);
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(AsyncStorage.getItem).toHaveBeenCalledWith(`isPremium_${userA.uid}`);
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(AsyncStorage.getItem).toHaveBeenCalledWith(`isPremium_${userB.uid}`);
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      userACache.resolve('true');
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('starts RevenueCat sync without waiting for createUserDocument to finish', async () => {
+    const createUserDocumentDeferred = createDeferred<void>();
+
+    mockCreateUserDocument.mockImplementation(() => createUserDocumentDeferred.promise);
+
+    renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockCreateUserDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ uid: 'test-user-id' })
+      );
+      expect(mockConfigureRevenueCat).toHaveBeenCalled();
+      expect(mockLogIn).toHaveBeenCalledWith('test-user-id');
+    });
+
+    await act(async () => {
+      createUserDocumentDeferred.resolve(undefined);
+      await Promise.resolve();
+    });
   });
 
   it('purchases a selected package by plan and returns premium success', async () => {
