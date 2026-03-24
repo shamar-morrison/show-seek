@@ -4,7 +4,6 @@ import {
   SUBSCRIPTION_PRODUCT_IDS,
   type PremiumPlan,
 } from '@/src/context/premiumBilling';
-import { useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
@@ -152,7 +151,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   });
 
   const [user, setUser] = useState<User | null>(auth.currentUser);
-  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
 
   const applyCustomerInfo = useCallback(async (customerInfo: CustomerInfo, userId?: string) => {
     const isPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
@@ -257,14 +255,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   }, []);
 
   useEffect(() => {
-    if (!runtimeConfigReady) {
-      return;
-    }
-
-    const shouldSkipPremiumInit =
-      !user || user.isAnonymous || !runtimeConfig.firestoreClientEnabled;
-
-    if (shouldSkipPremiumInit) {
+    if (!user || user.isAnonymous) {
       setIsPremiumFromRevenueCat(false);
       setHasUsedTrialFromRevenueCat(false);
       setIsRevenueCatLoading(false);
@@ -282,9 +273,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     let isCancelled = false;
 
     const initializeForUser = async () => {
-      if (!runtimeConfig.disableNonCriticalReads) {
-        await createUserDocument(user);
-      }
+      await createUserDocument(user);
       if (isCancelled) {
         return;
       }
@@ -297,23 +286,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       isCancelled = true;
     };
-  }, [
-    runtimeConfig.disableNonCriticalReads,
-    runtimeConfig.firestoreClientEnabled,
-    runtimeConfigReady,
-    syncRevenueCatForUser,
-    user,
-  ]);
+  }, [syncRevenueCatForUser, user]);
 
   useEffect(() => {
-    if (
-      !runtimeConfigReady ||
-      !user ||
-      user.isAnonymous ||
-      !runtimeConfig.firestoreClientEnabled ||
-      Platform.OS !== 'android' ||
-      isRevenueCatLoading
-    ) {
+    if (!user || user.isAnonymous || Platform.OS !== 'android' || isRevenueCatLoading) {
       return;
     }
 
@@ -325,23 +301,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [
-    applyCustomerInfo,
-    isRevenueCatLoading,
-    runtimeConfig.firestoreClientEnabled,
-    runtimeConfigReady,
-    user,
-  ]);
+  }, [applyCustomerInfo, isRevenueCatLoading, user]);
 
   useEffect(() => {
-    if (
-      !runtimeConfigReady ||
-      !user?.uid ||
-      user.isAnonymous ||
-      !runtimeConfig.firestoreClientEnabled ||
-      Platform.OS !== 'android' ||
-      isRevenueCatLoading
-    ) {
+    if (!user?.uid || user.isAnonymous || Platform.OS !== 'android' || isRevenueCatLoading) {
       return;
     }
 
@@ -360,21 +323,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       appStateSubscription?.remove?.();
     };
-  }, [
-    applyCustomerInfo,
-    isRevenueCatLoading,
-    runtimeConfig.firestoreClientEnabled,
-    runtimeConfigReady,
-    user?.isAnonymous,
-    user?.uid,
-  ]);
+  }, [applyCustomerInfo, isRevenueCatLoading, user?.isAnonymous, user?.uid]);
 
   useEffect(() => {
-    if (!runtimeConfigReady) {
-      return;
-    }
-
-    if (!user?.uid || user.isAnonymous || !runtimeConfig.firestoreClientEnabled) {
+    if (!user?.uid || user.isAnonymous) {
       setIsPremiumFromFirestore(false);
       setHasUsedTrialFromFirestore(false);
       setIsFirestoreLoading(false);
@@ -484,7 +436,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       isCancelled = true;
       appStateSubscription?.remove?.();
     };
-  }, [runtimeConfig.firestoreClientEnabled, runtimeConfigReady, user?.isAnonymous, user?.uid]);
+  }, [user?.isAnonymous, user?.uid]);
 
   const purchasePremium = useCallback(
     async (plan: PremiumPlan): Promise<boolean> => {

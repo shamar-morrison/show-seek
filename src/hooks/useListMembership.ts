@@ -1,5 +1,5 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '@/src/context/auth';
 import { ListMembershipIndex, listService } from '@/src/services/ListService';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 import { useQuery } from '@tanstack/react-query';
@@ -15,8 +15,8 @@ import { usePreferences } from './usePreferences';
  */
 export function useListMembership() {
   const { preferences } = usePreferences();
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const showIndicators = preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators;
   const cacheWindows = READ_QUERY_CACHE_WINDOWS as typeof READ_QUERY_CACHE_WINDOWS & {
     listIndicatorsStaleTimeMs?: number;
@@ -30,7 +30,7 @@ export function useListMembership() {
   const membershipIndexQuery = useQuery<ListMembershipIndex>({
     queryKey: ['list-membership-index', userId],
     queryFn: () => listService.getListMembershipIndex(userId!),
-    enabled: !!userId && showIndicators && canUseNonCriticalReads,
+    enabled: !!userId && showIndicators,
     staleTime: listIndicatorsStaleTimeMs,
     gcTime: listIndicatorsGcTimeMs,
   });

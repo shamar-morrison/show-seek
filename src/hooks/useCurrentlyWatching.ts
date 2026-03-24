@@ -1,5 +1,5 @@
 import { tmdbApi } from '@/src/api/tmdb';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '@/src/context/auth';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -23,13 +23,14 @@ const MAX_SEASONS_TO_FETCH = 2;
  * - React Query caches and deduplicates requests
  */
 export function useCurrentlyWatching() {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   // 1. Fetch all tracking docs from Firestore
   const trackingQuery = useQuery({
-    queryKey: ['episodeTracking', 'allShows', firestoreUserId],
-    queryFn: () => episodeTrackingService.getAllWatchedShows(firestoreUserId!),
-    enabled: !!firestoreUserId && canUseNonCriticalReads,
+    queryKey: ['episodeTracking', 'allShows', userId],
+    queryFn: () => episodeTrackingService.getAllWatchedShows(userId!),
+    enabled: !!userId,
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
   });
@@ -71,7 +72,7 @@ export function useCurrentlyWatching() {
     queries: tvShowIds.map((tvShowId) => ({
       queryKey: ['tv', tvShowId],
       queryFn: () => tmdbApi.getTVShowDetails(tvShowId),
-      enabled: !!firestoreUserId && canUseNonCriticalReads && tvShowIds.length > 0,
+      enabled: !!userId && tvShowIds.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),
@@ -120,7 +121,7 @@ export function useCurrentlyWatching() {
     queries: seasonQueries.map(({ tvShowId, seasonNumber }) => ({
       queryKey: ['tv', tvShowId, 'season', seasonNumber],
       queryFn: () => tmdbApi.getSeasonDetails(tvShowId, seasonNumber),
-      enabled: !!firestoreUserId && canUseNonCriticalReads && seasonQueries.length > 0,
+      enabled: !!userId && seasonQueries.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),

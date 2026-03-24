@@ -42,7 +42,7 @@ describe('queryCachePersistence', () => {
     const targetClient = new QueryClient();
     const taggedDate = { __type: 'Date', value: 'not-a-date' };
 
-    sourceClient.setQueryData(['ratings', 'user-1', true], {
+    sourceClient.setQueryData(['ratings', 'user-1'], {
       ratedAt: taggedDate,
     });
 
@@ -54,7 +54,7 @@ describe('queryCachePersistence', () => {
 
     await expect(hydratePersistedQueryCache(targetClient)).resolves.toBe(true);
 
-    expect(targetClient.getQueryData(['ratings', 'user-1', true])).toEqual({
+    expect(targetClient.getQueryData(['ratings', 'user-1'])).toEqual({
       ratedAt: taggedDate,
     });
   });
@@ -67,7 +67,7 @@ describe('queryCachePersistence', () => {
 
     const unsubscribe = subscribeToPersistedQueryCache(queryClient);
 
-    queryClient.setQueryData(['ratings', 'user-1', true], [{ id: 'rating-1' }]);
+    queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
     jest.advanceTimersByTime(300);
     await flushMicrotasks();
 

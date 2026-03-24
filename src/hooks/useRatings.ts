@@ -1,23 +1,17 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RatingItem, ratingService } from '../services/RatingService';
 
-const getRatingsQueryKey = (userId: string | undefined, canUseNonCriticalReads: boolean) =>
-  ['ratings', userId, canUseNonCriticalReads] as const;
-const getMediaRatingQueryKey = (
-  userId: string,
-  mediaType: 'movie' | 'tv',
-  mediaId: number,
-  canUseNonCriticalReads: boolean
-) => ['rating', userId, mediaType, mediaId, canUseNonCriticalReads] as const;
+const getRatingsQueryKey = (userId?: string) => ['ratings', userId] as const;
+const getMediaRatingQueryKey = (userId: string, mediaType: 'movie' | 'tv', mediaId: number) =>
+  ['rating', userId, mediaType, mediaId] as const;
 const getEpisodeRatingQueryKey = (
   userId: string,
   tvShowId: number,
   seasonNumber: number,
-  episodeNumber: number,
-  canUseNonCriticalReads: boolean
-) => ['rating', userId, 'episode', tvShowId, seasonNumber, episodeNumber, canUseNonCriticalReads] as const;
+  episodeNumber: number
+) => ['rating', userId, 'episode', tvShowId, seasonNumber, episodeNumber] as const;
 
 const upsertRatingInList = (ratings: RatingItem[], nextRating: RatingItem) => {
   const withoutExisting = ratings.filter((item) => item.id !== nextRating.id);
@@ -72,12 +66,12 @@ const buildEpisodeRating = (
 });
 
 export const useRatings = () => {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const query = useQuery({
-    queryKey: getRatingsQueryKey(userId, canUseNonCriticalReads),
+    queryKey: getRatingsQueryKey(userId),
     queryFn: () => ratingService.getUserRatings(userId!),
-    enabled: !!userId && canUseNonCriticalReads,
+    enabled: !!userId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -89,15 +83,13 @@ export const useRatings = () => {
 };
 
 export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   const query = useQuery({
-    queryKey: userId
-      ? getMediaRatingQueryKey(userId, mediaType, mediaId, canUseNonCriticalReads)
-      : ['rating', userId, canUseNonCriticalReads],
+    queryKey: userId ? getMediaRatingQueryKey(userId, mediaType, mediaId) : ['rating', userId],
     queryFn: () => ratingService.getRating(mediaId, mediaType),
-    enabled: !!userId && !!mediaId && canUseNonCriticalReads,
+    enabled: !!userId && !!mediaId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -112,8 +104,8 @@ export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
 
 export const useRateMedia = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({
@@ -136,8 +128,8 @@ export const useRateMedia = () => {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
 
       await Promise.all([
         queryClient.cancelQueries({ queryKey: detailKey }),
@@ -168,8 +160,8 @@ export const useRateMedia = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -180,8 +172,8 @@ export const useRateMedia = () => {
     onSuccess: (savedRating, variables) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData<RatingItem | null>(detailKey, savedRating);
 
@@ -195,8 +187,8 @@ export const useRateMedia = () => {
 
 export const useDeleteRating = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({ mediaId, mediaType }: { mediaId: number; mediaType: 'movie' | 'tv' }) =>
@@ -206,8 +198,8 @@ export const useDeleteRating = () => {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
       const ratingId = variables.mediaId.toString();
 
       await Promise.all([
@@ -232,8 +224,8 @@ export const useDeleteRating = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -244,8 +236,8 @@ export const useDeleteRating = () => {
     onSuccess: (_data, variables) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
-      const listKey = getRatingsQueryKey(userId, true);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
+      const listKey = getRatingsQueryKey(userId);
       const ratingId = variables.mediaId.toString();
 
       queryClient.setQueryData<RatingItem | null>(detailKey, null);
@@ -259,26 +251,15 @@ export const useDeleteRating = () => {
 };
 
 export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episodeNumber: number) => {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   const query = useQuery({
     queryKey: userId
-      ? getEpisodeRatingQueryKey(
-          userId,
-          tvShowId,
-          seasonNumber,
-          episodeNumber,
-          canUseNonCriticalReads
-        )
-      : ['rating', userId, 'episode', canUseNonCriticalReads],
+      ? getEpisodeRatingQueryKey(userId, tvShowId, seasonNumber, episodeNumber)
+      : ['rating', userId, 'episode'],
     queryFn: () => ratingService.getEpisodeRating(tvShowId, seasonNumber, episodeNumber),
-    enabled:
-      !!userId &&
-      !!tvShowId &&
-      canUseNonCriticalReads &&
-      Number.isFinite(seasonNumber) &&
-      Number.isFinite(episodeNumber),
+    enabled: !!userId && !!tvShowId && Number.isFinite(seasonNumber) && Number.isFinite(episodeNumber),
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -293,8 +274,8 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
 
 export const useRateEpisode = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({
@@ -330,10 +311,9 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
 
       await Promise.all([
         queryClient.cancelQueries({ queryKey: detailKey }),
@@ -369,10 +349,9 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -387,10 +366,9 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData<RatingItem | null>(detailKey, savedRating);
 
@@ -404,8 +382,8 @@ export const useRateEpisode = () => {
 
 export const useDeleteEpisodeRating = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({
@@ -426,10 +404,9 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
       const ratingId = `episode-${variables.tvShowId}-${variables.seasonNumber}-${variables.episodeNumber}`;
 
       await Promise.all([
@@ -458,10 +435,9 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -476,10 +452,9 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber,
-        true
+        variables.episodeNumber
       );
-      const listKey = getRatingsQueryKey(userId, true);
+      const listKey = getRatingsQueryKey(userId);
       const ratingId = `episode-${variables.tvShowId}-${variables.seasonNumber}-${variables.episodeNumber}`;
 
       queryClient.setQueryData<RatingItem | null>(detailKey, null);

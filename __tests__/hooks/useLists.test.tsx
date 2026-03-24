@@ -19,23 +19,8 @@ const mockPremiumState = {
   isLoading: false,
 };
 
-const mockFirestoreAccessState = {
-  user: { uid: 'test-user-id' } as any,
-  isAnonymous: false,
-  signedInUserId: 'test-user-id' as string | undefined,
-  firestoreUserId: 'test-user-id' as string | undefined,
-  canUseFirestoreClient: true,
-  canUseListManagementReads: true,
-  canUseNonCriticalReads: true,
-  canUsePremiumRealtime: true,
-};
-
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
-}));
-
-jest.mock('@/src/hooks/useFirestoreAccess', () => ({
-  useFirestoreAccess: () => mockFirestoreAccessState,
 }));
 
 jest.mock('@/src/context/auth', () => ({
@@ -116,14 +101,6 @@ describe('useAddToList', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
-    mockFirestoreAccessState.user = { uid: 'test-user-id' };
-    mockFirestoreAccessState.isAnonymous = false;
-    mockFirestoreAccessState.signedInUserId = 'test-user-id';
-    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
-    mockFirestoreAccessState.canUseFirestoreClient = true;
-    mockFirestoreAccessState.canUseListManagementReads = true;
-    mockFirestoreAccessState.canUseNonCriticalReads = true;
-    mockFirestoreAccessState.canUsePremiumRealtime = true;
     mockAddToList.mockResolvedValue(undefined);
     mockDeleteList.mockResolvedValue(undefined);
     mockGetUserLists.mockResolvedValue([]);
@@ -132,69 +109,6 @@ describe('useAddToList', () => {
     mockUpdatePreference.mockResolvedValue(undefined);
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
-  });
-
-  it('does not fetch lists for anonymous users', () => {
-    mockAuthState.user = { uid: 'anon-1', isAnonymous: true } as any;
-    mockFirestoreAccessState.user = mockAuthState.user;
-    mockFirestoreAccessState.isAnonymous = true;
-    mockFirestoreAccessState.signedInUserId = undefined;
-    mockFirestoreAccessState.firestoreUserId = undefined;
-    mockFirestoreAccessState.canUseFirestoreClient = false;
-    mockFirestoreAccessState.canUseListManagementReads = false;
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
-    mockFirestoreAccessState.canUsePremiumRealtime = false;
-
-    const client = createQueryClient();
-    const { result } = renderHook(() => useLists(), {
-      wrapper: createWrapper(client),
-    });
-
-    expect(mockGetUserLists).not.toHaveBeenCalled();
-    expect(result.current.data).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('keeps default list reads disabled in premium-only mode', () => {
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
-    mockFirestoreAccessState.canUseListManagementReads = true;
-
-    const client = createQueryClient();
-    const { result } = renderHook(() => useLists(), {
-      wrapper: createWrapper(client),
-    });
-
-    expect(mockGetUserLists).not.toHaveBeenCalled();
-    expect(result.current.data).toEqual([]);
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('allows list-management reads in premium-only mode for signed-in users', async () => {
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
-    mockFirestoreAccessState.canUseListManagementReads = true;
-    mockGetUserLists.mockResolvedValueOnce([
-      {
-        id: 'watchlist',
-        name: 'Watchlist',
-        items: {},
-      },
-    ]);
-
-    const client = createQueryClient();
-    const { result } = renderHook(() => useLists({ accessScope: 'list-management' }), {
-      wrapper: createWrapper(client),
-    });
-
-    await waitFor(() => {
-      expect(mockGetUserLists).toHaveBeenCalledWith('test-user-id');
-      expect(result.current.data).toEqual([
-        {
-          id: 'watchlist',
-          name: 'Watchlist',
-          items: {},
-        },
-      ]);
-    });
   });
 
   it('enforces free tier item limits before optimistic updates', async () => {
@@ -287,6 +201,27 @@ describe('useAddToList', () => {
         refetchType: 'active',
       });
     });
+  });
+});
+
+describe('useLists', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockGetUserLists.mockResolvedValue([]);
+  });
+
+  it('does not fetch lists for anonymous users', () => {
+    mockAuthState.user = { uid: 'anon-1', isAnonymous: true } as any;
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useLists(), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(mockGetUserLists).not.toHaveBeenCalled();
+    expect(result.current.data).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
   });
 });
 
@@ -389,14 +324,6 @@ describe('useMediaLists', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
-    mockFirestoreAccessState.user = { uid: 'test-user-id' };
-    mockFirestoreAccessState.isAnonymous = false;
-    mockFirestoreAccessState.signedInUserId = 'test-user-id';
-    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
-    mockFirestoreAccessState.canUseFirestoreClient = true;
-    mockFirestoreAccessState.canUseListManagementReads = true;
-    mockFirestoreAccessState.canUseNonCriticalReads = true;
-    mockFirestoreAccessState.canUsePremiumRealtime = true;
     mockGetUserLists.mockResolvedValue([]);
   });
 
@@ -477,31 +404,9 @@ describe('useMediaLists', () => {
 
   it('does not fetch when signed out', () => {
     mockAuthState.user = null;
-    mockFirestoreAccessState.user = null;
-    mockFirestoreAccessState.isAnonymous = false;
-    mockFirestoreAccessState.signedInUserId = undefined;
-    mockFirestoreAccessState.firestoreUserId = undefined;
-    mockFirestoreAccessState.canUseFirestoreClient = false;
-    mockFirestoreAccessState.canUseListManagementReads = false;
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
-    mockFirestoreAccessState.canUsePremiumRealtime = false;
 
     const client = createQueryClient();
     const { result } = renderHook(() => useMediaLists(999), {
-      wrapper: createWrapper(client),
-    });
-
-    expect(mockGetUserLists).not.toHaveBeenCalled();
-    expect(result.current.membership).toEqual({});
-    expect(result.current.isLoading).toBe(false);
-  });
-
-  it('stays disabled in premium-only mode', () => {
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
-    mockFirestoreAccessState.canUseListManagementReads = true;
-
-    const client = createQueryClient();
-    const { result } = renderHook(() => useMediaLists(123), {
       wrapper: createWrapper(client),
     });
 

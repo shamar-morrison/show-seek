@@ -8,7 +8,6 @@
  */
 import { ACCENT_COLORS, DEFAULT_ACCENT_COLOR, isAccentColor } from '@/src/constants/accentColors';
 import { useAuth } from '@/src/context/auth';
-import { useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import {
   fetchAccentColorFromFirebase,
   getStoredAccentColor,
@@ -31,7 +30,6 @@ interface AccentColorProviderProps {
 
 export function AccentColorProvider({ children }: AccentColorProviderProps) {
   const { user } = useAuth();
-  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
   const [accentColor, setAccentColorState] = useState<string>(DEFAULT_ACCENT_COLOR);
   const [isAccentReady, setIsAccentReady] = useState(false);
   const hasSyncedFromFirebase = useRef(false);
@@ -64,17 +62,8 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
 
   // 2. Sync from Firebase on login (cross-device restore)
   useEffect(() => {
-    if (!user) {
+    if (!user || user.isAnonymous) {
       hasSyncedFromFirebase.current = false;
-      return;
-    }
-
-    if (
-      !runtimeConfigReady ||
-      user.isAnonymous ||
-      !runtimeConfig.firestoreClientEnabled ||
-      runtimeConfig.disableNonCriticalReads
-    ) {
       return;
     }
 
@@ -91,13 +80,7 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
     };
 
     syncFromFirebase();
-  }, [
-    accentColor,
-    runtimeConfig.disableNonCriticalReads,
-    runtimeConfig.firestoreClientEnabled,
-    runtimeConfigReady,
-    user,
-  ]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3. Set accent color: state (instant) → AsyncStorage → Firebase (fire-and-forget)
   const setAccentColor = useCallback(

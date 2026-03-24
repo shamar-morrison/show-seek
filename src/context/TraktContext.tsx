@@ -11,7 +11,6 @@
  */
 
 import { TRAKT_CONFIG, TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
-import { useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import { auth } from '@/src/firebase/config';
 import { TraktRequestError } from '@/src/services/TraktService';
 import * as TraktService from '@/src/services/TraktService';
@@ -43,15 +42,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(auth.currentUser);
-  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasAttemptedAutoSync = useRef(false);
-  const traktBootstrapEnabled =
-    runtimeConfigReady &&
-    runtimeConfig.firestoreClientEnabled &&
-    !runtimeConfig.disableNonCriticalReads;
 
   // Monitor auth state
   useEffect(() => {
@@ -98,7 +92,6 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   // Auto-sync on app launch if connected and cooldown has passed
   useEffect(() => {
     if (
-      !traktBootstrapEnabled ||
       !hasEligibleTraktUser(user) ||
       !isConnected ||
       isLoading ||
@@ -124,7 +117,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     } else {
       console.log('[Trakt] Skipping auto-sync (cooldown not passed or never synced)');
     }
-  }, [traktBootstrapEnabled, user, isConnected, isLoading, lastSyncedAt, syncStatus]);
+  }, [user, isConnected, isLoading, lastSyncedAt, syncStatus]);
 
   // Cleanup polling intervals on unmount
   useEffect(() => {
@@ -306,7 +299,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   }, [user]);
 
   useEffect(() => {
-    if (!traktBootstrapEnabled || !hasEligibleTraktUser(user) || !syncStatus?.status) {
+    if (!hasEligibleTraktUser(user) || !syncStatus?.status) {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
@@ -334,7 +327,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
 
     setIsSyncing(false);
-  }, [pollSyncStatus, syncStatus?.status, traktBootstrapEnabled, user]);
+  }, [pollSyncStatus, syncStatus?.status, user]);
 
   const syncNow = useCallback(async () => {
     ensureEligibleUser('Must be logged in to sync');

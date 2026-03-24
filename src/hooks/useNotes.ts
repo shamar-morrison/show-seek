@@ -1,6 +1,6 @@
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '../context/auth';
 import { Note, NoteInput } from '@/src/types/note';
 import {
   FreemiumLimitError,
@@ -140,8 +140,8 @@ const assertCanCreateNote = async ({
  */
 export const useNotes = () => {
   const queryClient = useQueryClient();
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const previousUserIdRef = useRef<string | undefined>(userId);
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export const useNotes = () => {
   const query = useQuery({
     queryKey: getNotesQueryKey(userId),
     queryFn: () => noteService.getUserNotes(userId!),
-    enabled: !!userId && canUseNonCriticalReads,
+    enabled: !!userId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -178,8 +178,8 @@ export const useMediaNote = (
   episodeNumber?: number
 ) => {
   const queryClient = useQueryClient();
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const detailKey = getMediaNoteQueryKey(userId, mediaType, mediaId, seasonNumber, episodeNumber);
 
   const getNoteFromNotesListCache = useCallback((): Note | null => {
@@ -198,7 +198,7 @@ export const useMediaNote = (
   const query = useQuery({
     queryKey: detailKey,
     queryFn: () => noteService.getNote(userId!, mediaType, mediaId, seasonNumber, episodeNumber),
-    enabled: !!userId && !!mediaId && canUseNonCriticalReads && getStatusReadsEnabled(),
+    enabled: !!userId && !!mediaId && getStatusReadsEnabled(),
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -253,8 +253,8 @@ export const useMediaNote = (
  */
 export const useSaveNote = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -369,8 +369,8 @@ export const useSaveNote = () => {
 
 export const useCanCreateNote = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useCallback(
@@ -410,8 +410,8 @@ export const useCanCreateNote = () => {
  */
 export const useDeleteNote = () => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({

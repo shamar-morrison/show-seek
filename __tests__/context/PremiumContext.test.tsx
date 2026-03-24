@@ -2,19 +2,6 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Platform } from 'react-native';
 
-const mockRuntimeConfigState = {
-  isReady: true,
-  config: {
-    firestoreClientEnabled: true,
-    disableNonCriticalReads: false,
-    allowGuestFirestoreReads: false,
-    version: 'test',
-    maintenanceTitle: 'Maintenance',
-    maintenanceMessage: 'Down for maintenance',
-    updatedAt: '2026-03-24T00:00:00.000Z',
-  },
-};
-
 const mockConfigureRevenueCat = jest.fn();
 const mockCreateUserDocument = jest.fn();
 const mockGetOfferings = jest.fn();
@@ -53,10 +40,6 @@ jest.mock('@/src/services/firestoreReadAudit', () => ({
 
 jest.mock('@/src/services/revenueCat', () => ({
   configureRevenueCat: (...args: unknown[]) => mockConfigureRevenueCat(...args),
-}));
-
-jest.mock('@/src/context/RuntimeConfigContext', () => ({
-  useRuntimeConfig: () => mockRuntimeConfigState,
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -167,7 +150,6 @@ const createSnapshot = (premium: Record<string, unknown> = {}) => ({
 
 describe('PremiumContext', () => {
   const { PremiumProvider, usePremium } = require('@/src/context/PremiumContext');
-  const { auth } = require('@/src/firebase/config');
   const originalPlatform = Platform.OS;
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -177,11 +159,6 @@ describe('PremiumContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as { OS: string }).OS = 'android';
-    auth.currentUser = { uid: 'test-user-id', email: 'test@example.com' };
-    mockRuntimeConfigState.isReady = true;
-    mockRuntimeConfigState.config.firestoreClientEnabled = true;
-    mockRuntimeConfigState.config.disableNonCriticalReads = false;
-    mockRuntimeConfigState.config.allowGuestFirestoreReads = false;
 
     mockConfigureRevenueCat.mockResolvedValue(true);
     mockCreateUserDocument.mockResolvedValue(undefined);
@@ -248,44 +225,6 @@ describe('PremiumContext', () => {
 
     await act(async () => {
       resolveConfigure?.(true);
-    });
-  });
-
-  it('does not create user docs or attach Firestore listeners for anonymous users', async () => {
-    auth.currentUser = { uid: 'anon-1', isAnonymous: true };
-    mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
-      callback({ uid: 'anon-1', isAnonymous: true });
-      return jest.fn();
-    });
-
-    renderHook(() => usePremium(), { wrapper });
-
-    await waitFor(() => {
-      expect(mockCreateUserDocument).not.toHaveBeenCalled();
-      expect(mockAuditedOnSnapshot).not.toHaveBeenCalled();
-    });
-  });
-
-  it('waits for runtime config readiness before initializing Firestore and RevenueCat work', async () => {
-    mockRuntimeConfigState.isReady = false;
-
-    renderHook(() => usePremium(), { wrapper });
-
-    await waitFor(() => {
-      expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
-      expect(mockCreateUserDocument).not.toHaveBeenCalled();
-      expect(mockAuditedOnSnapshot).not.toHaveBeenCalled();
-    });
-  });
-
-  it('skips user document creation in premium-only mode but keeps the premium listener', async () => {
-    mockRuntimeConfigState.config.disableNonCriticalReads = true;
-
-    renderHook(() => usePremium(), { wrapper });
-
-    await waitFor(() => {
-      expect(mockCreateUserDocument).not.toHaveBeenCalled();
-      expect(mockAuditedOnSnapshot).toHaveBeenCalledTimes(1);
     });
   });
 

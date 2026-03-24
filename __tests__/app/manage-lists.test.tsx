@@ -12,10 +12,9 @@ const mockListsState = {
   ],
   isLoading: false,
 };
-const mockUseLists = jest.fn();
 
 jest.mock('@/src/hooks/useLists', () => ({
-  useLists: (...args: any[]) => mockUseLists(...args),
+  useLists: () => mockListsState,
   useDeleteList: () => ({ mutateAsync: jest.fn() }),
 }));
 
@@ -41,13 +40,11 @@ import ManageListsScreen from '@/app/manage-lists';
 describe('ManageListsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseLists.mockReturnValue(mockListsState);
   });
 
   it('does not render delete controls for default lists', () => {
     const { UNSAFE_queryAllByType } = render(<ManageListsScreen />);
 
-    expect(mockUseLists).toHaveBeenCalledWith({ accessScope: 'list-management' });
     expect(UNSAFE_queryAllByType(Trash2)).toHaveLength(0);
   });
 });

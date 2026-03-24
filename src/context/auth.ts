@@ -1,7 +1,6 @@
 import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
-import { useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
@@ -12,7 +11,6 @@ const getPersonalOnboardingCacheKey = (userId: string) =>
   `hasCompletedPersonalOnboarding:${userId}`;
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
-  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
@@ -120,11 +118,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         return;
       }
 
-      if (!runtimeConfigReady) {
-        setLoading(true);
-        return;
-      }
-
       setHasCompletedPersonalOnboarding(false);
       setLoading(true);
 
@@ -142,14 +135,6 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         }
       } catch (error) {
         console.error('Error reading personal onboarding cache', error);
-      }
-
-      if (runtimeConfig.disableNonCriticalReads) {
-        if (isCurrentSession() && !hasCachedPersonalOnboarding) {
-          setHasCompletedPersonalOnboarding(true);
-          setLoading(false);
-        }
-        return;
       }
 
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -191,7 +176,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       isMounted = false;
       unsubscribe();
     };
-  }, [runtimeConfig.disableNonCriticalReads, runtimeConfigReady]);
+  }, []);
 
   const signOut = async () => {
     if (signOutInFlight.current) {

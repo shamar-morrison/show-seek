@@ -1,9 +1,0 @@
-{
-  "version": "2-premium-only",
-  "firestoreClientEnabled": true,
-  "disableNonCriticalReads": true,
-  "allowGuestFirestoreReads": false,
-  "maintenanceTitle": "Maintenance in progress",
-  "maintenanceMessage": "Show Seek is temporarily unavailable while we stabilize the service.",
-  "updatedAt": "2026-03-24T12:00:00.000Z"
-}

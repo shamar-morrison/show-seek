@@ -1,5 +1,4 @@
 import { useAuth } from '@/src/context/auth';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { posterOverrideService } from '@/src/services/PosterOverrideService';
 import { DEFAULT_PREFERENCES, UserPreferences } from '@/src/types/preferences';
 import {
@@ -42,8 +41,8 @@ export function usePosterOverrides() {
 
 export function useSetPosterOverride() {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation<
     void,
@@ -97,8 +96,8 @@ export function useSetPosterOverride() {
 
 export function useClearPosterOverride() {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation<
     void,

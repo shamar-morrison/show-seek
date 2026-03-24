@@ -104,7 +104,7 @@ describe('CreateListModal', () => {
     mockCreateListMutateAsync.mockResolvedValue('custom-list-id');
   });
 
-  it('uses list-management reads and still creates a list in premium-only mode', async () => {
+  it('creates a list with the default live list query', async () => {
     const ref = createRef<CreateListModalRef>();
     const onSuccess = jest.fn();
     const { getByPlaceholderText, getByText } = render(
@@ -115,7 +115,7 @@ describe('CreateListModal', () => {
       await ref.current?.present();
     });
 
-    expect(mockUseLists).toHaveBeenCalledWith({ accessScope: 'list-management' });
+    expect(mockUseLists).toHaveBeenCalledWith();
 
     fireEvent.changeText(getByPlaceholderText('List Name'), 'My New List');
     fireEvent.changeText(getByPlaceholderText('Description (optional)'), 'Weekend picks');

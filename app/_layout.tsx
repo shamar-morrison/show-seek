@@ -13,7 +13,6 @@ import { AuthProvider, useAuth } from '@/src/context/auth';
 import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
-import { RuntimeConfigProvider, useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
@@ -99,7 +98,6 @@ interface InitDebugSnapshot {
   isLanguageReady: boolean;
   isRegionReady: boolean;
   isAccentReady: boolean;
-  runtimeConfigReady: boolean;
   preferencesLoading: boolean;
   user: string | null;
   segments: string[];
@@ -118,29 +116,6 @@ function AppShellLoading({ accentColor }: { accentColor: string }) {
       }}
     >
       <ActivityIndicator size="large" color={accentColor} />
-    </View>
-  );
-}
-
-function MaintenanceScreen({
-  title,
-  message,
-}: {
-  title: string;
-  message: string;
-}) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: COLORS.background,
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        gap: 12,
-      }}
-    >
-      <Text style={{ color: COLORS.text, fontSize: 28, fontWeight: '700' }}>{title}</Text>
-      <Text style={{ color: COLORS.textSecondary, fontSize: 16, lineHeight: 24 }}>{message}</Text>
     </View>
   );
 }
@@ -180,7 +155,6 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
 
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
-  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
@@ -198,7 +172,6 @@ function RootLayoutNav() {
     const reasons: string[] = [];
     if (loading) reasons.push('auth-loading');
     if (hasCompletedOnboarding === null) reasons.push('onboarding-null');
-    if (!runtimeConfigReady) reasons.push('runtime-config-loading');
     if (!isLanguageReady) reasons.push('language-not-ready');
     if (!isRegionReady) reasons.push('region-not-ready');
     if (!isAccentReady) reasons.push('accent-not-ready');
@@ -207,7 +180,6 @@ function RootLayoutNav() {
   }, [
     loading,
     hasCompletedOnboarding,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -231,7 +203,6 @@ function RootLayoutNav() {
       user: user?.uid ?? 'none',
       loading,
       hasCompletedOnboarding,
-      runtimeConfigReady,
       isLanguageReady,
       isRegionReady,
       isAccentReady,
@@ -244,7 +215,6 @@ function RootLayoutNav() {
     user?.uid,
     loading,
     hasCompletedOnboarding,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -260,7 +230,6 @@ function RootLayoutNav() {
       snapshot: (): InitDebugSnapshot => ({
         loading,
         hasCompletedOnboarding,
-        runtimeConfigReady,
         isLanguageReady,
         isRegionReady,
         isAccentReady,
@@ -279,7 +248,6 @@ function RootLayoutNav() {
   }, [
     loading,
     hasCompletedOnboarding,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -337,7 +305,6 @@ function RootLayoutNav() {
     if (
       loading ||
       hasCompletedOnboarding === null ||
-      !runtimeConfigReady ||
       !isLanguageReady ||
       !isRegionReady ||
       !isAccentReady ||
@@ -371,7 +338,6 @@ function RootLayoutNav() {
     user,
     loading,
     hasCompletedOnboarding,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -459,7 +425,6 @@ function RootLayoutNav() {
       const snapshot: InitDebugSnapshot = {
         loading,
         hasCompletedOnboarding,
-        runtimeConfigReady,
         isLanguageReady,
         isRegionReady,
         isAccentReady,
@@ -482,7 +447,6 @@ function RootLayoutNav() {
     debugTimeoutTriggered,
     loading,
     hasCompletedOnboarding,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -507,23 +471,12 @@ function RootLayoutNav() {
 
   useEffect(() => {
     const waitingForPreferences = !!user && preferencesLoading;
-    if (
-      loading ||
-      !runtimeConfigReady ||
-      !isLanguageReady ||
-      !isRegionReady ||
-      !isAccentReady ||
-      waitingForPreferences
-    ) {
+    if (loading || !isLanguageReady || !isRegionReady || !isAccentReady || waitingForPreferences) {
       return;
     }
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
-
-    if (!runtimeConfig.firestoreClientEnabled) {
-      return;
-    }
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
@@ -550,22 +503,12 @@ function RootLayoutNav() {
     hasCompletedPersonalOnboarding,
     segments,
     router,
-    runtimeConfig,
-    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
     preferences,
     preferencesLoading,
   ]);
-
-  useEffect(() => {
-    if (!runtimeConfigReady || runtimeConfig.firestoreClientEnabled) {
-      return;
-    }
-
-    SplashScreen.hideAsync();
-  }, [runtimeConfig.firestoreClientEnabled, runtimeConfigReady]);
 
   if (debugTimeoutTriggered && debugSnapshot) {
     return (
@@ -637,15 +580,6 @@ function RootLayoutNav() {
     return <AppShellLoading accentColor={accentColor} />;
   }
 
-  if (!runtimeConfig.firestoreClientEnabled) {
-    return (
-      <MaintenanceScreen
-        title={runtimeConfig.maintenanceTitle}
-        message={runtimeConfig.maintenanceMessage}
-      />
-    );
-  }
-
   return (
     <>
       <StatusBar style="light" backgroundColor={COLORS.background} translucent={false} />
@@ -673,27 +607,25 @@ export default function RootLayout() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <QueryCacheBootstrap>
-          <RuntimeConfigProvider>
-            <AuthProvider>
-              <GuestAccessProvider>
-                <PremiumProvider>
-                  <TraktProvider>
-                    <LanguageProvider>
-                      <RegionProvider>
-                        <AccentColorProvider>
-                          <GestureHandlerRootView
-                            style={{ flex: 1, backgroundColor: COLORS.background }}
-                          >
-                            <RootLayoutNav />
-                          </GestureHandlerRootView>
-                        </AccentColorProvider>
-                      </RegionProvider>
-                    </LanguageProvider>
-                  </TraktProvider>
-                </PremiumProvider>
-              </GuestAccessProvider>
-            </AuthProvider>
-          </RuntimeConfigProvider>
+          <AuthProvider>
+            <GuestAccessProvider>
+              <PremiumProvider>
+                <TraktProvider>
+                  <LanguageProvider>
+                    <RegionProvider>
+                      <AccentColorProvider>
+                        <GestureHandlerRootView
+                          style={{ flex: 1, backgroundColor: COLORS.background }}
+                        >
+                          <RootLayoutNav />
+                        </GestureHandlerRootView>
+                      </AccentColorProvider>
+                    </RegionProvider>
+                  </LanguageProvider>
+                </TraktProvider>
+              </PremiumProvider>
+            </GuestAccessProvider>
+          </AuthProvider>
         </QueryCacheBootstrap>
       </QueryClientProvider>
     </ErrorBoundary>

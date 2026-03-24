@@ -1,7 +1,6 @@
 import { db } from '@/src/firebase/config';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { requireSignedInUser } from '@/src/services/serviceSupport';
@@ -18,6 +17,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
+import { auth } from '../firebase/config';
 
 export interface AddWatchInput {
   watchedAt: Date;
@@ -27,11 +27,8 @@ export interface AddWatchInput {
 export const createWatchId = (): string =>
   `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-const getWatchedMoviesQueryKey = (
-  userId: string | undefined,
-  movieId: number,
-  canUseNonCriticalReads: boolean
-) => ['watchedMovies', userId, movieId, canUseNonCriticalReads] as const;
+const getWatchedMoviesQueryKey = (userId: string | undefined, movieId: number) =>
+  ['watchedMovies', userId, movieId] as const;
 
 /**
  * Fetch watch instances for a movie (one-time fetch for initial data)
@@ -98,15 +95,15 @@ const syncCollectionTrackingAfterUnwatch = async (movieId: number): Promise<void
  * Uses explicit invalidation/optimistic updates from mutations instead of realtime listeners.
  */
 export const useWatchedMovies = (movieId: number) => {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
-  const queryKey = getWatchedMoviesQueryKey(userId, movieId, canUseNonCriticalReads);
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
+  const queryKey = getWatchedMoviesQueryKey(userId, movieId);
 
   // Use React Query for caching
   const query = useQuery({
     queryKey,
     queryFn: () => fetchWatchInstances(userId!, movieId),
-    enabled: !!userId && !!movieId && canUseNonCriticalReads,
+    enabled: !!userId && !!movieId,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
     refetchOnMount: false,
@@ -131,8 +128,8 @@ export const useWatchedMovies = (movieId: number) => {
  */
 export const useAddWatch = (movieId: number) => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationKey: ['addWatch', movieId],
@@ -151,7 +148,7 @@ export const useAddWatch = (movieId: number) => {
       return { id: watchId, watchedAt, movieId };
     },
     onMutate: async ({ watchedAt, watchId }) => {
-      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -171,7 +168,7 @@ export const useAddWatch = (movieId: number) => {
     },
     onError: (error, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useAddWatch] Error:', error);
@@ -179,7 +176,7 @@ export const useAddWatch = (movieId: number) => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: getWatchedMoviesQueryKey(userId, movieId, true),
+        queryKey: getWatchedMoviesQueryKey(userId, movieId),
       });
     },
   });
@@ -190,8 +187,8 @@ export const useAddWatch = (movieId: number) => {
  */
 export const useClearWatches = (movieId: number) => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationKey: ['clearWatches', movieId],
@@ -232,7 +229,7 @@ export const useClearWatches = (movieId: number) => {
     },
     // Optimistic update
     onMutate: async () => {
-      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -245,7 +242,7 @@ export const useClearWatches = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useClearWatches] Error:', error);
@@ -262,8 +259,8 @@ export const useClearWatches = (movieId: number) => {
  */
 export const useDeleteWatch = (movieId: number) => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationKey: ['deleteWatch', movieId],
@@ -295,7 +292,7 @@ export const useDeleteWatch = (movieId: number) => {
     },
     // Optimistic update for instant UI feedback
     onMutate: async (instanceId) => {
-      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -310,7 +307,7 @@ export const useDeleteWatch = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useDeleteWatch] Error:', error);
@@ -327,8 +324,8 @@ export const useDeleteWatch = (movieId: number) => {
  */
 export const useUpdateWatchDate = (movieId: number) => {
   const queryClient = useQueryClient();
-  const { signedInUserId } = useFirestoreAccess();
-  const userId = signedInUserId;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationKey: ['updateWatchDate', movieId],
@@ -348,7 +345,7 @@ export const useUpdateWatchDate = (movieId: number) => {
     },
     // Optimistic update for instant UI feedback
     onMutate: async ({ instanceId, newDate }) => {
-      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -367,7 +364,7 @@ export const useUpdateWatchDate = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useUpdateWatchDate] Error:', error);

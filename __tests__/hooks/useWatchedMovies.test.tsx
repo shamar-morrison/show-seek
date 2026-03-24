@@ -2,49 +2,14 @@ import { collectionTrackingService } from '@/src/services/CollectionTrackingServ
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
 import React from 'react';
+import { auth } from '@/src/firebase/config';
 import { collection, deleteDoc, doc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import {
   useAddWatch,
   useClearWatches,
   useDeleteWatch,
   useUpdateWatchDate,
-  useWatchedMovies,
 } from '@/src/hooks/useWatchedMovies';
-
-const mockWatchedMoviesAuth = {
-  currentUser: {
-    uid: 'test-user-id',
-    email: 'test@example.com',
-    isAnonymous: false,
-  } as { uid: string; email?: string; isAnonymous?: boolean } | null,
-};
-let mockCanUseNonCriticalReads = true;
-
-jest.mock('@/src/firebase/config', () => ({
-  auth: {
-    get currentUser() {
-      return mockWatchedMoviesAuth.currentUser;
-    },
-  },
-  db: {},
-}));
-
-jest.mock('@/src/hooks/useFirestoreAccess', () => ({
-  useFirestoreAccess: () => {
-    const currentUser = mockWatchedMoviesAuth.currentUser;
-    const isAnonymous = currentUser?.isAnonymous === true;
-
-    return {
-      user: currentUser,
-      isAnonymous,
-      signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
-      firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
-      canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
-      canUseNonCriticalReads: mockCanUseNonCriticalReads,
-      canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
-    };
-  },
-}));
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -86,15 +51,12 @@ function createQueryClient() {
   });
 }
 
-function createSnapshot(docs: { ref: { id: string } }[]) {
+function createSnapshot(docs: Array<{ ref: { id: string } }>) {
   return {
     empty: docs.length === 0,
     docs,
   };
 }
-
-const getWatchedMoviesKey = (movieId: number, canUseNonCriticalReads = true) =>
-  ['watchedMovies', 'test-user-id', movieId, canUseNonCriticalReads] as const;
 
 async function captureMutationError(runMutation: () => Promise<unknown>) {
   let thrown: unknown;
@@ -125,12 +87,11 @@ describe('useWatchedMovies mutations', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockWatchedMoviesAuth.currentUser = {
+    (auth as any).currentUser = {
       uid: 'test-user-id',
       email: 'test@example.com',
       isAnonymous: false,
     };
-    mockCanUseNonCriticalReads = true;
     (collection as jest.Mock).mockImplementation((_db, path) => ({ path }));
     (doc as jest.Mock).mockImplementation((_db, path) => ({ path }));
     (setDoc as jest.Mock).mockResolvedValue(undefined);
@@ -163,7 +124,7 @@ describe('useWatchedMovies mutations', () => {
         movieId: 999,
       }
     );
-    expect(client.getQueryData(getWatchedMoviesKey(999))).toEqual([
+    expect(client.getQueryData(['watchedMovies', 'test-user-id', 999])).toEqual([
       {
         id: 'watch-123',
         watchedAt,
@@ -171,7 +132,7 @@ describe('useWatchedMovies mutations', () => {
       },
     ]);
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: getWatchedMoviesKey(999),
+      queryKey: ['watchedMovies', 'test-user-id', 999],
     });
   });
 
@@ -192,7 +153,7 @@ describe('useWatchedMovies mutations', () => {
       await addResult.current.mutateAsync({ watchedAt: initialDate, watchId });
     });
 
-    const cachedInstances = client.getQueryData<any[]>(getWatchedMoviesKey(999)) ?? [];
+    const cachedInstances = client.getQueryData<any[]>(['watchedMovies', 'test-user-id', 999]) ?? [];
 
     await act(async () => {
       await updateResult.current.mutateAsync({
@@ -270,27 +231,6 @@ describe('useWatchedMovies mutations', () => {
     expect(collectionTrackingService.removeWatchedMovie).not.toHaveBeenCalled();
   });
 
-  it('masks cached watch data when non-critical reads are revoked', () => {
-    const client = createQueryClient();
-    const watchedAt = new Date('2026-03-11T18:30:00.000Z');
-    client.setQueryData(getWatchedMoviesKey(999), [
-      {
-        id: 'watch-789',
-        watchedAt,
-        movieId: 999,
-      },
-    ]);
-    mockCanUseNonCriticalReads = false;
-
-    const { result } = renderHook(() => useWatchedMovies(999), {
-      wrapper: createWrapper(client),
-    });
-
-    expect(result.current.instances).toEqual([]);
-    expect(result.current.count).toBe(0);
-    expect(result.current.lastWatchedAt).toBeNull();
-  });
-
   it('syncs tracked collections when deleting the final watch instance', async () => {
     const client = createQueryClient();
     const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
@@ -362,7 +302,7 @@ describe('useWatchedMovies mutations', () => {
 
   it('rejects watched-movie mutations for anonymous users before reaching Firestore', async () => {
     const client = createQueryClient();
-    mockWatchedMoviesAuth.currentUser = {
+    (auth as any).currentUser = {
       uid: 'guest-user',
       email: 'guest@example.com',
       isAnonymous: true,

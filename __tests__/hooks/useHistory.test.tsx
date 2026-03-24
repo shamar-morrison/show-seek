@@ -4,17 +4,17 @@ import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react
 import { act, renderHook } from '@testing-library/react-native';
 import React from 'react';
 
-const mockFirestoreAccessState = {
-  firestoreUserId: 'test-user-id' as string | undefined,
-  canUseNonCriticalReads: true,
+const mockAuthState = {
+  user: { uid: 'test-user-id', isAnonymous: false } as
+    | { uid: string; isAnonymous?: boolean }
+    | null,
 };
 const mockFetchUserHistory = jest.fn();
 const mockFetchMonthDetail = jest.fn();
 
-jest.mock('@/src/hooks/useFirestoreAccess', () => ({
-  useFirestoreAccess: () => ({
-    firestoreUserId: mockFirestoreAccessState.firestoreUserId,
-    canUseNonCriticalReads: mockFirestoreAccessState.canUseNonCriticalReads,
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({
+    user: mockAuthState.user,
   }),
 }));
 
@@ -47,7 +47,7 @@ function createWrapper(client: QueryClient) {
   };
 }
 
-describe('useHistory access masking', () => {
+describe('useHistory', () => {
   beforeAll(() => {
     notifyManager.setNotifyFunction((fn: () => void) => act(fn));
   });
@@ -58,18 +58,12 @@ describe('useHistory access masking', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
-    mockFirestoreAccessState.canUseNonCriticalReads = true;
+    mockAuthState.user = { uid: 'test-user-id', isAnonymous: false };
   });
 
-  it('masks cached history data when non-critical reads are revoked', () => {
+  it('does not fetch history when signed out', () => {
     const client = createQueryClient();
-    client.setQueryData(['userHistory', 'test-user-id', 6, i18n.language, true], {
-      totalWatched: 10,
-      totalRated: 4,
-      totalAddedToLists: 2,
-    });
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
+    mockAuthState.user = null;
 
     const { result } = renderHook(() => useHistory(), {
       wrapper: createWrapper(client),
@@ -79,14 +73,9 @@ describe('useHistory access masking', () => {
     expect(mockFetchUserHistory).not.toHaveBeenCalled();
   });
 
-  it('masks cached month detail data when non-critical reads are revoked', () => {
+  it('does not fetch month detail for anonymous users', () => {
     const client = createQueryClient();
-    client.setQueryData(['monthDetail', 'test-user-id', '2026-03', i18n.language, true], {
-      month: '2026-03',
-      items: [],
-      totalWatchTime: 0,
-    });
-    mockFirestoreAccessState.canUseNonCriticalReads = false;
+    mockAuthState.user = { uid: 'anon-1', isAnonymous: true };
 
     const { result } = renderHook(() => useMonthDetail('2026-03'), {
       wrapper: createWrapper(client),

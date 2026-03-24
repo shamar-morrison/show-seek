@@ -1,5 +1,5 @@
 import i18n from '@/src/i18n';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '@/src/context/auth';
 import { useAllGenres } from '@/src/hooks/useGenres';
 import { historyService } from '@/src/services/HistoryService';
 import type { HistoryData, MonthlyDetail } from '@/src/types/history';
@@ -10,13 +10,14 @@ import { useMemo } from 'react';
  * Hook to fetch and cache user history/stats data
  */
 export function useHistory(monthsBack = 6) {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<HistoryData>({
-    queryKey: ['userHistory', firestoreUserId, monthsBack, i18n.language, canUseNonCriticalReads],
+    queryKey: ['userHistory', userId, monthsBack, i18n.language],
     queryFn: () => historyService.fetchUserHistory(genreMap, monthsBack),
-    enabled: !!firestoreUserId && canUseNonCriticalReads && Object.keys(genreMap).length > 0,
+    enabled: !!userId && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
@@ -26,17 +27,14 @@ export function useHistory(monthsBack = 6) {
  * Hook to fetch detailed data for a specific month
  */
 export function useMonthDetail(month: string | null) {
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<MonthlyDetail | null>({
-    queryKey: ['monthDetail', firestoreUserId, month, i18n.language, canUseNonCriticalReads],
+    queryKey: ['monthDetail', userId, month, i18n.language],
     queryFn: () => (month ? historyService.fetchMonthDetail(month, genreMap) : null),
-    enabled:
-      !!firestoreUserId &&
-      canUseNonCriticalReads &&
-      !!month &&
-      Object.keys(genreMap).length > 0,
+    enabled: !!userId && !!month && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });

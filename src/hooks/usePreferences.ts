@@ -4,7 +4,7 @@ import {
   MAX_HOME_LISTS,
   MIN_HOME_LISTS,
 } from '@/src/constants/homeScreenLists';
-import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAuth } from '@/src/context/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { auth } from '../firebase/config';
@@ -16,9 +16,9 @@ import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../typ
  */
 export const usePreferences = () => {
   const queryClient = useQueryClient();
-  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
-  const userId = firestoreUserId;
-  const queryEnabled = !!userId && canUseNonCriticalReads;
+  const { user, loading: authLoading } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
+  const queryEnabled = !!userId && !authLoading;
 
   const query = useQuery({
     queryKey: ['preferences', userId],
@@ -44,6 +44,7 @@ export const usePreferences = () => {
       return;
     }
   }, [
+    authLoading,
     queryEnabled,
     query.status,
     query.fetchStatus,
