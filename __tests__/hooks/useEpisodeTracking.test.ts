@@ -5,6 +5,11 @@ import { listService } from '@/src/services/ListService';
 import { useQuery } from '@tanstack/react-query';
 
 const mockInvalidateQueries = jest.fn();
+const mockAuthState = {
+  currentUser: { uid: 'test-user-123', isAnonymous: false } as
+    | { uid: string; isAnonymous?: boolean }
+    | null,
+};
 
 // Mock dependencies
 jest.mock('@/src/services/EpisodeTrackingService', () => ({
@@ -28,9 +33,28 @@ jest.mock('@/src/services/ListService', () => ({
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
-    currentUser: { uid: 'test-user-123' },
+    get currentUser() {
+      return mockAuthState.currentUser;
+    },
   },
   db: {},
+}));
+
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => {
+    const currentUser = mockAuthState.currentUser;
+    const isAnonymous = currentUser?.isAnonymous === true;
+
+    return {
+      user: currentUser,
+      isAnonymous,
+      signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
+      canUseNonCriticalReads: Boolean(currentUser && !isAnonymous),
+      canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
+    };
+  },
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -154,6 +178,7 @@ describe('useMarkEpisodeWatched', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockInvalidateQueries.mockClear();
+    mockAuthState.currentUser = { uid: 'test-user-123', isAnonymous: false };
   });
 
   it('should only mark current episode when shouldMarkPrevious is false', async () => {

@@ -12,6 +12,25 @@ const mockAuthState: { currentUser: { uid: string } | null } = {
   currentUser: { uid: 'test-user-id' },
 };
 
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => {
+    const currentUser = mockAuthState.currentUser as
+      | { uid: string; isAnonymous?: boolean }
+      | null;
+    const isAnonymous = currentUser?.isAnonymous === true;
+
+    return {
+      user: currentUser,
+      isAnonymous,
+      signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
+      canUseNonCriticalReads: Boolean(currentUser && !isAnonymous),
+      canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
+    };
+  },
+}));
+
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
@@ -142,6 +161,19 @@ describe('useCollectionTracking hooks', () => {
     expect(mockGetCollectionTracking).not.toHaveBeenCalled();
     expect(result.current.tracking).toBeNull();
     expect(result.current.isTracked).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('does not fetch collection tracking for anonymous users', () => {
+    mockAuthState.currentUser = { uid: 'anon-1', isAnonymous: true } as any;
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCollectionTracking(50), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(mockGetCollectionTracking).not.toHaveBeenCalled();
+    expect(result.current.tracking).toBeNull();
     expect(result.current.isLoading).toBe(false);
   });
 

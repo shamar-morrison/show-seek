@@ -1,6 +1,7 @@
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
@@ -9,7 +10,10 @@ import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import { listService } from '../services/ListService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
-const getUserId = () => auth.currentUser?.uid;
+const getUserId = () => {
+  const currentUser = auth.currentUser;
+  return currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
+};
 const getShowEpisodeTrackingQueryKey = (userId: string | undefined, tvShowId: number) =>
   ['episodeTracking', userId, tvShowId] as const;
 
@@ -172,11 +176,12 @@ const maybeAutoAddToWatching = async ({
  * Fetch episode tracking data for a specific TV show.
  */
 export const useShowEpisodeTracking = (tvShowId: number) => {
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const query = useQuery<TVShowEpisodeTracking | null>({
     queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
     queryFn: () => episodeTrackingService.getShowTracking(tvShowId),
-    enabled: !!userId && tvShowId > 0,
+    enabled: !!userId && tvShowId > 0 && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });

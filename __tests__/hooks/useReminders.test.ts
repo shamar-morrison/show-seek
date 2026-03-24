@@ -18,6 +18,25 @@ const mockPremiumState = {
   isLoading: false,
 };
 
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => {
+    const currentUser = mockAuthState.currentUser as
+      | { uid: string; isAnonymous?: boolean }
+      | null;
+    const isAnonymous = currentUser?.isAnonymous === true;
+
+    return {
+      user: currentUser,
+      isAnonymous,
+      signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
+      canUseNonCriticalReads: Boolean(currentUser && !isAnonymous),
+      canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
+    };
+  },
+}));
+
 jest.mock('@/src/firebase/config', () => ({
   auth: {
     get currentUser() {
@@ -165,6 +184,19 @@ describe('useReminders hooks', () => {
         expect(result.current.hasReminder).toBe(false);
         expect(result.current.reminder).toBeNull();
       });
+    });
+
+    it('does not fetch reminders for anonymous users', () => {
+      mockAuthState.currentUser = { uid: 'anon-1', isAnonymous: true } as any;
+
+      const client = createQueryClient();
+      const { result } = renderHook(() => useMediaReminder(100, 'tv'), {
+        wrapper: createWrapper(client),
+      });
+
+      expect(mockGetActiveReminders).not.toHaveBeenCalled();
+      expect(result.current.hasReminder).toBe(false);
+      expect(result.current.isLoading).toBe(false);
     });
   });
 

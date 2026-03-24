@@ -1,5 +1,5 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { useAuth } from '@/src/context/auth';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RatingItem, ratingService } from '../services/RatingService';
 
@@ -66,12 +66,12 @@ const buildEpisodeRating = (
 });
 
 export const useRatings = () => {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const query = useQuery({
     queryKey: getRatingsQueryKey(userId),
     queryFn: () => ratingService.getUserRatings(userId!),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -83,13 +83,13 @@ export const useRatings = () => {
 };
 
 export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
 
   const query = useQuery({
     queryKey: userId ? getMediaRatingQueryKey(userId, mediaType, mediaId) : ['rating', userId],
     queryFn: () => ratingService.getRating(mediaId, mediaType),
-    enabled: !!userId && !!mediaId,
+    enabled: !!userId && !!mediaId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -104,8 +104,8 @@ export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
 
 export const useRateMedia = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({
@@ -187,8 +187,8 @@ export const useRateMedia = () => {
 
 export const useDeleteRating = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({ mediaId, mediaType }: { mediaId: number; mediaType: 'movie' | 'tv' }) =>
@@ -251,15 +251,20 @@ export const useDeleteRating = () => {
 };
 
 export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episodeNumber: number) => {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
 
   const query = useQuery({
     queryKey: userId
       ? getEpisodeRatingQueryKey(userId, tvShowId, seasonNumber, episodeNumber)
       : ['rating', userId, 'episode'],
     queryFn: () => ratingService.getEpisodeRating(tvShowId, seasonNumber, episodeNumber),
-    enabled: !!userId && !!tvShowId && Number.isFinite(seasonNumber) && Number.isFinite(episodeNumber),
+    enabled:
+      !!userId &&
+      !!tvShowId &&
+      canUseNonCriticalReads &&
+      Number.isFinite(seasonNumber) &&
+      Number.isFinite(episodeNumber),
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -274,8 +279,8 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
 
 export const useRateEpisode = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({
@@ -382,8 +387,8 @@ export const useRateEpisode = () => {
 
 export const useDeleteEpisodeRating = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({

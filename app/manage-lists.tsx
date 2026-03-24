@@ -22,7 +22,9 @@ const DEFAULT_LIST_IDS = [
 
 export default function ManageListsScreen() {
   const router = useRouter();
-  const { data: lists, isLoading, isError, error, refetch } = useLists();
+  const { data: lists, isLoading, isError, error, refetch } = useLists({
+    accessScope: 'list-management',
+  });
   const deleteMutation = useDeleteList();
   const renameModalRef = useRef<RenameListModalRef>(null);
   const { t } = useTranslation();

@@ -1,6 +1,7 @@
 import { db } from '@/src/firebase/config';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
 import { requireSignedInUser } from '@/src/services/serviceSupport';
@@ -17,7 +18,6 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { auth } from '../firebase/config';
 
 export interface AddWatchInput {
   watchedAt: Date;
@@ -92,7 +92,8 @@ const syncCollectionTrackingAfterUnwatch = async (movieId: number): Promise<void
  * Uses explicit invalidation/optimistic updates from mutations instead of realtime listeners.
  */
 export const useWatchedMovies = (movieId: number) => {
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const queryClient = useQueryClient();
   const queryKey = ['watchedMovies', userId, movieId];
 
@@ -100,7 +101,7 @@ export const useWatchedMovies = (movieId: number) => {
   const query = useQuery({
     queryKey,
     queryFn: () => fetchWatchInstances(userId!, movieId),
-    enabled: !!userId && !!movieId,
+    enabled: !!userId && !!movieId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
     refetchOnMount: false,
@@ -125,7 +126,8 @@ export const useWatchedMovies = (movieId: number) => {
  */
 export const useAddWatch = (movieId: number) => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationKey: ['addWatch', movieId],
@@ -181,7 +183,8 @@ export const useAddWatch = (movieId: number) => {
  */
 export const useClearWatches = (movieId: number) => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationKey: ['clearWatches', movieId],
@@ -252,7 +255,8 @@ export const useClearWatches = (movieId: number) => {
  */
 export const useDeleteWatch = (movieId: number) => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationKey: ['deleteWatch', movieId],
@@ -316,7 +320,8 @@ export const useDeleteWatch = (movieId: number) => {
  */
 export const useUpdateWatchDate = (movieId: number) => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationKey: ['updateWatchDate', movieId],

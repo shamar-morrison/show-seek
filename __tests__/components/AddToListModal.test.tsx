@@ -20,6 +20,7 @@ const mockAddMutate = jest.fn();
 const mockAddMutateAsync = jest.fn();
 const mockRemoveMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
+const mockUseLists = jest.fn();
 const mockInvalidateQueries = jest.fn(async () => {});
 let latestCreateListModalProps:
   | {
@@ -157,7 +158,7 @@ jest.mock('@/src/components/CreateListModal', () => {
 });
 
 jest.mock('@/src/hooks/useLists', () => ({
-  useLists: () => mockListsState,
+  useLists: (...args: any[]) => mockUseLists(...args),
   useAddToList: () => ({
     mutateAsync: mockAddMutateAsync,
     mutate: mockAddMutate,
@@ -205,6 +206,7 @@ describe('AddToListModal (bulk mode)', () => {
     mockListsState.data = [];
     mockListsState.isLoading = false;
     mockListsState.error = null;
+    mockUseLists.mockImplementation(() => mockListsState);
     mockAddMutateAsync.mockResolvedValue(undefined);
     mockRemoveMutateAsync.mockResolvedValue(undefined);
     mockDeleteMutateAsync.mockResolvedValue(undefined);
@@ -238,6 +240,7 @@ describe('AddToListModal (bulk mode)', () => {
       await ref.current?.present();
     });
 
+    expect(mockUseLists).toHaveBeenCalledWith({ accessScope: 'list-management' });
     expect(queryByTestId('add-to-list-row-favorites')).toBeNull();
     expect(getByTestId('add-to-list-row-watchlist')).toBeTruthy();
 

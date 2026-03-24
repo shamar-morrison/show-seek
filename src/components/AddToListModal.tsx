@@ -171,7 +171,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }
     }, [successMessage]);
 
-    const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists();
+    const { data: lists, isLoading: isLoadingLists, error: listsError } = useLists({
+      accessScope: 'list-management',
+    });
 
     const addMutation = useAddToList();
     const removeMutation = useRemoveFromList();

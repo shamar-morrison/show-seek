@@ -132,4 +132,17 @@ describe('createUserDocument', () => {
 
     expect(mockSetDoc).not.toHaveBeenCalled();
   });
+
+  it('skips Firestore user-document creation for anonymous users', async () => {
+    await createUserDocument({
+      uid: 'anon-1',
+      isAnonymous: true,
+      displayName: null,
+      email: null,
+      photoURL: null,
+    } as any);
+
+    expect(mockSetDoc).not.toHaveBeenCalled();
+    expect(mockUpdateProfile).not.toHaveBeenCalled();
+  });
 });

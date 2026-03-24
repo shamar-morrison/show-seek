@@ -1,6 +1,19 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+const mockRuntimeConfigState = {
+  isReady: true,
+  config: {
+    firestoreClientEnabled: true,
+    disableNonCriticalReads: false,
+    allowGuestFirestoreReads: false,
+    version: 'test',
+    maintenanceTitle: 'Maintenance',
+    maintenanceMessage: 'Down for maintenance',
+    updatedAt: '2026-03-24T00:00:00.000Z',
+  },
+};
+
 // Mock dependencies at module level
 const mockSetApiRegion = jest.fn();
 const mockGetStoredRegion = jest.fn().mockResolvedValue('US');
@@ -22,6 +35,10 @@ jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({ user: mockAuthState.user }),
 }));
 
+jest.mock('@/src/context/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => mockRuntimeConfigState,
+}));
+
 jest.mock('@/src/utils/regionStorage', () => ({
   getStoredRegion: () => mockGetStoredRegion(),
   setStoredRegion: (...args: any[]) => mockSetStoredRegion(...args),
@@ -35,6 +52,10 @@ describe('RegionProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.user = null;
+    mockRuntimeConfigState.isReady = true;
+    mockRuntimeConfigState.config.firestoreClientEnabled = true;
+    mockRuntimeConfigState.config.disableNonCriticalReads = false;
+    mockRuntimeConfigState.config.allowGuestFirestoreReads = false;
     mockGetStoredRegion.mockResolvedValue('US');
     mockSetStoredRegion.mockResolvedValue(undefined);
     mockFetchRegionFromFirebase.mockResolvedValue(null);
@@ -117,6 +138,32 @@ describe('RegionProvider', () => {
 
     it('should not fetch region from Firebase when unauthenticated', async () => {
       mockAuthState.user = null;
+
+      const { result } = renderHook(() => useRegion(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isRegionReady).toBe(true);
+      });
+
+      expect(mockFetchRegionFromFirebase).not.toHaveBeenCalled();
+    });
+
+    it('should not fetch region from Firebase before runtime config is ready', async () => {
+      mockAuthState.user = { uid: 'user-1' };
+      mockRuntimeConfigState.isReady = false;
+
+      const { result } = renderHook(() => useRegion(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isRegionReady).toBe(true);
+      });
+
+      expect(mockFetchRegionFromFirebase).not.toHaveBeenCalled();
+    });
+
+    it('should not fetch region from Firebase in premium-only mode', async () => {
+      mockAuthState.user = { uid: 'user-1' };
+      mockRuntimeConfigState.config.disableNonCriticalReads = true;
 
       const { result } = renderHook(() => useRegion(), { wrapper });
 

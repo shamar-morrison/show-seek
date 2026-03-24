@@ -1,19 +1,19 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../context/auth';
 import { favoritePersonsService } from '../services/FavoritePersonsService';
 import { FavoritePerson } from '../types/favoritePerson';
 
 const getFavoritePersonsQueryKey = (userId?: string) => ['favoritePersons', userId] as const;
 
 export const useFavoritePersons = () => {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
 
   const query = useQuery({
     queryKey: getFavoritePersonsQueryKey(userId),
     queryFn: () => favoritePersonsService.getFavoritePersons(userId!),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -35,8 +35,8 @@ export const useIsPersonFavorited = (personId: number) => {
 
 export const useAddFavoritePerson = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({ personData }: { personData: Omit<FavoritePerson, 'addedAt'> }) =>
@@ -82,8 +82,8 @@ export const useAddFavoritePerson = () => {
 
 export const useRemoveFavoritePerson = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({ personId }: { personId: number }) =>

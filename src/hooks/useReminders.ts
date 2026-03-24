@@ -1,6 +1,7 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import {
   FreemiumLimitError,
   isFreemiumLimitError,
@@ -11,7 +12,6 @@ import {
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
-import { auth } from '../firebase/config';
 import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { reminderService } from '../services/ReminderService';
 import {
@@ -121,12 +121,13 @@ const assertCanCreateReminder = async ({
  * Hook to get all active reminders for current user
  */
 export const useReminders = () => {
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
 
   const query = useQuery({
     queryKey: ['reminders', userId],
     queryFn: () => reminderService.getActiveReminders(userId!),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
     placeholderData: [] as Reminder[],
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
@@ -300,7 +301,8 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
  */
 export const useCreateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -330,7 +332,8 @@ export const useCreateReminder = () => {
 
 export const useCanCreateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useCallback(
@@ -366,7 +369,8 @@ export const useCanCreateReminder = () => {
  */
 export const useCancelReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: (reminderId: string) => reminderService.cancelReminder(reminderId),
@@ -389,7 +393,8 @@ export const useCancelReminder = () => {
  */
 export const useUpdateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({ reminderId, timing }: { reminderId: string; timing: ReminderTiming }) =>

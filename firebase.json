@@ -18,5 +18,21 @@
       "npm --prefix \"$RESOURCE_DIR\" run lint",
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
+  },
+  "hosting": {
+    "site": "showseek-app-2025",
+    "public": "hosting",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      {
+        "source": "/runtime-config.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=60, must-revalidate"
+          }
+        ]
+      }
+    ]
   }
 }

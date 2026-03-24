@@ -1,5 +1,6 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import {
   collectionTrackingService,
   MAX_FREE_COLLECTIONS,
@@ -9,7 +10,6 @@ import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
-import { auth } from '../firebase/config';
 
 // Aggressive cache time for collection data since it rarely changes
 const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -20,11 +20,12 @@ const START_TRACKING_BACKFILL_TIMEOUT_MS = 5000;
  * Hook to fetch all tracked collections using cached query reads.
  */
 export const useTrackedCollections = () => {
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const query = useQuery({
     queryKey: ['collectionTracking', 'all', userId],
     queryFn: () => collectionTrackingService.getAllTrackedCollections(),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
   });
 
   return {
@@ -39,11 +40,12 @@ export const useTrackedCollections = () => {
  * Returns null if not tracked.
  */
 export const useCollectionTracking = (collectionId: number) => {
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const query = useQuery({
     queryKey: ['collectionTracking', userId, collectionId],
     queryFn: () => collectionTrackingService.getCollectionTracking(collectionId),
-    enabled: !!userId && collectionId > 0,
+    enabled: !!userId && collectionId > 0 && canUseNonCriticalReads,
   });
 
   const tracking = query.data ?? null;
@@ -68,12 +70,13 @@ export const useCollectionTracking = (collectionId: number) => {
  */
 export const useCanTrackMoreCollections = () => {
   const { isPremium } = usePremium();
-  const userId = auth.currentUser?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
 
   const query = useQuery({
     queryKey: ['collectionTracking', 'count', userId],
     queryFn: () => collectionTrackingService.getTrackedCollectionCount(),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 

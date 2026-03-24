@@ -5,8 +5,9 @@
  * Writes go to both AsyncStorage and Firebase (fire-and-forget).
  * Used for watch providers, release dates, and certifications.
  */
-import { auth, db } from '@/src/firebase/config';
+import { db } from '@/src/firebase/config';
 import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
+import { getSignedInUser } from '@/src/services/serviceSupport';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -46,7 +47,7 @@ export async function setStoredRegion(region: string): Promise<void> {
  */
 export async function syncRegionToFirebase(region: string): Promise<void> {
   try {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return;
 
     const userRef = doc(db, 'users', user.uid);
@@ -64,7 +65,7 @@ export async function syncRegionToFirebase(region: string): Promise<void> {
  */
 export async function fetchRegionFromFirebase(): Promise<string | null> {
   try {
-    const user = auth.currentUser;
+    const user = getSignedInUser();
     if (!user) return null;
 
     const userData = await getCachedUserDocument(user.uid, {

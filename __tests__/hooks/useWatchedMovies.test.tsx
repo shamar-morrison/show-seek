@@ -2,7 +2,6 @@ import { collectionTrackingService } from '@/src/services/CollectionTrackingServ
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react-native';
 import React from 'react';
-import { auth } from '@/src/firebase/config';
 import { collection, deleteDoc, doc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import {
   useAddWatch,
@@ -10,6 +9,40 @@ import {
   useDeleteWatch,
   useUpdateWatchDate,
 } from '@/src/hooks/useWatchedMovies';
+
+const mockWatchedMoviesAuth = {
+  currentUser: {
+    uid: 'test-user-id',
+    email: 'test@example.com',
+    isAnonymous: false,
+  } as { uid: string; email?: string; isAnonymous?: boolean } | null,
+};
+
+jest.mock('@/src/firebase/config', () => ({
+  auth: {
+    get currentUser() {
+      return mockWatchedMoviesAuth.currentUser;
+    },
+  },
+  db: {},
+}));
+
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => {
+    const currentUser = mockWatchedMoviesAuth.currentUser;
+    const isAnonymous = currentUser?.isAnonymous === true;
+
+    return {
+      user: currentUser,
+      isAnonymous,
+      signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
+      canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
+      canUseNonCriticalReads: Boolean(currentUser && !isAnonymous),
+      canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
+    };
+  },
+}));
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
@@ -87,7 +120,7 @@ describe('useWatchedMovies mutations', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    (auth as any).currentUser = {
+    mockWatchedMoviesAuth.currentUser = {
       uid: 'test-user-id',
       email: 'test@example.com',
       isAnonymous: false,
@@ -302,7 +335,7 @@ describe('useWatchedMovies mutations', () => {
 
   it('rejects watched-movie mutations for anonymous users before reaching Firestore', async () => {
     const client = createQueryClient();
-    (auth as any).currentUser = {
+    mockWatchedMoviesAuth.currentUser = {
       uid: 'guest-user',
       email: 'guest@example.com',
       isAnonymous: true,

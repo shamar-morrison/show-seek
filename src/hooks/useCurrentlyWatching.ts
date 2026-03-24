@@ -1,5 +1,5 @@
 import { tmdbApi } from '@/src/api/tmdb';
-import { useAuth } from '@/src/context/auth';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -23,13 +23,13 @@ const MAX_SEASONS_TO_FETCH = 2;
  * - React Query caches and deduplicates requests
  */
 export function useCurrentlyWatching() {
-  const { user } = useAuth();
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
 
   // 1. Fetch all tracking docs from Firestore
   const trackingQuery = useQuery({
-    queryKey: ['episodeTracking', 'allShows', user?.uid],
-    queryFn: () => episodeTrackingService.getAllWatchedShows(user!.uid),
-    enabled: !!user,
+    queryKey: ['episodeTracking', 'allShows', firestoreUserId],
+    queryFn: () => episodeTrackingService.getAllWatchedShows(firestoreUserId!),
+    enabled: !!firestoreUserId && canUseNonCriticalReads,
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
   });
@@ -71,7 +71,7 @@ export function useCurrentlyWatching() {
     queries: tvShowIds.map((tvShowId) => ({
       queryKey: ['tv', tvShowId],
       queryFn: () => tmdbApi.getTVShowDetails(tvShowId),
-      enabled: !!user && tvShowIds.length > 0,
+      enabled: !!firestoreUserId && canUseNonCriticalReads && tvShowIds.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),
@@ -120,7 +120,7 @@ export function useCurrentlyWatching() {
     queries: seasonQueries.map(({ tvShowId, seasonNumber }) => ({
       queryKey: ['tv', tvShowId, 'season', seasonNumber],
       queryFn: () => tmdbApi.getSeasonDetails(tvShowId, seasonNumber),
-      enabled: !!user && seasonQueries.length > 0,
+      enabled: !!firestoreUserId && canUseNonCriticalReads && seasonQueries.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),

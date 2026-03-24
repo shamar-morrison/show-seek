@@ -1,5 +1,5 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { useAuth } from '@/src/context/auth';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { favoriteEpisodeService } from '@/src/services/FavoriteEpisodeService';
 import { FavoriteEpisode } from '@/src/types/favoriteEpisode';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,8 +11,8 @@ const getFavoriteEpisodeQueryKey = (userId: string | undefined, episodeId: strin
 
 export const useFavoriteEpisodes = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
+  const userId = firestoreUserId;
   const previousUserIdRef = useRef<string | undefined>(userId);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export const useFavoriteEpisodes = () => {
   const query = useQuery({
     queryKey: getFavoriteEpisodesQueryKey(userId),
     queryFn: () => favoriteEpisodeService.getFavoriteEpisodes(userId!),
-    enabled: !!userId,
+    enabled: !!userId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -58,8 +58,8 @@ export const useIsEpisodeFavorited = (
  * Mutation hook to toggle favorite status for an episode.
  */
 export const useToggleFavoriteEpisode = () => {
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
   const queryClient = useQueryClient();
 
   return useMutation({

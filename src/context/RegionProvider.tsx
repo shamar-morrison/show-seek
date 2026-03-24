@@ -10,6 +10,7 @@
  */
 import { setApiRegion } from '@/src/api/tmdb';
 import { useAuth } from '@/src/context/auth';
+import { useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import {
   fetchRegionFromFirebase,
   getStoredRegion,
@@ -93,6 +94,7 @@ interface RegionProviderProps {
 
 export function RegionProvider({ children }: RegionProviderProps) {
   const { user } = useAuth();
+  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
   const [region, setRegionState] = useState<string>(DEFAULT_REGION);
   const [isRegionReady, setIsRegionReady] = useState(false);
   const hasSyncedFromFirebase = useRef(false);
@@ -134,6 +136,15 @@ export function RegionProvider({ children }: RegionProviderProps) {
       return;
     }
 
+    if (
+      !runtimeConfigReady ||
+      user.isAnonymous ||
+      !runtimeConfig.firestoreClientEnabled ||
+      runtimeConfig.disableNonCriticalReads
+    ) {
+      return;
+    }
+
     // Only sync once per login session to avoid unnecessary reads.
     if (hasSyncedFromFirebase.current) return;
     hasSyncedFromFirebase.current = true;
@@ -148,7 +159,13 @@ export function RegionProvider({ children }: RegionProviderProps) {
     };
 
     syncFromFirebase();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    region,
+    runtimeConfig.disableNonCriticalReads,
+    runtimeConfig.firestoreClientEnabled,
+    runtimeConfigReady,
+    user,
+  ]);
 
   // 3. Set region: state (instant) -> AsyncStorage -> Firebase (fire-and-forget)
   const setRegion = useCallback(

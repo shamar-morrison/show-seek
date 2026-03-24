@@ -13,9 +13,10 @@ import { useTrakt } from '@/src/context/TraktContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { usePreferences, useUpdatePreference } from '@/src/hooks/usePreferences';
 import { useProfileLogic } from '@/src/hooks/useProfileLogic';
+import { getFirestoreReadAuditReport } from '@/src/services/firestoreReadAudit';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { UserPreferences } from '@/src/types/preferences';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -93,6 +94,21 @@ export default function ProfileScreen() {
   );
 
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
+
+  const handleReadDiagnosticsPress = useCallback(() => {
+    const report = getFirestoreReadAuditReport();
+    const topCallsites = report.byCallsite
+      .slice(0, 3)
+      .map((entry) => `${entry.name}: ${entry.reads}`)
+      .join('\n');
+
+    Alert.alert(
+      'Read diagnostics',
+      [`Total reads: ${report.totalReads}`, `Events: ${report.eventCount}`, topCallsites]
+        .filter(Boolean)
+        .join('\n')
+    );
+  }, []);
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
     if (isAccountRequired()) return;
@@ -188,9 +204,13 @@ export default function ProfileScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.header}
+          onLongPress={handleReadDiagnosticsPress}
+          activeOpacity={1}
+        >
           <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        </View>
+        </TouchableOpacity>
 
         {/* User Info Section - Fixed at top */}
         <UserInfoSection

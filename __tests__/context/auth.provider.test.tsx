@@ -5,6 +5,19 @@ import { getDoc, setDoc } from 'firebase/firestore';
 import React from 'react';
 import { signOutGoogle } from '@/src/firebase/auth';
 
+const mockRuntimeConfigState = {
+  isReady: true,
+  config: {
+    firestoreClientEnabled: true,
+    disableNonCriticalReads: false,
+    allowGuestFirestoreReads: false,
+    version: 'test',
+    maintenanceTitle: 'Maintenance',
+    maintenanceMessage: 'Down for maintenance',
+    updatedAt: '2026-03-24T00:00:00.000Z',
+  },
+};
+
 // Capture the auth state callback so we can trigger it in tests
 let capturedAuthCallback: ((user: any) => void) | null = null;
 let mockCurrentUser: any = null;
@@ -21,6 +34,10 @@ jest.mock('firebase/auth', () => ({
 
 jest.mock('@/src/firebase/auth', () => ({
   signOutGoogle: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/src/context/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => mockRuntimeConfigState,
 }));
 
 // Mock the firebase config
@@ -40,6 +57,10 @@ describe('AuthProvider', () => {
     jest.clearAllMocks();
     capturedAuthCallback = null;
     mockCurrentUser = null;
+    mockRuntimeConfigState.isReady = true;
+    mockRuntimeConfigState.config.firestoreClientEnabled = true;
+    mockRuntimeConfigState.config.disableNonCriticalReads = false;
+    mockRuntimeConfigState.config.allowGuestFirestoreReads = false;
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
@@ -119,6 +140,45 @@ describe('AuthProvider', () => {
       expect(getDoc).not.toHaveBeenCalled();
       expect(firebaseSignOut).not.toHaveBeenCalled();
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('userId', anonymousUser.uid);
+    });
+
+    it('should skip the Firestore onboarding read while runtime config is not ready', async () => {
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      mockCurrentUser = mockUser;
+      mockRuntimeConfigState.isReady = false;
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.loading).toBe(true);
+      expect(getDoc).not.toHaveBeenCalled();
+    });
+
+    it('should skip the Firestore onboarding read in premium-only mode and fall back to true', async () => {
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      mockCurrentUser = mockUser;
+      mockRuntimeConfigState.config.disableNonCriticalReads = true;
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+        if (key === 'hasCompletedOnboarding') return 'true';
+        return null;
+      });
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+      expect(getDoc).not.toHaveBeenCalled();
     });
 
     it('should reset personal onboarding state and keep loading true while re-reading Firestore for a signed-in user', async () => {

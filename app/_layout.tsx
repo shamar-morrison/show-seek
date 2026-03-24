@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from '@/src/context/auth';
 import { GuestAccessProvider } from '@/src/context/GuestAccessContext';
 import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { PremiumProvider } from '@/src/context/PremiumContext';
+import { RuntimeConfigProvider, useRuntimeConfig } from '@/src/context/RuntimeConfigContext';
 import { RegionProvider, useRegion } from '@/src/context/RegionProvider';
 import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
@@ -24,6 +25,11 @@ import {
   logFirestoreReadAuditReport,
 } from '@/src/services/firestoreReadAudit';
 import { resetReadBudgetForSession } from '@/src/services/ReadBudgetGuard';
+import {
+  clearPersistedQueryCache,
+  hydratePersistedQueryCache,
+  subscribeToPersistedQueryCache,
+} from '@/src/services/queryCachePersistence';
 import { configureRevenueCat } from '@/src/services/revenueCat';
 
 import {
@@ -93,6 +99,7 @@ interface InitDebugSnapshot {
   isLanguageReady: boolean;
   isRegionReady: boolean;
   isAccentReady: boolean;
+  runtimeConfigReady: boolean;
   preferencesLoading: boolean;
   user: string | null;
   segments: string[];
@@ -100,8 +107,80 @@ interface InitDebugSnapshot {
   timestamp: number;
 }
 
+function AppShellLoading({ accentColor }: { accentColor: string }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <ActivityIndicator size="large" color={accentColor} />
+    </View>
+  );
+}
+
+function MaintenanceScreen({
+  title,
+  message,
+}: {
+  title: string;
+  message: string;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: COLORS.background,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        gap: 12,
+      }}
+    >
+      <Text style={{ color: COLORS.text, fontSize: 28, fontWeight: '700' }}>{title}</Text>
+      <Text style={{ color: COLORS.textSecondary, fontSize: 16, lineHeight: 24 }}>{message}</Text>
+    </View>
+  );
+}
+
+function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let unsubscribePersistence = () => {};
+
+    const bootstrap = async () => {
+      try {
+        await hydratePersistedQueryCache(queryClient);
+      } finally {
+        unsubscribePersistence = subscribeToPersistedQueryCache(queryClient);
+        if (isMounted) {
+          setIsHydrated(true);
+        }
+      }
+    };
+
+    void bootstrap();
+
+    return () => {
+      isMounted = false;
+      unsubscribePersistence();
+    };
+  }, []);
+
+  if (!isHydrated) {
+    return <AppShellLoading accentColor={COLORS.primary} />;
+  }
+
+  return <>{children}</>;
+}
+
 function RootLayoutNav() {
   const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
+  const { config: runtimeConfig, isReady: runtimeConfigReady } = useRuntimeConfig();
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const { isLanguageReady } = useLanguage();
   const { isRegionReady } = useRegion();
@@ -119,6 +198,7 @@ function RootLayoutNav() {
     const reasons: string[] = [];
     if (loading) reasons.push('auth-loading');
     if (hasCompletedOnboarding === null) reasons.push('onboarding-null');
+    if (!runtimeConfigReady) reasons.push('runtime-config-loading');
     if (!isLanguageReady) reasons.push('language-not-ready');
     if (!isRegionReady) reasons.push('region-not-ready');
     if (!isAccentReady) reasons.push('accent-not-ready');
@@ -127,6 +207,7 @@ function RootLayoutNav() {
   }, [
     loading,
     hasCompletedOnboarding,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -150,6 +231,7 @@ function RootLayoutNav() {
       user: user?.uid ?? 'none',
       loading,
       hasCompletedOnboarding,
+      runtimeConfigReady,
       isLanguageReady,
       isRegionReady,
       isAccentReady,
@@ -162,6 +244,7 @@ function RootLayoutNav() {
     user?.uid,
     loading,
     hasCompletedOnboarding,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -177,6 +260,7 @@ function RootLayoutNav() {
       snapshot: (): InitDebugSnapshot => ({
         loading,
         hasCompletedOnboarding,
+        runtimeConfigReady,
         isLanguageReady,
         isRegionReady,
         isAccentReady,
@@ -195,6 +279,7 @@ function RootLayoutNav() {
   }, [
     loading,
     hasCompletedOnboarding,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -252,6 +337,7 @@ function RootLayoutNav() {
     if (
       loading ||
       hasCompletedOnboarding === null ||
+      !runtimeConfigReady ||
       !isLanguageReady ||
       !isRegionReady ||
       !isAccentReady ||
@@ -285,6 +371,7 @@ function RootLayoutNav() {
     user,
     loading,
     hasCompletedOnboarding,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -316,6 +403,7 @@ function RootLayoutNav() {
       } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
         queryClient.clear();
       }
+      void clearPersistedQueryCache();
       resetClientReadState();
     }
 
@@ -371,6 +459,7 @@ function RootLayoutNav() {
       const snapshot: InitDebugSnapshot = {
         loading,
         hasCompletedOnboarding,
+        runtimeConfigReady,
         isLanguageReady,
         isRegionReady,
         isAccentReady,
@@ -393,6 +482,7 @@ function RootLayoutNav() {
     debugTimeoutTriggered,
     loading,
     hasCompletedOnboarding,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
@@ -417,12 +507,23 @@ function RootLayoutNav() {
 
   useEffect(() => {
     const waitingForPreferences = !!user && preferencesLoading;
-    if (loading || !isLanguageReady || !isRegionReady || !isAccentReady || waitingForPreferences) {
+    if (
+      loading ||
+      !runtimeConfigReady ||
+      !isLanguageReady ||
+      !isRegionReady ||
+      !isAccentReady ||
+      waitingForPreferences
+    ) {
       return;
     }
 
     // Hide splash screen once we know the auth state and language/region are ready
     SplashScreen.hideAsync();
+
+    if (!runtimeConfig.firestoreClientEnabled) {
+      return;
+    }
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[0] === 'onboarding';
@@ -449,12 +550,22 @@ function RootLayoutNav() {
     hasCompletedPersonalOnboarding,
     segments,
     router,
+    runtimeConfig,
+    runtimeConfigReady,
     isLanguageReady,
     isRegionReady,
     isAccentReady,
     preferences,
     preferencesLoading,
   ]);
+
+  useEffect(() => {
+    if (!runtimeConfigReady || runtimeConfig.firestoreClientEnabled) {
+      return;
+    }
+
+    SplashScreen.hideAsync();
+  }, [runtimeConfig.firestoreClientEnabled, runtimeConfigReady]);
 
   if (debugTimeoutTriggered && debugSnapshot) {
     return (
@@ -523,17 +634,15 @@ function RootLayoutNav() {
       });
     }
 
+    return <AppShellLoading accentColor={accentColor} />;
+  }
+
+  if (!runtimeConfig.firestoreClientEnabled) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: COLORS.background,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <ActivityIndicator size="large" color={accentColor} />
-      </View>
+      <MaintenanceScreen
+        title={runtimeConfig.maintenanceTitle}
+        message={runtimeConfig.maintenanceMessage}
+      />
     );
   }
 
@@ -563,25 +672,29 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <GuestAccessProvider>
-            <PremiumProvider>
-              <TraktProvider>
-                <LanguageProvider>
-                  <RegionProvider>
-                    <AccentColorProvider>
-                      <GestureHandlerRootView
-                        style={{ flex: 1, backgroundColor: COLORS.background }}
-                      >
-                        <RootLayoutNav />
-                      </GestureHandlerRootView>
-                    </AccentColorProvider>
-                  </RegionProvider>
-                </LanguageProvider>
-              </TraktProvider>
-            </PremiumProvider>
-          </GuestAccessProvider>
-        </AuthProvider>
+        <QueryCacheBootstrap>
+          <RuntimeConfigProvider>
+            <AuthProvider>
+              <GuestAccessProvider>
+                <PremiumProvider>
+                  <TraktProvider>
+                    <LanguageProvider>
+                      <RegionProvider>
+                        <AccentColorProvider>
+                          <GestureHandlerRootView
+                            style={{ flex: 1, backgroundColor: COLORS.background }}
+                          >
+                            <RootLayoutNav />
+                          </GestureHandlerRootView>
+                        </AccentColorProvider>
+                      </RegionProvider>
+                    </LanguageProvider>
+                  </TraktProvider>
+                </PremiumProvider>
+              </GuestAccessProvider>
+            </AuthProvider>
+          </RuntimeConfigProvider>
+        </QueryCacheBootstrap>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -1,0 +1,160 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  dehydrate,
+  hydrate,
+  type DehydratedState,
+  type Query,
+  type QueryClient,
+} from '@tanstack/react-query';
+
+const QUERY_CACHE_STORAGE_KEY = 'showseek_query_cache_v1';
+const QUERY_CACHE_PERSIST_DEBOUNCE_MS = 300;
+const PERSISTED_QUERY_ROOTS = new Set([
+  'preferences',
+  'lists',
+  'list-membership-index',
+  'notes',
+  'note',
+  'reminders',
+  'watchedMovies',
+  'collectionTracking',
+  'ratings',
+  'rating',
+  'favoritePersons',
+  'favoriteEpisodes',
+  'episodeTracking',
+]);
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  return Object.getPrototypeOf(value) === Object.prototype;
+};
+
+const serializeValue = (value: unknown): unknown => {
+  if (value instanceof Date) {
+    return {
+      __type: 'Date',
+      value: value.toISOString(),
+    };
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => serializeValue(entry));
+  }
+
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, serializeValue(entry)])
+    );
+  }
+
+  return value;
+};
+
+const deserializeValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => deserializeValue(entry));
+  }
+
+  if (isPlainObject(value)) {
+    if (value.__type === 'Date' && typeof value.value === 'string') {
+      return new Date(value.value);
+    }
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, deserializeValue(entry)])
+    );
+  }
+
+  return value;
+};
+
+const getQueryRoot = (query: Query | { queryKey: readonly unknown[] | unknown }): string | null => {
+  const queryKey = Array.isArray(query.queryKey) ? query.queryKey : [];
+  const root = queryKey[0];
+  return typeof root === 'string' ? root : null;
+};
+
+const shouldPersistQuery = (query: Query): boolean => {
+  const queryRoot = getQueryRoot(query);
+  if (!queryRoot || !PERSISTED_QUERY_ROOTS.has(queryRoot)) {
+    return false;
+  }
+
+  return query.state.status === 'success' && query.state.data !== undefined;
+};
+
+export async function hydratePersistedQueryCache(queryClient: QueryClient): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
+  if (!raw) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { state?: unknown } | null;
+    if (!parsed?.state) {
+      return false;
+    }
+
+    hydrate(queryClient, deserializeValue(parsed.state) as DehydratedState);
+    return true;
+  } catch (error) {
+    console.warn('[queryCachePersistence] Failed to hydrate query cache:', error);
+    return false;
+  }
+}
+
+export async function clearPersistedQueryCache(): Promise<void> {
+  await AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
+}
+
+export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => void {
+  let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const persistNow = async () => {
+    const state = dehydrate(queryClient, {
+      shouldDehydrateQuery: shouldPersistQuery,
+    });
+
+    const payload = {
+      savedAt: Date.now(),
+      state: serializeValue(state),
+    };
+
+    await AsyncStorage.setItem(QUERY_CACHE_STORAGE_KEY, JSON.stringify(payload));
+  };
+
+  const schedulePersist = () => {
+    if (persistTimeout) {
+      clearTimeout(persistTimeout);
+    }
+
+    persistTimeout = setTimeout(() => {
+      void persistNow();
+    }, QUERY_CACHE_PERSIST_DEBOUNCE_MS);
+  };
+
+  const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+    if (!event?.query) {
+      return;
+    }
+
+    const queryRoot = getQueryRoot(event.query);
+    if (!queryRoot || !PERSISTED_QUERY_ROOTS.has(queryRoot)) {
+      return;
+    }
+
+    schedulePersist();
+  });
+
+  return () => {
+    if (persistTimeout) {
+      clearTimeout(persistTimeout);
+    }
+    unsubscribe();
+  };
+}
+

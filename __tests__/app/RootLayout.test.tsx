@@ -16,6 +16,18 @@ const mockPreferencesState = {
   preferences: { defaultLaunchScreen: '/(tabs)/home' },
   isLoading: false,
 };
+const mockRuntimeConfigState = {
+  config: {
+    firestoreClientEnabled: true,
+    disableNonCriticalReads: false,
+    allowGuestFirestoreReads: false,
+    maintenanceTitle: 'Maintenance in progress',
+    maintenanceMessage: 'Show Seek is temporarily unavailable while we stabilize the service.',
+    updatedAt: '2026-03-24T00:00:00.000Z',
+    version: '1',
+  },
+  isReady: true,
+};
 
 jest.mock('react-native-screens', () => ({
   enableScreens: jest.fn(),
@@ -35,7 +47,12 @@ jest.mock('react-native-gesture-handler', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  QueryClient: jest.fn(() => ({})),
+  QueryClient: jest.fn(() => ({
+    clear: jest.fn(),
+    getQueryCache: () => ({
+      subscribe: jest.fn(() => jest.fn()),
+    }),
+  })),
   QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
@@ -80,6 +97,16 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#ff0000', isAccentReady: true }),
 }));
 
+jest.mock('@/src/components/ErrorBoundary', () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock('@/src/context/RuntimeConfigContext', () => ({
+  RuntimeConfigProvider: ({ children }: { children: React.ReactNode }) => children,
+  useRuntimeConfig: () => mockRuntimeConfigState,
+}));
+
 jest.mock('@/src/context/PremiumContext', () => ({
   PremiumProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -111,6 +138,12 @@ jest.mock('@/src/services/revenueCat', () => ({
   configureRevenueCat: jest.fn(() => Promise.resolve(false)),
 }));
 
+jest.mock('@/src/services/queryCachePersistence', () => ({
+  clearPersistedQueryCache: jest.fn(() => Promise.resolve()),
+  hydratePersistedQueryCache: jest.fn(() => Promise.resolve(true)),
+  subscribeToPersistedQueryCache: jest.fn(() => jest.fn()),
+}));
+
 jest.mock('@/src/i18n', () => ({
   t: jest.fn(() => 'Notifications'),
 }));
@@ -138,6 +171,8 @@ describe('RootLayout routing', () => {
     mockAuthState.hasCompletedOnboarding = true;
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/home' };
     mockPreferencesState.isLoading = false;
+    mockRuntimeConfigState.isReady = true;
+    mockRuntimeConfigState.config.firestoreClientEnabled = true;
   });
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
@@ -214,5 +249,16 @@ describe('RootLayout routing', () => {
     await waitFor(() => {
       expect(mockTrackScreen).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('shows maintenance UI when Firestore client access is disabled', async () => {
+    mockRuntimeConfigState.config.firestoreClientEnabled = false;
+
+    const { getByText } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(getByText('Maintenance in progress')).toBeTruthy();
+    });
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

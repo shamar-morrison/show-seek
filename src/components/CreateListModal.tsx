@@ -48,7 +48,9 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const router = useRouter();
     const { t } = useTranslation();
     const { isPremium, isLoading: isPremiumLoading } = usePremium();
-    const { data: lists, isLoading: isListsLoading } = useLists();
+    const { data: lists, isLoading: isListsLoading } = useLists({
+      accessScope: 'list-management',
+    });
 
     // Calculate custom list count - only check limits when both premium status and lists are loaded
     const customListCount = lists ? filterCustomLists(lists).length : 0;

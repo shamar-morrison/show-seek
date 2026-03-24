@@ -1,9 +1,9 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { filterCustomLists, MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
-import { useAuth } from '../context/auth';
 import { usePremium } from '../context/PremiumContext';
 import {
   DEFAULT_LISTS,
@@ -68,17 +68,25 @@ const removeListIdFromMembershipIndex = (
 };
 
 type UseListsOptions = {
+  accessScope?: 'default' | 'list-management';
   enabled?: boolean;
 };
 
 export const useLists = (options: UseListsOptions = {}) => {
-  const { enabled = true } = options;
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { accessScope = 'default', enabled = true } = options;
+  const {
+    canUseListManagementReads,
+    canUseNonCriticalReads,
+    firestoreUserId,
+    signedInUserId,
+  } = useFirestoreAccess();
+  const userId = accessScope === 'list-management' ? signedInUserId : firestoreUserId;
+  const canReadLists =
+    accessScope === 'list-management' ? canUseListManagementReads : canUseNonCriticalReads;
   const query = useQuery({
     queryKey: ['lists', userId],
     queryFn: () => listService.getUserLists(userId!),
-    enabled: !!userId && enabled,
+    enabled: !!userId && enabled && canReadLists,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
     gcTime: READ_QUERY_CACHE_WINDOWS.statusGcTimeMs,
   });
@@ -90,8 +98,8 @@ export const useLists = (options: UseListsOptions = {}) => {
 };
 
 export const useMediaLists = (mediaId: number) => {
-  // Detail-screen add-to-list state depends on this membership data.
-  // Keep this active for signed-in users even when optional list indicator optimizations are disabled.
+  // Detail-screen membership chips stay on the default read path.
+  // Premium-only mode should not opt this into list-management reads automatically.
   const { data: lists, isLoading } = useLists();
 
   if (!lists) {
@@ -110,8 +118,8 @@ export const useMediaLists = (mediaId: number) => {
 
 export const useAddToList = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -273,8 +281,8 @@ export const useAddToList = () => {
 
 export const useRemoveFromList = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({ listId, mediaId }: { listId: string; mediaId: number }) =>
@@ -401,8 +409,8 @@ export class PremiumLimitError extends Error {
 
 export const useCreateList = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -431,8 +439,8 @@ export const useCreateList = () => {
 
 export const useDeleteList = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: (listId: string) => listService.deleteList(listId),
@@ -503,8 +511,8 @@ export const useDeleteList = () => {
 
 export const useRenameList = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const userId = user?.uid;
+  const { signedInUserId } = useFirestoreAccess();
+  const userId = signedInUserId;
 
   return useMutation({
     mutationFn: ({
