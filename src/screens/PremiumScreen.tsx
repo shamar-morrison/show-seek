@@ -8,7 +8,7 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
-import { type PremiumPlan } from '@/src/context/premiumBilling';
+import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { trackPremiumPaywallView } from '@/src/services/analytics';
@@ -106,6 +106,10 @@ export default function PremiumScreen() {
         Alert.alert(t('premium.noPurchasesTitle'), t('premium.noPurchasesMessage'));
       }
     } catch (error: any) {
+      if (isPremiumAuthRequiredError(error)) {
+        requireAccount();
+        return;
+      }
       Alert.alert(t('premium.restoreFailedTitle'), error?.message || t('errors.generic'));
     } finally {
       setIsRestoring(false);

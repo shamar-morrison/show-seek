@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
 
 let mockSegments: string[] = ['(tabs)', 'home'];
 const mockReplace = jest.fn();
@@ -7,6 +7,8 @@ const mockTrackScreen = jest.fn();
 const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 const mockQueryClientClear = jest.fn();
 const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
+const mockHydratePersistedQueryCache = jest.fn(() => Promise.resolve(true));
+const mockSubscribeToPersistedQueryCache = jest.fn(() => jest.fn());
 
 const mockAuthState = {
   user: null as null | { uid?: string },
@@ -120,8 +122,9 @@ jest.mock('@/src/services/revenueCat', () => ({
 
 jest.mock('@/src/services/queryCachePersistence', () => ({
   clearPersistedQueryCache: () => mockClearPersistedQueryCache(),
-  hydratePersistedQueryCache: jest.fn(() => Promise.resolve(true)),
-  subscribeToPersistedQueryCache: jest.fn(() => jest.fn()),
+  hydratePersistedQueryCache: (queryClient: unknown) => mockHydratePersistedQueryCache(queryClient),
+  subscribeToPersistedQueryCache: (queryClient: unknown) =>
+    mockSubscribeToPersistedQueryCache(queryClient),
 }));
 
 jest.mock('@/src/i18n', () => ({
@@ -152,6 +155,8 @@ describe('RootLayout routing', () => {
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/home' };
     mockPreferencesState.isLoading = false;
     mockClearPersistedQueryCache.mockResolvedValue(undefined);
+    mockHydratePersistedQueryCache.mockResolvedValue(true);
+    mockSubscribeToPersistedQueryCache.mockReturnValue(jest.fn());
   });
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
@@ -263,5 +268,31 @@ describe('RootLayout routing', () => {
     });
 
     consoleSpy.mockRestore();
+  });
+
+  it('does not subscribe to persisted cache updates after bootstrap unmounts early', async () => {
+    let resolveHydration: ((value: boolean) => void) | null = null;
+    mockHydratePersistedQueryCache.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveHydration = resolve;
+        })
+    );
+
+    const { unmount } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockHydratePersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+
+    await act(async () => {
+      resolveHydration?.(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockSubscribeToPersistedQueryCache).not.toHaveBeenCalled();
   });
 });

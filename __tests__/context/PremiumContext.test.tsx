@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 const mockConfigureRevenueCat = jest.fn();
 const mockCreateUserDocument = jest.fn();
+const mockGetCachedUserDocument = jest.fn();
 const mockGetOfferings = jest.fn();
 const mockGetCustomerInfo = jest.fn();
 const mockLogIn = jest.fn();
@@ -14,6 +15,7 @@ const mockAddCustomerInfoUpdateListener = jest.fn();
 const mockRemoveCustomerInfoUpdateListener = jest.fn();
 const mockAuditedOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
+let mockEnablePremiumRealtimeListener = true;
 let mockCurrentUser:
   | { uid: string; email?: string | null; isAnonymous?: boolean }
   | null = {
@@ -21,12 +23,17 @@ let mockCurrentUser:
   email: 'test@example.com',
   isAnonymous: false,
 };
+let authStateChangeCallback:
+  | ((user: { uid: string; email?: string | null; isAnonymous?: boolean } | null) => void)
+  | null = null;
 
 process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'true';
 
 jest.mock('@/src/config/readOptimization', () => ({
   READ_OPTIMIZATION_FLAGS: {
-    enablePremiumRealtimeListener: true,
+    get enablePremiumRealtimeListener() {
+      return mockEnablePremiumRealtimeListener;
+    },
   },
 }));
 
@@ -49,6 +56,10 @@ jest.mock('@/src/services/firestoreReadAudit', () => ({
 
 jest.mock('@/src/services/revenueCat', () => ({
   configureRevenueCat: (...args: unknown[]) => mockConfigureRevenueCat(...args),
+}));
+
+jest.mock('@/src/services/UserDocumentCache', () => ({
+  getCachedUserDocument: (...args: unknown[]) => mockGetCachedUserDocument(...args),
 }));
 
 jest.mock('firebase/auth', () => ({
@@ -157,6 +168,17 @@ const createSnapshot = (premium: Record<string, unknown> = {}) => ({
   exists: () => true,
 });
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
+
 describe('PremiumContext', () => {
   const { PremiumProvider, usePremium } = require('@/src/context/PremiumContext');
   const originalPlatform = Platform.OS;
@@ -165,17 +187,31 @@ describe('PremiumContext', () => {
     <PremiumProvider>{children}</PremiumProvider>
   );
 
+  const emitAuthStateChange = (
+    nextUser: { uid: string; email?: string | null; isAnonymous?: boolean } | null
+  ) => {
+    mockCurrentUser = nextUser;
+    act(() => {
+      authStateChangeCallback?.(nextUser);
+    });
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as { OS: string }).OS = 'android';
+    mockEnablePremiumRealtimeListener = true;
     mockCurrentUser = {
       uid: 'test-user-id',
       email: 'test@example.com',
       isAnonymous: false,
     };
+    authStateChangeCallback = null;
 
     mockConfigureRevenueCat.mockResolvedValue(true);
     mockCreateUserDocument.mockResolvedValue(undefined);
+    mockGetCachedUserDocument.mockResolvedValue({
+      premium: { hasUsedTrial: false, isPremium: false },
+    });
     mockGetOfferings.mockResolvedValue(baseOfferings);
     mockGetCustomerInfo.mockResolvedValue(makeCustomerInfo(true));
     mockLogIn.mockResolvedValue({ customerInfo: makeCustomerInfo(true), created: false });
@@ -187,6 +223,7 @@ describe('PremiumContext', () => {
     mockRestorePurchases.mockResolvedValue(makeCustomerInfo(true));
 
     mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
+      authStateChangeCallback = callback;
       callback(mockCurrentUser);
       return jest.fn();
     });
@@ -240,6 +277,136 @@ describe('PremiumContext', () => {
     await act(async () => {
       resolveConfigure?.(true);
     });
+  });
+
+  it('ignores stale startup sync results after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const staleConfigure = createDeferred<boolean>();
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockImplementation(() =>
+      mockCurrentUser?.uid === userA.uid ? staleConfigure.promise : Promise.resolve(true)
+    );
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockConfigureRevenueCat).toHaveBeenCalledTimes(1);
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(mockLogIn).toHaveBeenCalledWith(userB.uid);
+      expect(result.current.prices.monthly).toBe('$3.00');
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      staleConfigure.resolve(true);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockLogIn).not.toHaveBeenCalledWith(userA.uid);
+    expect(mockGetCustomerInfo).toHaveBeenCalledTimes(1);
+    expect(result.current.prices.monthly).toBe('$3.00');
+    expect(result.current.isPremium).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('ignores stale non-realtime firestore refresh results after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const userARefresh = createDeferred<{ premium: Record<string, unknown> } | null>();
+    const userBRefresh = createDeferred<{ premium: Record<string, unknown> } | null>();
+
+    mockEnablePremiumRealtimeListener = false;
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+    mockGetCachedUserDocument.mockImplementation((userId: string) => {
+      if (userId === userA.uid) {
+        return userARefresh.promise;
+      }
+
+      if (userId === userB.uid) {
+        return userBRefresh.promise;
+      }
+
+      return Promise.resolve(null);
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockGetCachedUserDocument).toHaveBeenCalledWith(
+        userA.uid,
+        expect.objectContaining({
+          callsite: 'PremiumContext.refreshPremiumFromFirestore',
+          forceRefresh: true,
+        })
+      );
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(mockGetCachedUserDocument).toHaveBeenCalledWith(
+        userB.uid,
+        expect.objectContaining({
+          callsite: 'PremiumContext.refreshPremiumFromFirestore',
+          forceRefresh: true,
+        })
+      );
+    });
+
+    await act(async () => {
+      userBRefresh.resolve({
+        premium: {
+          hasUsedTrial: false,
+          isPremium: false,
+        },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      userARefresh.resolve({
+        premium: {
+          hasUsedTrial: true,
+          isPremium: true,
+        },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(false);
+    expect(result.current.isLoading).toBe(false);
   });
 
   it('purchases a selected package by plan and returns premium success', async () => {
@@ -337,7 +504,7 @@ describe('PremiumContext', () => {
     expect(mockRestorePurchases).toHaveBeenCalled();
   });
 
-  it('returns false for anonymous restore attempts before RevenueCat flow starts', async () => {
+  it('throws an auth-required error for anonymous restore attempts before RevenueCat flow starts', async () => {
     mockCurrentUser = {
       uid: 'anon-user',
       email: 'anon@example.com',
@@ -350,12 +517,21 @@ describe('PremiumContext', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    let restored = true;
+    let thrownError: unknown = null;
     await act(async () => {
-      restored = await result.current.restorePurchases();
+      try {
+        await result.current.restorePurchases();
+      } catch (error) {
+        thrownError = error;
+      }
     });
 
-    expect(restored).toBe(false);
+    expect(thrownError).toEqual(
+      expect.objectContaining({
+        code: 'AUTH_REQUIRED',
+        message: 'AUTH_REQUIRED',
+      })
+    );
     expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
     expect(mockRestorePurchases).not.toHaveBeenCalled();
   });

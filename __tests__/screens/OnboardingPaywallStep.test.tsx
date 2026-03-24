@@ -1,8 +1,10 @@
 import { act, fireEvent, render, within } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
+const mockRequireAccount = jest.fn(() => false);
 
 const mockPremiumState = {
   isPremium: false,
@@ -23,6 +25,10 @@ const mockPremiumState = {
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
+}));
+
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockRequireAccount,
 }));
 
 jest.mock('@/src/context/AccentColorProvider', () => ({
@@ -70,6 +76,7 @@ describe('OnboardingPaywallStep', () => {
     jest.clearAllMocks();
     mockPurchasePremium.mockReset().mockResolvedValue(true);
     mockRestorePurchases.mockReset().mockResolvedValue(false);
+    mockRequireAccount.mockReset().mockReturnValue(false);
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockPremiumState.monthlyTrial = {
@@ -167,5 +174,27 @@ describe('OnboardingPaywallStep', () => {
     fireEvent.press(getByTestId('onboarding-subscribe-button'));
 
     expect(mockPurchasePremium).toHaveBeenCalledWith('monthly');
+  });
+
+  it('prompts for account instead of showing restore alerts when restore requires auth', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };
+    authRequiredError.code = 'AUTH_REQUIRED';
+    mockRestorePurchases.mockRejectedValueOnce(authRequiredError);
+
+    const { getByText } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    fireEvent.press(getByText('Restore'));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });

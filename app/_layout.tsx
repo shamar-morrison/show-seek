@@ -131,10 +131,12 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
       try {
         await hydratePersistedQueryCache(queryClient);
       } finally {
-        unsubscribePersistence = subscribeToPersistedQueryCache(queryClient);
-        if (isMounted) {
-          setIsHydrated(true);
+        if (!isMounted) {
+          return;
         }
+
+        unsubscribePersistence = subscribeToPersistedQueryCache(queryClient);
+        setIsHydrated(true);
       }
     };
 

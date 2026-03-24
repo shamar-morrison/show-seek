@@ -133,6 +133,43 @@ describe('queryCachePersistence', () => {
     unsubscribe();
   });
 
+  it('persists reminder detail queries across cache writes', async () => {
+    jest.useFakeTimers();
+    const queryClient = new QueryClient();
+
+    const unsubscribe = subscribeToPersistedQueryCache(queryClient);
+
+    queryClient.setQueryData(['reminder', 'user-1', 'movie', 101], {
+      id: 'reminder-1',
+      mediaId: 101,
+      mediaType: 'movie',
+    });
+
+    await jest.runAllTimersAsync();
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
+    expect(getPersistedPayload()).toEqual(
+      expect.objectContaining({
+        state: expect.objectContaining({
+          queries: [
+            expect.objectContaining({
+              queryKey: ['reminder', 'user-1', 'movie', 101],
+              state: expect.objectContaining({
+                data: {
+                  id: 'reminder-1',
+                  mediaId: 101,
+                  mediaType: 'movie',
+                },
+              }),
+            }),
+          ],
+        }),
+      })
+    );
+
+    unsubscribe();
+  });
+
   it('serializes persist writes so older writes cannot overtake newer state', async () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();

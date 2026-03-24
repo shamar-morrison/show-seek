@@ -16,6 +16,7 @@ const PERSISTED_QUERY_ROOTS = new Set([
   'notes',
   'note',
   'genres',
+  'reminder',
   'reminders',
   'watchedMovies',
   'collectionTracking',

@@ -304,5 +304,25 @@ describe('PremiumScreen', () => {
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('Restore Failed', 'Something went wrong');
     });
+
+    alertSpy.mockRestore();
+  });
+
+  it('prompts for account instead of showing restore alerts when restore requires auth', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };
+    authRequiredError.code = 'AUTH_REQUIRED';
+    mockRestorePurchases.mockRejectedValueOnce(authRequiredError);
+
+    const { getByText } = render(<PremiumScreen />);
+
+    fireEvent.press(getByText('Restore'));
+
+    await waitFor(() => {
+      expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });

@@ -1,5 +1,6 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import {
+  createPremiumAuthRequiredError,
   getProductIdForPlan,
   SUBSCRIPTION_PRODUCT_IDS,
   type PremiumPlan,
@@ -13,7 +14,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import Purchases, {
   PURCHASES_ERROR_CODE,
@@ -35,6 +36,8 @@ interface MonthlyTrialAvailability {
   offerToken: string | null;
   reasonKey: string | null;
 }
+
+type PackagesByPlan = Record<PremiumPlan, PurchasesPackage | null>;
 
 interface PremiumState {
   isPremium: boolean;
@@ -151,6 +154,16 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   });
 
   const [user, setUser] = useState<User | null>(auth.currentUser);
+  const latestUserRef = useRef<User | null>(auth.currentUser);
+
+  useEffect(() => {
+    latestUserRef.current = user;
+  }, [user]);
+
+  const isExpectedAuthenticatedUser = useCallback((expectedUserId: string): boolean => {
+    const liveUser = latestUserRef.current;
+    return liveUser != null && !liveUser.isAnonymous && liveUser.uid === expectedUserId;
+  }, []);
 
   const applyCustomerInfo = useCallback(async (customerInfo: CustomerInfo, userId?: string) => {
     const isPremium = customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID] != null;
@@ -175,7 +188,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         all: Record<string, PurchasesOffering>;
       },
       context: string
-    ): Record<PremiumPlan, PurchasesPackage | null> => {
+    ): PackagesByPlan => {
       logOfferingsDebug(offerings, `${context}:before-resolve`);
 
       const resolvedOffering = resolveOffering(offerings);
@@ -208,39 +221,65 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   );
 
   const refreshOfferings = useCallback(
-    async (context = 'refreshOfferings'): Promise<Record<PremiumPlan, PurchasesPackage | null>> => {
+    async (context = 'refreshOfferings', shouldApplyState?: () => boolean): Promise<PackagesByPlan> => {
       const offerings = await Purchases.getOfferings();
+      if (shouldApplyState && !shouldApplyState()) {
+        return {
+          monthly: null,
+          yearly: null,
+        };
+      }
       return applyOfferingsState(offerings, context);
     },
     [applyOfferingsState]
   );
 
   const syncRevenueCatForUser = useCallback(
-    async (nextUser: User) => {
+    async (nextUser: User, shouldApplyState: () => boolean = () => true) => {
       if (Platform.OS !== 'android') {
-        setIsRevenueCatLoading(false);
+        if (shouldApplyState()) {
+          setIsRevenueCatLoading(false);
+        }
+        return;
+      }
+
+      if (!shouldApplyState()) {
         return;
       }
 
       setIsRevenueCatLoading(true);
       try {
         const configured = await configureRevenueCat();
+        if (!shouldApplyState()) {
+          return;
+        }
         if (!configured) {
           return;
         }
 
         await Purchases.logIn(nextUser.uid);
+        if (!shouldApplyState()) {
+          return;
+        }
 
         const customerInfo = await Purchases.getCustomerInfo();
+        if (!shouldApplyState()) {
+          return;
+        }
         await applyCustomerInfo(customerInfo, nextUser.uid);
+        if (!shouldApplyState()) {
+          return;
+        }
 
         try {
-          await refreshOfferings('syncRevenueCatForUser');
+          await refreshOfferings('syncRevenueCatForUser', shouldApplyState);
         } catch (offeringsError) {}
       } catch (err) {
         console.error('RevenueCat sync failed:', err);
       } finally {
-        setIsRevenueCatLoading(false);
+        if (shouldApplyState()) {
+          setIsRevenueCatLoading(false);
+        }
       }
     },
     [applyCustomerInfo, refreshOfferings]
@@ -248,6 +287,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (newUser) => {
+      latestUserRef.current = newUser;
       setUser(newUser);
     });
 
@@ -271,14 +311,17 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
 
     let isCancelled = false;
+    const currentUserId = user.uid;
+    const shouldApplyForCurrentUser = () =>
+      !isCancelled && isExpectedAuthenticatedUser(currentUserId);
 
     const initializeForUser = async () => {
       await createUserDocument(user);
-      if (isCancelled) {
+      if (!shouldApplyForCurrentUser()) {
         return;
       }
 
-      await syncRevenueCatForUser(user);
+      await syncRevenueCatForUser(user, shouldApplyForCurrentUser);
     };
 
     void initializeForUser();
@@ -286,7 +329,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       isCancelled = true;
     };
-  }, [syncRevenueCatForUser, user]);
+  }, [isExpectedAuthenticatedUser, syncRevenueCatForUser, user]);
 
   useEffect(() => {
     if (!user || user.isAnonymous || Platform.OS !== 'android' || isRevenueCatLoading) {
@@ -382,9 +425,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     let isCancelled = false;
     let lastForegroundRefresh = 0;
     const FOREGROUND_REFRESH_COOLDOWN_MS = 5 * 60 * 1000;
+    const shouldApplyForCurrentUser = () => !isCancelled && isExpectedAuthenticatedUser(userId);
 
     const refreshPremiumFromFirestore = async (forceRefresh = false) => {
-      if (isCancelled) {
+      if (!shouldApplyForCurrentUser()) {
         return;
       }
 
@@ -399,6 +443,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           forceRefresh,
           callsite: 'PremiumContext.refreshPremiumFromFirestore',
         });
+
+        if (!shouldApplyForCurrentUser()) {
+          return;
+        }
 
         if (!userData) {
           setIsFirestoreLoading(false);
@@ -419,6 +467,9 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           console.warn('Failed to write premium cache:', cacheError);
         }
       } catch (err) {
+        if (!shouldApplyForCurrentUser()) {
+          return;
+        }
         console.error('Error fetching premium status:', err);
         setIsFirestoreLoading(false);
       }
@@ -436,7 +487,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       isCancelled = true;
       appStateSubscription?.remove?.();
     };
-  }, [user?.isAnonymous, user?.uid]);
+  }, [isExpectedAuthenticatedUser, user?.isAnonymous, user?.uid]);
 
   const purchasePremium = useCallback(
     async (plan: PremiumPlan): Promise<boolean> => {
@@ -494,11 +545,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
 
     if (!user) {
-      return false;
+      throw createPremiumAuthRequiredError();
     }
 
     if (user.isAnonymous) {
-      return false;
+      throw createPremiumAuthRequiredError();
     }
 
     const configured = await configureRevenueCat();
