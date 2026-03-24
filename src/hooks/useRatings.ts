@@ -3,15 +3,21 @@ import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RatingItem, ratingService } from '../services/RatingService';
 
-const getRatingsQueryKey = (userId?: string) => ['ratings', userId] as const;
-const getMediaRatingQueryKey = (userId: string, mediaType: 'movie' | 'tv', mediaId: number) =>
-  ['rating', userId, mediaType, mediaId] as const;
+const getRatingsQueryKey = (userId: string | undefined, canUseNonCriticalReads: boolean) =>
+  ['ratings', userId, canUseNonCriticalReads] as const;
+const getMediaRatingQueryKey = (
+  userId: string,
+  mediaType: 'movie' | 'tv',
+  mediaId: number,
+  canUseNonCriticalReads: boolean
+) => ['rating', userId, mediaType, mediaId, canUseNonCriticalReads] as const;
 const getEpisodeRatingQueryKey = (
   userId: string,
   tvShowId: number,
   seasonNumber: number,
-  episodeNumber: number
-) => ['rating', userId, 'episode', tvShowId, seasonNumber, episodeNumber] as const;
+  episodeNumber: number,
+  canUseNonCriticalReads: boolean
+) => ['rating', userId, 'episode', tvShowId, seasonNumber, episodeNumber, canUseNonCriticalReads] as const;
 
 const upsertRatingInList = (ratings: RatingItem[], nextRating: RatingItem) => {
   const withoutExisting = ratings.filter((item) => item.id !== nextRating.id);
@@ -69,7 +75,7 @@ export const useRatings = () => {
   const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
   const userId = firestoreUserId;
   const query = useQuery({
-    queryKey: getRatingsQueryKey(userId),
+    queryKey: getRatingsQueryKey(userId, canUseNonCriticalReads),
     queryFn: () => ratingService.getUserRatings(userId!),
     enabled: !!userId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
@@ -87,7 +93,9 @@ export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
   const userId = firestoreUserId;
 
   const query = useQuery({
-    queryKey: userId ? getMediaRatingQueryKey(userId, mediaType, mediaId) : ['rating', userId],
+    queryKey: userId
+      ? getMediaRatingQueryKey(userId, mediaType, mediaId, canUseNonCriticalReads)
+      : ['rating', userId, canUseNonCriticalReads],
     queryFn: () => ratingService.getRating(mediaId, mediaType),
     enabled: !!userId && !!mediaId && canUseNonCriticalReads,
     staleTime: READ_QUERY_CACHE_WINDOWS.statusStaleTimeMs,
@@ -128,8 +136,8 @@ export const useRateMedia = () => {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
 
       await Promise.all([
         queryClient.cancelQueries({ queryKey: detailKey }),
@@ -160,8 +168,8 @@ export const useRateMedia = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -172,8 +180,8 @@ export const useRateMedia = () => {
     onSuccess: (savedRating, variables) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData<RatingItem | null>(detailKey, savedRating);
 
@@ -198,8 +206,8 @@ export const useDeleteRating = () => {
         throw new Error('Please sign in to continue');
       }
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
       const ratingId = variables.mediaId.toString();
 
       await Promise.all([
@@ -224,8 +232,8 @@ export const useDeleteRating = () => {
     onError: (_error, variables, context) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -236,8 +244,8 @@ export const useDeleteRating = () => {
     onSuccess: (_data, variables) => {
       if (!userId) return;
 
-      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId);
-      const listKey = getRatingsQueryKey(userId);
+      const detailKey = getMediaRatingQueryKey(userId, variables.mediaType, variables.mediaId, true);
+      const listKey = getRatingsQueryKey(userId, true);
       const ratingId = variables.mediaId.toString();
 
       queryClient.setQueryData<RatingItem | null>(detailKey, null);
@@ -256,8 +264,14 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
 
   const query = useQuery({
     queryKey: userId
-      ? getEpisodeRatingQueryKey(userId, tvShowId, seasonNumber, episodeNumber)
-      : ['rating', userId, 'episode'],
+      ? getEpisodeRatingQueryKey(
+          userId,
+          tvShowId,
+          seasonNumber,
+          episodeNumber,
+          canUseNonCriticalReads
+        )
+      : ['rating', userId, 'episode', canUseNonCriticalReads],
     queryFn: () => ratingService.getEpisodeRating(tvShowId, seasonNumber, episodeNumber),
     enabled:
       !!userId &&
@@ -316,9 +330,10 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
 
       await Promise.all([
         queryClient.cancelQueries({ queryKey: detailKey }),
@@ -354,9 +369,10 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -371,9 +387,10 @@ export const useRateEpisode = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData<RatingItem | null>(detailKey, savedRating);
 
@@ -409,9 +426,10 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
       const ratingId = `episode-${variables.tvShowId}-${variables.seasonNumber}-${variables.episodeNumber}`;
 
       await Promise.all([
@@ -440,9 +458,10 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
 
       queryClient.setQueryData(detailKey, context?.previousDetailRating ?? null);
 
@@ -457,9 +476,10 @@ export const useDeleteEpisodeRating = () => {
         userId,
         variables.tvShowId,
         variables.seasonNumber,
-        variables.episodeNumber
+        variables.episodeNumber,
+        true
       );
-      const listKey = getRatingsQueryKey(userId);
+      const listKey = getRatingsQueryKey(userId, true);
       const ratingId = `episode-${variables.tvShowId}-${variables.seasonNumber}-${variables.episodeNumber}`;
 
       queryClient.setQueryData<RatingItem | null>(detailKey, null);

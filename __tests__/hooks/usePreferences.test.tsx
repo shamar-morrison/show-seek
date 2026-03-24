@@ -6,6 +6,13 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockFetchPreferences = jest.fn();
+const mockFirestoreAccessState: {
+  firestoreUserId: string | undefined;
+  canUseNonCriticalReads: boolean;
+} = {
+  firestoreUserId: 'test-user-id',
+  canUseNonCriticalReads: true,
+};
 const mockAuthState: { user: { uid: string } | null; loading: boolean } = {
   user: { uid: 'test-user-id' },
   loading: false,
@@ -13,6 +20,19 @@ const mockAuthState: { user: { uid: string } | null; loading: boolean } = {
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => ({
+    user: mockAuthState.user,
+    isAnonymous: false,
+    signedInUserId: mockFirestoreAccessState.firestoreUserId,
+    firestoreUserId: mockFirestoreAccessState.firestoreUserId,
+    canUseFirestoreClient: Boolean(mockFirestoreAccessState.firestoreUserId),
+    canUseListManagementReads: Boolean(mockFirestoreAccessState.firestoreUserId),
+    canUseNonCriticalReads: mockFirestoreAccessState.canUseNonCriticalReads,
+    canUsePremiumRealtime: Boolean(mockFirestoreAccessState.firestoreUserId),
+  }),
 }));
 
 jest.mock('@/src/firebase/config', () => ({
@@ -72,6 +92,8 @@ describe('usePreferences', () => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
     mockAuthState.loading = false;
+    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
+    mockFirestoreAccessState.canUseNonCriticalReads = true;
   });
 
   it('loads defaults first, then hydrates remote preferences including custom homeScreenLists', async () => {
@@ -153,6 +175,8 @@ describe('usePreferences', () => {
 
   it('does not fetch when signed out', () => {
     mockAuthState.user = null;
+    mockFirestoreAccessState.firestoreUserId = undefined;
+    mockFirestoreAccessState.canUseNonCriticalReads = false;
 
     const client = createQueryClient();
     const { result } = renderHook(() => usePreferences(), {
@@ -169,6 +193,8 @@ describe('usePreferences', () => {
 
   it('does not fetch for anonymous users', () => {
     mockAuthState.user = { uid: 'anon-1', isAnonymous: true } as any;
+    mockFirestoreAccessState.firestoreUserId = undefined;
+    mockFirestoreAccessState.canUseNonCriticalReads = false;
 
     const client = createQueryClient();
     const { result } = renderHook(() => usePreferences(), {

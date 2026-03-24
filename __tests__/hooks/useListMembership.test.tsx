@@ -6,10 +6,29 @@ import React from 'react';
 import { DEFAULT_PREFERENCES } from '@/src/types/preferences';
 
 const mockPreferences: { showListIndicators?: boolean } = {};
+const mockFirestoreAccessState = {
+  user: { uid: 'test-user-id' } as { uid: string } | null,
+  signedInUserId: 'test-user-id' as string | undefined,
+  firestoreUserId: 'test-user-id' as string | undefined,
+  canUseNonCriticalReads: true,
+};
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
     user: { uid: 'test-user-id' },
+  }),
+}));
+
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => ({
+    user: mockFirestoreAccessState.user,
+    isAnonymous: false,
+    signedInUserId: mockFirestoreAccessState.signedInUserId,
+    firestoreUserId: mockFirestoreAccessState.firestoreUserId,
+    canUseFirestoreClient: Boolean(mockFirestoreAccessState.firestoreUserId),
+    canUseListManagementReads: Boolean(mockFirestoreAccessState.signedInUserId),
+    canUseNonCriticalReads: mockFirestoreAccessState.canUseNonCriticalReads,
+    canUsePremiumRealtime: Boolean(mockFirestoreAccessState.signedInUserId),
   }),
 }));
 
@@ -36,6 +55,10 @@ describe('useListMembership', () => {
     jest.clearAllMocks();
     clearFirestoreReadAuditEvents();
     delete mockPreferences.showListIndicators;
+    mockFirestoreAccessState.user = { uid: 'test-user-id' };
+    mockFirestoreAccessState.signedInUserId = 'test-user-id';
+    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
+    mockFirestoreAccessState.canUseNonCriticalReads = true;
   });
 
   it('shares a single membership-index fetch across consumers when the preference uses the default', async () => {

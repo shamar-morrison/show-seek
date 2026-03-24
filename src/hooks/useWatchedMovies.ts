@@ -27,6 +27,12 @@ export interface AddWatchInput {
 export const createWatchId = (): string =>
   `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
+const getWatchedMoviesQueryKey = (
+  userId: string | undefined,
+  movieId: number,
+  canUseNonCriticalReads: boolean
+) => ['watchedMovies', userId, movieId, canUseNonCriticalReads] as const;
+
 /**
  * Fetch watch instances for a movie (one-time fetch for initial data)
  */
@@ -94,8 +100,7 @@ const syncCollectionTrackingAfterUnwatch = async (movieId: number): Promise<void
 export const useWatchedMovies = (movieId: number) => {
   const { firestoreUserId, canUseNonCriticalReads } = useFirestoreAccess();
   const userId = firestoreUserId;
-  const queryClient = useQueryClient();
-  const queryKey = ['watchedMovies', userId, movieId];
+  const queryKey = getWatchedMoviesQueryKey(userId, movieId, canUseNonCriticalReads);
 
   // Use React Query for caching
   const query = useQuery({
@@ -146,7 +151,7 @@ export const useAddWatch = (movieId: number) => {
       return { id: watchId, watchedAt, movieId };
     },
     onMutate: async ({ watchedAt, watchId }) => {
-      const queryKey = ['watchedMovies', userId, movieId];
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -166,14 +171,16 @@ export const useAddWatch = (movieId: number) => {
     },
     onError: (error, _variables, context) => {
       if (context?.previousData) {
-        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useAddWatch] Error:', error);
       throw new Error(message);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['watchedMovies', userId, movieId] });
+      await queryClient.invalidateQueries({
+        queryKey: getWatchedMoviesQueryKey(userId, movieId, true),
+      });
     },
   });
 };
@@ -225,7 +232,7 @@ export const useClearWatches = (movieId: number) => {
     },
     // Optimistic update
     onMutate: async () => {
-      const queryKey = ['watchedMovies', userId, movieId];
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -238,7 +245,7 @@ export const useClearWatches = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useClearWatches] Error:', error);
@@ -288,7 +295,7 @@ export const useDeleteWatch = (movieId: number) => {
     },
     // Optimistic update for instant UI feedback
     onMutate: async (instanceId) => {
-      const queryKey = ['watchedMovies', userId, movieId];
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -303,7 +310,7 @@ export const useDeleteWatch = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useDeleteWatch] Error:', error);
@@ -341,7 +348,7 @@ export const useUpdateWatchDate = (movieId: number) => {
     },
     // Optimistic update for instant UI feedback
     onMutate: async ({ instanceId, newDate }) => {
-      const queryKey = ['watchedMovies', userId, movieId];
+      const queryKey = getWatchedMoviesQueryKey(userId, movieId, true);
       await queryClient.cancelQueries({ queryKey });
 
       const previousData = queryClient.getQueryData<WatchInstance[]>(queryKey);
@@ -360,7 +367,7 @@ export const useUpdateWatchDate = (movieId: number) => {
     onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousData) {
-        queryClient.setQueryData(['watchedMovies', userId, movieId], context.previousData);
+        queryClient.setQueryData(getWatchedMoviesQueryKey(userId, movieId, true), context.previousData);
       }
       const message = getFirestoreErrorMessage(error);
       console.error('[useUpdateWatchDate] Error:', error);

@@ -8,6 +8,7 @@ import {
   useClearWatches,
   useDeleteWatch,
   useUpdateWatchDate,
+  useWatchedMovies,
 } from '@/src/hooks/useWatchedMovies';
 
 const mockWatchedMoviesAuth = {
@@ -17,6 +18,7 @@ const mockWatchedMoviesAuth = {
     isAnonymous: false,
   } as { uid: string; email?: string; isAnonymous?: boolean } | null,
 };
+let mockCanUseNonCriticalReads = true;
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
@@ -38,7 +40,7 @@ jest.mock('@/src/hooks/useFirestoreAccess', () => ({
       signedInUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
       firestoreUserId: currentUser && !isAnonymous ? currentUser.uid : undefined,
       canUseFirestoreClient: Boolean(currentUser && !isAnonymous),
-      canUseNonCriticalReads: Boolean(currentUser && !isAnonymous),
+      canUseNonCriticalReads: mockCanUseNonCriticalReads,
       canUsePremiumRealtime: Boolean(currentUser && !isAnonymous),
     };
   },
@@ -84,12 +86,15 @@ function createQueryClient() {
   });
 }
 
-function createSnapshot(docs: Array<{ ref: { id: string } }>) {
+function createSnapshot(docs: { ref: { id: string } }[]) {
   return {
     empty: docs.length === 0,
     docs,
   };
 }
+
+const getWatchedMoviesKey = (movieId: number, canUseNonCriticalReads = true) =>
+  ['watchedMovies', 'test-user-id', movieId, canUseNonCriticalReads] as const;
 
 async function captureMutationError(runMutation: () => Promise<unknown>) {
   let thrown: unknown;
@@ -125,6 +130,7 @@ describe('useWatchedMovies mutations', () => {
       email: 'test@example.com',
       isAnonymous: false,
     };
+    mockCanUseNonCriticalReads = true;
     (collection as jest.Mock).mockImplementation((_db, path) => ({ path }));
     (doc as jest.Mock).mockImplementation((_db, path) => ({ path }));
     (setDoc as jest.Mock).mockResolvedValue(undefined);
@@ -157,7 +163,7 @@ describe('useWatchedMovies mutations', () => {
         movieId: 999,
       }
     );
-    expect(client.getQueryData(['watchedMovies', 'test-user-id', 999])).toEqual([
+    expect(client.getQueryData(getWatchedMoviesKey(999))).toEqual([
       {
         id: 'watch-123',
         watchedAt,
@@ -165,7 +171,7 @@ describe('useWatchedMovies mutations', () => {
       },
     ]);
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['watchedMovies', 'test-user-id', 999],
+      queryKey: getWatchedMoviesKey(999),
     });
   });
 
@@ -186,7 +192,7 @@ describe('useWatchedMovies mutations', () => {
       await addResult.current.mutateAsync({ watchedAt: initialDate, watchId });
     });
 
-    const cachedInstances = client.getQueryData<any[]>(['watchedMovies', 'test-user-id', 999]) ?? [];
+    const cachedInstances = client.getQueryData<any[]>(getWatchedMoviesKey(999)) ?? [];
 
     await act(async () => {
       await updateResult.current.mutateAsync({
@@ -262,6 +268,27 @@ describe('useWatchedMovies mutations', () => {
     expect(writeBatch).not.toHaveBeenCalled();
     expect(collectionTrackingService.getAllTrackedCollections).not.toHaveBeenCalled();
     expect(collectionTrackingService.removeWatchedMovie).not.toHaveBeenCalled();
+  });
+
+  it('masks cached watch data when non-critical reads are revoked', () => {
+    const client = createQueryClient();
+    const watchedAt = new Date('2026-03-11T18:30:00.000Z');
+    client.setQueryData(getWatchedMoviesKey(999), [
+      {
+        id: 'watch-789',
+        watchedAt,
+        movieId: 999,
+      },
+    ]);
+    mockCanUseNonCriticalReads = false;
+
+    const { result } = renderHook(() => useWatchedMovies(999), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(result.current.instances).toEqual([]);
+    expect(result.current.count).toBe(0);
+    expect(result.current.lastWatchedAt).toBeNull();
   });
 
   it('syncs tracked collections when deleting the final watch instance', async () => {

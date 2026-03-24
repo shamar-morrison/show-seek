@@ -10,8 +10,8 @@ const mockRequireAccount = jest.fn();
 const mockPush = jest.fn();
 
 jest.mock('@lodev09/react-native-true-sheet', () => {
-  const React = require('react');
-  const { View } = require('react-native');
+  const React = jest.requireActual('react') as typeof import('react');
+  const { View } = jest.requireActual('react-native') as typeof import('react-native');
 
   const TrueSheet = React.forwardRef(({ children, onDidDismiss }: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
@@ -24,6 +24,7 @@ jest.mock('@lodev09/react-native-true-sheet', () => {
 
     return <View>{children}</View>;
   });
+  TrueSheet.displayName = 'TrueSheet';
 
   return {
     TrueSheet,
@@ -31,8 +32,8 @@ jest.mock('@lodev09/react-native-true-sheet', () => {
 });
 
 jest.mock('react-native-gesture-handler', () => {
-  const React = require('react');
-  const { View, Pressable } = require('react-native');
+  const React = jest.requireActual('react') as typeof import('react');
+  const { View, Pressable } = jest.requireActual('react-native') as typeof import('react-native');
 
   return {
     GestureHandlerRootView: ({ children }: any) => <View>{children}</View>,

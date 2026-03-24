@@ -18,12 +18,15 @@ interface RuntimeConfigContextValue {
   refreshConfig: (force?: boolean) => Promise<void>;
 }
 
+const DEFAULT_REFRESH_CONFIG: RuntimeConfigContextValue['refreshConfig'] = async () => {};
+let hasWarnedMissingRuntimeConfigProvider = false;
+
 const defaultContextValue: RuntimeConfigContextValue = {
   config: DEFAULT_RUNTIME_CONFIG,
-  isReady: true,
+  isReady: false,
   isRefreshing: false,
   source: 'default',
-  refreshConfig: async () => {},
+  refreshConfig: DEFAULT_REFRESH_CONFIG,
 };
 
 const RuntimeConfigContext = createContext<RuntimeConfigContextValue>(defaultContextValue);
@@ -116,5 +119,18 @@ export function RuntimeConfigProvider({ children }: { children: React.ReactNode 
   return <RuntimeConfigContext.Provider value={value}>{children}</RuntimeConfigContext.Provider>;
 }
 
-export const useRuntimeConfig = () => useContext(RuntimeConfigContext);
+export const useRuntimeConfig = () => {
+  const context = useContext(RuntimeConfigContext);
 
+  if (
+    context.refreshConfig === DEFAULT_REFRESH_CONFIG &&
+    !hasWarnedMissingRuntimeConfigProvider
+  ) {
+    hasWarnedMissingRuntimeConfigProvider = true;
+    console.warn(
+      '[RuntimeConfigContext] useRuntimeConfig called outside RuntimeConfigProvider; using default runtime config.'
+    );
+  }
+
+  return context;
+};

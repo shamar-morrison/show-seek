@@ -36,14 +36,26 @@ const parseStoredRuntimeConfig = (value: string | null): StoredRuntimeConfig | n
 };
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Runtime config request timed out'));
-      }, timeoutMs);
-    }),
-  ]);
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const clearTimer = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  try {
+    return await Promise.race([
+      promise.finally(clearTimer),
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Runtime config request timed out'));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimer();
+  }
 };
 
 export async function readCachedRuntimeConfig(): Promise<StoredRuntimeConfig | null> {
@@ -63,6 +75,10 @@ export async function writeCachedRuntimeConfig(config: RuntimeConfig): Promise<v
 export async function fetchRuntimeConfigFromNetwork(): Promise<RuntimeConfig> {
   const runtimeConfigUrl = getRuntimeConfigUrl();
   if (!runtimeConfigUrl) {
+    console.info('[runtimeConfig] No runtime config URL configured; using default config.', {
+      explicitUrl: process.env.EXPO_PUBLIC_RUNTIME_CONFIG_URL ?? null,
+      firebaseProjectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? null,
+    });
     return DEFAULT_RUNTIME_CONFIG;
   }
 
@@ -112,4 +128,3 @@ export async function loadRuntimeConfig(): Promise<{
     };
   }
 }
-

@@ -61,7 +61,8 @@ const deserializeValue = (value: unknown): unknown => {
 
   if (isPlainObject(value)) {
     if (value.__type === 'Date' && typeof value.value === 'string') {
-      return new Date(value.value);
+      const parsedDate = new Date(value.value);
+      return Number.isNaN(parsedDate.getTime()) ? value : parsedDate;
     }
 
     return Object.fromEntries(
@@ -88,12 +89,12 @@ const shouldPersistQuery = (query: Query): boolean => {
 };
 
 export async function hydratePersistedQueryCache(queryClient: QueryClient): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
-  if (!raw) {
-    return false;
-  }
-
   try {
+    const raw = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
+    if (!raw) {
+      return false;
+    }
+
     const parsed = JSON.parse(raw) as { state?: unknown } | null;
     if (!parsed?.state) {
       return false;
@@ -133,7 +134,15 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
     }
 
     persistTimeout = setTimeout(() => {
-      void persistNow();
+      void persistNow().catch((error) => {
+        console.error('[queryCachePersistence] Query cache persist failed:', {
+          error,
+          storageKey: QUERY_CACHE_STORAGE_KEY,
+          debounceMs: QUERY_CACHE_PERSIST_DEBOUNCE_MS,
+          persistTimeoutActive: persistTimeout !== null,
+          scheduler: 'schedulePersist',
+        });
+      });
     }, QUERY_CACHE_PERSIST_DEBOUNCE_MS);
   };
 
@@ -157,4 +166,3 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
     unsubscribe();
   };
 }
-

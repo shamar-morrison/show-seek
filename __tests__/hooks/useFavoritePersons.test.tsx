@@ -7,6 +7,12 @@ import React from 'react';
 const mockGetFavoritePersons = jest.fn();
 const mockAddFavoritePerson = jest.fn();
 const mockRemoveFavoritePerson = jest.fn();
+const mockFirestoreAccessState = {
+  user: { uid: 'test-user-id' } as { uid: string } | null,
+  signedInUserId: 'test-user-id' as string | undefined,
+  firestoreUserId: 'test-user-id' as string | undefined,
+  canUseNonCriticalReads: true,
+};
 
 const mockAuthState: { user: { uid: string } | null } = {
   user: { uid: 'test-user-id' },
@@ -14,6 +20,19 @@ const mockAuthState: { user: { uid: string } | null } = {
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => mockAuthState,
+}));
+
+jest.mock('@/src/hooks/useFirestoreAccess', () => ({
+  useFirestoreAccess: () => ({
+    user: mockFirestoreAccessState.user,
+    isAnonymous: false,
+    signedInUserId: mockFirestoreAccessState.signedInUserId,
+    firestoreUserId: mockFirestoreAccessState.firestoreUserId,
+    canUseFirestoreClient: Boolean(mockFirestoreAccessState.firestoreUserId),
+    canUseListManagementReads: Boolean(mockFirestoreAccessState.signedInUserId),
+    canUseNonCriticalReads: mockFirestoreAccessState.canUseNonCriticalReads,
+    canUsePremiumRealtime: Boolean(mockFirestoreAccessState.signedInUserId),
+  }),
 }));
 
 jest.mock('@/src/services/FavoritePersonsService', () => ({
@@ -76,6 +95,10 @@ describe('useFavoritePersons optimistic mutations', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
+    mockFirestoreAccessState.user = { uid: 'test-user-id' };
+    mockFirestoreAccessState.signedInUserId = 'test-user-id';
+    mockFirestoreAccessState.firestoreUserId = 'test-user-id';
+    mockFirestoreAccessState.canUseNonCriticalReads = true;
     mockGetFavoritePersons.mockResolvedValue([]);
     mockAddFavoritePerson.mockResolvedValue(undefined);
     mockRemoveFavoritePerson.mockResolvedValue(undefined);

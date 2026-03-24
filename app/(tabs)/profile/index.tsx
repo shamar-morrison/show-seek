@@ -96,6 +96,10 @@ export default function ProfileScreen() {
   const [selectedTab, setSelectedTab] = useState<ProfileTab>('preferences');
 
   const handleReadDiagnosticsPress = useCallback(() => {
+    if (!__DEV__) {
+      return;
+    }
+
     const report = getFirestoreReadAuditReport();
     const topCallsites = report.byCallsite
       .slice(0, 3)
@@ -103,12 +107,18 @@ export default function ProfileScreen() {
       .join('\n');
 
     Alert.alert(
-      'Read diagnostics',
-      [`Total reads: ${report.totalReads}`, `Events: ${report.eventCount}`, topCallsites]
+      t('profile.readDiagnostics.title'),
+      [
+        t('profile.readDiagnostics.totalReads', { count: report.totalReads }),
+        t('profile.readDiagnostics.events', { count: report.eventCount }),
+        topCallsites
+          ? `${t('profile.readDiagnostics.callsites')}\n${topCallsites}`
+          : '',
+      ]
         .filter(Boolean)
         .join('\n')
     );
-  }, []);
+  }, [t]);
 
   const handlePreferenceUpdate = (key: keyof UserPreferences, value: boolean) => {
     if (isAccountRequired()) return;
@@ -206,7 +216,7 @@ export default function ProfileScreen() {
         {/* Header */}
         <TouchableOpacity
           style={styles.header}
-          onLongPress={handleReadDiagnosticsPress}
+          onLongPress={__DEV__ ? handleReadDiagnosticsPress : undefined}
           activeOpacity={1}
         >
           <Text style={styles.headerTitle}>{t('profile.title')}</Text>

@@ -1,10 +1,10 @@
+import i18n from '@/src/i18n';
+import { useFirestoreAccess } from '@/src/hooks/useFirestoreAccess';
+import { useAllGenres } from '@/src/hooks/useGenres';
+import { historyService } from '@/src/services/HistoryService';
+import type { HistoryData, MonthlyDetail } from '@/src/types/history';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import i18n from '../i18n';
-import { useFirestoreAccess } from './useFirestoreAccess';
-import { historyService } from '../services/HistoryService';
-import type { HistoryData, MonthlyDetail } from '../types/history';
-import { useAllGenres } from './useGenres';
 
 /**
  * Hook to fetch and cache user history/stats data
@@ -14,7 +14,7 @@ export function useHistory(monthsBack = 6) {
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<HistoryData>({
-    queryKey: ['userHistory', firestoreUserId, monthsBack, i18n.language],
+    queryKey: ['userHistory', firestoreUserId, monthsBack, i18n.language, canUseNonCriticalReads],
     queryFn: () => historyService.fetchUserHistory(genreMap, monthsBack),
     enabled: !!firestoreUserId && canUseNonCriticalReads && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -30,7 +30,7 @@ export function useMonthDetail(month: string | null) {
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<MonthlyDetail | null>({
-    queryKey: ['monthDetail', firestoreUserId, month, i18n.language],
+    queryKey: ['monthDetail', firestoreUserId, month, i18n.language, canUseNonCriticalReads],
     queryFn: () => (month ? historyService.fetchMonthDetail(month, genreMap) : null),
     enabled:
       !!firestoreUserId &&
