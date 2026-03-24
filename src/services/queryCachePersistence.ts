@@ -15,6 +15,7 @@ const PERSISTED_QUERY_ROOTS = new Set([
   'list-membership-index',
   'notes',
   'note',
+  'genres',
   'reminders',
   'watchedMovies',
   'collectionTracking',
@@ -114,18 +115,32 @@ export async function clearPersistedQueryCache(): Promise<void> {
 
 export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => void {
   let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingWrite: Promise<void> | null = null;
 
   const persistNow = async () => {
-    const state = dehydrate(queryClient, {
-      shouldDehydrateQuery: shouldPersistQuery,
+    const previousWrite = pendingWrite?.catch(() => undefined) ?? Promise.resolve();
+    const nextWrite = previousWrite.then(async () => {
+      const state = dehydrate(queryClient, {
+        shouldDehydrateQuery: shouldPersistQuery,
+      });
+
+      const payload = {
+        savedAt: Date.now(),
+        state: serializeValue(state),
+      };
+
+      await AsyncStorage.setItem(QUERY_CACHE_STORAGE_KEY, JSON.stringify(payload));
     });
 
-    const payload = {
-      savedAt: Date.now(),
-      state: serializeValue(state),
-    };
+    pendingWrite = nextWrite;
 
-    await AsyncStorage.setItem(QUERY_CACHE_STORAGE_KEY, JSON.stringify(payload));
+    try {
+      await nextWrite;
+    } finally {
+      if (pendingWrite === nextWrite) {
+        pendingWrite = null;
+      }
+    }
   };
 
   const schedulePersist = () => {
@@ -133,8 +148,12 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
       clearTimeout(persistTimeout);
     }
 
-    persistTimeout = setTimeout(() => {
-      void persistNow().catch((error) => {
+    persistTimeout = setTimeout(async () => {
+      persistTimeout = null;
+
+      try {
+        await persistNow();
+      } catch (error) {
         console.error('[queryCachePersistence] Query cache persist failed:', {
           error,
           storageKey: QUERY_CACHE_STORAGE_KEY,
@@ -142,7 +161,7 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
           persistTimeoutActive: persistTimeout !== null,
           scheduler: 'schedulePersist',
         });
-      });
+      }
     }, QUERY_CACHE_PERSIST_DEBOUNCE_MS);
   };
 
@@ -162,6 +181,7 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
   return () => {
     if (persistTimeout) {
       clearTimeout(persistTimeout);
+      persistTimeout = null;
     }
     unsubscribe();
   };

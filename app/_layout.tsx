@@ -369,7 +369,13 @@ function RootLayoutNav() {
       } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
         queryClient.clear();
       }
-      void clearPersistedQueryCache();
+      clearPersistedQueryCache().catch((error) => {
+        console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
+          error,
+          previousUid,
+          currentUid,
+        });
+      });
       resetClientReadState();
     }
 

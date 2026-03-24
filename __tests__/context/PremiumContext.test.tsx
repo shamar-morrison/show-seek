@@ -14,6 +14,13 @@ const mockAddCustomerInfoUpdateListener = jest.fn();
 const mockRemoveCustomerInfoUpdateListener = jest.fn();
 const mockAuditedOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
+let mockCurrentUser:
+  | { uid: string; email?: string | null; isAnonymous?: boolean }
+  | null = {
+  uid: 'test-user-id',
+  email: 'test@example.com',
+  isAnonymous: false,
+};
 
 process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'true';
 
@@ -25,7 +32,9 @@ jest.mock('@/src/config/readOptimization', () => ({
 
 jest.mock('@/src/firebase/config', () => ({
   auth: {
-    currentUser: { uid: 'test-user-id', email: 'test@example.com' },
+    get currentUser() {
+      return mockCurrentUser;
+    },
   },
   db: {},
 }));
@@ -159,6 +168,11 @@ describe('PremiumContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform as { OS: string }).OS = 'android';
+    mockCurrentUser = {
+      uid: 'test-user-id',
+      email: 'test@example.com',
+      isAnonymous: false,
+    };
 
     mockConfigureRevenueCat.mockResolvedValue(true);
     mockCreateUserDocument.mockResolvedValue(undefined);
@@ -173,7 +187,7 @@ describe('PremiumContext', () => {
     mockRestorePurchases.mockResolvedValue(makeCustomerInfo(true));
 
     mockOnAuthStateChanged.mockImplementation((_auth, callback) => {
-      callback({ uid: 'test-user-id', email: 'test@example.com' });
+      callback(mockCurrentUser);
       return jest.fn();
     });
 
@@ -263,6 +277,37 @@ describe('PremiumContext', () => {
     expect(purchaseResult).toBe(false);
   });
 
+  it('rejects anonymous purchase attempts before RevenueCat flow starts', async () => {
+    mockCurrentUser = {
+      uid: 'anon-user',
+      email: 'anon@example.com',
+      isAnonymous: true,
+    };
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let thrownError: unknown = null;
+    await act(async () => {
+      try {
+        await result.current.purchasePremium('monthly');
+      } catch (error) {
+        thrownError = error;
+      }
+    });
+
+    expect(thrownError).toEqual(
+      expect.objectContaining({
+        message: 'Anonymous users cannot purchase premium.',
+      })
+    );
+    expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
+    expect(mockPurchasePackage).not.toHaveBeenCalled();
+  });
+
   it('returns true from restore when RevenueCat has active premium entitlement', async () => {
     mockRestorePurchases.mockResolvedValue(makeCustomerInfo(true));
     const { result } = renderHook(() => usePremium(), { wrapper });
@@ -290,6 +335,29 @@ describe('PremiumContext', () => {
 
     expect(restored).toBe(false);
     expect(mockRestorePurchases).toHaveBeenCalled();
+  });
+
+  it('returns false for anonymous restore attempts before RevenueCat flow starts', async () => {
+    mockCurrentUser = {
+      uid: 'anon-user',
+      email: 'anon@example.com',
+      isAnonymous: true,
+    };
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    let restored = true;
+    await act(async () => {
+      restored = await result.current.restorePurchases();
+    });
+
+    expect(restored).toBe(false);
+    expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
+    expect(mockRestorePurchases).not.toHaveBeenCalled();
   });
 
   it('throws when RevenueCat restore fails', async () => {

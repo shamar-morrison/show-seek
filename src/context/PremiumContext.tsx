@@ -448,6 +448,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         throw new Error('User must be signed in to purchase premium.');
       }
 
+      if (user.isAnonymous) {
+        throw new Error('Anonymous users cannot purchase premium.');
+      }
+
       try {
         const configured = await configureRevenueCat();
         if (!configured) {
@@ -490,6 +494,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
 
     if (!user) {
+      return false;
+    }
+
+    if (user.isAnonymous) {
       return false;
     }
 

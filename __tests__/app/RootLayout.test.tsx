@@ -5,6 +5,8 @@ let mockSegments: string[] = ['(tabs)', 'home'];
 const mockReplace = jest.fn();
 const mockTrackScreen = jest.fn();
 const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
+const mockQueryClientClear = jest.fn();
+const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
 
 const mockAuthState = {
   user: null as null | { uid?: string },
@@ -36,7 +38,7 @@ jest.mock('react-native-gesture-handler', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   QueryClient: jest.fn(() => ({
-    clear: jest.fn(),
+    clear: mockQueryClientClear,
     getQueryCache: () => ({
       subscribe: jest.fn(() => jest.fn()),
     }),
@@ -117,7 +119,7 @@ jest.mock('@/src/services/revenueCat', () => ({
 }));
 
 jest.mock('@/src/services/queryCachePersistence', () => ({
-  clearPersistedQueryCache: jest.fn(() => Promise.resolve()),
+  clearPersistedQueryCache: () => mockClearPersistedQueryCache(),
   hydratePersistedQueryCache: jest.fn(() => Promise.resolve(true)),
   subscribeToPersistedQueryCache: jest.fn(() => jest.fn()),
 }));
@@ -149,6 +151,7 @@ describe('RootLayout routing', () => {
     mockAuthState.hasCompletedOnboarding = true;
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/home' };
     mockPreferencesState.isLoading = false;
+    mockClearPersistedQueryCache.mockResolvedValue(undefined);
   });
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
@@ -225,5 +228,40 @@ describe('RootLayout routing', () => {
     await waitFor(() => {
       expect(mockTrackScreen).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('logs persisted cache clear failures without interrupting auth transition cleanup', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'home'];
+    mockClearPersistedQueryCache.mockRejectedValueOnce(new Error('persist clear failed'));
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
+    });
+
+    expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[RootLayout] Failed to clear persisted query cache during auth transition:',
+        expect.objectContaining({
+          error: expect.any(Error),
+          previousUid: 'user-1',
+          currentUid: null,
+        })
+      );
+    });
+
+    consoleSpy.mockRestore();
   });
 });
