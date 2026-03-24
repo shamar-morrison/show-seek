@@ -2336,7 +2336,8 @@ const enrichEpisodeTracking = async (
 const runTraktEnrichmentJob = async (
   userId: string,
   listIds: string[],
-  includeEpisodes: boolean
+  includeEpisodes: boolean,
+  runId: string
 ): Promise<EnrichmentCounts> => {
   const enrichedCounts = emptyEnrichmentCounts();
   const db = admin.firestore();
@@ -2369,6 +2370,16 @@ const runTraktEnrichmentJob = async (
   }
 
   if (!includeEpisodes) {
+    console.info('[TraktEnrichment] Skipping episode tracking scan for list-only enrichment', {
+      counts: enrichedCounts,
+      episodeTrackingSnapshot: {
+        size: 0,
+      },
+      includeEpisodes,
+      listCount: listIds.length,
+      runId,
+      userId,
+    });
     return enrichedCounts;
   }
 
@@ -2377,6 +2388,17 @@ const runTraktEnrichmentJob = async (
     .doc(userId)
     .collection('episode_tracking')
     .get();
+  const episodeTrackingSnapshotSize = episodeTrackingSnapshot.size;
+
+  console.info('[TraktEnrichment] Loaded episode tracking snapshot', {
+    episodeTrackingSnapshot: {
+      size: episodeTrackingSnapshotSize,
+    },
+    includeEpisodes,
+    listCount: listIds.length,
+    runId,
+    userId,
+  });
 
   for (const episodeDoc of episodeTrackingSnapshot.docs) {
     const showId = Number(episodeDoc.id);
@@ -2404,6 +2426,17 @@ const runTraktEnrichmentJob = async (
 
     enrichedCounts.episodes += Object.keys(enrichedEpisodes).length;
   }
+
+  console.info('[TraktEnrichment] Completed enrichment job', {
+    counts: enrichedCounts,
+    episodeTrackingSnapshot: {
+      size: episodeTrackingSnapshotSize,
+    },
+    includeEpisodes,
+    listCount: listIds.length,
+    runId,
+    userId,
+  });
 
   return enrichedCounts;
 };
@@ -2904,9 +2937,21 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       const accessToken = await maybeRefreshAccessToken(userId, userData);
       const itemsSynced = await syncTraktImport(userId, accessToken);
 
+      console.info('[TraktSync] Completed sync import', {
+        itemsSynced,
+        runId,
+        userId,
+      });
+
       try {
-        const enrichmentRun = await prepareEnrichmentRun(userId, undefined, true);
+        const enrichmentRun = await prepareEnrichmentRun(userId, undefined, false);
         if (enrichmentRun.kind === 'queued') {
+          console.info('[TraktSync] Auto-queued post-sync enrichment', {
+            includeEpisodes: enrichmentRun.status.includeEpisodes,
+            listCount: enrichmentRun.status.lists.length,
+            runId: enrichmentRun.status.runId,
+            userId,
+          });
           await dispatchEnrichmentRun(enrichmentRun.status);
         }
       } catch (enrichmentError) {
@@ -3065,7 +3110,14 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
     });
 
     try {
-      const counts = await runTraktEnrichmentJob(userId, lists, includeEpisodes);
+      console.info('[TraktEnrichment] Starting queued enrichment run', {
+        includeEpisodes,
+        listCount: lists.length,
+        runId,
+        userId,
+      });
+
+      const counts = await runTraktEnrichmentJob(userId, lists, includeEpisodes, runId);
       const completedAt = Timestamp.now();
 
       await writeEnrichmentStatus(userId, runId, {
