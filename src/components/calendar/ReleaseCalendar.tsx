@@ -1,3 +1,4 @@
+import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -9,9 +10,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Bell, Calendar, CrownIcon, Film, Tv } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface ReleaseCalendarProps {
   sections: ReleaseSection[];
@@ -47,6 +48,37 @@ function limitSections(sections: ReleaseSection[], previewLimit?: number): Relea
   return limitedSections;
 }
 
+interface DateLocation {
+  rowIndex: number;
+  isTailItem: boolean;
+}
+
+interface PendingScrollTarget {
+  index: number;
+  animated: boolean;
+  viewPosition?: number;
+  useEndFallback?: boolean;
+}
+
+interface CalendarMonthHeaderRow {
+  type: 'month-header';
+  key: string;
+  title: string;
+  isFirstSection: boolean;
+}
+
+interface CalendarReleaseRow {
+  type: 'release';
+  key: string;
+  release: UpcomingRelease;
+  isLastInSection: boolean;
+}
+
+type CalendarRow = CalendarMonthHeaderRow | CalendarReleaseRow;
+
+const TAIL_ITEM_VIEW_POSITION = 1;
+const TAIL_SCROLL_FALLBACK_DELAY_MS = 80;
+
 /**
  * Vertical agenda/timeline calendar component for displaying upcoming releases.
  * Features a horizontal date strip selector and grouped section list.
@@ -63,62 +95,171 @@ export function ReleaseCalendar({
   const { t } = useTranslation();
   const router = useRouter();
   const { accentColor } = useAccentColor();
+  const { resolvePosterPath } = usePosterOverrides();
   const styles = useStyles();
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const listRef = useRef<FlashListRef<CalendarRow> | null>(null);
+  const scrollFollowUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingScrollTargetRef = useRef<PendingScrollTarget | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
 
   const visibleSections = useMemo(
     () => limitSections(sections, previewLimit),
     [sections, previewLimit]
   );
 
-  // Get all unique dates for the date strip
-  const uniqueDates = useMemo(() => {
+  const clearScrollFollowUp = useCallback(() => {
+    if (scrollFollowUpTimeoutRef.current) {
+      clearTimeout(scrollFollowUpTimeoutRef.current);
+      scrollFollowUpTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearScrollFollowUp();
+    },
+    [clearScrollFollowUp]
+  );
+
+  const { calendarRows, uniqueDates, dateLocations } = useMemo(() => {
     const dateMap = new Map<string, Date>();
-    visibleSections.forEach((section) => {
-      section.data.forEach((release) => {
+    const locationMap = new Map<string, DateLocation>();
+    const rows: CalendarRow[] = [];
+    const lastSectionIndex = visibleSections.length - 1;
+    const lastItemIndex =
+      lastSectionIndex >= 0 ? visibleSections[lastSectionIndex].data.length - 1 : -1;
+
+    visibleSections.forEach((section, sectionIndex) => {
+      rows.push({
+        type: 'month-header',
+        key: `month-header-${section.title}-${sectionIndex}`,
+        title: section.title,
+        isFirstSection: sectionIndex === 0,
+      });
+
+      section.data.forEach((release, itemIndex) => {
         const dateKey = toLocalDateKey(release.releaseDate);
+        const rowIndex = rows.length;
         if (!dateMap.has(dateKey)) {
           dateMap.set(dateKey, release.releaseDate);
+          locationMap.set(dateKey, {
+            rowIndex,
+            isTailItem: sectionIndex === lastSectionIndex && itemIndex === lastItemIndex,
+          });
         }
+
+        rows.push({
+          type: 'release',
+          key: release.uniqueKey,
+          release,
+          isLastInSection: itemIndex === section.data.length - 1,
+        });
       });
     });
-    return Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime());
+
+    return {
+      calendarRows: rows,
+      uniqueDates: Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime()),
+      dateLocations: locationMap,
+    };
   }, [visibleSections]);
 
-  // Filter sections based on selected date
-  const filteredSections = useMemo(() => {
-    if (!selectedDate) return visibleSections;
+  const buildScrollTarget = useCallback((location: DateLocation): PendingScrollTarget => {
+    if (location.isTailItem) {
+      return {
+        index: location.rowIndex,
+        animated: true,
+        viewPosition: TAIL_ITEM_VIEW_POSITION,
+        useEndFallback: true,
+      };
+    }
 
-    const selectedDateStr = toLocalDateKey(selectedDate);
-    return visibleSections
-      .map((section) => ({
-        ...section,
-        data: section.data.filter((release) => {
-          const releaseDateStr = toLocalDateKey(release.releaseDate);
-          return releaseDateStr >= selectedDateStr;
-        }),
-      }))
-      .filter((section) => section.data.length > 0);
-  }, [visibleSections, selectedDate]);
+    return {
+      index: location.rowIndex,
+      animated: true,
+    };
+  }, []);
+
+  const scheduleTailFallback = useCallback(
+    (target: PendingScrollTarget) => {
+      if (!target.useEndFallback) {
+        return;
+      }
+
+      clearScrollFollowUp();
+      scrollFollowUpTimeoutRef.current = setTimeout(() => {
+        const pendingTarget = pendingScrollTargetRef.current;
+        if (!pendingTarget || pendingTarget.index !== target.index || !pendingTarget.useEndFallback) {
+          return;
+        }
+
+        const visibleIndices = listRef.current?.computeVisibleIndices();
+        if (visibleIndices && visibleIndices.endIndex >= target.index) {
+          return;
+        }
+
+        void listRef.current?.scrollToEnd({ animated: target.animated });
+      }, TAIL_SCROLL_FALLBACK_DELAY_MS);
+    },
+    [clearScrollFollowUp]
+  );
+
+  const scrollToDateLocation = useCallback(
+    async (location: DateLocation) => {
+      clearScrollFollowUp();
+
+      const params = buildScrollTarget(location);
+      pendingScrollTargetRef.current = params;
+      const list = listRef.current;
+      if (!list) {
+        return;
+      }
+
+      list.recordInteraction();
+
+      try {
+        const scrollParams =
+          params.viewPosition === undefined
+            ? { index: params.index, animated: params.animated }
+            : {
+                index: params.index,
+                animated: params.animated,
+                viewPosition: params.viewPosition,
+              };
+        await list.scrollToIndex(scrollParams);
+        scheduleTailFallback(params);
+      } catch {
+        if (params.useEndFallback) {
+          await list.scrollToEnd({ animated: params.animated });
+        }
+      }
+    },
+    [buildScrollTarget, clearScrollFollowUp, scheduleTailFallback]
+  );
 
   useEffect(() => {
-    if (!selectedDate) return;
-
-    const selectedDateKey = toLocalDateKey(selectedDate);
-    const hasSelectedDate = uniqueDates.some((date) => toLocalDateKey(date) === selectedDateKey);
-
-    if (!hasSelectedDate) {
-      setSelectedDate(null);
+    if (selectedDateKey && !dateLocations.has(selectedDateKey)) {
+      setSelectedDateKey(null);
     }
-  }, [selectedDate, uniqueDates]);
+  }, [dateLocations, selectedDateKey]);
 
-  const handleDateSelect = useCallback((date: Date) => {
-    setSelectedDate((prev) => {
-      const prevStr = prev ? toLocalDateKey(prev) : null;
-      const newStr = toLocalDateKey(date);
-      return prevStr === newStr ? null : date;
-    });
-  }, []);
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      const dateKey = toLocalDateKey(date);
+
+      if (selectedDateKey === dateKey) {
+        return;
+      }
+
+      setSelectedDateKey(dateKey);
+
+      const location = dateLocations.get(dateKey);
+      if (location) {
+        void scrollToDateLocation(location);
+      }
+    },
+    [dateLocations, scrollToDateLocation, selectedDateKey]
+  );
 
   const handleReleasePress = useCallback(
     (release: UpcomingRelease) => {
@@ -160,23 +301,37 @@ export function ReleaseCalendar({
   }, [onUpgradePress, router]);
 
   const renderItem = useCallback(
-    ({ item }: { item: UpcomingRelease }) => (
-      <ReleaseCard release={item} onPress={() => handleReleasePress(item)} />
-    ),
-    [handleReleasePress]
+    ({ item }: ListRenderItemInfo<CalendarRow>) => {
+      if (item.type === 'month-header') {
+        return (
+          <View
+            style={[
+              styles.sectionHeader,
+              !item.isFirstSection && styles.sectionHeaderWithMargin,
+            ]}
+          >
+            <Calendar size={18} color={accentColor} />
+            <Text style={styles.sectionTitle}>{item.title}</Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={!item.isLastInSection && styles.releaseRowSpacing}>
+          <ReleaseCard
+            release={item.release}
+            onPress={handleReleasePress}
+            resolvePosterPath={resolvePosterPath}
+          />
+        </View>
+      );
+    },
+    [accentColor, handleReleasePress, resolvePosterPath, styles]
   );
 
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: ReleaseSection }) => (
-      <View style={styles.sectionHeader}>
-        <Calendar size={18} color={accentColor} />
-        <Text style={styles.sectionTitle}>{section.title}</Text>
-      </View>
-    ),
-    [accentColor, styles]
-  );
+  const keyExtractor = useCallback((item: CalendarRow) => item.key, []);
+  const getItemType = useCallback((item: CalendarRow) => item.type, []);
 
-  const keyExtractor = useCallback((item: UpcomingRelease) => item.uniqueKey, []);
   const listFooter = useMemo(() => {
     if (!showUpgradeOverlay) return null;
 
@@ -216,26 +371,24 @@ export function ReleaseCalendar({
       {uniqueDates.length > 0 && (
         <DateStrip
           dates={uniqueDates}
-          selectedDate={selectedDate}
+          selectedDateKey={selectedDateKey}
           onSelectDate={handleDateSelect}
         />
       )}
 
-      {/* Section List */}
-      <SectionList<UpcomingRelease, ReleaseSection>
+      <FlashList<CalendarRow>
+        ref={listRef}
         testID="release-calendar-section-list"
         style={styles.content}
-        sections={filteredSections}
+        data={calendarRows}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
-        stickySectionHeadersEnabled
+        getItemType={getItemType}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-        SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
+        drawDistance={600}
         ListFooterComponent={listFooter}
       />
     </View>
@@ -244,14 +397,14 @@ export function ReleaseCalendar({
 
 interface DateStripProps {
   dates: Date[];
-  selectedDate: Date | null;
+  selectedDateKey: string | null;
   onSelectDate: (date: Date) => void;
 }
 
 /**
  * Horizontal scrollable date selector strip
  */
-function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
+function DateStrip({ dates, selectedDateKey, onSelectDate }: DateStripProps) {
   const { t, i18n } = useTranslation();
   const styles = useStyles();
   const today = new Date();
@@ -268,8 +421,6 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
     return `${weekday}, ${monthDay}`;
   };
 
-  const selectedStr = selectedDate ? toLocalDateKey(selectedDate) : null;
-
   return (
     <View style={styles.dateStripContainer}>
       <ScrollView
@@ -280,7 +431,7 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
       >
         {dates.map((date) => {
           const dateStr = toLocalDateKey(date);
-          const isSelected = dateStr === selectedStr;
+          const isSelected = dateStr === selectedDateKey;
           const isToday = dateStr === todayStr;
 
           return (
@@ -313,113 +464,127 @@ function DateStrip({ dates, selectedDate, onSelectDate }: DateStripProps) {
 
 interface ReleaseCardProps {
   release: UpcomingRelease;
-  onPress: () => void;
+  onPress: (release: UpcomingRelease) => void;
+  resolvePosterPath: (
+    mediaType: UpcomingRelease['mediaType'],
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
 }
 
 /**
  * Individual release card component with backdrop, countdown, and episode info
  */
-function ReleaseCard({ release, onPress }: ReleaseCardProps) {
-  const { t, i18n } = useTranslation();
-  const styles = useStyles();
-  const { resolvePosterPath } = usePosterOverrides();
-  const today = new Date();
-  const todayStr = toLocalDateKey(today);
-  const releaseDateStr = toLocalDateKey(release.releaseDate);
+const ReleaseCard = React.memo(
+  function ReleaseCard({ release, onPress, resolvePosterPath }: ReleaseCardProps) {
+    const { t, i18n } = useTranslation();
+    const styles = useStyles();
+    const today = new Date();
+    const todayStr = toLocalDateKey(today);
+    const releaseDateStr = toLocalDateKey(release.releaseDate);
+    const handlePress = useCallback(() => {
+      onPress(release);
+    }, [onPress, release]);
 
-  // Calculate days until release
-  const daysUntil = Math.ceil(
-    (release.releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
+    // Calculate days until release
+    const daysUntil = Math.ceil(
+      (release.releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
-  const getCountdownText = (): string => {
-    if (releaseDateStr === todayStr) return t('calendar.today');
-    if (daysUntil === 1) return t('calendar.tomorrow');
-    return t('calendar.inDays', { count: daysUntil });
-  };
+    const getCountdownText = (): string => {
+      if (releaseDateStr === todayStr) return t('calendar.today');
+      if (daysUntil === 1) return t('calendar.tomorrow');
+      return t('calendar.inDays', { count: daysUntil });
+    };
 
-  const posterPath = resolvePosterPath(release.mediaType, release.id, release.posterPath);
-  const imageUrl =
-    getImageUrl(release.backdropPath, TMDB_IMAGE_SIZES.backdrop.medium) ||
-    getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
+    const posterPath = resolvePosterPath(release.mediaType, release.id, release.posterPath);
+    const imageUrl =
+      getImageUrl(release.backdropPath, TMDB_IMAGE_SIZES.backdrop.medium) ||
+      getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
 
-  const isToday = releaseDateStr === todayStr;
+    const isToday = releaseDateStr === todayStr;
 
-  return (
-    <Pressable
-      style={({ pressed }) => [styles.releaseCard, pressed && styles.releaseCardPressed]}
-      onPress={onPress}
-    >
-      {/* Left: Date Column */}
-      <View style={[styles.dateColumn, isToday && styles.dateColumnToday]}>
-        <Text style={[styles.dateDay, isToday && styles.dateDayHighlight]}>
-          {release.releaseDate.getDate()}
-        </Text>
-        <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
-          {release.releaseDate
-            .toLocaleDateString(i18n.language, { month: 'short' })
-            .toLocaleUpperCase(i18n.language)}
-        </Text>
-        {isToday && (
-          <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>{t('calendar.today')}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Right: Media Info */}
-      <View style={styles.mediaInfo}>
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.backdrop}
-            contentFit="cover"
-            transition={200}
-          />
-        ) : (
-          <View style={[styles.backdrop, styles.placeholderBackdrop]}>
-            {release.mediaType === 'movie' ? (
-              <Film size={32} color={COLORS.textSecondary} />
-            ) : (
-              <Tv size={32} color={COLORS.textSecondary} />
-            )}
-          </View>
-        )}
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,1.0)']} style={styles.gradient} />
-        <View style={styles.textOverlay}>
-          <View style={styles.titleRow}>
-            <Text style={styles.releaseTitle} numberOfLines={1}>
-              {release.title}
-            </Text>
-            {release.isReminder && (
-              <View style={styles.reminderBadge}>
-                <Bell size={12} color={COLORS.warning} />
-              </View>
-            )}
-          </View>
-          {release.nextEpisode && (
-            <Text style={styles.episodeInfo}>
-              {t('calendar.seasonEpisode', {
-                season: release.nextEpisode.seasonNumber,
-                episode: release.nextEpisode.episodeNumber,
-              })}
-            </Text>
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.releaseCard, pressed && styles.releaseCardPressed]}
+        onPress={handlePress}
+      >
+        {/* Left: Date Column */}
+        <View style={[styles.dateColumn, isToday && styles.dateColumnToday]}>
+          <Text style={[styles.dateDay, isToday && styles.dateDayHighlight]}>
+            {release.releaseDate.getDate()}
+          </Text>
+          <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
+            {release.releaseDate
+              .toLocaleDateString(i18n.language, { month: 'short' })
+              .toLocaleUpperCase(i18n.language)}
+          </Text>
+          {isToday && (
+            <View style={styles.todayBadge}>
+              <Text style={styles.todayBadgeText}>{t('calendar.today')}</Text>
+            </View>
           )}
-          <View style={styles.countdownRow}>
-            <Text style={styles.countdown}>{getCountdownText()}</Text>
-            <View style={styles.mediaTypeBadge}>
+        </View>
+
+        {/* Right: Media Info */}
+        <View style={styles.mediaInfo}>
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.backdrop}
+              contentFit="cover"
+              transition={200}
+              recyclingKey={imageUrl}
+            />
+          ) : (
+            <View style={[styles.backdrop, styles.placeholderBackdrop]}>
               {release.mediaType === 'movie' ? (
-                <Film size={12} color={COLORS.white} />
+                <Film size={32} color={COLORS.textSecondary} />
               ) : (
-                <Tv size={12} color={COLORS.white} />
+                <Tv size={32} color={COLORS.textSecondary} />
               )}
+            </View>
+          )}
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,1.0)']} style={styles.gradient} />
+          <View style={styles.textOverlay}>
+            <View style={styles.titleRow}>
+              <Text style={styles.releaseTitle} numberOfLines={1}>
+                {release.title}
+              </Text>
+              {release.isReminder && (
+                <View style={styles.reminderBadge}>
+                  <Bell size={12} color={COLORS.warning} />
+                </View>
+              )}
+            </View>
+            {release.nextEpisode && (
+              <Text style={styles.episodeInfo}>
+                {t('calendar.seasonEpisode', {
+                  season: release.nextEpisode.seasonNumber,
+                  episode: release.nextEpisode.episodeNumber,
+                })}
+              </Text>
+            )}
+            <View style={styles.countdownRow}>
+              <Text style={styles.countdown}>{getCountdownText()}</Text>
+              <View style={styles.mediaTypeBadge}>
+                {release.mediaType === 'movie' ? (
+                  <Film size={12} color={COLORS.white} />
+                ) : (
+                  <Tv size={12} color={COLORS.white} />
+                )}
+              </View>
             </View>
           </View>
         </View>
-      </View>
-    </Pressable>
-  );
-}
+      </Pressable>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.release === nextProps.release &&
+    prevProps.onPress === nextProps.onPress &&
+    prevProps.resolvePosterPath === nextProps.resolvePosterPath
+);
 
 const useStyles = () =>
   useThemedStyles(({ accentColor }) => ({
@@ -507,6 +672,9 @@ const useStyles = () =>
     },
     sectionSeparator: {
       height: SPACING.m,
+    },
+    releaseRowSpacing: {
+      marginBottom: SPACING.s,
     },
     releaseCard: {
       flexDirection: 'row',
