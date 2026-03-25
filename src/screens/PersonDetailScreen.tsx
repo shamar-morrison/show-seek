@@ -20,6 +20,7 @@ import {
 import { useListMembership } from '@/src/hooks/useListMembership';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
 import { usePreferences } from '@/src/hooks/usePreferences';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { calculateTmdbAge, formatTmdbDate } from '@/src/utils/dateUtils';
@@ -105,6 +106,7 @@ export default function PersonDetailScreen() {
   const removeFavoriteMutation = useRemoveFavoritePerson();
   const isLoadingFavorite =
     isFavoritedLoading || addFavoriteMutation.isPending || removeFavoriteMutation.isPending;
+  const { isReady } = useProgressiveRender();
 
   const personQuery = useQuery({
     queryKey: ['person', personId],
@@ -176,7 +178,7 @@ export default function PersonDetailScreen() {
     }
   }, [selectedMediaItem]);
 
-  if (personQuery.isLoading) {
+  if (!isReady || personQuery.isLoading) {
     return <FullScreenLoading />;
   }
 

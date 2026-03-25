@@ -11,6 +11,7 @@ const mockPresent = jest.fn();
 const mockRequireAccount = jest.fn();
 const mockFormatTmdbDate = jest.mocked(formatTmdbDate);
 const mockCalculateTmdbAge = jest.mocked(calculateTmdbAge);
+let mockProgressiveReady = true;
 const mockAuthState = {
   user: { uid: 'user-1' } as { uid: string } | null,
   isGuest: false,
@@ -219,6 +220,10 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/useProgressiveRender', () => ({
+  useProgressiveRender: () => ({ isReady: mockProgressiveReady }),
+}));
+
 jest.mock('@/src/hooks/usePosterOverrides', () => {
   const { posterOverridesMock } = require('@/__tests__/utils/posterOverridesMock');
   return posterOverridesMock();
@@ -303,6 +308,7 @@ describe('PersonDetailScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockProgressiveReady = true;
     mockAuthState.user = { uid: 'user-1' };
     mockAuthState.isGuest = false;
     latestAddToListModalOnDismiss = null;
@@ -369,6 +375,21 @@ describe('PersonDetailScreen', () => {
     isPersonLoading = false;
 
     expect(() => rerender(<PersonDetailScreen />)).not.toThrow();
+    expect(queryByText('Known Movie')).toBeTruthy();
+  });
+
+  it('defers rendering cached content until the progressive render hook is ready', () => {
+    mockProgressiveReady = false;
+
+    const { queryByText, rerender } = render(<PersonDetailScreen />);
+
+    expect(queryByText('Test Person')).toBeNull();
+    expect(queryByText('Known Movie')).toBeNull();
+
+    mockProgressiveReady = true;
+    rerender(<PersonDetailScreen />);
+
+    expect(queryByText('Test Person')).toBeTruthy();
     expect(queryByText('Known Movie')).toBeTruthy();
   });
 
