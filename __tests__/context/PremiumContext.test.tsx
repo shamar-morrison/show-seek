@@ -556,6 +556,112 @@ describe('PremiumContext', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('ignores stale realtime firestore snapshot callbacks after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const staleUnsubscribe = jest.fn();
+    let staleSnapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
+      if (!staleSnapshotCallback) {
+        staleSnapshotCallback = onNext;
+        return staleUnsubscribe;
+      }
+
+      onNext(createSnapshot({ hasUsedTrial: false, isPremium: false }));
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockAuditedOnSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(staleUnsubscribe).toHaveBeenCalledTimes(1);
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+
+    await act(async () => {
+      staleSnapshotCallback?.(createSnapshot({ hasUsedTrial: true, isPremium: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('ignores stale realtime firestore listener errors after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const staleUnsubscribe = jest.fn();
+    let staleErrorCallback: ((error: Error) => void) | null = null;
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+    mockAuditedOnSnapshot.mockImplementation((_ref, onNext, onError) => {
+      if (!staleErrorCallback) {
+        staleErrorCallback = onError;
+        return staleUnsubscribe;
+      }
+
+      onNext(createSnapshot({ hasUsedTrial: true, isPremium: true }));
+      return jest.fn();
+    });
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockAuditedOnSnapshot).toHaveBeenCalledTimes(1);
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(staleUnsubscribe).toHaveBeenCalledTimes(1);
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      staleErrorCallback?.(new Error('stale listener failure'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+
+    consoleSpy.mockRestore();
+  });
+
   it('ignores stale foreground customer info refresh results after the auth user changes', async () => {
     const userA = {
       uid: 'user-a',

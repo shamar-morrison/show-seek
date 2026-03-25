@@ -444,9 +444,16 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     setIsFirestoreLoading(true);
 
     if (READ_OPTIMIZATION_FLAGS.enablePremiumRealtimeListener) {
+      let isActive = true;
+      const shouldApplyRealtimeResult = () => isActive && isExpectedAuthenticatedUser(userId);
+
       const unsubscribe = auditedOnSnapshot(
         doc(db, 'users', userId),
         async (snapshot) => {
+          if (!shouldApplyRealtimeResult()) {
+            return;
+          }
+
           if (!snapshot.exists()) {
             setIsPremiumFromFirestore(false);
             setHasUsedTrialFromFirestore(false);
@@ -464,12 +471,22 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           setIsFirestoreLoading(false);
 
           try {
+            if (!shouldApplyRealtimeResult()) {
+              return;
+            }
             await AsyncStorage.setItem(`isPremium_${userId}`, String(premiumStatus));
           } catch (cacheError) {
+            if (!shouldApplyRealtimeResult()) {
+              return;
+            }
             console.warn('[PremiumContext] Cache write failed:', cacheError);
           }
         },
         (error) => {
+          if (!shouldApplyRealtimeResult()) {
+            return;
+          }
+
           console.error('[PremiumContext] Premium listener error:', error);
           setIsPremiumFromFirestore(false);
           setHasUsedTrialFromFirestore(false);
@@ -482,7 +499,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
       );
 
-      return () => unsubscribe();
+      return () => {
+        isActive = false;
+        unsubscribe();
+      };
     }
 
     let isCancelled = false;

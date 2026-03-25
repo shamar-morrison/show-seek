@@ -40,7 +40,7 @@ import {
 } from '@/src/utils/readAuditCollector';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -76,16 +76,19 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 60 * 3, // 3 hours
-      refetchOnWindowFocus: false, // Reduce unnecessary refetches
-      refetchOnReconnect: false, // Prevent reconnect storms from triggering refetches
+const createAppQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 2,
+        staleTime: 1000 * 60 * 60 * 3, // 3 hours
+        refetchOnWindowFocus: false, // Reduce unnecessary refetches
+        refetchOnReconnect: false, // Prevent reconnect storms from triggering refetches
+      },
     },
-  },
-});
+  });
+
+const queryClient = createAppQueryClient();
 
 const resetClientReadState = () => {
   clearFirestoreReadAuditEvents();
@@ -164,10 +167,32 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
     const bootstrapOwnerId = authenticatedOwnerId;
 
     const bootstrap = async () => {
+      const bootstrapQueryClient = createAppQueryClient();
+
       try {
-        await hydratePersistedQueryCache(queryClient, bootstrapOwnerId);
+        const didHydratePersistedCache = await hydratePersistedQueryCache(
+          bootstrapQueryClient,
+          bootstrapOwnerId
+        );
+
+        const isCurrentBootstrap =
+          isActive &&
+          bootstrapSequenceRef.current === bootstrapSequence &&
+          ownerIdRef.current === bootstrapOwnerId;
+
+        if (!isCurrentBootstrap) {
+          return;
+        }
+
+        if (didHydratePersistedCache) {
+          hydrate(queryClient, dehydrate(bootstrapQueryClient));
+        }
       } finally {
-        if (isActive && bootstrapSequenceRef.current === bootstrapSequence) {
+        if (
+          isActive &&
+          bootstrapSequenceRef.current === bootstrapSequence &&
+          ownerIdRef.current === bootstrapOwnerId
+        ) {
           hasHydratedRef.current = true;
           persistedQuerySyncController.resume();
           setIsHydrated(true);
@@ -627,7 +652,11 @@ function RootLayoutNav() {
             await persistedQuerySyncController.pause();
             syncPaused = true;
 
-            if (READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear) {
+            const canSkipAuthTransitionCacheClear =
+              READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear &&
+              process.env.NODE_ENV !== 'production';
+
+            if (canSkipAuthTransitionCacheClear) {
               if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
                 console.log('[RootLayout] queryClient.clear() skipped by debug flag', {
                   previousUid,
@@ -649,6 +678,7 @@ function RootLayoutNav() {
             resetClientReadState();
 
             if (authTransitionCleanupSequenceRef.current === cleanupSequence) {
+              startReadAuditSession(currentUid ?? undefined);
               if (syncPaused) {
                 persistedQuerySyncController.resume();
               }
@@ -658,7 +688,7 @@ function RootLayoutNav() {
         });
     }
 
-    if (authChanged || !getReadAuditSessionReport()) {
+    if (!authChanged && !getReadAuditSessionReport()) {
       startReadAuditSession(currentUid ?? undefined);
     }
 

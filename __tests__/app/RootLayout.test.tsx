@@ -6,6 +6,10 @@ const mockReplace = jest.fn();
 const mockTrackScreen = jest.fn();
 const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 const mockQueryClientClear = jest.fn();
+const mockReactQueryDehydrate = jest.fn((queryClient?: unknown) => ({
+  dehydratedFromClientId: (queryClient as { __id?: number } | undefined)?.__id ?? null,
+}));
+const mockReactQueryHydrate = jest.fn();
 const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
 const mockHydratePersistedQueryCache = jest.fn(
   (_queryClient?: unknown, _expectedOwnerId?: string | null) => Promise.resolve(true)
@@ -25,10 +29,57 @@ const mockCreatePersistedQueryCacheSyncController = jest.fn(
     dispose: mockDisposePersistedQuerySync,
   })
 );
+const mockClearFirestoreReadAuditEvents = jest.fn();
+const mockLogFirestoreReadAuditReport = jest.fn();
+const mockResetReadBudgetForSession = jest.fn();
+const mockClearReadAuditSession = jest.fn();
+const mockLogReadAuditSessionReport = jest.fn();
+const mockStartReadAuditSession = jest.fn();
+let mockReadAuditSessionReport: Record<string, unknown> | null = null;
+let mockDebugInitGateLogs = false;
+let mockDebugEnableTimeoutEscapeHatch = false;
+let mockDebugInitTimeoutMs = 5000;
+let mockEnableStartupReminderSync = false;
+let mockDebugDisableAuthTransitionCacheClear = false;
+let mockDebugDisableAppStateAuditLogging = false;
+let nextMockQueryClientId = 0;
+const originalNodeEnv = process.env.NODE_ENV;
+
+const createMockQueryClient = () => {
+  let instance: { __id: number; clear: jest.Mock; getQueryCache: () => unknown };
+  instance = {
+    __id: ++nextMockQueryClientId,
+    clear: jest.fn(() => mockQueryClientClear(instance)),
+    getQueryCache: () => ({
+      subscribe: jest.fn(() => jest.fn()),
+    }),
+  };
+  return instance;
+};
+
+const setNodeEnv = (value: string | undefined) => {
+  Object.defineProperty(process.env, 'NODE_ENV', {
+    value,
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  });
+};
 
 const flushMicrotasks = async () => {
   await Promise.resolve();
   await Promise.resolve();
+};
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
 };
 
 const mockAuthState = {
@@ -60,13 +111,33 @@ jest.mock('react-native-gesture-handler', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
-  QueryClient: jest.fn(() => ({
-    clear: mockQueryClientClear,
-    getQueryCache: () => ({
-      subscribe: jest.fn(() => jest.fn()),
-    }),
-  })),
+  QueryClient: jest.fn(() => createMockQueryClient()),
   QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  dehydrate: (...args: unknown[]) => mockReactQueryDehydrate(...args),
+  hydrate: (...args: unknown[]) => mockReactQueryHydrate(...args),
+}));
+
+jest.mock('@/src/config/readOptimization', () => ({
+  READ_OPTIMIZATION_FLAGS: {
+    get debugInitGateLogs() {
+      return mockDebugInitGateLogs;
+    },
+    get debugEnableTimeoutEscapeHatch() {
+      return mockDebugEnableTimeoutEscapeHatch;
+    },
+    get debugInitTimeoutMs() {
+      return mockDebugInitTimeoutMs;
+    },
+    get enableStartupReminderSync() {
+      return mockEnableStartupReminderSync;
+    },
+    get debugDisableAuthTransitionCacheClear() {
+      return mockDebugDisableAuthTransitionCacheClear;
+    },
+    get debugDisableAppStateAuditLogging() {
+      return mockDebugDisableAppStateAuditLogging;
+    },
+  },
 }));
 
 jest.mock('expo-router', () => {
@@ -137,6 +208,15 @@ jest.mock('@/src/services/analytics', () => ({
   trackScreen: (...args: unknown[]) => mockTrackScreen(...args),
 }));
 
+jest.mock('@/src/services/firestoreReadAudit', () => ({
+  clearFirestoreReadAuditEvents: () => mockClearFirestoreReadAuditEvents(),
+  logFirestoreReadAuditReport: (...args: unknown[]) => mockLogFirestoreReadAuditReport(...args),
+}));
+
+jest.mock('@/src/services/ReadBudgetGuard', () => ({
+  resetReadBudgetForSession: () => mockResetReadBudgetForSession(),
+}));
+
 jest.mock('@/src/services/revenueCat', () => ({
   configureRevenueCat: jest.fn(() => Promise.resolve(false)),
 }));
@@ -153,6 +233,13 @@ jest.mock('@/src/services/queryCachePersistence', () => ({
 
 jest.mock('@/src/i18n', () => ({
   t: jest.fn(() => 'Notifications'),
+}));
+
+jest.mock('@/src/utils/readAuditCollector', () => ({
+  clearReadAuditSession: () => mockClearReadAuditSession(),
+  getReadAuditSessionReport: () => mockReadAuditSessionReport,
+  logReadAuditSessionReport: (...args: unknown[]) => mockLogReadAuditSessionReport(...args),
+  startReadAuditSession: (...args: unknown[]) => mockStartReadAuditSession(...args),
 }));
 
 import RootLayout from '@/app/_layout';
@@ -172,12 +259,20 @@ afterAll(() => {
 describe('RootLayout routing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    setNodeEnv(originalNodeEnv);
     mockSegments = ['(tabs)', 'home'];
     mockAuthState.user = null;
     mockAuthState.loading = false;
     mockAuthState.hasCompletedOnboarding = true;
     mockPreferencesState.preferences = { defaultLaunchScreen: '/(tabs)/home' };
     mockPreferencesState.isLoading = false;
+    mockReadAuditSessionReport = null;
+    mockDebugInitGateLogs = false;
+    mockDebugEnableTimeoutEscapeHatch = false;
+    mockDebugInitTimeoutMs = 5000;
+    mockEnableStartupReminderSync = false;
+    mockDebugDisableAuthTransitionCacheClear = false;
+    mockDebugDisableAppStateAuditLogging = false;
     mockClearPersistedQueryCache.mockResolvedValue(undefined);
     mockHydratePersistedQueryCache.mockResolvedValue(true);
     mockPausePersistedQuerySync.mockResolvedValue(undefined);
@@ -187,6 +282,10 @@ describe('RootLayout routing', () => {
       resume: mockResumePersistedQuerySync,
       dispose: mockDisposePersistedQuerySync,
     });
+  });
+
+  afterEach(() => {
+    setNodeEnv(originalNodeEnv);
   });
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
@@ -266,6 +365,74 @@ describe('RootLayout routing', () => {
     await waitFor(() => {
       expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('drops stale bootstrap hydration results when auth changes before hydration finishes', async () => {
+    const userAHydration = createDeferred<boolean>();
+    const userBHydration = createDeferred<boolean>();
+    mockAuthState.user = { uid: 'user-a', isAnonymous: false };
+    mockReadAuditSessionReport = { sessionId: 'existing-session' };
+    mockHydratePersistedQueryCache.mockImplementation((_queryClient, expectedOwnerId) => {
+      if (expectedOwnerId === 'user-a') {
+        return userAHydration.promise;
+      }
+
+      if (expectedOwnerId === 'user-b') {
+        return userBHydration.promise;
+      }
+
+      return Promise.resolve(false);
+    });
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockHydratePersistedQueryCache).toHaveBeenCalledWith(expect.anything(), 'user-a');
+    });
+
+    const bootstrapClientA = mockHydratePersistedQueryCache.mock.calls[0]?.[0] as { __id: number };
+    const sharedQueryClient = mockCreatePersistedQueryCacheSyncController.mock.calls[0]?.[0] as {
+      __id: number;
+    };
+
+    mockAuthState.user = { uid: 'user-b', isAnonymous: false };
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockHydratePersistedQueryCache).toHaveBeenCalledWith(expect.anything(), 'user-b');
+    });
+
+    const bootstrapClientB = mockHydratePersistedQueryCache.mock.calls[1]?.[0] as { __id: number };
+
+    expect(bootstrapClientA).toBeDefined();
+    expect(bootstrapClientB).toBeDefined();
+    expect(bootstrapClientB).not.toBe(bootstrapClientA);
+    expect(bootstrapClientA).not.toBe(sharedQueryClient);
+    expect(bootstrapClientB).not.toBe(sharedQueryClient);
+
+    mockReactQueryDehydrate.mockClear();
+    mockReactQueryHydrate.mockClear();
+    mockResumePersistedQuerySync.mockClear();
+
+    await act(async () => {
+      userAHydration.resolve(true);
+      await flushMicrotasks();
+    });
+
+    expect(mockReactQueryDehydrate).not.toHaveBeenCalled();
+    expect(mockReactQueryHydrate).not.toHaveBeenCalled();
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      userBHydration.resolve(true);
+      await flushMicrotasks();
+    });
+
+    expect(mockReactQueryDehydrate).toHaveBeenCalledWith(bootstrapClientB);
+    expect(mockReactQueryHydrate).toHaveBeenCalledWith(sharedQueryClient, {
+      dehydratedFromClientId: bootstrapClientB.__id,
+    });
+    expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
   });
 
   it('tracks a settled screen only once across rerenders', async () => {
@@ -354,6 +521,92 @@ describe('RootLayout routing', () => {
 
     await waitFor(() => {
       expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('starts a new read-audit session only after auth transition cleanup resets client state', async () => {
+    const clearDeferred = createDeferred<void>();
+    mockAuthState.user = { uid: 'user-1' };
+    mockReadAuditSessionReport = { sessionId: 'existing-session' };
+    mockClearPersistedQueryCache.mockImplementationOnce(() => clearDeferred.promise);
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockStartReadAuditSession.mockClear();
+    mockClearFirestoreReadAuditEvents.mockClear();
+    mockClearReadAuditSession.mockClear();
+    mockResetReadBudgetForSession.mockClear();
+    mockResumePersistedQuerySync.mockClear();
+
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockStartReadAuditSession).not.toHaveBeenCalled();
+
+    await act(async () => {
+      clearDeferred.resolve(undefined);
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockStartReadAuditSession).toHaveBeenCalledWith(undefined);
+    });
+
+    expect(mockClearFirestoreReadAuditEvents).toHaveBeenCalledTimes(1);
+    expect(mockClearReadAuditSession).toHaveBeenCalledTimes(1);
+    expect(mockResetReadBudgetForSession).toHaveBeenCalledTimes(1);
+    expect(mockStartReadAuditSession.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockClearFirestoreReadAuditEvents.mock.invocationCallOrder[0] ?? 0
+    );
+    expect(mockStartReadAuditSession.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockClearReadAuditSession.mock.invocationCallOrder[0] ?? 0
+    );
+    expect(mockStartReadAuditSession.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockResetReadBudgetForSession.mock.invocationCallOrder[0] ?? 0
+    );
+    expect(mockResumePersistedQuerySync.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockStartReadAuditSession.mock.invocationCallOrder[0] ?? 0
+    );
+  });
+
+  it('starts a read-audit session during non-transition renders when no session exists', async () => {
+    mockAuthState.user = null;
+    mockReadAuditSessionReport = null;
+
+    render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockStartReadAuditSession).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  it('still clears the shared query client in production when the debug bypass flag is enabled', async () => {
+    mockAuthState.user = { uid: 'user-1' };
+    mockReadAuditSessionReport = { sessionId: 'existing-session' };
+    mockDebugDisableAuthTransitionCacheClear = true;
+    setNodeEnv('production');
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockQueryClientClear.mockClear();
+
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockQueryClientClear).toHaveBeenCalledTimes(1);
     });
   });
 
