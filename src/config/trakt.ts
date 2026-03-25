@@ -28,9 +28,9 @@ export const TRAKT_CONFIG = {
   /**
    * Minimum time (in milliseconds) between automatic syncs
    * Prevents rapid syncing when user opens/closes app quickly
-   * Default: 1 hour (3600000ms)
+   * Default: 24 hours (86400000ms)
    */
-  AUTO_SYNC_COOLDOWN_MS: 60 * 60 * 1000, // 1 hour
+  AUTO_SYNC_COOLDOWN_MS: 24 * 60 * 60 * 1000, // 24 hours
 
   /**
    * Polling interval for checking sync status (in milliseconds)

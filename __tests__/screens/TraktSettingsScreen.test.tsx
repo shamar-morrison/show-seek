@@ -1,5 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockRouterBack = jest.fn();
 const mockRouterPush = jest.fn();
@@ -11,8 +12,8 @@ const mockTraktState = {
   isEnriching: false,
   isLoading: false,
   isSyncing: false,
-  lastEnrichedAt: null,
-  lastSyncedAt: null,
+  lastEnrichedAt: null as Date | null,
+  lastSyncedAt: null as Date | null,
   syncNow: jest.fn(),
   syncStatus: null as
     | {
@@ -80,6 +81,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 import TraktSettingsScreen from '@/src/screens/TraktSettingsScreen';
+import { TraktRequestError } from '@/src/services/TraktService';
 
 describe('TraktSettingsScreen', () => {
   beforeEach(() => {
@@ -206,5 +208,31 @@ describe('TraktSettingsScreen', () => {
 
     expect(mockRouterPush).not.toHaveBeenCalled();
     expect(mockTraktState.connectTrakt).not.toHaveBeenCalled();
+  });
+
+  it('shows the enrichment cooldown alert with retry timing from the backend error', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.enrichData.mockRejectedValueOnce(
+      new TraktRequestError('Please wait before running TMDB enrichment again.', {
+        category: 'rate_limited',
+        nextAllowedEnrichAt: new Date(Date.now() + 60_000).toISOString(),
+      })
+    );
+
+    const { getByText } = render(<TraktSettingsScreen />);
+
+    fireEvent.press(getByText('Enrich Now'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Please wait before running TMDB enrichment again.',
+        expect.stringContaining('You can try again')
+      );
+    });
+
+    alertSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 });

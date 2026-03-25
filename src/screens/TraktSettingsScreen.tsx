@@ -99,10 +99,40 @@ export default function TraktSettingsScreen() {
     }
   }, [i18n.language]);
 
-  const getPreferredMessage = (translationKey: string, fallback?: string) => {
-    const translated = t(translationKey);
-    return translated !== translationKey ? translated : (fallback ?? translated);
-  };
+  const getPreferredMessage = useCallback(
+    (translationKey: string, fallback?: string) => {
+      const translated = t(translationKey);
+      return translated !== translationKey ? translated : (fallback ?? translated);
+    },
+    [t]
+  );
+
+  const formatRetryTimeMessage = useCallback(
+    (nextAllowedAt?: string) => {
+      if (!nextAllowedAt) {
+        return undefined;
+      }
+
+      return t('trakt.rateLimitedRetryAt', {
+        time: formatDistanceToNow(new Date(nextAllowedAt), {
+          addSuffix: true,
+          locale: distanceLocale,
+        }),
+      });
+    },
+    [distanceLocale, t]
+  );
+
+  const showRateLimitAlert = useCallback(
+    (title: string, primaryMessage?: string, nextAllowedAt?: string) => {
+      const alertMessage = [primaryMessage, formatRetryTimeMessage(nextAllowedAt)]
+        .filter((message): message is string => Boolean(message))
+        .join('\n\n');
+
+      Alert.alert(title, alertMessage || undefined);
+    },
+    [formatRetryTimeMessage]
+  );
 
   const handleConnect = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -138,13 +168,17 @@ export default function TraktSettingsScreen() {
     } catch (error) {
       console.error('Failed to sync:', error);
       if (error instanceof TraktRequestError && error.category === 'rate_limited') {
-        Alert.alert(t('trakt.rateLimitedTitle'), getPreferredMessage('trakt.rateLimitedMessage', error.message));
+        showRateLimitAlert(
+          t('trakt.rateLimitedTitle'),
+          getPreferredMessage('trakt.rateLimitedMessage', error.message),
+          error.nextAllowedSyncAt
+        );
         return;
       }
 
       Alert.alert(t('trakt.syncFailedTitle'), t('trakt.syncFailedMessage'));
     }
-  }, [syncNow, t]);
+  }, [getPreferredMessage, showRateLimitAlert, syncNow, t]);
 
   const handleDisconnect = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -176,13 +210,17 @@ export default function TraktSettingsScreen() {
       console.error('Failed to enrich:', error);
 
       if (error instanceof TraktRequestError && error.category === 'rate_limited') {
-        Alert.alert(t('trakt.rateLimitedTitle'), getPreferredMessage('trakt.rateLimitedMessage', error.message));
+        showRateLimitAlert(
+          error.message || t('trakt.enrichmentFailedTitle'),
+          undefined,
+          error.nextAllowedEnrichAt
+        );
         return;
       }
 
       Alert.alert(t('trakt.enrichmentFailedTitle'), t('trakt.enrichmentFailedMessage'));
     }
-  }, [enrichData, t]);
+  }, [enrichData, showRateLimitAlert, t]);
 
   if (isLoading) {
     return (

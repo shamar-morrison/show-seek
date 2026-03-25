@@ -107,6 +107,8 @@ const emptyItemsSynced = () => ({
   watchlistItems: 0,
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const assertNoUndefined = (value: unknown, path = 'root'): void => {
   if (value === undefined) {
     throw new Error(`Undefined Firestore value at ${path}`);
@@ -303,7 +305,7 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   it('keeps the manual cooldown after a successful sync until the next allowed time', async () => {
-    const futureCooldown = MockTimestamp.fromMillis(Date.now() + 60_000);
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
     const transactionGet = jest.fn().mockResolvedValue({
       data: () => ({
         traktAccessToken: 'token',
@@ -372,6 +374,152 @@ describe('Trakt sync Firestore sanitization', () => {
         nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
       })
     );
+  });
+
+  it('writes a 24-hour cooldown after a successful sync completes', async () => {
+    const frozenNow = Date.UTC(2026, 2, 25, 12, 0, 0);
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozenNow);
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id = 'enrich-1') => ({
+              id,
+              path: `users/user-1/traktEnrichmentRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(frozenNow + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn().mockResolvedValue({
+        kind: 'active',
+        status: {
+          runId: 'enrich-1',
+          status: 'in_progress',
+        },
+        userData: {
+          traktEnrichmentStatus: {
+            runId: 'enrich-1',
+            status: 'in_progress',
+          },
+        },
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: any) => {
+      const url = String(input);
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (
+        url.endsWith('/sync/watched/movies') ||
+        url.endsWith('/sync/watched/shows?extended=full') ||
+        url.endsWith('/sync/ratings') ||
+        url.endsWith('/sync/watchlist') ||
+        url.endsWith('/sync/favorites') ||
+        url.endsWith('/users/tester/lists')
+      ) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    try {
+      await expect(
+        (runTraktSync as any)({
+          data: { runId: 'run-1', userId: 'user-1' },
+          retryCount: 0,
+          retryReason: undefined,
+        })
+      ).resolves.toBeUndefined();
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+
+    const completedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'completed') as
+      | { completedAt: MockTimestamp; nextAllowedSyncAt: MockTimestamp }
+      | undefined;
+
+    expect(completedWrite).toBeDefined();
+    expect(completedWrite?.completedAt.toMillis()).toBe(frozenNow);
+    expect(completedWrite?.nextAllowedSyncAt.toMillis()).toBe(frozenNow + DAY_MS);
   });
 
   it('sanitizes failed worker status writes when optional diagnostics are absent', async () => {
@@ -931,6 +1079,165 @@ describe('Trakt sync Firestore sanitization', () => {
       expect.objectContaining({
         runId: 'enrich-1',
         status: 'retrying',
+      })
+    );
+  });
+
+  it('writes a 24-hour cooldown when queueing a new enrichment run', async () => {
+    const frozenNow = Date.UTC(2026, 2, 25, 12, 0, 0);
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozenNow);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({}),
+    });
+    const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'lists') {
+          return {
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id?: string) => ({
+              id: id ?? 'enrich-1',
+              path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    try {
+      await (traktApi as any)(
+        {
+          body: { includeEpisodes: true },
+          header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+          method: 'POST',
+          path: '/enrich',
+        },
+        response
+      );
+    } finally {
+      dateNowSpy.mockRestore();
+    }
+
+    const userStatusWriteCall = transactionSet.mock.calls.find(
+      ([_ref, data]) => data && typeof data === 'object' && 'traktEnrichmentStatus' in data
+    ) as [unknown, { traktEnrichmentStatus: Record<string, MockTimestamp> }] | undefined;
+
+    expect(response.status).toHaveBeenCalledWith(202);
+    expect(userStatusWriteCall?.[1].traktEnrichmentStatus).toBeDefined();
+    expect(userStatusWriteCall?.[1].traktEnrichmentStatus.startedAt.toMillis()).toBe(frozenNow);
+    expect(userStatusWriteCall?.[1].traktEnrichmentStatus.nextAllowedEnrichAt.toMillis()).toBe(
+      frozenNow + DAY_MS
+    );
+  });
+
+  it('keeps the manual enrichment cooldown after a completed run until the next allowed time', async () => {
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktEnrichmentStatus: {
+          completedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          counts: {
+            episodes: 0,
+            items: 3,
+            lists: 1,
+          },
+          includeEpisodes: true,
+          lists: ['watchlist'],
+          maxAttempts: 5,
+          nextAllowedEnrichAt: futureCooldown,
+          runId: 'completed-enrich-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'lists') {
+          return {
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id?: string) => ({
+              id: id ?? 'enrich-1',
+              path: `users/user-1/traktEnrichmentRuns/${id ?? 'enrich-1'}`,
+            })),
+          };
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: { includeEpisodes: true },
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/enrich',
+      },
+      response
+    );
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedEnrichAt: futureCooldown.toDate().toISOString(),
       })
     );
   });
