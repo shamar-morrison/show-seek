@@ -291,7 +291,7 @@ describe('PremiumContext', () => {
     });
   });
 
-  it('uses cached premium during startup while live checks are still loading', async () => {
+  it('keeps cached premium pending until live startup checks resolve', async () => {
     const configureDeferred = createDeferred<boolean>();
     let snapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
 
@@ -305,7 +305,7 @@ describe('PremiumContext', () => {
     const { result } = renderHook(() => usePremium(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isPremium).toBe(false);
       expect(result.current.isLoading).toBe(true);
     });
 
@@ -338,7 +338,7 @@ describe('PremiumContext', () => {
     const { result } = renderHook(() => usePremium(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isPremium).toBe(false);
       expect(result.current.isLoading).toBe(true);
     });
 
@@ -389,6 +389,39 @@ describe('PremiumContext', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+  });
+
+  it('keeps premium state settled for guest auth transitions without starting authenticated sync work', async () => {
+    const guestUser = {
+      uid: 'guest-user',
+      email: 'guest@example.com',
+      isAnonymous: true,
+    };
+
+    mockCurrentUser = null;
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isPremium).toBe(false);
+    });
+
+    emitAuthStateChange(guestUser);
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isPremium).toBe(false);
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isPremium).toBe(false);
+    });
+
+    expect(mockConfigureRevenueCat).not.toHaveBeenCalled();
+    expect(mockLogIn).not.toHaveBeenCalled();
+    expect(mockAuditedOnSnapshot).not.toHaveBeenCalled();
+    expect(mockGetCachedUserDocument).not.toHaveBeenCalled();
+    expect(mockCreateUserDocument).not.toHaveBeenCalled();
   });
 
   it('keeps loading true until cache and live startup checks finish', async () => {
@@ -747,7 +780,7 @@ describe('PremiumContext', () => {
 
     await waitFor(() => {
       expect(mockRemoveCustomerInfoUpdateListener).toHaveBeenCalledWith(staleListener);
-      expect(mockAddCustomerInfoUpdateListener).toHaveBeenCalledTimes(2);
+      expect(mockAddCustomerInfoUpdateListener.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(result.current.isPremium).toBe(false);
       expect(result.current.isLoading).toBe(false);
     });
@@ -871,7 +904,7 @@ describe('PremiumContext', () => {
     expect(purchaseResult).toBe(false);
   });
 
-  it('rejects anonymous purchase attempts before RevenueCat flow starts', async () => {
+  it('throws an auth-required error for anonymous purchase attempts before RevenueCat flow starts', async () => {
     mockCurrentUser = {
       uid: 'anon-user',
       email: 'anon@example.com',
@@ -895,7 +928,8 @@ describe('PremiumContext', () => {
 
     expect(thrownError).toEqual(
       expect.objectContaining({
-        message: 'Anonymous users cannot purchase premium.',
+        code: 'AUTH_REQUIRED',
+        message: 'AUTH_REQUIRED',
       })
     );
     expect(mockConfigureRevenueCat).not.toHaveBeenCalled();

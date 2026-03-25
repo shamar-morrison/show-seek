@@ -325,4 +325,22 @@ describe('PremiumScreen', () => {
     expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
+
+  it('prompts for account instead of showing purchase alerts when purchase requires auth', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };
+    authRequiredError.code = 'AUTH_REQUIRED';
+    mockPurchasePremium.mockRejectedValueOnce(authRequiredError);
+
+    const { getByTestId } = render(<PremiumScreen />);
+
+    fireEvent.press(getByTestId('subscribe-button'));
+
+    await waitFor(() => {
+      expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
 });

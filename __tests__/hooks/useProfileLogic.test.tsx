@@ -14,6 +14,10 @@ const mockResetSession = jest.fn();
 const mockExportUserData = jest.fn();
 const mockDeleteAccount = jest.fn();
 const mockClearLocalAccountData = jest.fn();
+const mockPremiumState = {
+  isPremium: true,
+  isLoading: false,
+};
 
 jest.mock('@/src/context/auth', () => ({
   useAuth: () => ({
@@ -24,9 +28,7 @@ jest.mock('@/src/context/auth', () => ({
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
-  usePremium: () => ({
-    isPremium: true,
-  }),
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('@/src/services/DataExportService', () => ({
@@ -94,6 +96,8 @@ const confirmDeleteAccount = async (handleDeleteAccount: () => void) => {
 describe('useProfileLogic', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPremiumState.isPremium = true;
+    mockPremiumState.isLoading = false;
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -129,6 +133,21 @@ describe('useProfileLogic', () => {
       'profile.exportFailedTitle',
       'profile.exportFailedFallbackMessage'
     );
+  });
+
+  it('does not route to premium or export data while premium status is still loading', () => {
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = true;
+
+    const { result } = renderHook(() => useProfileLogic());
+
+    act(() => {
+      result.current.handleExportData();
+    });
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockExportUserData).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it('runs account deletion, local cleanup, and routes to sign-in after double confirmation', async () => {

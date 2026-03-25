@@ -21,7 +21,7 @@ const PLAY_STORE_URL = `market://details?id=${PACKAGE_ID}`;
 export function useProfileLogic() {
   const { t } = useTranslation();
   const { user, resetSession, signOut } = useAuth();
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
 
   const [isExporting, setIsExporting] = useState(false);
@@ -90,6 +90,10 @@ export function useProfileLogic() {
   const handleExportData = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
+    if (isPremiumLoading) {
+      return;
+    }
+
     if (!isPremium) {
       router.push('/premium');
       return;
@@ -109,7 +113,7 @@ export function useProfileLogic() {
         onPress: () => performExport('markdown'),
       },
     ]);
-  }, [isPremium, router, performExport, t]);
+  }, [isPremium, isPremiumLoading, router, performExport, t]);
 
   const handleImdbImport = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

@@ -3,12 +3,17 @@ import HomeScreenCustomizationModal, {
 } from '@/src/components/HomeScreenCustomizationModal';
 import { HomeScreenListItem } from '@/src/types/preferences';
 import { normalizeHomeScreenSelections } from '@/src/utils/homeScreenSelections';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import React, { createRef } from 'react';
 
 const mockSheetDismiss = jest.fn(async () => {});
 const mockSheetPresent = jest.fn(async () => {});
 const mockMutateAsync = jest.fn(async () => {});
+const mockPush = jest.fn();
+const mockPremiumState = {
+  isPremium: true,
+  isLoading: false,
+};
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -80,7 +85,7 @@ jest.mock('expo-haptics', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
-    push: jest.fn(),
+    push: mockPush,
   }),
 }));
 
@@ -95,9 +100,7 @@ jest.mock('@/src/context/auth', () => ({
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
-  usePremium: () => ({
-    isPremium: true,
-  }),
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('@/src/hooks/usePreferences', () => ({
@@ -120,6 +123,8 @@ describe('HomeScreenCustomizationModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockMutateAsync.mockResolvedValue(undefined);
+    mockPremiumState.isPremium = true;
+    mockPremiumState.isLoading = false;
   });
 
   it('uses resolved selections so stale deleted custom lists are not counted or rendered', async () => {
@@ -147,5 +152,28 @@ describe('HomeScreenCustomizationModal', () => {
     expect(getByTestId('home-customization-row-kept-list').props.accessibilityState.checked).toBe(
       true
     );
+  });
+
+  it('does not dismiss or route to premium while trailer access is still verifying', async () => {
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = true;
+
+    const ref = createRef<HomeScreenCustomizationModalRef>();
+    const { getByTestId } = render(
+      <HomeScreenCustomizationModal
+        ref={ref}
+        resolvedHomeScreenLists={[]}
+        customLists={[]}
+      />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.press(getByTestId('home-customization-row-latest-trailers'));
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockSheetDismiss).not.toHaveBeenCalled();
   });
 });

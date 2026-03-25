@@ -69,7 +69,7 @@ export const useCollectionTracking = (collectionId: number) => {
  * Hook to check if user can track more collections (premium limit check)
  */
 export const useCanTrackMoreCollections = () => {
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const currentUser = auth.currentUser;
   const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
@@ -87,6 +87,7 @@ export const useCanTrackMoreCollections = () => {
     count,
     canTrackMore,
     isLoading: query.isLoading,
+    isPremiumLoading,
     maxFreeCollections: MAX_FREE_COLLECTIONS,
   };
 };

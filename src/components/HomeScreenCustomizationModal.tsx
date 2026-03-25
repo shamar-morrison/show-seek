@@ -92,7 +92,7 @@ const HomeScreenCustomizationModal = forwardRef<
   const { width } = useWindowDimensions();
   const updateMutation = useUpdateHomeScreenLists();
   const { user } = useAuth();
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -123,6 +123,10 @@ const HomeScreenCustomizationModal = forwardRef<
   const handleToggle = useCallback(
     (item: HomeScreenListItem) => {
       // Check if this is a premium-locked item
+      if (item.id === 'latest-trailers' && isPremiumLoading) {
+        return;
+      }
+
       if (item.id === 'latest-trailers' && !canAccessTrailers) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         sheetRef.current?.dismiss();
@@ -153,7 +157,7 @@ const HomeScreenCustomizationModal = forwardRef<
         }
       });
     },
-    [canAccessTrailers, router]
+    [canAccessTrailers, isPremiumLoading, router, t]
   );
 
   const handleApply = async () => {
@@ -215,7 +219,9 @@ const HomeScreenCustomizationModal = forwardRef<
               type="tmdb"
               isSelected={isSelected(list.id)}
               onToggle={handleToggle}
-              isPremiumLocked={list.id === 'latest-trailers' && !canAccessTrailers}
+              isPremiumLocked={
+                list.id === 'latest-trailers' && !isPremiumLoading && !canAccessTrailers
+              }
             />
           ))}
 

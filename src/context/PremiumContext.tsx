@@ -1,7 +1,6 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import {
   createPremiumAuthRequiredError,
-  getProductIdForPlan,
   SUBSCRIPTION_PRODUCT_IDS,
   type PremiumPlan,
 } from '@/src/context/premiumBilling';
@@ -84,6 +83,9 @@ const normalizeStoreProductId = (productId?: string | null): string =>
     .split(':')[0]
     .trim();
 
+const resolveAuthenticatedUserKey = (user: User | null): string | null =>
+  user != null && !user.isAnonymous ? user.uid : null;
+
 const findPackageByProductId = (
   packages: PurchasesPackage[],
   expectedProductId: string
@@ -142,15 +144,23 @@ const resolvePackagesByPlan = (
 };
 
 export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() => {
+  const initialUser = auth.currentUser;
+  const initialAuthenticatedUserKey = resolveAuthenticatedUserKey(initialUser);
   const [isPremiumFromRevenueCat, setIsPremiumFromRevenueCat] = useState(false);
   const [hasUsedTrialFromRevenueCat, setHasUsedTrialFromRevenueCat] = useState(false);
-  const [isRevenueCatLoading, setIsRevenueCatLoading] = useState(Platform.OS === 'android');
+  const [isRevenueCatLoading, setIsRevenueCatLoading] = useState(
+    Platform.OS === 'android' && initialAuthenticatedUserKey != null
+  );
 
   const [isPremiumFromFirestore, setIsPremiumFromFirestore] = useState(false);
   const [hasUsedTrialFromFirestore, setHasUsedTrialFromFirestore] = useState(false);
-  const [isFirestoreLoading, setIsFirestoreLoading] = useState(true);
+  const [isFirestoreLoading, setIsFirestoreLoading] = useState(
+    initialAuthenticatedUserKey != null
+  );
   const [cachedPremiumStatus, setCachedPremiumStatus] = useState<boolean | null>(null);
-  const [isCachedPremiumLoading, setIsCachedPremiumLoading] = useState(false);
+  const [isCachedPremiumLoading, setIsCachedPremiumLoading] = useState(
+    initialAuthenticatedUserKey != null
+  );
 
   const [prices, setPrices] = useState<PremiumPrices>({
     ...EMPTY_PRICES,
@@ -159,12 +169,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     Record<PremiumPlan, PurchasesPackage | null>
   >(EMPTY_PACKAGES_BY_PLAN);
 
-  const [user, setUser] = useState<User | null>(auth.currentUser);
-  const latestUserRef = useRef<User | null>(auth.currentUser);
-
-  useEffect(() => {
-    latestUserRef.current = user;
-  }, [user]);
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [premiumStateUserKey, setPremiumStateUserKey] = useState<string | null>(
+    initialAuthenticatedUserKey
+  );
+  const latestUserRef = useRef<User | null>(initialUser);
 
   const isExpectedAuthenticatedUser = useCallback((expectedUserId: string): boolean => {
     const liveUser = latestUserRef.current;
@@ -172,7 +181,8 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   }, []);
 
   const resetPremiumStateForUser = useCallback((nextUser: User | null) => {
-    const isAuthenticatedUser = nextUser != null && !nextUser.isAnonymous;
+    const nextAuthenticatedUserKey = resolveAuthenticatedUserKey(nextUser);
+    const isAuthenticatedUser = nextAuthenticatedUserKey != null;
 
     setIsPremiumFromRevenueCat(false);
     setHasUsedTrialFromRevenueCat(false);
@@ -184,6 +194,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     setIsCachedPremiumLoading(isAuthenticatedUser);
     setPrices(EMPTY_PRICES);
     setPackagesByPlan(EMPTY_PACKAGES_BY_PLAN);
+    setPremiumStateUserKey(nextAuthenticatedUserKey);
   }, []);
 
   const applyCustomerInfo = useCallback(async (customerInfo: CustomerInfo, userId?: string) => {
@@ -192,6 +203,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
     setIsPremiumFromRevenueCat(isPremium);
     setHasUsedTrialFromRevenueCat(hasTrialHistory);
+    setCachedPremiumStatus(isPremium);
 
     if (userId) {
       try {
@@ -308,13 +320,12 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (newUser) => {
-      resetPremiumStateForUser(newUser);
       latestUserRef.current = newUser;
       setUser(newUser);
     });
 
     return () => unsubscribe();
-  }, [resetPremiumStateForUser]);
+  }, []);
 
   useEffect(() => {
     if (!user || user.isAnonymous) {
@@ -457,6 +468,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           if (!snapshot.exists()) {
             setIsPremiumFromFirestore(false);
             setHasUsedTrialFromFirestore(false);
+            setCachedPremiumStatus(false);
             setIsFirestoreLoading(false);
             return;
           }
@@ -468,6 +480,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
           setIsPremiumFromFirestore(premiumStatus);
           setHasUsedTrialFromFirestore(hasTrialHistory);
+          setCachedPremiumStatus(premiumStatus);
           setIsFirestoreLoading(false);
 
           try {
@@ -532,6 +545,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
         }
 
         if (!userData) {
+          setCachedPremiumStatus(false);
           setIsFirestoreLoading(false);
           return;
         }
@@ -542,6 +556,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
         setIsPremiumFromFirestore(premiumStatus);
         setHasUsedTrialFromFirestore(hasTrialHistory);
+        setCachedPremiumStatus(premiumStatus);
         setIsFirestoreLoading(false);
 
         try {
@@ -579,11 +594,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       }
 
       if (!user) {
-        throw new Error('User must be signed in to purchase premium.');
+        throw createPremiumAuthRequiredError();
       }
 
       if (user.isAnonymous) {
-        throw new Error('Anonymous users cannot purchase premium.');
+        throw createPremiumAuthRequiredError();
       }
 
       try {
@@ -592,7 +607,6 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           throw new Error('RevenueCat SDK key is missing.');
         }
 
-        const requestedProductId = getProductIdForPlan(plan);
         let selectedPackage = packagesByPlan[plan];
         if (!selectedPackage) {
           const refreshedPackagesByPlan = await refreshOfferings('purchasePremium:fallback');
@@ -651,13 +665,14 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     }
   }, [applyCustomerInfo, user]);
 
+  const authenticatedUserKey = resolveAuthenticatedUserKey(user);
+  const isPremiumStateAligned = premiumStateUserKey === authenticatedUserKey;
   const livePremium = isPremiumFromRevenueCat || isPremiumFromFirestore;
+  const baseLoading = isRevenueCatLoading || isFirestoreLoading || isCachedPremiumLoading;
+  const isLoading = !isPremiumStateAligned || baseLoading;
   const isPremium =
-    livePremium ||
-    (cachedPremiumStatus === true &&
-      (isRevenueCatLoading || isFirestoreLoading || isCachedPremiumLoading));
+    isPremiumStateAligned && (livePremium || (cachedPremiumStatus === true && !baseLoading));
   const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
-  const isLoading = isRevenueCatLoading || isFirestoreLoading || isCachedPremiumLoading;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
     const monthlyPackage = packagesByPlan.monthly;

@@ -44,7 +44,7 @@ export default function OnboardingContainer() {
   const { user, completePersonalOnboarding } = useAuth();
   const { setRegion } = useRegion();
   const { setAccentColor } = useAccentColor();
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const queryClient = useQueryClient();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -212,10 +212,15 @@ export default function OnboardingContainer() {
   }, [currentStep?.id, selections]);
 
   React.useEffect(() => {
-    if (!isPersonalizing && currentStep?.id === 'premium-paywall' && isPremium) {
+    if (
+      !isPersonalizing &&
+      !isPremiumLoading &&
+      currentStep?.id === 'premium-paywall' &&
+      isPremium
+    ) {
       setIsPersonalizing(true);
     }
-  }, [currentStep?.id, isPersonalizing, isPremium]);
+  }, [currentStep?.id, isPersonalizing, isPremium, isPremiumLoading]);
 
   if (showWelcome) {
     return <WelcomeIntroScreen onComplete={() => setShowWelcome(false)} />;

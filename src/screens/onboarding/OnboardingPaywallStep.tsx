@@ -55,6 +55,11 @@ export default function OnboardingPaywallStep({
     try {
       await purchasePremium(selectedPlan);
     } catch (error: any) {
+      if (isPremiumAuthRequiredError(error)) {
+        requireAccount();
+        return;
+      }
+
       const code = String(error?.code || '').toLowerCase();
       const message = String(error?.message || '').toLowerCase();
       const isUserCanceled =

@@ -197,4 +197,26 @@ describe('OnboardingPaywallStep', () => {
     expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
+
+  it('prompts for account instead of showing purchase alerts when purchase requires auth', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    const authRequiredError = new Error('AUTH_REQUIRED') as Error & { code: string };
+    authRequiredError.code = 'AUTH_REQUIRED';
+    mockPurchasePremium.mockRejectedValueOnce(authRequiredError);
+
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    fireEvent.press(getByTestId('onboarding-subscribe-button'));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockRequireAccount).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
 });
