@@ -215,4 +215,17 @@ describe('ReleaseCalendar', () => {
       params: { id: 303 },
     });
   });
+
+  it('passes pull-to-refresh props through to the section list', () => {
+    const onRefresh = jest.fn();
+    const sections = createSections();
+
+    const { getByTestId } = renderWithProviders(
+      <ReleaseCalendar sections={sections} refreshing={true} onRefresh={onRefresh} />
+    );
+    const sectionList = getByTestId('release-calendar-section-list');
+
+    expect(sectionList.props.refreshing).toBe(true);
+    expect(sectionList.props.onRefresh).toBe(onRefresh);
+  });
 });

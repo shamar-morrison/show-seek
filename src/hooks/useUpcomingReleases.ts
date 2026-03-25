@@ -7,8 +7,8 @@ import { Reminder } from '@/src/types/reminder';
 import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { getRegionalReleaseDate } from '@/src/utils/mediaUtils';
 import { createRateLimitedQueryFn } from '@/src/utils/rateLimitedQuery';
-import { useQueries } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 import { useLists } from './useLists';
 import { useReminders } from './useReminders';
 
@@ -49,13 +49,14 @@ export interface UseUpcomingReleasesResult {
   allReleases: UpcomingRelease[];
   isLoading: boolean;
   isLoadingEnrichment: boolean;
+  isRefreshing: boolean;
+  refresh: () => Promise<void>;
   error: Error | null;
 }
 
-// Stale time for details enrichment (30 minutes)
-const DETAILS_STALE_TIME = 1000 * 60 * 30;
-// Stale time for season details (15 minutes - shorter to catch new episodes)
-const SEASON_DETAILS_STALE_TIME = 1000 * 60 * 15;
+// Keep calendar enrichment fresh for 30 minutes and retained for 60 minutes
+const CALENDAR_ENRICHMENT_STALE_TIME = 1000 * 60 * 30;
+const CALENDAR_ENRICHMENT_GC_TIME = 1000 * 60 * 60;
 // Maximum episodes to show per show
 const MAX_EPISODES_PER_SHOW = 5;
 
@@ -142,6 +143,14 @@ interface SeasonFetchRequest {
   sourceLists: string[];
 }
 
+function isCalendarEnrichmentQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    (((queryKey[0] === 'tv' || queryKey[0] === 'movie') &&
+      queryKey[2] === 'calendar-enrichment') ||
+      (queryKey[0] === 'tv' && queryKey[2] === 'season' && queryKey[4] === 'calendar'))
+  );
+}
+
 /**
  * Hook that provides upcoming releases from user's tracked content
  * (Watchlist, Favorites, Watching, and Reminders) for the Release Calendar.
@@ -154,10 +163,13 @@ interface SeasonFetchRequest {
 export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const { user } = useAuth();
   const { region } = useRegion();
+  const queryClient = useQueryClient();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { data: lists, isLoading: isLoadingLists } = useLists();
   const { data: reminders, isLoading: isLoadingReminders } = useReminders();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!userId;
 
   // Extract items from watchlist, favorites, and watching lists
   const listItems = useMemo(() => {
@@ -187,7 +199,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     queries: tvShowIds.map((id) => ({
       queryKey: ['tv', id, 'calendar-enrichment'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getTVShowDetails(id)),
-      staleTime: DETAILS_STALE_TIME,
+      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
+      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
       enabled: isAuthenticated && tvShowIds.length > 0,
     })),
   });
@@ -197,7 +210,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     queries: movieIds.map((id) => ({
       queryKey: ['movie', id, 'calendar-enrichment'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getMovieDetails(id)),
-      staleTime: DETAILS_STALE_TIME,
+      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
+      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
       enabled: isAuthenticated && movieIds.length > 0,
     })),
   });
@@ -262,7 +276,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     queries: seasonFetchRequests.map(({ showId, seasonNumber }) => ({
       queryKey: ['tv', showId, 'season', seasonNumber, 'calendar'],
       queryFn: createRateLimitedQueryFn(() => tmdbApi.getSeasonDetails(showId, seasonNumber)),
-      staleTime: SEASON_DETAILS_STALE_TIME,
+      staleTime: CALENDAR_ENRICHMENT_STALE_TIME,
+      gcTime: CALENDAR_ENRICHMENT_GC_TIME,
       enabled: isAuthenticated && seasonFetchRequests.length > 0,
     })),
   });
@@ -483,11 +498,41 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
   const seasonError = seasonQueries.find((q) => q.error)?.error as Error | null;
   const error = detailsError || movieDetailsError || seasonError;
 
+  const refresh = useCallback(async () => {
+    if (!userId || isRefreshing) {
+      return;
+    }
+
+    setIsRefreshing(true);
+
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['lists', userId],
+          refetchType: 'active',
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['reminders', userId],
+          refetchType: 'active',
+        }),
+      ]);
+
+      await queryClient.invalidateQueries({
+        predicate: (query) => isCalendarEnrichmentQueryKey(query.queryKey),
+        refetchType: 'active',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, queryClient, userId]);
+
   return {
     sections,
     allReleases,
     isLoading,
     isLoadingEnrichment,
+    isRefreshing,
+    refresh,
     error,
   };
 }

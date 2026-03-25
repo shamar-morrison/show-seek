@@ -19,6 +19,8 @@ interface ReleaseCalendarProps {
   previewLimit?: number;
   showUpgradeOverlay?: boolean;
   onUpgradePress?: () => void;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 function limitSections(sections: ReleaseSection[], previewLimit?: number): ReleaseSection[] {
@@ -55,6 +57,8 @@ export function ReleaseCalendar({
   previewLimit,
   showUpgradeOverlay = false,
   onUpgradePress,
+  refreshing = false,
+  onRefresh,
 }: ReleaseCalendarProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -222,6 +226,8 @@ export function ReleaseCalendar({
         testID="release-calendar-section-list"
         style={styles.content}
         sections={filteredSections}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderSectionHeader={renderSectionHeader}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
@@ -235,6 +241,7 @@ export function ReleaseCalendar({
     </View>
   );
 }
+
 interface DateStripProps {
   dates: Date[];
   selectedDate: Date | null;

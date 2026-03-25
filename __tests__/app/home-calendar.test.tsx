@@ -2,6 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 const mockReleaseCalendar = jest.fn();
+const mockRefresh = jest.fn().mockResolvedValue(undefined);
+let mockProgressiveReady = true;
 
 const mockPremiumState = {
   isPremium: false,
@@ -30,6 +32,8 @@ const mockUpcomingState = {
   allReleases: [createRelease(1), createRelease(2), createRelease(3), createRelease(4)],
   isLoading: false,
   isLoadingEnrichment: false,
+  isRefreshing: false,
+  refresh: mockRefresh,
   error: null,
 };
 
@@ -41,15 +45,33 @@ jest.mock('@/src/hooks/useUpcomingReleases', () => ({
   useUpcomingReleases: () => mockUpcomingState,
 }));
 
+jest.mock('@/src/hooks/useProgressiveRender', () => ({
+  useProgressiveRender: () => ({ isReady: mockProgressiveReady }),
+}));
+
 jest.mock('@/src/components/calendar/ReleaseCalendar', () => ({
   ReleaseCalendar: (props: any) => {
     mockReleaseCalendar(props);
-    return null;
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'release-calendar' });
+  },
+}));
+
+jest.mock('@/src/components/ui/InlineUpdatingIndicator', () => ({
+  InlineUpdatingIndicator: ({ message }: { message: string }) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, null, message);
   },
 }));
 
 jest.mock('@/src/components/ui/FullScreenLoading', () => ({
-  FullScreenLoading: () => null,
+  FullScreenLoading: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'calendar-loading' });
+  },
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -61,6 +83,8 @@ import CalendarScreen from '@/app/(tabs)/home/calendar';
 describe('CalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRefresh.mockClear();
+    mockProgressiveReady = true;
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
     mockUpcomingState.sections = [
@@ -77,6 +101,8 @@ describe('CalendarScreen', () => {
     ];
     mockUpcomingState.isLoading = false;
     mockUpcomingState.isLoadingEnrichment = false;
+    mockUpcomingState.isRefreshing = false;
+    mockUpcomingState.refresh = mockRefresh;
   });
 
   it('passes free-preview props for signed-in free users', () => {
@@ -105,11 +131,46 @@ describe('CalendarScreen', () => {
     );
   });
 
-  it('shows updating text while enrichment is loading', () => {
+  it('passes refresh props to the release calendar', () => {
+    render(<CalendarScreen />);
+
+    expect(mockReleaseCalendar).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refreshing: false,
+        onRefresh: mockRefresh,
+      })
+    );
+  });
+
+  it('renders cached releases while enrichment is still loading', () => {
     mockUpcomingState.isLoadingEnrichment = true;
 
-    const { getByText } = render(<CalendarScreen />);
+    const { getByTestId, getByText } = render(<CalendarScreen />);
 
+    expect(getByTestId('release-calendar')).toBeTruthy();
     expect(getByText('Updating TV episodes...')).toBeTruthy();
+  });
+
+  it('defers cached calendar rendering until progressive render is ready', () => {
+    mockProgressiveReady = false;
+
+    const { getByTestId, queryByTestId } = render(<CalendarScreen />);
+
+    expect(getByTestId('calendar-loading')).toBeTruthy();
+    expect(queryByTestId('release-calendar')).toBeNull();
+  });
+
+  it('keeps showing loading while initial enrichment is building the first result set', () => {
+    mockUpcomingState.sections = [];
+    mockUpcomingState.allReleases = [];
+    mockUpcomingState.isLoadingEnrichment = true;
+
+    const { getByTestId, getByText, queryByTestId } = render(<CalendarScreen />);
+
+    expect(getByTestId('calendar-loading')).toBeTruthy();
+    expect(getByText('Updating TV episodes...')).toBeTruthy();
+    expect(queryByTestId('release-calendar')).toBeNull();
+    expect(mockReleaseCalendar).not.toHaveBeenCalled();
   });
 });

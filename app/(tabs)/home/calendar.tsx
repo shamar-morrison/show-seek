@@ -3,6 +3,7 @@ import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import { screenStyles } from '@/src/styles/screenStyles';
@@ -24,8 +25,10 @@ export default function CalendarScreen() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const router = useRouter();
   const { accentColor } = useAccentColor();
+  const { isReady } = useProgressiveRender();
 
-  const { sections, allReleases, isLoading, isLoadingEnrichment } = useUpcomingReleases();
+  const { sections, allReleases, isLoading, isLoadingEnrichment, isRefreshing, refresh } =
+    useUpcomingReleases();
 
   // Haptic feedback on mount
   useEffect(() => {
@@ -36,10 +39,24 @@ export default function CalendarScreen() {
     router.push({ pathname: '/(tabs)/library' });
   };
 
+  const hasSections = sections.length > 0;
+  const shouldShowInitialEnrichmentLoading = !hasSections && isLoadingEnrichment;
+  const shouldDelayCalendarRender = hasSections && !isReady;
+
   // Loading state
-  if (isPremiumLoading || isLoading) {
+  if (
+    isPremiumLoading ||
+    isLoading ||
+    shouldShowInitialEnrichmentLoading ||
+    shouldDelayCalendarRender
+  ) {
+    const shouldShowUpdatingIndicator = isLoadingEnrichment && !isPremiumLoading && !isLoading;
+
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
+        {shouldShowUpdatingIndicator && (
+          <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />
+        )}
         <FullScreenLoading message={t('common.loading')} />
       </SafeAreaView>
     );
@@ -68,13 +85,15 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-      {/* Enrichment loading indicator */}
-      {isLoadingEnrichment && <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />}
-
+      {isLoadingEnrichment && (
+        <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />
+      )}
       <ReleaseCalendar
         sections={sections}
         previewLimit={previewLimit}
         showUpgradeOverlay={showUpgradeOverlay}
+        refreshing={isRefreshing}
+        onRefresh={refresh}
       />
     </SafeAreaView>
   );
