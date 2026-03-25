@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, dehydrate } from '@tanstack/react-query';
 
 import {
+  clearPersistedQueryCache,
+  createPersistedQueryCacheSyncController,
   hydratePersistedQueryCache,
   subscribeToPersistedQueryCache,
 } from '@/src/services/queryCachePersistence';
@@ -31,6 +33,7 @@ describe('queryCachePersistence', () => {
     jest.clearAllMocks();
     jest.useRealTimers();
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+    (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
   });
 
@@ -168,6 +171,110 @@ describe('queryCachePersistence', () => {
     );
 
     unsubscribe();
+  });
+
+  it('cancels pending debounced writes when sync is paused', async () => {
+    jest.useFakeTimers();
+    const queryClient = new QueryClient();
+    const controller = createPersistedQueryCacheSyncController(queryClient);
+
+    controller.resume();
+    queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+
+    await controller.pause();
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+
+    await controller.dispose();
+  });
+
+  it('waits for in-flight writes to finish before pause resolves', async () => {
+    jest.useFakeTimers();
+    const queryClient = new QueryClient();
+    const setItemResolution = { current: null as null | (() => void) };
+    let pauseResolved = false;
+
+    (AsyncStorage.setItem as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          setItemResolution.current = resolve;
+        })
+    );
+
+    const controller = createPersistedQueryCacheSyncController(queryClient);
+    controller.resume();
+
+    queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+    jest.advanceTimersByTime(300);
+    await flushMicrotasks();
+
+    const pausePromise = controller.pause().then(() => {
+      pauseResolved = true;
+    });
+
+    await flushMicrotasks();
+    expect(pauseResolved).toBe(false);
+
+    const resolvePersistWrite = setItemResolution.current;
+    if (typeof resolvePersistWrite !== 'function') {
+      throw new Error('Expected an in-flight persist write before pausing sync.');
+    }
+
+    resolvePersistWrite();
+    await pausePromise;
+
+    expect(pauseResolved).toBe(true);
+
+    await controller.dispose();
+  });
+
+  it('prevents stale persisted writes from landing after the clear sequence pauses sync', async () => {
+    jest.useFakeTimers();
+    const queryClient = new QueryClient();
+    const operations: string[] = [];
+    const setItemResolution = { current: null as null | (() => void) };
+
+    (AsyncStorage.setItem as jest.Mock).mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          operations.push('setItem-start');
+          setItemResolution.current = () => {
+            operations.push('setItem-finish');
+            resolve();
+          };
+        })
+    );
+    (AsyncStorage.removeItem as jest.Mock).mockImplementation(async () => {
+      operations.push('removeItem');
+    });
+
+    const controller = createPersistedQueryCacheSyncController(queryClient);
+    controller.resume();
+
+    queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+    jest.advanceTimersByTime(300);
+    await flushMicrotasks();
+
+    const clearSequence = (async () => {
+      await controller.pause();
+      await clearPersistedQueryCache();
+    })();
+
+    await flushMicrotasks();
+    expect(operations).toEqual(['setItem-start']);
+
+    const resolvePersistWrite = setItemResolution.current;
+    if (typeof resolvePersistWrite !== 'function') {
+      throw new Error('Expected an in-flight persist write before clearing persisted cache.');
+    }
+
+    resolvePersistWrite();
+    await clearSequence;
+
+    expect(operations).toEqual(['setItem-start', 'setItem-finish', 'removeItem']);
+
+    await controller.dispose();
   });
 
   it('serializes persist writes so older writes cannot overtake newer state', async () => {

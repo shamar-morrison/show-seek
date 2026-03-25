@@ -8,7 +8,19 @@ const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 const mockQueryClientClear = jest.fn();
 const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
 const mockHydratePersistedQueryCache = jest.fn((_queryClient?: unknown) => Promise.resolve(true));
-const mockSubscribeToPersistedQueryCache = jest.fn((_queryClient?: unknown) => jest.fn());
+const mockPausePersistedQuerySync = jest.fn(() => Promise.resolve());
+const mockResumePersistedQuerySync = jest.fn();
+const mockDisposePersistedQuerySync = jest.fn(() => Promise.resolve());
+const mockCreatePersistedQueryCacheSyncController = jest.fn((_queryClient?: unknown) => ({
+  pause: mockPausePersistedQuerySync,
+  resume: mockResumePersistedQuerySync,
+  dispose: mockDisposePersistedQuerySync,
+}));
+
+const flushMicrotasks = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
 const mockAuthState = {
   user: null as null | { uid?: string },
@@ -122,9 +134,9 @@ jest.mock('@/src/services/revenueCat', () => ({
 
 jest.mock('@/src/services/queryCachePersistence', () => ({
   clearPersistedQueryCache: () => mockClearPersistedQueryCache(),
+  createPersistedQueryCacheSyncController: (queryClient: unknown) =>
+    mockCreatePersistedQueryCacheSyncController(queryClient),
   hydratePersistedQueryCache: (queryClient: unknown) => mockHydratePersistedQueryCache(queryClient),
-  subscribeToPersistedQueryCache: (queryClient: unknown) =>
-    mockSubscribeToPersistedQueryCache(queryClient),
 }));
 
 jest.mock('@/src/i18n', () => ({
@@ -156,7 +168,13 @@ describe('RootLayout routing', () => {
     mockPreferencesState.isLoading = false;
     mockClearPersistedQueryCache.mockResolvedValue(undefined);
     mockHydratePersistedQueryCache.mockResolvedValue(true);
-    mockSubscribeToPersistedQueryCache.mockReturnValue(jest.fn());
+    mockPausePersistedQuerySync.mockResolvedValue(undefined);
+    mockDisposePersistedQuerySync.mockResolvedValue(undefined);
+    mockCreatePersistedQueryCacheSyncController.mockReturnValue({
+      pause: mockPausePersistedQuerySync,
+      resume: mockResumePersistedQuerySync,
+      dispose: mockDisposePersistedQuerySync,
+    });
   });
 
   it('redirects to onboarding when onboarding is incomplete', async () => {
@@ -270,7 +288,133 @@ describe('RootLayout routing', () => {
     consoleSpy.mockRestore();
   });
 
-  it('does not subscribe to persisted cache updates after bootstrap unmounts early', async () => {
+  it('pauses sync before clearing persisted cache during auth transitions', async () => {
+    let resolvePause: (() => void) | null = null;
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'home'];
+    mockPausePersistedQuerySync.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolvePause = resolve;
+        })
+    );
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockResumePersistedQuerySync.mockClear();
+    mockAuthState.user = { uid: 'user-2' };
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockPausePersistedQuerySync).toHaveBeenCalledTimes(1);
+    });
+    expect(mockQueryClientClear).not.toHaveBeenCalled();
+    expect(mockClearPersistedQueryCache).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolvePause?.();
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('resumes sync only after persisted cache clear completes', async () => {
+    let resolveClear: (() => void) | null = null;
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'home'];
+    mockClearPersistedQueryCache.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveClear = resolve;
+        })
+    );
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockResumePersistedQuerySync.mockClear();
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveClear?.();
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not resume sync early when auth cleanup transitions overlap', async () => {
+    const clearResolvers: Array<() => void> = [];
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'home'];
+    mockClearPersistedQueryCache.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          clearResolvers.push(resolve);
+        })
+    );
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockResumePersistedQuerySync.mockClear();
+    mockAuthState.user = { uid: 'user-2' };
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+
+    mockAuthState.user = { uid: 'user-3' };
+    rerender(<RootLayout />);
+
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      clearResolvers[0]?.();
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockPausePersistedQuerySync).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(2);
+    });
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
+
+    await act(async () => {
+      clearResolvers[1]?.();
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not resume persisted cache sync after bootstrap unmounts early', async () => {
     let resolveHydration: ((value: boolean) => void) | null = null;
     mockHydratePersistedQueryCache.mockImplementation(
       () =>
@@ -293,6 +437,6 @@ describe('RootLayout routing', () => {
       await Promise.resolve();
     });
 
-    expect(mockSubscribeToPersistedQueryCache).not.toHaveBeenCalled();
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
   });
 });

@@ -26,8 +26,9 @@ import {
 import { resetReadBudgetForSession } from '@/src/services/ReadBudgetGuard';
 import {
   clearPersistedQueryCache,
+  createPersistedQueryCacheSyncController,
   hydratePersistedQueryCache,
-  subscribeToPersistedQueryCache,
+  type PersistedQueryCacheSyncController,
 } from '@/src/services/queryCachePersistence';
 import { configureRevenueCat } from '@/src/services/revenueCat';
 
@@ -44,7 +45,7 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
@@ -105,6 +106,20 @@ interface InitDebugSnapshot {
   timestamp: number;
 }
 
+const PersistedQuerySyncContext = React.createContext<PersistedQueryCacheSyncController | null>(
+  null
+);
+
+const usePersistedQuerySync = (): PersistedQueryCacheSyncController => {
+  const persistedQuerySyncController = useContext(PersistedQuerySyncContext);
+
+  if (!persistedQuerySyncController) {
+    throw new Error('Persisted query sync controller is unavailable.');
+  }
+
+  return persistedQuerySyncController;
+};
+
 function AppShellLoading({ accentColor }: { accentColor: string }) {
   return (
     <View
@@ -122,21 +137,22 @@ function AppShellLoading({ accentColor }: { accentColor: string }) {
 
 function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
+  const persistedQuerySyncController = useMemo(
+    () => createPersistedQueryCacheSyncController(queryClient),
+    []
+  );
 
   useEffect(() => {
     let isMounted = true;
-    let unsubscribePersistence = () => {};
 
     const bootstrap = async () => {
       try {
         await hydratePersistedQueryCache(queryClient);
       } finally {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          persistedQuerySyncController.resume();
+          setIsHydrated(true);
         }
-
-        unsubscribePersistence = subscribeToPersistedQueryCache(queryClient);
-        setIsHydrated(true);
       }
     };
 
@@ -144,15 +160,15 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false;
-      unsubscribePersistence();
+      void persistedQuerySyncController.dispose();
     };
-  }, []);
+  }, [persistedQuerySyncController]);
 
-  if (!isHydrated) {
-    return <AppShellLoading accentColor={COLORS.primary} />;
-  }
-
-  return <>{children}</>;
+  return (
+    <PersistedQuerySyncContext.Provider value={persistedQuerySyncController}>
+      {isHydrated ? children : <AppShellLoading accentColor={COLORS.primary} />}
+    </PersistedQuerySyncContext.Provider>
+  );
 }
 
 function RootLayoutNav() {
@@ -163,7 +179,10 @@ function RootLayoutNav() {
   const { accentColor, isAccentReady } = useAccentColor();
   const segments = useSegments();
   const router = useRouter();
+  const persistedQuerySyncController = usePersistedQuerySync();
   const previousUidRef = useRef<string | null>(user?.uid ?? null);
+  const authTransitionCleanupRef = useRef<Promise<void>>(Promise.resolve());
+  const authTransitionCleanupSequenceRef = useRef(0);
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
   const lastTrackedScreenRef = useRef<string | null>(null);
   const [debugTimeoutTriggered, setDebugTimeoutTriggered] = useState(false);
@@ -361,24 +380,41 @@ function RootLayoutNav() {
     const isAccountSwitch = !!previousUid && !!currentUid && previousUid !== currentUid;
 
     if (isSignOut || isAccountSwitch) {
-      if (READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear) {
-        if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-          console.log('[RootLayout] queryClient.clear() skipped by debug flag', {
-            previousUid,
-            currentUid,
-          });
-        }
-      } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
-        queryClient.clear();
-      }
-      clearPersistedQueryCache().catch((error) => {
-        console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
-          error,
-          previousUid,
-          currentUid,
+      const cleanupSequence = authTransitionCleanupSequenceRef.current + 1;
+      authTransitionCleanupSequenceRef.current = cleanupSequence;
+
+      authTransitionCleanupRef.current = authTransitionCleanupRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          await persistedQuerySyncController.pause();
+
+          try {
+            if (READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear) {
+              if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
+                console.log('[RootLayout] queryClient.clear() skipped by debug flag', {
+                  previousUid,
+                  currentUid,
+                });
+              }
+            } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
+              queryClient.clear();
+            }
+
+            await clearPersistedQueryCache();
+          } catch (error) {
+            console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
+              error,
+              previousUid,
+              currentUid,
+            });
+          } finally {
+            resetClientReadState();
+
+            if (authTransitionCleanupSequenceRef.current === cleanupSequence) {
+              persistedQuerySyncController.resume();
+            }
+          }
         });
-      });
-      resetClientReadState();
     }
 
     if (authChanged || !getReadAuditSessionReport()) {
@@ -386,7 +422,7 @@ function RootLayoutNav() {
     }
 
     previousUidRef.current = currentUid;
-  }, [user?.uid]);
+  }, [persistedQuerySyncController, user?.uid]);
 
   useEffect(() => {
     if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {

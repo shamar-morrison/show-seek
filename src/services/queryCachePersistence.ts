@@ -114,9 +114,19 @@ export async function clearPersistedQueryCache(): Promise<void> {
   await AsyncStorage.removeItem(QUERY_CACHE_STORAGE_KEY);
 }
 
-export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => void {
+export interface PersistedQueryCacheSyncController {
+  pause: () => Promise<void>;
+  resume: () => void;
+  dispose: () => Promise<void>;
+}
+
+export function createPersistedQueryCacheSyncController(
+  queryClient: QueryClient
+): PersistedQueryCacheSyncController {
   let persistTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingWrite: Promise<void> | null = null;
+  let unsubscribe: (() => void) | null = null;
+  let isDisposed = false;
 
   const persistNow = async () => {
     const previousWrite = pendingWrite?.catch(() => undefined) ?? Promise.resolve();
@@ -144,7 +154,24 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
     }
   };
 
+  const clearPersistTimeout = () => {
+    if (!persistTimeout) {
+      return;
+    }
+
+    clearTimeout(persistTimeout);
+    persistTimeout = null;
+  };
+
+  const drainPendingWrite = async () => {
+    await (pendingWrite?.catch(() => undefined) ?? Promise.resolve());
+  };
+
   const schedulePersist = () => {
+    if (isDisposed) {
+      return;
+    }
+
     if (persistTimeout) {
       clearTimeout(persistTimeout);
     }
@@ -166,24 +193,53 @@ export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => 
     }, QUERY_CACHE_PERSIST_DEBOUNCE_MS);
   };
 
-  const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-    if (!event?.query) {
+  const resume = () => {
+    if (isDisposed || unsubscribe) {
       return;
     }
 
-    const queryRoot = getQueryRoot(event.query);
-    if (!queryRoot || !PERSISTED_QUERY_ROOTS.has(queryRoot)) {
-      return;
+    unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (!event?.query) {
+        return;
+      }
+
+      const queryRoot = getQueryRoot(event.query);
+      if (!queryRoot || !PERSISTED_QUERY_ROOTS.has(queryRoot)) {
+        return;
+      }
+
+      schedulePersist();
+    });
+  };
+
+  const pause = async () => {
+    clearPersistTimeout();
+
+    if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
     }
 
-    schedulePersist();
-  });
+    await drainPendingWrite();
+  };
+
+  const dispose = async () => {
+    isDisposed = true;
+    await pause();
+  };
+
+  return {
+    pause,
+    resume,
+    dispose,
+  };
+}
+
+export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => void {
+  const controller = createPersistedQueryCacheSyncController(queryClient);
+  controller.resume();
 
   return () => {
-    if (persistTimeout) {
-      clearTimeout(persistTimeout);
-      persistTimeout = null;
-    }
-    unsubscribe();
+    void controller.dispose();
   };
 }
