@@ -121,6 +121,52 @@ describe('AuthProvider', () => {
       expect(AsyncStorage.setItem).toHaveBeenCalledWith('userId', anonymousUser.uid);
     });
 
+    it('should return cached personal onboarding immediately and still refresh from Firestore', async () => {
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      let resolveGetDoc:
+        | ((value: { data: () => { hasCompletedPersonalOnboarding: boolean } }) => void)
+        | null = null;
+
+      mockCurrentUser = mockUser;
+      (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+        if (key === 'hasCompletedPersonalOnboarding:test-user-123') {
+          return 'true';
+        }
+        return null;
+      });
+      (getDoc as jest.Mock).mockImplementation(
+        () =>
+          new Promise<{ data: () => { hasCompletedPersonalOnboarding: boolean } }>((resolve) => {
+            resolveGetDoc = resolve;
+          })
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        capturedAuthCallback?.(mockUser);
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+      expect(result.current.loading).toBe(false);
+      expect(getDoc).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        resolveGetDoc?.({
+          data: () => ({ hasCompletedPersonalOnboarding: false }),
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+      });
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'hasCompletedPersonalOnboarding:test-user-123',
+        'false'
+      );
+    });
+
     it('should reset personal onboarding state and keep loading true while re-reading Firestore for a signed-in user', async () => {
       const anonymousUser = { uid: 'anon-1', isAnonymous: true };
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };

@@ -42,7 +42,7 @@ export function usePosterOverrides() {
 export function useSetPosterOverride() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation<
     void,
@@ -97,7 +97,7 @@ export function useSetPosterOverride() {
 export function useClearPosterOverride() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation<
     void,

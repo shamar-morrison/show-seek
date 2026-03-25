@@ -42,7 +42,7 @@ const isSyncErrorCategory = (value: unknown): value is SyncErrorCategory =>
 
 const requireAuthenticatedUser = async () => {
   const currentUser = auth.currentUser;
-  if (!currentUser) {
+  if (!currentUser || currentUser.isAnonymous) {
     throw new Error('Must be logged in to use Trakt');
   }
 

@@ -5,8 +5,13 @@ import React from 'react';
 const mockGetAllTrackedCollections = jest.fn();
 const mockGetCollectionTracking = jest.fn();
 const mockGetPreviouslyWatchedMovieIds = jest.fn();
+const mockGetTrackedCollectionCount = jest.fn();
 const mockStartTracking = jest.fn();
 const mockCreateTimeoutWithCleanup = jest.fn();
+const mockPremiumState = {
+  isPremium: false,
+  isLoading: false,
+};
 
 const mockAuthState: { currentUser: { uid: string } | null } = {
   currentUser: { uid: 'test-user-id' },
@@ -22,7 +27,7 @@ jest.mock('@/src/firebase/config', () => ({
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
-  usePremium: () => ({ isPremium: false }),
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('@/src/utils/timeout', () => ({
@@ -35,7 +40,7 @@ jest.mock('@/src/services/CollectionTrackingService', () => ({
     getCollectionTracking: (...args: unknown[]) => mockGetCollectionTracking(...args),
     getPreviouslyWatchedMovieIds: (...args: unknown[]) =>
       mockGetPreviouslyWatchedMovieIds(...args),
-    getTrackedCollectionCount: jest.fn(),
+    getTrackedCollectionCount: (...args: unknown[]) => mockGetTrackedCollectionCount(...args),
     startTracking: (...args: unknown[]) => mockStartTracking(...args),
     stopTracking: jest.fn(),
     addWatchedMovie: jest.fn(),
@@ -45,6 +50,7 @@ jest.mock('@/src/services/CollectionTrackingService', () => ({
 }));
 
 import {
+  useCanTrackMoreCollections,
   useCollectionTracking,
   useStartCollectionTracking,
   useTrackedCollections,
@@ -73,6 +79,8 @@ describe('useCollectionTracking hooks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthState.currentUser = { uid: 'test-user-id' };
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
     mockCreateTimeoutWithCleanup.mockImplementation(() => ({
       promise: new Promise<never>(() => {}),
       cancel: jest.fn(),
@@ -270,5 +278,23 @@ describe('useCollectionTracking hooks', () => {
     expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
+  });
+
+  it('exposes premium loading so collection limit gating can stay pending', async () => {
+    mockPremiumState.isLoading = true;
+    mockGetTrackedCollectionCount.mockResolvedValueOnce(2);
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCanTrackMoreCollections(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.isPremiumLoading).toBe(true);
+    expect(result.current.canTrackMore).toBe(false);
+    expect(result.current.count).toBe(2);
   });
 });

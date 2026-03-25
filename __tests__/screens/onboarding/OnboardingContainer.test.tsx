@@ -5,6 +5,10 @@ const mockReplace = jest.fn();
 const mockCompletePersonalOnboarding = jest.fn();
 const mockSetRegion = jest.fn();
 const mockSetAccentColor = jest.fn();
+const mockPremiumState = {
+  isPremium: false,
+  isLoading: false,
+};
 let mockAuthUser = {
   uid: 'user-1',
   displayName: null as string | null,
@@ -65,9 +69,7 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
-  usePremium: () => ({
-    isPremium: false,
-  }),
+  usePremium: () => mockPremiumState,
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -209,6 +211,8 @@ import OnboardingContainer from '@/src/screens/onboarding/OnboardingContainer';
 describe('OnboardingContainer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
     mockAuthUser = {
       uid: 'user-1',
       displayName: null,
@@ -249,6 +253,36 @@ describe('OnboardingContainer', () => {
       expect(getByTestId('mock-onboarding-paywall-display-name')).toHaveTextContent(
         'fallback.user'
       );
+    });
+  });
+
+  it('waits for premium verification before skipping the onboarding paywall', async () => {
+    mockPremiumState.isPremium = true;
+    mockPremiumState.isLoading = true;
+
+    const rendered = render(<OnboardingContainer />);
+    const { getByText, getByTestId, queryByText, rerender } = rendered;
+
+    fireEvent.press(getByText('Begin onboarding'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Continue'));
+
+    for (let stepIndex = 0; stepIndex < 7; stepIndex += 1) {
+      fireEvent.press(getByText('Skip'));
+    }
+
+    await waitFor(() => {
+      expect(getByTestId('mock-onboarding-paywall-display-name')).toHaveTextContent(
+        'fallback.user'
+      );
+    });
+    expect(queryByText('Personalizing')).toBeNull();
+
+    mockPremiumState.isLoading = false;
+    rerender(<OnboardingContainer />);
+
+    await waitFor(() => {
+      expect(rendered.getByText('Personalizing')).toBeTruthy();
     });
   });
 });

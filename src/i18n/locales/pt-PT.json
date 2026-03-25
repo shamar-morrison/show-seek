@@ -705,6 +705,12 @@
       "integrations": "Integrações",
       "settings": "Definições"
     },
+    "readDiagnostics": {
+      "title": "Diagnóstico de leituras",
+      "totalReads": "Leituras totais: {{count}}",
+      "events": "Eventos: {{count}}",
+      "callsites": "Locais de chamada"
+    },
     "editProfile": "Editar perfil",
     "stats": "Estatísticas",
     "moviesWatched": "Filmes vistos",

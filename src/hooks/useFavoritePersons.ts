@@ -8,7 +8,7 @@ const getFavoritePersonsQueryKey = (userId?: string) => ['favoritePersons', user
 
 export const useFavoritePersons = () => {
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   const query = useQuery({
     queryKey: getFavoritePersonsQueryKey(userId),
@@ -36,7 +36,7 @@ export const useIsPersonFavorited = (personId: number) => {
 export const useAddFavoritePerson = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({ personData }: { personData: Omit<FavoritePerson, 'addedAt'> }) =>
@@ -83,7 +83,7 @@ export const useAddFavoritePerson = () => {
 export const useRemoveFavoritePerson = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({ personId }: { personId: number }) =>

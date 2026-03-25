@@ -55,6 +55,7 @@ import {
   PremiumLimitError,
   useAddToList,
   useDeleteList,
+  useLists,
   useMediaLists,
   useRemoveFromList,
 } from '@/src/hooks/useLists';
@@ -200,6 +201,27 @@ describe('useAddToList', () => {
         refetchType: 'active',
       });
     });
+  });
+});
+
+describe('useLists', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockGetUserLists.mockResolvedValue([]);
+  });
+
+  it('does not fetch lists for anonymous users', () => {
+    mockAuthState.user = { uid: 'anon-1', isAnonymous: true } as any;
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useLists(), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(mockGetUserLists).not.toHaveBeenCalled();
+    expect(result.current.data).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
   });
 });
 

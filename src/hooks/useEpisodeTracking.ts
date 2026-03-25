@@ -9,7 +9,10 @@ import { episodeTrackingService } from '../services/EpisodeTrackingService';
 import { listService } from '../services/ListService';
 import type { TVShowEpisodeTracking } from '../types/episodeTracking';
 
-const getUserId = () => auth.currentUser?.uid;
+const getUserId = () => {
+  const currentUser = auth.currentUser;
+  return currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
+};
 const getShowEpisodeTrackingQueryKey = (userId: string | undefined, tvShowId: number) =>
   ['episodeTracking', userId, tvShowId] as const;
 
@@ -172,7 +175,7 @@ const maybeAutoAddToWatching = async ({
  * Fetch episode tracking data for a specific TV show.
  */
 export const useShowEpisodeTracking = (tvShowId: number) => {
-  const userId = auth.currentUser?.uid;
+  const userId = getUserId();
   const query = useQuery<TVShowEpisodeTracking | null>({
     queryKey: getShowEpisodeTrackingQueryKey(userId, tvShowId),
     queryFn: () => episodeTrackingService.getShowTracking(tvShowId),

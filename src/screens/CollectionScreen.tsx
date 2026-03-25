@@ -67,7 +67,11 @@ export default function CollectionScreen() {
     percentage,
     isLoading: isLoadingTracking,
   } = useCollectionTracking(collectionId);
-  const { canTrackMore, maxFreeCollections } = useCanTrackMoreCollections();
+  const {
+    canTrackMore,
+    maxFreeCollections,
+    isPremiumLoading: isPremiumStatusLoading,
+  } = useCanTrackMoreCollections();
   const startTrackingMutation = useStartCollectionTracking();
   const stopTrackingMutation = useStopCollectionTracking();
 
@@ -103,6 +107,8 @@ export default function CollectionScreen() {
     // Guard: don't start tracking if already tracked
     if (isTracked) return;
 
+    if (isPremiumStatusLoading) return;
+
     if (!canTrackMore) {
       showPremiumAlert('premiumFeature.features.collectionTracking');
       return;
@@ -125,6 +131,7 @@ export default function CollectionScreen() {
     isAccountRequired,
     collectionQuery.data,
     isTracked,
+    isPremiumStatusLoading,
     canTrackMore,
     startTrackingMutation,
     collectionId,
@@ -296,9 +303,9 @@ export default function CollectionScreen() {
                   pressed && styles.buttonPressed,
                 ]}
                 onPress={handleStartTracking}
-                disabled={isButtonLoading || isLoadingTracking}
+                disabled={isButtonLoading || isLoadingTracking || isPremiumStatusLoading}
               >
-                {isButtonLoading || isLoadingTracking ? (
+                {isButtonLoading || isLoadingTracking || isPremiumStatusLoading ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
                 ) : (
                   <>
@@ -310,7 +317,7 @@ export default function CollectionScreen() {
             )}
 
             {/* Free user limit notice */}
-            {!isPremium && !isTracked && !canTrackMore && (
+            {!isPremiumStatusLoading && !isPremium && !isTracked && !canTrackMore && (
               <Text style={styles.limitNotice}>
                 {t('collection.freeLimitNotice', { count: maxFreeCollections })}
               </Text>

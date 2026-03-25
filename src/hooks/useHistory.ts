@@ -1,22 +1,23 @@
+import i18n from '@/src/i18n';
+import { useAuth } from '@/src/context/auth';
+import { useAllGenres } from '@/src/hooks/useGenres';
+import { historyService } from '@/src/services/HistoryService';
+import type { HistoryData, MonthlyDetail } from '@/src/types/history';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { useAuth } from '../context/auth';
-import i18n from '../i18n';
-import { historyService } from '../services/HistoryService';
-import type { HistoryData, MonthlyDetail } from '../types/history';
-import { useAllGenres } from './useGenres';
 
 /**
  * Hook to fetch and cache user history/stats data
  */
 export function useHistory(monthsBack = 6) {
   const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<HistoryData>({
-    queryKey: ['userHistory', user?.uid, monthsBack, i18n.language],
+    queryKey: ['userHistory', userId, monthsBack, i18n.language],
     queryFn: () => historyService.fetchUserHistory(genreMap, monthsBack),
-    enabled: !!user && Object.keys(genreMap).length > 0,
+    enabled: !!userId && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
@@ -27,12 +28,13 @@ export function useHistory(monthsBack = 6) {
  */
 export function useMonthDetail(month: string | null) {
   const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { data: genreMap = {} } = useAllGenres();
 
   return useQuery<MonthlyDetail | null>({
-    queryKey: ['monthDetail', user?.uid, month, i18n.language],
+    queryKey: ['monthDetail', userId, month, i18n.language],
     queryFn: () => (month ? historyService.fetchMonthDetail(month, genreMap) : null),
-    enabled: !!user && !!month && Object.keys(genreMap).length > 0,
+    enabled: !!userId && !!month && Object.keys(genreMap).length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });

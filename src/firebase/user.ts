@@ -35,7 +35,7 @@ function normalizePhotoURL(photoURL: string | null): string | null {
  * @param user - Firebase Auth User object
  */
 export async function createUserDocument(user: User): Promise<void> {
-  if (!user) {
+  if (!user || user.isAnonymous) {
     return;
   }
 

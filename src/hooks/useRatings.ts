@@ -67,7 +67,7 @@ const buildEpisodeRating = (
 
 export const useRatings = () => {
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const query = useQuery({
     queryKey: getRatingsQueryKey(userId),
     queryFn: () => ratingService.getUserRatings(userId!),
@@ -84,7 +84,7 @@ export const useRatings = () => {
 
 export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   const query = useQuery({
     queryKey: userId ? getMediaRatingQueryKey(userId, mediaType, mediaId) : ['rating', userId],
@@ -105,7 +105,7 @@ export const useMediaRating = (mediaId: number, mediaType: 'movie' | 'tv') => {
 export const useRateMedia = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({
@@ -188,7 +188,7 @@ export const useRateMedia = () => {
 export const useDeleteRating = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({ mediaId, mediaType }: { mediaId: number; mediaType: 'movie' | 'tv' }) =>
@@ -252,7 +252,7 @@ export const useDeleteRating = () => {
 
 export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episodeNumber: number) => {
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   const query = useQuery({
     queryKey: userId
@@ -275,7 +275,7 @@ export const useEpisodeRating = (tvShowId: number, seasonNumber: number, episode
 export const useRateEpisode = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({
@@ -383,7 +383,7 @@ export const useRateEpisode = () => {
 export const useDeleteEpisodeRating = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({

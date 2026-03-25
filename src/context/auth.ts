@@ -7,6 +7,9 @@ import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/a
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 
+const getPersonalOnboardingCacheKey = (userId: string) =>
+  `hasCompletedPersonalOnboarding:${userId}`;
+
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +26,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const clearPersistedUserId = () => {
     AsyncStorage.removeItem('userId').catch((error) => {
       console.error('Error clearing persisted userId', error);
+    });
+  };
+
+  const persistPersonalOnboardingState = (userId: string, value: boolean) => {
+    AsyncStorage.setItem(getPersonalOnboardingCacheKey(userId), String(value)).catch((error) => {
+      console.error('Error persisting personal onboarding state', error);
     });
   };
 
@@ -113,14 +122,27 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       setLoading(true);
 
       const uid = currentUser.uid;
+      const isCurrentSession = () => isMounted && auth.currentUser?.uid === uid;
+      const personalOnboardingCacheKey = getPersonalOnboardingCacheKey(uid);
+      let hasCachedPersonalOnboarding = false;
+
+      try {
+        const cachedValue = await AsyncStorage.getItem(personalOnboardingCacheKey);
+        if (cachedValue !== null && isCurrentSession()) {
+          hasCachedPersonalOnboarding = true;
+          setHasCompletedPersonalOnboarding(cachedValue === 'true');
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error reading personal onboarding cache', error);
+      }
+
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(new Error('Personal onboarding check timed out'));
         }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
       });
-
-      const isCurrentSession = () => isMounted && auth.currentUser?.uid === uid;
 
       // Check personal onboarding status from Firestore
       try {
@@ -129,21 +151,23 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           return;
         }
         const userData = userDoc.data();
-        setHasCompletedPersonalOnboarding(
-          userData?.hasCompletedPersonalOnboarding === true
-        );
+        const hasCompletedPersonalOnboarding = userData?.hasCompletedPersonalOnboarding === true;
+        setHasCompletedPersonalOnboarding(hasCompletedPersonalOnboarding);
+        persistPersonalOnboardingState(uid, hasCompletedPersonalOnboarding);
       } catch (e) {
         if (!isCurrentSession()) {
           return;
         }
         console.error('[Auth] Personal onboarding check failed, defaulting to true:', e);
         // Default to true on error so user isn't stuck in onboarding
-        setHasCompletedPersonalOnboarding(true);
+        if (!hasCachedPersonalOnboarding) {
+          setHasCompletedPersonalOnboarding(true);
+        }
       } finally {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        if (isCurrentSession()) {
+        if (isCurrentSession() && !hasCachedPersonalOnboarding) {
           setLoading(false);
         }
       }
@@ -233,6 +257,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         { hasCompletedPersonalOnboarding: true },
         { merge: true }
       );
+      persistPersonalOnboardingState(currentUser.uid, true);
       setHasCompletedPersonalOnboarding(true);
     } catch (e) {
       console.error('[Auth] Failed to persist personal onboarding completion:', e);

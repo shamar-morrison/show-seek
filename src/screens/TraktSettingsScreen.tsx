@@ -77,7 +77,7 @@ export default function TraktSettingsScreen() {
     enrichData,
   } = useTrakt();
 
-  const { isPremium } = usePremium();
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -116,6 +116,20 @@ export default function TraktSettingsScreen() {
       setIsConnecting(false);
     }
   }, [connectTrakt, t]);
+
+  const handleConnectPress = useCallback(() => {
+    if (isPremiumLoading) {
+      return;
+    }
+
+    if (!isPremium) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push('/premium');
+      return;
+    }
+
+    void handleConnect();
+  }, [handleConnect, isPremium, isPremiumLoading, router]);
 
   const handleSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -350,16 +364,9 @@ export default function TraktSettingsScreen() {
 
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
-            onPress={() => {
-              if (!isPremium) {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push('/premium');
-              } else {
-                handleConnect();
-              }
-            }}
+            onPress={handleConnectPress}
             activeOpacity={ACTIVE_OPACITY}
-            disabled={isConnecting}
+            disabled={isConnecting || isPremiumLoading}
           >
             {isConnecting ? (
               <ActivityIndicator color={COLORS.white} />
@@ -367,7 +374,7 @@ export default function TraktSettingsScreen() {
               <>
                 <Link2 size={20} color={COLORS.white} />
                 <Text style={styles.primaryButtonText}>{t('trakt.connectButton')}</Text>
-                {!isPremium && <PremiumBadge />}
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </>
             )}
           </TouchableOpacity>

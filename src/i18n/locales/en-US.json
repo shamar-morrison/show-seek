@@ -706,6 +706,12 @@
       "integrations": "Integrations",
       "settings": "Settings"
     },
+    "readDiagnostics": {
+      "title": "Read diagnostics",
+      "totalReads": "Total reads: {{count}}",
+      "events": "Events: {{count}}",
+      "callsites": "Callsites"
+    },
     "editProfile": "Edit Profile",
     "stats": "Stats",
     "moviesWatched": "Movies Watched",

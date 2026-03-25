@@ -12,7 +12,7 @@ const getFavoriteEpisodeQueryKey = (userId: string | undefined, episodeId: strin
 export const useFavoriteEpisodes = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const previousUserIdRef = useRef<string | undefined>(userId);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export const useIsEpisodeFavorited = (
  */
 export const useToggleFavoriteEpisode = () => {
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const queryClient = useQueryClient();
 
   return useMutation({

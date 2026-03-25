@@ -1,6 +1,8 @@
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
+const mockRouterBack = jest.fn();
+const mockRouterPush = jest.fn();
 const mockTraktState = {
   connectTrakt: jest.fn(),
   disconnectTrakt: jest.fn(),
@@ -32,13 +34,24 @@ const mockTraktState = {
       }
     | null,
 };
+const mockPremiumState = {
+  isPremium: true,
+  isLoading: false,
+};
 
 jest.mock('@/src/context/TraktContext', () => ({
   useTrakt: () => mockTraktState,
 }));
 
 jest.mock('@/src/context/PremiumContext', () => ({
-  usePremium: () => ({ isPremium: true }),
+  usePremium: () => mockPremiumState,
+}));
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    back: mockRouterBack,
+    push: mockRouterPush,
+  }),
 }));
 
 jest.mock('@/src/components/icons/TraktLogo', () => ({
@@ -72,8 +85,11 @@ describe('TraktSettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTraktState.isSyncing = false;
+    mockTraktState.isConnected = true;
     mockTraktState.syncStatus = null;
     mockTraktState.lastSyncedAt = null;
+    mockPremiumState.isPremium = true;
+    mockPremiumState.isLoading = false;
   });
 
   it('shows the rate-limited banner before the first sync and prefers translated copy', () => {
@@ -177,5 +193,18 @@ describe('TraktSettingsScreen', () => {
         '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched'
       )
     ).toBeNull();
+  });
+
+  it('does not route to premium or connect Trakt while premium status is still loading', () => {
+    mockTraktState.isConnected = false;
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = true;
+
+    const { getAllByText } = render(<TraktSettingsScreen />);
+
+    fireEvent.press(getAllByText('Connect Trakt')[1]);
+
+    expect(mockRouterPush).not.toHaveBeenCalled();
+    expect(mockTraktState.connectTrakt).not.toHaveBeenCalled();
   });
 });

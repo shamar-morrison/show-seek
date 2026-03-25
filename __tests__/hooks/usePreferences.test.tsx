@@ -167,6 +167,21 @@ describe('usePreferences', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('does not fetch for anonymous users', () => {
+    mockAuthState.user = { uid: 'anon-1', isAnonymous: true } as any;
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => usePreferences(), {
+      wrapper: createWrapper(client),
+    });
+
+    expect(mockFetchPreferences).not.toHaveBeenCalled();
+    expect(result.current.preferences).toEqual(DEFAULT_PREFERENCES);
+    expect(result.current.homeScreenLists).toEqual(DEFAULT_HOME_LISTS);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasLoaded).toBe(true);
+  });
+
   it('falls back gracefully on fetch error and exits loading state', async () => {
     const deferred = createDeferred<UserPreferences>();
     mockFetchPreferences.mockReturnValueOnce(deferred.promise);

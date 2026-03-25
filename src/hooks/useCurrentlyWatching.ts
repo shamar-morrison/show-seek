@@ -24,12 +24,13 @@ const MAX_SEASONS_TO_FETCH = 2;
  */
 export function useCurrentlyWatching() {
   const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   // 1. Fetch all tracking docs from Firestore
   const trackingQuery = useQuery({
-    queryKey: ['episodeTracking', 'allShows', user?.uid],
-    queryFn: () => episodeTrackingService.getAllWatchedShows(user!.uid),
-    enabled: !!user,
+    queryKey: ['episodeTracking', 'allShows', userId],
+    queryFn: () => episodeTrackingService.getAllWatchedShows(userId!),
+    enabled: !!userId,
     staleTime: STALE_TIME,
     retry: RETRY_COUNT,
   });
@@ -71,7 +72,7 @@ export function useCurrentlyWatching() {
     queries: tvShowIds.map((tvShowId) => ({
       queryKey: ['tv', tvShowId],
       queryFn: () => tmdbApi.getTVShowDetails(tvShowId),
-      enabled: !!user && tvShowIds.length > 0,
+      enabled: !!userId && tvShowIds.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),
@@ -120,7 +121,7 @@ export function useCurrentlyWatching() {
     queries: seasonQueries.map(({ tvShowId, seasonNumber }) => ({
       queryKey: ['tv', tvShowId, 'season', seasonNumber],
       queryFn: () => tmdbApi.getSeasonDetails(tvShowId, seasonNumber),
-      enabled: !!user && seasonQueries.length > 0,
+      enabled: !!userId && seasonQueries.length > 0,
       staleTime: STALE_TIME,
       retry: RETRY_COUNT,
     })),

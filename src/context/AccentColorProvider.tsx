@@ -62,7 +62,7 @@ export function AccentColorProvider({ children }: AccentColorProviderProps) {
 
   // 2. Sync from Firebase on login (cross-device restore)
   useEffect(() => {
-    if (!user) {
+    if (!user || user.isAnonymous) {
       hasSyncedFromFirebase.current = false;
       return;
     }

@@ -16,7 +16,7 @@ import { usePreferences } from './usePreferences';
 export function useListMembership() {
   const { preferences } = usePreferences();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const showIndicators = preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators;
   const cacheWindows = READ_QUERY_CACHE_WINDOWS as typeof READ_QUERY_CACHE_WINDOWS & {
     listIndicatorsStaleTimeMs?: number;

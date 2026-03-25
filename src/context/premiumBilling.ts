@@ -28,6 +28,8 @@ export type PremiumPurchaseType = 'subs';
 
 export { MONTHLY_TRIAL_OFFER_ID };
 
+export const PREMIUM_AUTH_REQUIRED_ERROR_CODE = 'AUTH_REQUIRED';
+
 export const SUBSCRIPTION_PRODUCT_IDS: Record<PremiumPlan, string> = {
   monthly: 'monthly_showseek_sub',
   yearly: 'showseek_yearly_sub',
@@ -270,6 +272,24 @@ export interface PremiumRestoreAttemptResult {
   isPremium: boolean;
   validationSucceeded: boolean;
 }
+
+export const createPremiumAuthRequiredError = (): Error & {
+  code: typeof PREMIUM_AUTH_REQUIRED_ERROR_CODE;
+} => {
+  const error = new Error(PREMIUM_AUTH_REQUIRED_ERROR_CODE) as Error & {
+    code: typeof PREMIUM_AUTH_REQUIRED_ERROR_CODE;
+  };
+  error.name = 'PremiumAuthRequiredError';
+  error.code = PREMIUM_AUTH_REQUIRED_ERROR_CODE;
+  return error;
+};
+
+export const isPremiumAuthRequiredError = (
+  error: unknown
+): error is Error & { code: typeof PREMIUM_AUTH_REQUIRED_ERROR_CODE } =>
+  error instanceof Error &&
+  (error.message === PREMIUM_AUTH_REQUIRED_ERROR_CODE ||
+    (error as { code?: string }).code === PREMIUM_AUTH_REQUIRED_ERROR_CODE);
 
 export const shouldTreatRestoreAsSuccess = (result: PremiumRestoreAttemptResult): boolean =>
   result.validationSucceeded && result.isPremium;

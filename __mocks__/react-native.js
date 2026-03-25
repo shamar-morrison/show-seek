@@ -2,6 +2,7 @@
 // This mock provides string-based components for testing-library compatibility
 
 const React = require('react');
+const { jest } = require('@jest/globals');
 
 // Create proper mock components
 const createMockComponent = (name) => {
@@ -37,6 +38,10 @@ module.exports = {
   Dimensions: {
     get: () => ({ width: 375, height: 812 }),
     addEventListener: () => ({ remove: () => {} }),
+  },
+  AppState: {
+    currentState: 'active',
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   },
   View: 'View',
   Text: 'Text',

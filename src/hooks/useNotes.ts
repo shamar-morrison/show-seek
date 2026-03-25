@@ -1,5 +1,6 @@
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAuth } from '../context/auth';
 import { Note, NoteInput } from '@/src/types/note';
 import {
   FreemiumLimitError,
@@ -12,7 +13,6 @@ import { getMediaNoteQueryKey, getNotesQueryKey } from '@/src/utils/noteQueries'
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
-import { useAuth } from '../context/auth';
 import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
 import { noteService } from '../services/NoteService';
 
@@ -141,7 +141,7 @@ const assertCanCreateNote = async ({
 export const useNotes = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const previousUserIdRef = useRef<string | undefined>(userId);
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export const useMediaNote = (
 ) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const detailKey = getMediaNoteQueryKey(userId, mediaType, mediaId, seasonNumber, episodeNumber);
 
   const getNoteFromNotesListCache = useCallback((): Note | null => {
@@ -254,7 +254,7 @@ export const useMediaNote = (
 export const useSaveNote = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -370,7 +370,7 @@ export const useSaveNote = () => {
 export const useCanCreateNote = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useCallback(
@@ -411,7 +411,7 @@ export const useCanCreateNote = () => {
 export const useDeleteNote = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({

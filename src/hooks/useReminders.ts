@@ -121,7 +121,8 @@ const assertCanCreateReminder = async ({
  * Hook to get all active reminders for current user
  */
 export const useReminders = () => {
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   const query = useQuery({
     queryKey: ['reminders', userId],
@@ -300,7 +301,8 @@ export const useMediaReminder = (mediaId: number, mediaType: ReminderMediaType) 
  */
 export const useCreateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -330,7 +332,8 @@ export const useCreateReminder = () => {
 
 export const useCanCreateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useCallback(
@@ -366,7 +369,8 @@ export const useCanCreateReminder = () => {
  */
 export const useCancelReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationFn: (reminderId: string) => reminderService.cancelReminder(reminderId),
@@ -389,7 +393,8 @@ export const useCancelReminder = () => {
  */
 export const useUpdateReminder = () => {
   const queryClient = useQueryClient();
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   return useMutation({
     mutationFn: ({ reminderId, timing }: { reminderId: string; timing: ReminderTiming }) =>

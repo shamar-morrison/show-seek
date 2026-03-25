@@ -20,7 +20,8 @@ const START_TRACKING_BACKFILL_TIMEOUT_MS = 5000;
  * Hook to fetch all tracked collections using cached query reads.
  */
 export const useTrackedCollections = () => {
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
   const query = useQuery({
     queryKey: ['collectionTracking', 'all', userId],
     queryFn: () => collectionTrackingService.getAllTrackedCollections(),
@@ -39,7 +40,8 @@ export const useTrackedCollections = () => {
  * Returns null if not tracked.
  */
 export const useCollectionTracking = (collectionId: number) => {
-  const userId = auth.currentUser?.uid;
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
   const query = useQuery({
     queryKey: ['collectionTracking', userId, collectionId],
     queryFn: () => collectionTrackingService.getCollectionTracking(collectionId),
@@ -67,8 +69,9 @@ export const useCollectionTracking = (collectionId: number) => {
  * Hook to check if user can track more collections (premium limit check)
  */
 export const useCanTrackMoreCollections = () => {
-  const { isPremium } = usePremium();
-  const userId = auth.currentUser?.uid;
+  const { isPremium, isLoading: isPremiumLoading } = usePremium();
+  const currentUser = auth.currentUser;
+  const userId = currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
 
   const query = useQuery({
     queryKey: ['collectionTracking', 'count', userId],
@@ -84,6 +87,7 @@ export const useCanTrackMoreCollections = () => {
     count,
     canTrackMore,
     isLoading: query.isLoading,
+    isPremiumLoading,
     maxFreeCollections: MAX_FREE_COLLECTIONS,
   };
 };

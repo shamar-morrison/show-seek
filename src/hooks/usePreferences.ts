@@ -17,7 +17,7 @@ import { DEFAULT_PREFERENCES, HomeScreenListItem, UserPreferences } from '../typ
 export const usePreferences = () => {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const queryEnabled = !!userId && !authLoading;
 
   const query = useQuery({
@@ -105,7 +105,9 @@ export const useUpdatePreference = () => {
 
     // Optimistic update
     onMutate: async ({ key, value }) => {
-      const currentUserId = auth.currentUser?.uid;
+      const currentUser = auth.currentUser;
+      const currentUserId =
+        currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
       if (!currentUserId) throw new Error('User must be logged in');
 
       await queryClient.cancelQueries({ queryKey: ['preferences', currentUserId] });
@@ -165,7 +167,9 @@ export const useUpdateHomeScreenLists = () => {
 
     // Optimistic update
     onMutate: async (lists) => {
-      const currentUserId = auth.currentUser?.uid;
+      const currentUser = auth.currentUser;
+      const currentUserId =
+        currentUser && !currentUser.isAnonymous ? currentUser.uid : undefined;
       if (!currentUserId) throw new Error('User must be logged in');
 
       await queryClient.cancelQueries({ queryKey: ['preferences', currentUserId] });

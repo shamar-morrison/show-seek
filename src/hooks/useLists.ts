@@ -74,7 +74,7 @@ type UseListsOptions = {
 export const useLists = (options: UseListsOptions = {}) => {
   const { enabled = true } = options;
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const query = useQuery({
     queryKey: ['lists', userId],
     queryFn: () => listService.getUserLists(userId!),
@@ -111,7 +111,7 @@ export const useMediaLists = (mediaId: number) => {
 export const useAddToList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -274,7 +274,7 @@ export const useAddToList = () => {
 export const useRemoveFromList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({ listId, mediaId }: { listId: string; mediaId: number }) =>
@@ -402,7 +402,7 @@ export class PremiumLimitError extends Error {
 export const useCreateList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
 
   return useMutation({
@@ -432,7 +432,7 @@ export const useCreateList = () => {
 export const useDeleteList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: (listId: string) => listService.deleteList(listId),
@@ -504,7 +504,7 @@ export const useDeleteList = () => {
 export const useRenameList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const userId = user?.uid;
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
     mutationFn: ({

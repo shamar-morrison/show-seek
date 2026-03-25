@@ -6,8 +6,9 @@ import {
 } from '@/src/components/premium/PremiumPaywallLayout';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { type PremiumPlan } from '@/src/context/premiumBilling';
+import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -23,6 +24,7 @@ export default function OnboardingPaywallStep({
 }: OnboardingPaywallStepProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const requireAccount = useAccountRequired();
   const { isPremium, isLoading, monthlyTrial, purchasePremium, restorePurchases, prices } =
     usePremium();
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
@@ -53,6 +55,11 @@ export default function OnboardingPaywallStep({
     try {
       await purchasePremium(selectedPlan);
     } catch (error: any) {
+      if (isPremiumAuthRequiredError(error)) {
+        requireAccount();
+        return;
+      }
+
       const code = String(error?.code || '').toLowerCase();
       const message = String(error?.message || '').toLowerCase();
       const isUserCanceled =
@@ -79,6 +86,10 @@ export default function OnboardingPaywallStep({
         Alert.alert(t('premium.noPurchasesTitle'), t('premium.noPurchasesMessage'));
       }
     } catch (error: any) {
+      if (isPremiumAuthRequiredError(error)) {
+        requireAccount();
+        return;
+      }
       Alert.alert(t('premium.restoreFailedTitle'), error?.message || t('errors.generic'));
     } finally {
       setIsRestoring(false);

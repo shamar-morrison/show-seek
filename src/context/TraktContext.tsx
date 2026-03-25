@@ -300,6 +300,16 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
 
   useEffect(() => {
     if (!hasEligibleTraktUser(user) || !syncStatus?.status) {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      if (enrichmentIntervalRef.current) {
+        clearInterval(enrichmentIntervalRef.current);
+        enrichmentIntervalRef.current = null;
+      }
+      setIsSyncing(false);
+      setIsEnriching(false);
       return;
     }
 
@@ -317,7 +327,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     }
 
     setIsSyncing(false);
-  }, [user, syncStatus?.status, pollSyncStatus]);
+  }, [pollSyncStatus, syncStatus?.status, user]);
 
   const syncNow = useCallback(async () => {
     ensureEligibleUser('Must be logged in to sync');
