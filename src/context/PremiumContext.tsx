@@ -1,7 +1,9 @@
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 import {
   createPremiumAuthRequiredError,
+  resolvePremiumPlanBillingDetails,
   SUBSCRIPTION_PRODUCT_IDS,
+  type PremiumPlanBillingDetails,
   type PremiumPlan,
 } from '@/src/context/premiumBilling';
 import { auth, db } from '@/src/firebase/config';
@@ -33,6 +35,21 @@ const EMPTY_PACKAGES_BY_PLAN: PackagesByPlan = {
   yearly: null,
 };
 
+const createBillingDetailsByPlan = (
+  packagesByPlan: PackagesByPlan
+): Record<PremiumPlan, PremiumPlanBillingDetails> => ({
+  monthly: resolvePremiumPlanBillingDetails({
+    plan: 'monthly',
+    platform: Platform.OS,
+    product: packagesByPlan.monthly?.product,
+  }),
+  yearly: resolvePremiumPlanBillingDetails({
+    plan: 'yearly',
+    platform: Platform.OS,
+    product: packagesByPlan.yearly?.product,
+  }),
+});
+
 interface PremiumPrices {
   monthly: string | null;
   yearly: string | null;
@@ -47,6 +64,7 @@ interface MonthlyTrialAvailability {
 type PackagesByPlan = Record<PremiumPlan, PurchasesPackage | null>;
 
 interface PremiumState {
+  billingDetails: Record<PremiumPlan, PremiumPlanBillingDetails>;
   isPremium: boolean;
   isLoading: boolean;
   purchasePremium: (plan: PremiumPlan, options?: { useTrial?: boolean }) => Promise<boolean>;
@@ -154,9 +172,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
   const [isPremiumFromFirestore, setIsPremiumFromFirestore] = useState(false);
   const [hasUsedTrialFromFirestore, setHasUsedTrialFromFirestore] = useState(false);
-  const [isFirestoreLoading, setIsFirestoreLoading] = useState(
-    initialAuthenticatedUserKey != null
-  );
+  const [isFirestoreLoading, setIsFirestoreLoading] = useState(initialAuthenticatedUserKey != null);
   const [cachedPremiumStatus, setCachedPremiumStatus] = useState<boolean | null>(null);
   const [isCachedPremiumLoading, setIsCachedPremiumLoading] = useState(
     initialAuthenticatedUserKey != null
@@ -165,9 +181,11 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const [prices, setPrices] = useState<PremiumPrices>({
     ...EMPTY_PRICES,
   });
-  const [packagesByPlan, setPackagesByPlan] = useState<
-    Record<PremiumPlan, PurchasesPackage | null>
-  >(EMPTY_PACKAGES_BY_PLAN);
+  const [packagesByPlan, setPackagesByPlan] =
+    useState<Record<PremiumPlan, PurchasesPackage | null>>(EMPTY_PACKAGES_BY_PLAN);
+  const [billingDetails, setBillingDetails] = useState<
+    Record<PremiumPlan, PremiumPlanBillingDetails>
+  >(() => createBillingDetailsByPlan(EMPTY_PACKAGES_BY_PLAN));
 
   const [user, setUser] = useState<User | null>(initialUser);
   const [premiumStateUserKey, setPremiumStateUserKey] = useState<string | null>(
@@ -194,6 +212,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     setIsCachedPremiumLoading(isAuthenticatedUser);
     setPrices(EMPTY_PRICES);
     setPackagesByPlan(EMPTY_PACKAGES_BY_PLAN);
+    setBillingDetails(createBillingDetailsByPlan(EMPTY_PACKAGES_BY_PLAN));
     setPremiumStateUserKey(nextAuthenticatedUserKey);
   }, []);
 
@@ -231,6 +250,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           yearly: null,
         };
         setPackagesByPlan(clearedPackages);
+        setBillingDetails(createBillingDetailsByPlan(clearedPackages));
         setPrices({
           monthly: null,
           yearly: null,
@@ -244,6 +264,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
 
       const nextPackages = resolvePackagesByPlan(resolvedOffering);
       setPackagesByPlan(nextPackages);
+      setBillingDetails(createBillingDetailsByPlan(nextPackages));
       setPrices({
         monthly: nextPackages.monthly?.product.priceString ?? null,
         yearly: nextPackages.yearly?.product.priceString ?? null,
@@ -254,7 +275,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   );
 
   const refreshOfferings = useCallback(
-    async (context = 'refreshOfferings', shouldApplyState?: () => boolean): Promise<PackagesByPlan> => {
+    async (
+      context = 'refreshOfferings',
+      shouldApplyState?: () => boolean
+    ): Promise<PackagesByPlan> => {
       const offerings = await Purchases.getOfferings();
       if (shouldApplyState && !shouldApplyState()) {
         return {
@@ -439,7 +463,13 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
     return () => {
       appStateSubscription?.remove?.();
     };
-  }, [applyCustomerInfo, isExpectedAuthenticatedUser, isRevenueCatLoading, user?.isAnonymous, user?.uid]);
+  }, [
+    applyCustomerInfo,
+    isExpectedAuthenticatedUser,
+    isRevenueCatLoading,
+    user?.isAnonymous,
+    user?.uid,
+  ]);
 
   useEffect(() => {
     if (!user?.uid || user.isAnonymous) {
@@ -675,8 +705,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
   const hasUsedTrial = hasUsedTrialFromRevenueCat || hasUsedTrialFromFirestore;
 
   const monthlyTrial = useMemo<MonthlyTrialAvailability>(() => {
-    const monthlyPackage = packagesByPlan.monthly;
-    const hasMonthlyIntroOffer = monthlyPackage?.product.introPrice != null;
+    const hasMonthlyIntroOffer = billingDetails.monthly.hasTrialAvailable;
 
     if (hasUsedTrial) {
       return {
@@ -699,9 +728,10 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       offerToken: null,
       reasonKey: null,
     };
-  }, [hasUsedTrial, packagesByPlan.monthly]);
+  }, [billingDetails.monthly.hasTrialAvailable, hasUsedTrial]);
 
   return {
+    billingDetails,
     isPremium,
     isLoading,
     purchasePremium,

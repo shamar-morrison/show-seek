@@ -17,11 +17,37 @@ const mockAuthState = {
   loading: false,
 };
 
+const createBillingDetails = (): any => ({
+  monthly: {
+    hasTrialAvailable: false,
+    recurringPeriod: {
+      iso8601: 'P1M',
+      unit: 'month' as const,
+      value: 1,
+    },
+    recurringPrice: '$3.00',
+    storeLabelKey: 'premium.storeNameGooglePlay' as const,
+    trialPeriod: null,
+  },
+  yearly: {
+    hasTrialAvailable: false,
+    recurringPeriod: {
+      iso8601: 'P1Y',
+      unit: 'year' as const,
+      value: 1,
+    },
+    recurringPrice: '$12.00',
+    storeLabelKey: 'premium.storeNameGooglePlay' as const,
+    trialPeriod: null,
+  },
+});
+
 const mockPremiumState = {
   isPremium: false,
   isLoading: false,
   purchasePremium: mockPurchasePremium,
   restorePurchases: mockRestorePurchases,
+  billingDetails: createBillingDetails(),
   prices: {
     monthly: '$3.00',
     yearly: '$12.00',
@@ -93,6 +119,7 @@ describe('PremiumScreen', () => {
     mockAuthState.loading = false;
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
+    mockPremiumState.billingDetails = createBillingDetails();
     mockPremiumState.monthlyTrial = {
       isEligible: false,
       offerToken: null,
@@ -207,9 +234,11 @@ describe('PremiumScreen', () => {
   });
 
   it('does not show trial helper text when yearly is selected', () => {
-    const { queryByTestId } = render(<PremiumScreen />);
+    const { getByTestId } = render(<PremiumScreen />);
 
-    expect(queryByTestId('billing-helper-text')).toBeNull();
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+    );
   });
 
   it('falls back to the email prefix when the auth display name is blank', () => {
@@ -245,6 +274,25 @@ describe('PremiumScreen', () => {
   });
 
   it('shows monthly trial-eligible helper text when monthly is selected and eligible', () => {
+    mockPremiumState.billingDetails = {
+      ...createBillingDetails(),
+      monthly: {
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      },
+      yearly: createBillingDetails().yearly,
+    };
     mockPremiumState.monthlyTrial = {
       isEligible: true,
       offerToken: null,
@@ -258,9 +306,8 @@ describe('PremiumScreen', () => {
     fireEvent.press(getByTestId('plan-monthly'));
 
     expect(getByTestId('billing-helper-text')).toHaveTextContent(
-      'Eligible for a 7-day free trial.'
+      'Free trial for 7 days. Then $3.00 per month, auto-renews unless canceled. Cancel before the trial ends in Google Play subscriptions to avoid being charged.'
     );
-    expect(queryByTestId('billing-helper-reason')).toBeNull();
   });
 
   it('does not show helper text when monthly trial is unavailable', () => {
@@ -276,11 +323,31 @@ describe('PremiumScreen', () => {
 
     fireEvent.press(getByTestId('plan-monthly'));
 
-    expect(queryByTestId('billing-helper-text')).toBeNull();
-    expect(queryByTestId('billing-helper-reason')).toBeNull();
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      '$3.00 per month, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+    );
   });
 
   it('shows monthly trial badge before the user selects the monthly plan', () => {
+    mockPremiumState.billingDetails = {
+      ...createBillingDetails(),
+      monthly: {
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      },
+      yearly: createBillingDetails().yearly,
+    };
     mockPremiumState.monthlyTrial = {
       isEligible: true,
       offerToken: null,
@@ -291,7 +358,9 @@ describe('PremiumScreen', () => {
 
     expect(getByTestId('plan-monthly-badge')).toHaveTextContent('7-day trial');
     expect(getByTestId('plan-yearly-badge')).toBeTruthy();
-    expect(queryByTestId('billing-helper-text')).toBeNull();
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+    );
   });
 
   it('shows generic restore error message when restore fails without an error message', async () => {

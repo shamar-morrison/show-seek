@@ -17,14 +17,64 @@ export interface ProductSubscriptionAndroidOfferDetails {
 }
 
 type BillingProduct = {
+  defaultOption?: BillingSubscriptionOption | null;
   displayPrice?: string | null;
+  introPrice?: BillingIntroPrice | null;
   platform?: string | null;
+  priceString?: string | null;
+  subscriptionPeriod?: string | null;
   subscriptionOfferDetailsAndroid?: ProductSubscriptionAndroidOfferDetails[] | null;
   type?: string | null;
 };
 
+interface BillingIntroPrice {
+  period?: string | null;
+  periodNumberOfUnits?: number | null;
+  periodUnit?: string | null;
+}
+
+interface BillingPeriodSource {
+  iso8601?: string | null;
+  unit?: string | null;
+  value?: number | null;
+}
+
+interface BillingPriceSource {
+  formatted?: string | null;
+}
+
+interface BillingPricingPhase {
+  billingPeriod?: BillingPeriodSource | null;
+  price?: BillingPriceSource | null;
+}
+
+interface BillingSubscriptionOption {
+  billingPeriod?: BillingPeriodSource | null;
+  freePhase?: BillingPricingPhase | null;
+  fullPricePhase?: BillingPricingPhase | null;
+}
+
 export type PremiumPlan = 'monthly' | 'yearly';
 export type PremiumPurchaseType = 'subs';
+export type PremiumBillingPeriodUnit = 'day' | 'week' | 'month' | 'year' | 'unknown';
+export type PremiumStoreSubscriptionLabelKey =
+  | 'premium.storeNameGooglePlay'
+  | 'premium.storeNameAppStore'
+  | 'premium.storeNameGeneric';
+
+export interface PremiumBillingPeriod {
+  iso8601: string | null;
+  unit: PremiumBillingPeriodUnit;
+  value: number;
+}
+
+export interface PremiumPlanBillingDetails {
+  hasTrialAvailable: boolean;
+  recurringPeriod: PremiumBillingPeriod;
+  recurringPrice: string | null;
+  storeLabelKey: PremiumStoreSubscriptionLabelKey;
+  trialPeriod: PremiumBillingPeriod | null;
+}
 
 export { MONTHLY_TRIAL_OFFER_ID };
 
@@ -152,6 +202,112 @@ const normalizeOfferIdentifier = (value?: string | null): string =>
     .trim()
     .toLowerCase();
 
+const normalizePeriodUnit = (value?: string | null): PremiumBillingPeriodUnit => {
+  switch (
+    String(value ?? '')
+      .trim()
+      .toUpperCase()
+  ) {
+    case 'DAY':
+    case 'D':
+      return 'day';
+    case 'WEEK':
+    case 'W':
+      return 'week';
+    case 'MONTH':
+    case 'M':
+      return 'month';
+    case 'YEAR':
+    case 'Y':
+      return 'year';
+    default:
+      return 'unknown';
+  }
+};
+
+const createBillingPeriod = (
+  value: number,
+  unit: PremiumBillingPeriodUnit,
+  iso8601?: string | null
+): PremiumBillingPeriod | null => {
+  if (!Number.isFinite(value) || value <= 0 || unit === 'unknown') {
+    return null;
+  }
+
+  return {
+    iso8601: iso8601 ?? null,
+    unit,
+    value,
+  };
+};
+
+const parseIso8601Period = (value?: string | null): PremiumBillingPeriod | null => {
+  const normalizedValue = String(value ?? '')
+    .trim()
+    .toUpperCase();
+
+  const match = normalizedValue.match(/^P(\d+)(D|W|M|Y)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, parsedValue, parsedUnit] = match;
+  return createBillingPeriod(Number(parsedValue), normalizePeriodUnit(parsedUnit), normalizedValue);
+};
+
+const resolveBillingPeriodFromSource = (
+  periodSource?: BillingPeriodSource | null
+): PremiumBillingPeriod | null => {
+  if (!periodSource) {
+    return null;
+  }
+
+  const directPeriod = createBillingPeriod(
+    Number(periodSource.value ?? 0),
+    normalizePeriodUnit(periodSource.unit),
+    periodSource.iso8601
+  );
+  if (directPeriod) {
+    return directPeriod;
+  }
+
+  return parseIso8601Period(periodSource.iso8601);
+};
+
+const resolveIntroPricePeriod = (
+  introPrice?: BillingIntroPrice | null
+): PremiumBillingPeriod | null => {
+  if (!introPrice) {
+    return null;
+  }
+
+  const directPeriod = createBillingPeriod(
+    Number(introPrice.periodNumberOfUnits ?? 0),
+    normalizePeriodUnit(introPrice.periodUnit),
+    introPrice.period
+  );
+  if (directPeriod) {
+    return directPeriod;
+  }
+
+  return parseIso8601Period(introPrice.period);
+};
+
+const getFallbackRecurringPeriod = (plan: PremiumPlan): PremiumBillingPeriod => ({
+  iso8601: plan === 'monthly' ? 'P1M' : 'P1Y',
+  unit: plan === 'monthly' ? 'month' : 'year',
+  value: 1,
+});
+
+const getFallbackTrialPeriod = (plan: PremiumPlan): PremiumBillingPeriod | null =>
+  plan === 'monthly'
+    ? {
+        iso8601: 'P7D',
+        unit: 'day',
+        value: 7,
+      }
+    : null;
+
 const hasRecurringMonthlyPaidPhase = (
   offerDetails?: ProductSubscriptionAndroidOfferDetails | null
 ): boolean => {
@@ -202,7 +358,9 @@ export const resolveMonthlyTrialOffer = (
     };
   }
 
-  const matchingOffer = offerDetails.find((offer) => isMonthlyTrialOffer(offer) && offer.offerToken);
+  const matchingOffer = offerDetails.find(
+    (offer) => isMonthlyTrialOffer(offer) && offer.offerToken
+  );
   if (!matchingOffer) {
     return {
       isEligible: false,
@@ -264,9 +422,100 @@ export const getDisplayPriceForSubscriptionProduct = (
   return product.displayPrice || null;
 };
 
+export const resolveStoreSubscriptionLabelKey = (
+  platform?: string | null
+): PremiumStoreSubscriptionLabelKey => {
+  switch (
+    String(platform ?? '')
+      .trim()
+      .toLowerCase()
+  ) {
+    case 'android':
+      return 'premium.storeNameGooglePlay';
+    case 'ios':
+      return 'premium.storeNameAppStore';
+    default:
+      return 'premium.storeNameGeneric';
+  }
+};
+
+export const getPremiumBillingPeriodTranslationKey = (
+  unit: PremiumBillingPeriodUnit
+): 'premium.periodDay' | 'premium.periodWeek' | 'premium.periodMonth' | 'premium.periodYear' => {
+  switch (unit) {
+    case 'day':
+      return 'premium.periodDay';
+    case 'week':
+      return 'premium.periodWeek';
+    case 'year':
+      return 'premium.periodYear';
+    case 'month':
+    case 'unknown':
+    default:
+      return 'premium.periodMonth';
+  }
+};
+
+export const getPremiumBillingPeriodLabelTranslationKey = (
+  unit: PremiumBillingPeriodUnit
+):
+  | 'premium.periodDayLabel'
+  | 'premium.periodWeekLabel'
+  | 'premium.periodMonthLabel'
+  | 'premium.periodYearLabel' => {
+  switch (unit) {
+    case 'day':
+      return 'premium.periodDayLabel';
+    case 'week':
+      return 'premium.periodWeekLabel';
+    case 'year':
+      return 'premium.periodYearLabel';
+    case 'month':
+    case 'unknown':
+    default:
+      return 'premium.periodMonthLabel';
+  }
+};
+
+export const resolvePremiumPlanBillingDetails = ({
+  plan,
+  platform,
+  product,
+}: {
+  plan: PremiumPlan;
+  platform?: string | null;
+  product?: BillingProduct | null;
+}): PremiumPlanBillingDetails => {
+  const recurringPrice =
+    product?.defaultOption?.fullPricePhase?.price?.formatted ??
+    product?.priceString ??
+    getDisplayPriceForSubscriptionProduct(product ?? undefined);
+  const recurringPeriod =
+    resolveBillingPeriodFromSource(product?.defaultOption?.billingPeriod) ??
+    resolveBillingPeriodFromSource(product?.defaultOption?.fullPricePhase?.billingPeriod) ??
+    parseIso8601Period(product?.subscriptionPeriod) ??
+    getFallbackRecurringPeriod(plan);
+  const hasTrialAvailable =
+    product?.defaultOption?.freePhase?.billingPeriod != null || product?.introPrice != null;
+  const trialPeriod = hasTrialAvailable
+    ? (resolveBillingPeriodFromSource(product?.defaultOption?.freePhase?.billingPeriod) ??
+      resolveIntroPricePeriod(product?.introPrice) ??
+      getFallbackTrialPeriod(plan))
+    : null;
+
+  return {
+    hasTrialAvailable,
+    recurringPeriod,
+    recurringPrice,
+    storeLabelKey: resolveStoreSubscriptionLabelKey(platform),
+    trialPeriod,
+  };
+};
+
 export const sortPurchasesByPremiumPriority = <T extends { productId?: string | null }>(
   purchases: T[]
-): T[] => [...purchases].sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId));
+): T[] =>
+  [...purchases].sort((a, b) => getProductPriority(a.productId) - getProductPriority(b.productId));
 
 export interface PremiumRestoreAttemptResult {
   isPremium: boolean;

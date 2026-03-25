@@ -49,8 +49,8 @@ interface PremiumPaywallScreenShellProps {
 
 interface PremiumPaywallFooterProps {
   accentColor: string;
+  billingDisclosure?: string | null;
   isRestoring: boolean;
-  monthlyTrialNote?: string | null;
   onRestore: () => void;
   onSubscribe: () => void;
   plans: PremiumPaywallPlanOption[];
@@ -174,9 +174,9 @@ export function PremiumPaywallScreenShell({
 
 export function PremiumPaywallFooter({
   accentColor,
+  billingDisclosure,
   footerExtras,
   isRestoring,
-  monthlyTrialNote,
   onRestore,
   onSubscribe,
   plans,
@@ -187,9 +187,9 @@ export function PremiumPaywallFooter({
 
   return (
     <>
-      {monthlyTrialNote ? (
+      {billingDisclosure ? (
         <Text style={styles.trialNote} testID="billing-helper-text">
-          {monthlyTrialNote}
+          {billingDisclosure}
         </Text>
       ) : null}
 

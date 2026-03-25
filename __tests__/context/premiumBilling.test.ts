@@ -1,5 +1,6 @@
 import {
   getDisplayPriceForSubscriptionProduct,
+  getPremiumBillingPeriodTranslationKey,
   getPlanForProductId,
   getProductIdForPlan,
   getProductPriority,
@@ -7,6 +8,8 @@ import {
   isKnownPremiumProductId,
   isMonthlyTrialOffer,
   MONTHLY_TRIAL_OFFER_ID,
+  resolvePremiumPlanBillingDetails,
+  resolveStoreSubscriptionLabelKey,
   resolveMonthlyStandardOffer,
   resolveMonthlyTrialOffer,
   shouldTreatRestoreAsSuccess,
@@ -300,6 +303,113 @@ describe('premiumBilling helpers', () => {
     } as any;
 
     expect(getDisplayPriceForSubscriptionProduct(monthlyProduct)).toBe('$3.00');
+  });
+
+  it('derives trial duration from the default subscription option free phase', () => {
+    const billingDetails = resolvePremiumPlanBillingDetails({
+      plan: 'monthly',
+      platform: 'android',
+      product: {
+        defaultOption: {
+          billingPeriod: {
+            iso8601: 'P1M',
+            unit: 'MONTH',
+            value: 1,
+          },
+          freePhase: {
+            billingPeriod: {
+              iso8601: 'P7D',
+              unit: 'DAY',
+              value: 7,
+            },
+          },
+          fullPricePhase: {
+            price: {
+              formatted: '$3.00',
+            },
+          },
+        },
+        priceString: '$3.00',
+      } as any,
+    });
+
+    expect(billingDetails).toEqual({
+      hasTrialAvailable: true,
+      recurringPeriod: {
+        iso8601: 'P1M',
+        unit: 'month',
+        value: 1,
+      },
+      recurringPrice: '$3.00',
+      storeLabelKey: 'premium.storeNameGooglePlay',
+      trialPeriod: {
+        iso8601: 'P7D',
+        unit: 'day',
+        value: 7,
+      },
+    });
+  });
+
+  it('falls back to intro price details when the default option omits a free phase', () => {
+    const billingDetails = resolvePremiumPlanBillingDetails({
+      plan: 'monthly',
+      platform: 'ios',
+      product: {
+        introPrice: {
+          period: 'P1W',
+          periodNumberOfUnits: 1,
+          periodUnit: 'WEEK',
+        },
+        priceString: '$3.00',
+        subscriptionPeriod: 'P1M',
+      } as any,
+    });
+
+    expect(billingDetails.trialPeriod).toEqual({
+      iso8601: 'P1W',
+      unit: 'week',
+      value: 1,
+    });
+    expect(billingDetails.storeLabelKey).toBe('premium.storeNameAppStore');
+  });
+
+  it('derives recurring cadence from store billing periods and falls back to known plan cadence', () => {
+    expect(
+      resolvePremiumPlanBillingDetails({
+        plan: 'yearly',
+        platform: 'android',
+        product: {
+          priceString: '$30.00',
+          subscriptionPeriod: 'P1Y',
+        } as any,
+      }).recurringPeriod
+    ).toEqual({
+      iso8601: 'P1Y',
+      unit: 'year',
+      value: 1,
+    });
+
+    expect(
+      resolvePremiumPlanBillingDetails({
+        plan: 'monthly',
+        platform: 'android',
+        product: {
+          priceString: '$3.00',
+        } as any,
+      }).recurringPeriod
+    ).toEqual({
+      iso8601: 'P1M',
+      unit: 'month',
+      value: 1,
+    });
+  });
+
+  it('resolves the expected store label and period translation keys', () => {
+    expect(resolveStoreSubscriptionLabelKey('android')).toBe('premium.storeNameGooglePlay');
+    expect(resolveStoreSubscriptionLabelKey('ios')).toBe('premium.storeNameAppStore');
+    expect(resolveStoreSubscriptionLabelKey('web')).toBe('premium.storeNameGeneric');
+    expect(getPremiumBillingPeriodTranslationKey('day')).toBe('premium.periodDay');
+    expect(getPremiumBillingPeriodTranslationKey('year')).toBe('premium.periodYear');
   });
 
   it('keeps restore scan running for non-entitled validation results', () => {

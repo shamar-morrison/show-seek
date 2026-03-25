@@ -4,6 +4,7 @@ import {
   PremiumPaywallScreenShell,
   type PremiumPaywallPlanOption,
 } from '@/src/components/premium/PremiumPaywallLayout';
+import { resolvePremiumBillingDisclosure } from '@/src/components/premium/premiumPaywallCopy';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -26,6 +27,7 @@ export default function PremiumScreen() {
     isPremium,
     isLoading,
     monthlyTrial,
+    billingDetails,
     purchasePremium,
     restorePurchases,
     prices,
@@ -58,10 +60,13 @@ export default function PremiumScreen() {
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
-  const monthlyTrialNote =
-    selectedPlan === 'monthly' && monthlyTrial.isEligible
-      ? t('premium.freeTrialEligibleMessage')
-      : null;
+  const selectedPlanDisclosure = resolvePremiumBillingDisclosure({
+    billingDetails: billingDetails[selectedPlan],
+    fallbackPrice: selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice,
+    isMonthlyTrialEligible: monthlyTrial.isEligible,
+    plan: selectedPlan,
+    t,
+  });
   const resolvedDisplayName = resolvePreferredDisplayName(user?.displayName, null, user?.email);
   const readyTitle = resolvedDisplayName
     ? t('premium.readyTitle', { name: resolvedDisplayName })
@@ -176,8 +181,8 @@ export default function PremiumScreen() {
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
+          billingDisclosure={selectedPlanDisclosure}
           isRestoring={isRestoring}
-          monthlyTrialNote={monthlyTrialNote}
           onRestore={handleRestore}
           onSubscribe={handlePurchase}
           plans={plans}

@@ -6,11 +6,37 @@ const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
 const mockRequireAccount = jest.fn(() => false);
 
+const createBillingDetails = (): any => ({
+  monthly: {
+    hasTrialAvailable: false,
+    recurringPeriod: {
+      iso8601: 'P1M',
+      unit: 'month' as const,
+      value: 1,
+    },
+    recurringPrice: '$3.00',
+    storeLabelKey: 'premium.storeNameGooglePlay' as const,
+    trialPeriod: null,
+  },
+  yearly: {
+    hasTrialAvailable: false,
+    recurringPeriod: {
+      iso8601: 'P1Y',
+      unit: 'year' as const,
+      value: 1,
+    },
+    recurringPrice: '$12.00',
+    storeLabelKey: 'premium.storeNameGooglePlay' as const,
+    trialPeriod: null,
+  },
+});
+
 const mockPremiumState = {
   isPremium: false,
   isLoading: false,
   purchasePremium: mockPurchasePremium,
   restorePurchases: mockRestorePurchases,
+  billingDetails: createBillingDetails(),
   prices: {
     monthly: '$3.00',
     yearly: '$12.00',
@@ -79,6 +105,7 @@ describe('OnboardingPaywallStep', () => {
     mockRequireAccount.mockReset().mockReturnValue(false);
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
+    mockPremiumState.billingDetails = createBillingDetails();
     mockPremiumState.monthlyTrial = {
       isEligible: false,
       offerToken: null,
@@ -107,6 +134,9 @@ describe('OnboardingPaywallStep', () => {
     expect(within(footer).getByTestId('onboarding-plan-yearly')).toBeTruthy();
     expect(within(footer).getByTestId('onboarding-subscribe-button')).toBeTruthy();
     expect(within(footer).getByText('Continue')).toBeTruthy();
+    expect(within(footer).getByTestId('billing-helper-text')).toHaveTextContent(
+      '$12.00 per year, auto-renews unless canceled. Cancel anytime in Google Play subscriptions.'
+    );
   });
 
   it('expands the feature accordions by default and keeps Lists last', () => {
@@ -141,7 +171,9 @@ describe('OnboardingPaywallStep', () => {
   it('keeps the close button hidden and untappable until the reveal delay finishes', () => {
     jest.useFakeTimers();
     const onClose = jest.fn();
-    const { getByTestId } = render(<OnboardingPaywallStep displayName="Taylor" onClose={onClose} />);
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={onClose} />
+    );
 
     const closeButton = getByTestId('onboarding-paywall-close-button');
 
@@ -174,6 +206,43 @@ describe('OnboardingPaywallStep', () => {
     fireEvent.press(getByTestId('onboarding-subscribe-button'));
 
     expect(mockPurchasePremium).toHaveBeenCalledWith('monthly');
+  });
+
+  it('shows the monthly trial disclosure when an eligible monthly plan is selected', () => {
+    mockPremiumState.billingDetails = {
+      ...createBillingDetails(),
+      monthly: {
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      },
+      yearly: createBillingDetails().yearly,
+    };
+    mockPremiumState.monthlyTrial = {
+      isEligible: true,
+      offerToken: null,
+      reasonKey: null,
+    };
+
+    const { getByTestId } = render(
+      <OnboardingPaywallStep displayName="Taylor" onClose={jest.fn()} />
+    );
+
+    fireEvent.press(getByTestId('onboarding-plan-monthly'));
+
+    expect(getByTestId('billing-helper-text')).toHaveTextContent(
+      'Free trial for 7 days. Then $3.00 per month, auto-renews unless canceled. Cancel before the trial ends in Google Play subscriptions to avoid being charged.'
+    );
   });
 
   it('prompts for account instead of showing restore alerts when restore requires auth', async () => {

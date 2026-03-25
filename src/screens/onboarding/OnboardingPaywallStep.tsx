@@ -4,6 +4,7 @@ import {
   PremiumPaywallScreenShell,
   type PremiumPaywallPlanOption,
 } from '@/src/components/premium/PremiumPaywallLayout';
+import { resolvePremiumBillingDisclosure } from '@/src/components/premium/premiumPaywallCopy';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
@@ -25,18 +26,28 @@ export default function OnboardingPaywallStep({
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
   const requireAccount = useAccountRequired();
-  const { isPremium, isLoading, monthlyTrial, purchasePremium, restorePurchases, prices } =
-    usePremium();
+  const {
+    billingDetails,
+    isPremium,
+    isLoading,
+    monthlyTrial,
+    purchasePremium,
+    restorePurchases,
+    prices,
+  } = usePremium();
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
-  const monthlyTrialNote =
-    selectedPlan === 'monthly' && monthlyTrial.isEligible
-      ? t('premium.freeTrialEligibleMessage')
-      : null;
+  const selectedPlanDisclosure = resolvePremiumBillingDisclosure({
+    billingDetails: billingDetails[selectedPlan],
+    fallbackPrice: selectedPlan === 'monthly' ? monthlyPrice : yearlyPrice,
+    isMonthlyTrialEligible: monthlyTrial.isEligible,
+    plan: selectedPlan,
+    t,
+  });
   const trimmedDisplayName = displayName.trim();
   const readyTitle = trimmedDisplayName
     ? t('premium.readyTitle', { name: trimmedDisplayName })
@@ -131,8 +142,8 @@ export default function OnboardingPaywallStep({
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
+          billingDisclosure={selectedPlanDisclosure}
           isRestoring={isRestoring}
-          monthlyTrialNote={monthlyTrialNote}
           onRestore={handleRestore}
           onSubscribe={handlePurchase}
           plans={plans}

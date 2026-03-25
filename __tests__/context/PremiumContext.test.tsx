@@ -18,9 +18,7 @@ const mockAuditedOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
 const mockAppStateListenerRemove = jest.fn();
 let mockEnablePremiumRealtimeListener = true;
-let mockCurrentUser:
-  | { uid: string; email?: string | null; isAnonymous?: boolean }
-  | null = {
+let mockCurrentUser: { uid: string; email?: string | null; isAnonymous?: boolean } | null = {
   uid: 'test-user-id',
   email: 'test@example.com',
   isAnonymous: false,
@@ -601,7 +599,8 @@ describe('PremiumContext', () => {
       isAnonymous: false,
     };
     const staleUnsubscribe = jest.fn();
-    let staleSnapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null = null;
+    let staleSnapshotCallback: ((snapshot: ReturnType<typeof createSnapshot>) => void) | null =
+      null;
 
     mockCurrentUser = userA;
     mockConfigureRevenueCat.mockResolvedValue(false);
@@ -1115,6 +1114,21 @@ describe('PremiumContext', () => {
         offerToken: null,
         reasonKey: null,
       });
+      expect(result.current.billingDetails.monthly).toEqual({
+        hasTrialAvailable: true,
+        recurringPeriod: {
+          iso8601: 'P1M',
+          unit: 'month',
+          value: 1,
+        },
+        recurringPrice: '$3.00',
+        storeLabelKey: 'premium.storeNameGooglePlay',
+        trialPeriod: {
+          iso8601: 'P7D',
+          unit: 'day',
+          value: 7,
+        },
+      });
     });
   });
 
@@ -1127,6 +1141,12 @@ describe('PremiumContext', () => {
         isEligible: false,
         offerToken: null,
         reasonKey: 'premium.freeTrialUnavailableMessage',
+      });
+      expect(result.current.billingDetails.monthly.trialPeriod).toBeNull();
+      expect(result.current.billingDetails.monthly.recurringPeriod).toEqual({
+        iso8601: 'P1M',
+        unit: 'month',
+        value: 1,
       });
     });
   });
