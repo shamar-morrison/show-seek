@@ -7,15 +7,24 @@ const mockTrackScreen = jest.fn();
 const mockInitializeAnalytics = jest.fn(() => Promise.resolve());
 const mockQueryClientClear = jest.fn();
 const mockClearPersistedQueryCache = jest.fn(() => Promise.resolve());
-const mockHydratePersistedQueryCache = jest.fn((_queryClient?: unknown) => Promise.resolve(true));
+const mockHydratePersistedQueryCache = jest.fn(
+  (_queryClient?: unknown, _expectedOwnerId?: string | null) => Promise.resolve(true)
+);
 const mockPausePersistedQuerySync = jest.fn(() => Promise.resolve());
 const mockResumePersistedQuerySync = jest.fn();
 const mockDisposePersistedQuerySync = jest.fn(() => Promise.resolve());
-const mockCreatePersistedQueryCacheSyncController = jest.fn((_queryClient?: unknown) => ({
-  pause: mockPausePersistedQuerySync,
-  resume: mockResumePersistedQuerySync,
-  dispose: mockDisposePersistedQuerySync,
-}));
+const mockCreatePersistedQueryCacheSyncController = jest.fn(
+  (
+    _queryClient?: unknown,
+    _options?: {
+      getOwnerId: () => string | null;
+    }
+  ) => ({
+    pause: mockPausePersistedQuerySync,
+    resume: mockResumePersistedQuerySync,
+    dispose: mockDisposePersistedQuerySync,
+  })
+);
 
 const flushMicrotasks = async () => {
   await Promise.resolve();
@@ -23,7 +32,7 @@ const flushMicrotasks = async () => {
 };
 
 const mockAuthState = {
-  user: null as null | { uid?: string },
+  user: null as null | { uid?: string; isAnonymous?: boolean },
   loading: false,
   hasCompletedOnboarding: true as boolean | null,
 };
@@ -134,9 +143,12 @@ jest.mock('@/src/services/revenueCat', () => ({
 
 jest.mock('@/src/services/queryCachePersistence', () => ({
   clearPersistedQueryCache: () => mockClearPersistedQueryCache(),
-  createPersistedQueryCacheSyncController: (queryClient: unknown) =>
-    mockCreatePersistedQueryCacheSyncController(queryClient),
-  hydratePersistedQueryCache: (queryClient: unknown) => mockHydratePersistedQueryCache(queryClient),
+  createPersistedQueryCacheSyncController: (
+    queryClient: unknown,
+    options: { getOwnerId: () => string | null }
+  ) => mockCreatePersistedQueryCacheSyncController(queryClient, options),
+  hydratePersistedQueryCache: (queryClient: unknown, expectedOwnerId: string | null) =>
+    mockHydratePersistedQueryCache(queryClient, expectedOwnerId),
 }));
 
 jest.mock('@/src/i18n', () => ({
@@ -233,6 +245,26 @@ describe('RootLayout routing', () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
+    });
+  });
+
+  it('waits for auth loading to settle before hydrating persisted query cache', async () => {
+    mockAuthState.loading = true;
+    mockAuthState.user = { uid: 'user-1', isAnonymous: false };
+
+    const { rerender } = render(<RootLayout />);
+
+    expect(mockHydratePersistedQueryCache).not.toHaveBeenCalled();
+    expect(mockResumePersistedQuerySync).not.toHaveBeenCalled();
+
+    mockAuthState.loading = false;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockHydratePersistedQueryCache).toHaveBeenCalledWith(expect.anything(), 'user-1');
+    });
+    await waitFor(() => {
+      expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
     });
   });
 

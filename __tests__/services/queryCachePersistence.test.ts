@@ -13,9 +13,14 @@ const flushMicrotasks = async () => {
   await Promise.resolve();
 };
 
+const createOwnerResolver = (ownerId: string | null) => ({
+  getOwnerId: () => ownerId,
+});
+
 const getPersistedPayload = (callIndex = 0) => {
   const setItemCall = (AsyncStorage.setItem as jest.Mock).mock.calls[callIndex];
   return JSON.parse(setItemCall[1] as string) as {
+    ownerId: string;
     savedAt: number;
     state: {
       queries: Array<{
@@ -46,7 +51,7 @@ describe('queryCachePersistence', () => {
     const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
     (AsyncStorage.getItem as jest.Mock).mockRejectedValue(new Error('storage read failed'));
 
-    await expect(hydratePersistedQueryCache(queryClient)).resolves.toBe(false);
+    await expect(hydratePersistedQueryCache(queryClient, 'user-1')).resolves.toBe(false);
 
     expect(consoleSpy).toHaveBeenCalledWith(
       '[queryCachePersistence] Failed to hydrate query cache:',
@@ -55,7 +60,7 @@ describe('queryCachePersistence', () => {
     consoleSpy.mockRestore();
   });
 
-  it('does not hydrate invalid serialized dates as Invalid Date', async () => {
+  it('hydrates persisted cache only when the stored owner matches the current user', async () => {
     const sourceClient = new QueryClient();
     const targetClient = new QueryClient();
     const taggedDate = { __type: 'Date', value: 'not-a-date' };
@@ -66,15 +71,70 @@ describe('queryCachePersistence', () => {
 
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
       JSON.stringify({
+        ownerId: 'user-1',
         state: dehydrate(sourceClient),
       })
     );
 
-    await expect(hydratePersistedQueryCache(targetClient)).resolves.toBe(true);
+    await expect(hydratePersistedQueryCache(targetClient, 'user-1')).resolves.toBe(true);
 
     expect(targetClient.getQueryData(['ratings', 'user-1'])).toEqual({
       ratedAt: taggedDate,
     });
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalled();
+  });
+
+  it('clears legacy ownerless persisted cache before hydrating', async () => {
+    const sourceClient = new QueryClient();
+    const targetClient = new QueryClient();
+
+    sourceClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+      JSON.stringify({
+        state: dehydrate(sourceClient),
+      })
+    );
+
+    await expect(hydratePersistedQueryCache(targetClient, 'user-1')).resolves.toBe(false);
+
+    expect(targetClient.getQueryData(['ratings', 'user-1'])).toBeUndefined();
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('showseek_query_cache_v1');
+  });
+
+  it('clears persisted cache when the stored owner differs from the current user', async () => {
+    const sourceClient = new QueryClient();
+    const targetClient = new QueryClient();
+
+    sourceClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+      JSON.stringify({
+        ownerId: 'user-1',
+        state: dehydrate(sourceClient),
+      })
+    );
+
+    await expect(hydratePersistedQueryCache(targetClient, 'user-2')).resolves.toBe(false);
+
+    expect(targetClient.getQueryData(['ratings', 'user-1'])).toBeUndefined();
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('showseek_query_cache_v1');
+  });
+
+  it('clears persisted cache when no authenticated owner is available', async () => {
+    const sourceClient = new QueryClient();
+    const targetClient = new QueryClient();
+
+    sourceClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(
+      JSON.stringify({
+        ownerId: 'user-1',
+        state: dehydrate(sourceClient),
+      })
+    );
+
+    await expect(hydratePersistedQueryCache(targetClient, null)).resolves.toBe(false);
+
+    expect(targetClient.getQueryData(['ratings', 'user-1'])).toBeUndefined();
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('showseek_query_cache_v1');
   });
 
   it('logs when debounced query cache persistence fails', async () => {
@@ -83,7 +143,7 @@ describe('queryCachePersistence', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
     (AsyncStorage.setItem as jest.Mock).mockRejectedValue(new Error('persist failed'));
 
-    const unsubscribe = subscribeToPersistedQueryCache(queryClient);
+    const unsubscribe = subscribeToPersistedQueryCache(queryClient, createOwnerResolver('user-1'));
 
     queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
     await jest.runAllTimersAsync();
@@ -107,7 +167,7 @@ describe('queryCachePersistence', () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();
 
-    const unsubscribe = subscribeToPersistedQueryCache(queryClient);
+    const unsubscribe = subscribeToPersistedQueryCache(queryClient, createOwnerResolver('user-1'));
 
     queryClient.setQueryData(['genres', 'movie', 'en-US'], {
       28: 'Action',
@@ -118,6 +178,7 @@ describe('queryCachePersistence', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
     expect(getPersistedPayload()).toEqual(
       expect.objectContaining({
+        ownerId: 'user-1',
         state: expect.objectContaining({
           queries: [
             expect.objectContaining({
@@ -140,7 +201,7 @@ describe('queryCachePersistence', () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();
 
-    const unsubscribe = subscribeToPersistedQueryCache(queryClient);
+    const unsubscribe = subscribeToPersistedQueryCache(queryClient, createOwnerResolver('user-1'));
 
     queryClient.setQueryData(['reminder', 'user-1', 'movie', 101], {
       id: 'reminder-1',
@@ -153,6 +214,7 @@ describe('queryCachePersistence', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
     expect(getPersistedPayload()).toEqual(
       expect.objectContaining({
+        ownerId: 'user-1',
         state: expect.objectContaining({
           queries: [
             expect.objectContaining({
@@ -176,7 +238,10 @@ describe('queryCachePersistence', () => {
   it('cancels pending debounced writes when sync is paused', async () => {
     jest.useFakeTimers();
     const queryClient = new QueryClient();
-    const controller = createPersistedQueryCacheSyncController(queryClient);
+    const controller = createPersistedQueryCacheSyncController(
+      queryClient,
+      createOwnerResolver('user-1')
+    );
 
     controller.resume();
     queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
@@ -202,7 +267,10 @@ describe('queryCachePersistence', () => {
         })
     );
 
-    const controller = createPersistedQueryCacheSyncController(queryClient);
+    const controller = createPersistedQueryCacheSyncController(
+      queryClient,
+      createOwnerResolver('user-1')
+    );
     controller.resume();
 
     queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
@@ -249,7 +317,10 @@ describe('queryCachePersistence', () => {
       operations.push('removeItem');
     });
 
-    const controller = createPersistedQueryCacheSyncController(queryClient);
+    const controller = createPersistedQueryCacheSyncController(
+      queryClient,
+      createOwnerResolver('user-1')
+    );
     controller.resume();
 
     queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
@@ -293,7 +364,7 @@ describe('queryCachePersistence', () => {
         })
     );
 
-    const unsubscribe = subscribeToPersistedQueryCache(queryClient);
+    const unsubscribe = subscribeToPersistedQueryCache(queryClient, createOwnerResolver('user-1'));
 
     queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
     jest.advanceTimersByTime(300);
@@ -329,5 +400,21 @@ describe('queryCachePersistence', () => {
     expect(storedPayload).toBe((AsyncStorage.setItem as jest.Mock).mock.calls[1][1]);
 
     unsubscribe();
+  });
+
+  it('does not persist query cache when there is no authenticated owner', async () => {
+    jest.useFakeTimers();
+    const queryClient = new QueryClient();
+    const controller = createPersistedQueryCacheSyncController(queryClient, createOwnerResolver(null));
+
+    controller.resume();
+    queryClient.setQueryData(['ratings', 'user-1'], [{ id: 'rating-1' }]);
+
+    await jest.runAllTimersAsync();
+    await flushMicrotasks();
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+
+    await controller.dispose();
   });
 });

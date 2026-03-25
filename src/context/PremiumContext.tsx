@@ -378,15 +378,20 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       return;
     }
 
+    const expectedUid = user.uid;
     const listener = (customerInfo: CustomerInfo) => {
-      void applyCustomerInfo(customerInfo, user.uid);
+      if (!isExpectedAuthenticatedUser(expectedUid)) {
+        return;
+      }
+
+      void applyCustomerInfo(customerInfo, expectedUid);
     };
 
     Purchases.addCustomerInfoUpdateListener(listener);
     return () => {
       Purchases.removeCustomerInfoUpdateListener(listener);
     };
-  }, [applyCustomerInfo, isRevenueCatLoading, user]);
+  }, [applyCustomerInfo, isExpectedAuthenticatedUser, isRevenueCatLoading, user]);
 
   useEffect(() => {
     if (!user?.uid || user.isAnonymous || Platform.OS !== 'android' || isRevenueCatLoading) {

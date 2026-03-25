@@ -136,20 +136,39 @@ function AppShellLoading({ accentColor }: { accentColor: string }) {
 }
 
 function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
+  const { loading, user } = useAuth();
   const [isHydrated, setIsHydrated] = useState(false);
+  const authenticatedOwnerId = user && !user.isAnonymous ? user.uid : null;
+  const ownerIdRef = useRef<string | null>(authenticatedOwnerId);
+  const bootstrapSequenceRef = useRef(0);
+  const hasHydratedRef = useRef(false);
+
+  ownerIdRef.current = authenticatedOwnerId;
+
   const persistedQuerySyncController = useMemo(
-    () => createPersistedQueryCacheSyncController(queryClient),
+    () =>
+      createPersistedQueryCacheSyncController(queryClient, {
+        getOwnerId: () => ownerIdRef.current,
+      }),
     []
   );
 
   useEffect(() => {
-    let isMounted = true;
+    if (loading || hasHydratedRef.current) {
+      return;
+    }
+
+    let isActive = true;
+    const bootstrapSequence = bootstrapSequenceRef.current + 1;
+    bootstrapSequenceRef.current = bootstrapSequence;
+    const bootstrapOwnerId = authenticatedOwnerId;
 
     const bootstrap = async () => {
       try {
-        await hydratePersistedQueryCache(queryClient);
+        await hydratePersistedQueryCache(queryClient, bootstrapOwnerId);
       } finally {
-        if (isMounted) {
+        if (isActive && bootstrapSequenceRef.current === bootstrapSequence) {
+          hasHydratedRef.current = true;
           persistedQuerySyncController.resume();
           setIsHydrated(true);
         }
@@ -159,7 +178,12 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
     void bootstrap();
 
     return () => {
-      isMounted = false;
+      isActive = false;
+    };
+  }, [authenticatedOwnerId, loading, persistedQuerySyncController]);
+
+  useEffect(() => {
+    return () => {
       void persistedQuerySyncController.dispose();
     };
   }, [persistedQuerySyncController]);
@@ -704,8 +728,8 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <QueryCacheBootstrap>
-          <AuthProvider>
+        <AuthProvider>
+          <QueryCacheBootstrap>
             <GuestAccessProvider>
               <PremiumProvider>
                 <TraktProvider>
@@ -723,8 +747,8 @@ export default function RootLayout() {
                 </TraktProvider>
               </PremiumProvider>
             </GuestAccessProvider>
-          </AuthProvider>
-        </QueryCacheBootstrap>
+          </QueryCacheBootstrap>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

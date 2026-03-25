@@ -606,6 +606,58 @@ describe('PremiumContext', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('ignores stale customer info listener callbacks after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(mockAddCustomerInfoUpdateListener).toHaveBeenCalledTimes(1);
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    const staleListener = mockAddCustomerInfoUpdateListener.mock.calls[0]?.[0] as
+      | ((customerInfo: ReturnType<typeof makeCustomerInfo>) => void)
+      | undefined;
+
+    if (!staleListener) {
+      throw new Error('Expected a registered customer info listener for the initial user.');
+    }
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(mockRemoveCustomerInfoUpdateListener).toHaveBeenCalledWith(staleListener);
+      expect(mockAddCustomerInfoUpdateListener).toHaveBeenCalledTimes(2);
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    (AsyncStorage.setItem as jest.Mock).mockClear();
+
+    await act(async () => {
+      staleListener(makeCustomerInfo(true));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(false);
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+  });
+
   it('does not leak cached premium across users when auth changes during startup', async () => {
     const userA = {
       uid: 'user-a',

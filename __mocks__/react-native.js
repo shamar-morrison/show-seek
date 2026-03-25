@@ -2,6 +2,7 @@
 // This mock provides string-based components for testing-library compatibility
 
 const React = require('react');
+const { jest } = require('@jest/globals');
 
 // Create proper mock components
 const createMockComponent = (name) => {

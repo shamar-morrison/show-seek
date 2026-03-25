@@ -90,15 +90,36 @@ const shouldPersistQuery = (query: Query): boolean => {
   return query.state.status === 'success' && query.state.data !== undefined;
 };
 
-export async function hydratePersistedQueryCache(queryClient: QueryClient): Promise<boolean> {
+type PersistedQueryOwnerId = string | null;
+
+interface PersistedQueryCachePayload {
+  ownerId?: unknown;
+  savedAt?: unknown;
+  state?: unknown;
+}
+
+export interface PersistedQueryCacheSyncControllerOptions {
+  getOwnerId: () => PersistedQueryOwnerId;
+}
+
+const resolvePersistedOwnerId = (ownerId: unknown): PersistedQueryOwnerId =>
+  typeof ownerId === 'string' ? ownerId : null;
+
+export async function hydratePersistedQueryCache(
+  queryClient: QueryClient,
+  expectedOwnerId: PersistedQueryOwnerId
+): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(QUERY_CACHE_STORAGE_KEY);
     if (!raw) {
       return false;
     }
 
-    const parsed = JSON.parse(raw) as { state?: unknown } | null;
-    if (!parsed?.state) {
+    const parsed = JSON.parse(raw) as PersistedQueryCachePayload | null;
+    const storedOwnerId = resolvePersistedOwnerId(parsed?.ownerId);
+
+    if (!parsed?.state || !expectedOwnerId || !storedOwnerId || storedOwnerId !== expectedOwnerId) {
+      await clearPersistedQueryCache();
       return false;
     }
 
@@ -121,7 +142,8 @@ export interface PersistedQueryCacheSyncController {
 }
 
 export function createPersistedQueryCacheSyncController(
-  queryClient: QueryClient
+  queryClient: QueryClient,
+  { getOwnerId }: PersistedQueryCacheSyncControllerOptions
 ): PersistedQueryCacheSyncController {
   let persistTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingWrite: Promise<void> | null = null;
@@ -131,11 +153,17 @@ export function createPersistedQueryCacheSyncController(
   const persistNow = async () => {
     const previousWrite = pendingWrite?.catch(() => undefined) ?? Promise.resolve();
     const nextWrite = previousWrite.then(async () => {
+      const ownerId = getOwnerId();
+      if (!ownerId) {
+        return;
+      }
+
       const state = dehydrate(queryClient, {
         shouldDehydrateQuery: shouldPersistQuery,
       });
 
-      const payload = {
+      const payload: PersistedQueryCachePayload = {
+        ownerId,
         savedAt: Date.now(),
         state: serializeValue(state),
       };
@@ -235,8 +263,11 @@ export function createPersistedQueryCacheSyncController(
   };
 }
 
-export function subscribeToPersistedQueryCache(queryClient: QueryClient): () => void {
-  const controller = createPersistedQueryCacheSyncController(queryClient);
+export function subscribeToPersistedQueryCache(
+  queryClient: QueryClient,
+  options: PersistedQueryCacheSyncControllerOptions
+): () => void {
+  const controller = createPersistedQueryCacheSyncController(queryClient, options);
   controller.resume();
 
   return () => {
