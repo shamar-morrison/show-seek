@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 const mockConfigureRevenueCat = jest.fn();
 const mockCreateUserDocument = jest.fn();
@@ -16,6 +16,7 @@ const mockAddCustomerInfoUpdateListener = jest.fn();
 const mockRemoveCustomerInfoUpdateListener = jest.fn();
 const mockAuditedOnSnapshot = jest.fn();
 const mockOnAuthStateChanged = jest.fn();
+const mockAppStateListenerRemove = jest.fn();
 let mockEnablePremiumRealtimeListener = true;
 let mockCurrentUser:
   | { uid: string; email?: string | null; isAnonymous?: boolean }
@@ -27,6 +28,7 @@ let mockCurrentUser:
 let authStateChangeCallback:
   | ((user: { uid: string; email?: string | null; isAnonymous?: boolean } | null) => void)
   | null = null;
+let appStateChangeHandler: ((nextState: string) => void) | null = null;
 
 process.env.EXPO_PUBLIC_ENABLE_PREMIUM_REALTIME_LISTENER = 'true';
 
@@ -207,6 +209,7 @@ describe('PremiumContext', () => {
       isAnonymous: false,
     };
     authStateChangeCallback = null;
+    appStateChangeHandler = null;
 
     mockConfigureRevenueCat.mockResolvedValue(true);
     mockCreateUserDocument.mockResolvedValue(undefined);
@@ -229,6 +232,12 @@ describe('PremiumContext', () => {
       authStateChangeCallback = callback;
       callback(mockCurrentUser);
       return jest.fn();
+    });
+
+    mockAppStateListenerRemove.mockReset();
+    (AppState.addEventListener as jest.Mock).mockImplementation((_event, callback) => {
+      appStateChangeHandler = callback as (nextState: string) => void;
+      return { remove: mockAppStateListenerRemove };
     });
 
     mockAuditedOnSnapshot.mockImplementation((_ref, onNext) => {
@@ -342,6 +351,43 @@ describe('PremiumContext', () => {
     await waitFor(() => {
       expect(result.current.isPremium).toBe(false);
       expect(result.current.isLoading).toBe(false);
+    });
+  });
+
+  it('clears previous premium state immediately when auth changes users', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const userBConfigure = createDeferred<boolean>();
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockImplementation(() =>
+      mockCurrentUser?.uid === userB.uid ? userBConfigure.promise : Promise.resolve(true)
+    );
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    emitAuthStateChange(userB);
+
+    expect(result.current.isPremium).toBe(false);
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      userBConfigure.resolve(false);
+      await Promise.resolve();
+      await Promise.resolve();
     });
   });
 
@@ -502,6 +548,56 @@ describe('PremiumContext', () => {
           isPremium: true,
         },
       });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPremium).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('ignores stale foreground customer info refresh results after the auth user changes', async () => {
+    const userA = {
+      uid: 'user-a',
+      email: 'user-a@example.com',
+      isAnonymous: false,
+    };
+    const userB = {
+      uid: 'user-b',
+      email: 'user-b@example.com',
+      isAnonymous: false,
+    };
+    const foregroundRefresh = createDeferred<ReturnType<typeof makeCustomerInfo>>();
+
+    mockCurrentUser = userA;
+    mockConfigureRevenueCat.mockResolvedValue(false);
+
+    const { result } = renderHook(() => usePremium(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    mockGetCustomerInfo.mockImplementation(() => foregroundRefresh.promise);
+
+    act(() => {
+      appStateChangeHandler?.('active');
+    });
+
+    await waitFor(() => {
+      expect(mockGetCustomerInfo).toHaveBeenCalledTimes(1);
+    });
+
+    emitAuthStateChange(userB);
+
+    await waitFor(() => {
+      expect(result.current.isPremium).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      foregroundRefresh.resolve(makeCustomerInfo(true));
       await Promise.resolve();
       await Promise.resolve();
     });

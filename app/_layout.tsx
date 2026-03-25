@@ -171,19 +171,32 @@ function QueryCacheBootstrap({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RootLayoutNav() {
-  const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
+interface ResolvedRootLayoutNavProps {
+  accentColor: string;
+  hasCompletedOnboarding: boolean | null;
+  hasCompletedPersonalOnboarding: boolean | null;
+  isAccentReady: boolean;
+  isLanguageReady: boolean;
+  isRegionReady: boolean;
+  loading: boolean;
+  router: ReturnType<typeof useRouter>;
+  segments: readonly string[];
+  user: { uid?: string } | null;
+}
+
+function ResolvedRootLayoutNav({
+  accentColor,
+  hasCompletedOnboarding,
+  hasCompletedPersonalOnboarding,
+  isAccentReady,
+  isLanguageReady,
+  isRegionReady,
+  loading,
+  router,
+  segments,
+  user,
+}: ResolvedRootLayoutNavProps) {
   const { preferences, isLoading: preferencesLoading } = usePreferences();
-  const { isLanguageReady } = useLanguage();
-  const { isRegionReady } = useRegion();
-  const { accentColor, isAccentReady } = useAccentColor();
-  const segments = useSegments();
-  const router = useRouter();
-  const persistedQuerySyncController = usePersistedQuerySync();
-  const previousUidRef = useRef<string | null>(user?.uid ?? null);
-  const authTransitionCleanupRef = useRef<Promise<void>>(Promise.resolve());
-  const authTransitionCleanupSequenceRef = useRef(0);
-  const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
   const lastTrackedScreenRef = useRef<string | null>(null);
   const [debugTimeoutTriggered, setDebugTimeoutTriggered] = useState(false);
   const [debugForceContinue, setDebugForceContinue] = useState(false);
@@ -208,10 +221,6 @@ function RootLayoutNav() {
     preferencesLoading,
   ]);
   const isInitializing = gateReasons.length > 0;
-
-  // Handle deep links
-  useDeepLinking();
-  useQuickActions();
 
   useEffect(() => {
     if (!__DEV__ || !READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
@@ -278,48 +287,6 @@ function RootLayoutNav() {
     gateReasons,
   ]);
 
-  // Handle notification taps
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-
-      if (data.type === 'reminder' && data.mediaType && data.mediaId) {
-        // Navigate to movie detail screen
-        // Use timeout to ensure navigation is ready
-        setTimeout(() => {
-          router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
-        }, 100);
-      }
-    });
-
-    return () => subscription.remove();
-  }, [router]);
-
-  // Initialize reminder sync on app launch
-  useEffect(() => {
-    if (!READ_OPTIMIZATION_FLAGS.enableStartupReminderSync) {
-      return;
-    }
-
-    initializeReminderSync().catch((error) => {
-      console.error('[reminderSync] Failed to initialize', error);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-
-    Notifications.setNotificationChannelAsync('default', {
-      name: i18n.t('notifications.channelName'),
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: accentColor,
-      sound: 'default',
-    }).catch((error) => {
-      console.error('[NotificationChannel] Failed to create default channel', error);
-    });
-  }, [accentColor]);
-
   useEffect(() => {
     const waitingForPreferences = !!user && preferencesLoading;
 
@@ -364,97 +331,6 @@ function RootLayoutNav() {
     isAccentReady,
     preferencesLoading,
   ]);
-
-  useEffect(() => {
-    const currentUid = user?.uid ?? null;
-    const previousUid = previousUidRef.current;
-    const authChanged = previousUid !== currentUid;
-
-    if (authChanged) {
-      const context = `auth-transition:${previousUid ?? 'none'}->${currentUid ?? 'none'}`;
-      logFirestoreReadAuditReport(context);
-      logReadAuditSessionReport(context);
-    }
-
-    const isSignOut = !!previousUid && !currentUid;
-    const isAccountSwitch = !!previousUid && !!currentUid && previousUid !== currentUid;
-
-    if (isSignOut || isAccountSwitch) {
-      const cleanupSequence = authTransitionCleanupSequenceRef.current + 1;
-      authTransitionCleanupSequenceRef.current = cleanupSequence;
-
-      authTransitionCleanupRef.current = authTransitionCleanupRef.current
-        .catch(() => undefined)
-        .then(async () => {
-          await persistedQuerySyncController.pause();
-
-          try {
-            if (READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear) {
-              if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
-                console.log('[RootLayout] queryClient.clear() skipped by debug flag', {
-                  previousUid,
-                  currentUid,
-                });
-              }
-            } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
-              queryClient.clear();
-            }
-
-            await clearPersistedQueryCache();
-          } catch (error) {
-            console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
-              error,
-              previousUid,
-              currentUid,
-            });
-          } finally {
-            resetClientReadState();
-
-            if (authTransitionCleanupSequenceRef.current === cleanupSequence) {
-              persistedQuerySyncController.resume();
-            }
-          }
-        });
-    }
-
-    if (authChanged || !getReadAuditSessionReport()) {
-      startReadAuditSession(currentUid ?? undefined);
-    }
-
-    previousUidRef.current = currentUid;
-  }, [persistedQuerySyncController, user?.uid]);
-
-  useEffect(() => {
-    if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
-      return;
-    }
-
-    if (!AppState?.addEventListener) {
-      return;
-    }
-
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      const previousState = appStateRef.current;
-      const isBackgroundTransition =
-        previousState === 'active' && (nextState === 'inactive' || nextState === 'background');
-      const isForegroundTransition =
-        (previousState === 'inactive' || previousState === 'background') && nextState === 'active';
-
-      if (isBackgroundTransition) {
-        logFirestoreReadAuditReport('app-background');
-        logReadAuditSessionReport('app-background');
-      }
-
-      if (isForegroundTransition) {
-        logFirestoreReadAuditReport('app-foreground');
-        logReadAuditSessionReport('app-foreground');
-      }
-
-      appStateRef.current = nextState;
-    });
-
-    return () => subscription.remove();
-  }, []);
 
   useEffect(() => {
     if (!__DEV__ || !READ_OPTIMIZATION_FLAGS.debugEnableTimeoutEscapeHatch) {
@@ -636,6 +512,184 @@ function RootLayoutNav() {
         <Stack.Screen name="personalized-onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </>
+  );
+}
+
+function RootLayoutNav() {
+  const { loading, user, hasCompletedOnboarding, hasCompletedPersonalOnboarding } = useAuth();
+  const { isLanguageReady } = useLanguage();
+  const { isRegionReady } = useRegion();
+  const { accentColor, isAccentReady } = useAccentColor();
+  const segments = useSegments();
+  const router = useRouter();
+  const persistedQuerySyncController = usePersistedQuerySync();
+  const previousUidRef = useRef<string | null>(user?.uid ?? null);
+  const authTransitionCleanupRef = useRef<Promise<void>>(Promise.resolve());
+  const authTransitionCleanupSequenceRef = useRef(0);
+  const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
+  const [isAuthTransitioning, setIsAuthTransitioning] = useState(false);
+
+  const currentUid = user?.uid ?? null;
+  const previousUid = previousUidRef.current;
+  const isSignOut = !!previousUid && !currentUid;
+  const isAccountSwitch = !!previousUid && !!currentUid && previousUid !== currentUid;
+  const shouldBlockForAuthTransition = isAuthTransitioning || isSignOut || isAccountSwitch;
+
+  useDeepLinking();
+  useQuickActions();
+
+  // Handle notification taps
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+
+      if (data.type === 'reminder' && data.mediaType && data.mediaId) {
+        // Navigate to movie detail screen
+        // Use timeout to ensure navigation is ready
+        setTimeout(() => {
+          router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
+        }, 100);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
+
+  // Initialize reminder sync on app launch
+  useEffect(() => {
+    if (!READ_OPTIMIZATION_FLAGS.enableStartupReminderSync) {
+      return;
+    }
+
+    initializeReminderSync().catch((error) => {
+      console.error('[reminderSync] Failed to initialize', error);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    Notifications.setNotificationChannelAsync('default', {
+      name: i18n.t('notifications.channelName'),
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: accentColor,
+      sound: 'default',
+    }).catch((error) => {
+      console.error('[NotificationChannel] Failed to create default channel', error);
+    });
+  }, [accentColor]);
+
+  useEffect(() => {
+    const authChanged = previousUid !== currentUid;
+
+    if (authChanged) {
+      const context = `auth-transition:${previousUid ?? 'none'}->${currentUid ?? 'none'}`;
+      logFirestoreReadAuditReport(context);
+      logReadAuditSessionReport(context);
+    }
+
+    if (isSignOut || isAccountSwitch) {
+      const cleanupSequence = authTransitionCleanupSequenceRef.current + 1;
+      authTransitionCleanupSequenceRef.current = cleanupSequence;
+      setIsAuthTransitioning(true);
+
+      authTransitionCleanupRef.current = authTransitionCleanupRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          let syncPaused = false;
+
+          try {
+            await persistedQuerySyncController.pause();
+            syncPaused = true;
+
+            if (READ_OPTIMIZATION_FLAGS.debugDisableAuthTransitionCacheClear) {
+              if (READ_OPTIMIZATION_FLAGS.debugInitGateLogs) {
+                console.log('[RootLayout] queryClient.clear() skipped by debug flag', {
+                  previousUid,
+                  currentUid,
+                });
+              }
+            } else if (typeof (queryClient as { clear?: () => void }).clear === 'function') {
+              queryClient.clear();
+            }
+
+            await clearPersistedQueryCache();
+          } catch (error) {
+            console.error('[RootLayout] Failed to clear persisted query cache during auth transition:', {
+              error,
+              previousUid,
+              currentUid,
+            });
+          } finally {
+            resetClientReadState();
+
+            if (authTransitionCleanupSequenceRef.current === cleanupSequence) {
+              if (syncPaused) {
+                persistedQuerySyncController.resume();
+              }
+              setIsAuthTransitioning(false);
+            }
+          }
+        });
+    }
+
+    if (authChanged || !getReadAuditSessionReport()) {
+      startReadAuditSession(currentUid ?? undefined);
+    }
+
+    previousUidRef.current = currentUid;
+  }, [currentUid, isAccountSwitch, isSignOut, persistedQuerySyncController, previousUid]);
+
+  useEffect(() => {
+    if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
+      return;
+    }
+
+    if (!AppState?.addEventListener) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const previousState = appStateRef.current;
+      const isBackgroundTransition =
+        previousState === 'active' && (nextState === 'inactive' || nextState === 'background');
+      const isForegroundTransition =
+        (previousState === 'inactive' || previousState === 'background') && nextState === 'active';
+
+      if (isBackgroundTransition) {
+        logFirestoreReadAuditReport('app-background');
+        logReadAuditSessionReport('app-background');
+      }
+
+      if (isForegroundTransition) {
+        logFirestoreReadAuditReport('app-foreground');
+        logReadAuditSessionReport('app-foreground');
+      }
+
+      appStateRef.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  if (shouldBlockForAuthTransition) {
+    return <AppShellLoading accentColor={accentColor} />;
+  }
+
+  return (
+    <ResolvedRootLayoutNav
+      accentColor={accentColor}
+      hasCompletedOnboarding={hasCompletedOnboarding}
+      hasCompletedPersonalOnboarding={hasCompletedPersonalOnboarding}
+      isAccentReady={isAccentReady}
+      isLanguageReady={isLanguageReady}
+      isRegionReady={isRegionReady}
+      loading={loading}
+      router={router}
+      segments={segments}
+      user={user}
+    />
   );
 }
 

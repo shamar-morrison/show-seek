@@ -361,6 +361,45 @@ describe('RootLayout routing', () => {
     });
   });
 
+  it('keeps auth transition redirects blocked until cleanup resumes sync', async () => {
+    let resolveClear: (() => void) | null = null;
+    mockAuthState.user = { uid: 'user-1' };
+    mockSegments = ['(tabs)', 'home'];
+    mockClearPersistedQueryCache.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveClear = resolve;
+        })
+    );
+
+    const { rerender } = render(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockTrackScreen).toHaveBeenCalledWith(['(tabs)', 'home']);
+    });
+
+    mockReplace.mockClear();
+    mockResumePersistedQuerySync.mockClear();
+    mockAuthState.user = null;
+    rerender(<RootLayout />);
+
+    await waitFor(() => {
+      expect(mockClearPersistedQueryCache).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveClear?.();
+      await flushMicrotasks();
+    });
+
+    await waitFor(() => {
+      expect(mockResumePersistedQuerySync).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith('/(auth)/sign-in');
+    });
+  });
+
   it('does not resume sync early when auth cleanup transitions overlap', async () => {
     const clearResolvers: Array<() => void> = [];
     mockAuthState.user = { uid: 'user-1' };
