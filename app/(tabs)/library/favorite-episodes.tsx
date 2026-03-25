@@ -34,6 +34,7 @@ export default function FavoriteEpisodesScreen() {
 
   const hideLabels = preferences?.hideTabLabels ?? false;
   const TAB_BAR_HEIGHT = hideLabels ? 56 : 70;
+  console.log('test');
 
   const {
     searchQuery,
