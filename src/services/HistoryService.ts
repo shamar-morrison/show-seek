@@ -1,5 +1,6 @@
 import i18n from '../i18n';
-import type { TVShowEpisodeTracking, WatchedEpisode } from '../types/episodeTracking';
+import { normalizeEpisodeTrackingDoc } from './episodeTrackingNormalization';
+import type { WatchedEpisode } from '../types/episodeTracking';
 import type {
   ActivityItem,
   HistoryData,
@@ -76,27 +77,19 @@ class HistoryService {
       (snapshot) => {
         const episodes: EnrichedWatchedEpisode[] = [];
         snapshot.docs.forEach((doc) => {
-          const data = doc.data() as TVShowEpisodeTracking;
-          if (data.episodes) {
-            // Warn if metadata is missing - this indicates a partial write or data issue
-            if (!data.metadata) {
-              console.warn(
-                `[HistoryService] Missing metadata for episode_tracking doc: ${doc.id}. Using fallback values.`
-              );
-            }
+          const data = normalizeEpisodeTrackingDoc(doc.data(), doc.id);
+          if (!data) return;
 
-            // Use safe defaults when metadata is missing
-            const tvShowName = data.metadata?.tvShowName ?? i18n.t('media.unknownShow');
-            const posterPath = data.metadata?.posterPath ?? null;
+          const tvShowName = data.metadata.tvShowName ?? i18n.t('media.unknownShow');
+          const posterPath = data.metadata.posterPath ?? null;
 
-            Object.values(data.episodes).forEach((episode) => {
-              episodes.push({
-                ...episode,
-                tvShowName,
-                posterPath,
-              });
+          Object.values(data.episodes).forEach((episode) => {
+            episodes.push({
+              ...episode,
+              tvShowName,
+              posterPath,
             });
-          }
+          });
         });
         return episodes;
       },
