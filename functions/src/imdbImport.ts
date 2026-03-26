@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import {
@@ -12,6 +13,11 @@ import {
   type ImdbImportSkipReason,
   type ImdbImportStats,
 } from './shared/imdbImport';
+import {
+  buildListItemKey,
+  getLegacyListItemKey,
+  hasExistingListItem,
+} from './shared/listItemKeys';
 
 const TMDB_API_KEY = defineSecret('TMDB_API_KEY');
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -496,10 +502,12 @@ async function upsertListMembership(
     existingRecord?.ref ??
     context.db.collection('users').doc(context.userId).collection('lists').doc(listId);
   const existingData = existingRecord?.data ?? null;
-  const itemKey = String(resolvedResult.value.id);
   const existingItems = (existingData?.items ?? {}) as Record<string, unknown>;
+  const mediaType = resolvedResult.kind === 'movie' ? 'movie' : 'tv';
+  const itemKey = buildListItemKey(mediaType, resolvedResult.value.id);
+  const legacyItemKey = getLegacyListItemKey(resolvedResult.value.id);
 
-  if (existingItems[itemKey]) {
+  if (hasExistingListItem(existingItems, mediaType, resolvedResult.value.id)) {
     return false;
   }
 
@@ -509,7 +517,7 @@ async function upsertListMembership(
           addedAt,
           genre_ids: resolvedResult.value.genre_ids,
           id: resolvedResult.value.id,
-          media_type: 'movie' as const,
+          media_type: mediaType,
           poster_path: resolvedResult.value.poster_path ?? null,
           release_date: resolvedResult.value.release_date ?? '',
           title: resolvedResult.value.title,
@@ -520,7 +528,7 @@ async function upsertListMembership(
           first_air_date: resolvedResult.value.first_air_date ?? '',
           genre_ids: resolvedResult.value.genre_ids,
           id: resolvedResult.value.id,
-          media_type: 'tv' as const,
+          media_type: mediaType,
           name: resolvedResult.value.name,
           poster_path: resolvedResult.value.poster_path ?? null,
           release_date: resolvedResult.value.first_air_date ?? '',
@@ -532,6 +540,7 @@ async function upsertListMembership(
     {
       createdAt: existingData?.createdAt ?? Date.now(),
       items: {
+        [legacyItemKey]: FieldValue.delete(),
         [itemKey]: removeUndefined(basePayload),
       },
       name: existingData?.name ?? listName,
@@ -540,14 +549,17 @@ async function upsertListMembership(
     { merge: true }
   );
 
+  const nextItems = {
+    ...(existingItems ?? {}),
+    [itemKey]: removeUndefined(basePayload),
+  } as Record<string, unknown>;
+  delete nextItems[legacyItemKey];
+
   context.listCache.set(listId, {
     data: {
       ...(existingData ?? {}),
       createdAt: existingData?.createdAt ?? Date.now(),
-      items: {
-        ...(existingItems ?? {}),
-        [itemKey]: removeUndefined(basePayload),
-      },
+      items: nextItems,
       name: existingData?.name ?? listName,
       updatedAt: Date.now(),
     },

@@ -220,7 +220,8 @@ export default function CustomListDetailScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number) => removeMutation.mutateAsync({ listId: id, mediaId }),
+    (mediaId: number, mediaType: 'movie' | 'tv') =>
+      removeMutation.mutateAsync({ listId: id, mediaId, mediaType }),
     [id, removeMutation]
   );
 

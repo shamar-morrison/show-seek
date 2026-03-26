@@ -86,7 +86,7 @@ export default function TVSeasonsScreen() {
 
   // Auto-add to Watching list hooks
   const { preferences } = usePreferences();
-  const { membership: listMembership } = useMediaLists(tvId);
+  const { membership: listMembership } = useMediaLists(tvId, 'tv');
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
 

@@ -1,6 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Alert } from 'react-native';
+import type { SyncStatus } from '@/src/types/trakt';
 
 const mockRouterBack = jest.fn();
 const mockRouterPush = jest.fn();
@@ -15,25 +16,7 @@ const mockTraktState = {
   lastEnrichedAt: null as Date | null,
   lastSyncedAt: null as Date | null,
   syncNow: jest.fn(),
-  syncStatus: null as
-    | {
-        attempt?: number;
-        connected: boolean;
-        errorCategory?:
-          | 'locked_account'
-          | 'rate_limited'
-          | 'storage_limit'
-          | 'upstream_blocked'
-          | 'upstream_unavailable';
-        errorMessage?: string;
-        errors?: string[];
-        maxAttempts?: number;
-        nextAllowedSyncAt?: string;
-        nextRetryAt?: string;
-        status?: 'failed' | 'retrying';
-        synced: boolean;
-      }
-    | null,
+  syncStatus: null as SyncStatus | null,
 };
 const mockPremiumState = {
   isPremium: true,
@@ -144,8 +127,8 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText, queryByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText('Retrying Import')).toBeTruthy();
-    expect(getByText('Retrying your import')).toBeTruthy();
+    expect(getByText('Retrying Sync')).toBeTruthy();
+    expect(getByText('Retrying your sync')).toBeTruthy();
     expect(getByText('Retry 2 of 5.')).toBeTruthy();
     expect(getByText(/Next retry/i)).toBeTruthy();
     expect(queryByText('Connected!')).toBeNull();
@@ -165,10 +148,10 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(getByText("Mirror Sync Didn't Finish")).toBeTruthy();
     expect(getByText('Trakt blocked the request upstream.')).toBeTruthy();
     expect(getByText('You can try again now without reconnecting Trakt.')).toBeTruthy();
-    expect(getByText('Import History')).toBeTruthy();
+    expect(getByText('Mirror Trakt Data')).toBeTruthy();
   });
 
   it('prefers translated storage-limit copy over the raw Firestore error', () => {
@@ -186,7 +169,7 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText, queryByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(getByText("Mirror Sync Didn't Finish")).toBeTruthy();
     expect(
       getByText('Your Trakt history is too large to import right now. Please try again later.')
     ).toBeTruthy();
@@ -195,6 +178,43 @@ describe('TraktSettingsScreen', () => {
         '3 INVALID_ARGUMENT: too many index entries for entity /users/user-1/lists/already-watched'
       )
     ).toBeNull();
+  });
+
+  it('shows the completed no-changes state when the sync reports zero changed items', () => {
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: true,
+      itemsSynced: {
+        episodes: 0,
+        favorites: 0,
+        lists: 0,
+        movies: 0,
+        ratings: 0,
+        shows: 0,
+        watchlistItems: 0,
+      },
+      status: 'completed',
+      synced: true,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('No changes found on Trakt')).toBeTruthy();
+    expect(queryByText('Changes from this sync')).toBeNull();
+  });
+
+  it('shows the completed no-changes state when the sync completes without item stats', () => {
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: true,
+      status: 'completed',
+      synced: true,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('No changes found on Trakt')).toBeTruthy();
+    expect(queryByText('Changes from this sync')).toBeNull();
   });
 
   it('does not route to premium or connect Trakt while premium status is still loading', () => {

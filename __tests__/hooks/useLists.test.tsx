@@ -254,9 +254,9 @@ describe('useRemoveFromList', () => {
     });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ listId: 'watchlist', mediaId: 1 })).rejects.toThrow(
-        'Network error'
-      );
+      await expect(
+        result.current.mutateAsync({ listId: 'watchlist', mediaId: 1, mediaType: 'movie' })
+      ).rejects.toThrow('Network error');
     });
 
     expect(client.getQueryData(['lists', 'test-user-id'])).toEqual(initialLists);
@@ -352,7 +352,7 @@ describe('useMediaLists', () => {
     ]);
 
     const client = createQueryClient();
-    const { result } = renderHook(() => useMediaLists(123), {
+    const { result } = renderHook(() => useMediaLists(123, 'movie'), {
       wrapper: createWrapper(client),
     });
 
@@ -369,7 +369,7 @@ describe('useMediaLists', () => {
     mockGetUserLists.mockReturnValueOnce(deferred.promise);
 
     const client = createQueryClient();
-    const { result } = renderHook(() => useMediaLists(456), {
+    const { result } = renderHook(() => useMediaLists(456, 'tv'), {
       wrapper: createWrapper(client),
     });
 
@@ -406,7 +406,7 @@ describe('useMediaLists', () => {
     mockAuthState.user = null;
 
     const client = createQueryClient();
-    const { result } = renderHook(() => useMediaLists(999), {
+    const { result } = renderHook(() => useMediaLists(999, 'movie'), {
       wrapper: createWrapper(client),
     });
 

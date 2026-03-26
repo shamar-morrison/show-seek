@@ -1,12 +1,15 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import { hasListItemInMap } from '@/src/utils/listItemKeys';
+import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { isDefaultList } from '@/src/constants/lists';
 import { MODAL_LIST_HEIGHT } from '@/src/constants/modalLayout';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
+import { useTrakt } from '@/src/context/TraktContext';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
@@ -123,6 +126,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const { t } = useTranslation();
     const { accentColor } = useAccentColor();
     const { user, isGuest } = useAuth();
+    const { isConnected: isTraktConnected } = useTrakt();
     const { requireAccount } = useGuestAccess();
     const userId = user?.uid;
     const queryClient = useQueryClient();
@@ -197,7 +201,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       const membership: Record<string, boolean> = {};
       lists.forEach((list) => {
-        if (list.items && list.items[mediaItem.id]) {
+        if (hasListItemInMap(list.items, mediaItem.media_type, mediaItem.id)) {
           membership[list.id] = true;
         }
       });
@@ -333,6 +337,13 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         return;
       }
 
+      maybeWarnTraktManagedListEdit(
+        isTraktConnected,
+        changedLists.map((list) => list.id),
+        onShowToast,
+        t('trakt.localListEditWarning')
+      );
+
       setIsSaving(true);
       setOperationError(null);
 
@@ -347,7 +358,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         if (wasInList && !isNowInList) {
           totalOperations++;
           try {
-            await removeMutation.mutateAsync({ listId: list.id, mediaId: mediaItem.id });
+            await removeMutation.mutateAsync({
+              listId: list.id,
+              mediaId: mediaItem.id,
+              mediaType: mediaItem.media_type,
+            });
           } catch (error) {
             failedOperations++;
             if (!firstError) {
@@ -389,6 +404,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     }, [
       addMutation,
       handleMutationError,
+      isTraktConnected,
       listsWithCounts,
       mediaItem,
       onShowToast,
@@ -404,6 +420,16 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       const targetLists = listsWithCounts.filter((list) => !!pendingSelections[list.id]);
       if (targetLists.length === 0) return;
 
+      maybeWarnTraktManagedListEdit(
+        isTraktConnected,
+        [
+          ...targetLists.map((list) => list.id),
+          bulkAddMode === 'copy' ? null : sourceListId,
+        ],
+        onShowToast,
+        t('trakt.localListEditWarning')
+      );
+
       setIsSaving(true);
       setOperationError(null);
 
@@ -415,7 +441,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         let itemHadAddFailure = false;
 
         for (const targetList of targetLists) {
-          const alreadyInTargetList = !!targetList.items?.[selectedMedia.id];
+          const alreadyInTargetList = hasListItemInMap(
+            targetList.items,
+            selectedMedia.media_type,
+            selectedMedia.id
+          );
           if (alreadyInTargetList) continue;
 
           totalOperations++;
@@ -446,7 +476,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         totalOperations++;
 
         try {
-          await removeMutation.mutateAsync({ listId: sourceListId, mediaId: selectedMedia.id });
+          await removeMutation.mutateAsync({
+            listId: sourceListId,
+            mediaId: selectedMedia.id,
+            mediaType: selectedMedia.media_type,
+          });
         } catch (error) {
           failedOperations++;
           if (!firstError) {
@@ -481,6 +515,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       bulkAddMode,
       bulkMediaItems,
       handleMutationError,
+      isTraktConnected,
       listsWithCounts,
       onShowToast,
       pendingSelections,
@@ -527,6 +562,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             style: 'destructive',
             onPress: async () => {
               try {
+                maybeWarnTraktManagedListEdit(
+                  isTraktConnected,
+                  [listId],
+                  onShowToast,
+                  t('trakt.localListEditWarning')
+                );
                 await deleteMutation.mutateAsync(listId);
                 setPendingSelections((prev) => {
                   const updated = { ...prev };

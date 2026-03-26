@@ -50,6 +50,12 @@ const createDeferred = <T,>(): Deferred<T> => {
   return { promise, resolve, reject };
 };
 
+jest.mock('@/src/context/TraktContext', () => ({
+  useTrakt: () => ({
+    isConnected: false,
+  }),
+}));
+
 jest.mock('react-native', () => {
   const React = require('react');
   const createComponent = (name: string) => ({ children, ...props }: any) =>
@@ -477,6 +483,7 @@ describe('AddToListModal (bulk mode)', () => {
       expect(mockRemoveMutateAsync).toHaveBeenCalledWith({
         listId: 'favorites',
         mediaId: selected.id,
+        mediaType: 'movie',
       });
     });
 

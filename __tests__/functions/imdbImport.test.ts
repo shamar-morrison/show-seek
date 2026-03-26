@@ -20,6 +20,16 @@ jest.mock(
   { virtual: true }
 );
 
+jest.mock(
+  'firebase-admin/firestore',
+  () => ({
+    FieldValue: {
+      delete: jest.fn(() => '__deleteField__'),
+    },
+  }),
+  { virtual: true }
+);
+
 import { importImdbChunk } from '@/functions/src/imdbImport';
 import { IMDB_IMPORT_MAX_ACTIONS_PER_CHUNK } from '@/functions/src/shared/imdbImport';
 
@@ -477,7 +487,7 @@ describe('importImdbChunk', () => {
 
     expect(getDoc('users/user-1/lists/already-watched')).toMatchObject({
       items: {
-        '101': expect.objectContaining({
+        'movie-101': expect.objectContaining({
           addedAt: 1_704_067_200_000,
           id: 101,
           media_type: 'movie',
@@ -552,7 +562,7 @@ describe('importImdbChunk', () => {
     expect(getDirectDocPaths('users/user-1/lists')).toEqual(['users/user-1/lists/sci-fi-picks']);
     expect(getDoc('users/user-1/lists/sci-fi-picks')).toMatchObject({
       items: {
-        '101': expect.objectContaining({
+        'movie-101': expect.objectContaining({
           addedAt: 1_704_067_200_000,
           id: 101,
         }),
@@ -685,6 +695,11 @@ function deepMerge(
   const result: Record<string, unknown> = clone(base);
 
   Object.entries(incoming).forEach(([key, value]) => {
+    if (value === '__deleteField__') {
+      delete result[key];
+      return;
+    }
+
     const existingValue = result[key];
     if (isPlainObject(existingValue) && isPlainObject(value)) {
       result[key] = deepMerge(existingValue, value);

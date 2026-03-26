@@ -126,7 +126,7 @@ export default function EpisodeDetailScreen() {
 
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();
-  const { membership: listMembership } = useMediaLists(tvId);
+  const { membership: listMembership } = useMediaLists(tvId, 'tv');
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
 

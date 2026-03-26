@@ -3,6 +3,11 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { normalizeListKind, trackAddToList, trackCreateList } from '@/src/services/analytics';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { requireSignedInUser, toFirestoreError } from '@/src/services/serviceSupport';
+import {
+  buildListItemKey,
+  getLegacyListItemKey,
+  normalizeListItemsMap,
+} from '@/src/utils/listItemKeys';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { collection, deleteDoc, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -65,6 +70,14 @@ class ListService {
     return sanitized;
   }
 
+  private normalizeList<T extends Partial<UserList>>(list: T): T {
+    const items = normalizeListItemsMap(list.items as Record<string, ListMediaItem> | undefined);
+    return {
+      ...list,
+      items,
+    };
+  }
+
   private isCreateFallbackEligibleError(error: unknown): boolean {
     const code = (error as { code?: string })?.code;
     // Intentional: updateDoc on a missing document can surface as permission-denied when
@@ -102,10 +115,12 @@ class ListService {
         timeout.cancel();
       });
 
-      const lists: UserList[] = snapshot.docs.map((listDoc) => ({
-        id: listDoc.id,
-        ...listDoc.data(),
-      })) as UserList[];
+      const lists: UserList[] = snapshot.docs.map((listDoc) =>
+        this.normalizeList({
+          id: listDoc.id,
+          ...listDoc.data(),
+        } as UserList)
+      );
 
       const mergedLists = [...lists];
 
@@ -188,7 +203,7 @@ class ListService {
 
       snapshot.docs.forEach((listDoc) => {
         const listId = listDoc.id;
-        const listData = listDoc.data() as Partial<UserList>;
+        const listData = this.normalizeList(listDoc.data() as Partial<UserList>);
         const listItems = listData.items || {};
 
         Object.values(listItems).forEach((item) => {
@@ -243,6 +258,7 @@ class ListService {
         ...sanitizedItem,
         addedAt: Date.now(),
       } as ListMediaItem;
+      const itemKey = buildListItemKey(mediaItem.media_type, mediaItem.id);
 
       const now = Date.now();
       const updateTimeout = createTimeoutWithCleanup(10000);
@@ -252,7 +268,8 @@ class ListService {
         await Promise.race([
           updateDoc(listRef, {
             name: listName || listId, // Keep behavior: ensure name exists for system lists
-            [`items.${mediaItem.id}`]: itemToAdd,
+            [`items.${itemKey}`]: itemToAdd,
+            [`items.${getLegacyListItemKey(mediaItem.id)}`]: deleteField(),
             updatedAt: now,
           }),
           updateTimeout.promise,
@@ -280,7 +297,7 @@ class ListService {
             {
               name: listName || listId,
               items: {
-                [mediaItem.id]: itemToAdd,
+                [itemKey]: itemToAdd,
               },
               updatedAt: now,
               createdAt: now,
@@ -318,17 +335,19 @@ class ListService {
   /**
    * Remove a media item from a specific list
    */
-  async removeFromList(listId: string, mediaId: number) {
+  async removeFromList(listId: string, mediaId: number, mediaType: 'movie' | 'tv') {
     const timeout = createTimeoutWithCleanup(10000);
 
     try {
       const user = requireSignedInUser();
 
       const listRef = this.getUserListRef(user.uid, listId);
+      const itemKey = buildListItemKey(mediaType, mediaId);
 
       await Promise.race([
         updateDoc(listRef, {
-          [`items.${mediaId}`]: deleteField(),
+          [`items.${itemKey}`]: deleteField(),
+          [`items.${getLegacyListItemKey(mediaId)}`]: deleteField(),
           updatedAt: Date.now(),
         }),
         timeout.promise,
@@ -343,6 +362,7 @@ class ListService {
         userId: currentUserId,
         listId,
         mediaId,
+        mediaType,
       });
       throw new Error(message);
     } finally {

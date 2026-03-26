@@ -386,6 +386,10 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
       get: jest.fn().mockResolvedValue({ docs: [] }),
@@ -412,6 +416,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -481,12 +505,86 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watchlist')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              listed_at: '2024-01-02T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-2',
+                  tmdb: 102,
+                  trakt: 202,
+                },
+                title: 'Movie Two',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/favorites')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 2,
+              listed_at: '2024-01-03T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-3',
+                  tmdb: 103,
+                  trakt: 203,
+                },
+                title: 'Movie Three',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
       if (
-        url.endsWith('/sync/watched/movies') ||
         url.endsWith('/sync/watched/shows?extended=full') ||
         url.endsWith('/sync/ratings') ||
-        url.endsWith('/sync/watchlist') ||
-        url.endsWith('/sync/favorites') ||
         url.endsWith('/users/tester/lists')
       ) {
         return Promise.resolve({
@@ -586,6 +684,10 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
       get: jest.fn().mockResolvedValue({ docs: [] }),
@@ -612,6 +714,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -681,12 +803,86 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watchlist')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              listed_at: '2024-01-02T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-2',
+                  tmdb: 102,
+                  trakt: 202,
+                },
+                title: 'Movie Two',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/favorites')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 2,
+              listed_at: '2024-01-03T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-3',
+                  tmdb: 103,
+                  trakt: 203,
+                },
+                title: 'Movie Three',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
       if (
-        url.endsWith('/sync/watched/movies') ||
         url.endsWith('/sync/watched/shows?extended=full') ||
         url.endsWith('/sync/ratings') ||
-        url.endsWith('/sync/watchlist') ||
-        url.endsWith('/sync/favorites') ||
         url.endsWith('/users/tester/lists')
       ) {
         return Promise.resolve({
@@ -732,6 +928,10 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
       get: jest.fn().mockResolvedValue({ docs: [] }),
@@ -758,6 +958,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -824,12 +1044,86 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watchlist')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              listed_at: '2024-01-02T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-2',
+                  tmdb: 102,
+                  trakt: 202,
+                },
+                title: 'Movie Two',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/favorites')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 2,
+              listed_at: '2024-01-03T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-3',
+                  tmdb: 103,
+                  trakt: 203,
+                },
+                title: 'Movie Three',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
       if (
-        url.endsWith('/sync/watched/movies') ||
         url.endsWith('/sync/watched/shows?extended=full') ||
         url.endsWith('/sync/ratings') ||
-        url.endsWith('/sync/watchlist') ||
-        url.endsWith('/sync/favorites') ||
         url.endsWith('/users/tester/lists')
       ) {
         return Promise.resolve({
@@ -964,7 +1258,10 @@ describe('Trakt sync Firestore sanitization', () => {
       expect.objectContaining({
         traktAccessToken: 'access-token',
         traktConnected: true,
+        traktEnrichmentStatus: 'FIELD_DELETE',
+        traktIncrementalState: 'FIELD_DELETE',
         traktRefreshToken: 'refresh-token',
+        traktSyncStatus: 'FIELD_DELETE',
       }),
       { merge: true }
     );
@@ -1559,6 +1856,10 @@ describe('Trakt sync Firestore sanitization', () => {
 
           return {
             doc: jest.fn(() => ({
+              get: jest.fn().mockResolvedValue({
+                data: () => undefined,
+                exists: false,
+              }),
               set: listSet,
             })),
           };
@@ -1850,8 +2151,13 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
     };
     const userRef = {
       collection: jest.fn((name: string) => {
@@ -1866,6 +2172,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -1917,6 +2243,14 @@ describe('Trakt sync Firestore sanitization', () => {
               vip_ep: false,
             },
           }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
           ok: true,
           status: 200,
         });
@@ -1991,8 +2325,13 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
     };
     const userRef = {
       collection: jest.fn((name: string) => {
@@ -2016,6 +2355,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -2080,6 +2439,14 @@ describe('Trakt sync Firestore sanitization', () => {
               vip_ep: false,
             },
           }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
           ok: true,
           status: 200,
         });
@@ -2109,6 +2476,7 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
+        url.endsWith('/sync/last_activities') ||
         url.endsWith('/sync/watched/shows?extended=full') ||
         url.endsWith('/sync/ratings') ||
         url.endsWith('/sync/watchlist') ||
@@ -2138,7 +2506,9 @@ describe('Trakt sync Firestore sanitization', () => {
     )?.[0] as Record<string, unknown> | undefined;
 
     expect(alreadyWatchedWrite).toBeDefined();
-    const movieEntry = (alreadyWatchedWrite?.items as Record<string, Record<string, unknown>>)?.['576788'];
+    const movieEntry = (alreadyWatchedWrite?.items as Record<string, Record<string, unknown>>)?.[
+      'movie-576788'
+    ];
     expect(movieEntry).toEqual(
       expect.objectContaining({
         id: 576788,
@@ -2157,8 +2527,13 @@ describe('Trakt sync Firestore sanitization', () => {
       doc: jest.fn((id: string) => ({
         id,
         path: `users/user-1/lists/${id}`,
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
         set: listSet,
       })),
+      get: jest.fn().mockResolvedValue({ docs: [] }),
     };
     const userRef = {
       collection: jest.fn((name: string) => {
@@ -2182,6 +2557,26 @@ describe('Trakt sync Firestore sanitization', () => {
 
         if (name === 'lists') {
           return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/episode_tracking/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
+        }
+
+        if (name === 'ratings') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/ratings/${id}`,
+            })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
+          };
         }
 
         throw new Error(`Unexpected subcollection ${name}`);
@@ -2252,6 +2647,7 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
+        url.endsWith('/sync/last_activities') ||
         url.endsWith('/sync/watched/movies') ||
         url.endsWith('/sync/watched/shows?extended=full') ||
         url.endsWith('/sync/ratings') ||
@@ -2324,7 +2720,9 @@ describe('Trakt sync Firestore sanitization', () => {
     )?.[0] as Record<string, unknown> | undefined;
 
     expect(customListWrite).toBeDefined();
-    const customItem = (customListWrite?.items as Record<string, Record<string, unknown>>)?.['333'];
+    const customItem = (customListWrite?.items as Record<string, Record<string, unknown>>)?.[
+      'movie-333'
+    ];
     expect(customItem).toEqual(
       expect.objectContaining({
         id: 333,

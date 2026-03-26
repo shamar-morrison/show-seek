@@ -2,8 +2,10 @@ import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useTrakt } from '@/src/context/TraktContext';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
+import { maybeWarnTraktManagedWatchedEdit } from '@/src/utils/traktManagedEdits';
 import { Calendar, CalendarDays, Clock, Trash2, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -56,6 +58,7 @@ export default function MarkAsWatchedModal({
 }: MarkAsWatchedModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { isConnected: isTraktConnected } = useTrakt();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -87,6 +90,11 @@ export default function MarkAsWatchedModal({
   const handleRightNow = async () => {
     try {
       setIsLoading(true);
+      maybeWarnTraktManagedWatchedEdit(
+        isTraktConnected,
+        onShowToast,
+        t('trakt.localWatchedEditWarning')
+      );
       await onMarkAsWatched(new Date());
       onShowToast?.(t('library.markedAsWatched'));
       onClose();
@@ -102,6 +110,11 @@ export default function MarkAsWatchedModal({
 
     try {
       setIsLoading(true);
+      maybeWarnTraktManagedWatchedEdit(
+        isTraktConnected,
+        onShowToast,
+        t('trakt.localWatchedEditWarning')
+      );
       await onMarkAsWatched(parsedReleaseDate);
       onShowToast?.(t('library.markedAsWatched'));
       onClose();
@@ -118,6 +131,11 @@ export default function MarkAsWatchedModal({
     (async () => {
       try {
         setIsLoading(true);
+        maybeWarnTraktManagedWatchedEdit(
+          isTraktConnected,
+          onShowToast,
+          t('trakt.localWatchedEditWarning')
+        );
         await onMarkAsWatched(date);
         onShowToast?.(t('library.markedAsWatched'));
         onClose();
@@ -141,6 +159,11 @@ export default function MarkAsWatchedModal({
           onPress: async () => {
             try {
               setIsLoading(true);
+              maybeWarnTraktManagedWatchedEdit(
+                isTraktConnected,
+                onShowToast,
+                t('trakt.localWatchedEditWarning')
+              );
               await onClearAll();
               onShowToast?.(t('watched.watchHistoryCleared'));
               onClose();
