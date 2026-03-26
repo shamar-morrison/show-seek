@@ -587,7 +587,7 @@ export default function TraktSettingsScreen() {
           </View>
         )}
 
-        {itemsSynced && !hasChangedItems && syncStatus?.status === 'completed' && (
+        {syncStatus?.status === 'completed' && !hasChangedItems && (
           <View style={styles.noChangesContainer}>
             <Text style={styles.noChangesTitle}>{t('trakt.noChangesTitle')}</Text>
             <Text style={styles.noChangesDescription}>{t('trakt.noChangesDescription')}</Text>

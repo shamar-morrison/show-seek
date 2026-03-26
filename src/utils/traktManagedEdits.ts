@@ -18,8 +18,12 @@ const warnOnce = (
     return;
   }
 
+  if (!showToast) {
+    return;
+  }
+
   warnedManagedEditKinds.add(kind);
-  showToast?.(message);
+  showToast(message);
 };
 
 export const maybeWarnTraktManagedListEdit = (

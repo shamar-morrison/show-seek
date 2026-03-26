@@ -13,6 +13,11 @@ import {
   type ImdbImportSkipReason,
   type ImdbImportStats,
 } from './shared/imdbImport';
+import {
+  buildListItemKey,
+  getLegacyListItemKey,
+  hasExistingListItem,
+} from './shared/listItemKeys';
 
 const TMDB_API_KEY = defineSecret('TMDB_API_KEY');
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -279,20 +284,6 @@ export const normalizeListIdBase = (listName: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'imported-list';
-
-const buildListItemKey = (mediaType: 'movie' | 'tv', mediaId: number): string => `${mediaType}-${mediaId}`;
-
-const getLegacyListItemKey = (mediaId: number): string => String(mediaId);
-
-const hasExistingListItem = (
-  items: Record<string, unknown>,
-  mediaType: 'movie' | 'tv',
-  mediaId: number
-): boolean => {
-  const compositeKey = buildListItemKey(mediaType, mediaId);
-  const legacyKey = getLegacyListItemKey(mediaId);
-  return Boolean(items[compositeKey] || items[legacyKey]);
-};
 
 export const resolveTmdbImportResult = (payload: TmdbFindResponse): ResolvedTmdbImportResult => {
   if ((payload.tv_episode_results?.length ?? 0) > 0) {

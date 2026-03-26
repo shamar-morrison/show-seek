@@ -1258,7 +1258,10 @@ describe('Trakt sync Firestore sanitization', () => {
       expect.objectContaining({
         traktAccessToken: 'access-token',
         traktConnected: true,
+        traktEnrichmentStatus: 'FIELD_DELETE',
+        traktIncrementalState: 'FIELD_DELETE',
         traktRefreshToken: 'refresh-token',
+        traktSyncStatus: 'FIELD_DELETE',
       }),
       { merge: true }
     );

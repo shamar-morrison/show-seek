@@ -8,6 +8,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { onRequest } from 'firebase-functions/v2/https';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
 import type { Request, Response as ExpressResponse } from 'express';
+import { buildListItemKey, getLegacyListItemKey } from './shared/listItemKeys';
 
 const TRAKT_CLIENT_ID = defineSecret('TRAKT_CLIENT_ID');
 const TRAKT_CLIENT_SECRET = defineSecret('TRAKT_CLIENT_SECRET');
@@ -1233,10 +1234,6 @@ const getLastActivities = async (accessToken: string): Promise<TraktLastActiviti
 };
 
 const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
-
-const buildListItemKey = (mediaType: 'movie' | 'tv', mediaId: number): string => `${mediaType}-${mediaId}`;
-
-const getLegacyListItemKey = (mediaId: number): string => String(mediaId);
 
 const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
   typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';
@@ -3398,6 +3395,7 @@ export const traktCallback = onRequest(
           traktAccessToken: tokenData.access_token,
           traktConnected: true,
           traktConnectedAt: Timestamp.now(),
+          traktEnrichmentStatus: FieldValue.delete(),
           traktIncrementalState: FieldValue.delete(),
           traktRefreshToken: tokenData.refresh_token,
           traktSyncStatus: FieldValue.delete(),
