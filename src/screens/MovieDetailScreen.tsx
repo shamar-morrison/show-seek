@@ -181,7 +181,7 @@ const tryAutoRemoveFromShouldWatch = async (params: {
 
   try {
     const { listService } = await import('@/src/services/ListService');
-    await listService.removeFromList('watchlist', movieId);
+    await listService.removeFromList('watchlist', movieId, 'movie');
 
     console.log('[MovieDetailScreen] Auto-removed from Should Watch list:', movieTitle ?? movieId);
     return true;
@@ -238,7 +238,7 @@ export default function MovieDetailScreen() {
     movieId
   );
 
-  const { membership, isLoading: isLoadingLists } = useMediaLists(movieId);
+  const { membership, isLoading: isLoadingLists } = useMediaLists(movieId, 'movie');
   const { data: lists } = useLists();
   const { isPremium } = usePremium();
   const { userRating, isLoading: isLoadingRating } = useMediaRating(movieId, 'movie');

@@ -45,6 +45,7 @@ const TRAKT_SYNC_RECONNECT_MESSAGE =
 const TRAKT_SYNC_STORAGE_LIMIT_MESSAGE =
   'Your Trakt history is too large to import right now. Please try again later.';
 const FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN = /too many index entries/i;
+const TRAKT_INCREMENTAL_SCHEMA_VERSION = 1;
 
 type SyncStatusState = 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed';
 type TraktSyncErrorCategory =
@@ -141,10 +142,40 @@ interface TraktUserDoc {
   traktConnected?: boolean;
   traktConnectedAt?: FirebaseFirestore.Timestamp;
   traktEnrichmentStatus?: Partial<TraktEnrichmentStatus>;
+  traktIncrementalState?: TraktIncrementalState;
   traktOauthStartAllowedAt?: FirebaseFirestore.Timestamp;
   traktRefreshToken?: string;
   traktSyncStatus?: Partial<TraktSyncStatus>;
   traktTokenExpiresAt?: FirebaseFirestore.Timestamp;
+}
+
+interface TraktActivitiesGroup {
+  [key: string]: string | undefined;
+  rated_at?: string;
+  updated_at?: string;
+  watched_at?: string;
+}
+
+interface TraktLastActivities {
+  episodes?: TraktActivitiesGroup;
+  favorites?: TraktActivitiesGroup;
+  lists?: TraktActivitiesGroup;
+  movies?: TraktActivitiesGroup;
+  shows?: TraktActivitiesGroup;
+  watchlist?: TraktActivitiesGroup;
+}
+
+interface TraktIncrementalCustomListState {
+  slug: string;
+  updatedAt: string;
+}
+
+interface TraktIncrementalState {
+  bootstrapCompletedAt: FirebaseFirestore.Timestamp;
+  customLists: Record<string, TraktIncrementalCustomListState>;
+  lastActivities: TraktLastActivities;
+  schemaVersion: typeof TRAKT_INCREMENTAL_SCHEMA_VERSION;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 interface TraktOAuthStateDoc {
@@ -430,6 +461,11 @@ class TraktOAuthError extends Error {
 
 const ACTIVE_RUN_STATUSES = new Set<SyncStatusState>(['queued', 'in_progress', 'retrying']);
 const DEFAULT_ENRICHMENT_LIST_IDS = ['already-watched', 'watchlist', 'favorites'] as const;
+const TRAKT_MANAGED_DEFAULT_LIST_NAMES = {
+  'already-watched': 'Already Watched',
+  favorites: 'Favorites',
+  watchlist: 'Should Watch',
+} as const;
 
 const getManualSyncCooldownTimestamp = (
   syncStatus?: Partial<TraktSyncStatus> | null
@@ -1180,30 +1216,141 @@ const getFavorites = (accessToken: string): Promise<TraktFavorite[]> =>
     endpoint: '/sync/favorites',
   });
 
-const transformEpisodeTracking = (traktShow: TraktWatchedShow): Record<string, unknown> | null => {
-  if (!traktShow.show.ids.tmdb) {
-    return null;
-  }
-
-  const episodes: Record<string, unknown> = {};
-  traktShow.seasons.forEach((season) => {
-    season.episodes.forEach((episode) => {
-      const key = `${season.number}_${episode.number}`;
-      episodes[key] = {
-        watched: true,
-        watchedAt: Timestamp.fromDate(new Date(episode.last_watched_at)),
-      };
-    });
+const getLastActivities = async (accessToken: string): Promise<TraktLastActivities> => {
+  const activities = await traktRequest<Record<string, unknown>>({
+    accessToken,
+    endpoint: '/sync/last_activities',
   });
 
   return {
-    episodes,
-    metadata: {
-      lastUpdated: Timestamp.now(),
-      tvShowName: traktShow.show.title,
-    },
+    episodes: isPlainObject(activities.episodes) ? (activities.episodes as TraktActivitiesGroup) : undefined,
+    favorites: isPlainObject(activities.favorites) ? (activities.favorites as TraktActivitiesGroup) : undefined,
+    lists: isPlainObject(activities.lists) ? (activities.lists as TraktActivitiesGroup) : undefined,
+    movies: isPlainObject(activities.movies) ? (activities.movies as TraktActivitiesGroup) : undefined,
+    shows: isPlainObject(activities.shows) ? (activities.shows as TraktActivitiesGroup) : undefined,
+    watchlist: isPlainObject(activities.watchlist) ? (activities.watchlist as TraktActivitiesGroup) : undefined,
   };
 };
+
+const isListMediaType = (value: unknown): value is 'movie' | 'tv' => value === 'movie' || value === 'tv';
+
+const buildListItemKey = (mediaType: 'movie' | 'tv', mediaId: number): string => `${mediaType}-${mediaId}`;
+
+const getLegacyListItemKey = (mediaId: number): string => String(mediaId);
+
+const isTimestampLike = (value: unknown): value is { toMillis: () => number } =>
+  typeof value === 'object' && value !== null && typeof (value as { toMillis?: unknown }).toMillis === 'function';
+
+const areValuesEqual = (left: unknown, right: unknown): boolean => {
+  if (isTimestampLike(left) && isTimestampLike(right)) {
+    return left.toMillis() === right.toMillis();
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return left.length === right.length && left.every((item, index) => areValuesEqual(item, right[index]));
+  }
+
+  if (isPlainObject(left) && isPlainObject(right)) {
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+
+    if (leftKeys.length !== rightKeys.length) {
+      return false;
+    }
+
+    return leftKeys.every((key) => areValuesEqual(left[key], right[key]));
+  }
+
+  return Object.is(left, right);
+};
+
+const hasManagedFieldChanges = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>
+): boolean =>
+  Object.entries(remoteValue).some(([key, value]) => !areValuesEqual(existingValue?.[key], value));
+
+const mergeManagedValue = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>
+): Record<string, unknown> =>
+  (stripUndefinedDeep(
+    {
+      ...(existingValue ?? {}),
+      ...remoteValue,
+    },
+    true
+  ) as Record<string, unknown>) ?? remoteValue;
+
+const normalizeStoredListItems = (
+  items: Record<string, unknown> | undefined
+): Record<string, Record<string, unknown>> => {
+  if (!items || !isPlainObject(items)) {
+    return {};
+  }
+
+  const normalized: Record<string, Record<string, unknown>> = {};
+  const entries = Object.entries(items).filter((entry): entry is [string, Record<string, unknown>] =>
+    isPlainObject(entry[1])
+  );
+
+  entries.forEach(([rawKey, rawValue]) => {
+    const mediaType = rawValue.media_type;
+    const mediaId = rawValue.id;
+
+    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+      if (!normalized[rawKey]) {
+        normalized[rawKey] = rawValue;
+      }
+      return;
+    }
+
+    const normalizedKey = buildListItemKey(mediaType, mediaId);
+    if (rawKey === normalizedKey) {
+      normalized[normalizedKey] = rawValue;
+    }
+  });
+
+  entries.forEach(([rawKey, rawValue]) => {
+    const mediaType = rawValue.media_type;
+    const mediaId = rawValue.id;
+
+    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+      if (!normalized[rawKey]) {
+        normalized[rawKey] = rawValue;
+      }
+      return;
+    }
+
+    const normalizedKey = buildListItemKey(mediaType, mediaId);
+    if (!normalized[normalizedKey]) {
+      normalized[normalizedKey] = rawValue;
+      return;
+    }
+
+    if (rawKey !== normalizedKey) {
+      normalized[normalizedKey] = {
+        ...rawValue,
+        ...normalized[normalizedKey],
+      };
+    }
+  });
+
+  return normalized;
+};
+
+const didActivityFieldChange = (
+  previousGroup: TraktActivitiesGroup | undefined,
+  nextGroup: TraktActivitiesGroup | undefined,
+  field: keyof TraktActivitiesGroup
+): boolean => (previousGroup?.[field] ?? null) !== (nextGroup?.[field] ?? null);
+
+const hasActivityGroupChanged = (
+  previousGroup: TraktActivitiesGroup | undefined,
+  nextGroup: TraktActivitiesGroup | undefined
+): boolean => !areValuesEqual(previousGroup ?? {}, nextGroup ?? {});
+
+const normalizeChangedListIds = (listIds: string[]): string[] => Array.from(new Set(listIds.filter(Boolean)));
 
 const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, unknown> | null => {
   if (!traktMovie.movie.ids.tmdb) {
@@ -1421,6 +1568,17 @@ const sanitizeEnrichmentStatusForWrite = (
   return sanitized;
 };
 
+const sanitizeIncrementalStateForWrite = (
+  incrementalState: TraktIncrementalState
+): FirebaseFirestore.DocumentData => {
+  const sanitized = stripUndefinedDeep(incrementalState, true);
+  if (!sanitized || !isPlainObject(sanitized)) {
+    throw new TraktSyncError('Failed to serialize Trakt incremental state.', 'internal', false);
+  }
+
+  return sanitized;
+};
+
 const writeSyncStatus = async (userId: string, runId: string, syncStatus: TraktSyncStatus): Promise<void> => {
   const db = admin.firestore();
   const userRef = db.collection('users').doc(userId);
@@ -1435,6 +1593,32 @@ const writeSyncStatus = async (userId: string, runId: string, syncStatus: TraktS
       traktSyncStatus: syncStatusForWrite,
     },
     { mergeFields: ['traktSyncStatus'] }
+  );
+
+  await batch.commit();
+};
+
+const writeCompletedSyncResult = async (
+  userId: string,
+  runId: string,
+  syncStatus: TraktSyncStatus,
+  incrementalState: TraktIncrementalState
+): Promise<void> => {
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(userId);
+  const runRef = userRef.collection('traktSyncRuns').doc(runId);
+  const batch = db.batch();
+  const syncStatusForWrite = sanitizeSyncStatusForWrite(syncStatus);
+  const incrementalStateForWrite = sanitizeIncrementalStateForWrite(incrementalState);
+
+  batch.set(runRef, syncStatusForWrite);
+  batch.set(
+    userRef,
+    {
+      traktIncrementalState: incrementalStateForWrite,
+      traktSyncStatus: syncStatusForWrite,
+    },
+    { merge: true }
   );
 
   await batch.commit();
@@ -1680,120 +1864,393 @@ const maybeRefreshAccessToken = async (userId: string, userData: TraktUserDoc): 
   return refreshed.access_token;
 };
 
-const syncWatchedShows = async (
-  userId: string,
-  traktShows: TraktWatchedShow[]
-): Promise<{ alreadyWatchedShows: Record<string, unknown>; episodes: number; shows: number }> => {
-  const db = admin.firestore();
-  const batch = db.batch();
-  const alreadyWatchedShows: Record<string, unknown> = {};
-  let episodeCount = 0;
-  let showCount = 0;
+const buildManagedListItemsMap = (
+  items: Array<Record<string, unknown> | null>
+): Record<string, Record<string, unknown>> => {
+  const mappedItems: Record<string, Record<string, unknown>> = {};
 
-  for (const traktShow of traktShows) {
-    const episodeTracking = transformEpisodeTracking(traktShow);
-    if (episodeTracking && traktShow.show.ids.tmdb) {
-      const episodeRef = db
-        .collection('users')
-        .doc(userId)
-        .collection('episode_tracking')
-        .doc(traktShow.show.ids.tmdb.toString());
-      batch.set(episodeRef, episodeTracking, { merge: true });
-      episodeCount += Object.keys((episodeTracking.episodes as Record<string, unknown>) ?? {}).length;
-      showCount++;
+  items.forEach((item) => {
+    if (!item) {
+      return;
     }
 
-    const watchedShow = transformWatchedShow(traktShow);
-    if (watchedShow) {
-      alreadyWatchedShows[String(watchedShow.id)] = watchedShow;
+    const mediaType = item.media_type;
+    const mediaId = item.id;
+    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+      return;
     }
-  }
 
-  if (showCount > 0) {
-    await batch.commit();
-  }
+    mappedItems[buildListItemKey(mediaType, mediaId)] = item;
+  });
 
-  return { alreadyWatchedShows, episodes: episodeCount, shows: showCount };
+  return mappedItems;
 };
 
-const syncRatings = async (userId: string, traktRatings: TraktRating[]): Promise<number> => {
-  const db = admin.firestore();
-  const batch = db.batch();
-  let count = 0;
+const buildCustomListItemsMap = (
+  traktItems: TraktListItem[]
+): Record<string, Record<string, unknown>> => {
+  const items: Record<string, Record<string, unknown>> = {};
 
-  for (const traktRating of traktRatings) {
-    const rating = transformRating(traktRating);
-    if (!rating) {
+  for (const traktItem of traktItems) {
+    const transformed = transformListItem(traktItem);
+    if (!transformed) {
       continue;
     }
 
-    const docRef = db.collection('users').doc(userId).collection('ratings').doc(String(rating.id));
-    batch.set(docRef, rating, { merge: true });
-    count++;
+    items[buildListItemKey(transformed.mediaType, transformed.tmdbId)] = stripUndefinedDeep(
+      {
+        addedAt: transformed.addedAt,
+        id: transformed.tmdbId,
+        media_type: transformed.mediaType,
+        title: transformed.title,
+        traktId: transformed.traktId,
+      },
+      true
+    ) as Record<string, unknown>;
   }
 
-  if (count > 0) {
+  return items;
+};
+
+const buildEpisodeTrackingDoc = (
+  traktShow: TraktWatchedShow
+): { metadata: { tvShowName: string }; showId: string; episodes: Record<string, Record<string, unknown>> } | null => {
+  if (!traktShow.show.ids.tmdb) {
+    return null;
+  }
+
+  const episodes: Record<string, Record<string, unknown>> = {};
+  traktShow.seasons.forEach((season) => {
+    season.episodes.forEach((episode) => {
+      const key = `${season.number}_${episode.number}`;
+      episodes[key] = {
+        watched: true,
+        watchedAt: Timestamp.fromDate(new Date(episode.last_watched_at)),
+      };
+    });
+  });
+
+  return {
+    episodes,
+    metadata: {
+      tvShowName: traktShow.show.title,
+    },
+    showId: traktShow.show.ids.tmdb.toString(),
+  };
+};
+
+const countMediaTypeChanges = (mediaTypes: Array<'movie' | 'tv'>, mediaType: 'movie' | 'tv'): number =>
+  mediaTypes.filter((value) => value === mediaType).length;
+
+const reconcileManagedList = async (
+  userId: string,
+  listId: string,
+  remoteItems: Record<string, Record<string, unknown>>,
+  baseData: Record<string, unknown>,
+  existingSnapshot?: FirebaseFirestore.DocumentSnapshot
+): Promise<{
+  changedCount: number;
+  changedMediaTypes: Array<'movie' | 'tv'>;
+  didWrite: boolean;
+  shouldEnrich: boolean;
+}> => {
+  const listRef =
+    existingSnapshot?.ref ?? admin.firestore().collection('users').doc(userId).collection('lists').doc(listId);
+  const snapshot = existingSnapshot ?? (await listRef.get());
+  const existingData = (snapshot.data() ?? {}) as Record<string, unknown>;
+  const existingItemsRaw = isPlainObject(existingData.items)
+    ? (existingData.items as Record<string, unknown>)
+    : undefined;
+  const existingItems = normalizeStoredListItems(existingItemsRaw);
+  const itemChanges: Record<string, unknown> = {};
+  const changedMediaTypes: Array<'movie' | 'tv'> = [];
+  let changedCount = 0;
+  let addedOrUpdatedCount = 0;
+
+  Object.entries(remoteItems).forEach(([remoteKey, remoteItem]) => {
+    const mediaType = remoteItem.media_type;
+    const mediaId = remoteItem.id;
+
+    if (!isListMediaType(mediaType) || typeof mediaId !== 'number') {
+      return;
+    }
+
+    const existingItem = existingItems[remoteKey];
+    const legacyKey = getLegacyListItemKey(mediaId);
+    const hasLegacyKey = Boolean(existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw);
+    const itemChanged = !existingItem || hasLegacyKey || hasManagedFieldChanges(existingItem, remoteItem);
+
+    if (itemChanged) {
+      itemChanges[remoteKey] = mergeManagedValue(existingItem, remoteItem);
+      changedMediaTypes.push(mediaType);
+      changedCount += 1;
+      addedOrUpdatedCount += 1;
+    }
+
+    if (hasLegacyKey) {
+      itemChanges[legacyKey] = FieldValue.delete();
+    }
+  });
+
+  Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
+    if (remoteItems[existingKey]) {
+      return;
+    }
+
+    itemChanges[existingKey] = FieldValue.delete();
+
+    const mediaType = existingItem.media_type;
+    const mediaId = existingItem.id;
+    if (isListMediaType(mediaType)) {
+      changedMediaTypes.push(mediaType);
+    }
+    if (typeof mediaId === 'number' && existingItemsRaw) {
+      const legacyKey = getLegacyListItemKey(mediaId);
+      if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
+        itemChanges[legacyKey] = FieldValue.delete();
+      }
+    }
+
+    changedCount += 1;
+  });
+
+  const existingMetadata = isPlainObject(existingData.metadata)
+    ? (existingData.metadata as Record<string, unknown>)
+    : {};
+  const nextNeedsEnrichment = Boolean(existingMetadata.needsEnrichment) || addedOrUpdatedCount > 0;
+  const baseDataChanged = hasManagedFieldChanges(existingData, baseData);
+  const shouldWrite = !snapshot.exists || changedCount > 0 || baseDataChanged;
+
+  if (!shouldWrite) {
+    return {
+      changedCount: 0,
+      changedMediaTypes: [],
+      didWrite: false,
+      shouldEnrich: false,
+    };
+  }
+
+  const payload = stripUndefinedDeep(
+    {
+      ...baseData,
+      items:
+        changedCount > 0
+          ? itemChanges
+          : !snapshot.exists
+            ? {}
+            : undefined,
+      metadata: {
+        ...existingMetadata,
+        itemCount: Object.keys(remoteItems).length,
+        lastUpdated: Timestamp.now(),
+        needsEnrichment: nextNeedsEnrichment,
+      },
+    },
+    true
+  ) as FirebaseFirestore.DocumentData;
+
+  await listRef.set(payload, { merge: true });
+
+  return {
+    changedCount,
+    changedMediaTypes,
+    didWrite: true,
+    shouldEnrich: addedOrUpdatedCount > 0,
+  };
+};
+
+const reconcileEpisodeTracking = async (
+  userId: string,
+  traktShows: TraktWatchedShow[]
+): Promise<number> => {
+  const db = admin.firestore();
+  const collectionRef = db.collection('users').doc(userId).collection('episode_tracking');
+  const existingSnapshot = await collectionRef.get();
+  const existingDocs = new Map(existingSnapshot.docs.map((doc) => [doc.id, doc]));
+  const batch = db.batch();
+  let writeCount = 0;
+  let changedEpisodes = 0;
+
+  for (const traktShow of traktShows) {
+    const remoteDoc = buildEpisodeTrackingDoc(traktShow);
+    if (!remoteDoc) {
+      continue;
+    }
+
+    const existingDoc = existingDocs.get(remoteDoc.showId);
+    const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
+    const existingEpisodes = isPlainObject(existingData.episodes)
+      ? (existingData.episodes as Record<string, Record<string, unknown>>)
+      : {};
+    const episodeChanges: Record<string, unknown> = {};
+    let docChanged = !existingDoc;
+
+    Object.entries(remoteDoc.episodes).forEach(([episodeKey, remoteEpisode]) => {
+      const existingEpisode = isPlainObject(existingEpisodes[episodeKey])
+        ? (existingEpisodes[episodeKey] as Record<string, unknown>)
+        : undefined;
+
+      if (!existingEpisode || hasManagedFieldChanges(existingEpisode, remoteEpisode)) {
+        episodeChanges[episodeKey] = mergeManagedValue(existingEpisode, remoteEpisode);
+        changedEpisodes += 1;
+        docChanged = true;
+      }
+    });
+
+    Object.keys(existingEpisodes).forEach((episodeKey) => {
+      if (remoteDoc.episodes[episodeKey]) {
+        return;
+      }
+
+      episodeChanges[episodeKey] = FieldValue.delete();
+      changedEpisodes += 1;
+      docChanged = true;
+    });
+
+    const existingMetadata = isPlainObject(existingData.metadata)
+      ? (existingData.metadata as Record<string, unknown>)
+      : {};
+    const metadataBase = {
+      tvShowName: remoteDoc.metadata.tvShowName,
+    };
+    const metadataChanged = !existingDoc || hasManagedFieldChanges(existingMetadata, metadataBase);
+
+    if (docChanged || metadataChanged) {
+      batch.set(
+        collectionRef.doc(remoteDoc.showId),
+        stripUndefinedDeep(
+          {
+            episodes:
+              Object.keys(episodeChanges).length > 0
+                ? episodeChanges
+                : !existingDoc
+                  ? {}
+                  : undefined,
+            metadata: {
+              ...existingMetadata,
+              ...metadataBase,
+              lastUpdated: Timestamp.now(),
+            },
+          },
+          true
+        ) as FirebaseFirestore.DocumentData,
+        { merge: true }
+      );
+      writeCount += 1;
+    }
+
+    existingDocs.delete(remoteDoc.showId);
+  }
+
+  existingDocs.forEach((doc) => {
+    const existingData = doc.data() as Record<string, unknown>;
+    const existingEpisodes = isPlainObject(existingData.episodes)
+      ? (existingData.episodes as Record<string, unknown>)
+      : {};
+    changedEpisodes += Object.keys(existingEpisodes).length;
+    batch.delete(doc.ref);
+    writeCount += 1;
+  });
+
+  if (writeCount > 0) {
     await batch.commit();
   }
 
-  return count;
+  return changedEpisodes;
 };
 
-const syncItemsMap = async (
+const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Promise<number> => {
+  const db = admin.firestore();
+  const ratingsCollection = db.collection('users').doc(userId).collection('ratings');
+  const existingSnapshot = await ratingsCollection.get();
+  const existingDocs = new Map(
+    existingSnapshot.docs
+      .filter((doc) => doc.id.startsWith('movie-') || doc.id.startsWith('tv-'))
+      .map((doc) => [doc.id, doc])
+  );
+  const remoteRatings: Record<string, Record<string, unknown>> = {};
+
+  traktRatings.forEach((traktRating) => {
+    const transformed = transformRating(traktRating);
+    if (!transformed) {
+      return;
+    }
+
+    remoteRatings[String(transformed.id)] = transformed;
+  });
+
+  const batch = db.batch();
+  let writeCount = 0;
+  let changedCount = 0;
+
+  Object.entries(remoteRatings).forEach(([docId, remoteRating]) => {
+    const existingDoc = existingDocs.get(docId);
+    const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
+
+    if (!existingDoc || hasManagedFieldChanges(existingData, remoteRating)) {
+      batch.set(
+        ratingsCollection.doc(docId),
+        mergeManagedValue(existingDoc ? existingData : undefined, remoteRating),
+        { merge: false }
+      );
+      changedCount += 1;
+      writeCount += 1;
+    }
+
+    existingDocs.delete(docId);
+  });
+
+  existingDocs.forEach((doc) => {
+    batch.delete(doc.ref);
+    changedCount += 1;
+    writeCount += 1;
+  });
+
+  if (writeCount > 0) {
+    await batch.commit();
+  }
+
+  return changedCount;
+};
+
+const syncWatchlist = async (
   userId: string,
-  listId: string,
-  items: Record<string, unknown>
-): Promise<number> => {
-  const sanitizedItems = stripUndefinedDeep(items, true) as Record<string, unknown> | undefined;
-  const count = Object.keys(sanitizedItems ?? {}).length;
-  if (count === 0) {
-    return 0;
-  }
+  traktWatchlist: TraktWatchlistItem[]
+): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+  const result = await reconcileManagedList(
+    userId,
+    'watchlist',
+    buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item))),
+    {
+      id: 'watchlist',
+      name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.watchlist,
+    }
+  );
 
-  await admin
-    .firestore()
-    .collection('users')
-    .doc(userId)
-    .collection('lists')
-    .doc(listId)
-    .set(
-      stripUndefinedDeep(
-        {
-          items: sanitizedItems ?? {},
-          metadata: {
-            itemCount: count,
-            lastUpdated: Timestamp.now(),
-            needsEnrichment: true,
-          },
-        },
-        true
-      ) as FirebaseFirestore.DocumentData,
-      { merge: true }
-    );
-
-  return count;
+  return {
+    changedCount: result.changedCount,
+    shouldEnrich: result.shouldEnrich,
+  };
 };
 
-const syncWatchlist = async (userId: string, traktWatchlist: TraktWatchlistItem[]): Promise<number> => {
-  const items: Record<string, unknown> = {};
-  for (const traktItem of traktWatchlist) {
-    const item = transformWatchlistItem(traktItem);
-    if (item) {
-      items[String(item.id)] = item;
+const syncFavorites = async (
+  userId: string,
+  traktFavorites: TraktFavorite[]
+): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+  const result = await reconcileManagedList(
+    userId,
+    'favorites',
+    buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item))),
+    {
+      id: 'favorites',
+      name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.favorites,
     }
-  }
-  return syncItemsMap(userId, 'watchlist', items);
-};
+  );
 
-const syncFavorites = async (userId: string, traktFavorites: TraktFavorite[]): Promise<number> => {
-  const items: Record<string, unknown> = {};
-  for (const traktFavorite of traktFavorites) {
-    const favorite = transformFavorite(traktFavorite);
-    if (favorite) {
-      items[String(favorite.id)] = favorite;
-    }
-  }
-  return syncItemsMap(userId, 'favorites', items);
+  return {
+    changedCount: result.changedCount,
+    shouldEnrich: result.shouldEnrich,
+  };
 };
 
 const syncCustomLists = async (
@@ -1802,128 +2259,231 @@ const syncCustomLists = async (
   username: string,
   traktLists: TraktList[]
 ): Promise<number> => {
-  let count = 0;
+  let changedCount = 0;
 
   for (const traktList of traktLists) {
-    try {
-      const listItems = await getListItems(accessToken, username, traktList.ids.slug);
-      const items: Record<string, unknown> = {};
-
-      for (const traktItem of listItems) {
-        const transformed = transformListItem(traktItem);
-        if (!transformed) {
-          continue;
-        }
-
-        items[transformed.tmdbId.toString()] = {
-          addedAt: transformed.addedAt,
-          id: transformed.tmdbId,
-          media_type: transformed.mediaType,
-          title: transformed.title,
-          traktId: transformed.traktId,
-        };
+    const listItems = await getListItems(accessToken, username, traktList.ids.slug);
+    const result = await reconcileManagedList(
+      userId,
+      `trakt_${traktList.ids.trakt}`,
+      buildCustomListItemsMap(listItems),
+      {
+        createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
+        description: traktList.description || '',
+        isCustom: true,
+        name: traktList.name,
+        privacy: traktList.privacy === 'public' ? 'public' : 'private',
+        traktId: traktList.ids.trakt,
+        updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
       }
-
-      const sanitizedItems = stripUndefinedDeep(items, true) as Record<string, unknown> | undefined;
-
-      await admin
-        .firestore()
-        .collection('users')
-        .doc(userId)
-        .collection('lists')
-        .doc(`trakt_${traktList.ids.trakt}`)
-        .set(
-          stripUndefinedDeep(
-            {
-              createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
-              description: traktList.description || '',
-              isCustom: true,
-              items: sanitizedItems ?? {},
-              metadata: {
-                itemCount: Object.keys(sanitizedItems ?? {}).length,
-                lastUpdated: Timestamp.now(),
-                needsEnrichment: true,
-              },
-              name: traktList.name,
-              privacy: traktList.privacy === 'public' ? 'public' : 'private',
-              traktId: traktList.ids.trakt,
-              updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
-            },
-            true
-          ) as FirebaseFirestore.DocumentData
-        );
-
-      count++;
-    } catch (error) {
-      console.error(`[TraktSync] Failed to sync custom list "${traktList.name}":`, error);
-    }
-  }
-
-  return count;
-};
-
-const syncTraktImport = async (userId: string, accessToken: string): Promise<SyncStatusItems> => {
-  const db = admin.firestore();
-  const itemsSynced = emptyItemsSynced();
-  const userProfile = await getUserProfile(accessToken);
-  const allAlreadyWatchedItems: Record<string, unknown> = {};
-
-  const watchedMovies = await getWatchedMovies(accessToken);
-  for (const traktMovie of watchedMovies) {
-    const item = transformWatchedMovie(traktMovie);
-    if (!item) {
-      continue;
-    }
-    allAlreadyWatchedItems[String(item.id)] = item;
-    itemsSynced.movies++;
-  }
-
-  const watchedShows = await getWatchedShows(accessToken);
-  const watchedShowsResult = await syncWatchedShows(userId, watchedShows);
-  Object.assign(allAlreadyWatchedItems, watchedShowsResult.alreadyWatchedShows);
-  itemsSynced.episodes = watchedShowsResult.episodes;
-  itemsSynced.shows = watchedShowsResult.shows;
-
-  const sanitizedAlreadyWatchedItems = stripUndefinedDeep(allAlreadyWatchedItems, true) as
-    | Record<string, unknown>
-    | undefined;
-
-  await db
-    .collection('users')
-    .doc(userId)
-    .collection('lists')
-    .doc('already-watched')
-    .set(
-      stripUndefinedDeep(
-        {
-          createdAt: Timestamp.now(),
-          id: 'already-watched',
-          items: sanitizedAlreadyWatchedItems ?? {},
-          metadata: {
-            itemCount: Object.keys(sanitizedAlreadyWatchedItems ?? {}).length,
-            lastUpdated: Timestamp.now(),
-            needsEnrichment: true,
-          },
-          name: 'Already Watched',
-        },
-        true
-      ) as FirebaseFirestore.DocumentData,
-      { merge: true }
     );
 
-  const ratings = await getRatings(accessToken);
-  itemsSynced.ratings = await syncRatings(userId, ratings);
+    if (result.didWrite) {
+      changedCount += 1;
+    }
+  }
 
-  const watchlist = await getWatchlist(accessToken);
-  itemsSynced.watchlistItems = await syncWatchlist(userId, watchlist);
+  return changedCount;
+};
 
-  const favorites = await getFavorites(accessToken);
-  itemsSynced.favorites = await syncFavorites(userId, favorites);
+const reconcileCustomLists = async (
+  userId: string,
+  accessToken: string,
+  username: string,
+  traktLists: TraktList[],
+  previousCustomLists: Record<string, TraktIncrementalCustomListState>,
+  bootstrap: boolean
+): Promise<{
+  changedCount: number;
+  customLists: Record<string, TraktIncrementalCustomListState>;
+  listsToEnrich: string[];
+}> => {
+  const listsCollection = admin.firestore().collection('users').doc(userId).collection('lists');
+  const localListsSnapshot = await listsCollection.get();
+  const localTraktLists = new Map(
+    localListsSnapshot.docs.filter((doc) => doc.id.startsWith('trakt_')).map((doc) => [doc.id, doc])
+  );
+  const nextCustomLists = Object.fromEntries(
+    traktLists.map((traktList) => [
+      String(traktList.ids.trakt),
+      {
+        slug: traktList.ids.slug,
+        updatedAt: traktList.updated_at,
+      },
+    ])
+  ) as Record<string, TraktIncrementalCustomListState>;
+  const listsToEnrich: string[] = [];
+  let changedCount = 0;
 
-  const lists = await getUserLists(accessToken, userProfile.username);
-  itemsSynced.lists = await syncCustomLists(userId, accessToken, userProfile.username, lists);
+  for (const traktList of traktLists) {
+    const traktId = String(traktList.ids.trakt);
+    const listId = `trakt_${traktId}`;
+    const previousState = previousCustomLists[traktId];
+    const shouldReconcileList =
+      bootstrap ||
+      !previousState ||
+      previousState.slug !== traktList.ids.slug ||
+      previousState.updatedAt !== traktList.updated_at ||
+      !localTraktLists.has(listId);
 
-  return itemsSynced;
+    if (!shouldReconcileList) {
+      continue;
+    }
+
+    const listItems = await getListItems(accessToken, username, traktList.ids.slug);
+    const result = await reconcileManagedList(
+      userId,
+      listId,
+      buildCustomListItemsMap(listItems),
+      {
+        createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
+        description: traktList.description || '',
+        isCustom: true,
+        name: traktList.name,
+        privacy: traktList.privacy === 'public' ? 'public' : 'private',
+        traktId: traktList.ids.trakt,
+        updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
+      },
+      localTraktLists.get(listId)
+    );
+
+    if (result.didWrite) {
+      changedCount += 1;
+    }
+    if (result.shouldEnrich) {
+      listsToEnrich.push(listId);
+    }
+  }
+
+  const removedLocalLists = localListsSnapshot.docs.filter(
+    (doc) => doc.id.startsWith('trakt_') && !nextCustomLists[doc.id.replace(/^trakt_/, '')]
+  );
+  if (removedLocalLists.length > 0) {
+    const deleteBatch = admin.firestore().batch();
+    removedLocalLists.forEach((doc) => {
+      deleteBatch.delete(doc.ref);
+      changedCount += 1;
+    });
+    await deleteBatch.commit();
+  }
+
+  return {
+    changedCount,
+    customLists: nextCustomLists,
+    listsToEnrich: normalizeChangedListIds(listsToEnrich),
+  };
+};
+
+const syncTraktImport = async (
+  userId: string,
+  accessToken: string,
+  currentIncrementalState?: TraktIncrementalState
+): Promise<{
+  itemsSynced: SyncStatusItems;
+  listsToEnrich: string[];
+  nextIncrementalState: TraktIncrementalState;
+}> => {
+  const itemsSynced = emptyItemsSynced();
+  const lastActivities = await getLastActivities(accessToken);
+  const bootstrap =
+    !currentIncrementalState ||
+    currentIncrementalState.schemaVersion !== TRAKT_INCREMENTAL_SCHEMA_VERSION;
+  const previousActivities = currentIncrementalState?.lastActivities;
+  const shouldSyncWatched =
+    bootstrap ||
+    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'watched_at') ||
+    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'watched_at') ||
+    didActivityFieldChange(previousActivities?.episodes, lastActivities.episodes, 'watched_at');
+  const shouldSyncRatings =
+    bootstrap ||
+    didActivityFieldChange(previousActivities?.movies, lastActivities.movies, 'rated_at') ||
+    didActivityFieldChange(previousActivities?.shows, lastActivities.shows, 'rated_at');
+  const shouldSyncWatchlist =
+    bootstrap || hasActivityGroupChanged(previousActivities?.watchlist, lastActivities.watchlist);
+  const shouldSyncFavorites =
+    bootstrap || hasActivityGroupChanged(previousActivities?.favorites, lastActivities.favorites);
+  const shouldSyncCustomLists =
+    bootstrap || hasActivityGroupChanged(previousActivities?.lists, lastActivities.lists);
+  const listsToEnrich: string[] = [];
+  let customListsState = currentIncrementalState?.customLists ?? {};
+
+  if (shouldSyncWatched) {
+    const watchedMovies = await getWatchedMovies(accessToken);
+    const watchedShows = await getWatchedShows(accessToken);
+    const alreadyWatchedItems = buildManagedListItemsMap([
+      ...watchedMovies.map((item) => transformWatchedMovie(item)),
+      ...watchedShows.map((item) => transformWatchedShow(item)),
+    ]);
+    const alreadyWatchedResult = await reconcileManagedList(
+      userId,
+      'already-watched',
+      alreadyWatchedItems,
+      {
+        id: 'already-watched',
+        name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
+      }
+    );
+
+    itemsSynced.movies = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
+    itemsSynced.shows = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
+    itemsSynced.episodes = await reconcileEpisodeTracking(userId, watchedShows);
+
+    if (alreadyWatchedResult.shouldEnrich) {
+      listsToEnrich.push('already-watched');
+    }
+  }
+
+  if (shouldSyncRatings) {
+    const ratings = await getRatings(accessToken);
+    itemsSynced.ratings = await reconcileRatings(userId, ratings);
+  }
+
+  if (shouldSyncWatchlist) {
+    const watchlist = await getWatchlist(accessToken);
+    const result = await syncWatchlist(userId, watchlist);
+    itemsSynced.watchlistItems = result.changedCount;
+    if (result.shouldEnrich) {
+      listsToEnrich.push('watchlist');
+    }
+  }
+
+  if (shouldSyncFavorites) {
+    const favorites = await getFavorites(accessToken);
+    const result = await syncFavorites(userId, favorites);
+    itemsSynced.favorites = result.changedCount;
+    if (result.shouldEnrich) {
+      listsToEnrich.push('favorites');
+    }
+  }
+
+  if (shouldSyncCustomLists) {
+    const userProfile = await getUserProfile(accessToken);
+    const traktLists = await getUserLists(accessToken, userProfile.username);
+    const customListsResult = await reconcileCustomLists(
+      userId,
+      accessToken,
+      userProfile.username,
+      traktLists,
+      currentIncrementalState?.customLists ?? {},
+      bootstrap
+    );
+
+    itemsSynced.lists = customListsResult.changedCount;
+    customListsState = customListsResult.customLists;
+    listsToEnrich.push(...customListsResult.listsToEnrich);
+  }
+
+  return {
+    itemsSynced,
+    listsToEnrich: normalizeChangedListIds(listsToEnrich),
+    nextIncrementalState: {
+      bootstrapCompletedAt: currentIncrementalState?.bootstrapCompletedAt ?? Timestamp.now(),
+      customLists: customListsState,
+      lastActivities,
+      schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
+      updatedAt: Timestamp.now(),
+    },
+  };
 };
 
 const prepareEnrichmentRun = async (
@@ -2656,6 +3216,7 @@ const handleDisconnect = async (request: Request, response: ExpressResponse): Pr
         traktConnected: false,
         traktConnectedAt: FieldValue.delete(),
         traktOauthStartAllowedAt: FieldValue.delete(),
+        traktIncrementalState: FieldValue.delete(),
         traktRefreshToken: FieldValue.delete(),
         traktEnrichmentStatus: FieldValue.delete(),
         traktSyncStatus: FieldValue.delete(),
@@ -2837,7 +3398,9 @@ export const traktCallback = onRequest(
           traktAccessToken: tokenData.access_token,
           traktConnected: true,
           traktConnectedAt: Timestamp.now(),
+          traktIncrementalState: FieldValue.delete(),
           traktRefreshToken: tokenData.refresh_token,
+          traktSyncStatus: FieldValue.delete(),
           traktTokenExpiresAt: expiresAt,
         },
         { merge: true }
@@ -2935,33 +3498,37 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
 
     try {
       const accessToken = await maybeRefreshAccessToken(userId, userData);
-      const itemsSynced = await syncTraktImport(userId, accessToken);
+      const syncResult = await syncTraktImport(userId, accessToken, userData.traktIncrementalState);
+      const { itemsSynced, listsToEnrich, nextIncrementalState } = syncResult;
 
       console.info('[TraktSync] Completed sync import', {
         itemsSynced,
+        listsToEnrich,
         runId,
         userId,
       });
 
-      try {
-        const enrichmentRun = await prepareEnrichmentRun(userId, undefined, false);
-        if (enrichmentRun.kind === 'queued') {
-          console.info('[TraktSync] Auto-queued post-sync enrichment', {
-            includeEpisodes: enrichmentRun.status.includeEpisodes,
-            listCount: enrichmentRun.status.lists.length,
-            runId: enrichmentRun.status.runId,
-            userId,
-          });
-          await dispatchEnrichmentRun(enrichmentRun.status);
+      if (listsToEnrich.length > 0) {
+        try {
+          const enrichmentRun = await prepareEnrichmentRun(userId, listsToEnrich, false);
+          if (enrichmentRun.kind === 'queued') {
+            console.info('[TraktSync] Auto-queued post-sync enrichment', {
+              includeEpisodes: enrichmentRun.status.includeEpisodes,
+              listCount: enrichmentRun.status.lists.length,
+              runId: enrichmentRun.status.runId,
+              userId,
+            });
+            await dispatchEnrichmentRun(enrichmentRun.status);
+          }
+        } catch (enrichmentError) {
+          console.error('[TraktEnrichment] Failed to auto-start enrichment after sync:', enrichmentError);
         }
-      } catch (enrichmentError) {
-        console.error('[TraktEnrichment] Failed to auto-start enrichment after sync:', enrichmentError);
       }
 
       const completedAt = Timestamp.now();
       const nextAllowedSyncAt = Timestamp.fromMillis(completedAt.toMillis() + TRAKT_SYNC_COOLDOWN_MS);
 
-      await writeSyncStatus(userId, runId, {
+      await writeCompletedSyncResult(userId, runId, {
         attempt,
         completedAt,
         itemsSynced,
@@ -2973,7 +3540,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         status: 'completed',
         updatedAt: completedAt,
         userId,
-      });
+      }, nextIncrementalState);
     } catch (error) {
       const normalizedError = normalizeSyncError(error);
       console.error('[TraktSync] Sync attempt failed', {

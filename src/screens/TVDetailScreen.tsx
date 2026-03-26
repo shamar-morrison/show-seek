@@ -112,7 +112,7 @@ export default function TVDetailScreen() {
     tvId
   );
 
-  const { membership, isLoading: isLoadingLists } = useMediaLists(tvId);
+  const { membership, isLoading: isLoadingLists } = useMediaLists(tvId, 'tv');
   const { userRating, isLoading: isLoadingRating } = useMediaRating(tvId, 'tv');
   const { preferences } = usePreferences();
   const { resolvePosterPath } = usePosterOverrides();

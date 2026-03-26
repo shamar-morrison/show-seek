@@ -1,6 +1,12 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { filterCustomLists, MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import {
+  buildListItemKey,
+  getLegacyListItemKey,
+  getListItemFromMap,
+  hasListItemInMap,
+} from '@/src/utils/listItemKeys';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tmdbApi } from '../api/tmdb';
 import { useAuth } from '../context/auth';
@@ -89,7 +95,7 @@ export const useLists = (options: UseListsOptions = {}) => {
   };
 };
 
-export const useMediaLists = (mediaId: number) => {
+export const useMediaLists = (mediaId: number, mediaType: 'movie' | 'tv') => {
   // Detail-screen add-to-list state depends on this membership data.
   // Keep this active for signed-in users even when optional list indicator optimizations are disabled.
   const { data: lists, isLoading } = useLists();
@@ -100,7 +106,7 @@ export const useMediaLists = (mediaId: number) => {
 
   const membership: Record<string, boolean> = {};
   lists.forEach((list) => {
-    if (list.items && list.items[mediaId]) {
+    if (hasListItemInMap(list.items, mediaType, mediaId)) {
       membership[list.id] = true;
     }
   });
@@ -193,7 +199,7 @@ export const useAddToList = () => {
               name: listName || list.name,
               items: {
                 ...list.items,
-                [mediaItem.id]: newItem,
+                [buildListItemKey(mediaItem.media_type, mediaItem.id)]: newItem,
               },
               updatedAt: Date.now(),
             };
@@ -277,11 +283,18 @@ export const useRemoveFromList = () => {
   const userId = user && !user.isAnonymous ? user.uid : undefined;
 
   return useMutation({
-    mutationFn: ({ listId, mediaId }: { listId: string; mediaId: number }) =>
-      listService.removeFromList(listId, mediaId),
+    mutationFn: ({
+      listId,
+      mediaId,
+      mediaType,
+    }: {
+      listId: string;
+      mediaId: number;
+      mediaType: 'movie' | 'tv';
+    }) => listService.removeFromList(listId, mediaId, mediaType),
 
     // Optimistic update - immediately show the item as removed
-    onMutate: async ({ listId, mediaId }) => {
+    onMutate: async ({ listId, mediaId, mediaType }) => {
       if (!userId) {
         throw new Error('User must be logged in');
       }
@@ -303,7 +316,11 @@ export const useRemoveFromList = () => {
       ]);
       const hasHydratedMembershipCache =
         membershipQueryState?.status === 'success' && previousMembershipIndex !== undefined;
-      const targetItem = previousLists?.find((list) => list.id === listId)?.items?.[mediaId] as
+      const targetItem = getListItemFromMap(
+        previousLists?.find((list) => list.id === listId)?.items,
+        mediaType,
+        mediaId
+      ) as
         | ListMediaItem
         | undefined;
 
@@ -316,7 +333,9 @@ export const useRemoveFromList = () => {
           appliedListOptimisticUpdate = true;
           return oldLists.map((list) => {
             if (list.id === listId) {
-              const { [mediaId]: _, ...remainingItems } = list.items || {};
+              const remainingItems = { ...(list.items || {}) };
+              delete remainingItems[buildListItemKey(mediaType, mediaId)];
+              delete remainingItems[getLegacyListItemKey(mediaId)];
               return {
                 ...list,
                 items: remainingItems,

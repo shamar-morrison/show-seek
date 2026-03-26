@@ -144,8 +144,8 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText, queryByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText('Retrying Import')).toBeTruthy();
-    expect(getByText('Retrying your import')).toBeTruthy();
+    expect(getByText('Retrying Sync')).toBeTruthy();
+    expect(getByText('Retrying your sync')).toBeTruthy();
     expect(getByText('Retry 2 of 5.')).toBeTruthy();
     expect(getByText(/Next retry/i)).toBeTruthy();
     expect(queryByText('Connected!')).toBeNull();
@@ -165,10 +165,10 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(getByText("Mirror Sync Didn't Finish")).toBeTruthy();
     expect(getByText('Trakt blocked the request upstream.')).toBeTruthy();
     expect(getByText('You can try again now without reconnecting Trakt.')).toBeTruthy();
-    expect(getByText('Import History')).toBeTruthy();
+    expect(getByText('Mirror Trakt Data')).toBeTruthy();
   });
 
   it('prefers translated storage-limit copy over the raw Firestore error', () => {
@@ -186,7 +186,7 @@ describe('TraktSettingsScreen', () => {
 
     const { getByText, queryByText } = render(<TraktSettingsScreen />);
 
-    expect(getByText("Import Didn't Finish")).toBeTruthy();
+    expect(getByText("Mirror Sync Didn't Finish")).toBeTruthy();
     expect(
       getByText('Your Trakt history is too large to import right now. Please try again later.')
     ).toBeTruthy();

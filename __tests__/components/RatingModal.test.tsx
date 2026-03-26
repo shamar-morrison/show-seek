@@ -39,6 +39,12 @@ jest.mock('@/src/context/auth', () => ({
   }),
 }));
 
+jest.mock('@/src/context/TraktContext', () => ({
+  useTrakt: () => ({
+    isConnected: false,
+  }),
+}));
+
 jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
@@ -90,7 +96,7 @@ describe('RatingModal', () => {
 
     await waitFor(() => {
       expect(mockRateMediaMutateAsync).toHaveBeenCalled();
-      expect(removeFromListSpy).toHaveBeenCalledWith('watchlist', 123);
+      expect(removeFromListSpy).toHaveBeenCalledWith('watchlist', 123, 'movie');
     });
 
     await waitFor(() => {

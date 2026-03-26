@@ -75,12 +75,13 @@ describe('ListService', () => {
         mockDocRef,
         expect.objectContaining({
           name: 'watchlist',
-          'items.123': expect.objectContaining({
+          'items.movie-123': expect.objectContaining({
             id: 123,
             title: 'Test Movie',
             media_type: 'movie',
             addedAt: expect.any(Number),
           }),
+          'items.123': '__deleteField__',
           updatedAt: expect.any(Number),
         })
       );
@@ -115,7 +116,7 @@ describe('ListService', () => {
         expect.objectContaining({
           name: 'watchlist',
           items: expect.objectContaining({
-            123: expect.objectContaining({
+            'movie-123': expect.objectContaining({
               id: 123,
               title: 'Test Movie',
               media_type: 'movie',
@@ -159,7 +160,7 @@ describe('ListService', () => {
         expect.objectContaining({
           name: 'watchlist',
           items: expect.objectContaining({
-            123: expect.objectContaining({
+            'movie-123': expect.objectContaining({
               id: 123,
               title: 'Test Movie',
               media_type: 'movie',
@@ -235,9 +236,10 @@ describe('ListService', () => {
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
-      await listService.removeFromList('watchlist', 123);
+      await listService.removeFromList('watchlist', 123, 'movie');
 
       expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+        'items.movie-123': '__deleteField__',
         'items.123': '__deleteField__',
         updatedAt: expect.any(Number),
       });
@@ -246,7 +248,7 @@ describe('ListService', () => {
     it('should throw error when user is not authenticated', async () => {
       mockUserId = null;
 
-      await expect(listService.removeFromList('watchlist', 123)).rejects.toThrow(
+      await expect(listService.removeFromList('watchlist', 123, 'movie')).rejects.toThrow(
         'Please sign in to continue'
       );
     });
@@ -394,7 +396,7 @@ describe('ListService', () => {
       (doc as jest.Mock).mockReturnValue(mockDocRef);
       (updateDoc as jest.Mock).mockResolvedValue(undefined);
 
-      await listService.removeFromList('watchlist', 123);
+      await listService.removeFromList('watchlist', 123, 'movie');
 
       expect(mockCreateTimeoutWithCleanup).toHaveBeenCalled();
       expect(mockTimeoutCancel).toHaveBeenCalled();

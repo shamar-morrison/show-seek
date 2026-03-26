@@ -536,6 +536,7 @@ export default function TraktSettingsScreen() {
 
   // State: Connected and synced
   const itemsSynced = syncStatus?.itemsSynced;
+  const hasChangedItems = Boolean(itemsSynced && Object.values(itemsSynced).some((count) => count > 0));
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
@@ -557,7 +558,7 @@ export default function TraktSettingsScreen() {
           </Text>
         </View>
 
-        {itemsSynced && (
+        {itemsSynced && hasChangedItems && (
           <View style={styles.statsContainer}>
             <Text style={styles.statsTitle}>{t('trakt.syncedItemsTitle')}</Text>
             <View style={styles.statsGrid}>
@@ -583,6 +584,13 @@ export default function TraktSettingsScreen() {
                 <StatItem label={t('library.watchlist')} value={itemsSynced.watchlistItems} />
               )}
             </View>
+          </View>
+        )}
+
+        {itemsSynced && !hasChangedItems && syncStatus?.status === 'completed' && (
+          <View style={styles.noChangesContainer}>
+            <Text style={styles.noChangesTitle}>{t('trakt.noChangesTitle')}</Text>
+            <Text style={styles.noChangesDescription}>{t('trakt.noChangesDescription')}</Text>
           </View>
         )}
 
@@ -877,6 +885,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text,
     marginBottom: SPACING.m,
+  },
+  noChangesContainer: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    padding: SPACING.l,
+    marginBottom: SPACING.l,
+    gap: SPACING.xs,
+  },
+  noChangesTitle: {
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  noChangesDescription: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
   statsGrid: {
     flexDirection: 'row',

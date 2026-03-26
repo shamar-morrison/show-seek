@@ -4,6 +4,7 @@ import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useTrakt } from '@/src/context/TraktContext';
 import {
   useDeleteEpisodeRating,
   useDeleteRating,
@@ -13,6 +14,7 @@ import {
 import { listService } from '@/src/services/ListService';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
 import { getRatingText } from '@/src/utils/ratingHelpers';
+import { maybeWarnTraktManagedRatingEdit } from '@/src/utils/traktManagedEdits';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { Star, StarHalf, X } from 'lucide-react-native';
@@ -166,6 +168,7 @@ export default function RatingModal({
 }: RatingModalProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const { isConnected: isTraktConnected } = useTrakt();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.uid;
@@ -211,6 +214,12 @@ export default function RatingModal({
           },
         });
       } else if (mediaId !== undefined && mediaType) {
+        maybeWarnTraktManagedRatingEdit(
+          isTraktConnected,
+          onShowToast,
+          t('trakt.localRatingEditWarning')
+        );
+
         // Movie/TV rating - pass metadata if available
         const metadata = autoAddOptions?.mediaMetadata;
         await rateMediaMutation.mutateAsync({
@@ -281,7 +290,7 @@ export default function RatingModal({
 
         if (mediaType === 'movie' && shouldAutoRemoveFromShouldWatch && isInShouldWatch) {
           try {
-            await listService.removeFromList('watchlist', mediaId);
+            await listService.removeFromList('watchlist', mediaId, mediaType);
             didMutateLists = true;
             console.log('[RatingModal] Auto-removed from Should Watch list:', mediaId);
           } catch (autoRemoveError) {
@@ -326,6 +335,12 @@ export default function RatingModal({
           episodeNumber: episodeData.episodeNumber,
         });
       } else if (mediaId !== undefined && mediaType) {
+        maybeWarnTraktManagedRatingEdit(
+          isTraktConnected,
+          onShowToast,
+          t('trakt.localRatingEditWarning')
+        );
+
         // Delete movie/TV rating
         await deleteMediaMutation.mutateAsync({ mediaId, mediaType });
       }

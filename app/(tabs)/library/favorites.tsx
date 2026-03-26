@@ -150,10 +150,11 @@ export default function FavoritesScreen() {
   }, []);
 
   const removeSelectedItemFromList = useCallback(
-    (mediaId: number) =>
+    (mediaId: number, mediaType: 'movie' | 'tv') =>
       removeMutation.mutateAsync({
         listId: DEFAULT_LIST_IDS[3],
         mediaId,
+        mediaType,
       }),
     [removeMutation]
   );

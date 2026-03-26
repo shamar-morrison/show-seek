@@ -14,13 +14,22 @@ jest.mock('@/src/hooks/usePreferences', () => ({
   }),
 }));
 
+jest.mock('@/src/context/TraktContext', () => ({
+  useTrakt: () => ({
+    isConnected: false,
+  }),
+}));
+
 type HookParams = Parameters<typeof useListDetailMultiSelectActions>[0];
 
 function createParams(overrides: Partial<HookParams> = {}): HookParams {
   return {
     sourceListId: 'watchlist',
     sourceListName: 'Watchlist',
-    selectedMediaItems: [{ id: 1 }, { id: 2 }],
+    selectedMediaItems: [
+      { id: 1, media_type: 'movie' },
+      { id: 2, media_type: 'tv' },
+    ],
     selectedCount: 2,
     isSelectionMode: true,
     isRemoving: false,
@@ -102,8 +111,8 @@ describe('useListDetailMultiSelectActions', () => {
     expect(showToast).toHaveBeenCalledWith('2 items removed');
     expect(clearSelection).toHaveBeenCalledTimes(1);
     expect(removeItemFromSource).toHaveBeenCalledTimes(2);
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, 1);
-    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, 2);
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(1, 1, 'movie');
+    expect(removeItemFromSource).toHaveBeenNthCalledWith(2, 2, 'tv');
   });
 
   it('continues on failures and shows failure summary toast', async () => {

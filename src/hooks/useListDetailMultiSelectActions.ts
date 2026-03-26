@@ -1,6 +1,8 @@
 import { DEFAULT_MULTI_SELECT_ACTION_BAR_HEIGHT } from '@/src/components/library/MultiSelectActionBar';
+import { useTrakt } from '@/src/context/TraktContext';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
+import { maybeWarnTraktManagedListEdit } from '@/src/utils/traktManagedEdits';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -8,13 +10,13 @@ import { Alert } from 'react-native';
 interface UseListDetailMultiSelectActionsParams {
   sourceListId?: string;
   sourceListName: string;
-  selectedMediaItems: Array<Pick<ListMediaItem, 'id'>>;
+  selectedMediaItems: Array<Pick<ListMediaItem, 'id' | 'media_type'>>;
   selectedCount: number;
   isSelectionMode: boolean;
   isRemoving: boolean;
   clearSelection: () => void;
   showToast: (message: string) => void;
-  removeItemFromSource: (mediaId: number) => Promise<unknown>;
+  removeItemFromSource: (mediaId: number, mediaType: 'movie' | 'tv') => Promise<unknown>;
   isSearchActive: boolean;
   deactivateSearch: () => void;
   dismissListActionsModal: () => void;
@@ -42,6 +44,7 @@ export function useListDetailMultiSelectActions({
   insetsBottom,
 }: UseListDetailMultiSelectActionsParams) {
   const { preferences } = usePreferences();
+  const { isConnected: isTraktConnected } = useTrakt();
   const { t } = useTranslation();
   const [actionBarHeight, setActionBarHeight] = useState<number | null>(null);
   const [bulkRemoveProgress, setBulkRemoveProgress] = useState<BulkRemoveProgress | null>(null);
@@ -90,13 +93,20 @@ export function useListDetailMultiSelectActions({
             let failed = 0;
             let processed = 0;
 
+            maybeWarnTraktManagedListEdit(
+              isTraktConnected,
+              [sourceListId],
+              showToast,
+              t('trakt.localListEditWarning')
+            );
+
             setIsBulkRemoving(true);
             setBulkRemoveProgress({ processed: 0, total });
 
             try {
               for (const item of selectedMediaItems) {
                 try {
-                  await removeItemFromSource(item.id);
+                  await removeItemFromSource(item.id, item.media_type);
                 } catch {
                   failed += 1;
                 } finally {
@@ -122,6 +132,7 @@ export function useListDetailMultiSelectActions({
   }, [
     clearSelection,
     isBulkRemoving,
+    isTraktConnected,
     isRemoving,
     removeItemFromSource,
     selectedCount,
