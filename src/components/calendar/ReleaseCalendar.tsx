@@ -1,21 +1,39 @@
-import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { ReleaseCalendarSkeleton } from '@/src/components/calendar/ReleaseCalendarSkeleton';
+import { CategoryTabs } from '@/src/components/ui/CategoryTabs';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
-import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
-import { toLocalDateKey } from '@/src/utils/dateUtils';
+import type { UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
+import {
+  getCalendarDayOffset,
+  type CalendarDisplayItem,
+  type CalendarGroupedDisplayItem,
+  type CalendarMediaFilter,
+  type CalendarPresentationMap,
+  type CalendarRow,
+} from '@/src/utils/calendarViewModel';
+import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Bell, Calendar, CrownIcon, Film, Tv } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 interface ReleaseCalendarProps {
-  sections: ReleaseSection[];
+  presentations: CalendarPresentationMap;
+  activeMediaFilter?: CalendarMediaFilter;
   isLoading?: boolean;
   previewLimit?: number;
   showUpgradeOverlay?: boolean;
@@ -24,244 +42,59 @@ interface ReleaseCalendarProps {
   onRefresh?: () => void;
 }
 
-function limitSections(sections: ReleaseSection[], previewLimit?: number): ReleaseSection[] {
-  if (previewLimit === undefined) return sections;
-  if (previewLimit <= 0) return [];
-
-  let remaining = previewLimit;
-  const limitedSections: ReleaseSection[] = [];
-
-  for (const section of sections) {
-    if (remaining <= 0) break;
-
-    const sectionItems = section.data.slice(0, remaining);
-    if (sectionItems.length === 0) continue;
-
-    limitedSections.push({
-      ...section,
-      data: sectionItems,
-    });
-
-    remaining -= sectionItems.length;
-  }
-
-  return limitedSections;
+interface MediaTabState {
+  scrollOffset: number;
+  selectedTemporalTab: string | null;
 }
 
-interface DateLocation {
-  rowIndex: number;
-  isTailItem: boolean;
-}
+type ReleaseCalendarListRef = FlashListRef<CalendarRow> & {
+  scrollToOffset?: (params: { offset: number; animated: boolean }) => void;
+};
 
-interface PendingScrollTarget {
-  index: number;
-  animated: boolean;
-  viewPosition?: number;
-  useEndFallback?: boolean;
-}
+const INITIAL_TAB_STATE: Record<CalendarMediaFilter, MediaTabState> = {
+  all: {
+    scrollOffset: 0,
+    selectedTemporalTab: null,
+  },
+  movie: {
+    scrollOffset: 0,
+    selectedTemporalTab: null,
+  },
+  tv: {
+    scrollOffset: 0,
+    selectedTemporalTab: null,
+  },
+};
 
-interface CalendarMonthHeaderRow {
-  type: 'month-header';
-  key: string;
-  title: string;
-  isFirstSection: boolean;
-}
-
-interface CalendarReleaseRow {
-  type: 'release';
-  key: string;
-  release: UpcomingRelease;
-  isLastInSection: boolean;
-}
-
-type CalendarRow = CalendarMonthHeaderRow | CalendarReleaseRow;
-
-const TAIL_ITEM_VIEW_POSITION = 1;
-const TAIL_SCROLL_FALLBACK_DELAY_MS = 80;
-
-/**
- * Vertical agenda/timeline calendar component for displaying upcoming releases.
- * Features a horizontal date strip selector and grouped section list.
- */
 export function ReleaseCalendar({
-  sections,
+  presentations,
+  activeMediaFilter = 'all',
   isLoading,
   previewLimit,
-  showUpgradeOverlay = false,
+  showUpgradeOverlay,
   onUpgradePress,
   refreshing = false,
   onRefresh,
 }: ReleaseCalendarProps) {
-  const { t } = useTranslation();
   const router = useRouter();
-  const { accentColor } = useAccentColor();
   const { resolvePosterPath } = usePosterOverrides();
   const styles = useStyles();
-  const listRef = useRef<FlashListRef<CalendarRow> | null>(null);
-  const scrollFollowUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingScrollTargetRef = useRef<PendingScrollTarget | null>(null);
-  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-
-  const visibleSections = useMemo(
-    () => limitSections(sections, previewLimit),
-    [sections, previewLimit]
+  const { t } = useTranslation();
+  const { accentColor } = useAccentColor();
+  const { isReady } = useProgressiveRender(activeMediaFilter);
+  const listRef = useRef<ReleaseCalendarListRef | null>(null);
+  const tabStateRef = useRef<Record<CalendarMediaFilter, MediaTabState>>({
+    all: { ...INITIAL_TAB_STATE.all },
+    movie: { ...INITIAL_TAB_STATE.movie },
+    tv: { ...INITIAL_TAB_STATE.tv },
+  });
+  const [selectedTemporalTab, setSelectedTemporalTab] = useState<string | null>(
+    tabStateRef.current[activeMediaFilter].selectedTemporalTab
   );
 
-  const clearScrollFollowUp = useCallback(() => {
-    if (scrollFollowUpTimeoutRef.current) {
-      clearTimeout(scrollFollowUpTimeoutRef.current);
-      scrollFollowUpTimeoutRef.current = null;
-    }
-  }, []);
+  const presentation = presentations[activeMediaFilter];
 
-  useEffect(
-    () => () => {
-      clearScrollFollowUp();
-    },
-    [clearScrollFollowUp]
-  );
-
-  const { calendarRows, uniqueDates, dateLocations } = useMemo(() => {
-    const dateMap = new Map<string, Date>();
-    const locationMap = new Map<string, DateLocation>();
-    const rows: CalendarRow[] = [];
-    const lastSectionIndex = visibleSections.length - 1;
-    const lastItemIndex =
-      lastSectionIndex >= 0 ? visibleSections[lastSectionIndex].data.length - 1 : -1;
-
-    visibleSections.forEach((section, sectionIndex) => {
-      rows.push({
-        type: 'month-header',
-        key: `month-header-${section.title}-${sectionIndex}`,
-        title: section.title,
-        isFirstSection: sectionIndex === 0,
-      });
-
-      section.data.forEach((release, itemIndex) => {
-        const dateKey = toLocalDateKey(release.releaseDate);
-        const rowIndex = rows.length;
-        if (!dateMap.has(dateKey)) {
-          dateMap.set(dateKey, release.releaseDate);
-          locationMap.set(dateKey, {
-            rowIndex,
-            isTailItem: sectionIndex === lastSectionIndex && itemIndex === lastItemIndex,
-          });
-        }
-
-        rows.push({
-          type: 'release',
-          key: release.uniqueKey,
-          release,
-          isLastInSection: itemIndex === section.data.length - 1,
-        });
-      });
-    });
-
-    return {
-      calendarRows: rows,
-      uniqueDates: Array.from(dateMap.values()).sort((a, b) => a.getTime() - b.getTime()),
-      dateLocations: locationMap,
-    };
-  }, [visibleSections]);
-
-  const buildScrollTarget = useCallback((location: DateLocation): PendingScrollTarget => {
-    if (location.isTailItem) {
-      return {
-        index: location.rowIndex,
-        animated: true,
-        viewPosition: TAIL_ITEM_VIEW_POSITION,
-        useEndFallback: true,
-      };
-    }
-
-    return {
-      index: location.rowIndex,
-      animated: true,
-    };
-  }, []);
-
-  const scheduleTailFallback = useCallback(
-    (target: PendingScrollTarget) => {
-      if (!target.useEndFallback) {
-        return;
-      }
-
-      clearScrollFollowUp();
-      scrollFollowUpTimeoutRef.current = setTimeout(() => {
-        const pendingTarget = pendingScrollTargetRef.current;
-        if (!pendingTarget || pendingTarget.index !== target.index || !pendingTarget.useEndFallback) {
-          return;
-        }
-
-        const visibleIndices = listRef.current?.computeVisibleIndices();
-        if (visibleIndices && visibleIndices.endIndex >= target.index) {
-          return;
-        }
-
-        void listRef.current?.scrollToEnd({ animated: target.animated });
-      }, TAIL_SCROLL_FALLBACK_DELAY_MS);
-    },
-    [clearScrollFollowUp]
-  );
-
-  const scrollToDateLocation = useCallback(
-    async (location: DateLocation) => {
-      clearScrollFollowUp();
-
-      const params = buildScrollTarget(location);
-      pendingScrollTargetRef.current = params;
-      const list = listRef.current;
-      if (!list) {
-        return;
-      }
-
-      list.recordInteraction();
-
-      try {
-        const scrollParams =
-          params.viewPosition === undefined
-            ? { index: params.index, animated: params.animated }
-            : {
-                index: params.index,
-                animated: params.animated,
-                viewPosition: params.viewPosition,
-              };
-        await list.scrollToIndex(scrollParams);
-        scheduleTailFallback(params);
-      } catch {
-        if (params.useEndFallback) {
-          await list.scrollToEnd({ animated: params.animated });
-        }
-      }
-    },
-    [buildScrollTarget, clearScrollFollowUp, scheduleTailFallback]
-  );
-
-  useEffect(() => {
-    if (selectedDateKey && !dateLocations.has(selectedDateKey)) {
-      setSelectedDateKey(null);
-    }
-  }, [dateLocations, selectedDateKey]);
-
-  const handleDateSelect = useCallback(
-    (date: Date) => {
-      const dateKey = toLocalDateKey(date);
-
-      if (selectedDateKey === dateKey) {
-        return;
-      }
-
-      setSelectedDateKey(dateKey);
-
-      const location = dateLocations.get(dateKey);
-      if (location) {
-        void scrollToDateLocation(location);
-      }
-    },
-    [dateLocations, scrollToDateLocation, selectedDateKey]
-  );
-
-  const handleReleasePress = useCallback(
+  const handleSingleReleasePress = useCallback(
     (release: UpcomingRelease) => {
       if (release.mediaType === 'movie') {
         router.push({ pathname: '/(tabs)/home/movie/[id]', params: { id: release.id } });
@@ -291,7 +124,14 @@ export function ReleaseCalendar({
     [router]
   );
 
-  const handleUpgradePress = useCallback(() => {
+  const handleGroupedShowPress = useCallback(
+    (groupedItem: CalendarGroupedDisplayItem) => {
+      router.push({ pathname: '/(tabs)/home/tv/[id]', params: { id: groupedItem.showId } });
+    },
+    [router]
+  );
+
+  const handleUpgrade = useCallback(() => {
     if (onUpgradePress) {
       onUpgradePress();
       return;
@@ -300,43 +140,135 @@ export function ReleaseCalendar({
     router.push('/premium');
   }, [onUpgradePress, router]);
 
+  const shouldShowUpgrade =
+    showUpgradeOverlay ??
+    (previewLimit !== undefined && presentation.totalContentCount > previewLimit);
+
+  useLayoutEffect(() => {
+    const nextSelectedTemporalTab = tabStateRef.current[activeMediaFilter].selectedTemporalTab;
+
+    if (
+      nextSelectedTemporalTab &&
+      presentation.temporalTabAnchors[nextSelectedTemporalTab] === undefined
+    ) {
+      tabStateRef.current[activeMediaFilter].selectedTemporalTab = null;
+      setSelectedTemporalTab(null);
+      return;
+    }
+
+    setSelectedTemporalTab(nextSelectedTemporalTab);
+  }, [activeMediaFilter, presentation.temporalTabAnchors]);
+
+  useLayoutEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    listRef.current?.scrollToOffset?.({
+      offset: tabStateRef.current[activeMediaFilter].scrollOffset,
+      animated: false,
+    });
+  }, [activeMediaFilter, isReady, presentation.rows]);
+
+  const scrollToIndex = useCallback(async (index: number) => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+
+    list.recordInteraction();
+
+    try {
+      await list.scrollToIndex({
+        index,
+        animated: true,
+      });
+    } catch {
+      await list.scrollToEnd({ animated: true });
+    }
+  }, []);
+
+  const handleTemporalTabChange = useCallback(
+    (tabKey: string) => {
+      if (tabStateRef.current[activeMediaFilter].selectedTemporalTab === tabKey) {
+        return;
+      }
+
+      const targetIndex = presentation.temporalTabAnchors[tabKey];
+      if (targetIndex === undefined) {
+        return;
+      }
+
+      tabStateRef.current[activeMediaFilter].selectedTemporalTab = tabKey;
+      setSelectedTemporalTab(tabKey);
+      void scrollToIndex(targetIndex);
+    },
+    [activeMediaFilter, presentation.temporalTabAnchors, scrollToIndex]
+  );
+
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      tabStateRef.current[activeMediaFilter].scrollOffset = event.nativeEvent.contentOffset.y;
+    },
+    [activeMediaFilter]
+  );
+
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<CalendarRow>) => {
-      if (item.type === 'month-header') {
+    ({ item, index }: ListRenderItemInfo<CalendarRow>) => {
+      if (item.type === 'section-header') {
         return (
-          <View
-            style={[
-              styles.sectionHeader,
-              !item.isFirstSection && styles.sectionHeaderWithMargin,
-            ]}
-          >
+          <View style={[styles.sectionHeader, index !== 0 && styles.sectionHeaderWithMargin]}>
             <Calendar size={18} color={accentColor} />
             <Text style={styles.sectionTitle}>{item.title}</Text>
           </View>
         );
       }
 
+      if (item.type === 'grouped-release') {
+        return (
+          <View style={styles.releaseRowSpacing}>
+            <GroupedReleaseCard
+              mediaFilterKey={activeMediaFilter}
+              item={item.item}
+              onShowPress={handleGroupedShowPress}
+              onEpisodePress={handleSingleReleasePress}
+              resolvePosterPath={resolvePosterPath}
+            />
+          </View>
+        );
+      }
+
       return (
-        <View style={!item.isLastInSection && styles.releaseRowSpacing}>
-          <ReleaseCard
-            release={item.release}
-            onPress={handleReleasePress}
+        <View style={styles.releaseRowSpacing}>
+          <SingleReleaseCard
+            mediaFilterKey={activeMediaFilter}
+            item={item.item}
+            onPress={handleSingleReleasePress}
             resolvePosterPath={resolvePosterPath}
           />
         </View>
       );
     },
-    [accentColor, handleReleasePress, resolvePosterPath, styles]
+    [
+      accentColor,
+      activeMediaFilter,
+      handleGroupedShowPress,
+      handleSingleReleasePress,
+      resolvePosterPath,
+      styles,
+    ]
   );
 
-  const keyExtractor = useCallback((item: CalendarRow) => item.key, []);
-  const getItemType = useCallback((item: CalendarRow) => item.type, []);
-
   const listFooter = useMemo(() => {
-    if (!showUpgradeOverlay) return null;
+    if (!shouldShowUpgrade) {
+      return null;
+    }
 
     return (
-      <View style={styles.upgradeOverlayContainer} testID="release-calendar-upgrade-overlay">
+      <View
+        style={styles.upgradeOverlayContainer}
+        testID={buildMediaTestId(activeMediaFilter, 'upgrade-overlay')}
+      >
         <LinearGradient
           colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.75)']}
           locations={[0, 0.6, 1]}
@@ -346,43 +278,50 @@ export function ReleaseCalendar({
           <CrownIcon size={30} color={accentColor} style={styles.upgradeIcon} />
           <Text style={styles.upgradeTitle}>{t('calendar.upgradeForFullExperience')}</Text>
           <Pressable
-            testID="release-calendar-upgrade-button"
+            testID={buildMediaTestId(activeMediaFilter, 'upgrade-button')}
             style={({ pressed }) => [styles.upgradeButton, pressed && styles.upgradeButtonPressed]}
-            onPress={handleUpgradePress}
+            onPress={handleUpgrade}
           >
             <Text style={styles.upgradeButtonText}>{t('calendar.upgradeToPremium')}</Text>
           </Pressable>
         </View>
       </View>
     );
-  }, [handleUpgradePress, showUpgradeOverlay, styles, t]);
+  }, [accentColor, activeMediaFilter, handleUpgrade, shouldShowUpgrade, styles, t]);
 
   if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
-      </View>
-    );
+    return <ReleaseCalendarSkeleton />;
+  }
+
+  if (!isReady) {
+    return <ReleaseCalendarSkeleton showMediaFilterRow={false} />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Horizontal Date Strip */}
-      {uniqueDates.length > 0 && (
-        <DateStrip
-          dates={uniqueDates}
-          selectedDateKey={selectedDateKey}
-          onSelectDate={handleDateSelect}
-        />
-      )}
+      {presentation.temporalTabs.length > 0 ? (
+        <View style={styles.temporalTabsContainer}>
+          <CategoryTabs
+            tabs={presentation.temporalTabs.map((tab) => ({
+              key: tab.key,
+              label: tab.label,
+            }))}
+            activeKey={selectedTemporalTab ?? presentation.temporalTabs[0].key}
+            onChange={handleTemporalTabChange}
+            testID={buildMediaTestId(activeMediaFilter, 'temporal-tabs')}
+          />
+        </View>
+      ) : null}
 
       <FlashList<CalendarRow>
         ref={listRef}
-        testID="release-calendar-section-list"
+        testID={buildMediaTestId(activeMediaFilter, 'section-list')}
         style={styles.content}
-        data={calendarRows}
+        data={presentation.rows}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemType={getItemType}
@@ -395,75 +334,21 @@ export function ReleaseCalendar({
   );
 }
 
-interface DateStripProps {
-  dates: Date[];
-  selectedDateKey: string | null;
-  onSelectDate: (date: Date) => void;
+function keyExtractor(item: CalendarRow) {
+  return item.key;
 }
 
-/**
- * Horizontal scrollable date selector strip
- */
-function DateStrip({ dates, selectedDateKey, onSelectDate }: DateStripProps) {
-  const { t, i18n } = useTranslation();
-  const styles = useStyles();
-  const today = new Date();
-  const todayStr = toLocalDateKey(today);
-  const tomorrowStr = toLocalDateKey(new Date(today.getTime() + 24 * 60 * 60 * 1000));
-
-  const formatDateLabel = (date: Date): string => {
-    const dateStr = toLocalDateKey(date);
-    if (dateStr === todayStr) return t('calendar.today');
-    if (dateStr === tomorrowStr) return t('calendar.tomorrow');
-    // Format as "Sat, Jan 24" - all on one line
-    const weekday = date.toLocaleDateString(i18n.language, { weekday: 'short' });
-    const monthDay = date.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
-    return `${weekday}, ${monthDay}`;
-  };
-
-  return (
-    <View style={styles.dateStripContainer}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.dateStripContent}
-        style={styles.dateStrip}
-      >
-        {dates.map((date) => {
-          const dateStr = toLocalDateKey(date);
-          const isSelected = dateStr === selectedDateKey;
-          const isToday = dateStr === todayStr;
-
-          return (
-            <Pressable
-              testID={`release-calendar-date-item-${dateStr}`}
-              key={dateStr}
-              onPress={() => onSelectDate(date)}
-              style={[
-                styles.dateItem,
-                isSelected && styles.dateItemSelected,
-                isToday && !isSelected && styles.dateItemToday,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.dateLabel,
-                  isSelected && styles.dateLabelSelected,
-                  isToday && !isSelected && styles.dateLabelToday,
-                ]}
-              >
-                {formatDateLabel(date)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
+function getItemType(item: CalendarRow) {
+  return item.type;
 }
 
-interface ReleaseCardProps {
-  release: UpcomingRelease;
+function buildMediaTestId(mediaFilter: CalendarMediaFilter, suffix: string) {
+  return `release-calendar-${suffix}-${mediaFilter}`;
+}
+
+interface SingleReleaseCardProps {
+  mediaFilterKey: CalendarMediaFilter;
+  item: Extract<CalendarDisplayItem, { type: 'single' }>;
   onPress: (release: UpcomingRelease) => void;
   resolvePosterPath: (
     mediaType: UpcomingRelease['mediaType'],
@@ -472,180 +357,309 @@ interface ReleaseCardProps {
   ) => string | null;
 }
 
-/**
- * Individual release card component with backdrop, countdown, and episode info
- */
-const ReleaseCard = React.memo(
-  function ReleaseCard({ release, onPress, resolvePosterPath }: ReleaseCardProps) {
-    const { t, i18n } = useTranslation();
-    const styles = useStyles();
-    const today = new Date();
-    const todayStr = toLocalDateKey(today);
-    const releaseDateStr = toLocalDateKey(release.releaseDate);
-    const handlePress = useCallback(() => {
-      onPress(release);
-    }, [onPress, release]);
+const SingleReleaseCard = React.memo(function SingleReleaseCard({
+  mediaFilterKey,
+  item,
+  onPress,
+  resolvePosterPath,
+}: SingleReleaseCardProps) {
+  const { t } = useTranslation();
+  const styles = useStyles();
 
-    // Calculate days until release
-    const daysUntil = Math.ceil(
-      (release.releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
+  const handlePress = useCallback(() => {
+    onPress(item.release);
+  }, [item.release, onPress]);
 
-    const getCountdownText = (): string => {
-      if (releaseDateStr === todayStr) return t('calendar.today');
-      if (daysUntil === 1) return t('calendar.tomorrow');
-      return t('calendar.inDays', { count: daysUntil });
-    };
-
-    const posterPath = resolvePosterPath(release.mediaType, release.id, release.posterPath);
-    const imageUrl =
-      getImageUrl(release.backdropPath, TMDB_IMAGE_SIZES.backdrop.medium) ||
-      getImageUrl(posterPath, TMDB_IMAGE_SIZES.poster.medium);
-
-    const isToday = releaseDateStr === todayStr;
-
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.releaseCard, pressed && styles.releaseCardPressed]}
-        onPress={handlePress}
-      >
-        {/* Left: Date Column */}
-        <View style={[styles.dateColumn, isToday && styles.dateColumnToday]}>
-          <Text style={[styles.dateDay, isToday && styles.dateDayHighlight]}>
-            {release.releaseDate.getDate()}
-          </Text>
-          <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
-            {release.releaseDate
-              .toLocaleDateString(i18n.language, { month: 'short' })
-              .toLocaleUpperCase(i18n.language)}
-          </Text>
-          {isToday && (
-            <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>{t('calendar.today')}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Right: Media Info */}
-        <View style={styles.mediaInfo}>
-          {imageUrl ? (
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.backdrop}
-              contentFit="cover"
-              transition={200}
-              recyclingKey={imageUrl}
-            />
-          ) : (
-            <View style={[styles.backdrop, styles.placeholderBackdrop]}>
-              {release.mediaType === 'movie' ? (
-                <Film size={32} color={COLORS.textSecondary} />
-              ) : (
-                <Tv size={32} color={COLORS.textSecondary} />
-              )}
-            </View>
-          )}
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,1.0)']} style={styles.gradient} />
-          <View style={styles.textOverlay}>
-            <View style={styles.titleRow}>
-              <Text style={styles.releaseTitle} numberOfLines={1}>
-                {release.title}
-              </Text>
-              {release.isReminder && (
-                <View style={styles.reminderBadge}>
-                  <Bell size={12} color={COLORS.warning} />
-                </View>
-              )}
-            </View>
-            {release.nextEpisode && (
+  return (
+    <Pressable
+      testID={buildMediaTestId(mediaFilterKey, `single-${item.release.uniqueKey}`)}
+      style={({ pressed }) => [styles.releaseCard, pressed && styles.releaseCardPressed]}
+      onPress={handlePress}
+    >
+      <ReleaseDateColumn date={item.releaseDate} />
+      <CardMediaInfoShell
+        contentTestID={buildMediaTestId(mediaFilterKey, `single-content-${item.release.uniqueKey}`)}
+        title={item.release.title}
+        mediaType={item.release.mediaType}
+        mediaId={item.release.id}
+        posterPath={item.release.posterPath}
+        backdropPath={item.release.backdropPath}
+        isReminder={item.release.isReminder}
+        releaseDate={item.releaseDate}
+        resolvePosterPath={resolvePosterPath}
+        body={
+          item.release.nextEpisode ? (
+            <View>
               <Text style={styles.episodeInfo}>
                 {t('calendar.seasonEpisode', {
-                  season: release.nextEpisode.seasonNumber,
-                  episode: release.nextEpisode.episodeNumber,
+                  season: item.release.nextEpisode.seasonNumber,
+                  episode: item.release.nextEpisode.episodeNumber,
                 })}
               </Text>
-            )}
-            <View style={styles.countdownRow}>
-              <Text style={styles.countdown}>{getCountdownText()}</Text>
-              <View style={styles.mediaTypeBadge}>
-                {release.mediaType === 'movie' ? (
-                  <Film size={12} color={COLORS.white} />
-                ) : (
-                  <Tv size={12} color={COLORS.white} />
-                )}
+              {item.release.nextEpisode.episodeName ? (
+                <Text numberOfLines={1} style={styles.episodeName}>
+                  {item.release.nextEpisode.episodeName}
+                </Text>
+              ) : null}
+            </View>
+          ) : null
+        }
+      />
+    </Pressable>
+  );
+});
+
+interface GroupedReleaseCardProps {
+  mediaFilterKey: CalendarMediaFilter;
+  item: CalendarGroupedDisplayItem;
+  onShowPress: (item: CalendarGroupedDisplayItem) => void;
+  onEpisodePress: (release: UpcomingRelease) => void;
+  resolvePosterPath: (
+    mediaType: UpcomingRelease['mediaType'],
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
+}
+
+const GroupedReleaseCard = React.memo(function GroupedReleaseCard({
+  mediaFilterKey,
+  item,
+  onShowPress,
+  onEpisodePress,
+  resolvePosterPath,
+}: GroupedReleaseCardProps) {
+  const { t, i18n } = useTranslation();
+  const styles = useStyles();
+
+  const handleShowPress = useCallback(() => {
+    onShowPress(item);
+  }, [item, onShowPress]);
+
+  return (
+    <View style={styles.releaseCard}>
+      <ReleaseDateColumn date={item.releaseDate} />
+      <View style={styles.groupedMediaInfo}>
+        <Pressable
+          testID={buildMediaTestId(mediaFilterKey, `group-${item.key}`)}
+          style={({ pressed }) => [
+            styles.groupedHeaderPressable,
+            pressed && styles.releaseCardPressed,
+          ]}
+          onPress={handleShowPress}
+        >
+          <CardMediaInfoShell
+            contentTestID={buildMediaTestId(mediaFilterKey, `group-content-${item.key}`)}
+            title={item.title}
+            mediaType="tv"
+            mediaId={item.showId}
+            posterPath={item.posterPath}
+            backdropPath={item.backdropPath}
+            isReminder={item.isReminder}
+            releaseDate={item.releaseDate}
+            resolvePosterPath={resolvePosterPath}
+            body={
+              <Text style={styles.episodeInfo}>
+                {t('calendar.upcomingEpisodesCount', { count: item.episodes.length })}
+              </Text>
+            }
+          />
+        </Pressable>
+
+        <View style={styles.groupedEpisodeList}>
+          {item.episodes.map((episode, index) => (
+            <Pressable
+              key={episode.uniqueKey}
+              testID={buildMediaTestId(mediaFilterKey, `grouped-episode-${episode.uniqueKey}`)}
+              style={({ pressed }) => [
+                styles.episodeRow,
+                index > 0 && styles.episodeRowBorder,
+                pressed && styles.episodeRowPressed,
+              ]}
+              onPress={() => onEpisodePress(episode)}
+            >
+              <View style={styles.episodeRowText}>
+                <Text style={styles.episodeRowLabel} numberOfLines={1}>
+                  {t('calendar.seasonEpisode', {
+                    season: episode.nextEpisode?.seasonNumber ?? 0,
+                    episode: episode.nextEpisode?.episodeNumber ?? 0,
+                  })}
+                </Text>
+                {episode.nextEpisode?.episodeName ? (
+                  <Text numberOfLines={1} style={styles.episodeRowTitle}>
+                    {episode.nextEpisode.episodeName}
+                  </Text>
+                ) : null}
               </View>
+              <Text style={styles.episodeRowDate}>
+                {formatEpisodeDate(episode.releaseDate, i18n.language, t)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+});
+
+interface CardMediaInfoShellProps {
+  contentTestID?: string;
+  title: string;
+  mediaType: UpcomingRelease['mediaType'];
+  mediaId: number;
+  posterPath: string | null;
+  backdropPath: string | null;
+  isReminder: boolean;
+  releaseDate: Date;
+  resolvePosterPath: (
+    mediaType: UpcomingRelease['mediaType'],
+    mediaId: number,
+    fallbackPosterPath: string | null | undefined
+  ) => string | null;
+  body?: React.ReactNode;
+}
+
+function CardMediaInfoShell({
+  contentTestID,
+  title,
+  mediaType,
+  mediaId,
+  posterPath,
+  backdropPath,
+  isReminder,
+  releaseDate,
+  resolvePosterPath,
+  body,
+}: CardMediaInfoShellProps) {
+  const styles = useStyles();
+  const { t } = useTranslation();
+
+  const resolvedPosterPath = resolvePosterPath(mediaType, mediaId, posterPath);
+  const imageUrl =
+    getImageUrl(backdropPath, TMDB_IMAGE_SIZES.backdrop.medium) ||
+    getImageUrl(resolvedPosterPath, TMDB_IMAGE_SIZES.poster.medium);
+
+  return (
+    <View style={styles.mediaInfo}>
+      <View style={styles.previewContainer}>
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.backdrop}
+            contentFit="cover"
+            transition={200}
+            recyclingKey={imageUrl}
+          />
+        ) : (
+          <View style={[styles.backdrop, styles.placeholderBackdrop]}>
+            {mediaType === 'movie' ? (
+              <Film size={32} color={COLORS.textSecondary} />
+            ) : (
+              <Tv size={32} color={COLORS.textSecondary} />
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.metaPanel} testID={contentTestID}>
+        <View style={styles.titleRow}>
+          <Text style={styles.releaseTitle} numberOfLines={2}>
+            {title}
+          </Text>
+          {isReminder ? (
+            <View style={styles.reminderBadge}>
+              <Bell size={12} color={COLORS.warning} />
+            </View>
+          ) : null}
+        </View>
+        {body}
+        <View style={styles.countdownRow}>
+          <Text style={styles.countdown}>{getCountdownLabel(releaseDate, t)}</Text>
+          <View style={styles.metaBadgeRow}>
+            <View style={styles.mediaTypeBadge}>
+              {mediaType === 'movie' ? (
+                <Film size={12} color={COLORS.white} />
+              ) : (
+                <Tv size={12} color={COLORS.white} />
+              )}
             </View>
           </View>
         </View>
-      </Pressable>
-    );
-  },
-  (prevProps, nextProps) =>
-    prevProps.release === nextProps.release &&
-    prevProps.onPress === nextProps.onPress &&
-    prevProps.resolvePosterPath === nextProps.resolvePosterPath
-);
+      </View>
+    </View>
+  );
+}
+
+function ReleaseDateColumn({ date }: { date: Date }) {
+  const { t, i18n } = useTranslation();
+  const styles = useStyles();
+  const isToday = getCalendarDayOffset(date) === 0;
+
+  return (
+    <View style={[styles.dateColumn, isToday && styles.dateColumnToday]}>
+      <Text style={[styles.dateDay, isToday && styles.dateDayHighlight]}>{date.getDate()}</Text>
+      <Text style={[styles.dateMonth, isToday && styles.dateMonthHighlight]}>
+        {date
+          .toLocaleDateString(i18n.language, { month: 'short' })
+          .toLocaleUpperCase(i18n.language)}
+      </Text>
+      {isToday ? (
+        <View style={styles.todayBadge}>
+          <Text style={styles.todayBadgeText}>{t('calendar.today')}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function formatEpisodeDate(
+  releaseDate: Date,
+  locale: string,
+  t: ReturnType<typeof useTranslation>['t']
+): string {
+  const dayOffset = getCalendarDayOffset(releaseDate);
+
+  if (dayOffset === 0) {
+    return t('calendar.today');
+  }
+
+  if (dayOffset === 1) {
+    return t('calendar.tomorrow');
+  }
+
+  return releaseDate.toLocaleDateString(locale, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function getCountdownLabel(releaseDate: Date, t: ReturnType<typeof useTranslation>['t']): string {
+  const dayOffset = getCalendarDayOffset(releaseDate);
+
+  if (dayOffset === 0) {
+    return t('calendar.today');
+  }
+
+  if (dayOffset === 1) {
+    return t('calendar.tomorrow');
+  }
+
+  return t('calendar.inDays', { count: dayOffset });
+}
 
 const useStyles = () =>
   useThemedStyles(({ accentColor }) => ({
     container: {
       flex: 1,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      color: COLORS.textSecondary,
-      fontSize: FONT_SIZE.m,
-    },
-    dateStripContainer: {
-      flexShrink: 0,
-    },
-    dateStrip: {
+    temporalTabsContainer: {
       borderBottomWidth: 1,
       borderBottomColor: COLORS.surfaceLight,
     },
-    dateStripContent: {
-      paddingHorizontal: SPACING.m,
-      paddingVertical: SPACING.m,
-      gap: SPACING.s,
-    },
-    dateItem: {
-      height: 44,
-      paddingHorizontal: SPACING.m,
-      borderRadius: BORDER_RADIUS.m,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: COLORS.surface,
-      borderWidth: 2,
-      borderColor: 'transparent',
-    },
-    dateItemSelected: {
-      backgroundColor: accentColor,
-    },
-    dateItemToday: {
-      borderWidth: 2,
-      borderColor: accentColor,
-    },
-    dateLabel: {
-      fontSize: FONT_SIZE.s,
-      color: COLORS.text,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    dateLabelSelected: {
-      color: COLORS.white,
-    },
-    dateLabelToday: {
-      color: accentColor,
+    content: {
+      flex: 1,
     },
     listContent: {
       paddingBottom: SPACING.xl,
-    },
-    content: {
-      flex: 1,
     },
     sectionHeader: {
       flexDirection: 'row',
@@ -656,22 +670,13 @@ const useStyles = () =>
       backgroundColor: COLORS.background,
       gap: SPACING.s,
     },
-    upgradeIcon: {
-      marginTop: -30,
-    },
     sectionHeaderWithMargin: {
       marginTop: SPACING.m,
     },
     sectionTitle: {
       fontSize: FONT_SIZE.l,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: COLORS.text,
-    },
-    itemSeparator: {
-      height: SPACING.s,
-    },
-    sectionSeparator: {
-      height: SPACING.m,
     },
     releaseRowSpacing: {
       marginBottom: SPACING.s,
@@ -682,6 +687,8 @@ const useStyles = () =>
       borderRadius: BORDER_RADIUS.l,
       overflow: 'hidden',
       backgroundColor: COLORS.surface,
+      borderWidth: 1,
+      borderColor: COLORS.surfaceLight,
     },
     releaseCardPressed: {
       opacity: ACTIVE_OPACITY,
@@ -698,7 +705,7 @@ const useStyles = () =>
     },
     dateDay: {
       fontSize: 24,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: COLORS.text,
     },
     dateDayHighlight: {
@@ -721,13 +728,23 @@ const useStyles = () =>
     },
     todayBadgeText: {
       fontSize: 10,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: accentColor,
     },
     mediaInfo: {
       flex: 1,
-      height: 100,
+    },
+    groupedMediaInfo: {
+      flex: 1,
+      backgroundColor: COLORS.black,
+    },
+    groupedHeaderPressable: {
+      flex: 1,
+    },
+    previewContainer: {
+      height: 88,
       position: 'relative',
+      backgroundColor: COLORS.surfaceLight,
     },
     backdrop: {
       ...StyleSheet.absoluteFillObject,
@@ -737,59 +754,105 @@ const useStyles = () =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    gradient: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    textOverlay: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      padding: SPACING.s,
+    metaPanel: {
+      backgroundColor: COLORS.black,
+      paddingHorizontal: SPACING.s,
+      paddingVertical: SPACING.s,
+      gap: SPACING.xs,
     },
     titleRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
+      gap: SPACING.xs,
     },
     releaseTitle: {
       fontSize: FONT_SIZE.m,
-      fontWeight: 'bold',
+      fontWeight: '700',
       color: COLORS.white,
       flex: 1,
+      lineHeight: 20,
     },
     reminderBadge: {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: 'rgba(255,255,255,0.12)',
       justifyContent: 'center',
       alignItems: 'center',
-      marginLeft: SPACING.xs,
+      marginTop: 1,
     },
     episodeInfo: {
       fontSize: FONT_SIZE.xs,
-      color: COLORS.text,
-      opacity: 0.7,
-      marginTop: SPACING.xs / 2,
+      color: COLORS.textSecondary,
+    },
+    episodeName: {
+      fontSize: FONT_SIZE.xs,
+      color: COLORS.white,
+      marginTop: 2,
     },
     countdownRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: SPACING.xs,
+      gap: SPACING.s,
+      marginTop: SPACING.xs / 2,
     },
     countdown: {
+      flex: 1,
       fontSize: FONT_SIZE.xs,
       color: accentColor,
       fontWeight: '600',
+    },
+    metaBadgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.xs,
     },
     mediaTypeBadge: {
       width: 20,
       height: 20,
       borderRadius: 10,
-      backgroundColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: COLORS.surfaceLight,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    groupedEpisodeList: {
+      backgroundColor: COLORS.black,
+    },
+    episodeRow: {
+      minHeight: 52,
+      paddingHorizontal: SPACING.m,
+      paddingVertical: SPACING.s,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: SPACING.s,
+    },
+    episodeRowBorder: {
+      borderTopWidth: 1,
+      borderTopColor: COLORS.surfaceLight,
+    },
+    episodeRowPressed: {
+      opacity: ACTIVE_OPACITY,
+    },
+    episodeRowText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    episodeRowLabel: {
+      color: COLORS.text,
+      fontSize: FONT_SIZE.s,
+      fontWeight: '600',
+    },
+    episodeRowTitle: {
+      color: COLORS.textSecondary,
+      fontSize: FONT_SIZE.xs,
+      marginTop: 2,
+    },
+    episodeRowDate: {
+      color: accentColor,
+      fontSize: FONT_SIZE.xs,
+      fontWeight: '600',
     },
     upgradeOverlayContainer: {
       marginTop: SPACING.l,
@@ -808,6 +871,9 @@ const useStyles = () =>
       paddingBottom: SPACING.l,
       alignItems: 'center',
       gap: SPACING.m,
+    },
+    upgradeIcon: {
+      marginTop: -30,
     },
     upgradeTitle: {
       fontSize: FONT_SIZE.m,

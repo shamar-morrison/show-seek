@@ -85,6 +85,31 @@ describe('useProgressiveRender', () => {
     // isReady should still be false (from the last observed value)
     expect(result.current.isReady).toBe(false);
   });
+
+  it('should reset to false when the reset key changes and become ready again on the next tick', () => {
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useProgressiveRender>,
+      { resetKey: string }
+    >(({ resetKey }) => useProgressiveRender(resetKey), {
+      initialProps: { resetKey: 'all' },
+    });
+
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    expect(result.current.isReady).toBe(true);
+
+    rerender({ resetKey: 'tv' });
+
+    expect(result.current.isReady).toBe(false);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+
+    expect(result.current.isReady).toBe(true);
+  });
 });
 
 /**

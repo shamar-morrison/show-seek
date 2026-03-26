@@ -1,11 +1,17 @@
 import { fireEvent, renderWithProviders } from '@/__tests__/utils/test-utils';
 import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
-import { ReleaseSection, UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
+import type { UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
+import {
+  buildCalendarPresentations,
+  type CalendarSortMode,
+} from '@/src/utils/calendarViewModel';
+import { act, within } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPush = jest.fn();
 const mockScrollToIndex = jest.fn((params: any) => Promise.resolve(params));
 const mockScrollToEnd = jest.fn((params: any) => Promise.resolve(params));
+const mockScrollToOffset = jest.fn();
 const mockRecordInteraction = jest.fn();
 const mockComputeVisibleIndices = jest.fn(() => ({
   startIndex: 0,
@@ -21,6 +27,7 @@ jest.mock('@shopify/flash-list', () => {
       React.useImperativeHandle(ref, () => ({
         scrollToIndex: mockScrollToIndex,
         scrollToEnd: mockScrollToEnd,
+        scrollToOffset: mockScrollToOffset,
         recordInteraction: mockRecordInteraction,
         computeVisibleIndices: mockComputeVisibleIndices,
       }));
@@ -70,13 +77,8 @@ jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
 
-jest.mock('expo-linear-gradient', () => ({
-  LinearGradient: 'LinearGradient',
-}));
-
 jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => ({
-    overrides: {},
     resolvePosterPath: (
       _mediaType: 'movie' | 'tv',
       _mediaId: number,
@@ -85,310 +87,410 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
   }),
 }));
 
-function createRelease(id: number, day: number): UpcomingRelease {
-  return {
-    id,
-    mediaType: 'movie',
-    title: `Release ${id}`,
-    posterPath: null,
-    backdropPath: null,
-    releaseDate: new Date(2026, 1, day),
-    isReminder: false,
-    sourceLists: ['watchlist'],
-    uniqueKey: `release-${id}`,
-  };
-}
+jest.mock('@/src/components/calendar/ReleaseCalendarSkeleton', () => ({
+  ReleaseCalendarSkeleton: ({ showMediaFilterRow = true }: { showMediaFilterRow?: boolean }) => {
+    const React = require('react');
+    const { View } = require('react-native');
 
-function createTVRelease(
-  id: number,
-  day: number,
-  nextEpisode?: { seasonNumber: number; episodeNumber: number }
-): UpcomingRelease {
+    return React.createElement(View, {
+      testID: showMediaFilterRow ? 'calendar-loading' : 'calendar-loading-content-only',
+    });
+  },
+}));
+
+const LABELS = {
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  thisWeek: 'This Week',
+  nextWeek: 'Next Week',
+  movies: 'Movies',
+  tvShows: 'TV Shows',
+};
+
+function createRelease({
+  id,
+  day,
+  month = 1,
+  mediaType = 'movie',
+  title,
+  nextEpisode,
+}: {
+  id: number;
+  day: number;
+  month?: number;
+  mediaType?: 'movie' | 'tv';
+  title?: string;
+  nextEpisode?: {
+    seasonNumber: number;
+    episodeNumber: number;
+    episodeName?: string;
+  };
+}): UpcomingRelease {
   return {
     id,
-    mediaType: 'tv',
-    title: `TV Release ${id}`,
+    mediaType,
+    title: title ?? `${mediaType === 'movie' ? 'Movie' : 'TV'} ${id}`,
     posterPath: null,
     backdropPath: null,
-    releaseDate: new Date(2026, 1, day),
+    releaseDate: new Date(2026, month, day),
     nextEpisode,
     isReminder: false,
-    sourceLists: ['currently-watching'],
-    uniqueKey: `tv-release-${id}-${nextEpisode?.seasonNumber ?? 'none'}-${nextEpisode?.episodeNumber ?? 'none'}`,
+    sourceLists: mediaType === 'movie' ? ['watchlist'] : ['currently-watching'],
+    uniqueKey:
+      mediaType === 'tv' && nextEpisode
+        ? `tv-${id}-s${nextEpisode.seasonNumber}-e${nextEpisode.episodeNumber}`
+        : `${mediaType}-${id}`,
   };
 }
 
-function createSections(): ReleaseSection[] {
-  return [
-    {
-      title: 'February 2026',
-      data: [createRelease(1, 10), createRelease(2, 12)],
-    },
-    {
-      title: 'March 2026',
-      data: [createRelease(3, 14), createRelease(4, 16)],
-    },
-  ];
-}
-
-function findNodeByTestId(node: any, testID: string): any {
-  if (!node || typeof node !== 'object') return null;
-  if (node.props?.testID === testID) return node;
-
-  const children = node.props?.children;
-  const childNodes = Array.isArray(children) ? children : [children];
-
-  for (const child of childNodes) {
-    const result = findNodeByTestId(child, testID);
-    if (result) return result;
-  }
-
-  return null;
-}
-
-function findNodeByProp(node: any, propName: string): any {
-  if (!node || typeof node !== 'object') return null;
-  if (node.props?.[propName]) return node;
-
-  const children = node.props?.children;
-  const childNodes = Array.isArray(children) ? children : [children];
-
-  for (const child of childNodes) {
-    const result = findNodeByProp(child, propName);
-    if (result) return result;
-  }
-
-  return null;
-}
-
-function triggerFirstReleasePress(calendarList: any) {
-  const renderedRows = calendarList.props.data as Array<{
-    type: string;
-    release?: UpcomingRelease;
-  }>;
-  const firstReleaseRow = renderedRows.find((row) => row.type === 'release');
-  if (!firstReleaseRow) {
-    throw new Error('Expected at least one release row');
-  }
-  const firstReleaseIndex = renderedRows.indexOf(firstReleaseRow);
-  const itemNode = calendarList.props.renderItem({
-    item: firstReleaseRow,
-    index: firstReleaseIndex,
-    target: 'Cell',
+function createPresentations(
+  releases: UpcomingRelease[],
+  {
+    sortMode = 'soonest',
+    previewLimit,
+  }: {
+    sortMode?: CalendarSortMode;
+    previewLimit?: number;
+  } = {}
+) {
+  return buildCalendarPresentations({
+    releases,
+    sortMode,
+    previewLimit,
+    labels: LABELS,
+    locale: 'en-US',
+    referenceDate: new Date(2026, 1, 10),
   });
-  const pressableNode = findNodeByProp(itemNode, 'onPress');
-  if (!pressableNode) {
-    throw new Error('Expected a pressable release node');
-  }
-  pressableNode.props.onPress(pressableNode.props.release);
+}
+
+function flushProgressiveRender() {
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
 }
 
 describe('ReleaseCalendar', () => {
+  beforeAll(() => {
+    jest.useFakeTimers();
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
   beforeEach(() => {
+    jest.setSystemTime(new Date(2026, 1, 10));
     jest.clearAllMocks();
   });
 
-  it('limits the list to first 3 releases and limits date strip to preview dates', () => {
-    const sections = createSections();
+  it('limits visible content rows and temporal tabs to the preview window', () => {
+    const releases = [
+      createRelease({ id: 1, day: 10 }),
+      createRelease({ id: 2, day: 11 }),
+      createRelease({ id: 3, day: 13 }),
+      createRelease({ id: 4, day: 18 }),
+      createRelease({ id: 5, day: 3, month: 2 }),
+    ];
+    const presentations = createPresentations(releases, { previewLimit: 3 });
+
     const { getByTestId, queryAllByTestId } = renderWithProviders(
-      <ReleaseCalendar sections={sections} previewLimit={3} />
+      <ReleaseCalendar presentations={presentations} previewLimit={3} />
     );
+    flushProgressiveRender();
 
-    const calendarList = getByTestId('release-calendar-section-list');
-    const renderedRows = calendarList.props.data as Array<{
-      type: string;
-      title?: string;
-      release?: UpcomingRelease;
-    }>;
-    const renderedReleases = renderedRows
-      .filter((row) => row.type === 'release')
-      .map((row) => row.release as UpcomingRelease);
+    const calendarList = getByTestId('release-calendar-section-list-all');
+    const renderedRows = calendarList.props.data as Array<{ type: string }>;
 
-    expect(renderedReleases).toHaveLength(3);
-    expect(renderedReleases.map((release) => release.uniqueKey)).toEqual([
-      'release-1',
-      'release-2',
-      'release-3',
-    ]);
-    expect(renderedRows.map((row) => row.type)).toEqual([
-      'month-header',
-      'release',
-      'release',
-      'month-header',
-      'release',
-    ]);
     expect(
-      renderedRows.filter((row) => row.type === 'month-header').map((row) => row.title)
-    ).toEqual(['February 2026', 'March 2026']);
-
-    expect(queryAllByTestId(/release-calendar-date-item-/)).toHaveLength(3);
+      renderedRows.filter((row) => row.type === 'single-release' || row.type === 'grouped-release')
+    ).toHaveLength(3);
+    expect(queryAllByTestId(/release-calendar-temporal-tabs-all-tab-/)).toHaveLength(3);
   });
 
-  it('shows overlay only when configured', () => {
-    const sections = createSections();
-    const { getByTestId, rerender } = renderWithProviders(
-      <ReleaseCalendar sections={sections} previewLimit={3} showUpgradeOverlay />
-    );
+  it('does not render a sticky releasing-today banner in soonest mode', () => {
+    const releases = [createRelease({ id: 1, day: 10 }), createRelease({ id: 2, day: 12 })];
+    const presentations = createPresentations(releases);
 
-    const calendarListWithOverlay = getByTestId('release-calendar-section-list');
-    const overlayFooter = calendarListWithOverlay.props.ListFooterComponent;
-    expect(overlayFooter).toBeTruthy();
-    expect(overlayFooter.props.testID).toBe('release-calendar-upgrade-overlay');
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar presentations={presentations} />);
+    flushProgressiveRender();
 
-    rerender(<ReleaseCalendar sections={sections} previewLimit={3} showUpgradeOverlay={false} />);
+    const calendarList = getByTestId('release-calendar-section-list-all');
 
-    const calendarListWithoutOverlay = getByTestId('release-calendar-section-list');
-    expect(calendarListWithoutOverlay.props.ListFooterComponent).toBeNull();
+    expect(calendarList.props.stickyHeaderIndices).toBeUndefined();
   });
 
-  it('scrolls to the tapped date without rebuilding the row data', () => {
-    const sections = createSections();
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
+  it('scrolls to the tapped temporal tab without changing the rendered row structure', () => {
+    const releases = [
+      createRelease({ id: 1, day: 10 }),
+      createRelease({ id: 2, day: 11 }),
+      createRelease({ id: 3, day: 13 }),
+      createRelease({ id: 4, day: 18 }),
+      createRelease({ id: 5, day: 3, month: 2 }),
+    ];
+    const presentations = createPresentations(releases);
 
-    const calendarList = getByTestId('release-calendar-section-list');
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar presentations={presentations} />);
+    flushProgressiveRender();
+
+    const calendarList = getByTestId('release-calendar-section-list-all');
     const initialRows = calendarList.props.data;
 
-    fireEvent.press(getByTestId('release-calendar-date-item-2026-02-14'));
+    fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
 
-    const updatedCalendarList = getByTestId('release-calendar-section-list');
+    const updatedCalendarList = getByTestId('release-calendar-section-list-all');
 
-    expect(updatedCalendarList.props.data).toBe(initialRows);
+    expect(updatedCalendarList.props.data).toStrictEqual(initialRows);
     expect(mockRecordInteraction).toHaveBeenCalledTimes(1);
-    expect(mockScrollToIndex).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: 4,
-        animated: true,
-      })
-    );
-    expect(mockScrollToIndex.mock.calls[0][0].viewPosition).toBeUndefined();
-  });
-
-  it('keeps repeated taps on the selected date idempotent', () => {
-    const sections = createSections();
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-
-    const dateItem = getByTestId('release-calendar-date-item-2026-02-14');
-
-    fireEvent.press(dateItem);
-    fireEvent.press(dateItem);
-
-    expect(mockScrollToIndex).toHaveBeenCalledTimes(1);
-    expect(mockScrollToEnd).not.toHaveBeenCalled();
-  });
-
-  it('uses tail-aligned scroll params for the last date in the strip', () => {
-    const sections = createSections();
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-
-    fireEvent.press(getByTestId('release-calendar-date-item-2026-02-16'));
-
-    expect(mockRecordInteraction).toHaveBeenCalledTimes(1);
-    expect(mockScrollToIndex).toHaveBeenCalledWith(
-      expect.objectContaining({
-        index: 5,
-        animated: true,
-        viewPosition: 1,
-      })
-    );
-    expect(mockScrollToEnd).not.toHaveBeenCalled();
-  });
-
-  it('does not enable clipped subview removal on the calendar list', () => {
-    const sections = createSections();
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-
-    const calendarList = getByTestId('release-calendar-section-list');
-
-    expect(calendarList.props.removeClippedSubviews).toBeUndefined();
-  });
-
-  it('calls onUpgradePress when upgrade button is pressed', () => {
-    const onUpgradePress = jest.fn();
-    const sections = createSections();
-    const { getByTestId } = renderWithProviders(
-      <ReleaseCalendar
-        sections={sections}
-        previewLimit={3}
-        showUpgradeOverlay
-        onUpgradePress={onUpgradePress}
-      />
-    );
-
-    const calendarList = getByTestId('release-calendar-section-list');
-    const overlayFooter = calendarList.props.ListFooterComponent;
-    const upgradeButton = findNodeByTestId(overlayFooter, 'release-calendar-upgrade-button');
-
-    expect(upgradeButton).toBeTruthy();
-    upgradeButton.props.onPress();
-
-    expect(onUpgradePress).toHaveBeenCalledTimes(1);
-  });
-
-  it('navigates movie releases to movie details', () => {
-    const sections: ReleaseSection[] = [
-      {
-        title: 'February 2026',
-        data: [createRelease(101, 10)],
-      },
-    ];
-
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-    const calendarList = getByTestId('release-calendar-section-list');
-
-    triggerFirstReleasePress(calendarList);
-
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/(tabs)/home/movie/[id]',
-      params: { id: 101 },
+    expect(mockScrollToIndex).toHaveBeenCalledWith({
+      index: 4,
+      animated: true,
     });
   });
 
-  it('navigates TV releases with episode metadata to episode details', () => {
-    const sections: ReleaseSection[] = [
-      {
-        title: 'February 2026',
-        data: [createTVRelease(202, 12, { seasonNumber: 2, episodeNumber: 3 })],
-      },
+  it('keeps repeated taps on the selected temporal tab idempotent after tab switches', () => {
+    const releases = [createRelease({ id: 1, day: 10 }), createRelease({ id: 2, day: 18 })];
+    const presentations = createPresentations(releases);
+
+    const { getByTestId, rerender } = renderWithProviders(
+      <ReleaseCalendar presentations={presentations} activeMediaFilter="all" />
+    );
+    flushProgressiveRender();
+
+    const tab = getByTestId('release-calendar-temporal-tabs-all-tab-next-week');
+
+    fireEvent.press(tab);
+    fireEvent.press(tab);
+
+    expect(mockScrollToIndex).toHaveBeenCalledTimes(1);
+
+    rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="movie" />);
+    flushProgressiveRender();
+    rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="all" />);
+    flushProgressiveRender();
+
+    fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
+
+    expect(mockScrollToIndex).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores per-media scroll offsets and temporal tab state when switching tabs', () => {
+    const releases = [
+      createRelease({ id: 1, day: 10, mediaType: 'movie' }),
+      createRelease({ id: 2, day: 18, mediaType: 'movie' }),
+      createRelease({
+        id: 3,
+        day: 11,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 1, episodeName: 'Pilot' },
+      }),
+      createRelease({
+        id: 4,
+        day: 18,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 2, episodeName: 'Second' },
+      }),
     ];
+    const presentations = createPresentations(releases);
 
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-    const calendarList = getByTestId('release-calendar-section-list');
+    const { getByTestId, rerender } = renderWithProviders(
+      <ReleaseCalendar presentations={presentations} activeMediaFilter="all" />
+    );
+    flushProgressiveRender();
 
-    triggerFirstReleasePress(calendarList);
+    mockScrollToOffset.mockClear();
+
+    fireEvent.scroll(getByTestId('release-calendar-section-list-all'), {
+      nativeEvent: { contentOffset: { y: 120 } },
+    });
+    fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
+
+    rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="movie" />);
+    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
+    flushProgressiveRender();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 0, animated: false });
+
+    rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="all" />);
+    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
+    flushProgressiveRender();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({ offset: 120, animated: false });
+
+    fireEvent.press(getByTestId('release-calendar-temporal-tabs-all-tab-next-week'));
+
+    expect(mockScrollToIndex).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates grouped show headers to the TV show and grouped episodes to episode details', () => {
+    const releases = [
+      createRelease({
+        id: 202,
+        day: 12,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 2, episodeNumber: 3, episodeName: 'Third' },
+      }),
+      createRelease({
+        id: 202,
+        day: 13,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 2, episodeNumber: 4, episodeName: 'Fourth' },
+      }),
+    ];
+    const presentations = createPresentations(releases);
+
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar presentations={presentations} />);
+    flushProgressiveRender();
+
+    fireEvent.press(getByTestId('release-calendar-group-tv-202-2026-02-all'));
 
     expect(mockPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/home/tv/[id]',
+      params: { id: 202 },
+    });
+
+    fireEvent.press(getByTestId('release-calendar-grouped-episode-tv-202-s2-e3-all'));
+
+    expect(mockPush).toHaveBeenLastCalledWith({
       pathname: '/(tabs)/home/tv/[id]/season/[seasonNum]/episode/[episodeNum]',
       params: { id: 202, seasonNum: 2, episodeNum: 3 },
     });
   });
 
-  it('falls back to TV show details when episode metadata is missing', () => {
-    const sections: ReleaseSection[] = [
-      {
-        title: 'February 2026',
-        data: [createTVRelease(303, 14)],
-      },
+  it('renders readable metadata inside the dark content panel for single and grouped headers', () => {
+    const releases = [
+      createRelease({
+        id: 111,
+        day: 12,
+        mediaType: 'tv',
+        title: 'Single Show',
+        nextEpisode: { seasonNumber: 3, episodeNumber: 7, episodeName: 'A Better Title' },
+      }),
+      createRelease({
+        id: 222,
+        day: 13,
+        mediaType: 'tv',
+        title: 'Grouped Show',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 1, episodeName: 'Start' },
+      }),
+      createRelease({
+        id: 222,
+        day: 14,
+        mediaType: 'tv',
+        title: 'Grouped Show',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 2, episodeName: 'Continue' },
+      }),
     ];
+    const presentations = createPresentations(releases);
 
-    const { getByTestId } = renderWithProviders(<ReleaseCalendar sections={sections} />);
-    const calendarList = getByTestId('release-calendar-section-list');
+    const { getByTestId } = renderWithProviders(<ReleaseCalendar presentations={presentations} />);
+    flushProgressiveRender();
 
-    triggerFirstReleasePress(calendarList);
+    const singleContent = within(
+      getByTestId('release-calendar-single-content-tv-111-s3-e7-all')
+    );
+    expect(singleContent.getByText('Single Show')).toBeTruthy();
+    expect(singleContent.getByText('Season 3 Episode 7')).toBeTruthy();
+    expect(singleContent.getByText('A Better Title')).toBeTruthy();
 
-    expect(mockPush).toHaveBeenCalledWith({
-      pathname: '/(tabs)/home/tv/[id]',
-      params: { id: 303 },
-    });
+    const groupedContent = within(getByTestId('release-calendar-group-content-tv-222-2026-02-all'));
+    expect(groupedContent.getByText('Grouped Show')).toBeTruthy();
+    expect(groupedContent.getByText('2 upcoming episodes')).toBeTruthy();
+  });
+
+  it('renders episode names for single and grouped TV rows', () => {
+    const releases = [
+      createRelease({
+        id: 303,
+        day: 12,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 5, episodeName: 'The Episode Name' },
+      }),
+      createRelease({
+        id: 404,
+        day: 13,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 2, episodeNumber: 1, episodeName: 'One' },
+      }),
+      createRelease({
+        id: 404,
+        day: 14,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 2, episodeNumber: 2, episodeName: 'Two' },
+      }),
+    ];
+    const presentations = createPresentations(releases);
+
+    const { getByText } = renderWithProviders(<ReleaseCalendar presentations={presentations} />);
+    flushProgressiveRender();
+
+    expect(getByText('The Episode Name')).toBeTruthy();
+    expect(getByText('One')).toBeTruthy();
+    expect(getByText('Two')).toBeTruthy();
+  });
+
+  it('shows a content-only skeleton before rendering a new media tab', () => {
+    const releases = [
+      createRelease({ id: 1, day: 10, mediaType: 'movie' }),
+      createRelease({
+        id: 2,
+        day: 11,
+        mediaType: 'tv',
+        nextEpisode: { seasonNumber: 1, episodeNumber: 1, episodeName: 'Pilot' },
+      }),
+    ];
+    const presentations = createPresentations(releases);
+
+    const { getByTestId, queryByTestId, rerender } = renderWithProviders(
+      <ReleaseCalendar presentations={presentations} activeMediaFilter="all" />
+    );
+    flushProgressiveRender();
+
+    rerender(<ReleaseCalendar presentations={presentations} activeMediaFilter="tv" />);
+
+    expect(getByTestId('calendar-loading-content-only')).toBeTruthy();
+    expect(queryByTestId('release-calendar-section-list-tv')).toBeNull();
+
+    flushProgressiveRender();
+
+    expect(getByTestId('release-calendar-section-list-tv')).toBeTruthy();
+  });
+
+  it('shows the upgrade overlay automatically when previewing a truncated list', () => {
+    const releases = [createRelease({ id: 1, day: 10 }), createRelease({ id: 2, day: 11 })];
+    const presentations = createPresentations(releases, { previewLimit: 1 });
+    const onUpgradePress = jest.fn();
+
+    const { getByTestId } = renderWithProviders(
+      <ReleaseCalendar
+        presentations={presentations}
+        previewLimit={1}
+        onUpgradePress={onUpgradePress}
+      />
+    );
+    flushProgressiveRender();
+
+    fireEvent.press(getByTestId('release-calendar-upgrade-button-all'));
+
+    expect(onUpgradePress).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the calendar skeleton while loading', () => {
+    const presentations = createPresentations([]);
+
+    const { getByTestId } = renderWithProviders(
+      <ReleaseCalendar presentations={presentations} isLoading />
+    );
+
+    expect(getByTestId('calendar-loading')).toBeTruthy();
   });
 
   it('passes pull-to-refresh props through to the FlashList', () => {
     const onRefresh = jest.fn();
-    const sections = createSections();
+    const presentations = createPresentations([createRelease({ id: 1, day: 10 })]);
 
     const { getByTestId } = renderWithProviders(
-      <ReleaseCalendar sections={sections} refreshing={true} onRefresh={onRefresh} />
+      <ReleaseCalendar presentations={presentations} refreshing={true} onRefresh={onRefresh} />
     );
-    const calendarList = getByTestId('release-calendar-section-list');
+    flushProgressiveRender();
+    const calendarList = getByTestId('release-calendar-section-list-all');
 
     expect(calendarList.props.refreshing).toBe(true);
     expect(calendarList.props.onRefresh).toBe(onRefresh);

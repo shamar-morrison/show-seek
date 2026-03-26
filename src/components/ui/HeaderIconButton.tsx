@@ -10,13 +10,16 @@ export function HeaderIconButton({
   onPress,
   children,
   style,
+  testID,
 }: {
   onPress: () => void;
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       android_ripple={{ borderless: true, radius: HEADER_TOUCH_SIZE / 2 }}
       style={({ pressed }) => ({

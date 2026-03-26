@@ -297,7 +297,8 @@ export function useUpcomingReleases(): UseUpcomingReleasesResult {
     return map;
   }, [seasonQueries, seasonFetchRequests]);
 
-  const isLoadingDetails = tvDetailsQueries.some((q) => q.isLoading) || movieDetailsQueries.some((q) => q.isLoading);
+  const isLoadingDetails =
+    tvDetailsQueries.some((q) => q.isLoading) || movieDetailsQueries.some((q) => q.isLoading);
   const isLoadingSeasons = seasonQueries.some((q) => q.isLoading);
   const isLoadingEnrichment = isLoadingDetails || isLoadingSeasons;
 
