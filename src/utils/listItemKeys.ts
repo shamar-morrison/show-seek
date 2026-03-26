@@ -30,12 +30,20 @@ export const normalizeListItemsMap = <T extends Partial<ListItemLike>>(
   const normalized: ListItemsMap<T> = {};
 
   Object.entries(items).forEach(([key, value]) => {
-    if (!value || typeof value.id !== 'number' || (value.media_type !== 'movie' && value.media_type !== 'tv')) {
+    const mediaId = value?.id;
+
+    if (
+      !value ||
+      typeof mediaId !== 'number' ||
+      !Number.isFinite(mediaId) ||
+      !Number.isInteger(mediaId) ||
+      (value.media_type !== 'movie' && value.media_type !== 'tv')
+    ) {
       normalized[key] = value;
       return;
     }
 
-    normalized[buildListItemKey(value.media_type, value.id)] = value;
+    normalized[buildListItemKey(value.media_type, mediaId)] = value;
   });
 
   return normalized;
