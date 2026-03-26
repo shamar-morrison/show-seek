@@ -4,6 +4,7 @@ import { FavoritePersonBadge } from '@/src/components/ui/FavoritePersonBadge';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineListIndicators, ListMembershipBadge } from '@/src/components/ui/ListMembershipBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
+import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import {
   ACTIVE_OPACITY,
@@ -407,34 +408,16 @@ export default function SearchScreen() {
           </View>
         </View>
 
-        <View style={styles.typeToggleContainer}>
-          <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'all' && { backgroundColor: accentColor }]}
-            onPress={() => setMediaType('all')}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={[styles.typeText, mediaType === 'all' && styles.typeTextActive]}>
-              {t('search.all')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'movie' && { backgroundColor: accentColor }]}
-            onPress={() => setMediaType('movie')}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={[styles.typeText, mediaType === 'movie' && styles.typeTextActive]}>
-              {t('media.movies')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.typeButton, mediaType === 'tv' && { backgroundColor: accentColor }]}
-            onPress={() => setMediaType('tv')}
-            activeOpacity={ACTIVE_OPACITY}
-          >
-            <Text style={[styles.typeText, mediaType === 'tv' && styles.typeTextActive]}>
-              {t('media.tvShows')}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.segmentedControlContainer}>
+          <SegmentedControl
+            options={[
+              { key: 'all', label: t('search.all') },
+              { key: 'movie', label: t('media.movies') },
+              { key: 'tv', label: t('media.tvShows') },
+            ]}
+            activeKey={mediaType}
+            onChange={(key) => setMediaType(key as MediaType)}
+          />
         </View>
 
         {searchResultsQuery.isLoading ? (
@@ -518,25 +501,8 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.text,
   },
-  typeToggleContainer: {
-    flexDirection: 'row',
+  segmentedControlContainer: {
     padding: SPACING.m,
-    gap: SPACING.s,
-  },
-  typeButton: {
-    flex: 1,
-    paddingVertical: SPACING.s,
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
-    backgroundColor: COLORS.surface,
-  },
-  typeText: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  typeTextActive: {
-    color: COLORS.white,
   },
   centerContainer: {
     flex: 1,
