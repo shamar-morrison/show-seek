@@ -1,5 +1,6 @@
-import { tmdbApi } from '@/src/api/tmdb';
+import { tmdbApi, type Episode, type Season, type TVShowDetails } from '@/src/api/tmdb';
 import { useAuth } from '@/src/context/auth';
+import i18n from '@/src/i18n';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
 import { useQueries, useQuery } from '@tanstack/react-query';
@@ -13,6 +14,177 @@ const RETRY_COUNT = 2;
  * We only need the recent seasons to find the next episode and estimate time remaining.
  */
 const MAX_SEASONS_TO_FETCH = 2;
+type SeasonDetails = Season & { episodes: Episode[] };
+
+const isAiredOnOrBefore = (airDate: string | null | undefined, today: Date): boolean => {
+  if (!airDate) {
+    return false;
+  }
+
+  return new Date(airDate) <= today;
+};
+
+const buildEpisodeNameFallback = (episodeNumber: number): string =>
+  i18n.t('media.episodeNumber', { number: episodeNumber });
+
+const compareWatchedEpisodes = (left: WatchedEpisode, right: WatchedEpisode): number => {
+  if (left.seasonNumber !== right.seasonNumber) {
+    return left.seasonNumber - right.seasonNumber;
+  }
+
+  return left.episodeNumber - right.episodeNumber;
+};
+
+const buildSeasonCounts = (showDetails: TVShowDetails): Array<[number, number]> =>
+  showDetails.seasons
+    .filter((season) => season.season_number > 0 && (season.episode_count ?? 0) > 0)
+    .sort((left, right) => left.season_number - right.season_number)
+    .map((season) => [season.season_number, season.episode_count ?? 0]);
+
+const getEpisodePosition = (
+  seasonCounts: Array<[number, number]>,
+  seasonNumber: number,
+  episodeNumber: number
+): number => {
+  let position = 0;
+
+  seasonCounts.forEach(([season, count]) => {
+    if (season < seasonNumber) {
+      position += count;
+    }
+  });
+
+  const seasonCount = seasonCounts.find(([season]) => season === seasonNumber)?.[1];
+  const clampedEpisodeNumber =
+    seasonCount !== undefined
+      ? Math.min(Math.max(episodeNumber, 0), seasonCount)
+      : Math.max(episodeNumber, 0);
+
+  return position + clampedEpisodeNumber;
+};
+
+const resolveShowLevelLastAiredEpisode = (
+  showDetails: TVShowDetails,
+  today: Date
+): { episodeNumber: number; seasonNumber: number } | null => {
+  const lastEpisodeToAir = showDetails.last_episode_to_air;
+  if (
+    lastEpisodeToAir &&
+    lastEpisodeToAir.season_number > 0 &&
+    lastEpisodeToAir.episode_number > 0 &&
+    lastEpisodeToAir.air_date &&
+    new Date(lastEpisodeToAir.air_date) <= today
+  ) {
+    return {
+      seasonNumber: lastEpisodeToAir.season_number,
+      episodeNumber: lastEpisodeToAir.episode_number,
+    };
+  }
+
+  return null;
+};
+
+const getFallbackBoundarySeasonNumber = (showDetails: TVShowDetails, today: Date): number | null => {
+  const fallbackSeason = showDetails.seasons
+    .filter(
+      (season) =>
+        season.season_number > 0 &&
+        (season.episode_count ?? 0) > 0 &&
+        isAiredOnOrBefore(season.air_date, today)
+    )
+    .sort((left, right) => right.season_number - left.season_number)[0];
+
+  return fallbackSeason?.season_number ?? null;
+};
+
+const getLastAiredEpisodeFromSeason = (
+  seasonData: SeasonDetails,
+  today: Date
+): { episodeNumber: number; seasonNumber: number } | null => {
+  const lastAiredEpisode = [...(seasonData.episodes ?? [])]
+    .filter(
+      (episode) =>
+        episode.season_number > 0 &&
+        episode.episode_number > 0 &&
+        isAiredOnOrBefore(episode.air_date, today)
+    )
+    .sort((left, right) => right.episode_number - left.episode_number)[0];
+
+  if (!lastAiredEpisode) {
+    return null;
+  }
+
+  return {
+    seasonNumber: lastAiredEpisode.season_number,
+    episodeNumber: lastAiredEpisode.episode_number,
+  };
+};
+
+const resolveLastAiredEpisode = (
+  showDetails: TVShowDetails,
+  today: Date,
+  seasonDataByNumber: Map<number, SeasonDetails>
+): { episodeNumber: number; seasonNumber: number } | null => {
+  const showLevelLastAiredEpisode = resolveShowLevelLastAiredEpisode(showDetails, today);
+  if (showLevelLastAiredEpisode) {
+    return showLevelLastAiredEpisode;
+  }
+
+  const fallbackBoundarySeasonNumber = getFallbackBoundarySeasonNumber(showDetails, today);
+  if (fallbackBoundarySeasonNumber === null) {
+    return null;
+  }
+
+  const fallbackSeasonData = seasonDataByNumber.get(fallbackBoundarySeasonNumber);
+  if (!fallbackSeasonData) {
+    return null;
+  }
+
+  return getLastAiredEpisodeFromSeason(fallbackSeasonData, today);
+};
+
+const getNextEpisodeAfter = (
+  seasonCounts: Array<[number, number]>,
+  currentSeason: number,
+  currentEpisode: number
+): { episode: number; season: number } | null => {
+  const currentSeasonIndex = seasonCounts.findIndex(([season]) => season === currentSeason);
+
+  if (currentSeasonIndex >= 0) {
+    const [, episodeCount] = seasonCounts[currentSeasonIndex];
+    if (currentEpisode < episodeCount) {
+      return {
+        season: currentSeason,
+        episode: currentEpisode + 1,
+      };
+    }
+
+    for (let index = currentSeasonIndex + 1; index < seasonCounts.length; index += 1) {
+      const [season, count] = seasonCounts[index];
+      if (count > 0) {
+        return {
+          season,
+          episode: 1,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  const fallbackSeason = seasonCounts.find(([season, count]) => season > currentSeason && count > 0);
+  return fallbackSeason
+    ? {
+        season: fallbackSeason[0],
+        episode: 1,
+      }
+    : null;
+};
+
+const isShowStillActive = (showDetails: TVShowDetails): boolean =>
+  showDetails.status === 'Returning Series' ||
+  showDetails.status === 'In Production' ||
+  Boolean(showDetails.next_episode_to_air);
 
 /**
  * Hook to fetch and compute currently watching shows with optimized React Query caching.
@@ -42,21 +214,16 @@ export function useCurrentlyWatching() {
     return trackingQuery.data
       .filter((show) => Object.keys(show.episodes).length > 0)
       .map((show) => {
-        const episodes = Object.values(show.episodes);
+        const episodes = Object.values(show.episodes).filter((episode) => episode.seasonNumber > 0);
         if (episodes.length === 0) return null;
-
-        // Find the highest season number the user has watched
-        let maxWatchedSeason = 0;
-        for (const ep of episodes) {
-          if (ep.seasonNumber > maxWatchedSeason) {
-            maxWatchedSeason = ep.seasonNumber;
-          }
-        }
+        const sortedWatched = [...episodes].sort(compareWatchedEpisodes);
+        const furthestWatched = sortedWatched[sortedWatched.length - 1];
 
         return {
           trackingDoc: show,
-          tvShowId: episodes[0].tvShowId,
-          maxWatchedSeason,
+          furthestWatched,
+          tvShowId: furthestWatched.tvShowId,
+          maxWatchedSeason: furthestWatched.seasonNumber,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -81,40 +248,57 @@ export function useCurrentlyWatching() {
   // 4. Build optimized season queries - only fetch relevant seasons
   const seasonQueries = useMemo(() => {
     const queries: { tvShowId: number; seasonNumber: number }[] = [];
+    const today = new Date();
 
-    showDetailsQueries.forEach((query, index) => {
-      if (!query.data) return;
+    activeShowsWithInfo.forEach((showInfo, index) => {
+      const showDetails = showDetailsQueries[index]?.data;
+      if (!showDetails) return;
 
-      const tvShowId = tvShowIds[index];
-      const showInfo = activeShowsWithInfo[index];
-      const maxWatchedSeason = showInfo.maxWatchedSeason;
+      const seasonCounts = buildSeasonCounts(showDetails);
+      if (seasonCounts.length === 0) return;
 
-      // Get aired seasons only
-      const airedSeasons = query.data.seasons
-        .filter((s) => s.season_number > 0 && s.air_date && new Date(s.air_date) <= new Date())
-        .sort((a, b) => a.season_number - b.season_number);
-
-      if (airedSeasons.length === 0) return;
-
-      // Only fetch seasons around where the user is watching
-      // This includes: the season they're in + the next season (if it exists)
-      const relevantSeasons = airedSeasons.filter(
-        (s) =>
-          s.season_number >= maxWatchedSeason &&
-          s.season_number <= maxWatchedSeason + MAX_SEASONS_TO_FETCH - 1
+      const requestSeasonNumbers = new Set<number>();
+      const { tvShowId, furthestWatched } = showInfo;
+      const nextEpisodeNumbers = getNextEpisodeAfter(
+        seasonCounts,
+        furthestWatched.seasonNumber,
+        furthestWatched.episodeNumber
       );
+      const showLevelLastAiredEpisode = resolveShowLevelLastAiredEpisode(showDetails, today);
 
-      // If no seasons found (edge case), just take the last 2 aired seasons
-      const seasonsToFetch =
-        relevantSeasons.length > 0 ? relevantSeasons : airedSeasons.slice(-MAX_SEASONS_TO_FETCH);
+      if (showLevelLastAiredEpisode) {
+        const totalAiredEpisodes = getEpisodePosition(
+          seasonCounts,
+          showLevelLastAiredEpisode.seasonNumber,
+          showLevelLastAiredEpisode.episodeNumber
+        );
+        const furthestWatchedPosition = Math.min(
+          getEpisodePosition(seasonCounts, furthestWatched.seasonNumber, furthestWatched.episodeNumber),
+          totalAiredEpisodes
+        );
 
-      seasonsToFetch.forEach((season) => {
-        queries.push({ tvShowId, seasonNumber: season.season_number });
-      });
+        if (nextEpisodeNumbers && totalAiredEpisodes > furthestWatchedPosition) {
+          requestSeasonNumbers.add(nextEpisodeNumbers.season);
+        }
+      } else {
+        const fallbackBoundarySeasonNumber = getFallbackBoundarySeasonNumber(showDetails, today);
+        if (fallbackBoundarySeasonNumber !== null) {
+          requestSeasonNumbers.add(fallbackBoundarySeasonNumber);
+        }
+        if (nextEpisodeNumbers) {
+          requestSeasonNumbers.add(nextEpisodeNumbers.season);
+        }
+      }
+
+      Array.from(requestSeasonNumbers)
+        .slice(0, MAX_SEASONS_TO_FETCH)
+        .forEach((seasonNumber) => {
+          queries.push({ tvShowId, seasonNumber });
+        });
     });
 
     return queries;
-  }, [showDetailsQueries, tvShowIds, activeShowsWithInfo]);
+  }, [activeShowsWithInfo, showDetailsQueries]);
 
   // 5. Fetch season details for relevant seasons only
   const seasonDetailsQueries = useQueries({
@@ -126,6 +310,33 @@ export function useCurrentlyWatching() {
       retry: RETRY_COUNT,
     })),
   });
+
+  const pendingFallbackBoundaryData = useMemo(() => {
+    const today = new Date();
+
+    return activeShowsWithInfo.some((showInfo, index) => {
+      const showDetails = showDetailsQueries[index]?.data;
+      if (!showDetails || resolveShowLevelLastAiredEpisode(showDetails, today)) {
+        return false;
+      }
+
+      const fallbackBoundarySeasonNumber = getFallbackBoundarySeasonNumber(showDetails, today);
+      if (fallbackBoundarySeasonNumber === null) {
+        return false;
+      }
+
+      const boundaryQueryIndex = seasonQueries.findIndex(
+        (query) =>
+          query.tvShowId === showInfo.tvShowId && query.seasonNumber === fallbackBoundarySeasonNumber
+      );
+      if (boundaryQueryIndex < 0) {
+        return false;
+      }
+
+      const boundaryQuery = seasonDetailsQueries[boundaryQueryIndex];
+      return Boolean(boundaryQuery) && !boundaryQuery.data && !boundaryQuery.error;
+    });
+  }, [activeShowsWithInfo, seasonDetailsQueries, seasonQueries, showDetailsQueries]);
 
   // 6. Compute progress data from all resolved queries
   // Key insight: React Query caches data, so query.data is available even during refetch
@@ -146,12 +357,12 @@ export function useCurrentlyWatching() {
     }
 
     // Group season data by tvShowId
-    const seasonDataByShow = new Map<number, (typeof seasonDetailsQueries)[number]['data'][]>();
+    const seasonDataByShow = new Map<number, Map<number, SeasonDetails>>();
     seasonQueries.forEach((sq, index) => {
       const seasonData = seasonDetailsQueries[index]?.data;
       if (seasonData) {
-        const existing = seasonDataByShow.get(sq.tvShowId) || [];
-        existing.push(seasonData);
+        const existing = seasonDataByShow.get(sq.tvShowId) || new Map<number, SeasonDetails>();
+        existing.set(sq.seasonNumber, seasonData);
         seasonDataByShow.set(sq.tvShowId, existing);
       }
     });
@@ -160,8 +371,8 @@ export function useCurrentlyWatching() {
 
     activeShowsWithInfo.forEach((showInfo, index) => {
       try {
-        const { trackingDoc, tvShowId } = showInfo;
-        const episodesList = Object.values(trackingDoc.episodes);
+        const { trackingDoc, tvShowId, furthestWatched } = showInfo;
+        const episodesList = Object.values(trackingDoc.episodes).filter((episode) => episode.seasonNumber > 0);
         if (episodesList.length === 0) return;
 
         const metadata = trackingDoc.metadata;
@@ -169,31 +380,41 @@ export function useCurrentlyWatching() {
 
         if (!showDetails) return;
 
-        const seasonsData = seasonDataByShow.get(tvShowId) || [];
+        const seasonsData = seasonDataByShow.get(tvShowId) || new Map<number, SeasonDetails>();
+
+        const today = new Date();
 
         // Use show's average episode runtime for estimates
         const avgRuntime = (showDetails.episode_run_time && showDetails.episode_run_time[0]) || 45;
+        const seasonCounts = buildSeasonCounts(showDetails);
+        const lastAiredEpisode = resolveLastAiredEpisode(showDetails, today, seasonsData);
 
-        // Calculate total available/watched from showDetails season info (rough estimate)
-        const airedSeasons = showDetails.seasons.filter(
-          (s) => s.season_number > 0 && s.air_date && new Date(s.air_date) <= new Date()
-        );
-
-        // Estimate total available episodes from season episode_count
-        const totalAvailableEpisodes = airedSeasons.reduce(
-          (sum, s) => sum + (s.episode_count || 0),
-          0
-        );
-
-        // Count watched episodes
-        const totalWatchedCount = episodesList.filter((ep) => ep.seasonNumber > 0).length;
-
-        // Check if likely completed (rough estimate)
-        if (totalWatchedCount >= totalAvailableEpisodes && totalAvailableEpisodes > 0) {
-          return; // Skip completed shows
+        if (!lastAiredEpisode || seasonCounts.length === 0) {
+          return;
         }
 
-        // Find next episode from fetched season details
+        const totalAiredEpisodes = getEpisodePosition(
+          seasonCounts,
+          lastAiredEpisode.seasonNumber,
+          lastAiredEpisode.episodeNumber
+        );
+
+        if (totalAiredEpisodes <= 0) {
+          return;
+        }
+
+        const furthestWatchedPosition = Math.min(
+          getEpisodePosition(seasonCounts, furthestWatched.seasonNumber, furthestWatched.episodeNumber),
+          totalAiredEpisodes
+        );
+        const remainingEpisodes = Math.max(0, totalAiredEpisodes - furthestWatchedPosition);
+        const percentage = Math.round((furthestWatchedPosition / totalAiredEpisodes) * 100);
+        const timeRemaining = remainingEpisodes > 0 ? remainingEpisodes * avgRuntime : 0;
+
+        if (remainingEpisodes === 0 && !isShowStillActive(showDetails)) {
+          return;
+        }
+
         let nextEpisodeCandidate: {
           season: number;
           episode: number;
@@ -201,63 +422,36 @@ export function useCurrentlyWatching() {
           airDate: string | null;
         } | null = null;
 
-        // Get furthest watched episode (by season/episode order, not by timestamp)
-        // This ensures "next episode" recommendations continue from the user's furthest progress,
-        // even if they've rewatched earlier episodes more recently.
-        const sortedWatched = [...episodesList].sort((a, b) => {
-          if (a.seasonNumber !== b.seasonNumber) return a.seasonNumber - b.seasonNumber;
-          return a.episodeNumber - b.episodeNumber;
-        });
-        const furthestWatched = sortedWatched[sortedWatched.length - 1];
+        if (remainingEpisodes > 0) {
+          const nextEpisodeNumbers = getNextEpisodeAfter(
+            seasonCounts,
+            furthestWatched.seasonNumber,
+            furthestWatched.episodeNumber
+          );
 
-        // Search for next unwatched episode in fetched seasons
-        if (seasonsData.length > 0) {
-          const allFetchedEpisodes = seasonsData.flatMap((s) => s?.episodes || []);
-          allFetchedEpisodes.sort((a, b) => {
-            if (a.season_number !== b.season_number) return a.season_number - b.season_number;
-            return a.episode_number - b.episode_number;
-          });
+          if (nextEpisodeNumbers) {
+            const fetchedEpisode =
+              seasonsData
+                .get(nextEpisodeNumbers.season)
+                ?.episodes.find(
+                  (episode) =>
+                    episode.season_number === nextEpisodeNumbers.season &&
+                    episode.episode_number === nextEpisodeNumbers.episode
+                ) ?? null;
 
-          for (const ep of allFetchedEpisodes) {
-            const isWatched = isEpisodeWatched(
-              ep.season_number,
-              ep.episode_number,
-              trackingDoc.episodes
-            );
-            const isReleased = ep.air_date && new Date(ep.air_date) <= new Date();
-
-            if (isReleased && !isWatched) {
-              const isAfterFurthest =
-                ep.season_number > furthestWatched.seasonNumber ||
-                (ep.season_number === furthestWatched.seasonNumber &&
-                  ep.episode_number > furthestWatched.episodeNumber);
-
-              if (isAfterFurthest) {
-                nextEpisodeCandidate = {
-                  season: ep.season_number,
-                  episode: ep.episode_number,
-                  title: ep.name,
-                  airDate: ep.air_date,
-                };
-                break;
-              }
-            }
+            nextEpisodeCandidate = {
+              season: nextEpisodeNumbers.season,
+              episode: nextEpisodeNumbers.episode,
+              title: fetchedEpisode?.name || buildEpisodeNameFallback(nextEpisodeNumbers.episode),
+              airDate: fetchedEpisode?.air_date ?? null,
+            };
           }
         }
-
-        // Estimate time remaining using average runtime
-        const unwatchedCount = Math.max(0, totalAvailableEpisodes - totalWatchedCount);
-        const timeRemaining = unwatchedCount * avgRuntime;
-
-        const percentage =
-          totalAvailableEpisodes > 0
-            ? Math.round((totalWatchedCount / totalAvailableEpisodes) * 100)
-            : 0;
 
         processedShows.push({
           tvShowId,
           tvShowName: metadata.tvShowName,
-          posterPath: metadata.posterPath,
+          posterPath: showDetails.poster_path ?? metadata.posterPath,
           backdropPath: showDetails.backdrop_path,
           lastUpdated: metadata.lastUpdated,
           percentage,
@@ -286,16 +480,15 @@ export function useCurrentlyWatching() {
     seasonQueries,
   ]);
 
-  // Use computed data, or empty array if still computing initial load
-  const data = computedData ?? [];
-
   // Only show loading spinner on true initial load (no data at all from any source)
   // Once we have computed data, it means React Query had cached data and we're good
+  const data = computedData ?? [];
   const isLoading =
-    computedData === null &&
-    (trackingQuery.isLoading ||
-      (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
-      (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading)));
+    ((computedData === null &&
+      (trackingQuery.isLoading ||
+        (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
+        (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading)))) ||
+      (data.length === 0 && pendingFallbackBoundaryData));
 
   // Track if background refetch is happening (useful for subtle refresh indicators)
   // Only show this when we already have data to display
@@ -311,9 +504,9 @@ export function useCurrentlyWatching() {
 
   const error = trackingQuery.error
     ? 'Failed to load watching progress.'
-    : allShowDetailsFailed
-      ? 'Failed to load show details.'
-      : null;
+      : allShowDetailsFailed
+        ? 'Failed to load show details.'
+        : null;
 
   // Refresh function
   const refresh = async () => {
@@ -327,16 +520,4 @@ export function useCurrentlyWatching() {
     error,
     refresh,
   };
-}
-
-/**
- * Helper to check if an episode is watched
- */
-function isEpisodeWatched(
-  seasonNumber: number,
-  episodeNumber: number,
-  watchedEpisodes: Record<string, WatchedEpisode>
-): boolean {
-  const episodeKey = `${seasonNumber}_${episodeNumber}`;
-  return episodeKey in watchedEpisodes;
 }

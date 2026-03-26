@@ -1,5 +1,6 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
+import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { collection, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
@@ -50,7 +51,7 @@ class EpisodeTrackingService {
         return null;
       }
 
-      return snapshot.data() as TVShowEpisodeTracking;
+      return normalizeEpisodeTrackingDoc(snapshot.data(), snapshot.id);
     } catch (error) {
       throw new Error(getFirestoreErrorMessage(error));
     }
@@ -374,11 +375,9 @@ class EpisodeTrackingService {
         timeout.cancel();
       });
 
-      return snapshot.docs.map((doc) => {
-        const data = doc.data() as TVShowEpisodeTracking;
-        // Ensure the ID is included or available if needed, though usually it's in metadata or derived
-        return data;
-      });
+      return snapshot.docs
+        .map((doc) => normalizeEpisodeTrackingDoc(doc.data(), doc.id))
+        .filter((show): show is TVShowEpisodeTracking => show !== null);
     } catch (error) {
       console.error('[EpisodeTrackingService] Error fetching all watched shows:', error);
       throw new Error(getFirestoreErrorMessage(error));

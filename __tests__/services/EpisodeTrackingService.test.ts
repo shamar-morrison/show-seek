@@ -1,4 +1,4 @@
-import { deleteField, getDoc, updateDoc } from 'firebase/firestore';
+import { deleteField, getDoc, getDocs, updateDoc } from 'firebase/firestore';
 
 let mockUserId: string | null = 'test-user-id';
 let mockIsAnonymous = false;
@@ -68,5 +68,99 @@ describe('EpisodeTrackingService', () => {
 
     expect(result).toBeNull();
     expect(getDoc).not.toHaveBeenCalled();
+  });
+
+  it('normalizes sparse Firestore docs when loading a show tracking document', async () => {
+    const watchedAtMs = new Date('2026-03-07T12:00:00Z').getTime();
+    const lastUpdatedMs = new Date('2026-03-08T09:30:00Z').getTime();
+
+    (getDoc as jest.Mock).mockResolvedValue({
+      data: () => ({
+        metadata: {
+          lastUpdated: {
+            toDate: () => new Date(lastUpdatedMs),
+          },
+          tvShowName: 'Sparse Show',
+        },
+        episodes: {
+          '2_3': {
+            watchedAt: {
+              toMillis: () => watchedAtMs,
+            },
+          },
+        },
+      }),
+      exists: () => true,
+      id: '700',
+    });
+
+    const result = await episodeTrackingService.getShowTracking(700);
+
+    expect(result).toEqual({
+      metadata: {
+        tvShowName: 'Sparse Show',
+        posterPath: null,
+        lastUpdated: lastUpdatedMs,
+      },
+      episodes: {
+        '2_3': {
+          episodeId: 0,
+          tvShowId: 700,
+          seasonNumber: 2,
+          episodeNumber: 3,
+          watchedAt: watchedAtMs,
+          episodeName: 'Episode 3',
+          episodeAirDate: null,
+        },
+      },
+    });
+  });
+
+  it('normalizes all watched shows when loading the episode tracking collection', async () => {
+    const watchedAtMs = new Date('2026-03-09T14:00:00Z').getTime();
+
+    (getDocs as jest.Mock).mockResolvedValue({
+      docs: [
+        {
+          data: () => ({
+            metadata: {
+              tvShowName: 'Collection Show',
+            },
+            episodes: {
+              '1_1': {
+                watchedAt: {
+                  toMillis: () => watchedAtMs,
+                },
+              },
+            },
+          }),
+          id: '999',
+        },
+      ],
+      size: 1,
+    });
+
+    const result = await episodeTrackingService.getAllWatchedShows('test-user-id');
+
+    expect(result).toEqual([
+      {
+        metadata: {
+          tvShowName: 'Collection Show',
+          posterPath: null,
+          lastUpdated: watchedAtMs,
+        },
+        episodes: {
+          '1_1': {
+            episodeId: 0,
+            tvShowId: 999,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: watchedAtMs,
+            episodeName: 'Episode 1',
+            episodeAirDate: null,
+          },
+        },
+      },
+    ]);
   });
 });
