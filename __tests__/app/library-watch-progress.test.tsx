@@ -1,10 +1,12 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockSetOptions = jest.fn();
 const mockUseCurrentlyWatching = jest.fn();
 const mockUseHeaderSearch = jest.fn();
 const mockRefresh = jest.fn();
+const mockScrollToOffset = jest.fn();
+let latestSortModalProps: any = null;
 
 const mockShows = [
   {
@@ -37,7 +39,10 @@ jest.mock('@/src/components/ui/FullScreenLoading', () => ({
 }));
 
 jest.mock('@/src/components/library/LibrarySortModal', () => ({
-  LibrarySortModal: () => null,
+  LibrarySortModal: (props: any) => {
+    latestSortModalProps = props;
+    return null;
+  },
 }));
 
 jest.mock('@/src/components/ui/HeaderIconButton', () => ({
@@ -83,10 +88,14 @@ jest.mock('@/src/styles/iconBadgeStyles', () => ({
   useIconBadgeStyles: () => ({ wrapper: {}, badge: {} }),
 }));
 
-jest.mock('@shopify/flash-list', () => ({
-  FlashList: ({ data, renderItem, ListEmptyComponent }: any) => {
-    const React = require('react');
-    const { View } = require('react-native');
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const FlashList = React.forwardRef(({ data, renderItem, ListEmptyComponent }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      scrollToOffset: mockScrollToOffset,
+    }));
 
     if (!data || data.length === 0) {
       return React.createElement(View, { testID: 'flash-list-empty' }, ListEmptyComponent);
@@ -99,8 +108,11 @@ jest.mock('@shopify/flash-list', () => ({
         React.createElement(View, { key: `${item.tvShowId}-${index}` }, renderItem({ item, index }))
       )
     );
-  },
-}));
+  });
+  FlashList.displayName = 'FlashList';
+
+  return { FlashList };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
@@ -113,6 +125,8 @@ describe('WatchProgressScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefresh.mockReset();
+    mockScrollToOffset.mockReset();
+    latestSortModalProps = null;
     mockUseCurrentlyWatching.mockReturnValue({
       data: mockShows,
       isLoading: false,
@@ -128,6 +142,10 @@ describe('WatchProgressScreen', () => {
       setSearchQuery: jest.fn(),
       searchButton: { onPress: jest.fn(), showBadge: false },
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('shows inline updating indicator while background refetching', async () => {
@@ -188,5 +206,44 @@ describe('WatchProgressScreen', () => {
 
     fireEvent.press(getByTestId('watch-progress-error-retry'));
     expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not scroll to the top on initial render', async () => {
+    jest.useFakeTimers();
+
+    render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(latestSortModalProps).not.toBeNull();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(150);
+    });
+
+    expect(mockScrollToOffset).not.toHaveBeenCalled();
+  });
+
+  it('scrolls to the top after applying a new sort', async () => {
+    jest.useFakeTimers();
+
+    render(<WatchProgressScreen />);
+
+    await waitFor(() => {
+      expect(latestSortModalProps).not.toBeNull();
+    });
+
+    await act(async () => {
+      await latestSortModalProps.onApplySort({
+        option: 'alphabetical',
+        direction: 'asc',
+      });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(mockScrollToOffset).toHaveBeenCalledWith({ offset: 0, animated: true });
   });
 });

@@ -19,9 +19,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from 'expo-router';
 import { ArrowUpDown, Search, TvIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const STORAGE_KEY = 'watchProgressSortState';
@@ -37,6 +37,9 @@ export default function WatchProgressScreen() {
   const { data, isLoading, isFetching, error, refresh } = useCurrentlyWatching();
   const { t } = useTranslation();
   const iconBadgeStyles = useIconBadgeStyles();
+  const listRef = useRef<React.ComponentRef<typeof FlashList<InProgressShow>>>(null);
+  const isInitialMount = useRef(true);
+  const hasCompletedInitialPreferenceLoad = useRef(false);
 
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
   const hasActiveSort =
@@ -112,6 +115,29 @@ export default function WatchProgressScreen() {
     items: sortedData,
     getSearchableText: (item) => item.tvShowName,
   });
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (!hasCompletedInitialPreferenceLoad.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [sortState]);
+
+  useEffect(() => {
+    if (!isLoadingPreference) {
+      hasCompletedInitialPreferenceLoad.current = true;
+    }
+  }, [isLoadingPreference]);
 
   // Configure header with search + sort buttons
   useLayoutEffect(() => {
@@ -203,6 +229,7 @@ export default function WatchProgressScreen() {
         />
       )}
       <FlashList
+        ref={listRef}
         data={displayItems}
         renderItem={renderItem}
         contentContainerStyle={libraryListStyles.listContent}
