@@ -78,22 +78,26 @@ jest.mock('@/src/components/calendar/ReleaseCalendarSkeleton', () => ({
 jest.mock('@/src/components/calendar/CalendarSortModal', () => ({
   CalendarSortModal: ({ visible, onApply, onClose }: any) => {
     const React = require('react');
-    const { Pressable, Text } = require('react-native');
+    const { Pressable, Text, View } = require('react-native');
     latestSortModalProps = { visible, onApply, onClose };
 
-    return visible
-      ? React.createElement(
-          Pressable,
-          {
-            testID: 'apply-alphabetical-sort',
-            onPress: () => {
-              onApply('alphabetical');
-              onClose();
+    return React.createElement(
+      View,
+      { testID: 'calendar-sort-modal-host' },
+      visible
+        ? React.createElement(
+            Pressable,
+            {
+              testID: 'apply-alphabetical-sort',
+              onPress: () => {
+                onApply('alphabetical');
+                onClose();
+              },
             },
-          },
-          React.createElement(Text, null, 'Apply Alphabetical')
-        )
-      : null;
+            React.createElement(Text, null, 'Apply Alphabetical')
+          )
+        : null
+    );
   },
 }));
 
@@ -103,34 +107,38 @@ jest.mock('@/src/components/calendar/CalendarSourceFilterModal', () => ({
     const { Pressable, Text, View } = require('react-native');
     latestSourceFilterModalProps = { visible, onApply, onClose };
 
-    return visible
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(
-            Pressable,
-            {
-              testID: 'apply-reminder-filter',
-              onPress: () => {
-                onApply(['reminders']);
-                onClose();
+    return React.createElement(
+      View,
+      { testID: 'calendar-source-filter-modal-host' },
+      visible
+        ? React.createElement(
+            View,
+            null,
+            React.createElement(
+              Pressable,
+              {
+                testID: 'apply-reminder-filter',
+                onPress: () => {
+                  onApply(['reminders']);
+                  onClose();
+                },
               },
-            },
-            React.createElement(Text, null, 'Apply Reminder Filter')
-          ),
-          React.createElement(
-            Pressable,
-            {
-              testID: 'apply-empty-filter',
-              onPress: () => {
-                onApply([]);
-                onClose();
+              React.createElement(Text, null, 'Apply Reminder Filter')
+            ),
+            React.createElement(
+              Pressable,
+              {
+                testID: 'apply-empty-filter',
+                onPress: () => {
+                  onApply([]);
+                  onClose();
+                },
               },
-            },
-            React.createElement(Text, null, 'Apply Empty Filter')
+              React.createElement(Text, null, 'Apply Empty Filter')
+            )
           )
-        )
-      : null;
+        : null
+    );
   },
 }));
 
@@ -217,7 +225,7 @@ describe('CalendarScreen', () => {
   });
 
   it('passes refresh props to the release calendar', () => {
-    render(<CalendarScreen />);
+    const { queryAllByTestId } = render(<CalendarScreen />);
 
     expect(mockReleaseCalendar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -225,6 +233,8 @@ describe('CalendarScreen', () => {
         onRefresh: mockRefresh,
       })
     );
+    expect(queryAllByTestId('calendar-sort-modal-host')).toHaveLength(1);
+    expect(queryAllByTestId('calendar-source-filter-modal-host')).toHaveLength(1);
   });
 
   it('reuses cached presentations when the media tabs change', () => {
@@ -305,11 +315,13 @@ describe('CalendarScreen', () => {
     mockUpcomingState.allReleases = [];
     mockUpcomingState.isLoadingEnrichment = true;
 
-    const { getByTestId, getByText, queryByTestId } = render(<CalendarScreen />);
+    const { getByTestId, getByText, queryAllByTestId, queryByTestId } = render(<CalendarScreen />);
 
     expect(getByTestId('calendar-loading')).toBeTruthy();
     expect(getByText('Updating TV episodes...')).toBeTruthy();
     expect(queryByTestId('release-calendar')).toBeNull();
     expect(mockReleaseCalendar).not.toHaveBeenCalled();
+    expect(queryAllByTestId('calendar-sort-modal-host')).toHaveLength(1);
+    expect(queryAllByTestId('calendar-source-filter-modal-host')).toHaveLength(1);
   });
 });

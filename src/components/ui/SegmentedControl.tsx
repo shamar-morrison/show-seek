@@ -9,30 +9,30 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 
-export type SegmentedControlOption = {
-  key: string;
+export type SegmentedControlOption<K extends string = string> = {
+  key: K;
   label: string;
 };
 
-interface SegmentedControlProps {
-  options: SegmentedControlOption[];
-  activeKey: string;
-  onChange: (key: string) => void;
+interface SegmentedControlProps<K extends string> {
+  options: ReadonlyArray<SegmentedControlOption<K>>;
+  activeKey: K;
+  onChange: (key: K) => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
 
-export function SegmentedControl({
+export function SegmentedControl<K extends string>({
   options,
   activeKey,
   onChange,
   testID,
   style,
-}: SegmentedControlProps) {
+}: SegmentedControlProps<K>) {
   const { accentColor } = useAccentColor();
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
+    <View style={[styles.container, style]} accessibilityRole="tablist" testID={testID}>
       {options.map((option) => {
         const isActive = option.key === activeKey;
 

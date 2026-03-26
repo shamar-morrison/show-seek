@@ -409,14 +409,14 @@ export default function SearchScreen() {
         </View>
 
         <View style={styles.segmentedControlContainer}>
-          <SegmentedControl
+          <SegmentedControl<MediaType>
             options={[
               { key: 'all', label: t('search.all') },
               { key: 'movie', label: t('media.movies') },
               { key: 'tv', label: t('media.tvShows') },
             ]}
             activeKey={mediaType}
-            onChange={(key) => setMediaType(key as MediaType)}
+            onChange={setMediaType}
           />
         </View>
 

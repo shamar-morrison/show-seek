@@ -4,7 +4,7 @@ import { ReleaseCalendar } from '@/src/components/calendar/ReleaseCalendar';
 import { ReleaseCalendarSkeleton } from '@/src/components/calendar/ReleaseCalendarSkeleton';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
 import { InlineUpdatingIndicator } from '@/src/components/ui/InlineUpdatingIndicator';
-import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
+import { SegmentedControl, type SegmentedControlOption } from '@/src/components/ui/SegmentedControl';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
@@ -125,7 +125,7 @@ export default function CalendarScreen() {
 
   const activePresentation = presentations[mediaFilter];
 
-  const mediaOptions = useMemo(
+  const mediaOptions = useMemo<SegmentedControlOption<CalendarMediaFilter>[]>(
     () => [
       { key: 'all', label: t('library.allMedia') },
       { key: 'movie', label: t('media.movies') },
@@ -136,72 +136,46 @@ export default function CalendarScreen() {
 
   const hasReleases = allReleases.length > 0;
   const shouldShowInitialEnrichmentLoading = !hasReleases && isLoadingEnrichment;
+  const shouldShowInitialLoading =
+    isPremiumLoading || isLoading || shouldShowInitialEnrichmentLoading;
+  const shouldShowSkeletonUpdatingIndicator =
+    isLoadingEnrichment && !isPremiumLoading && !isLoading;
 
-  if (isPremiumLoading || isLoading || shouldShowInitialEnrichmentLoading) {
-    const shouldShowUpdatingIndicator = isLoadingEnrichment && !isPremiumLoading && !isLoading;
+  let content: React.ReactNode;
 
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-        {shouldShowUpdatingIndicator ? (
+  if (shouldShowInitialLoading) {
+    content = (
+      <>
+        {shouldShowSkeletonUpdatingIndicator ? (
           <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />
         ) : null}
         <ReleaseCalendarSkeleton />
-        <CalendarSourceFilterModal
-          visible={sourceModalVisible}
-          selectedSources={selectedSources}
-          onClose={() => setSourceModalVisible(false)}
-          onApply={setSelectedSources}
-        />
-        <CalendarSortModal
-          visible={sortModalVisible}
-          sortMode={sortMode}
-          onClose={() => setSortModalVisible(false)}
-          onApply={setSortMode}
-        />
-      </SafeAreaView>
+      </>
     );
-  }
-
-  if (!hasReleases) {
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-        <View style={styles.emptyContainer}>
-          <View style={styles.iconContainer}>
-            <Calendar size={64} color={accentColor} />
-          </View>
-          <Text style={styles.emptyTitle}>{t('calendar.empty')}</Text>
-          <Text style={styles.emptyDescription}>{t('calendar.emptyHint')}</Text>
-          <Pressable
-            style={[styles.primaryButton, { backgroundColor: accentColor }]}
-            onPress={handleGoToLibrary}
-          >
-            <Text style={styles.primaryButtonText}>{t('calendar.goToWatchlist')}</Text>
-          </Pressable>
+  } else if (!hasReleases) {
+    content = (
+      <View style={styles.emptyContainer}>
+        <View style={styles.iconContainer}>
+          <Calendar size={64} color={accentColor} />
         </View>
-        <CalendarSourceFilterModal
-          visible={sourceModalVisible}
-          selectedSources={selectedSources}
-          onClose={() => setSourceModalVisible(false)}
-          onApply={setSelectedSources}
-        />
-        <CalendarSortModal
-          visible={sortModalVisible}
-          sortMode={sortMode}
-          onClose={() => setSortModalVisible(false)}
-          onApply={setSortMode}
-        />
-      </SafeAreaView>
+        <Text style={styles.emptyTitle}>{t('calendar.empty')}</Text>
+        <Text style={styles.emptyDescription}>{t('calendar.emptyHint')}</Text>
+        <Pressable
+          style={[styles.primaryButton, { backgroundColor: accentColor }]}
+          onPress={handleGoToLibrary}
+        >
+          <Text style={styles.primaryButtonText}>{t('calendar.goToWatchlist')}</Text>
+        </Pressable>
+      </View>
     );
-  }
-
-  if (activePresentation.totalContentCount === 0) {
-    return (
-      <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
+  } else if (activePresentation.totalContentCount === 0) {
+    content = (
+      <>
         <View style={styles.segmentedControlContainer}>
           <SegmentedControl
             options={mediaOptions}
             activeKey={mediaFilter}
-            onChange={(key) => setMediaFilter(key as CalendarMediaFilter)}
+            onChange={setMediaFilter}
             testID="calendar-media-filter"
           />
         </View>
@@ -218,42 +192,36 @@ export default function CalendarScreen() {
             <Text style={styles.primaryButtonText}>{t('common.clearFilters')}</Text>
           </Pressable>
         </View>
-        <CalendarSourceFilterModal
-          visible={sourceModalVisible}
-          selectedSources={selectedSources}
-          onClose={() => setSourceModalVisible(false)}
-          onApply={setSelectedSources}
+      </>
+    );
+  } else {
+    content = (
+      <>
+        {isLoadingEnrichment ? (
+          <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />
+        ) : null}
+        <View style={styles.segmentedControlContainer}>
+          <SegmentedControl
+            options={mediaOptions}
+            activeKey={mediaFilter}
+            onChange={setMediaFilter}
+            testID="calendar-media-filter"
+          />
+        </View>
+        <ReleaseCalendar
+          presentations={presentations}
+          activeMediaFilter={mediaFilter}
+          previewLimit={previewLimit}
+          refreshing={isRefreshing}
+          onRefresh={refresh}
         />
-        <CalendarSortModal
-          visible={sortModalVisible}
-          sortMode={sortMode}
-          onClose={() => setSortModalVisible(false)}
-          onApply={setSortMode}
-        />
-      </SafeAreaView>
+      </>
     );
   }
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
-      {isLoadingEnrichment ? (
-        <InlineUpdatingIndicator message={t('calendar.updatingEpisodes')} />
-      ) : null}
-      <View style={styles.segmentedControlContainer}>
-        <SegmentedControl
-          options={mediaOptions}
-          activeKey={mediaFilter}
-          onChange={(key) => setMediaFilter(key as CalendarMediaFilter)}
-          testID="calendar-media-filter"
-        />
-      </View>
-      <ReleaseCalendar
-        presentations={presentations}
-        activeMediaFilter={mediaFilter}
-        previewLimit={previewLimit}
-        refreshing={isRefreshing}
-        onRefresh={refresh}
-      />
+      {content}
       <CalendarSourceFilterModal
         visible={sourceModalVisible}
         selectedSources={selectedSources}
