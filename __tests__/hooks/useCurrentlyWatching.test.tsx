@@ -29,6 +29,7 @@ jest.mock('@/src/api/tmdb', () => ({
 }));
 
 import { useCurrentlyWatching } from '@/src/hooks/useCurrentlyWatching';
+import i18n from '@/src/i18n';
 
 function createQueryClient() {
   return new QueryClient({
@@ -268,6 +269,129 @@ describe('useCurrentlyWatching', () => {
         },
       })
     );
+  });
+
+  it('uses the localized episode label when the fetched next episode name is missing', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Localized Fallback Show',
+          posterPath: null,
+          lastUpdated: 8200,
+        },
+        episodes: {
+          '1_1': {
+            episodeId: 201,
+            tvShowId: 703,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            watchedAt: 3000,
+            episodeName: 'Pilot',
+            episodeAirDate: '2026-03-01',
+          },
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 703,
+        poster_path: '/tmdb-localized.jpg',
+        seasons: [{ season_number: 1, episode_count: 4, air_date: '2026-03-01' }],
+        last_episode_to_air: {
+          season_number: 1,
+          episode_number: 2,
+          air_date: '2026-03-02',
+        },
+      })
+    );
+    mockGetSeasonDetails.mockResolvedValue(
+      buildSeasonDetails([
+        { season_number: 1, episode_number: 1, name: 'Pilot', air_date: '2026-03-01' },
+        { season_number: 1, episode_number: 2, name: '', air_date: '2026-03-02' },
+      ])
+    );
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data[0]?.nextEpisode?.airDate).toBe('2026-03-02');
+    });
+
+    expect(result.current.data[0]?.nextEpisode).toEqual({
+      season: 1,
+      episode: 2,
+      title: i18n.t('media.episodeNumber', { number: 2 }),
+      airDate: '2026-03-02',
+    });
+  });
+
+  it('derives the aired frontier from fallback season details when last_episode_to_air is missing', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Partial Airing Show',
+          posterPath: null,
+          lastUpdated: 9100,
+        },
+        episodes: {
+          '1_10': {
+            episodeId: 110,
+            tvShowId: 704,
+            seasonNumber: 1,
+            episodeNumber: 10,
+            watchedAt: 6000,
+            episodeName: 'Season 1 Finale',
+            episodeAirDate: '2026-02-20',
+          },
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 704,
+        poster_path: '/tmdb-partial.jpg',
+        seasons: [
+          { season_number: 1, episode_count: 10, air_date: '2026-01-01' },
+          { season_number: 2, episode_count: 10, air_date: '2026-03-01' },
+        ],
+        last_episode_to_air: null,
+      })
+    );
+    mockGetSeasonDetails.mockResolvedValue(
+      buildSeasonDetails([
+        { season_number: 2, episode_number: 1, name: 'Season 2 Premiere', air_date: '2026-03-01' },
+        { season_number: 2, episode_number: 2, name: 'Episode 2', air_date: '2026-03-08' },
+        { season_number: 2, episode_number: 3, name: 'Episode 3', air_date: '2026-03-15' },
+      ])
+    );
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data[0]?.nextEpisode?.title).toBe('Season 2 Premiere');
+    });
+
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 704,
+        posterPath: '/tmdb-partial.jpg',
+        percentage: 83,
+        timeRemaining: 60,
+        nextEpisode: {
+          season: 2,
+          episode: 1,
+          title: 'Season 2 Premiere',
+          airDate: '2026-03-01',
+        },
+      })
+    );
+    expect(mockGetSeasonDetails).toHaveBeenCalledWith(704, 2);
   });
 
   it('hides fully completed ended shows from the list', async () => {

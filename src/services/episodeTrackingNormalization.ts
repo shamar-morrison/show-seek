@@ -128,8 +128,9 @@ export function normalizeEpisodeTrackingDoc(
 
     const watchedAt = toMillis(rawEpisode.watchedAt) ?? 0;
     latestWatchedAt = Math.max(latestWatchedAt, watchedAt);
+    const normalizedEpisodeKey = `${seasonNumber}_${episodeNumber}`;
 
-    episodes[episodeKey] = {
+    episodes[normalizedEpisodeKey] = {
       episodeId: toInteger(rawEpisode.episodeId) ?? 0,
       tvShowId,
       seasonNumber,

@@ -88,4 +88,38 @@ describe('episodeTrackingNormalization', () => {
       },
     });
   });
+
+  it('rekeys episodes when stored identifiers disagree with the raw Firestore map key', () => {
+    const watchedAtMs = new Date('2026-03-10T07:45:00Z').getTime();
+
+    const result = normalizeEpisodeTrackingDoc(
+      {
+        metadata: {
+          tvShowName: 'Rekeyed Show',
+        },
+        episodes: {
+          '1_1': {
+            seasonNumber: '2',
+            episodeNumber: '3',
+            tvShowId: '777',
+            watchedAt: watchedAtMs,
+          },
+        },
+      },
+      '777'
+    );
+
+    expect(result).not.toBeNull();
+    expect(Object.keys(result!.episodes)).toEqual(['2_3']);
+    expect(result!.episodes['2_3']).toEqual({
+      episodeId: 0,
+      tvShowId: 777,
+      seasonNumber: 2,
+      episodeNumber: 3,
+      watchedAt: watchedAtMs,
+      episodeName: 'Episode 3',
+      episodeAirDate: null,
+    });
+    expect(result!.episodes['1_1']).toBeUndefined();
+  });
 });
