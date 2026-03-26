@@ -3,14 +3,25 @@ import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
-export function ReleaseCalendarSkeleton() {
+interface ReleaseCalendarSkeletonProps {
+  showMediaFilterRow?: boolean;
+}
+
+export function ReleaseCalendarSkeleton({
+  showMediaFilterRow = true,
+}: ReleaseCalendarSkeletonProps) {
   return (
-    <View style={styles.container} testID="calendar-loading">
-      <View style={styles.mediaFilterRow}>
-        <LoadingSkeleton width={72} height={36} style={styles.filterPill} />
-        <LoadingSkeleton width={88} height={36} style={styles.filterPill} />
-        <LoadingSkeleton width={98} height={36} style={styles.filterPill} />
-      </View>
+    <View
+      style={[styles.container, !showMediaFilterRow && styles.containerContentOnly]}
+      testID="calendar-loading"
+    >
+      {showMediaFilterRow ? (
+        <View style={styles.mediaFilterRow}>
+          <LoadingSkeleton width={72} height={36} style={styles.filterPill} />
+          <LoadingSkeleton width={88} height={36} style={styles.filterPill} />
+          <LoadingSkeleton width={98} height={36} style={styles.filterPill} />
+        </View>
+      ) : null}
 
       <View style={styles.temporalTabsRow}>
         <LoadingSkeleton width={72} height={34} style={styles.tabPill} />
@@ -55,6 +66,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: SPACING.m,
+  },
+  containerContentOnly: {
+    paddingTop: 0,
   },
   mediaFilterRow: {
     flexDirection: 'row',

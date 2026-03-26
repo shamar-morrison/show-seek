@@ -4,7 +4,6 @@ import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 const mockReleaseCalendar = jest.fn();
 const mockRefresh = jest.fn().mockResolvedValue(undefined);
 const mockSetOptions = jest.fn();
-let mockProgressiveReady = true;
 let latestSortModalProps: any = null;
 let latestSourceFilterModalProps: any = null;
 
@@ -56,10 +55,6 @@ jest.mock('@/src/context/PremiumContext', () => ({
 
 jest.mock('@/src/hooks/useUpcomingReleases', () => ({
   useUpcomingReleases: () => mockUpcomingState,
-}));
-
-jest.mock('@/src/hooks/useProgressiveRender', () => ({
-  useProgressiveRender: () => ({ isReady: mockProgressiveReady }),
 }));
 
 jest.mock('@/src/components/calendar/ReleaseCalendar', () => ({
@@ -176,7 +171,6 @@ describe('CalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRefresh.mockClear();
-    mockProgressiveReady = true;
     latestSortModalProps = null;
     latestSourceFilterModalProps = null;
     mockPremiumState.isPremium = false;
@@ -199,10 +193,13 @@ describe('CalendarScreen', () => {
     expect(mockReleaseCalendar).toHaveBeenCalledTimes(1);
     expect(mockReleaseCalendar).toHaveBeenCalledWith(
       expect.objectContaining({
-        releases: mockUpcomingState.allReleases,
         activeMediaFilter: 'all',
-        sortMode: 'soonest',
         previewLimit: 3,
+        presentations: expect.objectContaining({
+          all: expect.objectContaining({ totalContentCount: 4 }),
+          movie: expect.objectContaining({ totalContentCount: 3 }),
+          tv: expect.objectContaining({ totalContentCount: 1 }),
+        }),
       })
     );
   });
@@ -230,15 +227,16 @@ describe('CalendarScreen', () => {
     );
   });
 
-  it('filters releases when the media tabs change', () => {
+  it('reuses cached presentations when the media tabs change', () => {
     const { getByTestId } = render(<CalendarScreen />);
+    const initialProps = mockReleaseCalendar.mock.calls[mockReleaseCalendar.mock.calls.length - 1][0];
 
     fireEvent.press(getByTestId('calendar-media-filter-tab-tv'));
 
     expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        releases: mockUpcomingState.allReleases,
         activeMediaFilter: 'tv',
+        presentations: initialProps.presentations,
       })
     );
   });
@@ -258,7 +256,9 @@ describe('CalendarScreen', () => {
     await waitFor(() =>
       expect(mockReleaseCalendar).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          sortMode: 'alphabetical',
+          presentations: expect.objectContaining({
+            all: expect.objectContaining({ temporalTabs: [] }),
+          }),
         })
       )
     );
@@ -299,15 +299,6 @@ describe('CalendarScreen', () => {
 
     expect(getByTestId('release-calendar')).toBeTruthy();
     expect(getByText('Updating TV episodes...')).toBeTruthy();
-  });
-
-  it('defers cached calendar rendering until progressive render is ready', () => {
-    mockProgressiveReady = false;
-
-    const { getByTestId, queryByTestId } = render(<CalendarScreen />);
-
-    expect(getByTestId('calendar-loading')).toBeTruthy();
-    expect(queryByTestId('release-calendar')).toBeNull();
   });
 
   it('keeps showing skeleton loading while the first result set is enriching', () => {

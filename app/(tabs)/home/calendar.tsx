@@ -8,11 +8,11 @@ import { SegmentedControl } from '@/src/components/ui/SegmentedControl';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePremium } from '@/src/context/PremiumContext';
-import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useUpcomingReleases } from '@/src/hooks/useUpcomingReleases';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import {
+  buildCalendarPresentations,
   CALENDAR_SOURCE_FILTERS,
   CalendarMediaFilter,
   CalendarSortMode,
@@ -30,11 +30,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CalendarScreen() {
   const navigation = useNavigation();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { accentColor } = useAccentColor();
   const iconBadgeStyles = useIconBadgeStyles();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
-  const { isReady } = useProgressiveRender();
   const [mediaFilter, setMediaFilter] = useState<CalendarMediaFilter>('all');
   const [sortMode, setSortMode] = useState<CalendarSortMode>('soonest');
   const [selectedSources, setSelectedSources] =
@@ -98,14 +97,33 @@ export default function CalendarScreen() {
     [allReleases, selectedSources]
   );
 
-  const activeFilteredReleases = useMemo(
-    () =>
-      filterUpcomingReleases(allReleases, {
-        mediaFilter,
-        selectedSources,
-      }),
-    [allReleases, mediaFilter, selectedSources]
+  const presentationLabels = useMemo(
+    () => ({
+      today: t('calendar.today'),
+      tomorrow: t('calendar.tomorrow'),
+      thisWeek: t('common.thisWeek'),
+      nextWeek: t('calendar.nextWeek'),
+      movies: t('media.movies'),
+      tvShows: t('media.tvShows'),
+    }),
+    [t]
   );
+
+  const previewLimit = !isPremium ? 3 : undefined;
+
+  const presentations = useMemo(
+    () =>
+      buildCalendarPresentations({
+        releases: sourceFilteredReleases,
+        sortMode,
+        previewLimit,
+        locale: i18n.language,
+        labels: presentationLabels,
+      }),
+    [i18n.language, presentationLabels, previewLimit, sortMode, sourceFilteredReleases]
+  );
+
+  const activePresentation = presentations[mediaFilter];
 
   const mediaOptions = useMemo(
     () => [
@@ -118,14 +136,8 @@ export default function CalendarScreen() {
 
   const hasReleases = allReleases.length > 0;
   const shouldShowInitialEnrichmentLoading = !hasReleases && isLoadingEnrichment;
-  const shouldDelayCalendarRender = hasReleases && !isReady;
 
-  if (
-    isPremiumLoading ||
-    isLoading ||
-    shouldShowInitialEnrichmentLoading ||
-    shouldDelayCalendarRender
-  ) {
+  if (isPremiumLoading || isLoading || shouldShowInitialEnrichmentLoading) {
     const shouldShowUpdatingIndicator = isLoadingEnrichment && !isPremiumLoading && !isLoading;
 
     return (
@@ -182,7 +194,7 @@ export default function CalendarScreen() {
     );
   }
 
-  if (activeFilteredReleases.length === 0) {
+  if (activePresentation.totalContentCount === 0) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['bottom', 'left', 'right']}>
         <View style={styles.segmentedControlContainer}>
@@ -236,10 +248,9 @@ export default function CalendarScreen() {
         />
       </View>
       <ReleaseCalendar
-        releases={sourceFilteredReleases}
+        presentations={presentations}
         activeMediaFilter={mediaFilter}
-        sortMode={sortMode}
-        previewLimit={!isPremium ? 3 : undefined}
+        previewLimit={previewLimit}
         refreshing={isRefreshing}
         onRefresh={refresh}
       />

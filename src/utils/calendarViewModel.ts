@@ -83,6 +83,8 @@ export interface CalendarPresentation {
   visibleContentCount: number;
 }
 
+export type CalendarPresentationMap = Record<CalendarMediaFilter, CalendarPresentation>;
+
 interface CalendarPresentationOptions {
   releases: UpcomingRelease[];
   sortMode: CalendarSortMode;
@@ -181,6 +183,41 @@ export function buildCalendarPresentation({
     temporalTabAnchors,
     totalContentCount,
     visibleContentCount: visibleEntries.length,
+  };
+}
+
+export function buildCalendarPresentations({
+  releases,
+  sortMode,
+  labels,
+  locale,
+  previewLimit,
+  referenceDate = new Date(),
+}: CalendarPresentationOptions): CalendarPresentationMap {
+  const releasesByMedia: Record<CalendarMediaFilter, UpcomingRelease[]> = {
+    all: releases,
+    movie: [],
+    tv: [],
+  };
+
+  releases.forEach((release) => {
+    releasesByMedia[release.mediaType].push(release);
+  });
+
+  const createPresentation = (mediaFilter: CalendarMediaFilter) =>
+    buildCalendarPresentation({
+      releases: releasesByMedia[mediaFilter],
+      sortMode,
+      labels,
+      locale,
+      previewLimit,
+      referenceDate,
+    });
+
+  return {
+    all: createPresentation('all'),
+    movie: createPresentation('movie'),
+    tv: createPresentation('tv'),
   };
 }
 

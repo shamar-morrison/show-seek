@@ -1,6 +1,7 @@
 import type { UpcomingRelease } from '@/src/hooks/useUpcomingReleases';
 import {
   buildCalendarPresentation,
+  buildCalendarPresentations,
   filterUpcomingReleases,
 } from '@/src/utils/calendarViewModel';
 
@@ -222,5 +223,39 @@ describe('calendarViewModel', () => {
       .filter((row) => row.type === 'section-header')
       .map((row) => row.title);
     expect(sectionTitles).toEqual(['Movies', 'TV Shows']);
+  });
+
+  it('builds cached presentations for all, movie, and tv views from one release set', () => {
+    const releases = [
+      createRelease({
+        id: 1,
+        mediaType: 'movie',
+        releaseDate: new Date(2026, 0, 11),
+      }),
+      createRelease({
+        id: 2,
+        mediaType: 'movie',
+        releaseDate: new Date(2026, 0, 12),
+      }),
+      createRelease({
+        id: 3,
+        mediaType: 'tv',
+        releaseDate: new Date(2026, 0, 13),
+        sourceLists: ['currently-watching'],
+        nextEpisode: { seasonNumber: 1, episodeNumber: 1, episodeName: 'Pilot' },
+      }),
+    ];
+
+    const presentations = buildCalendarPresentations({
+      releases,
+      sortMode: 'soonest',
+      labels: LABELS,
+      locale: 'en-US',
+      referenceDate: new Date(2026, 0, 10),
+    });
+
+    expect(presentations.all.totalContentCount).toBe(3);
+    expect(presentations.movie.totalContentCount).toBe(2);
+    expect(presentations.tv.totalContentCount).toBe(1);
   });
 });

@@ -15,20 +15,24 @@ import { useEffect, useState } from 'react';
  * // Render full content
  * ```
  */
-export const useProgressiveRender = (): { isReady: boolean } => {
+export const useProgressiveRender = (resetKey?: unknown): { isReady: boolean } => {
   const [isReady, setIsReady] = useState(false);
+  const [readyKey, setReadyKey] = useState(resetKey);
 
   useEffect(() => {
+    setIsReady(false);
+
     // Use setTimeout(0) to defer to the next event loop tick
     // This allows the navigation to start before mounting heavy content
     const timeoutId = setTimeout(() => {
+      setReadyKey(resetKey);
       setIsReady(true);
     }, 0);
 
     return () => {
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [resetKey]);
 
-  return { isReady };
+  return { isReady: isReady && Object.is(readyKey, resetKey) };
 };
