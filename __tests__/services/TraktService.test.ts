@@ -15,7 +15,7 @@ jest.mock('@/src/utils/timeout', () => ({
   createTimeoutWithCleanup: (...args: unknown[]) => mockCreateTimeoutWithCleanup(...args),
 }));
 
-import { checkEnrichmentStatus, checkSyncStatus } from '@/src/services/TraktService';
+import { checkEnrichmentStatus, checkSyncStatus, triggerSync } from '@/src/services/TraktService';
 
 const createTimeoutControls = () => {
   const cancel = jest.fn();
@@ -27,10 +27,17 @@ const createTimeoutControls = () => {
 };
 
 describe('TraktService', () => {
+  const originalDev = (global as { __DEV__?: boolean }).__DEV__;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetIdToken.mockResolvedValue('token');
     global.fetch = jest.fn() as never;
+    (global as { __DEV__?: boolean }).__DEV__ = false;
+  });
+
+  afterAll(() => {
+    (global as { __DEV__?: boolean }).__DEV__ = originalDev;
   });
 
   it('ignores unknown sync error categories from backend responses', async () => {
@@ -87,5 +94,28 @@ describe('TraktService', () => {
 
     await expect(checkEnrichmentStatus()).rejects.toThrow('invalid enrichment json');
     expect(cancel).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends the dev sync bypass header from __DEV__ builds when triggering sync', async () => {
+    createTimeoutControls();
+    (global as { __DEV__?: boolean }).__DEV__ = true;
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+    });
+
+    await expect(triggerSync()).resolves.toBeUndefined();
+
+    const [, requestInit] = (global.fetch as jest.Mock).mock.calls[0] as [
+      string,
+      { headers: Record<string, string> }
+    ];
+
+    expect(requestInit.headers).toEqual(
+      expect.objectContaining({
+        Authorization: 'Bearer token',
+        'Content-Type': 'application/json',
+        'X-ShowSeek-Dev-Sync': 'true',
+      })
+    );
   });
 });

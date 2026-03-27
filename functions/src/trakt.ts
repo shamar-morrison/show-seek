@@ -36,7 +36,8 @@ const TRAKT_SYNC_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const TRAKT_ENRICHMENT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const TRAKT_OAUTH_START_COOLDOWN_MS = 60 * 1000;
 const TRAKT_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const CORS_ALLOW_HEADERS = 'Authorization, Content-Type';
+const DEV_SYNC_BYPASS_HEADER = 'x-showseek-dev-sync';
+const CORS_ALLOW_HEADERS = ['Authorization', 'Content-Type', DEV_SYNC_BYPASS_HEADER].join(', ');
 const CORS_ALLOW_METHODS = 'GET, POST, OPTIONS';
 const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
 const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
@@ -49,6 +50,7 @@ const FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN = /too many index entries/i;
 const TRAKT_INCREMENTAL_SCHEMA_VERSION = 1;
 
 type SyncStatusState = 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed';
+type SyncSummaryMode = 'bootstrap' | 'incremental';
 type TraktSyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
@@ -108,6 +110,7 @@ interface TraktSyncStatus {
   runId: string;
   startedAt?: FirebaseFirestore.Timestamp;
   status: SyncStatusState;
+  summaryMode?: SyncSummaryMode;
   updatedAt: FirebaseFirestore.Timestamp;
   userId: string;
 }
@@ -354,6 +357,7 @@ interface SyncResponseBody {
   runId?: string;
   startedAt?: string;
   status?: SyncStatusState;
+  summaryMode?: SyncSummaryMode;
   synced: boolean;
 }
 
@@ -509,6 +513,13 @@ const emptyEnrichmentCounts = (): EnrichmentCounts => ({
   lists: 0,
 });
 
+const getSyncSummaryMode = (
+  incrementalState?: TraktIncrementalState
+): SyncSummaryMode =>
+  !incrementalState || incrementalState.schemaVersion !== TRAKT_INCREMENTAL_SCHEMA_VERSION
+    ? 'bootstrap'
+    : 'incremental';
+
 const buildTaskDispatchOptions = ({
   scheduleDelaySeconds,
   taskId,
@@ -551,6 +562,11 @@ const applyCorsHeaders = (request: Request, response: ExpressResponse): void => 
   response.setHeader('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS);
   response.setHeader('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
 };
+
+const isFunctionsEmulator = (): boolean => process.env.FUNCTIONS_EMULATOR === 'true';
+
+const shouldBypassManualSyncCooldown = (request: Request): boolean =>
+  isFunctionsEmulator() && request.header(DEV_SYNC_BYPASS_HEADER) === 'true';
 
 const sendCorsPreflight = (request: Request, response: ExpressResponse): void => {
   applyCorsHeaders(request, response);
@@ -637,6 +653,7 @@ const serializeSyncStatus = (
     runId: syncStatus.runId,
     startedAt: toIsoString(syncStatus.startedAt),
     status: syncStatus.status,
+    summaryMode: syncStatus.summaryMode,
   };
 };
 
@@ -1267,6 +1284,79 @@ const hasManagedFieldChanges = (
 ): boolean =>
   Object.entries(remoteValue).some(([key, value]) => !areValuesEqual(existingValue?.[key], value));
 
+const hasManagedFieldChangesIgnoringField = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>,
+  ignoredField: string
+): boolean =>
+  Object.entries(remoteValue).some(
+    ([key, value]) => key !== ignoredField && !areValuesEqual(existingValue?.[key], value)
+  );
+
+const getComparableMillis = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue)) {
+      return numericValue;
+    }
+
+    const parsedDate = Date.parse(value);
+    return Number.isNaN(parsedDate) ? null : parsedDate;
+  }
+
+  if (isTimestampLike(value)) {
+    const millis = value.toMillis();
+    return Number.isFinite(millis) ? millis : null;
+  }
+
+  if (
+    value &&
+    typeof value === 'object' &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+  }
+
+  return null;
+};
+
+const shouldApplyRemoteManagedValue = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>,
+  recencyField?: string
+): boolean => {
+  if (!existingValue) {
+    return true;
+  }
+
+  if (!recencyField) {
+    return hasManagedFieldChanges(existingValue, remoteValue);
+  }
+
+  const existingMillis = getComparableMillis(existingValue[recencyField]);
+  const remoteMillis = getComparableMillis(remoteValue[recencyField]);
+
+  if (remoteMillis !== null && (existingMillis === null || remoteMillis > existingMillis)) {
+    return true;
+  }
+
+  if (remoteMillis !== null && existingMillis !== null && remoteMillis < existingMillis) {
+    return false;
+  }
+
+  if (remoteMillis !== null && existingMillis !== null && remoteMillis === existingMillis) {
+    return hasManagedFieldChangesIgnoringField(existingValue, remoteValue, recencyField);
+  }
+
+  return hasManagedFieldChanges(existingValue, remoteValue);
+};
+
 const mergeManagedValue = (
   existingValue: Record<string, unknown> | undefined,
   remoteValue: Record<string, unknown>
@@ -1399,8 +1489,9 @@ const transformRating = (traktRating: TraktRating): Record<string, unknown> | nu
   }
 
   return {
-    id: `${mediaType}-${tmdbId}`,
-    media_type: mediaType,
+    docId: `${mediaType}-${tmdbId}`,
+    id: String(tmdbId),
+    mediaType,
     ratedAt: Timestamp.fromDate(new Date(traktRating.rated_at)),
     rating: traktRating.rating,
     title,
@@ -1665,6 +1756,7 @@ const getPreviousEnrichmentCompletedAt = (
 const createQueuedSyncStatus = (
   userId: string,
   runId: string,
+  summaryMode: SyncSummaryMode,
   previousLastSyncedAt?: FirebaseFirestore.Timestamp
 ): TraktSyncStatus => {
   const now = Timestamp.now();
@@ -1676,6 +1768,7 @@ const createQueuedSyncStatus = (
     runId,
     startedAt: now,
     status: 'queued',
+    summaryMode,
     updatedAt: now,
     userId,
   };
@@ -1709,6 +1802,7 @@ const createQueuedEnrichmentStatus = (
 const createFailureStatus = (
   userId: string,
   runId: string,
+  summaryMode: SyncSummaryMode,
   previousLastSyncedAt: FirebaseFirestore.Timestamp | undefined,
   itemsSynced: SyncStatusItems,
   attempt: number,
@@ -1744,6 +1838,7 @@ const createFailureStatus = (
     runId,
     startedAt: now,
     status,
+    summaryMode,
     updatedAt: now,
     userId,
   };
@@ -1883,6 +1978,25 @@ const buildManagedListItemsMap = (
   return mappedItems;
 };
 
+const buildAlreadyWatchedItemsMap = (
+  watchedMovies: TraktWatchedMovie[],
+  watchedShows: TraktWatchedShow[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap([
+    ...watchedMovies.map((item) => transformWatchedMovie(item)),
+    ...watchedShows.map((item) => transformWatchedShow(item)),
+  ]);
+
+const buildWatchlistItemsMap = (
+  traktWatchlist: TraktWatchlistItem[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item)));
+
+const buildFavoriteItemsMap = (
+  traktFavorites: TraktFavorite[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item)));
+
 const buildCustomListItemsMap = (
   traktItems: TraktListItem[]
 ): Record<string, Record<string, unknown>> => {
@@ -1936,18 +2050,53 @@ const buildEpisodeTrackingDoc = (
   };
 };
 
+const buildRatingsMap = (traktRatings: TraktRating[]): Record<string, Record<string, unknown>> => {
+  const remoteRatings: Record<string, Record<string, unknown>> = {};
+
+  traktRatings.forEach((traktRating) => {
+    const transformed = transformRating(traktRating);
+    if (!transformed) {
+      return;
+    }
+
+    const docId = transformed.docId;
+    if (typeof docId !== 'string' || docId.trim() === '') {
+      return;
+    }
+
+    const { docId: _docId, ...ratingData } = transformed;
+    remoteRatings[docId] = ratingData;
+  });
+
+  return remoteRatings;
+};
+
+const countManagedListItemsByMediaType = (
+  items: Record<string, Record<string, unknown>>,
+  mediaType: 'movie' | 'tv'
+): number =>
+  Object.values(items).filter((item) => item.media_type === mediaType).length;
+
 const countMediaTypeChanges = (mediaTypes: Array<'movie' | 'tv'>, mediaType: 'movie' | 'tv'): number =>
   mediaTypes.filter((value) => value === mediaType).length;
+
+interface ReconcileManagedListOptions {
+  countBaseDataChangesAsRemoteChange?: boolean;
+  preserveLocalItems?: boolean;
+  recencyField?: string;
+}
 
 const reconcileManagedList = async (
   userId: string,
   listId: string,
   remoteItems: Record<string, Record<string, unknown>>,
   baseData: Record<string, unknown>,
-  existingSnapshot?: FirebaseFirestore.DocumentSnapshot
+  existingSnapshot?: FirebaseFirestore.DocumentSnapshot,
+  options: ReconcileManagedListOptions = {}
 ): Promise<{
   changedCount: number;
   changedMediaTypes: Array<'movie' | 'tv'>;
+  didRemoteChange: boolean;
   didWrite: boolean;
   shouldEnrich: boolean;
 }> => {
@@ -1963,6 +2112,8 @@ const reconcileManagedList = async (
   const changedMediaTypes: Array<'movie' | 'tv'> = [];
   let changedCount = 0;
   let addedOrUpdatedCount = 0;
+  let hasItemWrites = false;
+  const preserveLocalItems = options.preserveLocalItems ?? false;
 
   Object.entries(remoteItems).forEach(([remoteKey, remoteItem]) => {
     const mediaType = remoteItem.media_type;
@@ -1975,53 +2126,73 @@ const reconcileManagedList = async (
     const existingItem = existingItems[remoteKey];
     const legacyKey = getLegacyListItemKey(mediaId);
     const hasLegacyKey = Boolean(existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw);
-    const itemChanged = !existingItem || hasLegacyKey || hasManagedFieldChanges(existingItem, remoteItem);
+    const shouldApplyRemote = shouldApplyRemoteManagedValue(existingItem, remoteItem, options.recencyField);
+    const nextItem =
+      !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
+    const shouldWriteNormalizedItem = !existingItem || hasLegacyKey || shouldApplyRemote;
+    const isRemoteChange = !existingItem || shouldApplyRemote;
 
-    if (itemChanged) {
-      itemChanges[remoteKey] = mergeManagedValue(existingItem, remoteItem);
-      changedMediaTypes.push(mediaType);
-      changedCount += 1;
-      addedOrUpdatedCount += 1;
+    if (shouldWriteNormalizedItem) {
+      itemChanges[remoteKey] = nextItem;
+      hasItemWrites = true;
+      if (isRemoteChange) {
+        changedMediaTypes.push(mediaType);
+        changedCount += 1;
+        addedOrUpdatedCount += 1;
+      }
     }
 
     if (hasLegacyKey) {
       itemChanges[legacyKey] = FieldValue.delete();
+      hasItemWrites = true;
     }
   });
 
-  Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
-    if (remoteItems[existingKey]) {
-      return;
-    }
-
-    itemChanges[existingKey] = FieldValue.delete();
-
-    const mediaType = existingItem.media_type;
-    const mediaId = existingItem.id;
-    if (isListMediaType(mediaType)) {
-      changedMediaTypes.push(mediaType);
-    }
-    if (typeof mediaId === 'number' && existingItemsRaw) {
-      const legacyKey = getLegacyListItemKey(mediaId);
-      if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
-        itemChanges[legacyKey] = FieldValue.delete();
+  if (!preserveLocalItems) {
+    Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
+      if (remoteItems[existingKey]) {
+        return;
       }
-    }
 
-    changedCount += 1;
-  });
+      itemChanges[existingKey] = FieldValue.delete();
+      hasItemWrites = true;
+
+      const mediaType = existingItem.media_type;
+      const mediaId = existingItem.id;
+      if (isListMediaType(mediaType)) {
+        changedMediaTypes.push(mediaType);
+      }
+      if (typeof mediaId === 'number' && existingItemsRaw) {
+        const legacyKey = getLegacyListItemKey(mediaId);
+        if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
+          itemChanges[legacyKey] = FieldValue.delete();
+          hasItemWrites = true;
+        }
+      }
+
+      changedCount += 1;
+    });
+  }
 
   const existingMetadata = isPlainObject(existingData.metadata)
     ? (existingData.metadata as Record<string, unknown>)
     : {};
   const nextNeedsEnrichment = Boolean(existingMetadata.needsEnrichment) || addedOrUpdatedCount > 0;
   const baseDataChanged = hasManagedFieldChanges(existingData, baseData);
-  const shouldWrite = !snapshot.exists || changedCount > 0 || baseDataChanged;
+  const didRemoteChange =
+    changedCount > 0 || (baseDataChanged && Boolean(options.countBaseDataChangesAsRemoteChange));
+  const nextItemCount = preserveLocalItems
+    ? new Set([...Object.keys(existingItems), ...Object.keys(remoteItems)]).size
+    : Object.keys(remoteItems).length;
+  const metadataChanged =
+    existingMetadata.itemCount !== nextItemCount || Boolean(existingMetadata.needsEnrichment) !== nextNeedsEnrichment;
+  const shouldWrite = !snapshot.exists || hasItemWrites || baseDataChanged || metadataChanged;
 
   if (!shouldWrite) {
     return {
       changedCount: 0,
       changedMediaTypes: [],
+      didRemoteChange: false,
       didWrite: false,
       shouldEnrich: false,
     };
@@ -2031,14 +2202,14 @@ const reconcileManagedList = async (
     {
       ...baseData,
       items:
-        changedCount > 0
+        hasItemWrites
           ? itemChanges
           : !snapshot.exists
             ? {}
             : undefined,
       metadata: {
         ...existingMetadata,
-        itemCount: Object.keys(remoteItems).length,
+        itemCount: nextItemCount,
         lastUpdated: Timestamp.now(),
         needsEnrichment: nextNeedsEnrichment,
       },
@@ -2051,6 +2222,7 @@ const reconcileManagedList = async (
   return {
     changedCount,
     changedMediaTypes,
+    didRemoteChange,
     didWrite: true,
     shouldEnrich: addedOrUpdatedCount > 0,
   };
@@ -2059,7 +2231,7 @@ const reconcileManagedList = async (
 const reconcileEpisodeTracking = async (
   userId: string,
   traktShows: TraktWatchedShow[]
-): Promise<number> => {
+): Promise<{ changedCount: number; itemCount: number }> => {
   const db = admin.firestore();
   const collectionRef = db.collection('users').doc(userId).collection('episode_tracking');
   const existingSnapshot = await collectionRef.get();
@@ -2067,12 +2239,15 @@ const reconcileEpisodeTracking = async (
   const batch = db.batch();
   let writeCount = 0;
   let changedEpisodes = 0;
+  let importedEpisodes = 0;
 
   for (const traktShow of traktShows) {
     const remoteDoc = buildEpisodeTrackingDoc(traktShow);
     if (!remoteDoc) {
       continue;
     }
+
+    importedEpisodes += Object.keys(remoteDoc.episodes).length;
 
     const existingDoc = existingDocs.get(remoteDoc.showId);
     const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
@@ -2087,21 +2262,11 @@ const reconcileEpisodeTracking = async (
         ? (existingEpisodes[episodeKey] as Record<string, unknown>)
         : undefined;
 
-      if (!existingEpisode || hasManagedFieldChanges(existingEpisode, remoteEpisode)) {
+      if (shouldApplyRemoteManagedValue(existingEpisode, remoteEpisode, 'watchedAt')) {
         episodeChanges[episodeKey] = mergeManagedValue(existingEpisode, remoteEpisode);
         changedEpisodes += 1;
         docChanged = true;
       }
-    });
-
-    Object.keys(existingEpisodes).forEach((episodeKey) => {
-      if (remoteDoc.episodes[episodeKey]) {
-        return;
-      }
-
-      episodeChanges[episodeKey] = FieldValue.delete();
-      changedEpisodes += 1;
-      docChanged = true;
     });
 
     const existingMetadata = isPlainObject(existingData.metadata)
@@ -2139,24 +2304,20 @@ const reconcileEpisodeTracking = async (
     existingDocs.delete(remoteDoc.showId);
   }
 
-  existingDocs.forEach((doc) => {
-    const existingData = doc.data() as Record<string, unknown>;
-    const existingEpisodes = isPlainObject(existingData.episodes)
-      ? (existingData.episodes as Record<string, unknown>)
-      : {};
-    changedEpisodes += Object.keys(existingEpisodes).length;
-    batch.delete(doc.ref);
-    writeCount += 1;
-  });
-
   if (writeCount > 0) {
     await batch.commit();
   }
 
-  return changedEpisodes;
+  return {
+    changedCount: changedEpisodes,
+    itemCount: importedEpisodes,
+  };
 };
 
-const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Promise<number> => {
+const reconcileRatings = async (
+  userId: string,
+  traktRatings: TraktRating[]
+): Promise<{ changedCount: number; itemCount: number }> => {
   const db = admin.firestore();
   const ratingsCollection = db.collection('users').doc(userId).collection('ratings');
   const existingSnapshot = await ratingsCollection.get();
@@ -2165,16 +2326,7 @@ const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Pr
       .filter((doc) => doc.id.startsWith('movie-') || doc.id.startsWith('tv-'))
       .map((doc) => [doc.id, doc])
   );
-  const remoteRatings: Record<string, Record<string, unknown>> = {};
-
-  traktRatings.forEach((traktRating) => {
-    const transformed = transformRating(traktRating);
-    if (!transformed) {
-      return;
-    }
-
-    remoteRatings[String(transformed.id)] = transformed;
-  });
+  const remoteRatings = buildRatingsMap(traktRatings);
 
   const batch = db.batch();
   let writeCount = 0;
@@ -2184,7 +2336,7 @@ const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Pr
     const existingDoc = existingDocs.get(docId);
     const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
 
-    if (!existingDoc || hasManagedFieldChanges(existingData, remoteRating)) {
+    if (shouldApplyRemoteManagedValue(existingDoc ? existingData : undefined, remoteRating, 'ratedAt')) {
       batch.set(
         ratingsCollection.doc(docId),
         mergeManagedValue(existingDoc ? existingData : undefined, remoteRating),
@@ -2197,35 +2349,39 @@ const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Pr
     existingDocs.delete(docId);
   });
 
-  existingDocs.forEach((doc) => {
-    batch.delete(doc.ref);
-    changedCount += 1;
-    writeCount += 1;
-  });
-
   if (writeCount > 0) {
     await batch.commit();
   }
 
-  return changedCount;
+  return {
+    changedCount,
+    itemCount: Object.keys(remoteRatings).length,
+  };
 };
 
 const syncWatchlist = async (
   userId: string,
   traktWatchlist: TraktWatchlistItem[]
-): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
+  const remoteItems = buildWatchlistItemsMap(traktWatchlist);
   const result = await reconcileManagedList(
     userId,
     'watchlist',
-    buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item))),
+    remoteItems,
     {
       id: 'watchlist',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.watchlist,
+    },
+    undefined,
+    {
+      preserveLocalItems: true,
+      recencyField: 'addedAt',
     }
   );
 
   return {
     changedCount: result.changedCount,
+    itemCount: Object.keys(remoteItems).length,
     shouldEnrich: result.shouldEnrich,
   };
 };
@@ -2233,19 +2389,26 @@ const syncWatchlist = async (
 const syncFavorites = async (
   userId: string,
   traktFavorites: TraktFavorite[]
-): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
+  const remoteItems = buildFavoriteItemsMap(traktFavorites);
   const result = await reconcileManagedList(
     userId,
     'favorites',
-    buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item))),
+    remoteItems,
     {
       id: 'favorites',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.favorites,
+    },
+    undefined,
+    {
+      preserveLocalItems: true,
+      recencyField: 'addedAt',
     }
   );
 
   return {
     changedCount: result.changedCount,
+    itemCount: Object.keys(remoteItems).length,
     shouldEnrich: result.shouldEnrich,
   };
 };
@@ -2272,10 +2435,14 @@ const syncCustomLists = async (
         privacy: traktList.privacy === 'public' ? 'public' : 'private',
         traktId: traktList.ids.trakt,
         updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
+      },
+      undefined,
+      {
+        countBaseDataChangesAsRemoteChange: true,
       }
     );
 
-    if (result.didWrite) {
+    if (result.didRemoteChange) {
       changedCount += 1;
     }
   }
@@ -2341,10 +2508,15 @@ const reconcileCustomLists = async (
         traktId: traktList.ids.trakt,
         updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
       },
-      localTraktLists.get(listId)
+      localTraktLists.get(listId),
+      {
+        countBaseDataChangesAsRemoteChange: true,
+        preserveLocalItems: false,
+        recencyField: 'addedAt',
+      }
     );
 
-    if (result.didWrite) {
+    if (result.didRemoteChange) {
       changedCount += 1;
     }
     if (result.shouldEnrich) {
@@ -2379,12 +2551,12 @@ const syncTraktImport = async (
   itemsSynced: SyncStatusItems;
   listsToEnrich: string[];
   nextIncrementalState: TraktIncrementalState;
+  summaryMode: SyncSummaryMode;
 }> => {
   const itemsSynced = emptyItemsSynced();
+  const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
-  const bootstrap =
-    !currentIncrementalState ||
-    currentIncrementalState.schemaVersion !== TRAKT_INCREMENTAL_SCHEMA_VERSION;
+  const bootstrap = summaryMode === 'bootstrap';
   const previousActivities = currentIncrementalState?.lastActivities;
   const shouldSyncWatched =
     bootstrap ||
@@ -2407,10 +2579,7 @@ const syncTraktImport = async (
   if (shouldSyncWatched) {
     const watchedMovies = await getWatchedMovies(accessToken);
     const watchedShows = await getWatchedShows(accessToken);
-    const alreadyWatchedItems = buildManagedListItemsMap([
-      ...watchedMovies.map((item) => transformWatchedMovie(item)),
-      ...watchedShows.map((item) => transformWatchedShow(item)),
-    ]);
+    const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watchedMovies, watchedShows);
     const alreadyWatchedResult = await reconcileManagedList(
       userId,
       'already-watched',
@@ -2418,12 +2587,25 @@ const syncTraktImport = async (
       {
         id: 'already-watched',
         name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
+      },
+      undefined,
+      {
+        preserveLocalItems: true,
+        recencyField: 'addedAt',
       }
     );
+    const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
 
-    itemsSynced.movies = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
-    itemsSynced.shows = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
-    itemsSynced.episodes = await reconcileEpisodeTracking(userId, watchedShows);
+    itemsSynced.movies =
+      summaryMode === 'bootstrap'
+        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
+        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
+    itemsSynced.shows =
+      summaryMode === 'bootstrap'
+        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
+        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
+    itemsSynced.episodes =
+      summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
 
     if (alreadyWatchedResult.shouldEnrich) {
       listsToEnrich.push('already-watched');
@@ -2432,13 +2614,15 @@ const syncTraktImport = async (
 
   if (shouldSyncRatings) {
     const ratings = await getRatings(accessToken);
-    itemsSynced.ratings = await reconcileRatings(userId, ratings);
+    const result = await reconcileRatings(userId, ratings);
+    itemsSynced.ratings = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
   }
 
   if (shouldSyncWatchlist) {
     const watchlist = await getWatchlist(accessToken);
     const result = await syncWatchlist(userId, watchlist);
-    itemsSynced.watchlistItems = result.changedCount;
+    itemsSynced.watchlistItems =
+      summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
     if (result.shouldEnrich) {
       listsToEnrich.push('watchlist');
     }
@@ -2447,7 +2631,7 @@ const syncTraktImport = async (
   if (shouldSyncFavorites) {
     const favorites = await getFavorites(accessToken);
     const result = await syncFavorites(userId, favorites);
-    itemsSynced.favorites = result.changedCount;
+    itemsSynced.favorites = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
     if (result.shouldEnrich) {
       listsToEnrich.push('favorites');
     }
@@ -2465,7 +2649,10 @@ const syncTraktImport = async (
       bootstrap
     );
 
-    itemsSynced.lists = customListsResult.changedCount;
+    itemsSynced.lists =
+      summaryMode === 'bootstrap'
+        ? Object.keys(customListsResult.customLists).length
+        : customListsResult.changedCount;
     customListsState = customListsResult.customLists;
     listsToEnrich.push(...customListsResult.listsToEnrich);
   }
@@ -2480,6 +2667,7 @@ const syncTraktImport = async (
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },
+    summaryMode,
   };
 };
 
@@ -3057,6 +3245,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
   try {
     const decodedToken = await verifyUser(request);
     const userId = decodedToken.uid;
+    const bypassManualCooldown = shouldBypassManualSyncCooldown(request);
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const runRef = userRef.collection('traktSyncRuns').doc();
@@ -3080,14 +3269,25 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
       const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
       if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
-        return {
-          kind: 'rate_limited' as const,
-          nextAllowedSyncAt,
-          userData,
-        };
+        const shouldEnforceCooldown =
+          (existingStatus?.status === 'failed' && existingStatus.errorCategory === 'rate_limited') ||
+          (existingStatus?.status === 'completed' && !bypassManualCooldown);
+
+        if (shouldEnforceCooldown) {
+          return {
+            kind: 'rate_limited' as const,
+            nextAllowedSyncAt,
+            userData,
+          };
+        }
       }
 
-      const queuedStatus = createQueuedSyncStatus(userId, runRef.id, getPreviousLastSyncedAt(existingStatus));
+      const queuedStatus = createQueuedSyncStatus(
+        userId,
+        runRef.id,
+        getSyncSummaryMode(userData.traktIncrementalState),
+        getPreviousLastSyncedAt(existingStatus)
+      );
       const queuedStatusForWrite = sanitizeSyncStatusForWrite(queuedStatus);
       transaction.set(runRef, queuedStatusForWrite);
       transaction.set(
@@ -3141,6 +3341,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
       const failedStatus = createFailureStatus(
         userId,
         runId,
+        transactionResult.status.summaryMode ?? getSyncSummaryMode(undefined),
         getPreviousLastSyncedAt(transactionResult.status),
         emptyItemsSynced(),
         0,
@@ -3454,6 +3655,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
     const currentAttempt = typeof currentSyncStatus?.attempt === 'number' ? currentSyncStatus.attempt : 0;
     const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousLastSyncedAt = getPreviousLastSyncedAt(currentSyncStatus);
+    const summaryMode = currentSyncStatus?.summaryMode ?? getSyncSummaryMode(userData.traktIncrementalState);
 
     if (!userData.traktConnected) {
       await writeSyncStatus(
@@ -3462,6 +3664,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         createFailureStatus(
           userId,
           runId,
+          summaryMode,
           previousLastSyncedAt,
           emptyItemsSynced(),
           attempt,
@@ -3490,6 +3693,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       runId,
       startedAt,
       status: 'in_progress',
+      summaryMode,
       updatedAt: startedAt,
       userId,
     });
@@ -3497,7 +3701,8 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
     try {
       const accessToken = await maybeRefreshAccessToken(userId, userData);
       const syncResult = await syncTraktImport(userId, accessToken, userData.traktIncrementalState);
-      const { itemsSynced, listsToEnrich, nextIncrementalState } = syncResult;
+      const { itemsSynced, listsToEnrich, nextIncrementalState, summaryMode: completedSummaryMode } =
+        syncResult;
 
       console.info('[TraktSync] Completed sync import', {
         itemsSynced,
@@ -3536,6 +3741,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         runId,
         startedAt,
         status: 'completed',
+        summaryMode: completedSummaryMode,
         updatedAt: completedAt,
         userId,
       }, nextIncrementalState);
@@ -3558,6 +3764,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
           createFailureStatus(
             userId,
             runId,
+            summaryMode,
             previousLastSyncedAt,
             emptyItemsSynced(),
             attempt,
@@ -3598,6 +3805,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         createFailureStatus(
           userId,
           runId,
+          summaryMode,
           previousLastSyncedAt,
           emptyItemsSynced(),
           attempt,
@@ -3779,6 +3987,7 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 export const __test__ = {
   enrichEpisodeTracking,
   getAllowedCorsOrigin,
+  reconcileManagedList,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
   syncCustomLists,

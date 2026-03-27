@@ -20,6 +20,7 @@ import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import * as WebBrowser from 'expo-web-browser';
 
 const { BACKEND_URL, REDIRECT_URI } = TRAKT_CONFIG;
+const DEV_SYNC_BYPASS_HEADER = 'X-ShowSeek-Dev-Sync';
 
 const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
   status === 'queued' || status === 'in_progress' || status === 'retrying';
@@ -55,6 +56,9 @@ const requireAuthenticatedUser = async () => {
     },
   };
 };
+
+const getDevSyncBypassHeaders = (): Record<string, string> =>
+  typeof __DEV__ !== 'undefined' && __DEV__ ? { [DEV_SYNC_BYPASS_HEADER]: 'true' } : {};
 
 const parseJsonSafely = async (response: Response): Promise<Record<string, unknown> | undefined> => {
   try {
@@ -159,7 +163,10 @@ export async function triggerSync(): Promise<void> {
     const response = await Promise.race([
       fetch(`${BACKEND_URL}/sync`, {
         method: 'POST',
-        headers,
+        headers: {
+          ...headers,
+          ...getDevSyncBypassHeaders(),
+        },
       }),
       timeoutPromise,
     ]);
