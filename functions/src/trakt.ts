@@ -2068,6 +2068,7 @@ const countMediaTypeChanges = (mediaTypes: Array<'movie' | 'tv'>, mediaType: 'mo
   mediaTypes.filter((value) => value === mediaType).length;
 
 interface ReconcileManagedListOptions {
+  countBaseDataChangesAsRemoteChange?: boolean;
   preserveLocalItems?: boolean;
   recencyField?: string;
 }
@@ -2082,6 +2083,7 @@ const reconcileManagedList = async (
 ): Promise<{
   changedCount: number;
   changedMediaTypes: Array<'movie' | 'tv'>;
+  didRemoteChange: boolean;
   didWrite: boolean;
   shouldEnrich: boolean;
 }> => {
@@ -2097,6 +2099,7 @@ const reconcileManagedList = async (
   const changedMediaTypes: Array<'movie' | 'tv'> = [];
   let changedCount = 0;
   let addedOrUpdatedCount = 0;
+  let hasItemWrites = false;
   const preserveLocalItems = options.preserveLocalItems ?? false;
 
   Object.entries(remoteItems).forEach(([remoteKey, remoteItem]) => {
@@ -2114,18 +2117,21 @@ const reconcileManagedList = async (
     const nextItem =
       !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
     const shouldWriteNormalizedItem = !existingItem || hasLegacyKey || shouldApplyRemote;
+    const isRemoteChange = !existingItem || shouldApplyRemote;
 
     if (shouldWriteNormalizedItem) {
       itemChanges[remoteKey] = nextItem;
-      changedMediaTypes.push(mediaType);
-      changedCount += 1;
-      if (!existingItem || shouldApplyRemote) {
+      hasItemWrites = true;
+      if (isRemoteChange) {
+        changedMediaTypes.push(mediaType);
+        changedCount += 1;
         addedOrUpdatedCount += 1;
       }
     }
 
     if (hasLegacyKey) {
       itemChanges[legacyKey] = FieldValue.delete();
+      hasItemWrites = true;
     }
   });
 
@@ -2136,6 +2142,7 @@ const reconcileManagedList = async (
       }
 
       itemChanges[existingKey] = FieldValue.delete();
+      hasItemWrites = true;
 
       const mediaType = existingItem.media_type;
       const mediaId = existingItem.id;
@@ -2146,6 +2153,7 @@ const reconcileManagedList = async (
         const legacyKey = getLegacyListItemKey(mediaId);
         if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
           itemChanges[legacyKey] = FieldValue.delete();
+          hasItemWrites = true;
         }
       }
 
@@ -2158,17 +2166,20 @@ const reconcileManagedList = async (
     : {};
   const nextNeedsEnrichment = Boolean(existingMetadata.needsEnrichment) || addedOrUpdatedCount > 0;
   const baseDataChanged = hasManagedFieldChanges(existingData, baseData);
+  const didRemoteChange =
+    changedCount > 0 || (baseDataChanged && Boolean(options.countBaseDataChangesAsRemoteChange));
   const nextItemCount = preserveLocalItems
     ? new Set([...Object.keys(existingItems), ...Object.keys(remoteItems)]).size
     : Object.keys(remoteItems).length;
   const metadataChanged =
     existingMetadata.itemCount !== nextItemCount || Boolean(existingMetadata.needsEnrichment) !== nextNeedsEnrichment;
-  const shouldWrite = !snapshot.exists || changedCount > 0 || baseDataChanged || metadataChanged;
+  const shouldWrite = !snapshot.exists || hasItemWrites || baseDataChanged || metadataChanged;
 
   if (!shouldWrite) {
     return {
       changedCount: 0,
       changedMediaTypes: [],
+      didRemoteChange: false,
       didWrite: false,
       shouldEnrich: false,
     };
@@ -2178,7 +2189,7 @@ const reconcileManagedList = async (
     {
       ...baseData,
       items:
-        changedCount > 0
+        hasItemWrites
           ? itemChanges
           : !snapshot.exists
             ? {}
@@ -2198,6 +2209,7 @@ const reconcileManagedList = async (
   return {
     changedCount,
     changedMediaTypes,
+    didRemoteChange,
     didWrite: true,
     shouldEnrich: addedOrUpdatedCount > 0,
   };
@@ -2410,10 +2422,14 @@ const syncCustomLists = async (
         privacy: traktList.privacy === 'public' ? 'public' : 'private',
         traktId: traktList.ids.trakt,
         updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
+      },
+      undefined,
+      {
+        countBaseDataChangesAsRemoteChange: true,
       }
     );
 
-    if (result.didWrite) {
+    if (result.didRemoteChange) {
       changedCount += 1;
     }
   }
@@ -2481,12 +2497,13 @@ const reconcileCustomLists = async (
       },
       localTraktLists.get(listId),
       {
+        countBaseDataChangesAsRemoteChange: true,
         preserveLocalItems: false,
         recencyField: 'addedAt',
       }
     );
 
-    if (result.didWrite) {
+    if (result.didRemoteChange) {
       changedCount += 1;
     }
     if (result.shouldEnrich) {
@@ -3957,6 +3974,7 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 export const __test__ = {
   enrichEpisodeTracking,
   getAllowedCorsOrigin,
+  reconcileManagedList,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
   syncCustomLists,
