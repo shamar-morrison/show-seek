@@ -36,10 +36,10 @@ const TRAKT_SYNC_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const TRAKT_ENRICHMENT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const TRAKT_OAUTH_START_COOLDOWN_MS = 60 * 1000;
 const TRAKT_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
-const CORS_ALLOW_HEADERS = 'Authorization, Content-Type';
+const DEV_SYNC_BYPASS_HEADER = 'x-showseek-dev-sync';
+const CORS_ALLOW_HEADERS = ['Authorization', 'Content-Type', DEV_SYNC_BYPASS_HEADER].join(', ');
 const CORS_ALLOW_METHODS = 'GET, POST, OPTIONS';
 const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
-const DEV_SYNC_BYPASS_HEADER = 'x-showseek-dev-sync';
 const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
 const TRAKT_SYNC_RECONNECT_MESSAGE =
@@ -3158,9 +3158,13 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
         };
       }
 
-      if (!bypassManualCooldown) {
-        const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
-        if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
+      const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
+      if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
+        const shouldEnforceCooldown =
+          (existingStatus?.status === 'failed' && existingStatus.errorCategory === 'rate_limited') ||
+          (existingStatus?.status === 'completed' && !bypassManualCooldown);
+
+        if (shouldEnforceCooldown) {
           return {
             kind: 'rate_limited' as const,
             nextAllowedSyncAt,

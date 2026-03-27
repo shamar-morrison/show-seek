@@ -2003,6 +2003,95 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
+  it('keeps upstream rate-limit cooldowns enforced in the functions emulator even when the dev header is present', async () => {
+    const originalFunctionsEmulator = process.env.FUNCTIONS_EMULATOR;
+    process.env.FUNCTIONS_EMULATOR = 'true';
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          errorCategory: 'rate_limited',
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'failed-run',
+          status: 'failed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/user-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    try {
+      await (traktApi as any)(
+        {
+          body: {},
+          header: (name: string) => {
+            const normalized = name.toLowerCase();
+            if (normalized === 'authorization') return 'Bearer token';
+            if (normalized === 'x-showseek-dev-sync') return 'true';
+            return undefined;
+          },
+          method: 'POST',
+          path: '/sync',
+        },
+        response
+      );
+    } finally {
+      if (originalFunctionsEmulator === undefined) {
+        delete process.env.FUNCTIONS_EMULATOR;
+      } else {
+        process.env.FUNCTIONS_EMULATOR = originalFunctionsEmulator;
+      }
+    }
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
+      })
+    );
+  });
+
   it('sends the shared User-Agent on OAuth token exchange requests', async () => {
     const userSet = jest.fn().mockResolvedValue(undefined);
     const stateRef = {
@@ -3593,6 +3682,10 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(response.setHeader).toHaveBeenCalledWith(
       'Access-Control-Allow-Origin',
       'https://allowed.example'
+    );
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Access-Control-Allow-Headers',
+      expect.stringContaining('x-showseek-dev-sync')
     );
     expect(response.setHeader).toHaveBeenCalledWith('Vary', 'Origin');
     expect(response.status).toHaveBeenCalledWith(204);
