@@ -1,9 +1,11 @@
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 const mockSetOptions = jest.fn();
 const mockPush = jest.fn();
 const mockRefetch = jest.fn();
+const mockBulkDeleteMutateAsync = jest.fn();
 
 const mockUseLists = jest.fn();
 const mockUsePremium = jest.fn();
@@ -35,6 +37,10 @@ jest.mock('@/src/context/GuestAccessContext', () => ({
 
 jest.mock('@/src/hooks/useLists', () => ({
   useLists: () => mockUseLists(),
+  useBulkDeleteLists: () => ({
+    mutateAsync: mockBulkDeleteMutateAsync,
+    isPending: false,
+  }),
 }));
 
 jest.mock('@/src/hooks/useHeaderSearch', () => ({
@@ -43,6 +49,20 @@ jest.mock('@/src/hooks/useHeaderSearch', () => ({
 
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({ accentColor: '#ff0000' }),
+}));
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'Light',
+    Medium: 'Medium',
+  },
+  NotificationFeedbackType: {
+    Success: 'Success',
+    Error: 'Error',
+    Warning: 'Warning',
+  },
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -85,7 +105,11 @@ jest.mock('@/src/components/library/QueryErrorState', () => ({
 }));
 
 jest.mock('@/src/components/library/StackedPosterPreview', () => ({
-  StackedPosterPreview: () => null,
+  StackedPosterPreview: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'stacked-poster-preview' });
+  },
 }));
 
 jest.mock('@/src/components/library/SearchEmptyState', () => ({
@@ -106,6 +130,42 @@ jest.mock('@/src/components/library/EmptyState', () => ({
 
 jest.mock('@/src/components/ui/HeaderIconButton', () => ({
   HeaderIconButton: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock('@/src/components/ui/Toast', () => {
+  const React = require('react');
+
+  const Toast = React.forwardRef((_props: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      show: jest.fn(),
+    }));
+
+    return null;
+  });
+
+  Toast.displayName = 'MockToast';
+
+  return {
+    __esModule: true,
+    default: Toast,
+  };
+});
+
+jest.mock('@/src/components/library/BulkRemoveProgressModal', () => ({
+  BulkRemoveProgressModal: ({ visible, current, total, title }: any) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    if (!visible) {
+      return null;
+    }
+
+    return React.createElement(
+      Text,
+      { testID: 'bulk-delete-progress-modal' },
+      `${title}: ${current}/${total}`
+    );
+  },
 }));
 
 jest.mock('@/src/styles/iconBadgeStyles', () => ({
@@ -161,6 +221,10 @@ describe('CustomListsScreen search', () => {
     capturedFlashListProps = null;
     latestCreateListModalProps = null;
     mockRefetch.mockReset().mockResolvedValue(undefined);
+    mockBulkDeleteMutateAsync.mockReset().mockResolvedValue({
+      deletedIds: ['list-1'],
+      failedIds: [],
+    });
 
     mockUsePremium.mockReturnValue({
       isPremium: true,
@@ -275,5 +339,98 @@ describe('CustomListsScreen search', () => {
 
     expect(getByTestId('empty-state-title')).toBeTruthy();
     expect(queryByTestId('search-empty-state')).toBeNull();
+  });
+
+  it('enters selection mode on long press and suppresses navigation on the follow-up press', () => {
+    const { getByTestId } = render(<CustomListsScreen />);
+    const firstCard = getByTestId('custom-list-card-list-1');
+
+    fireEvent(firstCard, 'longPress');
+    fireEvent(firstCard, 'press');
+
+    expect(mockPush).not.toHaveBeenCalledWith('/(tabs)/library/custom-list/list-1');
+    expect(getByTestId('multi-select-action-bar')).toBeTruthy();
+    expect(getByTestId('custom-list-card-selection-badge-list-1')).toBeTruthy();
+  });
+
+  it('toggles selection on tap while in selection mode', () => {
+    jest.useFakeTimers();
+
+    const { getByTestId, queryByTestId, getByText } = render(<CustomListsScreen />);
+
+    fireEvent(getByTestId('custom-list-card-list-1'), 'longPress');
+    fireEvent(getByTestId('custom-list-card-list-1'), 'pressOut');
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(getByText('1 selected')).toBeTruthy();
+
+    fireEvent(getByTestId('custom-list-card-list-2'), 'press');
+    expect(getByText('2 selected')).toBeTruthy();
+
+    fireEvent(getByTestId('custom-list-card-list-1'), 'press');
+    expect(getByText('1 selected')).toBeTruthy();
+
+    fireEvent(getByTestId('custom-list-card-list-2'), 'press');
+    expect(queryByTestId('multi-select-action-bar')).toBeNull();
+
+    jest.useRealTimers();
+  });
+
+  it('hides header actions while selection mode is active', () => {
+    const { getByTestId } = render(<CustomListsScreen />);
+
+    const initialOptions = mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    expect(initialOptions.headerRight()).not.toBeNull();
+
+    fireEvent(getByTestId('custom-list-card-list-1'), 'longPress');
+
+    const selectionOptions = mockSetOptions.mock.calls[mockSetOptions.mock.calls.length - 1][0];
+    expect(selectionOptions.headerRight()).toBeNull();
+  });
+
+  it('opens bulk delete confirmation and shows the progress modal after confirming', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    let resolveDelete!: (value: { deletedIds: string[]; failedIds: string[] }) => void;
+
+    mockBulkDeleteMutateAsync.mockImplementation(
+      ({ onProgress }: { onProgress: (processed: number, total: number) => void }) =>
+        new Promise<{ deletedIds: string[]; failedIds: string[] }>((resolve) => {
+          resolveDelete = resolve;
+          onProgress(1, 1);
+        })
+    );
+
+    const { getByTestId } = render(<CustomListsScreen />);
+
+    fireEvent(getByTestId('custom-list-card-list-1'), 'longPress');
+    fireEvent.press(getByTestId('multi-select-remove-button'));
+
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+
+    const buttons = alertSpy.mock.calls[0]?.[2] as Array<{
+      style?: string;
+      onPress?: () => unknown;
+    }>;
+    const confirmButton = buttons.find((button) => button.style === 'destructive');
+
+    await act(async () => {
+      confirmButton?.onPress?.();
+    });
+
+    expect(mockBulkDeleteMutateAsync).toHaveBeenCalledWith({
+      listIds: ['list-1'],
+      onProgress: expect.any(Function),
+    });
+    expect(getByTestId('bulk-delete-progress-modal')).toBeTruthy();
+
+    await act(async () => {
+      resolveDelete({
+        deletedIds: ['list-1'],
+        failedIds: [],
+      });
+    });
+
+    alertSpy.mockRestore();
   });
 });

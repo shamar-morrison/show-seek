@@ -1,19 +1,23 @@
 import CreateListModal, { CreateListModalRef } from '@/src/components/CreateListModal';
+import { BulkRemoveProgressModal } from '@/src/components/library/BulkRemoveProgressModal';
+import { CustomListCard } from '@/src/components/library/CustomListCard';
 import { EmptyState } from '@/src/components/library/EmptyState';
 import { LibrarySortModal } from '@/src/components/library/LibrarySortModal';
+import { MultiSelectActionBar } from '@/src/components/library/MultiSelectActionBar';
 import { QueryErrorState } from '@/src/components/library/QueryErrorState';
 import { SearchEmptyState } from '@/src/components/library/SearchEmptyState';
-import { StackedPosterPreview } from '@/src/components/library/StackedPosterPreview';
 import { DEFAULT_SORT_STATE, SortState } from '@/src/components/MediaSortModal';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import { HeaderIconButton } from '@/src/components/ui/HeaderIconButton';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { filterCustomLists, MAX_FREE_LISTS } from '@/src/constants/lists';
-import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { COLORS, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useCustomListMultiSelectActions } from '@/src/hooks/useCustomListMultiSelectActions';
 import { useHeaderSearch } from '@/src/hooks/useHeaderSearch';
-import { useLists } from '@/src/hooks/useLists';
+import { useBulkDeleteLists, useLists } from '@/src/hooks/useLists';
 import { UserList } from '@/src/services/ListService';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { libraryListStyles } from '@/src/styles/libraryListStyles';
@@ -22,10 +26,10 @@ import { getSearchHeaderOptions } from '@/src/utils/searchHeaderOptions';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
-import { ArrowUpDown, ChevronRight, FolderPlus, Plus, Search } from 'lucide-react-native';
+import { ArrowUpDown, FolderPlus, Plus, Search } from 'lucide-react-native';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CustomListsScreen() {
@@ -35,11 +39,13 @@ export default function CustomListsScreen() {
   const { requireAccount } = useGuestAccess();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { data: lists, isLoading, isError, error, refetch } = useLists();
+  const bulkDeleteListsMutation = useBulkDeleteLists();
   const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const iconBadgeStyles = useIconBadgeStyles();
   const createListModalRef = useRef<CreateListModalRef>(null);
+  const toastRef = useRef<ToastRef>(null);
   const listRef = useRef<any>(null);
   const [sortModalVisible, setSortModalVisible] = useState(false);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT_STATE);
@@ -88,6 +94,10 @@ export default function CustomListsScreen() {
     items: customLists,
     getSearchableText: (item) => `${item.name} ${item.description ?? ''}`,
   });
+
+  const handleShowToast = useCallback((message: string) => {
+    toastRef.current?.show(message);
+  }, []);
 
   // Only check limits when premium status is confirmed (not loading)
   const isLimitReached = !isPremium && !isPremiumLoading && customLists.length >= MAX_FREE_LISTS;
@@ -143,7 +153,51 @@ export default function CustomListsScreen() {
     }
   }, [refetch]);
 
+  const handleNavigateToList = useCallback(
+    (listId: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push(`/(tabs)/library/custom-list/${listId}` as any);
+    },
+    [router]
+  );
+
+  const {
+    handleListPress,
+    handleListLongPress,
+    selectedListIds,
+    selectedCount,
+    isSelectionMode,
+    isListSelected,
+    clearSelection,
+    selectionContentBottomPadding,
+    handleActionBarHeightChange,
+    handleDeleteSelectedLists,
+    bulkDeleteProgress,
+    isBulkDeleting,
+  } = useCustomListMultiSelectActions({
+    isSearchActive,
+    deactivateSearch,
+    insetsBottom: insets.bottom,
+    showToast: handleShowToast,
+    onNavigateToList: handleNavigateToList,
+    deleteLists: (listIds, onProgress) =>
+      bulkDeleteListsMutation.mutateAsync({
+        listIds,
+        onProgress,
+      }),
+    isDeleting: bulkDeleteListsMutation.isPending,
+  });
+
   useLayoutEffect(() => {
+    if (isSelectionMode) {
+      navigation.setOptions({
+        header: undefined,
+        headerTitle: undefined,
+        headerRight: () => null,
+      });
+      return;
+    }
+
     if (isSearchActive) {
       navigation.setOptions(
         getSearchHeaderOptions({
@@ -180,6 +234,7 @@ export default function CustomListsScreen() {
     navigation,
     handleCreateList,
     hasActiveSort,
+    isSelectionMode,
     isSearchActive,
     searchQuery,
     setSearchQuery,
@@ -189,51 +244,19 @@ export default function CustomListsScreen() {
     iconBadgeStyles,
   ]);
 
-  const handleListPress = useCallback(
-    (listId: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      router.push(`/(tabs)/library/custom-list/${listId}` as any);
-    },
-    [router]
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: UserList }) => {
-      const previewItems = Object.values(item.items || {})
-        .slice(0, 3)
-        .map((mediaItem) => ({
-          mediaType: mediaItem.media_type,
-          mediaId: mediaItem.id,
-          posterPath: mediaItem.poster_path,
-        }));
-
-      // Count total items
-      const itemCount = Object.keys(item.items || {}).length;
-
       return (
-        <Pressable
-          style={({ pressed }) => [styles.listCard, pressed && styles.listCardPressed]}
-          onPress={() => handleListPress(item.id)}
-        >
-          <StackedPosterPreview items={previewItems} />
-          <View style={styles.listInfo}>
-            <Text style={styles.listName}>{item.name}</Text>
-            {!!item.description?.trim() && (
-              <Text style={styles.listDescription} numberOfLines={2}>
-                {item.description.trim()}
-              </Text>
-            )}
-            <Text style={styles.itemCount}>
-              {itemCount === 1
-                ? t('library.itemCountOne')
-                : t('library.itemCount', { count: itemCount })}
-            </Text>
-          </View>
-          <ChevronRight size={20} color={COLORS.textSecondary} />
-        </Pressable>
+        <CustomListCard
+          list={item}
+          onPress={handleListPress}
+          onLongPress={handleListLongPress}
+          selectionMode={isSelectionMode}
+          isSelected={isListSelected(item.id)}
+        />
       );
     },
-    [handleListPress, t]
+    [handleListLongPress, handleListPress, isListSelected, isSelectionMode]
   );
 
   const keyExtractor = useCallback((item: UserList) => item.id, []);
@@ -289,10 +312,14 @@ export default function CustomListsScreen() {
           contentContainerStyle={[
             libraryListStyles.listContent,
             displayLists.length === 0 ? styles.emptyListContent : null,
+            selectionContentBottomPadding > 0
+              ? { paddingBottom: selectionContentBottomPadding }
+              : null,
           ]}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={ItemSeparator}
           ListEmptyComponent={listEmptyComponent}
+          extraData={selectedListIds}
           refreshing={refreshing}
           onRefresh={handleRefresh}
         />
@@ -306,42 +333,34 @@ export default function CustomListsScreen() {
         onApplySort={handleApplySort}
         allowedOptions={['recentlyAdded', 'lastUpdated', 'alphabetical']}
       />
+
+      <Toast ref={toastRef} />
+
+      <BulkRemoveProgressModal
+        visible={isBulkDeleting}
+        current={bulkDeleteProgress?.processed ?? 0}
+        total={bulkDeleteProgress?.total ?? 0}
+        title={t('library.deletingListsTitle')}
+        progressText={t('library.deletingListsProgress', {
+          current: bulkDeleteProgress?.processed ?? 0,
+          total: bulkDeleteProgress?.total ?? 0,
+        })}
+      />
+
+      {isSelectionMode && (
+        <MultiSelectActionBar
+          selectedCount={selectedCount}
+          onCancel={clearSelection}
+          onRemoveItems={handleDeleteSelectedLists}
+          removeLabel={t('common.delete')}
+          onHeightChange={handleActionBarHeightChange}
+        />
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  listCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    borderWidth: 1,
-    borderColor: COLORS.surfaceLight,
-    gap: SPACING.s,
-  },
-  listCardPressed: {
-    transform: [{ scale: 0.98 }],
-  },
-  listInfo: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  listName: {
-    fontSize: FONT_SIZE.m,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  listDescription: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  itemCount: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
   separator: {
     height: SPACING.m,
   },

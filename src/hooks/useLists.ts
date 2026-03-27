@@ -1,5 +1,10 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
-import { filterCustomLists, MAX_FREE_ITEMS_PER_LIST, MAX_FREE_LISTS } from '@/src/constants/lists';
+import {
+  filterCustomLists,
+  isDefaultList,
+  MAX_FREE_ITEMS_PER_LIST,
+  MAX_FREE_LISTS,
+} from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   buildListItemKey,
@@ -476,6 +481,153 @@ export const useCreateList = () => {
   });
 };
 
+const removeDeletedListIdsFromMembershipIndex = (
+  index: ListMembershipIndex,
+  deletedListIds: Set<string>
+): ListMembershipIndex => {
+  let didChange = false;
+  const nextIndex: ListMembershipIndex = {};
+
+  Object.entries(index).forEach(([mediaKey, listIds]) => {
+    const remainingListIds = listIds.filter((listId) => !deletedListIds.has(listId));
+    if (remainingListIds.length !== listIds.length) {
+      didChange = true;
+    }
+
+    if (remainingListIds.length > 0) {
+      nextIndex[mediaKey] = remainingListIds;
+    }
+  });
+
+  return didChange ? nextIndex : index;
+};
+
+const repairHomeScreenSelectionsAfterDeletedLists = async ({
+  queryClient,
+  userId,
+  deletedListIds,
+  remainingLists,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  userId: string;
+  deletedListIds: Set<string>;
+  remainingLists: UserList[] | undefined;
+}) => {
+  const preferencesQueryKey = ['preferences', userId] as const;
+  let preferences = queryClient.getQueryData<UserPreferences>(preferencesQueryKey);
+
+  if (!preferences) {
+    try {
+      preferences = await preferencesService.fetchPreferences(userId);
+      queryClient.setQueryData<UserPreferences>(preferencesQueryKey, preferences);
+    } catch (error) {
+      console.error('Failed to fetch preferences after deleting lists:', error);
+    }
+  }
+
+  const currentHomeScreenLists = preferences?.homeScreenLists;
+
+  if (!currentHomeScreenLists) {
+    return;
+  }
+
+  const filteredSelections = currentHomeScreenLists.filter(
+    (item) => !(item.type === 'custom' && deletedListIds.has(item.id))
+  );
+  const remainingCustomLists =
+    remainingLists && remainingLists.length > 0
+      ? filterCustomLists(remainingLists).map((list) => ({
+          id: list.id,
+          name: list.name,
+        }))
+      : filteredSelections
+          .filter((item) => item.type === 'custom')
+          .map((item) => ({ id: item.id, name: item.label }));
+  const updatedLists = normalizeHomeScreenSelections(filteredSelections, remainingCustomLists);
+
+  if (areHomeScreenSelectionsEqual(updatedLists, currentHomeScreenLists)) {
+    return;
+  }
+
+  try {
+    await preferencesService.updatePreference('homeScreenLists', updatedLists);
+    queryClient.setQueryData<UserPreferences>(preferencesQueryKey, (old) => ({
+      ...(old ?? preferences ?? DEFAULT_PREFERENCES),
+      homeScreenLists: updatedLists,
+    }));
+  } catch (error) {
+    console.error('Failed to remove deleted lists from home screen:', error);
+  }
+};
+
+const applyDeletedListsSuccess = async ({
+  queryClient,
+  userId,
+  deletedListIds,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  userId: string | undefined;
+  deletedListIds: string[];
+}) => {
+  if (!userId || deletedListIds.length === 0) {
+    return;
+  }
+
+  const deletedListIdSet = new Set(deletedListIds);
+  const listsQueryKey = ['lists', userId] as const;
+  const membershipQueryKey = [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId] as const;
+
+  const cachedLists = queryClient.getQueryData<UserList[]>(listsQueryKey);
+  const listsQueryState = queryClient.getQueryState<UserList[]>(listsQueryKey);
+  const hasHydratedListCache =
+    listsQueryState?.status === 'success' && cachedLists !== undefined;
+
+  let remainingLists: UserList[] | undefined;
+
+  if (hasHydratedListCache) {
+    remainingLists = (cachedLists ?? []).filter((list) => !deletedListIdSet.has(list.id));
+    queryClient.setQueryData<UserList[]>(listsQueryKey, remainingLists);
+  } else {
+    try {
+      remainingLists = await listService.getUserLists(userId);
+      queryClient.setQueryData<UserList[]>(listsQueryKey, remainingLists);
+    } catch (error) {
+      console.error('Failed to fetch lists after deleting lists:', error);
+    }
+  }
+
+  const cachedMembershipIndex = queryClient.getQueryData<ListMembershipIndex>(membershipQueryKey);
+  const membershipQueryState = queryClient.getQueryState<ListMembershipIndex>(membershipQueryKey);
+  const hasHydratedMembershipCache =
+    membershipQueryState?.status === 'success' && cachedMembershipIndex !== undefined;
+
+  if (hasHydratedMembershipCache) {
+    queryClient.setQueryData<ListMembershipIndex>(membershipQueryKey, (oldIndex) => {
+      if (!oldIndex) {
+        return oldIndex;
+      }
+
+      return removeDeletedListIdsFromMembershipIndex(oldIndex, deletedListIdSet);
+    });
+  }
+
+  await repairHomeScreenSelectionsAfterDeletedLists({
+    queryClient,
+    userId,
+    deletedListIds: deletedListIdSet,
+    remainingLists,
+  });
+
+  await queryClient.invalidateQueries({
+    queryKey: listsQueryKey,
+    refetchType: 'active',
+  });
+  await queryClient.invalidateQueries({
+    queryKey: membershipQueryKey,
+    refetchType: 'active',
+  });
+};
+
 export const useDeleteList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -484,62 +636,93 @@ export const useDeleteList = () => {
   return useMutation({
     mutationFn: (listId: string) => listService.deleteList(listId),
     onSuccess: async (_data, listId) => {
-      // Clean up home screen preferences to remove the deleted custom list
-      if (!userId) return;
+      await applyDeletedListsSuccess({
+        queryClient,
+        userId,
+        deletedListIds: [listId],
+      });
+    },
+    onError: async () => {
+      if (!userId) {
+        return;
+      }
 
-      const preferencesQueryKey = ['preferences', userId] as const;
-      let preferences = queryClient.getQueryData<UserPreferences>(preferencesQueryKey);
+      await queryClient.invalidateQueries({
+        queryKey: ['lists', userId],
+        refetchType: 'active',
+      });
+      await queryClient.invalidateQueries({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
+        refetchType: 'active',
+      });
+    },
+  });
+};
 
-      if (!preferences) {
+export interface BulkDeleteListsVariables {
+  listIds: string[];
+  onProgress?: (processed: number, total: number) => void;
+}
+
+export interface BulkDeleteListsResult {
+  deletedIds: string[];
+  failedIds: string[];
+}
+
+export const useBulkDeleteLists = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user && !user.isAnonymous ? user.uid : undefined;
+
+  return useMutation({
+    mutationFn: async ({
+      listIds,
+      onProgress,
+    }: BulkDeleteListsVariables): Promise<BulkDeleteListsResult> => {
+      if (!userId) {
+        throw new Error('User must be logged in');
+      }
+
+      const uniqueListIds = Array.from(new Set(listIds)).filter((listId) => !isDefaultList(listId));
+      if (uniqueListIds.length === 0) {
+        return { deletedIds: [], failedIds: [] };
+      }
+
+      const deletedIds: string[] = [];
+      const failedIds: string[] = [];
+      const total = uniqueListIds.length;
+      let processed = 0;
+
+      for (const listId of uniqueListIds) {
         try {
-          preferences = await preferencesService.fetchPreferences(userId);
-          queryClient.setQueryData<UserPreferences>(preferencesQueryKey, preferences);
-        } catch (error) {
-          console.error('Failed to fetch preferences after deleting list:', error);
+          await listService.deleteList(listId);
+          deletedIds.push(listId);
+        } catch {
+          failedIds.push(listId);
+        } finally {
+          processed += 1;
+          onProgress?.(processed, total);
         }
       }
 
-      let lists = queryClient.getQueryData<UserList[]>(['lists', userId]);
-      if (!lists) {
-        try {
-          lists = await listService.getUserLists(userId);
-          queryClient.setQueryData<UserList[]>(['lists', userId], lists);
-        } catch (error) {
-          console.error('Failed to fetch lists after deleting list:', error);
-        }
+      return { deletedIds, failedIds };
+    },
+    onSuccess: async ({ deletedIds }) => {
+      await applyDeletedListsSuccess({
+        queryClient,
+        userId,
+        deletedListIds: deletedIds,
+      });
+    },
+    onError: async () => {
+      if (!userId) {
+        return;
       }
 
-      const currentHomeScreenLists = preferences?.homeScreenLists;
-
-      if (currentHomeScreenLists) {
-        const filteredSelections = currentHomeScreenLists.filter(
-          (item) => !(item.type === 'custom' && item.id === listId)
-        );
-        const remainingCustomLists =
-          lists && lists.length > 0
-            ? filterCustomLists(lists.filter((list) => list.id !== listId)).map((list) => ({
-                id: list.id,
-                name: list.name,
-              }))
-            : filteredSelections
-                .filter((item) => item.type === 'custom')
-                .map((item) => ({ id: item.id, name: item.label }));
-        const updatedLists = normalizeHomeScreenSelections(filteredSelections, remainingCustomLists);
-
-        if (!areHomeScreenSelectionsEqual(updatedLists, currentHomeScreenLists)) {
-          try {
-            await preferencesService.updatePreference('homeScreenLists', updatedLists);
-            queryClient.setQueryData<UserPreferences>(preferencesQueryKey, (old) => ({
-              ...(old ?? preferences ?? DEFAULT_PREFERENCES),
-              homeScreenLists: updatedLists,
-            }));
-          } catch (error) {
-            console.error('Failed to remove deleted list from home screen:', error);
-          }
-        }
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['lists', userId],
+        refetchType: 'active',
+      });
       await queryClient.invalidateQueries({
         queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, userId],
         refetchType: 'active',

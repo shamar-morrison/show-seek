@@ -56,6 +56,7 @@ jest.mock('@/src/services/PreferencesService', () => ({
 import {
   PremiumLimitError,
   useAddToList,
+  useBulkDeleteLists,
   useCreateList,
   useDeleteList,
   useLists,
@@ -392,6 +393,202 @@ describe('useDeleteList', () => {
       expect(client.getQueryData(['preferences', 'test-user-id'])).toEqual({
         homeScreenLists: [{ id: 'remaining-list', type: 'custom', label: 'Remaining List' }],
       });
+    });
+  });
+});
+
+describe('useBulkDeleteLists', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockDeleteList.mockResolvedValue(undefined);
+    mockUpdatePreference.mockResolvedValue(undefined);
+    mockFetchPreferences.mockResolvedValue({});
+  });
+
+  it('tracks progress and repairs caches once after a successful batch', async () => {
+    const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    client.setQueryData(['lists', 'test-user-id'], [
+      {
+        id: 'delete-a',
+        name: 'Delete A',
+        items: {},
+        createdAt: 1,
+      },
+      {
+        id: 'delete-b',
+        name: 'Delete B',
+        items: {},
+        createdAt: 2,
+      },
+      {
+        id: 'keep-list',
+        name: 'Keep List',
+        items: {},
+        createdAt: 3,
+      },
+    ]);
+    client.setQueryData([LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'], {
+      '1-movie': ['delete-a', 'delete-b', 'keep-list'],
+    });
+    client.setQueryData(['preferences', 'test-user-id'], {
+      homeScreenLists: [
+        { id: 'delete-a', type: 'custom', label: 'Delete A' },
+        { id: 'delete-b', type: 'custom', label: 'Delete B' },
+        { id: 'keep-list', type: 'custom', label: 'Old Keep Name' },
+      ],
+    });
+
+    const onProgress = jest.fn();
+
+    const { result } = renderHook(() => useBulkDeleteLists(), {
+      wrapper: createWrapper(client),
+    });
+
+    let mutationResult: Awaited<ReturnType<typeof result.current.mutateAsync>>;
+
+    await act(async () => {
+      mutationResult = await result.current.mutateAsync({
+        listIds: ['delete-a', 'delete-b'],
+        onProgress,
+      });
+    });
+
+    expect(mutationResult!).toEqual({
+      deletedIds: ['delete-a', 'delete-b'],
+      failedIds: [],
+    });
+    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2);
+    expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2);
+    expect(mockDeleteList).toHaveBeenNthCalledWith(1, 'delete-a');
+    expect(mockDeleteList).toHaveBeenNthCalledWith(2, 'delete-b');
+    expect(mockGetUserLists).not.toHaveBeenCalled();
+    expect(mockFetchPreferences).not.toHaveBeenCalled();
+    expect(mockUpdatePreference).toHaveBeenCalledTimes(1);
+    expect(mockUpdatePreference).toHaveBeenCalledWith('homeScreenLists', [
+      { id: 'keep-list', type: 'custom', label: 'Keep List' },
+    ]);
+    expect(client.getQueryData(['lists', 'test-user-id'])).toEqual([
+      {
+        id: 'keep-list',
+        name: 'Keep List',
+        items: {},
+        createdAt: 3,
+      },
+    ]);
+    expect(client.getQueryData([LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'])).toEqual({
+      '1-movie': ['keep-list'],
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledTimes(2);
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
+        refetchType: 'active',
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'],
+        refetchType: 'active',
+      });
+    });
+  });
+
+  it('continues on failures and returns failed ids while updating caches once', async () => {
+    const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    client.setQueryData(['lists', 'test-user-id'], [
+      {
+        id: 'delete-a',
+        name: 'Delete A',
+        items: {},
+        createdAt: 1,
+      },
+      {
+        id: 'delete-b',
+        name: 'Delete B',
+        items: {},
+        createdAt: 2,
+      },
+      {
+        id: 'delete-c',
+        name: 'Delete C',
+        items: {},
+        createdAt: 3,
+      },
+      {
+        id: 'keep-list',
+        name: 'Keep List',
+        items: {},
+        createdAt: 4,
+      },
+    ]);
+    client.setQueryData([LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'], {
+      '1-movie': ['delete-a', 'delete-b', 'delete-c', 'keep-list'],
+    });
+    client.setQueryData(['preferences', 'test-user-id'], {
+      homeScreenLists: [
+        { id: 'delete-a', type: 'custom', label: 'Delete A' },
+        { id: 'delete-b', type: 'custom', label: 'Delete B' },
+        { id: 'delete-c', type: 'custom', label: 'Delete C' },
+        { id: 'keep-list', type: 'custom', label: 'Keep List' },
+      ],
+    });
+
+    mockDeleteList
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce(undefined);
+
+    const onProgress = jest.fn();
+
+    const { result } = renderHook(() => useBulkDeleteLists(), {
+      wrapper: createWrapper(client),
+    });
+
+    let mutationResult: Awaited<ReturnType<typeof result.current.mutateAsync>>;
+
+    await act(async () => {
+      mutationResult = await result.current.mutateAsync({
+        listIds: ['delete-a', 'delete-b', 'delete-c'],
+        onProgress,
+      });
+    });
+
+    expect(mutationResult!).toEqual({
+      deletedIds: ['delete-a', 'delete-c'],
+      failedIds: ['delete-b'],
+    });
+    expect(onProgress).toHaveBeenNthCalledWith(1, 1, 3);
+    expect(onProgress).toHaveBeenNthCalledWith(2, 2, 3);
+    expect(onProgress).toHaveBeenNthCalledWith(3, 3, 3);
+    expect(mockUpdatePreference).toHaveBeenCalledTimes(1);
+    expect(mockUpdatePreference).toHaveBeenCalledWith('homeScreenLists', [
+      { id: 'delete-b', type: 'custom', label: 'Delete B' },
+      { id: 'keep-list', type: 'custom', label: 'Keep List' },
+    ]);
+    expect(client.getQueryData(['lists', 'test-user-id'])).toEqual([
+      {
+        id: 'delete-b',
+        name: 'Delete B',
+        items: {},
+        createdAt: 2,
+      },
+      {
+        id: 'keep-list',
+        name: 'Keep List',
+        items: {},
+        createdAt: 4,
+      },
+    ]);
+    expect(client.getQueryData([LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'])).toEqual({
+      '1-movie': ['delete-b', 'keep-list'],
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledTimes(2);
     });
   });
 });
