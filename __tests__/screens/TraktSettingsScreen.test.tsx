@@ -180,6 +180,82 @@ describe('TraktSettingsScreen', () => {
     ).toBeNull();
   });
 
+  it('shows imported totals copy for bootstrap sync summaries', () => {
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: true,
+      itemsSynced: {
+        episodes: 2,
+        favorites: 1,
+        lists: 1,
+        movies: 1,
+        ratings: 1,
+        shows: 1,
+        watchlistItems: 1,
+      },
+      status: 'completed',
+      summaryMode: 'bootstrap',
+      synced: true,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Imported from Trakt')).toBeTruthy();
+    expect(
+      getByText(
+        'This was a full mirror of your current Trakt data. Movies, TV Shows, and Episodes come from your watched history.'
+      )
+    ).toBeTruthy();
+    expect(queryByText('Changes from this sync')).toBeNull();
+  });
+
+  it('shows the changes title for incremental sync summaries', () => {
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: true,
+      itemsSynced: {
+        episodes: 0,
+        favorites: 0,
+        lists: 0,
+        movies: 0,
+        ratings: 0,
+        shows: 0,
+        watchlistItems: 3,
+      },
+      status: 'completed',
+      summaryMode: 'incremental',
+      synced: true,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Changes from this sync')).toBeTruthy();
+    expect(queryByText('Imported from Trakt')).toBeNull();
+  });
+
+  it('uses a neutral fallback title when legacy sync summaries omit summaryMode', () => {
+    mockTraktState.lastSyncedAt = new Date();
+    mockTraktState.syncStatus = {
+      connected: true,
+      itemsSynced: {
+        episodes: 0,
+        favorites: 0,
+        lists: 0,
+        movies: 0,
+        ratings: 2,
+        shows: 0,
+        watchlistItems: 0,
+      },
+      status: 'completed',
+      synced: true,
+    };
+
+    const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+    expect(getByText('Synced items')).toBeTruthy();
+    expect(queryByText('Changes from this sync')).toBeNull();
+  });
+
   it('shows the completed no-changes state when the sync reports zero changed items', () => {
     mockTraktState.lastSyncedAt = new Date();
     mockTraktState.syncStatus = {

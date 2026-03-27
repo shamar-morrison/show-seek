@@ -537,6 +537,14 @@ export default function TraktSettingsScreen() {
   // State: Connected and synced
   const itemsSynced = syncStatus?.itemsSynced;
   const hasChangedItems = Boolean(itemsSynced && Object.values(itemsSynced).some((count) => count > 0));
+  const statsTitle =
+    syncStatus?.summaryMode === 'bootstrap'
+      ? t('trakt.importedItemsTitle')
+      : syncStatus?.summaryMode === 'incremental'
+        ? t('trakt.syncedItemsTitle')
+        : t('trakt.syncedItemsFallbackTitle');
+  const statsDescription =
+    syncStatus?.summaryMode === 'bootstrap' ? t('trakt.importedItemsDescription') : null;
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
@@ -560,7 +568,8 @@ export default function TraktSettingsScreen() {
 
         {itemsSynced && hasChangedItems && (
           <View style={styles.statsContainer}>
-            <Text style={styles.statsTitle}>{t('trakt.syncedItemsTitle')}</Text>
+            <Text style={styles.statsTitle}>{statsTitle}</Text>
+            {statsDescription && <Text style={styles.statsDescription}>{statsDescription}</Text>}
             <View style={styles.statsGrid}>
               {itemsSynced.movies > 0 && (
                 <StatItem label={t('media.movies')} value={itemsSynced.movies} />
@@ -884,6 +893,12 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
     color: COLORS.text,
+    marginBottom: SPACING.m,
+  },
+  statsDescription: {
+    fontSize: FONT_SIZE.s,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
     marginBottom: SPACING.m,
   },
   noChangesContainer: {

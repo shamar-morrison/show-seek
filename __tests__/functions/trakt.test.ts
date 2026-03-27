@@ -142,6 +142,18 @@ const createResponse = () => {
   return response;
 };
 
+const createDocSnapshot = (path: string, data?: Record<string, unknown>) => ({
+  data: () => data,
+  exists: data !== undefined,
+  id: path.split('/').pop() ?? path,
+  ref: { path },
+});
+
+const createCollectionSnapshot = (docs: Array<ReturnType<typeof createDocSnapshot>>) => ({
+  docs,
+  size: docs.length,
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockVerifyIdToken.mockResolvedValue({ uid: 'user-1' });
@@ -618,6 +630,753 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(completedWrite).toBeDefined();
     expect(completedWrite?.completedAt.toMillis()).toBe(frozenNow);
     expect(completedWrite?.nextAllowedSyncAt.toMillis()).toBe(frozenNow + DAY_MS);
+  });
+
+  it('reports bootstrap summary mode with imported totals even when local data is already up to date', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchDelete = jest.fn();
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const alreadyWatchedData = {
+      id: 'already-watched',
+      items: {
+        'movie-101': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-01T00:00:00.000Z').getTime()),
+          id: 101,
+          media_type: 'movie',
+          release_date: '2024-01-01',
+          title: 'Movie One',
+        },
+        'tv-201': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-02-03T00:00:00.000Z').getTime()),
+          first_air_date: '2020-01-01',
+          id: 201,
+          media_type: 'tv',
+          name: 'Show One',
+        },
+      },
+      metadata: {
+        itemCount: 2,
+        lastUpdated: MockTimestamp.now(),
+        needsEnrichment: false,
+      },
+      name: 'Already Watched',
+    };
+    const watchlistData = {
+      id: 'watchlist',
+      items: {
+        'movie-102': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-02T00:00:00.000Z').getTime()),
+          id: 102,
+          media_type: 'movie',
+          release_date: '2024-01-01',
+          title: 'Movie Two',
+        },
+      },
+      metadata: {
+        itemCount: 1,
+        lastUpdated: MockTimestamp.now(),
+        needsEnrichment: false,
+      },
+      name: 'Should Watch',
+    };
+    const favoritesData = {
+      id: 'favorites',
+      items: {
+        'tv-202': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-04T00:00:00.000Z').getTime()),
+          id: 202,
+          media_type: 'tv',
+          title: 'Favorite Show',
+        },
+      },
+      metadata: {
+        itemCount: 1,
+        lastUpdated: MockTimestamp.now(),
+        needsEnrichment: false,
+      },
+      name: 'Favorites',
+    };
+    const customListData = {
+      createdAt: MockTimestamp.fromMillis(new Date('2024-01-05T00:00:00.000Z').getTime()),
+      description: 'Custom list',
+      isCustom: true,
+      items: {
+        'movie-333': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+          id: 333,
+          media_type: 'movie',
+          title: 'Custom Movie',
+          traktId: 303,
+        },
+      },
+      metadata: {
+        itemCount: 1,
+        lastUpdated: MockTimestamp.now(),
+        needsEnrichment: false,
+      },
+      name: 'Custom List',
+      privacy: 'private',
+      traktId: 701,
+      updatedAt: MockTimestamp.fromMillis(new Date('2024-01-07T00:00:00.000Z').getTime()),
+    };
+    const listSnapshots = {
+      'already-watched': createDocSnapshot('users/user-1/lists/already-watched', alreadyWatchedData),
+      favorites: createDocSnapshot('users/user-1/lists/favorites', favoritesData),
+      trakt_701: createDocSnapshot('users/user-1/lists/trakt_701', customListData),
+      watchlist: createDocSnapshot('users/user-1/lists/watchlist', watchlistData),
+    };
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        get: jest.fn().mockResolvedValue({
+          data: () => listSnapshots[id as keyof typeof listSnapshots]?.data(),
+          exists: Boolean(listSnapshots[id as keyof typeof listSnapshots]),
+        }),
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+      get: jest.fn().mockResolvedValue(createCollectionSnapshot([listSnapshots.trakt_701])),
+    };
+    const episodeTrackingCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/episode_tracking/${id}`,
+      })),
+      get: jest.fn().mockResolvedValue(
+        createCollectionSnapshot([
+          createDocSnapshot('users/user-1/episode_tracking/201', {
+            episodes: {
+              '1_1': {
+                watched: true,
+                watchedAt: MockTimestamp.fromMillis(new Date('2024-02-01T00:00:00.000Z').getTime()),
+              },
+              '1_2': {
+                watched: true,
+                watchedAt: MockTimestamp.fromMillis(new Date('2024-02-02T00:00:00.000Z').getTime()),
+              },
+            },
+            metadata: {
+              lastUpdated: MockTimestamp.now(),
+              tvShowName: 'Show One',
+            },
+          }),
+        ])
+      ),
+    };
+    const ratingsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/ratings/${id}`,
+      })),
+      get: jest.fn().mockResolvedValue(
+        createCollectionSnapshot([
+          createDocSnapshot('users/user-1/ratings/movie-101', {
+            id: 'movie-101',
+            media_type: 'movie',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-08T00:00:00.000Z').getTime()),
+            rating: 8,
+            title: 'Movie One',
+          }),
+        ])
+      ),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        if (name === 'episode_tracking') {
+          return episodeTrackingCollection;
+        }
+
+        if (name === 'ratings') {
+          return ratingsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        delete: batchDelete,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
+      const url = String(input);
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({}),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/movies')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-01-01T00:00:00.000Z',
+              last_watched_at: '2024-01-01T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              plays: 1,
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watched/shows?extended=full')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              last_updated_at: '2024-02-03T00:00:00.000Z',
+              last_watched_at: '2024-02-03T00:00:00.000Z',
+              plays: 2,
+              seasons: [
+                {
+                  episodes: [
+                    {
+                      last_watched_at: '2024-02-01T00:00:00.000Z',
+                      number: 1,
+                      plays: 1,
+                    },
+                    {
+                      last_watched_at: '2024-02-02T00:00:00.000Z',
+                      number: 2,
+                      plays: 1,
+                    },
+                  ],
+                  number: 1,
+                },
+              ],
+              show: {
+                ids: {
+                  slug: 'show-1',
+                  tmdb: 201,
+                  trakt: 301,
+                },
+                title: 'Show One',
+                year: 2020,
+              },
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/ratings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              rated_at: '2024-01-08T00:00:00.000Z',
+              rating: 8,
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watchlist')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              listed_at: '2024-01-02T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-2',
+                  tmdb: 102,
+                  trakt: 202,
+                },
+                title: 'Movie Two',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/favorites')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 2,
+              listed_at: '2024-01-04T00:00:00.000Z',
+              show: {
+                ids: {
+                  slug: 'favorite-show',
+                  tmdb: 202,
+                  trakt: 302,
+                },
+                title: 'Favorite Show',
+                year: 2022,
+              },
+              type: 'show',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/users/settings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue({
+            user: {
+              ids: {
+                slug: 'tester',
+              },
+              name: 'Tester',
+              private: false,
+              username: 'tester',
+              vip: false,
+              vip_ep: false,
+            },
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/users/tester/lists')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              created_at: '2024-01-05T00:00:00.000Z',
+              description: 'Custom list',
+              ids: {
+                slug: 'custom-list',
+                trakt: 701,
+              },
+              name: 'Custom List',
+              privacy: 'private',
+              updated_at: '2024-01-07T00:00:00.000Z',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 77,
+              listed_at: '2024-01-06T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'custom-movie',
+                  tmdb: 333,
+                  trakt: 303,
+                },
+                title: 'Custom Movie',
+                year: 2024,
+              },
+              rank: 1,
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const completedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'completed') as
+      | {
+          itemsSynced: ReturnType<typeof emptyItemsSynced>;
+          summaryMode: string;
+        }
+      | undefined;
+
+    expect(completedWrite).toMatchObject({
+      itemsSynced: {
+        episodes: 2,
+        favorites: 1,
+        lists: 1,
+        movies: 1,
+        ratings: 1,
+        shows: 1,
+        watchlistItems: 1,
+      },
+      summaryMode: 'bootstrap',
+    });
+    expect(listSet).not.toHaveBeenCalled();
+  });
+
+  it('reports zero changed items for unchanged incremental syncs', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const lastActivities = {
+      episodes: {
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      favorites: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+      lists: {
+        updated_at: '2024-01-05T00:00:00.000Z',
+      },
+      movies: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-01T00:00:00.000Z',
+      },
+      shows: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      watchlist: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id: string) => ({
+            id,
+            path: `users/user-1/traktSyncRuns/${id}`,
+          })),
+        };
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktIncrementalState: {
+            bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+            customLists: {},
+            lastActivities,
+            schemaVersion: 1,
+            updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+          },
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
+      const url = String(input);
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue(lastActivities),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const completedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'completed') as
+      | {
+          itemsSynced: ReturnType<typeof emptyItemsSynced>;
+          summaryMode: string;
+        }
+      | undefined;
+
+    expect(completedWrite).toMatchObject({
+      itemsSynced: emptyItemsSynced(),
+      summaryMode: 'incremental',
+    });
+    expect((global.fetch as jest.Mock).mock.calls).toHaveLength(1);
+  });
+
+  it('reports only the changed incremental bucket when a single activity group changes', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const lastActivitiesBefore = {
+      episodes: {
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      favorites: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+      lists: {
+        updated_at: '2024-01-05T00:00:00.000Z',
+      },
+      movies: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-01T00:00:00.000Z',
+      },
+      shows: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      watchlist: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+    };
+    const lastActivitiesAfter = {
+      ...lastActivitiesBefore,
+      watchlist: {
+        updated_at: '2024-01-06T00:00:00.000Z',
+      },
+    };
+    const listsCollection = {
+      doc: jest.fn((id: string) => ({
+        get: jest.fn().mockResolvedValue({
+          data: () => undefined,
+          exists: false,
+        }),
+        id,
+        path: `users/user-1/lists/${id}`,
+        set: listSet,
+      })),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'traktEnrichmentRuns') {
+          return {
+            doc: jest.fn((id = 'enrich-1') => ({
+              id,
+              path: `users/user-1/traktEnrichmentRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'lists') {
+          return listsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktIncrementalState: {
+            bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+            customLists: {},
+            lastActivities: lastActivitiesBefore,
+            schemaVersion: 1,
+            updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+          },
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn().mockResolvedValue({
+        kind: 'active',
+        status: {
+          runId: 'enrich-1',
+          status: 'in_progress',
+        },
+        userData: {
+          traktEnrichmentStatus: {
+            runId: 'enrich-1',
+            status: 'in_progress',
+          },
+        },
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
+      const url = String(input);
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue(lastActivitiesAfter),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/watchlist')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              id: 1,
+              listed_at: '2024-01-06T00:00:00.000Z',
+              movie: {
+                ids: {
+                  slug: 'movie-2',
+                  tmdb: 102,
+                  trakt: 202,
+                },
+                title: 'Movie Two',
+                year: 2024,
+              },
+              type: 'movie',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const completedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'completed') as
+      | {
+          itemsSynced: ReturnType<typeof emptyItemsSynced>;
+          summaryMode: string;
+        }
+      | undefined;
+
+    expect(completedWrite).toMatchObject({
+      itemsSynced: {
+        episodes: 0,
+        favorites: 0,
+        lists: 0,
+        movies: 0,
+        ratings: 0,
+        shows: 0,
+        watchlistItems: 1,
+      },
+      summaryMode: 'incremental',
+    });
+    expect(listSet).toHaveBeenCalledTimes(1);
   });
 
   it('sanitizes failed worker status writes when optional diagnostics are absent', async () => {

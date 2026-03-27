@@ -49,6 +49,7 @@ const FIRESTORE_INDEX_ENTRY_LIMIT_PATTERN = /too many index entries/i;
 const TRAKT_INCREMENTAL_SCHEMA_VERSION = 1;
 
 type SyncStatusState = 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed';
+type SyncSummaryMode = 'bootstrap' | 'incremental';
 type TraktSyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
@@ -108,6 +109,7 @@ interface TraktSyncStatus {
   runId: string;
   startedAt?: FirebaseFirestore.Timestamp;
   status: SyncStatusState;
+  summaryMode?: SyncSummaryMode;
   updatedAt: FirebaseFirestore.Timestamp;
   userId: string;
 }
@@ -354,6 +356,7 @@ interface SyncResponseBody {
   runId?: string;
   startedAt?: string;
   status?: SyncStatusState;
+  summaryMode?: SyncSummaryMode;
   synced: boolean;
 }
 
@@ -509,6 +512,13 @@ const emptyEnrichmentCounts = (): EnrichmentCounts => ({
   lists: 0,
 });
 
+const getSyncSummaryMode = (
+  incrementalState?: TraktIncrementalState
+): SyncSummaryMode =>
+  !incrementalState || incrementalState.schemaVersion !== TRAKT_INCREMENTAL_SCHEMA_VERSION
+    ? 'bootstrap'
+    : 'incremental';
+
 const buildTaskDispatchOptions = ({
   scheduleDelaySeconds,
   taskId,
@@ -637,6 +647,7 @@ const serializeSyncStatus = (
     runId: syncStatus.runId,
     startedAt: toIsoString(syncStatus.startedAt),
     status: syncStatus.status,
+    summaryMode: syncStatus.summaryMode,
   };
 };
 
@@ -1665,6 +1676,7 @@ const getPreviousEnrichmentCompletedAt = (
 const createQueuedSyncStatus = (
   userId: string,
   runId: string,
+  summaryMode: SyncSummaryMode,
   previousLastSyncedAt?: FirebaseFirestore.Timestamp
 ): TraktSyncStatus => {
   const now = Timestamp.now();
@@ -1676,6 +1688,7 @@ const createQueuedSyncStatus = (
     runId,
     startedAt: now,
     status: 'queued',
+    summaryMode,
     updatedAt: now,
     userId,
   };
@@ -1709,6 +1722,7 @@ const createQueuedEnrichmentStatus = (
 const createFailureStatus = (
   userId: string,
   runId: string,
+  summaryMode: SyncSummaryMode,
   previousLastSyncedAt: FirebaseFirestore.Timestamp | undefined,
   itemsSynced: SyncStatusItems,
   attempt: number,
@@ -1744,6 +1758,7 @@ const createFailureStatus = (
     runId,
     startedAt: now,
     status,
+    summaryMode,
     updatedAt: now,
     userId,
   };
@@ -1883,6 +1898,25 @@ const buildManagedListItemsMap = (
   return mappedItems;
 };
 
+const buildAlreadyWatchedItemsMap = (
+  watchedMovies: TraktWatchedMovie[],
+  watchedShows: TraktWatchedShow[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap([
+    ...watchedMovies.map((item) => transformWatchedMovie(item)),
+    ...watchedShows.map((item) => transformWatchedShow(item)),
+  ]);
+
+const buildWatchlistItemsMap = (
+  traktWatchlist: TraktWatchlistItem[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item)));
+
+const buildFavoriteItemsMap = (
+  traktFavorites: TraktFavorite[]
+): Record<string, Record<string, unknown>> =>
+  buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item)));
+
 const buildCustomListItemsMap = (
   traktItems: TraktListItem[]
 ): Record<string, Record<string, unknown>> => {
@@ -1935,6 +1969,27 @@ const buildEpisodeTrackingDoc = (
     showId: traktShow.show.ids.tmdb.toString(),
   };
 };
+
+const buildRatingsMap = (traktRatings: TraktRating[]): Record<string, Record<string, unknown>> => {
+  const remoteRatings: Record<string, Record<string, unknown>> = {};
+
+  traktRatings.forEach((traktRating) => {
+    const transformed = transformRating(traktRating);
+    if (!transformed) {
+      return;
+    }
+
+    remoteRatings[String(transformed.id)] = transformed;
+  });
+
+  return remoteRatings;
+};
+
+const countManagedListItemsByMediaType = (
+  items: Record<string, Record<string, unknown>>,
+  mediaType: 'movie' | 'tv'
+): number =>
+  Object.values(items).filter((item) => item.media_type === mediaType).length;
 
 const countMediaTypeChanges = (mediaTypes: Array<'movie' | 'tv'>, mediaType: 'movie' | 'tv'): number =>
   mediaTypes.filter((value) => value === mediaType).length;
@@ -2059,7 +2114,7 @@ const reconcileManagedList = async (
 const reconcileEpisodeTracking = async (
   userId: string,
   traktShows: TraktWatchedShow[]
-): Promise<number> => {
+): Promise<{ changedCount: number; itemCount: number }> => {
   const db = admin.firestore();
   const collectionRef = db.collection('users').doc(userId).collection('episode_tracking');
   const existingSnapshot = await collectionRef.get();
@@ -2067,12 +2122,15 @@ const reconcileEpisodeTracking = async (
   const batch = db.batch();
   let writeCount = 0;
   let changedEpisodes = 0;
+  let importedEpisodes = 0;
 
   for (const traktShow of traktShows) {
     const remoteDoc = buildEpisodeTrackingDoc(traktShow);
     if (!remoteDoc) {
       continue;
     }
+
+    importedEpisodes += Object.keys(remoteDoc.episodes).length;
 
     const existingDoc = existingDocs.get(remoteDoc.showId);
     const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
@@ -2153,10 +2211,16 @@ const reconcileEpisodeTracking = async (
     await batch.commit();
   }
 
-  return changedEpisodes;
+  return {
+    changedCount: changedEpisodes,
+    itemCount: importedEpisodes,
+  };
 };
 
-const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Promise<number> => {
+const reconcileRatings = async (
+  userId: string,
+  traktRatings: TraktRating[]
+): Promise<{ changedCount: number; itemCount: number }> => {
   const db = admin.firestore();
   const ratingsCollection = db.collection('users').doc(userId).collection('ratings');
   const existingSnapshot = await ratingsCollection.get();
@@ -2165,16 +2229,7 @@ const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Pr
       .filter((doc) => doc.id.startsWith('movie-') || doc.id.startsWith('tv-'))
       .map((doc) => [doc.id, doc])
   );
-  const remoteRatings: Record<string, Record<string, unknown>> = {};
-
-  traktRatings.forEach((traktRating) => {
-    const transformed = transformRating(traktRating);
-    if (!transformed) {
-      return;
-    }
-
-    remoteRatings[String(transformed.id)] = transformed;
-  });
+  const remoteRatings = buildRatingsMap(traktRatings);
 
   const batch = db.batch();
   let writeCount = 0;
@@ -2207,17 +2262,21 @@ const reconcileRatings = async (userId: string, traktRatings: TraktRating[]): Pr
     await batch.commit();
   }
 
-  return changedCount;
+  return {
+    changedCount,
+    itemCount: Object.keys(remoteRatings).length,
+  };
 };
 
 const syncWatchlist = async (
   userId: string,
   traktWatchlist: TraktWatchlistItem[]
-): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
+  const remoteItems = buildWatchlistItemsMap(traktWatchlist);
   const result = await reconcileManagedList(
     userId,
     'watchlist',
-    buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item))),
+    remoteItems,
     {
       id: 'watchlist',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.watchlist,
@@ -2226,6 +2285,7 @@ const syncWatchlist = async (
 
   return {
     changedCount: result.changedCount,
+    itemCount: Object.keys(remoteItems).length,
     shouldEnrich: result.shouldEnrich,
   };
 };
@@ -2233,11 +2293,12 @@ const syncWatchlist = async (
 const syncFavorites = async (
   userId: string,
   traktFavorites: TraktFavorite[]
-): Promise<{ changedCount: number; shouldEnrich: boolean }> => {
+): Promise<{ changedCount: number; itemCount: number; shouldEnrich: boolean }> => {
+  const remoteItems = buildFavoriteItemsMap(traktFavorites);
   const result = await reconcileManagedList(
     userId,
     'favorites',
-    buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item))),
+    remoteItems,
     {
       id: 'favorites',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.favorites,
@@ -2246,6 +2307,7 @@ const syncFavorites = async (
 
   return {
     changedCount: result.changedCount,
+    itemCount: Object.keys(remoteItems).length,
     shouldEnrich: result.shouldEnrich,
   };
 };
@@ -2379,12 +2441,12 @@ const syncTraktImport = async (
   itemsSynced: SyncStatusItems;
   listsToEnrich: string[];
   nextIncrementalState: TraktIncrementalState;
+  summaryMode: SyncSummaryMode;
 }> => {
   const itemsSynced = emptyItemsSynced();
+  const summaryMode = getSyncSummaryMode(currentIncrementalState);
   const lastActivities = await getLastActivities(accessToken);
-  const bootstrap =
-    !currentIncrementalState ||
-    currentIncrementalState.schemaVersion !== TRAKT_INCREMENTAL_SCHEMA_VERSION;
+  const bootstrap = summaryMode === 'bootstrap';
   const previousActivities = currentIncrementalState?.lastActivities;
   const shouldSyncWatched =
     bootstrap ||
@@ -2407,10 +2469,7 @@ const syncTraktImport = async (
   if (shouldSyncWatched) {
     const watchedMovies = await getWatchedMovies(accessToken);
     const watchedShows = await getWatchedShows(accessToken);
-    const alreadyWatchedItems = buildManagedListItemsMap([
-      ...watchedMovies.map((item) => transformWatchedMovie(item)),
-      ...watchedShows.map((item) => transformWatchedShow(item)),
-    ]);
+    const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watchedMovies, watchedShows);
     const alreadyWatchedResult = await reconcileManagedList(
       userId,
       'already-watched',
@@ -2420,10 +2479,18 @@ const syncTraktImport = async (
         name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
       }
     );
+    const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
 
-    itemsSynced.movies = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
-    itemsSynced.shows = countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
-    itemsSynced.episodes = await reconcileEpisodeTracking(userId, watchedShows);
+    itemsSynced.movies =
+      summaryMode === 'bootstrap'
+        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
+        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
+    itemsSynced.shows =
+      summaryMode === 'bootstrap'
+        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
+        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
+    itemsSynced.episodes =
+      summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
 
     if (alreadyWatchedResult.shouldEnrich) {
       listsToEnrich.push('already-watched');
@@ -2432,13 +2499,15 @@ const syncTraktImport = async (
 
   if (shouldSyncRatings) {
     const ratings = await getRatings(accessToken);
-    itemsSynced.ratings = await reconcileRatings(userId, ratings);
+    const result = await reconcileRatings(userId, ratings);
+    itemsSynced.ratings = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
   }
 
   if (shouldSyncWatchlist) {
     const watchlist = await getWatchlist(accessToken);
     const result = await syncWatchlist(userId, watchlist);
-    itemsSynced.watchlistItems = result.changedCount;
+    itemsSynced.watchlistItems =
+      summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
     if (result.shouldEnrich) {
       listsToEnrich.push('watchlist');
     }
@@ -2447,7 +2516,7 @@ const syncTraktImport = async (
   if (shouldSyncFavorites) {
     const favorites = await getFavorites(accessToken);
     const result = await syncFavorites(userId, favorites);
-    itemsSynced.favorites = result.changedCount;
+    itemsSynced.favorites = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
     if (result.shouldEnrich) {
       listsToEnrich.push('favorites');
     }
@@ -2465,7 +2534,10 @@ const syncTraktImport = async (
       bootstrap
     );
 
-    itemsSynced.lists = customListsResult.changedCount;
+    itemsSynced.lists =
+      summaryMode === 'bootstrap'
+        ? Object.keys(customListsResult.customLists).length
+        : customListsResult.changedCount;
     customListsState = customListsResult.customLists;
     listsToEnrich.push(...customListsResult.listsToEnrich);
   }
@@ -2480,6 +2552,7 @@ const syncTraktImport = async (
       schemaVersion: TRAKT_INCREMENTAL_SCHEMA_VERSION,
       updatedAt: Timestamp.now(),
     },
+    summaryMode,
   };
 };
 
@@ -3087,7 +3160,12 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
         };
       }
 
-      const queuedStatus = createQueuedSyncStatus(userId, runRef.id, getPreviousLastSyncedAt(existingStatus));
+      const queuedStatus = createQueuedSyncStatus(
+        userId,
+        runRef.id,
+        getSyncSummaryMode(userData.traktIncrementalState),
+        getPreviousLastSyncedAt(existingStatus)
+      );
       const queuedStatusForWrite = sanitizeSyncStatusForWrite(queuedStatus);
       transaction.set(runRef, queuedStatusForWrite);
       transaction.set(
@@ -3141,6 +3219,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
       const failedStatus = createFailureStatus(
         userId,
         runId,
+        transactionResult.status.summaryMode ?? getSyncSummaryMode(undefined),
         getPreviousLastSyncedAt(transactionResult.status),
         emptyItemsSynced(),
         0,
@@ -3454,6 +3533,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
     const currentAttempt = typeof currentSyncStatus?.attempt === 'number' ? currentSyncStatus.attempt : 0;
     const attempt = Math.max(currentAttempt, request.retryCount) + 1;
     const previousLastSyncedAt = getPreviousLastSyncedAt(currentSyncStatus);
+    const summaryMode = currentSyncStatus?.summaryMode ?? getSyncSummaryMode(userData.traktIncrementalState);
 
     if (!userData.traktConnected) {
       await writeSyncStatus(
@@ -3462,6 +3542,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         createFailureStatus(
           userId,
           runId,
+          summaryMode,
           previousLastSyncedAt,
           emptyItemsSynced(),
           attempt,
@@ -3490,6 +3571,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
       runId,
       startedAt,
       status: 'in_progress',
+      summaryMode,
       updatedAt: startedAt,
       userId,
     });
@@ -3497,7 +3579,8 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
     try {
       const accessToken = await maybeRefreshAccessToken(userId, userData);
       const syncResult = await syncTraktImport(userId, accessToken, userData.traktIncrementalState);
-      const { itemsSynced, listsToEnrich, nextIncrementalState } = syncResult;
+      const { itemsSynced, listsToEnrich, nextIncrementalState, summaryMode: completedSummaryMode } =
+        syncResult;
 
       console.info('[TraktSync] Completed sync import', {
         itemsSynced,
@@ -3536,6 +3619,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         runId,
         startedAt,
         status: 'completed',
+        summaryMode: completedSummaryMode,
         updatedAt: completedAt,
         userId,
       }, nextIncrementalState);
@@ -3558,6 +3642,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
           createFailureStatus(
             userId,
             runId,
+            summaryMode,
             previousLastSyncedAt,
             emptyItemsSynced(),
             attempt,
@@ -3598,6 +3683,7 @@ export const runTraktSync = onTaskDispatched<SyncTaskPayload>(
         createFailureStatus(
           userId,
           runId,
+          summaryMode,
           previousLastSyncedAt,
           emptyItemsSynced(),
           attempt,

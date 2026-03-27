@@ -12,6 +12,8 @@ export interface TraktSyncItems {
   watchlistItems: number;
 }
 
+export type SyncSummaryMode = 'bootstrap' | 'incremental';
+
 export type SyncErrorCategory =
   | 'auth_invalid'
   | 'internal'
@@ -25,6 +27,7 @@ export interface SyncStatus {
   connected: boolean;
   synced: boolean;
   status?: 'idle' | 'queued' | 'in_progress' | 'retrying' | 'completed' | 'failed';
+  summaryMode?: SyncSummaryMode;
   runId?: string;
   attempt?: number;
   maxAttempts?: number;
