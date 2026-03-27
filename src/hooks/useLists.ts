@@ -440,9 +440,37 @@ export const useCreateList = () => {
       }
       return listService.createList(name, description);
     },
-    onSuccess: () => {
+    onSuccess: (listId, { name, description }) => {
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: ['lists', userId] });
+        const listsQueryKey = ['lists', userId] as const;
+        const previousLists = queryClient.getQueryData<UserList[]>(listsQueryKey);
+        const listsQueryState = queryClient.getQueryState<UserList[]>(listsQueryKey);
+        const hasHydratedListCache =
+          listsQueryState?.status === 'success' && previousLists !== undefined;
+
+        if (hasHydratedListCache) {
+          const createdAt = Date.now();
+          const trimmedDescription = description?.trim();
+
+          queryClient.setQueryData<UserList[]>(listsQueryKey, (oldLists) => {
+            if (!oldLists || oldLists.some((list) => list.id === listId)) {
+              return oldLists;
+            }
+
+            return [
+              ...oldLists,
+              {
+                id: listId,
+                name,
+                description: trimmedDescription ? trimmedDescription : undefined,
+                items: {},
+                createdAt,
+              },
+            ];
+          });
+        }
+
+        queryClient.invalidateQueries({ queryKey: listsQueryKey });
       }
     },
   });

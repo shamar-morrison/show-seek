@@ -4,6 +4,7 @@ import React from 'react';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 
 const mockAddToList = jest.fn();
+const mockCreateList = jest.fn();
 const mockDeleteList = jest.fn();
 const mockGetUserLists = jest.fn();
 const mockFetchPreferences = jest.fn();
@@ -37,6 +38,7 @@ jest.mock('@/src/firebase/config', () => ({
 jest.mock('@/src/services/ListService', () => ({
   listService: {
     addToList: (...args: any[]) => mockAddToList(...args),
+    createList: (...args: any[]) => mockCreateList(...args),
     deleteList: (...args: any[]) => mockDeleteList(...args),
     getUserLists: (...args: any[]) => mockGetUserLists(...args),
     removeFromList: (...args: any[]) => mockRemoveFromList(...args),
@@ -54,6 +56,7 @@ jest.mock('@/src/services/PreferencesService', () => ({
 import {
   PremiumLimitError,
   useAddToList,
+  useCreateList,
   useDeleteList,
   useLists,
   useMediaLists,
@@ -102,6 +105,7 @@ describe('useAddToList', () => {
     jest.clearAllMocks();
     mockAuthState.user = { uid: 'test-user-id' };
     mockAddToList.mockResolvedValue(undefined);
+    mockCreateList.mockResolvedValue('created-list');
     mockDeleteList.mockResolvedValue(undefined);
     mockGetUserLists.mockResolvedValue([]);
     mockFetchPreferences.mockResolvedValue({});
@@ -199,6 +203,78 @@ describe('useAddToList', () => {
       expect(invalidateSpy).toHaveBeenCalledWith({
         queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, 'test-user-id'],
         refetchType: 'active',
+      });
+    });
+  });
+});
+
+describe('useCreateList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthState.user = { uid: 'test-user-id' };
+    mockCreateList.mockResolvedValue('created-list');
+    mockPremiumState.isPremium = false;
+    mockPremiumState.isLoading = false;
+  });
+
+  it('seeds the hydrated lists cache and still invalidates the lists query', async () => {
+    const client = createQueryClient();
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    client.setQueryData(['lists', 'test-user-id'], [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 1,
+      },
+      {
+        id: 'existing-custom-list',
+        name: 'Existing Custom List',
+        items: {},
+        createdAt: 2,
+      },
+    ]);
+
+    const { result } = renderHook(() => useCreateList(), {
+      wrapper: createWrapper(client),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          name: 'Fresh Picks',
+          description: 'Weekend queue',
+        })
+      ).resolves.toBe('created-list');
+    });
+
+    expect(mockCreateList).toHaveBeenCalledWith('Fresh Picks', 'Weekend queue');
+    expect(client.getQueryData(['lists', 'test-user-id'])).toEqual([
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 1,
+      },
+      {
+        id: 'existing-custom-list',
+        name: 'Existing Custom List',
+        items: {},
+        createdAt: 2,
+      },
+      {
+        id: 'created-list',
+        name: 'Fresh Picks',
+        description: 'Weekend queue',
+        items: {},
+        createdAt: expect.any(Number),
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ['lists', 'test-user-id'],
       });
     });
   });

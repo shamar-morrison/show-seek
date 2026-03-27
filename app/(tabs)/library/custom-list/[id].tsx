@@ -49,7 +49,7 @@ const HEADER_FOOTER_CHROME_HEIGHT = 150;
 export default function CustomListDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: lists, isLoading, isError, error, refetch } = useLists();
+  const { data: lists, isLoading, isFetching, isError, error, refetch } = useLists();
   const deleteMutation = useDeleteList();
   const removeMutation = useRemoveFromList();
   const { t } = useTranslation();
@@ -341,10 +341,10 @@ export default function CustomListDetailScreen() {
 
   // Navigate back if list is deleted
   useEffect(() => {
-    if (!isLoading && lists && !list) {
+    if (!isLoading && !isFetching && !isError && !list) {
       router.replace('/(tabs)/library/custom-lists');
     }
-  }, [isLoading, lists, list, router]);
+  }, [isError, isFetching, isLoading, list, router]);
 
   // Track if initial mount to avoid scrolling on first render
   const isInitialMount = useRef(true);

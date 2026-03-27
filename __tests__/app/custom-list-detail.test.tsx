@@ -259,6 +259,7 @@ describe('CustomListDetailScreen', () => {
     mockUseLists.mockReturnValue({
       data: [baseList],
       isLoading: false,
+      isFetching: false,
       isError: false,
       error: null,
       refetch: mockRefetch,
@@ -319,5 +320,35 @@ describe('CustomListDetailScreen', () => {
     });
 
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not redirect while the lists query is still refetching', () => {
+    mockUseLists.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetching: true,
+      isError: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    render(<CustomListDetailScreen />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('redirects to custom lists once the query has settled and the list is still missing', () => {
+    mockUseLists.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    render(<CustomListDetailScreen />);
+
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/library/custom-lists');
   });
 });

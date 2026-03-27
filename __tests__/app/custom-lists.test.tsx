@@ -9,6 +9,7 @@ const mockUseLists = jest.fn();
 const mockUsePremium = jest.fn();
 const mockUseHeaderSearch = jest.fn();
 let capturedFlashListProps: any = null;
+let latestCreateListModalProps: any = null;
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -51,9 +52,16 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('@/src/components/CreateListModal', () => {
   const React = require('react');
+  const MockCreateListModal = React.forwardRef((props: any, _ref: any) => {
+    latestCreateListModalProps = props;
+    return null;
+  });
+
+  MockCreateListModal.displayName = 'MockCreateListModal';
+
   return {
     __esModule: true,
-    default: React.forwardRef(() => null),
+    default: MockCreateListModal,
   };
 });
 
@@ -151,6 +159,7 @@ describe('CustomListsScreen search', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedFlashListProps = null;
+    latestCreateListModalProps = null;
     mockRefetch.mockReset().mockResolvedValue(undefined);
 
     mockUsePremium.mockReturnValue({
@@ -195,6 +204,19 @@ describe('CustomListsScreen search', () => {
     });
 
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates once to the new list detail screen after create success', async () => {
+    render(<CustomListsScreen />);
+
+    expect(latestCreateListModalProps?.onSuccess).toBeDefined();
+
+    await act(async () => {
+      await latestCreateListModalProps?.onSuccess?.('my-new-list', 'My New List');
+    });
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/(tabs)/library/custom-list/my-new-list');
   });
 
   it('renders filtered custom lists from useHeaderSearch results', () => {
