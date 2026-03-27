@@ -726,11 +726,18 @@ describe('Trakt sync Firestore sanitization', () => {
       id: 'already-watched',
       items: {
         'movie-101': {
-          addedAt: MockTimestamp.fromMillis(new Date('2024-01-01T00:00:00.000Z').getTime()),
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-02T00:00:00.000Z').getTime()),
           id: 101,
           media_type: 'movie',
           release_date: '2024-01-01',
           title: 'Movie One',
+        },
+        'movie-999': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-03-01T00:00:00.000Z').getTime()),
+          id: 999,
+          media_type: 'movie',
+          release_date: '2023-01-01',
+          title: 'Local Movie Only',
         },
         'tv-201': {
           addedAt: MockTimestamp.fromMillis(new Date('2024-02-03T00:00:00.000Z').getTime()),
@@ -741,7 +748,7 @@ describe('Trakt sync Firestore sanitization', () => {
         },
       },
       metadata: {
-        itemCount: 2,
+        itemCount: 3,
         lastUpdated: MockTimestamp.now(),
         needsEnrichment: false,
       },
@@ -751,15 +758,22 @@ describe('Trakt sync Firestore sanitization', () => {
       id: 'watchlist',
       items: {
         'movie-102': {
-          addedAt: MockTimestamp.fromMillis(new Date('2024-01-02T00:00:00.000Z').getTime()),
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-03T00:00:00.000Z').getTime()),
           id: 102,
           media_type: 'movie',
           release_date: '2024-01-01',
           title: 'Movie Two',
         },
+        'tv-909': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-03-02T00:00:00.000Z').getTime()),
+          first_air_date: '2021-01-01',
+          id: 909,
+          media_type: 'tv',
+          name: 'Local Watchlist Show',
+        },
       },
       metadata: {
-        itemCount: 1,
+        itemCount: 2,
         lastUpdated: MockTimestamp.now(),
         needsEnrichment: false,
       },
@@ -769,14 +783,20 @@ describe('Trakt sync Firestore sanitization', () => {
       id: 'favorites',
       items: {
         'tv-202': {
-          addedAt: MockTimestamp.fromMillis(new Date('2024-01-04T00:00:00.000Z').getTime()),
+          addedAt: MockTimestamp.fromMillis(new Date('2024-01-05T00:00:00.000Z').getTime()),
           id: 202,
           media_type: 'tv',
           title: 'Favorite Show',
         },
+        'movie-303': {
+          addedAt: MockTimestamp.fromMillis(new Date('2024-03-03T00:00:00.000Z').getTime()),
+          id: 303,
+          media_type: 'movie',
+          title: 'Local Favorite Movie',
+        },
       },
       metadata: {
-        itemCount: 1,
+        itemCount: 2,
         lastUpdated: MockTimestamp.now(),
         needsEnrichment: false,
       },
@@ -838,12 +858,28 @@ describe('Trakt sync Firestore sanitization', () => {
               },
               '1_2': {
                 watched: true,
-                watchedAt: MockTimestamp.fromMillis(new Date('2024-02-02T00:00:00.000Z').getTime()),
+                watchedAt: MockTimestamp.fromMillis(new Date('2024-02-03T00:00:00.000Z').getTime()),
+              },
+              '1_3': {
+                watched: true,
+                watchedAt: MockTimestamp.fromMillis(new Date('2024-02-04T00:00:00.000Z').getTime()),
               },
             },
             metadata: {
               lastUpdated: MockTimestamp.now(),
               tvShowName: 'Show One',
+            },
+          }),
+          createDocSnapshot('users/user-1/episode_tracking/999', {
+            episodes: {
+              '1_1': {
+                watched: true,
+                watchedAt: MockTimestamp.fromMillis(new Date('2024-03-04T00:00:00.000Z').getTime()),
+              },
+            },
+            metadata: {
+              lastUpdated: MockTimestamp.now(),
+              tvShowName: 'Local Only Show',
             },
           }),
         ])
@@ -857,11 +893,18 @@ describe('Trakt sync Firestore sanitization', () => {
       get: jest.fn().mockResolvedValue(
         createCollectionSnapshot([
           createDocSnapshot('users/user-1/ratings/movie-101', {
-            id: 'movie-101',
-            media_type: 'movie',
-            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-08T00:00:00.000Z').getTime()),
+            id: '101',
+            mediaType: 'movie',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-09T00:00:00.000Z').getTime()),
             rating: 8,
             title: 'Movie One',
+          }),
+          createDocSnapshot('users/user-1/ratings/tv-909', {
+            id: '909',
+            mediaType: 'tv',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-03-05T00:00:00.000Z').getTime()),
+            rating: 9,
+            title: 'Local TV Rating',
           }),
         ])
       ),
@@ -1160,7 +1203,240 @@ describe('Trakt sync Firestore sanitization', () => {
       },
       summaryMode: 'bootstrap',
     });
+    expect(batchDelete).not.toHaveBeenCalled();
     expect(listSet).not.toHaveBeenCalled();
+  });
+
+  it('preserves local-only ratings and only overwrites overlapping Trakt ratings when Trakt is newer', async () => {
+    const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const batchDelete = jest.fn();
+    const batchCommit = jest.fn().mockResolvedValue(undefined);
+    const lastActivitiesBefore = {
+      episodes: {
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      favorites: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+      lists: {
+        updated_at: '2024-01-05T00:00:00.000Z',
+      },
+      movies: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-01T00:00:00.000Z',
+      },
+      shows: {
+        rated_at: '2024-01-02T00:00:00.000Z',
+        watched_at: '2024-01-03T00:00:00.000Z',
+      },
+      watchlist: {
+        updated_at: '2024-01-04T00:00:00.000Z',
+      },
+    };
+    const lastActivitiesAfter = {
+      ...lastActivitiesBefore,
+      movies: {
+        ...lastActivitiesBefore.movies,
+        rated_at: '2024-01-06T00:00:00.000Z',
+      },
+      shows: {
+        ...lastActivitiesBefore.shows,
+        rated_at: '2024-01-05T00:00:00.000Z',
+      },
+    };
+    const ratingsCollection = {
+      doc: jest.fn((id: string) => ({
+        id,
+        path: `users/user-1/ratings/${id}`,
+      })),
+      get: jest.fn().mockResolvedValue(
+        createCollectionSnapshot([
+          createDocSnapshot('users/user-1/ratings/movie-101', {
+            id: '101',
+            mediaType: 'movie',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+            rating: 9,
+            title: 'Movie One',
+          }),
+          createDocSnapshot('users/user-1/ratings/movie-303', {
+            id: '303',
+            mediaType: 'movie',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-07T00:00:00.000Z').getTime()),
+            rating: 7,
+            title: 'Local Only Movie',
+          }),
+          createDocSnapshot('users/user-1/ratings/tv-202', {
+            id: '202',
+            mediaType: 'tv',
+            ratedAt: MockTimestamp.fromMillis(new Date('2024-01-03T00:00:00.000Z').getTime()),
+            rating: 6,
+            title: 'Show Two',
+          }),
+        ])
+      ),
+    };
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name === 'traktSyncRuns') {
+          return {
+            doc: jest.fn((id: string) => ({
+              id,
+              path: `users/user-1/traktSyncRuns/${id}`,
+            })),
+          };
+        }
+
+        if (name === 'ratings') {
+          return ratingsCollection;
+        }
+
+        throw new Error(`Unexpected subcollection ${name}`);
+      }),
+      get: jest.fn().mockResolvedValue({
+        data: () => ({
+          traktAccessToken: 'token',
+          traktConnected: true,
+          traktIncrementalState: {
+            bootstrapCompletedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+            customLists: {},
+            lastActivities: lastActivitiesBefore,
+            schemaVersion: 1,
+            updatedAt: MockTimestamp.fromMillis(new Date('2024-01-06T00:00:00.000Z').getTime()),
+          },
+          traktSyncStatus: {
+            runId: 'run-1',
+          },
+          traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+        }),
+        exists: true,
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      batch: jest.fn(() => ({
+        commit: batchCommit,
+        delete: batchDelete,
+        set: batchSet,
+      })),
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+    }));
+
+    (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
+      const url = String(input);
+
+      if (url.endsWith('/sync/last_activities')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue(lastActivitiesAfter),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      if (url.endsWith('/sync/ratings')) {
+        return Promise.resolve({
+          json: jest.fn().mockResolvedValue([
+            {
+              movie: {
+                ids: {
+                  slug: 'movie-1',
+                  tmdb: 101,
+                  trakt: 201,
+                },
+                title: 'Movie One',
+                year: 2024,
+              },
+              rated_at: '2024-01-05T00:00:00.000Z',
+              rating: 8,
+              type: 'movie',
+            },
+            {
+              rated_at: '2024-01-04T00:00:00.000Z',
+              rating: 8,
+              show: {
+                ids: {
+                  slug: 'show-2',
+                  tmdb: 202,
+                  trakt: 302,
+                },
+                title: 'Show Two',
+                year: 2022,
+              },
+              type: 'show',
+            },
+          ]),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    });
+
+    await expect(
+      (runTraktSync as any)({
+        data: { runId: 'run-1', userId: 'user-1' },
+        retryCount: 0,
+        retryReason: undefined,
+      })
+    ).resolves.toBeUndefined();
+
+    const ratingWrites = batchSet.mock.calls
+      .filter(([ref]) => typeof ref?.path === 'string' && ref.path.startsWith('users/user-1/ratings/'))
+      .map((call) => {
+        const [ref, data, options] = call as unknown as [
+          { path: string },
+          Record<string, unknown>,
+          { merge: boolean } | undefined,
+        ];
+
+        return {
+          data,
+          options,
+          path: ref.path,
+        };
+      });
+
+    expect(ratingWrites).toHaveLength(1);
+    expect(ratingWrites[0]?.path).toBe('users/user-1/ratings/tv-202');
+    expect(ratingWrites[0]?.options).toEqual({ merge: false });
+    expect(ratingWrites[0]?.data).toMatchObject({
+      id: '202',
+      mediaType: 'tv',
+      rating: 8,
+      title: 'Show Two',
+    });
+    expect((ratingWrites[0]?.data?.ratedAt as MockTimestamp).toMillis()).toBe(
+      new Date('2024-01-04T00:00:00.000Z').getTime()
+    );
+    expect(ratingWrites[0]?.data).not.toHaveProperty('media_type');
+    expect(ratingWrites.some((write) => write.path === 'users/user-1/ratings/movie-101')).toBe(false);
+    expect(ratingWrites.some((write) => write.path === 'users/user-1/ratings/movie-303')).toBe(false);
+    expect(batchDelete).not.toHaveBeenCalled();
+
+    const completedWrite = batchSet.mock.calls
+      .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+      .find((data) => data?.status === 'completed') as
+      | {
+          itemsSynced: ReturnType<typeof emptyItemsSynced>;
+          summaryMode: string;
+        }
+      | undefined;
+
+    expect(completedWrite).toMatchObject({
+      itemsSynced: {
+        ratings: 1,
+      },
+      summaryMode: 'incremental',
+    });
   });
 
   it('reports zero changed items for unchanged incremental syncs', async () => {

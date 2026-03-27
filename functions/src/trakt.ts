@@ -1284,6 +1284,66 @@ const hasManagedFieldChanges = (
 ): boolean =>
   Object.entries(remoteValue).some(([key, value]) => !areValuesEqual(existingValue?.[key], value));
 
+const getComparableMillis = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue)) {
+      return numericValue;
+    }
+
+    const parsedDate = Date.parse(value);
+    return Number.isNaN(parsedDate) ? null : parsedDate;
+  }
+
+  if (isTimestampLike(value)) {
+    const millis = value.toMillis();
+    return Number.isFinite(millis) ? millis : null;
+  }
+
+  if (
+    value &&
+    typeof value === 'object' &&
+    'toDate' in value &&
+    typeof (value as { toDate?: unknown }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate();
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date.getTime() : null;
+  }
+
+  return null;
+};
+
+const shouldApplyRemoteManagedValue = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>,
+  recencyField?: string
+): boolean => {
+  if (!existingValue) {
+    return true;
+  }
+
+  if (!recencyField) {
+    return hasManagedFieldChanges(existingValue, remoteValue);
+  }
+
+  const existingMillis = getComparableMillis(existingValue[recencyField]);
+  const remoteMillis = getComparableMillis(remoteValue[recencyField]);
+
+  if (remoteMillis !== null && (existingMillis === null || remoteMillis > existingMillis)) {
+    return true;
+  }
+
+  if (remoteMillis !== null && existingMillis !== null && remoteMillis < existingMillis) {
+    return false;
+  }
+
+  return hasManagedFieldChanges(existingValue, remoteValue);
+};
+
 const mergeManagedValue = (
   existingValue: Record<string, unknown> | undefined,
   remoteValue: Record<string, unknown>
@@ -1416,8 +1476,9 @@ const transformRating = (traktRating: TraktRating): Record<string, unknown> | nu
   }
 
   return {
-    id: `${mediaType}-${tmdbId}`,
-    media_type: mediaType,
+    docId: `${mediaType}-${tmdbId}`,
+    id: String(tmdbId),
+    mediaType,
     ratedAt: Timestamp.fromDate(new Date(traktRating.rated_at)),
     rating: traktRating.rating,
     title,
@@ -1985,7 +2046,13 @@ const buildRatingsMap = (traktRatings: TraktRating[]): Record<string, Record<str
       return;
     }
 
-    remoteRatings[String(transformed.id)] = transformed;
+    const docId = transformed.docId;
+    if (typeof docId !== 'string' || docId.trim() === '') {
+      return;
+    }
+
+    const { docId: _docId, ...ratingData } = transformed;
+    remoteRatings[docId] = ratingData;
   });
 
   return remoteRatings;
@@ -2000,12 +2067,18 @@ const countManagedListItemsByMediaType = (
 const countMediaTypeChanges = (mediaTypes: Array<'movie' | 'tv'>, mediaType: 'movie' | 'tv'): number =>
   mediaTypes.filter((value) => value === mediaType).length;
 
+interface ReconcileManagedListOptions {
+  preserveLocalItems?: boolean;
+  recencyField?: string;
+}
+
 const reconcileManagedList = async (
   userId: string,
   listId: string,
   remoteItems: Record<string, Record<string, unknown>>,
   baseData: Record<string, unknown>,
-  existingSnapshot?: FirebaseFirestore.DocumentSnapshot
+  existingSnapshot?: FirebaseFirestore.DocumentSnapshot,
+  options: ReconcileManagedListOptions = {}
 ): Promise<{
   changedCount: number;
   changedMediaTypes: Array<'movie' | 'tv'>;
@@ -2024,6 +2097,7 @@ const reconcileManagedList = async (
   const changedMediaTypes: Array<'movie' | 'tv'> = [];
   let changedCount = 0;
   let addedOrUpdatedCount = 0;
+  const preserveLocalItems = options.preserveLocalItems ?? false;
 
   Object.entries(remoteItems).forEach(([remoteKey, remoteItem]) => {
     const mediaType = remoteItem.media_type;
@@ -2036,13 +2110,18 @@ const reconcileManagedList = async (
     const existingItem = existingItems[remoteKey];
     const legacyKey = getLegacyListItemKey(mediaId);
     const hasLegacyKey = Boolean(existingItemsRaw && legacyKey !== remoteKey && legacyKey in existingItemsRaw);
-    const itemChanged = !existingItem || hasLegacyKey || hasManagedFieldChanges(existingItem, remoteItem);
+    const shouldApplyRemote = shouldApplyRemoteManagedValue(existingItem, remoteItem, options.recencyField);
+    const nextItem =
+      !existingItem || shouldApplyRemote ? mergeManagedValue(existingItem, remoteItem) : existingItem;
+    const shouldWriteNormalizedItem = !existingItem || hasLegacyKey || shouldApplyRemote;
 
-    if (itemChanged) {
-      itemChanges[remoteKey] = mergeManagedValue(existingItem, remoteItem);
+    if (shouldWriteNormalizedItem) {
+      itemChanges[remoteKey] = nextItem;
       changedMediaTypes.push(mediaType);
       changedCount += 1;
-      addedOrUpdatedCount += 1;
+      if (!existingItem || shouldApplyRemote) {
+        addedOrUpdatedCount += 1;
+      }
     }
 
     if (hasLegacyKey) {
@@ -2050,34 +2129,41 @@ const reconcileManagedList = async (
     }
   });
 
-  Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
-    if (remoteItems[existingKey]) {
-      return;
-    }
-
-    itemChanges[existingKey] = FieldValue.delete();
-
-    const mediaType = existingItem.media_type;
-    const mediaId = existingItem.id;
-    if (isListMediaType(mediaType)) {
-      changedMediaTypes.push(mediaType);
-    }
-    if (typeof mediaId === 'number' && existingItemsRaw) {
-      const legacyKey = getLegacyListItemKey(mediaId);
-      if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
-        itemChanges[legacyKey] = FieldValue.delete();
+  if (!preserveLocalItems) {
+    Object.entries(existingItems).forEach(([existingKey, existingItem]) => {
+      if (remoteItems[existingKey]) {
+        return;
       }
-    }
 
-    changedCount += 1;
-  });
+      itemChanges[existingKey] = FieldValue.delete();
+
+      const mediaType = existingItem.media_type;
+      const mediaId = existingItem.id;
+      if (isListMediaType(mediaType)) {
+        changedMediaTypes.push(mediaType);
+      }
+      if (typeof mediaId === 'number' && existingItemsRaw) {
+        const legacyKey = getLegacyListItemKey(mediaId);
+        if (legacyKey !== existingKey && legacyKey in existingItemsRaw) {
+          itemChanges[legacyKey] = FieldValue.delete();
+        }
+      }
+
+      changedCount += 1;
+    });
+  }
 
   const existingMetadata = isPlainObject(existingData.metadata)
     ? (existingData.metadata as Record<string, unknown>)
     : {};
   const nextNeedsEnrichment = Boolean(existingMetadata.needsEnrichment) || addedOrUpdatedCount > 0;
   const baseDataChanged = hasManagedFieldChanges(existingData, baseData);
-  const shouldWrite = !snapshot.exists || changedCount > 0 || baseDataChanged;
+  const nextItemCount = preserveLocalItems
+    ? new Set([...Object.keys(existingItems), ...Object.keys(remoteItems)]).size
+    : Object.keys(remoteItems).length;
+  const metadataChanged =
+    existingMetadata.itemCount !== nextItemCount || Boolean(existingMetadata.needsEnrichment) !== nextNeedsEnrichment;
+  const shouldWrite = !snapshot.exists || changedCount > 0 || baseDataChanged || metadataChanged;
 
   if (!shouldWrite) {
     return {
@@ -2099,7 +2185,7 @@ const reconcileManagedList = async (
             : undefined,
       metadata: {
         ...existingMetadata,
-        itemCount: Object.keys(remoteItems).length,
+        itemCount: nextItemCount,
         lastUpdated: Timestamp.now(),
         needsEnrichment: nextNeedsEnrichment,
       },
@@ -2151,21 +2237,11 @@ const reconcileEpisodeTracking = async (
         ? (existingEpisodes[episodeKey] as Record<string, unknown>)
         : undefined;
 
-      if (!existingEpisode || hasManagedFieldChanges(existingEpisode, remoteEpisode)) {
+      if (shouldApplyRemoteManagedValue(existingEpisode, remoteEpisode, 'watchedAt')) {
         episodeChanges[episodeKey] = mergeManagedValue(existingEpisode, remoteEpisode);
         changedEpisodes += 1;
         docChanged = true;
       }
-    });
-
-    Object.keys(existingEpisodes).forEach((episodeKey) => {
-      if (remoteDoc.episodes[episodeKey]) {
-        return;
-      }
-
-      episodeChanges[episodeKey] = FieldValue.delete();
-      changedEpisodes += 1;
-      docChanged = true;
     });
 
     const existingMetadata = isPlainObject(existingData.metadata)
@@ -2203,16 +2279,6 @@ const reconcileEpisodeTracking = async (
     existingDocs.delete(remoteDoc.showId);
   }
 
-  existingDocs.forEach((doc) => {
-    const existingData = doc.data() as Record<string, unknown>;
-    const existingEpisodes = isPlainObject(existingData.episodes)
-      ? (existingData.episodes as Record<string, unknown>)
-      : {};
-    changedEpisodes += Object.keys(existingEpisodes).length;
-    batch.delete(doc.ref);
-    writeCount += 1;
-  });
-
   if (writeCount > 0) {
     await batch.commit();
   }
@@ -2245,7 +2311,7 @@ const reconcileRatings = async (
     const existingDoc = existingDocs.get(docId);
     const existingData = (existingDoc?.data() ?? {}) as Record<string, unknown>;
 
-    if (!existingDoc || hasManagedFieldChanges(existingData, remoteRating)) {
+    if (shouldApplyRemoteManagedValue(existingDoc ? existingData : undefined, remoteRating, 'ratedAt')) {
       batch.set(
         ratingsCollection.doc(docId),
         mergeManagedValue(existingDoc ? existingData : undefined, remoteRating),
@@ -2256,12 +2322,6 @@ const reconcileRatings = async (
     }
 
     existingDocs.delete(docId);
-  });
-
-  existingDocs.forEach((doc) => {
-    batch.delete(doc.ref);
-    changedCount += 1;
-    writeCount += 1;
   });
 
   if (writeCount > 0) {
@@ -2286,6 +2346,11 @@ const syncWatchlist = async (
     {
       id: 'watchlist',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.watchlist,
+    },
+    undefined,
+    {
+      preserveLocalItems: true,
+      recencyField: 'addedAt',
     }
   );
 
@@ -2308,6 +2373,11 @@ const syncFavorites = async (
     {
       id: 'favorites',
       name: TRAKT_MANAGED_DEFAULT_LIST_NAMES.favorites,
+    },
+    undefined,
+    {
+      preserveLocalItems: true,
+      recencyField: 'addedAt',
     }
   );
 
@@ -2409,7 +2479,11 @@ const reconcileCustomLists = async (
         traktId: traktList.ids.trakt,
         updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
       },
-      localTraktLists.get(listId)
+      localTraktLists.get(listId),
+      {
+        preserveLocalItems: false,
+        recencyField: 'addedAt',
+      }
     );
 
     if (result.didWrite) {
@@ -2483,6 +2557,11 @@ const syncTraktImport = async (
       {
         id: 'already-watched',
         name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
+      },
+      undefined,
+      {
+        preserveLocalItems: true,
+        recencyField: 'addedAt',
       }
     );
     const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
