@@ -20,6 +20,38 @@
 
 ShowSeek is a modern, feature-rich mobile application built with React Native and Expo that allows users to discover, search, and track movies and TV shows. Powered by The Movie Database (TMDB) API and Firebase, ShowSeek provides a seamless experience for entertainment enthusiasts to manage their watchlists, track episode progress, rate content, and receive release notifications.
 
+## Environment
+
+ShowSeek uses two different environment-variable paths:
+
+- App runtime config lives in the repo root `.env` file. Expo reads `EXPO_PUBLIC_*` variables from this file for the mobile app.
+- Firebase Functions secrets such as `TRAKT_CLIENT_SECRET` and `TMDB_API_KEY` are managed with `firebase functions:secrets:set`. These are not stored in repo `.env` files.
+- Firebase Functions non-secret runtime variables can be supplied through project-specific files named `functions/.env.<project-id>`. For this project, Firebase CLI loads `functions/.env.showseek-app-2025` during deploys.
+
+Use the root `.env` for app-facing values such as:
+
+```bash
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=
+EXPO_PUBLIC_TRAKT_BACKEND_URL=
+EXPO_PUBLIC_TRAKT_CLIENT_ID=
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=
+EXPO_PUBLIC_OMDB_API_KEY=
+```
+
+Use `functions/.env.showseek-app-2025` only for non-secret Firebase Functions runtime config that should be applied on deploy, for example:
+
+```bash
+TRAKT_SYNC_BYPASS_UIDS=uid1,uid2
+TRAKT_ALLOWED_ORIGINS=https://example.com,https://staging.example.com
+```
+
+Notes:
+
+- If a functions `.env.<project-id>` file exists only on your machine and is not committed, deploys from your machine will keep using it, but deploys from another machine or CI will not.
+- If a value must always be present on future deploys across environments, commit the project-specific functions `.env` file or manage the deploy source another way.
+- Do not put secrets in `functions/.env.<project-id>` if they belong in Firebase Functions secrets.
+
 ## Features
 
 ### 🎬 **Discover & Search**
