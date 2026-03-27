@@ -39,6 +39,7 @@ const TRAKT_OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const CORS_ALLOW_HEADERS = 'Authorization, Content-Type';
 const CORS_ALLOW_METHODS = 'GET, POST, OPTIONS';
 const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
+const DEV_SYNC_BYPASS_HEADER = 'x-showseek-dev-sync';
 const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
 const TRAKT_SYNC_RECONNECT_MESSAGE =
@@ -561,6 +562,11 @@ const applyCorsHeaders = (request: Request, response: ExpressResponse): void => 
   response.setHeader('Access-Control-Allow-Headers', CORS_ALLOW_HEADERS);
   response.setHeader('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
 };
+
+const isFunctionsEmulator = (): boolean => process.env.FUNCTIONS_EMULATOR === 'true';
+
+const shouldBypassManualSyncCooldown = (request: Request): boolean =>
+  isFunctionsEmulator() && request.header(DEV_SYNC_BYPASS_HEADER) === 'true';
 
 const sendCorsPreflight = (request: Request, response: ExpressResponse): void => {
   applyCorsHeaders(request, response);
@@ -3130,6 +3136,7 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
   try {
     const decodedToken = await verifyUser(request);
     const userId = decodedToken.uid;
+    const bypassManualCooldown = shouldBypassManualSyncCooldown(request);
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const runRef = userRef.collection('traktSyncRuns').doc();
@@ -3151,13 +3158,15 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
         };
       }
 
-      const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
-      if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
-        return {
-          kind: 'rate_limited' as const,
-          nextAllowedSyncAt,
-          userData,
-        };
+      if (!bypassManualCooldown) {
+        const nextAllowedSyncAt = getManualSyncCooldownTimestamp(existingStatus);
+        if (nextAllowedSyncAt instanceof Timestamp && nextAllowedSyncAt.toMillis() > Date.now()) {
+          return {
+            kind: 'rate_limited' as const,
+            nextAllowedSyncAt,
+            userData,
+          };
+        }
       }
 
       const queuedStatus = createQueuedSyncStatus(

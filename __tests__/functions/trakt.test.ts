@@ -388,6 +388,91 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
+  it('bypasses the manual sync cooldown in the functions emulator when the dev header is present', async () => {
+    const originalFunctionsEmulator = process.env.FUNCTIONS_EMULATOR;
+    process.env.FUNCTIONS_EMULATOR = 'true';
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'completed-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/user-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    try {
+      await (traktApi as any)(
+        {
+          body: {},
+          header: (name: string) => {
+            const normalized = name.toLowerCase();
+            if (normalized === 'authorization') return 'Bearer token';
+            if (normalized === 'x-showseek-dev-sync') return 'true';
+            return undefined;
+          },
+          method: 'POST',
+          path: '/sync',
+        },
+        response
+      );
+    } finally {
+      if (originalFunctionsEmulator === undefined) {
+        delete process.env.FUNCTIONS_EMULATOR;
+      } else {
+        process.env.FUNCTIONS_EMULATOR = originalFunctionsEmulator;
+      }
+    }
+
+    expect(transactionSet).toHaveBeenCalledTimes(2);
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      { runId: 'run-1', userId: 'user-1' },
+      expect.objectContaining({ id: 'run-1' })
+    );
+    expect(response.status).toHaveBeenCalledWith(202);
+  });
+
   it('writes a 24-hour cooldown after a successful sync completes', async () => {
     const frozenNow = Date.UTC(2026, 2, 25, 12, 0, 0);
     const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(frozenNow);
