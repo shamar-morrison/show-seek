@@ -8,6 +8,7 @@ const mockTVShowCard = jest.fn();
 const mockMovieCardSkeleton = jest.fn();
 const mockUseMoodDiscovery = jest.fn();
 const mockUsePosterOverrides = jest.fn();
+const mockUseAccountRequired = jest.fn();
 const mockResolvePosterPath = jest.fn();
 const mockSetOptions = jest.fn();
 const mockBack = jest.fn();
@@ -70,6 +71,10 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
   usePosterOverrides: () => mockUsePosterOverrides(),
 }));
 
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockUseAccountRequired(),
+}));
+
 jest.mock('@/src/components/cards/MovieCard', () => ({
   MovieCard: (props: any) => {
     mockMovieCard(props);
@@ -89,6 +94,16 @@ jest.mock('@/src/components/ui/LoadingSkeleton', () => ({
     mockMovieCardSkeleton(props);
     return null;
   },
+}));
+
+jest.mock('@/src/components/AddToListModal', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('@/src/components/ui/Toast', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 jest.mock('@shopify/flash-list', () => {
@@ -135,6 +150,7 @@ describe('MoodResultsScreen grid layout', () => {
       .spyOn(ReactNative, 'useWindowDimensions')
       .mockReturnValue(MOCK_WINDOW_DIMENSIONS);
     capturedFlashListProps = null;
+    mockUseAccountRequired.mockReturnValue(jest.fn(() => false));
     mockResolvePosterPath.mockImplementation((mediaType, mediaId, fallbackPosterPath) => {
       if (mediaType === 'movie' && mediaId === 101) {
         return '/override.jpg';

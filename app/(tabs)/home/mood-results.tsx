@@ -1,20 +1,24 @@
 import { Movie, TVShow } from '@/src/api/tmdb';
+import AddToListModal, { AddToListModalRef } from '@/src/components/AddToListModal';
 import { MovieCard } from '@/src/components/cards/MovieCard';
 import { TVShowCard } from '@/src/components/cards/TVShowCard';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { MovieCardSkeleton } from '@/src/components/ui/LoadingSkeleton';
+import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { getMoodById } from '@/src/constants/moods';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import { MoodMediaType, useMoodDiscovery } from '@/src/hooks/useMoodDiscovery';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
+import { ListMediaItem } from '@/src/services/ListService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { getGridMetrics } from '@/src/utils/gridLayout';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Frown, RefreshCw } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Pressable,
@@ -142,7 +146,13 @@ export default function MoodResultsScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const { accentColor } = useAccentColor();
   const { resolvePosterPath, overrides } = usePosterOverrides();
+  const isAccountRequired = useAccountRequired();
   const [isFocused, setIsFocused] = useState(false);
+  const addToListModalRef = useRef<AddToListModalRef>(null);
+  const toastRef = useRef<ToastRef>(null);
+  const [selectedMediaItem, setSelectedMediaItem] = useState<Omit<ListMediaItem, 'addedAt'> | null>(
+    null
+  );
   const params = useLocalSearchParams<{ moodId: string }>();
   const moodId = params.moodId || '';
 
@@ -206,6 +216,40 @@ export default function MoodResultsScreen() {
     setMediaType(type);
   }, []);
 
+  const handleShowToast = useCallback((message: string) => {
+    toastRef.current?.show(message);
+  }, []);
+
+  const handleMediaLongPress = useCallback(
+    (item: Movie | TVShow) => {
+      if (isAccountRequired()) {
+        return;
+      }
+
+      const itemMediaType = 'title' in item ? 'movie' : 'tv';
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSelectedMediaItem({
+        id: item.id,
+        media_type: itemMediaType,
+        title: 'title' in item ? item.title : item.name || '',
+        name: 'name' in item ? item.name : undefined,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        release_date: 'release_date' in item ? item.release_date || '' : item.first_air_date || '',
+        first_air_date: 'first_air_date' in item ? item.first_air_date : undefined,
+        genre_ids: item.genre_ids,
+      });
+    },
+    [isAccountRequired]
+  );
+
+  useEffect(() => {
+    if (selectedMediaItem) {
+      void addToListModalRef.current?.present();
+    }
+  }, [selectedMediaItem]);
+
   const { itemWidth, itemHorizontalMargin, listPaddingHorizontal } = useMemo(
     () => getGridMetrics(windowWidth, COLUMN_COUNT, ITEM_GAP, TARGET_OUTER_PADDING),
     [windowWidth]
@@ -235,6 +279,7 @@ export default function MoodResultsScreen() {
           width={itemWidth}
           containerStyle={cardSpacingStyle}
           posterPathOverride={posterPathOverride}
+          onLongPress={handleMediaLongPress}
         />
       );
     } else {
@@ -244,10 +289,11 @@ export default function MoodResultsScreen() {
           width={itemWidth}
           containerStyle={cardSpacingStyle}
           posterPathOverride={posterPathOverride}
+          onLongPress={handleMediaLongPress}
         />
       );
     }
-  }, [cardSpacingStyle, itemWidth, resolvePosterPath]);
+  }, [cardSpacingStyle, handleMediaLongPress, itemWidth, resolvePosterPath]);
 
   const keyExtractor = useCallback(
     (item: Movie | TVShow) => `${item.id}-${mediaType}`,
@@ -341,6 +387,15 @@ export default function MoodResultsScreen() {
         showsVerticalScrollIndicator={false}
         drawDistance={400}
       />
+      {selectedMediaItem && (
+        <AddToListModal
+          ref={addToListModalRef}
+          mediaItem={selectedMediaItem}
+          onShowToast={handleShowToast}
+          onDismiss={() => setSelectedMediaItem(null)}
+        />
+      )}
+      <Toast ref={toastRef} />
     </SafeAreaView>
   );
 }
