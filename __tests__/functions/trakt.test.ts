@@ -1284,6 +1284,137 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
+  it('does not treat equal addedAt millis with different raw shapes as remote changes', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const addedAtMs = new Date('2024-01-03T00:00:00.000Z').getTime();
+
+    const result = await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      {
+        'movie-101': {
+          addedAt: MockTimestamp.fromMillis(addedAtMs),
+          id: 101,
+          media_type: 'movie',
+          release_date: '2024-01-01',
+          title: 'Movie One',
+        },
+      },
+      {
+        id: 'watchlist',
+        name: 'Should Watch',
+      },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          id: 'watchlist',
+          items: {
+            'movie-101': {
+              addedAt: new Date(addedAtMs).toISOString(),
+              id: 101,
+              media_type: 'movie',
+              release_date: '2024-01-01',
+              title: 'Movie One',
+            },
+          },
+          metadata: {
+            itemCount: 1,
+            lastUpdated: MockTimestamp.now(),
+            needsEnrichment: false,
+          },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      {
+        preserveLocalItems: true,
+        recencyField: 'addedAt',
+      }
+    );
+
+    expect(result).toEqual({
+      changedCount: 0,
+      changedMediaTypes: [],
+      didRemoteChange: false,
+      didWrite: false,
+      shouldEnrich: false,
+    });
+    expect(listSet).not.toHaveBeenCalled();
+  });
+
+  it('applies equal addedAt millis updates when non-recency managed fields change', async () => {
+    const listSet = jest.fn().mockResolvedValue(undefined);
+    const addedAtMs = new Date('2024-01-03T00:00:00.000Z').getTime();
+
+    const result = await (__test__ as any).reconcileManagedList(
+      'user-1',
+      'watchlist',
+      {
+        'movie-101': {
+          addedAt: MockTimestamp.fromMillis(addedAtMs),
+          id: 101,
+          media_type: 'movie',
+          release_date: '2024-01-01',
+          title: 'Movie One Updated',
+        },
+      },
+      {
+        id: 'watchlist',
+        name: 'Should Watch',
+      },
+      createDocSnapshotWithSet(
+        'users/user-1/lists/watchlist',
+        {
+          id: 'watchlist',
+          items: {
+            'movie-101': {
+              addedAt: new Date(addedAtMs).toISOString(),
+              id: 101,
+              media_type: 'movie',
+              release_date: '2024-01-01',
+              title: 'Movie One',
+            },
+          },
+          metadata: {
+            itemCount: 1,
+            lastUpdated: MockTimestamp.now(),
+            needsEnrichment: false,
+          },
+          name: 'Should Watch',
+        },
+        listSet
+      ),
+      {
+        preserveLocalItems: true,
+        recencyField: 'addedAt',
+      }
+    );
+
+    expect(result).toEqual({
+      changedCount: 1,
+      changedMediaTypes: ['movie'],
+      didRemoteChange: true,
+      didWrite: true,
+      shouldEnrich: true,
+    });
+    expect(listSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: {
+          'movie-101': expect.objectContaining({
+            id: 101,
+            media_type: 'movie',
+            title: 'Movie One Updated',
+          }),
+        },
+        metadata: expect.objectContaining({
+          itemCount: 1,
+          needsEnrichment: true,
+        }),
+      }),
+      { merge: true }
+    );
+  });
+
   it('counts true remote managed list adds and updates as remote changes', async () => {
     const listSet = jest.fn().mockResolvedValue(undefined);
     const movieItem = {

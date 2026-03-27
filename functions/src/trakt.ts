@@ -1284,6 +1284,15 @@ const hasManagedFieldChanges = (
 ): boolean =>
   Object.entries(remoteValue).some(([key, value]) => !areValuesEqual(existingValue?.[key], value));
 
+const hasManagedFieldChangesIgnoringField = (
+  existingValue: Record<string, unknown> | undefined,
+  remoteValue: Record<string, unknown>,
+  ignoredField: string
+): boolean =>
+  Object.entries(remoteValue).some(
+    ([key, value]) => key !== ignoredField && !areValuesEqual(existingValue?.[key], value)
+  );
+
 const getComparableMillis = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -1339,6 +1348,10 @@ const shouldApplyRemoteManagedValue = (
 
   if (remoteMillis !== null && existingMillis !== null && remoteMillis < existingMillis) {
     return false;
+  }
+
+  if (remoteMillis !== null && existingMillis !== null && remoteMillis === existingMillis) {
+    return hasManagedFieldChangesIgnoringField(existingValue, remoteValue, recencyField);
   }
 
   return hasManagedFieldChanges(existingValue, remoteValue);
