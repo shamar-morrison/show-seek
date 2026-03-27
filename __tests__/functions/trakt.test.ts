@@ -169,6 +169,7 @@ beforeEach(() => {
   mockEnqueue.mockResolvedValue(undefined);
   global.fetch = jest.fn() as any;
   delete process.env.TRAKT_ALLOWED_ORIGINS;
+  delete process.env.TRAKT_SYNC_BYPASS_UIDS;
 });
 
 describe('Trakt sync Firestore sanitization', () => {
@@ -480,6 +481,249 @@ describe('Trakt sync Firestore sanitization', () => {
       expect.objectContaining({ id: 'run-1' })
     );
     expect(response.status).toHaveBeenCalledWith(202);
+  });
+
+  it('bypasses the manual sync cooldown on deployed functions for allowlisted testers when the dev header is present', async () => {
+    process.env.TRAKT_SYNC_BYPASS_UIDS = 'tester-1, tester-2';
+    mockVerifyIdToken.mockResolvedValue({ uid: 'tester-1' });
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'completed-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/tester-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/tester-1',
+    };
+    const consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    try {
+      await (traktApi as any)(
+        {
+          body: {},
+          header: (name: string) => {
+            const normalized = name.toLowerCase();
+            if (normalized === 'authorization') return 'Bearer token';
+            if (normalized === 'x-showseek-dev-sync') return 'true';
+            return undefined;
+          },
+          method: 'POST',
+          path: '/sync',
+        },
+        response
+      );
+      expect(transactionSet).toHaveBeenCalledTimes(2);
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        { runId: 'run-1', userId: 'tester-1' },
+        expect.objectContaining({ id: 'run-1' })
+      );
+      expect(response.status).toHaveBeenCalledWith(202);
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        '[Trakt] Bypassed manual sync cooldown for allowlisted tester',
+        expect.objectContaining({
+          runId: 'run-1',
+          userId: 'tester-1',
+        })
+      );
+    } finally {
+      consoleInfoSpy.mockRestore();
+    }
+  });
+
+  it('keeps the manual cooldown on deployed functions when the dev header is present for a non-allowlisted tester', async () => {
+    process.env.TRAKT_SYNC_BYPASS_UIDS = 'someone-else';
+    mockVerifyIdToken.mockResolvedValue({ uid: 'tester-1' });
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'completed-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/tester-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/tester-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => {
+          const normalized = name.toLowerCase();
+          if (normalized === 'authorization') return 'Bearer token';
+          if (normalized === 'x-showseek-dev-sync') return 'true';
+          return undefined;
+        },
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
+      })
+    );
+  });
+
+  it('keeps the manual cooldown on deployed functions for allowlisted testers when the dev header is absent', async () => {
+    process.env.TRAKT_SYNC_BYPASS_UIDS = 'tester-1';
+    mockVerifyIdToken.mockResolvedValue({ uid: 'tester-1' });
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'completed-run',
+          status: 'completed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/tester-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/tester-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
+      })
+    );
   });
 
   it('writes a 24-hour cooldown after a successful sync completes', async () => {
@@ -3435,6 +3679,87 @@ describe('Trakt sync Firestore sanitization', () => {
         process.env.FUNCTIONS_EMULATOR = originalFunctionsEmulator;
       }
     }
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(429);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        errorCategory: 'rate_limited',
+        nextAllowedSyncAt: futureCooldown.toDate().toISOString(),
+      })
+    );
+  });
+
+  it('keeps upstream rate-limit cooldowns enforced on deployed functions for allowlisted testers', async () => {
+    process.env.TRAKT_SYNC_BYPASS_UIDS = 'tester-1';
+    mockVerifyIdToken.mockResolvedValue({ uid: 'tester-1' });
+
+    const futureCooldown = MockTimestamp.fromMillis(Date.now() + DAY_MS);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktSyncStatus: {
+          errorCategory: 'rate_limited',
+          lastSyncedAt: MockTimestamp.fromMillis(Date.now() - 30_000),
+          nextAllowedSyncAt: futureCooldown,
+          runId: 'failed-run',
+          status: 'failed',
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+    const userRef = {
+      collection: jest.fn((name: string) => {
+        if (name !== 'traktSyncRuns') {
+          throw new Error(`Unexpected subcollection ${name}`);
+        }
+
+        return {
+          doc: jest.fn((id?: string) => ({
+            id: id ?? 'run-1',
+            path: `users/tester-1/traktSyncRuns/${id ?? 'run-1'}`,
+          })),
+        };
+      }),
+      path: 'users/tester-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn((name: string) => {
+        if (name !== 'users') {
+          throw new Error(`Unexpected collection ${name}`);
+        }
+
+        return {
+          doc: jest.fn(() => userRef),
+        };
+      }),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => {
+          const normalized = name.toLowerCase();
+          if (normalized === 'authorization') return 'Bearer token';
+          if (normalized === 'x-showseek-dev-sync') return 'true';
+          return undefined;
+        },
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
 
     expect(transactionSet).not.toHaveBeenCalled();
     expect(mockEnqueue).not.toHaveBeenCalled();

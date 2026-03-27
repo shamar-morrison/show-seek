@@ -40,6 +40,7 @@ const DEV_SYNC_BYPASS_HEADER = 'x-showseek-dev-sync';
 const CORS_ALLOW_HEADERS = ['Authorization', 'Content-Type', DEV_SYNC_BYPASS_HEADER].join(', ');
 const CORS_ALLOW_METHODS = 'GET, POST, OPTIONS';
 const CORS_ALLOWED_ORIGINS_ENV = 'TRAKT_ALLOWED_ORIGINS';
+const TRAKT_SYNC_BYPASS_UIDS_ENV = 'TRAKT_SYNC_BYPASS_UIDS';
 const TRAKT_SYNC_LOCKED_ACCOUNT_MESSAGE =
   'Your Trakt account is locked. Contact Trakt support with your username to unlock it.';
 const TRAKT_SYNC_RECONNECT_MESSAGE =
@@ -565,8 +566,33 @@ const applyCorsHeaders = (request: Request, response: ExpressResponse): void => 
 
 const isFunctionsEmulator = (): boolean => process.env.FUNCTIONS_EMULATOR === 'true';
 
-const shouldBypassManualSyncCooldown = (request: Request): boolean =>
-  isFunctionsEmulator() && request.header(DEV_SYNC_BYPASS_HEADER) === 'true';
+type ManualSyncCooldownBypassSource = 'allowlist' | 'emulator';
+
+const hasDevSyncBypassHeader = (request: Request): boolean =>
+  request.header(DEV_SYNC_BYPASS_HEADER) === 'true';
+
+const getAllowedSyncBypassUids = (): Set<string> =>
+  new Set(
+    (process.env[TRAKT_SYNC_BYPASS_UIDS_ENV] ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
+const getManualSyncCooldownBypassSource = (
+  request: Request,
+  userId: string
+): ManualSyncCooldownBypassSource | undefined => {
+  if (!hasDevSyncBypassHeader(request)) {
+    return undefined;
+  }
+
+  if (isFunctionsEmulator()) {
+    return 'emulator';
+  }
+
+  return getAllowedSyncBypassUids().has(userId) ? 'allowlist' : undefined;
+};
 
 const sendCorsPreflight = (request: Request, response: ExpressResponse): void => {
   applyCorsHeaders(request, response);
@@ -3245,7 +3271,8 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
   try {
     const decodedToken = await verifyUser(request);
     const userId = decodedToken.uid;
-    const bypassManualCooldown = shouldBypassManualSyncCooldown(request);
+    const cooldownBypassSource = getManualSyncCooldownBypassSource(request, userId);
+    const bypassManualCooldown = cooldownBypassSource !== undefined;
     const db = admin.firestore();
     const userRef = db.collection('users').doc(userId);
     const runRef = userRef.collection('traktSyncRuns').doc();
@@ -3300,6 +3327,11 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
 
       return {
         kind: 'queued' as const,
+        bypassedCompletedCooldown:
+          nextAllowedSyncAt instanceof Timestamp &&
+          nextAllowedSyncAt.toMillis() > Date.now() &&
+          existingStatus?.status === 'completed' &&
+          cooldownBypassSource,
         status: queuedStatus,
       };
     });
@@ -3324,6 +3356,13 @@ const handleSyncPost = async (request: Request, response: ExpressResponse): Prom
         )
       );
       return;
+    }
+
+    if (transactionResult.bypassedCompletedCooldown === 'allowlist') {
+      console.info('[Trakt] Bypassed manual sync cooldown for allowlisted tester', {
+        runId: transactionResult.status.runId,
+        userId,
+      });
     }
 
     const runId = transactionResult.status.runId;

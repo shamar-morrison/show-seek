@@ -55,6 +55,14 @@ When deploying `traktApi` for web callers, configure the runtime environment
 variable `TRAKT_ALLOWED_ORIGINS` with a comma-separated allowlist of trusted
 origins so CORS responses only reflect approved origins.
 
+To allow repeat Trakt sync testing from a physical-device dev build against the
+deployed backend, configure the runtime environment variable
+`TRAKT_SYNC_BYPASS_UIDS` with a comma-separated list of Firebase Auth user IDs.
+When a request includes `X-ShowSeek-Dev-Sync: true`, the deployed `/sync`
+endpoint will bypass only the completed-sync 24-hour manual cooldown for those
+allowlisted users. This bypass does not skip active-run protection or upstream
+Trakt rate-limit retry windows.
+
 Deploy the Trakt backend:
 
 ```bash

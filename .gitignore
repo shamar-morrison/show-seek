@@ -18,6 +18,7 @@ functions/service-account-key.json
 prompt.md
 /android
 /ios
+.env.*
 
 # Native
 *.orig.*
