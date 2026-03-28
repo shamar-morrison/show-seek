@@ -1,11 +1,15 @@
 import { useMemo } from 'react';
 import { useAuth } from '../context/auth';
 import { isReleased } from '../utils/dateUtils';
+import { hasListItemInMap, type ListItemMediaType } from '../utils/listItemKeys';
 import { useLists } from './useLists';
 import { usePreferences } from './usePreferences';
 
 interface MediaItem {
   id: number;
+  media_type?: ListItemMediaType;
+  title?: string;
+  name?: string;
   release_date?: string;
   first_air_date?: string;
   [key: string]: any;
@@ -28,6 +32,22 @@ const EMPTY_FILTER_DIAGNOSTICS: ContentFilterDiagnostics = {
   removedByPreferences: false,
   removedByUnreleasedContent: false,
   removedByWatchedContent: false,
+};
+
+const resolveMediaType = (item: MediaItem): ListItemMediaType | null => {
+  if (item.media_type === 'movie' || item.media_type === 'tv') {
+    return item.media_type;
+  }
+
+  if (typeof item.title === 'string' || typeof item.release_date === 'string') {
+    return 'movie';
+  }
+
+  if (typeof item.name === 'string' || typeof item.first_air_date === 'string') {
+    return 'tv';
+  }
+
+  return null;
 };
 
 const applyContentFilters = <T extends MediaItem>(
@@ -58,8 +78,14 @@ const applyContentFilters = <T extends MediaItem>(
   if (hideWatchedContent) {
     const alreadyWatchedList = lists?.find((list) => list.id === 'already-watched');
     if (alreadyWatchedList?.items) {
-      const watchedIds = new Set(Object.keys(alreadyWatchedList.items).map(Number));
-      const nextItems = filteredItems.filter((item) => !watchedIds.has(item.id));
+      const nextItems = filteredItems.filter((item) => {
+        const mediaType = resolveMediaType(item);
+        if (!mediaType) {
+          return true;
+        }
+
+        return !hasListItemInMap(alreadyWatchedList.items, mediaType, item.id);
+      });
       removedByWatchedContent = nextItems.length < filteredItems.length;
       filteredItems = nextItems;
     }

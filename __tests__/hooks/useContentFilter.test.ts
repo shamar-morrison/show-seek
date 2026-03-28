@@ -46,7 +46,7 @@ describe('useContentFilter', () => {
 
   const mockWatchedList = {
     id: 'already-watched',
-    items: { 1: { addedAt: 123 }, 4: { addedAt: 456 } },
+    items: { 'movie-1': { addedAt: 123 }, 'movie-4': { addedAt: 456 } },
   };
 
   beforeEach(() => {
@@ -158,6 +158,43 @@ describe('useContentFilter', () => {
       expect(result.current.map((m) => m.id)).toEqual([2, 3]);
     });
 
+    it('filters watched TV shows with normalized keys', () => {
+      mockUseLists.mockReturnValue({
+        data: [{ id: 'already-watched', items: { 'tv-10': { addedAt: 123 } } }],
+      });
+
+      const { result } = renderHook(() => useContentFilter(mockTVShows));
+
+      expect(result.current).toHaveLength(2);
+      expect(result.current.map((show) => show.id)).toEqual([11, 12]);
+    });
+
+    it('filters only the matching media type when movie and tv share the same id', () => {
+      mockUseLists.mockReturnValue({
+        data: [{ id: 'already-watched', items: { 'tv-42': { addedAt: 123 } } }],
+      });
+
+      const mixedItems = [
+        { id: 42, title: 'Shared Movie', release_date: '2025-01-15' },
+        { id: 42, name: 'Shared Show', first_air_date: '2025-03-01' },
+      ];
+
+      const { result } = renderHook(() => useContentFilter(mixedItems));
+
+      expect(result.current).toEqual([{ id: 42, title: 'Shared Movie', release_date: '2025-01-15' }]);
+    });
+
+    it('still supports legacy numeric keys', () => {
+      mockUseLists.mockReturnValue({
+        data: [{ id: 'already-watched', items: { 1: { addedAt: 123 }, 4: { addedAt: 456 } } }],
+      });
+
+      const { result } = renderHook(() => useContentFilter(mockMovies));
+
+      expect(result.current).toHaveLength(2);
+      expect(result.current.map((m) => m.id)).toEqual([2, 3]);
+    });
+
     it('returns all items when watched list is empty', () => {
       mockUseLists.mockReturnValue({ data: [{ id: 'already-watched', items: {} }] });
 
@@ -172,8 +209,8 @@ describe('useContentFilter', () => {
           {
             id: 'already-watched',
             items: {
-              1: { addedAt: 123 },
-              4: { addedAt: 456 },
+              'movie-1': { addedAt: 123 },
+              'movie-4': { addedAt: 456 },
             },
           },
         ],
