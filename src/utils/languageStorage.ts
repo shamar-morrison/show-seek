@@ -17,6 +17,10 @@ import { doc, setDoc } from 'firebase/firestore';
 
 const LANGUAGE_KEY = 'showseek_language';
 
+export interface SyncLanguageToFirebaseOptions {
+  throwOnError?: boolean;
+}
+
 /**
  * Get the stored language preference from AsyncStorage.
  * Returns default language if no preference is stored.
@@ -48,7 +52,12 @@ export async function setStoredLanguage(language: string): Promise<void> {
  * Writes to `users/{uid}.language` using merge so other fields are preserved.
  * Silently fails for unauthenticated users.
  */
-export async function syncLanguageToFirebase(language: string): Promise<void> {
+export async function syncLanguageToFirebase(
+  language: string,
+  options: SyncLanguageToFirebaseOptions = {}
+): Promise<void> {
+  const { throwOnError = false } = options;
+
   try {
     const user = getSignedInUser();
     if (!user) return;
@@ -59,6 +68,9 @@ export async function syncLanguageToFirebase(language: string): Promise<void> {
     mergeUserDocumentCache(user.uid, { language });
   } catch (error) {
     console.error('[languageStorage] Firebase sync error:', error);
+    if (throwOnError) {
+      throw error;
+    }
   }
 }
 

@@ -103,6 +103,19 @@ describe('languageStorage', () => {
       expect(setDoc).not.toHaveBeenCalled();
       expect(mergeUserDocumentCache).not.toHaveBeenCalled();
     });
+
+    it('should rethrow Firebase errors when requested', async () => {
+      const firebaseError = new Error('Firestore write failed');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (setDoc as jest.Mock).mockRejectedValue(firebaseError);
+
+      await expect(
+        syncLanguageToFirebase('ja-JP', { throwOnError: true })
+      ).rejects.toThrow('Firestore write failed');
+
+      expect(consoleSpy).toHaveBeenCalledWith('[languageStorage] Firebase sync error:', firebaseError);
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('fetchLanguageFromFirebase', () => {
