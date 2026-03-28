@@ -22,13 +22,13 @@ type OnboardingFailure = {
 class OnboardingService {
   /**
    * Save all onboarding selections in parallel.
-   * Region and accent color are saved in their respective steps via context,
-   * so are not persisted here.
+   * Region and accent color are saved in their respective steps via context.
+   * Language is applied locally during onboarding and persisted here on completion.
    */
   async saveOnboarding(selections: OnboardingSelections): Promise<void> {
     const tasks: Array<{ label: string; promise: Promise<unknown> }> = [];
 
-    // 0. Display Name — update Firebase Auth profile + Firestore user doc
+    // 0. Display Name + Language — update Firebase Auth profile + Firestore user doc
     if (auth.currentUser) {
       const currentUser = auth.currentUser;
       const resolvedDisplayName = resolvePreferredDisplayName(
@@ -37,7 +37,7 @@ class OnboardingService {
         currentUser.email
       );
       tasks.push({
-        label: 'display-name',
+        label: 'user-profile',
         promise: (async () => {
           const currentAuthDisplayName = currentUser.displayName?.trim() ?? '';
           if (resolvedDisplayName && currentAuthDisplayName !== resolvedDisplayName) {
@@ -45,9 +45,19 @@ class OnboardingService {
           }
 
           const userRef = doc(db, 'users', currentUser.uid);
+          const userDocUpdates: Record<string, unknown> = {};
+
           if (resolvedDisplayName) {
-            await setDoc(userRef, { displayName: resolvedDisplayName }, { merge: true });
-            mergeUserDocumentCache(currentUser.uid, { displayName: resolvedDisplayName });
+            userDocUpdates.displayName = resolvedDisplayName;
+          }
+
+          if (selections.language) {
+            userDocUpdates.language = selections.language;
+          }
+
+          if (Object.keys(userDocUpdates).length > 0) {
+            await setDoc(userRef, userDocUpdates, { merge: true });
+            mergeUserDocumentCache(currentUser.uid, userDocUpdates);
           }
         })(),
       });

@@ -1,9 +1,9 @@
 import { getAccentColorName } from '@/src/constants/accentColors';
+import { SUPPORTED_LANGUAGES } from '@/src/constants/supportedLanguages';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
-import { SUPPORTED_LANGUAGES } from '@/src/context/LanguageProvider';
 import { SUPPORTED_REGIONS } from '@/src/context/RegionProvider';
+import { sectionTitleStyles } from '@/src/styles/sectionTitleStyles';
 import { UserPreferences } from '@/src/types/preferences';
 import * as Haptics from 'expo-haptics';
 import { Languages, LayoutIcon, MapPin, Palette } from 'lucide-react-native';

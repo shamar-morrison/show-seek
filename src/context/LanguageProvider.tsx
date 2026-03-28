@@ -3,101 +3,65 @@
  *
  * This provider handles:
  * 1. Loading the user's preferred language on app launch from AsyncStorage
- * 2. Syncing language changes to the TMDB API client
- * 3. Syncing language changes to i18next for UI translations
- * 4. Resetting React Query cache when language changes
- * 5. Providing a loading state for splash screen
+ * 2. Syncing language changes to AsyncStorage + Firebase when requested
+ * 3. Restoring language from Firebase on login for cross-device sync
+ * 4. Syncing language changes to the TMDB API client
+ * 5. Syncing language changes to i18next for UI translations
+ * 6. Resetting React Query cache when language changes
+ * 7. Providing a loading state for splash screen
  */
 import { setApiLanguage } from '@/src/api/tmdb';
+import {
+  DEFAULT_LANGUAGE,
+  isSupportedLanguageCode,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguageCode,
+} from '@/src/constants/supportedLanguages';
+import { useAuth } from '@/src/context/auth';
 import i18n from '@/src/i18n';
-import { getStoredLanguage, setStoredLanguage } from '@/src/utils/languageStorage';
+import {
+  fetchLanguageFromFirebase,
+  getStoredLanguage,
+  setStoredLanguage,
+  syncLanguageToFirebase,
+} from '@/src/utils/languageStorage';
 import { useQueryClient } from '@tanstack/react-query';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+
+export interface SetLanguageOptions {
+  syncToFirebase?: boolean;
+}
+
+export { SUPPORTED_LANGUAGES };
+export type { SupportedLanguageCode };
 
 interface LanguageContextValue {
-  language: string;
+  language: SupportedLanguageCode;
   isLanguageReady: boolean;
-  setLanguage: (language: string) => Promise<void>;
+  setLanguage: (language: SupportedLanguageCode, options?: SetLanguageOptions) => Promise<void>;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
-
-/**
- * Supported languages configuration
- * All LTR (left-to-right) languages supported by TMDB
- * Sorted alphabetically by English name for easy navigation
- */
-export const SUPPORTED_LANGUAGES = [
-  { code: 'zh-CN', nativeName: '中文 (简体)', englishName: 'Chinese (Simplified)' },
-  { code: 'zh-TW', nativeName: '中文 (繁體)', englishName: 'Chinese (Traditional)' },
-  { code: 'da-DK', nativeName: 'Dansk', englishName: 'Danish' },
-  { code: 'nl-NL', nativeName: 'Nederlands', englishName: 'Dutch' },
-  { code: 'en-US', nativeName: 'English', englishName: 'English' },
-  { code: 'fi-FI', nativeName: 'Suomi', englishName: 'Finnish' },
-  { code: 'fr-FR', nativeName: 'Français', englishName: 'French' },
-  { code: 'de-DE', nativeName: 'Deutsch', englishName: 'German' },
-  { code: 'el-GR', nativeName: 'Ελληνικά', englishName: 'Greek' },
-  { code: 'hi-IN', nativeName: 'हिन्दी', englishName: 'Hindi' },
-  { code: 'hu-HU', nativeName: 'Magyar', englishName: 'Hungarian' },
-  { code: 'id-ID', nativeName: 'Bahasa Indonesia', englishName: 'Indonesian' },
-  { code: 'it-IT', nativeName: 'Italiano', englishName: 'Italian' },
-  { code: 'ja-JP', nativeName: '日本語', englishName: 'Japanese' },
-  { code: 'ko-KR', nativeName: '한국어', englishName: 'Korean' },
-  { code: 'no-NO', nativeName: 'Norsk', englishName: 'Norwegian' },
-  { code: 'pl-PL', nativeName: 'Polski', englishName: 'Polish' },
-  { code: 'pt-BR', nativeName: 'Português (Brasil)', englishName: 'Portuguese (Brazil)' },
-  { code: 'pt-PT', nativeName: 'Português (Portugal)', englishName: 'Portuguese (Portugal)' },
-  { code: 'ro-RO', nativeName: 'Română', englishName: 'Romanian' },
-  { code: 'ru-RU', nativeName: 'Русский', englishName: 'Russian' },
-  { code: 'es-ES', nativeName: 'Español (España)', englishName: 'Spanish (Spain)' },
-  { code: 'es-MX', nativeName: 'Español (México)', englishName: 'Spanish (Mexico)' },
-  { code: 'sv-SE', nativeName: 'Svenska', englishName: 'Swedish' },
-  { code: 'th-TH', nativeName: 'ไทย', englishName: 'Thai' },
-  { code: 'tr-TR', nativeName: 'Türkçe', englishName: 'Turkish' },
-  { code: 'uk-UA', nativeName: 'Українська', englishName: 'Ukrainian' },
-  { code: 'vi-VN', nativeName: 'Tiếng Việt', englishName: 'Vietnamese' },
-] as const;
-
-export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 interface LanguageProviderProps {
   children: React.ReactNode;
 }
 
 export function LanguageProvider({ children }: LanguageProviderProps) {
+  const { user, loading } = useAuth();
   const queryClient = useQueryClient();
 
-  const [language, setLanguageState] = useState<string>('en-US');
+  const [language, setLanguageState] = useState<SupportedLanguageCode>(DEFAULT_LANGUAGE);
   const [isLanguageReady, setIsLanguageReady] = useState(false);
+  const languageRef = useRef<SupportedLanguageCode>(DEFAULT_LANGUAGE);
+  const authenticatedUserIdRef = useRef<string | null>(null);
+  const hasSyncedFromFirebase = useRef(false);
+  const isSyncingFromFirebase = useRef(false);
+  const initializedAuthUserId = useRef<string | null | undefined>(undefined);
 
-  // Initialize language on mount from AsyncStorage
-  useEffect(() => {
-    let isMounted = true;
-
-    const initLanguage = async () => {
-      try {
-        const storedLanguage = await getStoredLanguage();
-        if (!isMounted) return;
-
-        setLanguageState(storedLanguage);
-        setApiLanguage(storedLanguage);
-        // Sync i18next with stored language
-        await i18n.changeLanguage(storedLanguage);
-      } catch (error) {
-        console.error('[LanguageProvider] Init failed, using default language:', error);
-      } finally {
-        if (isMounted) {
-          setIsLanguageReady(true);
-        }
-      }
-    };
-
-    void initLanguage();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const getCurrentLanguage = useCallback(() => languageRef.current, []);
+  const authenticatedUserId = user && !user.isAnonymous ? user.uid : null;
+  authenticatedUserIdRef.current = authenticatedUserId;
 
   // Reset all TMDB-related queries to refetch in new language
   const resetQueries = useCallback(() => {
@@ -120,24 +84,207 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     });
   }, [queryClient]);
 
-  const setLanguage = useCallback(
-    async (newLanguage: string) => {
-      if (newLanguage === language) return;
+  const applyLanguageLocally = useCallback(
+    async (
+      nextLanguage: SupportedLanguageCode,
+      options: {
+        force?: boolean;
+        persistToStorage?: boolean;
+        resetLanguageQueries?: boolean;
+      } = {}
+    ) => {
+      const {
+        force = false,
+        persistToStorage = true,
+        resetLanguageQueries = true,
+      } = options;
 
-      // Update state immediately for responsive UI
-      setLanguageState(newLanguage);
-      setApiLanguage(newLanguage);
+      if (!force && nextLanguage === getCurrentLanguage()) {
+        return;
+      }
 
-      // Sync i18next for UI translations
-      await i18n.changeLanguage(newLanguage);
+      languageRef.current = nextLanguage;
+      setLanguageState(nextLanguage);
+      setApiLanguage(nextLanguage);
+      await i18n.changeLanguage(nextLanguage);
 
-      // Persist to AsyncStorage
-      await setStoredLanguage(newLanguage);
+      if (persistToStorage) {
+        await setStoredLanguage(nextLanguage);
+      }
 
-      // Reset cache to refetch content in new language
-      resetQueries();
+      if (resetLanguageQueries) {
+        resetQueries();
+      }
     },
-    [language, resetQueries]
+    [getCurrentLanguage, resetQueries]
+  );
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (loading) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    const syncLocalLanguageWithAuthState = async () => {
+      const previousAuthUserId = initializedAuthUserId.current;
+      const isFirstResolvedAuthState = previousAuthUserId === undefined;
+
+      if (!isFirstResolvedAuthState && previousAuthUserId === authenticatedUserId) {
+        return;
+      }
+
+      initializedAuthUserId.current = authenticatedUserId;
+      hasSyncedFromFirebase.current = false;
+      isSyncingFromFirebase.current = false;
+
+      try {
+        if (authenticatedUserId) {
+          if (isFirstResolvedAuthState) {
+            const storedLanguage = await getStoredLanguage();
+            if (!isActive) {
+              return;
+            }
+
+            const safeLanguage = isSupportedLanguageCode(storedLanguage)
+              ? storedLanguage
+              : DEFAULT_LANGUAGE;
+
+            await applyLanguageLocally(safeLanguage, {
+              force: true,
+              persistToStorage: true,
+              resetLanguageQueries: false,
+            });
+          }
+        } else {
+          await applyLanguageLocally(DEFAULT_LANGUAGE, {
+            force: true,
+            persistToStorage: true,
+            resetLanguageQueries: !isFirstResolvedAuthState,
+          });
+        }
+      } catch (error) {
+        console.error('[LanguageProvider] Init failed, using default language:', error);
+
+        if (!isActive) {
+          return;
+        }
+
+        try {
+          await applyLanguageLocally(DEFAULT_LANGUAGE, {
+            force: true,
+            persistToStorage: true,
+            resetLanguageQueries: !isFirstResolvedAuthState,
+          });
+        } catch (fallbackError) {
+          console.error('[LanguageProvider] Default language fallback failed:', fallbackError);
+        }
+      } finally {
+        if (isActive && !isLanguageReady) {
+          setIsLanguageReady(true);
+        }
+      }
+    };
+
+    void syncLocalLanguageWithAuthState();
+
+    return () => {
+      isActive = false;
+    };
+  }, [applyLanguageLocally, authenticatedUserId, isLanguageReady, loading]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (loading || !isLanguageReady) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (!authenticatedUserId) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (hasSyncedFromFirebase.current || isSyncingFromFirebase.current) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    isSyncingFromFirebase.current = true;
+    const syncBaselineLanguage = getCurrentLanguage();
+    const syncUserId = authenticatedUserId;
+
+    const syncFromFirebase = async () => {
+      try {
+        const firebaseLanguage = await fetchLanguageFromFirebase();
+        if (!isActive || authenticatedUserIdRef.current !== syncUserId) {
+          return;
+        }
+
+        const currentLanguage = getCurrentLanguage();
+        const didLanguageChangeLocally = currentLanguage !== syncBaselineLanguage;
+
+        if (didLanguageChangeLocally) {
+          await syncLanguageToFirebase(currentLanguage, { throwOnError: true });
+          if (!isActive || authenticatedUserIdRef.current !== syncUserId) {
+            return;
+          }
+
+          hasSyncedFromFirebase.current = true;
+          return;
+        }
+
+        if (!firebaseLanguage || firebaseLanguage === currentLanguage) {
+          hasSyncedFromFirebase.current = true;
+          return;
+        }
+
+        await applyLanguageLocally(firebaseLanguage, {
+          persistToStorage: true,
+          resetLanguageQueries: true,
+        });
+        if (!isActive || authenticatedUserIdRef.current !== syncUserId) {
+          return;
+        }
+
+        hasSyncedFromFirebase.current = true;
+      } catch (error) {
+        hasSyncedFromFirebase.current = false;
+        console.error('[LanguageProvider] Firebase language sync failed:', error);
+      } finally {
+        isSyncingFromFirebase.current = false;
+      }
+    };
+
+    void syncFromFirebase();
+
+    return () => {
+      isActive = false;
+    };
+  }, [applyLanguageLocally, authenticatedUserId, getCurrentLanguage, isLanguageReady, loading]);
+
+  const setLanguage = useCallback(
+    async (newLanguage: SupportedLanguageCode, options: SetLanguageOptions = {}) => {
+      if (newLanguage === getCurrentLanguage()) return;
+      if (!isSupportedLanguageCode(newLanguage)) return;
+
+      const { syncToFirebase = true } = options;
+      await applyLanguageLocally(newLanguage, {
+        persistToStorage: true,
+        resetLanguageQueries: true,
+      });
+
+      if (syncToFirebase) {
+        syncLanguageToFirebase(newLanguage);
+      }
+    },
+    [applyLanguageLocally, getCurrentLanguage]
   );
 
   return (

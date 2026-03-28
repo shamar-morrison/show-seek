@@ -5,6 +5,7 @@ const mockReplace = jest.fn();
 const mockCompletePersonalOnboarding = jest.fn();
 const mockSetRegion = jest.fn();
 const mockSetAccentColor = jest.fn();
+const mockSetLanguage = jest.fn();
 const mockPremiumState = {
   isPremium: false,
   isLoading: false,
@@ -65,6 +66,13 @@ jest.mock('@/src/context/RegionProvider', () => ({
 jest.mock('@/src/context/AccentColorProvider', () => ({
   useAccentColor: () => ({
     setAccentColor: mockSetAccentColor,
+  }),
+}));
+
+jest.mock('@/src/context/LanguageProvider', () => ({
+  useLanguage: () => ({
+    language: 'en-US',
+    setLanguage: mockSetLanguage,
   }),
 }));
 
@@ -143,6 +151,31 @@ jest.mock('@/src/screens/onboarding/GenresStep', () => ({
     const { Text } = require('react-native');
 
     return React.createElement(Text, null, 'Genres step');
+  },
+}));
+
+jest.mock('@/src/screens/onboarding/LanguagesStep', () => ({
+  __esModule: true,
+  default: ({
+    selectedLanguage,
+    onSelect,
+  }: {
+    selectedLanguage: string;
+    onSelect: (languageCode: string) => Promise<void>;
+  }) => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    return React.createElement(
+      Text,
+      {
+        testID: 'languages-step',
+        onPress: () => {
+          void onSelect('es-ES');
+        },
+      },
+      `Languages step: ${selectedLanguage}`
+    );
   },
 }));
 
@@ -229,7 +262,7 @@ describe('OnboardingContainer', () => {
     fireEvent.changeText(getByTestId('display-name-input'), 'Jordan');
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 7; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -245,7 +278,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 7; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -253,6 +286,33 @@ describe('OnboardingContainer', () => {
       expect(getByTestId('mock-onboarding-paywall-display-name')).toHaveTextContent(
         'fallback.user'
       );
+    });
+  });
+
+  it('applies the selected onboarding language locally before later onboarding steps', async () => {
+    const { getByText, getByTestId } = render(<OnboardingContainer />);
+
+    mockSetLanguage.mockResolvedValue(undefined);
+
+    fireEvent.press(getByText('Begin onboarding'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Continue'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Skip'));
+
+    expect(getByTestId('languages-step')).toHaveTextContent('Languages step: en-US');
+
+    fireEvent.press(getByTestId('languages-step'));
+
+    await waitFor(() => {
+      expect(mockSetLanguage).toHaveBeenCalledWith('es-ES', { syncToFirebase: false });
+      expect(getByTestId('languages-step')).toHaveTextContent('Languages step: es-ES');
+    });
+
+    fireEvent.press(getByText('Continue'));
+
+    await waitFor(() => {
+      expect(getByText('Genres step')).toBeTruthy();
     });
   });
 
@@ -267,7 +327,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 7; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 

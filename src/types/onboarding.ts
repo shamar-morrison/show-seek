@@ -6,6 +6,7 @@
  */
 
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
+import { DEFAULT_LANGUAGE, type SupportedLanguageCode } from '@/src/constants/supportedLanguages';
 import type { HomeScreenListItem } from '@/src/types/preferences';
 
 /**
@@ -18,6 +19,8 @@ export interface OnboardingSelections {
   displayName: string;
   /** Selected home screen list items */
   homeScreenLists: HomeScreenListItem[];
+  /** Selected TMDB language code */
+  language: SupportedLanguageCode;
   /** Selected favorite genre IDs (max 3) */
   selectedGenreIds: number[];
   /** TV shows the user is currently watching */
@@ -37,6 +40,7 @@ export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
   region: null,
   displayName: '',
   homeScreenLists: [],
+  language: DEFAULT_LANGUAGE,
   selectedGenreIds: [],
   selectedTVShows: [],
   selectedMovies: [],
@@ -52,6 +56,7 @@ export type OnboardingStepId =
   | 'display-name'
   | 'streaming-providers'
   | 'favorite-lists'
+  | 'languages'
   | 'genres'
   | 'tv-shows'
   | 'movies'
@@ -72,6 +77,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'display-name', titleKey: 'personalOnboarding.displayNameTitle' },
   { id: 'streaming-providers', titleKey: 'personalOnboarding.streamingProvidersTitle' },
   { id: 'favorite-lists', titleKey: 'personalOnboarding.listsTitle' },
+  { id: 'languages', titleKey: 'personalOnboarding.languagesTitle' },
   { id: 'genres', titleKey: 'personalOnboarding.genresTitle' },
   { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },
   { id: 'movies', titleKey: 'personalOnboarding.moviesTitle' },
