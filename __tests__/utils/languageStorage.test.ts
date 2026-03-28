@@ -95,6 +95,14 @@ describe('languageStorage', () => {
       expect(doc).not.toHaveBeenCalled();
       expect(setDoc).not.toHaveBeenCalled();
     });
+
+    it('should skip unsupported language codes', async () => {
+      await syncLanguageToFirebase('xx-YY');
+
+      expect(doc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+      expect(mergeUserDocumentCache).not.toHaveBeenCalled();
+    });
   });
 
   describe('fetchLanguageFromFirebase', () => {

@@ -13,7 +13,7 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface LanguageSelectionListProps {
-  selectedLanguage: string;
+  selectedLanguage: SupportedLanguageCode;
   accentColor: string;
   errorTitle: string;
   errorMessage: string;

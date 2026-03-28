@@ -6,7 +6,7 @@
  */
 
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
-import { DEFAULT_LANGUAGE } from '@/src/constants/supportedLanguages';
+import { DEFAULT_LANGUAGE, type SupportedLanguageCode } from '@/src/constants/supportedLanguages';
 import type { HomeScreenListItem } from '@/src/types/preferences';
 
 /**
@@ -20,7 +20,7 @@ export interface OnboardingSelections {
   /** Selected home screen list items */
   homeScreenLists: HomeScreenListItem[];
   /** Selected TMDB language code */
-  language: string;
+  language: SupportedLanguageCode;
   /** Selected favorite genre IDs (max 3) */
   selectedGenreIds: number[];
   /** TV shows the user is currently watching */

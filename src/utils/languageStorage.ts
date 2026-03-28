@@ -4,7 +4,11 @@
  * cross-device persistence. Reads are always from AsyncStorage (instant).
  * Writes go to both AsyncStorage and Firebase when requested.
  */
-import { DEFAULT_LANGUAGE, isSupportedLanguageCode } from '@/src/constants/supportedLanguages';
+import {
+  DEFAULT_LANGUAGE,
+  isSupportedLanguageCode,
+  type SupportedLanguageCode,
+} from '@/src/constants/supportedLanguages';
 import { db } from '@/src/firebase/config';
 import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
 import { getSignedInUser } from '@/src/services/serviceSupport';
@@ -48,6 +52,7 @@ export async function syncLanguageToFirebase(language: string): Promise<void> {
   try {
     const user = getSignedInUser();
     if (!user) return;
+    if (!isSupportedLanguageCode(language)) return;
 
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { language }, { merge: true });
@@ -61,7 +66,7 @@ export async function syncLanguageToFirebase(language: string): Promise<void> {
  * Fetch language from Firebase Firestore for cross-device sync.
  * Returns null if user is not authenticated, missing, or unsupported.
  */
-export async function fetchLanguageFromFirebase(): Promise<string | null> {
+export async function fetchLanguageFromFirebase(): Promise<SupportedLanguageCode | null> {
   try {
     const user = getSignedInUser();
     if (!user) return null;

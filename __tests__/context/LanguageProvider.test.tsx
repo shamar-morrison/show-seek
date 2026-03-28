@@ -45,6 +45,17 @@ import { LanguageProvider, useLanguage } from '@/src/context/LanguageProvider';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+}
+
 describe('LanguageProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -118,6 +129,110 @@ describe('LanguageProvider', () => {
       expect(mockSetApiLanguage).toHaveBeenCalledWith('fr-FR');
       expect(mockChangeLanguage).toHaveBeenCalledWith('fr-FR');
       expect(mockResetQueries).toHaveBeenCalled();
+    });
+
+    it('waits for local language initialization before fetching from Firebase', async () => {
+      mockUser = { uid: 'user-1', isAnonymous: false };
+      const storedLanguage = createDeferred<string>();
+      mockGetStoredLanguage.mockReturnValue(storedLanguage.promise);
+      mockFetchLanguageFromFirebase.mockResolvedValue('fr-FR');
+
+      const { result } = renderHook(() => useLanguage(), { wrapper });
+
+      expect(result.current.isLanguageReady).toBe(false);
+      expect(mockFetchLanguageFromFirebase).not.toHaveBeenCalled();
+
+      await act(async () => {
+        storedLanguage.resolve('en-US');
+        await storedLanguage.promise;
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLanguageReady).toBe(true);
+      });
+
+      await waitFor(() => {
+        expect(mockFetchLanguageFromFirebase).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('does not overwrite a newer local language change while Firebase sync is in flight', async () => {
+      mockUser = { uid: 'user-1', isAnonymous: false };
+      mockGetStoredLanguage.mockResolvedValue('en-US');
+      const firebaseLanguage = createDeferred<string | null>();
+      mockFetchLanguageFromFirebase.mockReturnValue(firebaseLanguage.promise);
+
+      const { result } = renderHook(() => useLanguage(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isLanguageReady).toBe(true);
+      });
+
+      await waitFor(() => {
+        expect(mockFetchLanguageFromFirebase).toHaveBeenCalledTimes(1);
+      });
+
+      jest.clearAllMocks();
+
+      await act(async () => {
+        await result.current.setLanguage('es-ES', { syncToFirebase: false });
+      });
+
+      expect(result.current.language).toBe('es-ES');
+
+      await act(async () => {
+        firebaseLanguage.resolve('fr-FR');
+        await firebaseLanguage.promise;
+      });
+
+      await waitFor(() => {
+        expect(result.current.language).toBe('es-ES');
+      });
+
+      expect(mockSetApiLanguage).toHaveBeenCalledWith('es-ES');
+      expect(mockSetApiLanguage).not.toHaveBeenCalledWith('fr-FR');
+      expect(mockSetStoredLanguage).toHaveBeenCalledWith('es-ES');
+      expect(mockSetStoredLanguage).not.toHaveBeenCalledWith('fr-FR');
+      expect(mockResetQueries).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries Firebase sync on a later auth change after a sync error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      mockUser = { uid: 'user-1', isAnonymous: false };
+      mockGetStoredLanguage.mockResolvedValue('en-US');
+      mockFetchLanguageFromFirebase
+        .mockRejectedValueOnce(new Error('Firestore failure'))
+        .mockResolvedValueOnce('fr-FR');
+
+      const { result, rerender } = renderHook(() => useLanguage(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isLanguageReady).toBe(true);
+      });
+
+      await waitFor(() => {
+        expect(mockFetchLanguageFromFirebase).toHaveBeenCalledTimes(1);
+      });
+
+      await waitFor(() => {
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '[LanguageProvider] Firebase language sync failed:',
+          expect.any(Error)
+        );
+      });
+
+      mockUser = { uid: 'user-1', isAnonymous: false };
+      rerender({});
+
+      await waitFor(() => {
+        expect(mockFetchLanguageFromFirebase).toHaveBeenCalledTimes(2);
+      });
+
+      await waitFor(() => {
+        expect(result.current.language).toBe('fr-FR');
+      });
+
+      consoleSpy.mockRestore();
     });
   });
 

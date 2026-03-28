@@ -36,9 +36,9 @@ export { SUPPORTED_LANGUAGES };
 export type { SupportedLanguageCode };
 
 interface LanguageContextValue {
-  language: string;
+  language: SupportedLanguageCode;
   isLanguageReady: boolean;
-  setLanguage: (language: string, options?: SetLanguageOptions) => Promise<void>;
+  setLanguage: (language: SupportedLanguageCode, options?: SetLanguageOptions) => Promise<void>;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -51,67 +51,13 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [language, setLanguageState] = useState<string>(DEFAULT_LANGUAGE);
+  const [language, setLanguageState] = useState<SupportedLanguageCode>(DEFAULT_LANGUAGE);
   const [isLanguageReady, setIsLanguageReady] = useState(false);
+  const languageRef = useRef<SupportedLanguageCode>(DEFAULT_LANGUAGE);
   const hasSyncedFromFirebase = useRef(false);
+  const isSyncingFromFirebase = useRef(false);
 
-  // Initialize language on mount from AsyncStorage
-  useEffect(() => {
-    let isMounted = true;
-
-    const initLanguage = async () => {
-      try {
-        const storedLanguage = await getStoredLanguage();
-        if (!isMounted) return;
-
-        const safeLanguage = isSupportedLanguageCode(storedLanguage)
-          ? storedLanguage
-          : DEFAULT_LANGUAGE;
-
-        setLanguageState(safeLanguage);
-        setApiLanguage(safeLanguage);
-        // Sync i18next with stored language
-        await i18n.changeLanguage(safeLanguage);
-      } catch (error) {
-        console.error('[LanguageProvider] Init failed, using default language:', error);
-      } finally {
-        if (isMounted) {
-          setIsLanguageReady(true);
-        }
-      }
-    };
-
-    void initLanguage();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user || user.isAnonymous) {
-      hasSyncedFromFirebase.current = false;
-      return;
-    }
-
-    if (hasSyncedFromFirebase.current) return;
-    hasSyncedFromFirebase.current = true;
-
-    const syncFromFirebase = async () => {
-      const firebaseLanguage = await fetchLanguageFromFirebase();
-      if (!firebaseLanguage || firebaseLanguage === language) {
-        return;
-      }
-
-      setLanguageState(firebaseLanguage);
-      setApiLanguage(firebaseLanguage);
-      await i18n.changeLanguage(firebaseLanguage);
-      await setStoredLanguage(firebaseLanguage);
-      resetQueries();
-    };
-
-    void syncFromFirebase();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  const getCurrentLanguage = useCallback(() => languageRef.current, []);
 
   // Reset all TMDB-related queries to refetch in new language
   const resetQueries = useCallback(() => {
@@ -134,14 +80,116 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     });
   }, [queryClient]);
 
+  // Initialize language on mount from AsyncStorage
+  useEffect(() => {
+    let isMounted = true;
+
+    const initLanguage = async () => {
+      try {
+        const storedLanguage = await getStoredLanguage();
+        if (!isMounted) return;
+
+        const safeLanguage = isSupportedLanguageCode(storedLanguage)
+          ? storedLanguage
+          : DEFAULT_LANGUAGE;
+
+        languageRef.current = safeLanguage;
+        setLanguageState(safeLanguage);
+        setApiLanguage(safeLanguage);
+        // Sync i18next with stored language
+        await i18n.changeLanguage(safeLanguage);
+      } catch (error) {
+        console.error('[LanguageProvider] Init failed, using default language:', error);
+      } finally {
+        if (isMounted) {
+          setIsLanguageReady(true);
+        }
+      }
+    };
+
+    void initLanguage();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    if (!isLanguageReady) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (!user || user.isAnonymous) {
+      hasSyncedFromFirebase.current = false;
+      isSyncingFromFirebase.current = false;
+      return () => {
+        isActive = false;
+      };
+    }
+
+    if (hasSyncedFromFirebase.current || isSyncingFromFirebase.current) {
+      return () => {
+        isActive = false;
+      };
+    }
+
+    isSyncingFromFirebase.current = true;
+    const syncBaselineLanguage = getCurrentLanguage();
+
+    const syncFromFirebase = async () => {
+      try {
+        const firebaseLanguage = await fetchLanguageFromFirebase();
+        if (!isActive) {
+          return;
+        }
+
+        const currentLanguage = getCurrentLanguage();
+        const didLanguageChangeLocally = currentLanguage !== syncBaselineLanguage;
+
+        if (didLanguageChangeLocally || !firebaseLanguage || firebaseLanguage === currentLanguage) {
+          hasSyncedFromFirebase.current = true;
+          return;
+        }
+
+        await i18n.changeLanguage(firebaseLanguage);
+        await setStoredLanguage(firebaseLanguage);
+        if (!isActive) {
+          return;
+        }
+
+        languageRef.current = firebaseLanguage;
+        setLanguageState(firebaseLanguage);
+        setApiLanguage(firebaseLanguage);
+        resetQueries();
+        hasSyncedFromFirebase.current = true;
+      } catch (error) {
+        hasSyncedFromFirebase.current = false;
+        console.error('[LanguageProvider] Firebase language sync failed:', error);
+      } finally {
+        isSyncingFromFirebase.current = false;
+      }
+    };
+
+    void syncFromFirebase();
+
+    return () => {
+      isActive = false;
+    };
+  }, [getCurrentLanguage, isLanguageReady, resetQueries, user]);
+
   const setLanguage = useCallback(
-    async (newLanguage: string, options: SetLanguageOptions = {}) => {
+    async (newLanguage: SupportedLanguageCode, options: SetLanguageOptions = {}) => {
       if (newLanguage === language) return;
       if (!isSupportedLanguageCode(newLanguage)) return;
 
       const { syncToFirebase = true } = options;
 
       // Update state immediately for responsive UI
+      languageRef.current = newLanguage;
       setLanguageState(newLanguage);
       setApiLanguage(newLanguage);
 

@@ -8,7 +8,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface LanguagesStepProps {
-  selectedLanguage: string;
+  selectedLanguage: SupportedLanguageCode;
   onSelect: (languageCode: SupportedLanguageCode) => Promise<void>;
 }
 
