@@ -38,7 +38,7 @@ service cloud.firestore {
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if canWriteUserData(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region', 'hasCompletedPersonalOnboarding'])
+          .hasOnly(['displayName', 'photoURL', 'updatedAt', 'preferences', 'accentColor', 'region', 'language', 'hasCompletedPersonalOnboarding'])
         && request.resource.data.displayName is string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string)
         && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp)
@@ -49,6 +49,12 @@ service cloud.firestore {
           'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX',
           'NL', 'NZ', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SG', 'ZA', 'KR',
           'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'UA', 'GB', 'US', 'VN'
+        ])
+        && (!('language' in request.resource.data) || request.resource.data.language in [
+          'zh-CN', 'zh-TW', 'da-DK', 'nl-NL', 'en-US', 'fi-FI', 'fr-FR', 'de-DE',
+          'el-GR', 'hi-IN', 'hu-HU', 'id-ID', 'it-IT', 'ja-JP', 'ko-KR', 'no-NO',
+          'pl-PL', 'pt-BR', 'pt-PT', 'ro-RO', 'ru-RU', 'es-ES', 'es-MX', 'sv-SE',
+          'th-TH', 'tr-TR', 'uk-UA', 'vi-VN'
         ])
         // Preferences validation - must be a map with boolean autoAddToWatching
         && (!('preferences' in request.resource.data) || (

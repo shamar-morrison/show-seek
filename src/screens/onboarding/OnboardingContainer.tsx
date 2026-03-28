@@ -1,13 +1,15 @@
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, hexToRGBA } from '@/src/constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
+import { useLanguage } from '@/src/context/LanguageProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
 import { onboardingService } from '@/src/services/OnboardingService';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
-import type { OnboardingSelections, OnboardingStepId } from '@/src/types/onboarding';
+import type { OnboardingSelections } from '@/src/types/onboarding';
 import type { HomeScreenListItem } from '@/src/types/preferences';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
+import type { SupportedLanguageCode } from '@/src/constants/supportedLanguages';
 import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,6 +31,7 @@ import DisplayNameStep from './DisplayNameStep';
 import StreamingProvidersStep from './StreamingProvidersStep';
 import FavoriteListsStep from './FavoriteListsStep';
 import GenresStep from './GenresStep';
+import LanguagesStep from './LanguagesStep';
 import TVShowsStep from './TVShowsStep';
 import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
@@ -42,15 +45,17 @@ export default function OnboardingContainer() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, completePersonalOnboarding } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const { setRegion } = useRegion();
   const { setAccentColor } = useAccentColor();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const queryClient = useQueryClient();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [selections, setSelections] = useState<OnboardingSelections>({
+  const [selections, setSelections] = useState<OnboardingSelections>(() => ({
     ...EMPTY_ONBOARDING_SELECTIONS,
-  });
+    language,
+  }));
   const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -97,6 +102,14 @@ export default function OnboardingContainer() {
   const handleListsSelect = useCallback((lists: HomeScreenListItem[]) => {
     setSelections((prev) => ({ ...prev, homeScreenLists: lists }));
   }, []);
+
+  const handleLanguageSelect = useCallback(
+    async (languageCode: SupportedLanguageCode) => {
+      await setLanguage(languageCode, { syncToFirebase: false });
+      setSelections((prev) => ({ ...prev, language: languageCode }));
+    },
+    [setLanguage]
+  );
 
   const handleTVShowsSelect = useCallback((shows: TVShow[]) => {
     setSelections((prev) => ({ ...prev, selectedTVShows: shows }));
@@ -185,6 +198,10 @@ export default function OnboardingContainer() {
     updateProgress(0);
   }, [updateProgress]);
 
+  React.useEffect(() => {
+    setSelections((prev) => (prev.language === language ? prev : { ...prev, language }));
+  }, [language]);
+
   // Check if there's a meaningful selection for the current step
   const hasSelection = useMemo(() => {
     switch (currentStep?.id) {
@@ -196,6 +213,8 @@ export default function OnboardingContainer() {
         return true; // Always allow continuing — this step is purely aesthetic
       case 'favorite-lists':
         return selections.homeScreenLists.length > 0;
+      case 'languages':
+        return Boolean(selections.language);
       case 'genres':
         return selections.selectedGenreIds.length > 0;
       case 'tv-shows':
@@ -260,6 +279,13 @@ export default function OnboardingContainer() {
           <FavoriteListsStep
             selectedLists={selections.homeScreenLists}
             onSelect={handleListsSelect}
+          />
+        );
+      case 'languages':
+        return (
+          <LanguagesStep
+            selectedLanguage={selections.language}
+            onSelect={handleLanguageSelect}
           />
         );
       case 'genres':

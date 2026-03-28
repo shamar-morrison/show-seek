@@ -1,9 +1,29 @@
-import { getStoredLanguage, setStoredLanguage } from '@/src/utils/languageStorage';
+jest.mock('@/src/services/UserDocumentCache', () => ({
+  getCachedUserDocument: jest.fn(),
+  mergeUserDocumentCache: jest.fn(),
+}));
+
+import {
+  fetchLanguageFromFirebase,
+  getStoredLanguage,
+  setStoredLanguage,
+  syncLanguageToFirebase,
+} from '@/src/utils/languageStorage';
+import { auth, db } from '@/src/firebase/config';
+import { getCachedUserDocument, mergeUserDocumentCache } from '@/src/services/UserDocumentCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
 
 describe('languageStorage', () => {
+  const mockUserDocRef = { id: 'users/test-user-id' };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (doc as jest.Mock).mockReturnValue(mockUserDocRef);
+    (auth as any).currentUser = {
+      uid: 'test-user-id',
+      email: 'test@example.com',
+    };
   });
 
   describe('getStoredLanguage', () => {
@@ -51,6 +71,68 @@ describe('languageStorage', () => {
       (AsyncStorage.setItem as jest.Mock).mockRejectedValue(storageError);
 
       await expect(setStoredLanguage('ja-JP')).rejects.toThrow('Storage error');
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('syncLanguageToFirebase', () => {
+    it('should write language to Firebase for authenticated users', async () => {
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await syncLanguageToFirebase('ja-JP');
+
+      expect(doc).toHaveBeenCalledWith(db, 'users', 'test-user-id');
+      expect(setDoc).toHaveBeenCalledWith(mockUserDocRef, { language: 'ja-JP' }, { merge: true });
+      expect(mergeUserDocumentCache).toHaveBeenCalledWith('test-user-id', { language: 'ja-JP' });
+    });
+
+    it('should no-op when user is not authenticated', async () => {
+      (auth as any).currentUser = null;
+
+      await syncLanguageToFirebase('ja-JP');
+
+      expect(doc).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchLanguageFromFirebase', () => {
+    it('should return language from Firebase when present', async () => {
+      (getCachedUserDocument as jest.Mock).mockResolvedValue({ language: 'fr-FR' });
+
+      const result = await fetchLanguageFromFirebase();
+
+      expect(result).toBe('fr-FR');
+      expect(getCachedUserDocument).toHaveBeenCalledWith('test-user-id', {
+        callsite: 'languageStorage.fetchLanguageFromFirebase',
+      });
+    });
+
+    it('should return null for unsupported language codes', async () => {
+      (getCachedUserDocument as jest.Mock).mockResolvedValue({ language: 'xx-YY' });
+
+      const result = await fetchLanguageFromFirebase();
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when user is not authenticated', async () => {
+      (auth as any).currentUser = null;
+
+      const result = await fetchLanguageFromFirebase();
+
+      expect(result).toBeNull();
+      expect(getCachedUserDocument).not.toHaveBeenCalled();
+    });
+
+    it('should return null when Firebase fetch fails', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      (getCachedUserDocument as jest.Mock).mockRejectedValue(new Error('Firestore failure'));
+
+      const result = await fetchLanguageFromFirebase();
+
+      expect(result).toBeNull();
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });

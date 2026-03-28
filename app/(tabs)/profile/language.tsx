@@ -2,53 +2,23 @@
  * Language Selection Screen
  * Allows users to select their preferred language for TMDB content
  */
+import { LanguageSelectionList } from '@/src/components/language/LanguageSelectionList';
 import {
-  ACTIVE_OPACITY,
-  BORDER_RADIUS,
   COLORS,
   FONT_SIZE,
   SPACING,
-  hexToRGBA,
 } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
-import { SUPPORTED_LANGUAGES, useLanguage } from '@/src/context/LanguageProvider';
+import { useLanguage } from '@/src/context/LanguageProvider';
 import { screenStyles } from '@/src/styles/screenStyles';
-import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LanguageScreen() {
   const { language, setLanguage } = useLanguage();
   const { accentColor } = useAccentColor();
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const { t } = useTranslation();
-
-  const handleSelectLanguage = async (languageCode: string) => {
-    if (languageCode === language) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setIsUpdating(languageCode);
-
-    try {
-      await setLanguage(languageCode);
-    } catch (error) {
-      console.error('[LanguageScreen] Error updating language:', error);
-      Alert.alert(t('common.error'), t('settings.updateLanguageError'));
-    } finally {
-      setIsUpdating(null);
-    }
-  };
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['left', 'right', 'bottom']}>
@@ -57,46 +27,13 @@ export default function LanguageScreen() {
           {t('settings.languageScreenDescription')}
         </Text>
 
-        <View style={styles.languageList}>
-          {SUPPORTED_LANGUAGES.map((lang) => {
-            const isSelected = language === lang.code;
-            const isLoading = isUpdating === lang.code;
-
-            return (
-              <Pressable
-                key={lang.code}
-                style={({ pressed }) => [
-                  styles.languageItem,
-                  isSelected && styles.languageItemSelected,
-                  pressed && styles.languageItemPressed,
-                ]}
-                onPress={() => handleSelectLanguage(lang.code)}
-                disabled={isUpdating !== null}
-              >
-                <View style={styles.languageInfo}>
-                  <Text
-                    style={[styles.languageNativeName, isSelected && { color: accentColor }]}
-                  >
-                    {lang.nativeName}
-                  </Text>
-                  <Text style={styles.languageEnglishName}>{lang.englishName}</Text>
-                </View>
-
-                <View style={styles.languageStatus}>
-                  {isLoading ? (
-                    <ActivityIndicator size="small" color={accentColor} />
-                  ) : isSelected ? (
-                    <View
-                      style={[styles.checkContainer, { backgroundColor: hexToRGBA(accentColor, 0.2) }]}
-                    >
-                      <Check size={20} color={accentColor} />
-                    </View>
-                  ) : null}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+        <LanguageSelectionList
+          selectedLanguage={language}
+          accentColor={accentColor}
+          errorTitle={t('common.error')}
+          errorMessage={t('settings.updateLanguageError')}
+          onSelectLanguage={setLanguage}
+        />
 
         <Text style={styles.note}>
           {t('settings.languageScreenNote')}
@@ -115,52 +52,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.l,
     lineHeight: 22,
-  },
-  languageList: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.l,
-    overflow: 'hidden',
-  },
-  languageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.m,
-    paddingHorizontal: SPACING.l,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.surfaceLight,
-  },
-  languageItemSelected: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  languageItemPressed: {
-    opacity: ACTIVE_OPACITY,
-  },
-  languageInfo: {
-    flex: 1,
-  },
-  languageNativeName: {
-    fontSize: FONT_SIZE.l,
-    color: COLORS.text,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  languageEnglishName: {
-    fontSize: FONT_SIZE.s,
-    color: COLORS.textSecondary,
-  },
-  languageStatus: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   note: {
     fontSize: FONT_SIZE.s,

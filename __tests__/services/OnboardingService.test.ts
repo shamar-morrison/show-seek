@@ -56,6 +56,7 @@ describe('OnboardingService', () => {
   const selections = {
     displayName: 'Test User',
     homeScreenLists: [{ id: 'watchlist', type: 'tmdb' as const, label: 'Watchlist' }],
+    language: 'es-ES',
     selectedGenreIds: [],
     selectedTVShows: [
       {
@@ -112,6 +113,11 @@ describe('OnboardingService', () => {
     expect(mockUpdatePreference).toHaveBeenCalledTimes(1);
     expect(mockAddToList).toHaveBeenCalledTimes(3);
     expect(mockAddFavoritePerson).toHaveBeenCalledTimes(1);
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      { path: 'users/test-user-id' },
+      { displayName: 'Test User', language: 'es-ES' },
+      { merge: true }
+    );
   });
 
   it('rejects when a onboarding write fails after logging the summary', async () => {
@@ -154,11 +160,12 @@ describe('OnboardingService', () => {
     );
     expect(mockSetDoc).toHaveBeenCalledWith(
       { path: 'users/test-user-id' },
-      { displayName: 'fallback.user' },
+      { displayName: 'fallback.user', language: 'es-ES' },
       { merge: true }
     );
     expect(mockMergeUserDocumentCache).toHaveBeenCalledWith('test-user-id', {
       displayName: 'fallback.user',
+      language: 'es-ES',
     });
   });
 });

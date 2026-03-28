@@ -952,6 +952,8 @@
     "otherRegion": "Other",
     "listsTitle": "What do you want to see?",
     "listsSubtitle": "Choose the lists that will appear on your home screen.",
+    "languagesTitle": "Which language should we use?",
+    "languagesSubtitle": "We'll use this for movie and TV show titles and descriptions from TMDB.",
     "tvShowsTitle": "What are some shows you're watching right now?",
     "tvShowsSubtitle": "We'll add these to your Watching list.",
     "moviesTitle": "What are some movies that you love?",
