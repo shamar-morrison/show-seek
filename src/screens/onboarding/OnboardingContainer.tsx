@@ -135,6 +135,10 @@ export default function OnboardingContainer() {
     setSelections((prev) => ({ ...prev, selectedGenreIds: genreIds }));
   }, []);
 
+  const handleTVGenresSelect = useCallback((genreIds: number[]) => {
+    setSelections((prev) => ({ ...prev, selectedTVGenreIds: genreIds }));
+  }, []);
+
   const handleNext = useCallback(() => {
     if (currentStep?.id === 'accent-color' && selections.accentColor) {
       setAccentColor(selections.accentColor);
@@ -217,6 +221,8 @@ export default function OnboardingContainer() {
         return Boolean(selections.language);
       case 'genres':
         return selections.selectedGenreIds.length > 0;
+      case 'tv-genres':
+        return selections.selectedTVGenreIds.length > 0;
       case 'tv-shows':
         return selections.selectedTVShows.length > 0;
       case 'movies':
@@ -295,9 +301,21 @@ export default function OnboardingContainer() {
             onSelect={handleGenresSelect}
           />
         );
+      case 'tv-genres':
+        return (
+          <GenresStep
+            selectedGenreIds={selections.selectedTVGenreIds}
+            onSelect={handleTVGenresSelect}
+            mediaType="tv"
+          />
+        );
       case 'tv-shows':
         return (
-          <TVShowsStep selectedShows={selections.selectedTVShows} onSelect={handleTVShowsSelect} />
+          <TVShowsStep
+            selectedShows={selections.selectedTVShows}
+            onSelect={handleTVShowsSelect}
+            genreIds={selections.selectedTVGenreIds}
+          />
         );
       case 'movies':
         return (

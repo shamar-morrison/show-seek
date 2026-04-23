@@ -23,6 +23,8 @@ export interface OnboardingSelections {
   language: SupportedLanguageCode;
   /** Selected favorite genre IDs (max 3) */
   selectedGenreIds: number[];
+  /** Selected favorite TV genre IDs (max 3) */
+  selectedTVGenreIds: number[];
   /** TV shows the user is currently watching */
   selectedTVShows: TVShow[];
   /** Movies the user loves */
@@ -42,6 +44,7 @@ export const EMPTY_ONBOARDING_SELECTIONS: OnboardingSelections = {
   homeScreenLists: [],
   language: DEFAULT_LANGUAGE,
   selectedGenreIds: [],
+  selectedTVGenreIds: [],
   selectedTVShows: [],
   selectedMovies: [],
   selectedActors: [],
@@ -58,6 +61,7 @@ export type OnboardingStepId =
   | 'favorite-lists'
   | 'languages'
   | 'genres'
+  | 'tv-genres'
   | 'tv-shows'
   | 'movies'
   | 'actors'
@@ -79,8 +83,9 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 'favorite-lists', titleKey: 'personalOnboarding.listsTitle' },
   { id: 'languages', titleKey: 'personalOnboarding.languagesTitle' },
   { id: 'genres', titleKey: 'personalOnboarding.genresTitle' },
-  { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },
   { id: 'movies', titleKey: 'personalOnboarding.moviesTitle' },
+  { id: 'tv-genres', titleKey: 'personalOnboarding.tvGenresTitle' },
+  { id: 'tv-shows', titleKey: 'personalOnboarding.tvShowsTitle' },
   { id: 'actors', titleKey: 'personalOnboarding.actorsTitle' },
   { id: 'accent-color', titleKey: 'personalOnboarding.accentColorTitle' },
   { id: 'premium-paywall', titleKey: 'premium.unlockTitle' },

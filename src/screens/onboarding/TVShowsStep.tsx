@@ -16,11 +16,13 @@ import * as Haptics from 'expo-haptics';
 interface TVShowsStepProps {
   selectedShows: TVShow[];
   onSelect: (shows: TVShow[]) => void;
+  genreIds?: number[];
 }
 
-export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProps) {
+export default function TVShowsStep({ selectedShows, onSelect, genreIds }: TVShowsStepProps) {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
+  const genreFilter = genreIds && genreIds.length > 0 ? genreIds.join('|') : undefined;
 
   const {
     data: page1Data,
@@ -28,8 +30,13 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
     error: page1Error,
     refetch: refetchPage1,
   } = useQuery({
-    queryKey: ['onboarding', 'trendingTV', 1],
-    queryFn: () => tmdbApi.getTrendingTV('week', 1),
+    queryKey: genreFilter
+      ? ['onboarding', 'discoverTV', 1, genreFilter]
+      : ['onboarding', 'trendingTV', 1],
+    queryFn: () =>
+      genreFilter
+        ? tmdbApi.discoverTV({ page: 1, sortBy: 'popularity.desc', genre: genreFilter })
+        : tmdbApi.getTrendingTV('week', 1),
     staleTime: 1000 * 60 * 30,
   });
 
@@ -39,8 +46,13 @@ export default function TVShowsStep({ selectedShows, onSelect }: TVShowsStepProp
     error: page2Error,
     refetch: refetchPage2,
   } = useQuery({
-    queryKey: ['onboarding', 'trendingTV', 2],
-    queryFn: () => tmdbApi.getTrendingTV('week', 2),
+    queryKey: genreFilter
+      ? ['onboarding', 'discoverTV', 2, genreFilter]
+      : ['onboarding', 'trendingTV', 2],
+    queryFn: () =>
+      genreFilter
+        ? tmdbApi.discoverTV({ page: 2, sortBy: 'popularity.desc', genre: genreFilter })
+        : tmdbApi.getTrendingTV('week', 2),
     staleTime: 1000 * 60 * 30,
   });
 

@@ -146,11 +146,11 @@ jest.mock('@/src/screens/onboarding/FavoriteListsStep', () => ({
 
 jest.mock('@/src/screens/onboarding/GenresStep', () => ({
   __esModule: true,
-  default: () => {
+  default: ({ mediaType }: { mediaType?: 'movie' | 'tv' }) => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return React.createElement(Text, null, 'Genres step');
+    return React.createElement(Text, null, mediaType === 'tv' ? 'TV Genres step' : 'Genres step');
   },
 }));
 
@@ -262,7 +262,7 @@ describe('OnboardingContainer', () => {
     fireEvent.changeText(getByTestId('display-name-input'), 'Jordan');
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -278,7 +278,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -316,6 +316,36 @@ describe('OnboardingContainer', () => {
     });
   });
 
+  it('orders movies before TV genres and TV shows with the updated step count', () => {
+    const { getByText } = render(<OnboardingContainer />);
+
+    fireEvent.press(getByText('Begin onboarding'));
+
+    expect(getByText('Region step')).toBeTruthy();
+    expect(getByText('1/12')).toBeTruthy();
+
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Continue'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Skip'));
+
+    expect(getByText('Genres step')).toBeTruthy();
+
+    fireEvent.press(getByText('Skip'));
+
+    expect(getByText('Movies step')).toBeTruthy();
+
+    fireEvent.press(getByText('Skip'));
+
+    expect(getByText('TV Genres step')).toBeTruthy();
+
+    fireEvent.press(getByText('Skip'));
+
+    expect(getByText('TV step')).toBeTruthy();
+    expect(getByText('9/12')).toBeTruthy();
+  });
+
   it('waits for premium verification before skipping the onboarding paywall', async () => {
     mockPremiumState.isPremium = true;
     mockPremiumState.isLoading = true;
@@ -327,7 +357,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
