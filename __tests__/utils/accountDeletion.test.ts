@@ -46,6 +46,7 @@ describe('clearLocalAccountData', () => {
         TRAKT_STORAGE_KEYS.SYNC_STATUS,
         TRAKT_STORAGE_KEYS.LAST_ENRICHED,
         'isPremium_user-1',
+        'hasCompletedPersonalOnboarding:user-1',
         'widget_data_watchlist_user-1_watchlist',
         'widget_data_upcoming_movies',
       ])

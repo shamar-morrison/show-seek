@@ -35,11 +35,11 @@ describe('createUserDocument', () => {
       email: 'new.user@example.com',
       photoURL: null,
       createdAt: '__serverTimestamp__',
+      hasCompletedPersonalOnboarding: false,
     });
-    expect(mockUpdateProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ uid: 'uid-1' }),
-      { displayName: 'new.user' }
-    );
+    expect(mockUpdateProfile).toHaveBeenCalledWith(expect.objectContaining({ uid: 'uid-1' }), {
+      displayName: 'new.user',
+    });
   });
 
   it('creates a new user document with empty email fallback when email is null', async () => {
@@ -60,6 +60,7 @@ describe('createUserDocument', () => {
       email: '',
       photoURL: 'https://image.example/avatar.png',
       createdAt: '__serverTimestamp__',
+      hasCompletedPersonalOnboarding: false,
     });
     expect(mockUpdateProfile).not.toHaveBeenCalled();
   });
@@ -80,6 +81,7 @@ describe('createUserDocument', () => {
       'uid-created-at',
       expect.objectContaining({
         createdAt: '__serverTimestamp__',
+        hasCompletedPersonalOnboarding: false,
       })
     );
 

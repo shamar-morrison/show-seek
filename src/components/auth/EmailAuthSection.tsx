@@ -3,10 +3,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { auth } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { trackLogin } from '@/src/services/analytics';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from 'firebase/auth';
+import { persistPersonalOnboardingCache } from '@/src/utils/personalOnboardingCache';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,6 +57,16 @@ export default function EmailAuthSection({
     void trackLogin('email');
   };
 
+  const seedNewAccountPersonalOnboarding = async (
+    user: Parameters<typeof createUserDocument>[0]
+  ) => {
+    try {
+      await persistPersonalOnboardingCache(user.uid, false);
+    } catch (error) {
+      console.warn('Failed to seed personal onboarding cache:', error);
+    }
+  };
+
   const showExistingAccountMessage = () => {
     Alert.alert(t('auth.emailAlreadyInUseTitle'), t('auth.emailAlreadyInUseMessage'));
   };
@@ -76,6 +84,7 @@ export default function EmailAuthSection({
         normalizedEmail,
         enteredPassword
       );
+      await seedNewAccountPersonalOnboarding(userCredential.user);
       await completeEmailAuth(userCredential.user);
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
@@ -109,22 +118,18 @@ export default function EmailAuthSection({
   };
 
   const promptCreateAccount = (normalizedEmail: string, enteredPassword: string) => {
-    Alert.alert(
-      t('auth.emailCreateAccountTitle'),
-      t('auth.emailCreateAccountMessage'),
-      [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
+    Alert.alert(t('auth.emailCreateAccountTitle'), t('auth.emailCreateAccountMessage'), [
+      {
+        text: t('common.cancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('auth.createAccount'),
+        onPress: () => {
+          void handleCreateAccount(normalizedEmail, enteredPassword);
         },
-        {
-          text: t('auth.createAccount'),
-          onPress: () => {
-            void handleCreateAccount(normalizedEmail, enteredPassword);
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleEmailContinue = async () => {

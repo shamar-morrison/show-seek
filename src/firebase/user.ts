@@ -14,6 +14,7 @@ export interface UserDocument {
   email: string | null;
   photoURL: string | null;
   createdAt: any; // Firebase Timestamp
+  hasCompletedPersonalOnboarding: boolean;
 }
 
 function normalizeEmail(email: string | null): string {
@@ -41,12 +42,16 @@ export async function createUserDocument(user: User): Promise<void> {
 
   const userRef = doc(db, 'users', user.uid);
   const normalizedEmail = normalizeEmail(user.email);
-  const resolvedAuthDisplayName = resolvePreferredDisplayName(user.displayName, null, normalizedEmail);
+  const resolvedAuthDisplayName = resolvePreferredDisplayName(
+    user.displayName,
+    null,
+    normalizedEmail
+  );
   const normalizedDisplayName = normalizeDisplayName(user.displayName, normalizedEmail);
   const normalizedPhotoURL = normalizePhotoURL(user.photoURL);
 
   try {
-    if (!(user.displayName?.trim()) && resolvedAuthDisplayName) {
+    if (!user.displayName?.trim() && resolvedAuthDisplayName) {
       try {
         await updateProfile(user, { displayName: resolvedAuthDisplayName });
       } catch (error) {
@@ -86,6 +91,7 @@ export async function createUserDocument(user: User): Promise<void> {
         email: normalizedEmail,
         photoURL: normalizedPhotoURL,
         createdAt: serverTimestamp(),
+        hasCompletedPersonalOnboarding: false,
       };
 
       await setDoc(userRef, userData);
@@ -95,6 +101,7 @@ export async function createUserDocument(user: User): Promise<void> {
         email: normalizedEmail,
         photoURL: normalizedPhotoURL,
         createdAt: userData.createdAt ?? new Date(),
+        hasCompletedPersonalOnboarding: false,
       });
     }
   } catch (error) {

@@ -1,20 +1,23 @@
 import { auth, db } from '@/src/firebase/config';
 import { signOutGoogle } from '@/src/firebase/auth';
 import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
+import {
+  getPersonalOnboardingCacheKey,
+  persistPersonalOnboardingCache,
+} from '@/src/utils/personalOnboardingCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 
-const getPersonalOnboardingCacheKey = (userId: string) =>
-  `hasCompletedPersonalOnboarding:${userId}`;
-
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
-  const [hasCompletedPersonalOnboarding, setHasCompletedPersonalOnboarding] = useState<boolean | null>(null);
+  const [hasCompletedPersonalOnboarding, setHasCompletedPersonalOnboarding] = useState<
+    boolean | null
+  >(null);
   const signOutInFlight = useRef<Promise<void> | null>(null);
 
   const persistUserId = (userId: string) => {
@@ -30,7 +33,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   };
 
   const persistPersonalOnboardingState = (userId: string, value: boolean) => {
-    AsyncStorage.setItem(getPersonalOnboardingCacheKey(userId), String(value)).catch((error) => {
+    persistPersonalOnboardingCache(userId, value).catch((error) => {
       console.error('Error persisting personal onboarding state', error);
     });
   };
@@ -158,10 +161,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         if (!isCurrentSession()) {
           return;
         }
-        console.error('[Auth] Personal onboarding check failed, defaulting to true:', e);
-        // Default to true on error so user isn't stuck in onboarding
+        console.warn(
+          hasCachedPersonalOnboarding
+            ? '[Auth] Personal onboarding check failed, keeping cached state:'
+            : '[Auth] Personal onboarding check failed, defaulting to false:',
+          e
+        );
+        // Default to false on error so new users do not skip personalized onboarding.
         if (!hasCachedPersonalOnboarding) {
-          setHasCompletedPersonalOnboarding(true);
+          setHasCompletedPersonalOnboarding(false);
         }
       } finally {
         if (timeoutId) {
@@ -226,10 +234,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       if (signOutError) {
         throw signOutError;
       }
-    })()
-      .finally(() => {
-        signOutInFlight.current = null;
-      });
+    })().finally(() => {
+      signOutInFlight.current = null;
+    });
 
     signOutInFlight.current = signOutPromise;
     return signOutPromise;

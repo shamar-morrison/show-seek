@@ -27,13 +27,14 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if canWriteUserData(userId)
         // Enforce exact allowed key set (required + optional photoURL)
-        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'email', 'createdAt', 'photoURL'])
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'email', 'createdAt', 'photoURL', 'hasCompletedPersonalOnboarding'])
         && request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt'])
         // Validate field types and values
         && request.resource.data.uid == userId
         && request.resource.data.displayName is string
         && request.resource.data.email is string
         && request.resource.data.createdAt is timestamp
+        && (!('hasCompletedPersonalOnboarding' in request.resource.data) || request.resource.data.hasCompletedPersonalOnboarding is bool)
         // photoURL is optional but if present must be null or string
         && (!('photoURL' in request.resource.data) || request.resource.data.photoURL == null || request.resource.data.photoURL is string);
       allow update: if canWriteUserData(userId)

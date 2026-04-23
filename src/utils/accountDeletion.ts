@@ -1,6 +1,7 @@
 import { TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
 import { clearUserDocumentCache } from '@/src/services/UserDocumentCache';
 import { writeToSharedPreferences } from '@/src/services/sharedPreferencesService';
+import { getPersonalOnboardingCacheKey } from '@/src/utils/personalOnboardingCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
@@ -30,6 +31,7 @@ export async function clearLocalAccountData(userId?: string): Promise<void> {
 
   if (userId) {
     asyncStorageKeysToRemove.add(`isPremium_${userId}`);
+    asyncStorageKeysToRemove.add(getPersonalOnboardingCacheKey(userId));
   }
 
   try {

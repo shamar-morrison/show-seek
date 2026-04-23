@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { getDoc, setDoc } from 'firebase/firestore';
 import React from 'react';
 import { signOutGoogle } from '@/src/firebase/auth';
+import { READ_OPTIMIZATION_FLAGS } from '@/src/config/readOptimization';
 
 // Capture the auth state callback so we can trigger it in tests
 let capturedAuthCallback: ((user: any) => void) | null = null;
@@ -167,11 +168,87 @@ describe('AuthProvider', () => {
       );
     });
 
+    it('should keep personal onboarding incomplete when Firestore check times out without cache', async () => {
+      jest.useFakeTimers();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+
+      try {
+        mockCurrentUser = mockUser;
+        (getDoc as jest.Mock).mockImplementation(() => new Promise(() => {}));
+
+        const { result } = renderHook(() => useAuth(), { wrapper });
+
+        await act(async () => {
+          capturedAuthCallback?.(mockUser);
+          await Promise.resolve();
+        });
+
+        await act(async () => {
+          jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+          await Promise.resolve();
+        });
+
+        expect(result.current.loading).toBe(false);
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[Auth] Personal onboarding check failed, defaulting to false:',
+          expect.any(Error)
+        );
+      } finally {
+        consoleWarnSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    it('should keep cached completed personal onboarding when Firestore refresh times out', async () => {
+      jest.useFakeTimers();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+
+      try {
+        mockCurrentUser = mockUser;
+        (AsyncStorage.getItem as jest.Mock).mockImplementation(async (key: string) => {
+          if (key === 'hasCompletedPersonalOnboarding:test-user-123') {
+            return 'true';
+          }
+          return null;
+        });
+        (getDoc as jest.Mock).mockImplementation(() => new Promise(() => {}));
+
+        const { result } = renderHook(() => useAuth(), { wrapper });
+
+        await act(async () => {
+          capturedAuthCallback?.(mockUser);
+          await Promise.resolve();
+        });
+
+        expect(result.current.loading).toBe(false);
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+
+        await act(async () => {
+          jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+          await Promise.resolve();
+        });
+
+        expect(result.current.loading).toBe(false);
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '[Auth] Personal onboarding check failed, keeping cached state:',
+          expect.any(Error)
+        );
+      } finally {
+        consoleWarnSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
     it('should reset personal onboarding state and keep loading true while re-reading Firestore for a signed-in user', async () => {
       const anonymousUser = { uid: 'anon-1', isAnonymous: true };
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
-      let resolveGetDoc: ((value: { data: () => { hasCompletedPersonalOnboarding: boolean } }) => void) | null =
-        null;
+      let resolveGetDoc:
+        | ((value: { data: () => { hasCompletedPersonalOnboarding: boolean } }) => void)
+        | null = null;
 
       mockCurrentUser = anonymousUser;
 

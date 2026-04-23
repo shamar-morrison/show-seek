@@ -1,4 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import React from 'react';
 import { Alert } from 'react-native';
@@ -191,7 +192,9 @@ describe('SignIn', () => {
     });
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
 
-    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    const confirmButton = getLastAlertButtons().find(
+      (button) => button.text === 'auth.createAccount'
+    );
     if (!confirmButton?.onPress) {
       throw new Error('Expected create account confirm button');
     }
@@ -205,6 +208,12 @@ describe('SignIn', () => {
         expect.anything(),
         'new-user@example.com',
         'secret123'
+      );
+    });
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'hasCompletedPersonalOnboarding:new-user',
+        'false'
       );
     });
     await waitFor(() => {
@@ -243,7 +252,9 @@ describe('SignIn', () => {
     });
     expect(createUserWithEmailAndPassword).not.toHaveBeenCalled();
 
-    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    const confirmButton = getLastAlertButtons().find(
+      (button) => button.text === 'auth.createAccount'
+    );
     if (!confirmButton?.onPress) {
       throw new Error('Expected create account confirm button');
     }
@@ -307,7 +318,9 @@ describe('SignIn', () => {
       );
     });
 
-    const confirmButton = getLastAlertButtons().find((button) => button.text === 'auth.createAccount');
+    const confirmButton = getLastAlertButtons().find(
+      (button) => button.text === 'auth.createAccount'
+    );
     if (!confirmButton?.onPress) {
       throw new Error('Expected create account confirm button');
     }
@@ -325,7 +338,10 @@ describe('SignIn', () => {
     });
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('auth.emailAlreadyInUseTitle', 'auth.emailAlreadyInUseMessage');
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'auth.emailAlreadyInUseTitle',
+        'auth.emailAlreadyInUseMessage'
+      );
     });
 
     expect(mockCreateUserDocument).not.toHaveBeenCalled();
