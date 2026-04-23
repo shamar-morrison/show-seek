@@ -12,21 +12,95 @@ import type { OnboardingSelections } from '@/src/types/onboarding';
  * OnboardingService
  *
  * Orchestrates all data persistence for the personalized onboarding flow.
- * Runs writes in parallel and rejects after logging a summary if any operation fails.
+ * Keeps core setup writes strict, while saving optional personalization picks
+ * on a best-effort basis so slow item writes do not trap users in onboarding.
  */
 type OnboardingFailure = {
   label: string;
   reason: unknown;
 };
 
+type OnboardingTask = {
+  label: string;
+  required: boolean;
+  run: () => Promise<unknown>;
+};
+
+const RETRYABLE_FIRESTORE_CODES = new Set([
+  'deadline-exceeded',
+  'firestore/deadline-exceeded',
+  'unavailable',
+  'firestore/unavailable',
+]);
+
+const getErrorMessage = (reason: unknown): string => {
+  if (reason instanceof Error) {
+    return reason.message;
+  }
+
+  if (typeof reason === 'string') {
+    return reason;
+  }
+
+  return '';
+};
+
+const isRetryableOnboardingError = (reason: unknown): boolean => {
+  const code = (reason as { code?: string } | null)?.code;
+  if (code && RETRYABLE_FIRESTORE_CODES.has(code)) {
+    return true;
+  }
+
+  const message = getErrorMessage(reason).toLowerCase();
+  return (
+    message.includes('timed out') ||
+    message.includes('timeout') ||
+    message.includes('deadline exceeded') ||
+    message.includes('deadline-exceeded') ||
+    message.includes('network error') ||
+    message.includes('unavailable')
+  );
+};
+
+const runTask = async (task: OnboardingTask): Promise<OnboardingFailure | null> => {
+  try {
+    await task.run();
+    return null;
+  } catch (reason) {
+    return {
+      label: task.label,
+      reason,
+    };
+  }
+};
+
+const runOptionalTaskWithRetry = async (
+  task: OnboardingTask
+): Promise<OnboardingFailure | null> => {
+  const firstFailure = await runTask(task);
+  if (!firstFailure || !isRetryableOnboardingError(firstFailure.reason)) {
+    return firstFailure;
+  }
+
+  return runTask(task);
+};
+
+const collectFailures = async (
+  tasks: OnboardingTask[],
+  runner: (task: OnboardingTask) => Promise<OnboardingFailure | null>
+): Promise<OnboardingFailure[]> => {
+  const results = await Promise.all(tasks.map((task) => runner(task)));
+  return results.filter((failure): failure is OnboardingFailure => failure !== null);
+};
+
 class OnboardingService {
   /**
-   * Save all onboarding selections in parallel.
+   * Save all onboarding selections.
    * Region and accent color are saved in their respective steps via context.
    * Language is applied locally during onboarding and persisted here on completion.
    */
   async saveOnboarding(selections: OnboardingSelections): Promise<void> {
-    const tasks: Array<{ label: string; promise: Promise<unknown> }> = [];
+    const tasks: OnboardingTask[] = [];
 
     // 0. Display Name + Language — update Firebase Auth profile + Firestore user doc
     if (auth.currentUser) {
@@ -38,7 +112,8 @@ class OnboardingService {
       );
       tasks.push({
         label: 'user-profile',
-        promise: (async () => {
+        required: true,
+        run: async () => {
           const currentAuthDisplayName = currentUser.displayName?.trim() ?? '';
           if (resolvedDisplayName && currentAuthDisplayName !== resolvedDisplayName) {
             await updateProfile(currentUser, { displayName: resolvedDisplayName });
@@ -59,7 +134,7 @@ class OnboardingService {
             await setDoc(userRef, userDocUpdates, { merge: true });
             mergeUserDocumentCache(currentUser.uid, userDocUpdates);
           }
-        })(),
+        },
       });
     }
 
@@ -67,7 +142,8 @@ class OnboardingService {
     if (selections.homeScreenLists.length > 0) {
       tasks.push({
         label: 'home-screen-lists',
-        promise: preferencesService.updatePreference('homeScreenLists', selections.homeScreenLists),
+        required: true,
+        run: () => preferencesService.updatePreference('homeScreenLists', selections.homeScreenLists),
       });
     }
 
@@ -86,7 +162,8 @@ class OnboardingService {
       };
       tasks.push({
         label: `tv-show-${show.id}`,
-        promise: listService.addToList('currently-watching', mediaItem, 'Watching'),
+        required: false,
+        run: () => listService.addToList('currently-watching', mediaItem, 'Watching'),
       });
     }
 
@@ -103,11 +180,13 @@ class OnboardingService {
       };
       tasks.push({
         label: `movie-favorites-${movie.id}`,
-        promise: listService.addToList('favorites', mediaItem, 'Favorites'),
+        required: false,
+        run: () => listService.addToList('favorites', mediaItem, 'Favorites'),
       });
       tasks.push({
         label: `movie-already-watched-${movie.id}`,
-        promise: listService.addToList('already-watched', mediaItem, 'Already Watched'),
+        required: false,
+        run: () => listService.addToList('already-watched', mediaItem, 'Already Watched'),
       });
     }
 
@@ -115,26 +194,27 @@ class OnboardingService {
     for (const actor of selections.selectedActors) {
       tasks.push({
         label: `actor-${actor.id}`,
-        promise: favoritePersonsService.addFavoritePerson({
-          id: actor.id,
-          name: actor.name,
-          profile_path: actor.profile_path,
-          known_for_department: actor.known_for_department,
-        }),
+        required: false,
+        run: () =>
+          favoritePersonsService.addFavoritePerson({
+            id: actor.id,
+            name: actor.name,
+            profile_path: actor.profile_path,
+            known_for_department: actor.known_for_department,
+          }),
       });
     }
 
-    const results = await Promise.allSettled(tasks.map((task) => task.promise));
-    const failures = results
-      .map((result, index) =>
-        result.status === 'rejected'
-          ? {
-              label: tasks[index].label,
-              reason: result.reason,
-            }
-          : null
-      )
-      .filter((failure): failure is { label: string; reason: unknown } => failure !== null);
+    const requiredTasks = tasks.filter((task) => task.required);
+    const optionalTasks = tasks.filter((task) => !task.required);
+    const [failures, optionalFailures] = await Promise.all([
+      collectFailures(requiredTasks, runTask),
+      collectFailures(optionalTasks, runOptionalTaskWithRetry),
+    ]);
+
+    if (optionalFailures.length > 0) {
+      console.warn('[OnboardingService] Optional onboarding operations failed:', optionalFailures);
+    }
 
     if (failures.length > 0) {
       console.error('[OnboardingService] Failed onboarding operations:', failures);

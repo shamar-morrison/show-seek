@@ -120,12 +120,12 @@ describe('OnboardingService', () => {
     );
   });
 
-  it('rejects when a onboarding write fails after logging the summary', async () => {
+  it('rejects when a required onboarding write fails after logging the summary', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockAddFavoritePerson.mockRejectedValueOnce(new Error('permission denied'));
+    mockUpdatePreference.mockRejectedValueOnce(new Error('permission denied'));
 
     await expect(onboardingService.saveOnboarding(selections)).rejects.toThrow(
-      '[OnboardingService] Failed onboarding operations: actor-3'
+      '[OnboardingService] Failed onboarding operations: home-screen-lists'
     );
 
     expect(mockUpdateProfile).toHaveBeenCalledTimes(1);
@@ -137,13 +137,67 @@ describe('OnboardingService', () => {
       '[OnboardingService] Failed onboarding operations:',
       expect.arrayContaining([
         expect.objectContaining({
-          label: 'actor-3',
+          label: 'home-screen-lists',
           reason: expect.any(Error),
         }),
       ])
     );
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('retries an optional timeout once and resolves when the retry succeeds', async () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAddFavoritePerson
+      .mockRejectedValueOnce(new Error('Request timed out'))
+      .mockResolvedValueOnce(undefined);
+
+    await expect(onboardingService.saveOnboarding(selections)).resolves.toBeUndefined();
+
+    expect(mockAddFavoritePerson).toHaveBeenCalledTimes(2);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('logs optional timeout failures after one retry and still resolves', async () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAddFavoritePerson.mockRejectedValue(new Error('Request timed out'));
+
+    await expect(onboardingService.saveOnboarding(selections)).resolves.toBeUndefined();
+
+    expect(mockAddFavoritePerson).toHaveBeenCalledTimes(2);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[OnboardingService] Optional onboarding operations failed:',
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'actor-3',
+          reason: expect.any(Error),
+        }),
+      ])
+    );
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('logs non-retryable optional failures without blocking completion', async () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockAddFavoritePerson.mockRejectedValue(new Error('permission denied'));
+
+    await expect(onboardingService.saveOnboarding(selections)).resolves.toBeUndefined();
+
+    expect(mockAddFavoritePerson).toHaveBeenCalledTimes(1);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[OnboardingService] Optional onboarding operations failed:',
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'actor-3',
+          reason: expect.any(Error),
+        }),
+      ])
+    );
+
+    consoleWarnSpy.mockRestore();
   });
 
   it('backfills a fallback display name from the auth email when the onboarding input is blank', async () => {
