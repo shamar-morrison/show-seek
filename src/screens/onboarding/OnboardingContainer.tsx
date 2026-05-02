@@ -16,7 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
@@ -183,7 +183,9 @@ export default function OnboardingContainer() {
   const handlePersonalizingDone = useCallback(async () => {
     try {
       await handleSaveOnboarding();
-    } catch {
+    } catch (error) {
+      console.error('[OnboardingContainer] Onboarding save failed:', error);
+      Alert.alert(t('common.error'), t('errors.generic'));
       return;
     }
 
@@ -194,8 +196,17 @@ export default function OnboardingContainer() {
       router.replace('/(tabs)/home' as any);
     } catch (e) {
       console.error('[OnboardingContainer] Personal onboarding completion failed:', e);
+      Alert.alert(t('common.error'), t('errors.generic'));
     }
-  }, [completePersonalOnboarding, handleSaveOnboarding, queryClient, router, selections.homeScreenLists, user?.uid]);
+  }, [
+    completePersonalOnboarding,
+    handleSaveOnboarding,
+    queryClient,
+    router,
+    selections.homeScreenLists,
+    t,
+    user?.uid,
+  ]);
 
   // Initialize progress on first render
   React.useEffect(() => {

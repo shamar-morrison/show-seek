@@ -2,6 +2,7 @@ export const MAX_FREE_NOTES = 15;
 export const MAX_FREE_REMINDERS = 3;
 
 export type FreemiumLimitFeature = 'notes' | 'reminders';
+export type FreemiumGateState = 'allowed' | 'blocked';
 
 const FREEMIUM_LIMIT_EXCEEDED_MESSAGE = 'FREEMIUM_LIMIT_EXCEEDED';
 const PREMIUM_STATUS_PENDING_MESSAGE = 'PREMIUM_STATUS_PENDING';
@@ -36,9 +37,22 @@ export class PremiumStatusPendingError extends Error {
   }
 }
 
+interface FreemiumGateOptions {
+  currentCount: number;
+  isPremium: boolean;
+  maxFreeCount: number;
+}
+
+interface AssertFreemiumAllowedOptions extends FreemiumGateOptions {
+  feature: FreemiumLimitFeature;
+  isPremiumLoading?: boolean;
+}
+
 export const isFreemiumLimitError = (error: unknown): error is FreemiumLimitError =>
   error instanceof FreemiumLimitError ||
-  (error instanceof Error && 'code' in error && (error as { code?: string }).code === 'FREEMIUM_LIMIT');
+  (error instanceof Error &&
+    'code' in error &&
+    (error as { code?: string }).code === 'FREEMIUM_LIMIT');
 
 export const isPremiumStatusPendingError = (
   error: unknown
@@ -47,3 +61,45 @@ export const isPremiumStatusPendingError = (
   (error instanceof Error &&
     'code' in error &&
     (error as { code?: string }).code === 'PREMIUM_STATUS_PENDING');
+
+export const getFreemiumGateState = ({
+  currentCount,
+  isPremium,
+  maxFreeCount,
+}: FreemiumGateOptions): FreemiumGateState => {
+  if (isPremium) {
+    return 'allowed';
+  }
+
+  return currentCount < maxFreeCount ? 'allowed' : 'blocked';
+};
+
+export const assertFreemiumAllowed = ({
+  feature,
+  currentCount,
+  isPremium,
+  isPremiumLoading,
+  maxFreeCount,
+}: AssertFreemiumAllowedOptions): void => {
+  if (isPremium) {
+    return;
+  }
+
+  if (isPremiumLoading) {
+    throw new PremiumStatusPendingError();
+  }
+
+  if (
+    getFreemiumGateState({
+      currentCount,
+      isPremium,
+      maxFreeCount,
+    }) === 'blocked'
+  ) {
+    throw new FreemiumLimitError({
+      feature,
+      currentCount,
+      maxFreeCount,
+    });
+  }
+};

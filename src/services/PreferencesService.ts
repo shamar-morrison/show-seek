@@ -30,6 +30,10 @@ class PreferencesService {
         data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
       copyInsteadOfMove: data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
       homeScreenLists: data?.preferences?.homeScreenLists,
+      favoriteMovieGenreIds:
+        data?.preferences?.favoriteMovieGenreIds ?? DEFAULT_PREFERENCES.favoriteMovieGenreIds,
+      favoriteTVGenreIds:
+        data?.preferences?.favoriteTVGenreIds ?? DEFAULT_PREFERENCES.favoriteTVGenreIds,
       quickMarkAsWatched:
         data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
       defaultLaunchScreen:

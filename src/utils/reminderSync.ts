@@ -34,6 +34,8 @@ async function setDocWithTimeout(
 
 const SYNC_COOLDOWN_KEY = 'lastReminderSyncTimestamp';
 const SYNC_COOLDOWN_HOURS = 24;
+let syncInFlight = false;
+let startupSyncScheduled = false;
 
 /**
  * Check if sync is needed (24+ hours since last sync)
@@ -68,6 +70,13 @@ export async function shouldSync(): Promise<boolean> {
  * notifications—only successfully synced reminders are rescheduled.
  */
 export async function syncReminders(): Promise<void> {
+  if (syncInFlight) {
+    console.log('[reminderSync] Sync already in progress');
+    return;
+  }
+
+  syncInFlight = true;
+
   try {
     const user = auth.currentUser;
     if (!user) return;
@@ -232,6 +241,8 @@ export async function syncReminders(): Promise<void> {
     console.log('[reminderSync] Sync complete');
   } catch (error) {
     console.error('[reminderSync] Error during sync:', error);
+  } finally {
+    syncInFlight = false;
   }
 }
 
@@ -248,10 +259,17 @@ export async function initializeReminderSync(): Promise<void> {
   const needsSync = await shouldSync();
 
   if (needsSync) {
+    if (startupSyncScheduled || syncInFlight) {
+      console.log('[reminderSync] Startup sync already scheduled');
+      return;
+    }
+
+    startupSyncScheduled = true;
     console.log('[reminderSync] Starting background sync...');
     // Use setTimeout to avoid blocking app startup
     setTimeout(() => {
-      syncReminders();
+      startupSyncScheduled = false;
+      void syncReminders();
     }, 2000);
   } else {
     console.log('[reminderSync] Sync not needed (within cooldown period)');

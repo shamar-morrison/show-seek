@@ -3,6 +3,7 @@ import { usePremium } from '@/src/context/PremiumContext';
 import { useAuth } from '../context/auth';
 import { Note, NoteInput } from '@/src/types/note';
 import {
+  assertFreemiumAllowed,
   FreemiumLimitError,
   isFreemiumLimitError,
   isPremiumStatusPendingError,
@@ -121,17 +122,13 @@ const assertCanCreateNote = async ({
     return;
   }
 
-  if (isPremiumLoading) {
-    throw new PremiumStatusPendingError();
-  }
-
-  if (notes.length >= MAX_FREE_NOTES) {
-    throw new FreemiumLimitError({
-      feature: 'notes',
-      maxFreeCount: MAX_FREE_NOTES,
-      currentCount: notes.length,
-    });
-  }
+  assertFreemiumAllowed({
+    feature: 'notes',
+    currentCount: notes.length,
+    isPremium,
+    isPremiumLoading,
+    maxFreeCount: MAX_FREE_NOTES,
+  });
 };
 
 /**

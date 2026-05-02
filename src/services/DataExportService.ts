@@ -4,7 +4,7 @@ import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { ListMediaItem } from '@/src/services/ListService';
 import { normalizeRatingItem, type RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
-import { createTimeout } from '@/src/utils/timeout';
+import { raceWithTimeout } from '@/src/utils/timeout';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { collection, getDocs } from 'firebase/firestore';
@@ -40,18 +40,15 @@ async function fetchAllUserData(): Promise<{
   const userId = user.uid;
 
   try {
-    // 10 second timeout
-    const timeoutPromise = createTimeout(10000);
-
     // Fetch all data in parallel using getDocs (no orderBy to avoid index requirements)
-    const [listsSnapshot, ratingsSnapshot, favoritePersonsSnapshot] = await Promise.race([
+    const [listsSnapshot, ratingsSnapshot, favoritePersonsSnapshot] = await raceWithTimeout(
       Promise.all([
         getDocs(collection(db, `users/${userId}/lists`)),
         getDocs(collection(db, `users/${userId}/ratings`)),
         getDocs(collection(db, `users/${userId}/favorite_persons`)),
       ]),
-      timeoutPromise,
-    ]);
+      { ms: 10000 }
+    );
 
     const lists: UserList[] = listsSnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -105,10 +102,10 @@ async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<Enri
   // Fetch movie titles with timeout protection
   const moviePromises = movieRatings.map(async (rating) => {
     try {
-      const movie = await Promise.race([
-        tmdbApi.getMovieDetails(parseInt(rating.id, 10)),
-        createTimeout(10000, `Timeout fetching movie ${rating.id}`),
-      ]);
+      const movie = await raceWithTimeout(tmdbApi.getMovieDetails(parseInt(rating.id, 10)), {
+        ms: 10000,
+        message: `Timeout fetching movie ${rating.id}`,
+      });
       return { rating, title: movie.title || `Movie ID: ${rating.id}` };
     } catch {
       return { rating, title: `Movie ID: ${rating.id}` };
@@ -118,10 +115,10 @@ async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<Enri
   // Fetch TV show titles with timeout protection
   const tvPromises = tvRatings.map(async (rating) => {
     try {
-      const tvShow = await Promise.race([
-        tmdbApi.getTVShowDetails(parseInt(rating.id, 10)),
-        createTimeout(10000, `Timeout fetching TV show ${rating.id}`),
-      ]);
+      const tvShow = await raceWithTimeout(tmdbApi.getTVShowDetails(parseInt(rating.id, 10)), {
+        ms: 10000,
+        message: `Timeout fetching TV show ${rating.id}`,
+      });
       return { rating, title: tvShow.name || `TV Show ID: ${rating.id}` };
     } catch {
       return { rating, title: `TV Show ID: ${rating.id}` };
@@ -129,10 +126,10 @@ async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<Enri
   });
 
   // Global 30-second timeout for entire enrichment process
-  const [movieResults, tvResults] = await Promise.race([
+  const [movieResults, tvResults] = await raceWithTimeout(
     Promise.all([Promise.all(moviePromises), Promise.all(tvPromises)]),
-    createTimeout(30000, 'Title enrichment timed out'),
-  ]);
+    { ms: 30000, message: 'Title enrichment timed out' }
+  );
 
   return [...movieResults, ...tvResults, ...episodeEnriched];
 }

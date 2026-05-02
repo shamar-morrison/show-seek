@@ -6,6 +6,7 @@ import {
 } from '@/src/services/CollectionTrackingService';
 import type { CollectionProgressItem } from '@/src/types/collectionTracking';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
+import { getFreemiumGateState } from '@/src/utils/freemiumLimits';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -13,7 +14,8 @@ import { auth } from '../firebase/config';
 
 // Aggressive cache time for collection data since it rarely changes
 const COLLECTION_STALE_TIME = 7 * 24 * 60 * 60 * 1000; // 1 week
-const COLLECTION_GC_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days
+const COLLECTION_GC_TIME =
+  process.env.NODE_ENV === 'test' ? Infinity : 30 * 24 * 60 * 60 * 1000;
 const START_TRACKING_BACKFILL_TIMEOUT_MS = 5000;
 
 /**
@@ -81,7 +83,12 @@ export const useCanTrackMoreCollections = () => {
   });
 
   const count = query.data ?? 0;
-  const canTrackMore = isPremium || count < MAX_FREE_COLLECTIONS;
+  const canTrackMore =
+    getFreemiumGateState({
+      currentCount: count,
+      isPremium,
+      maxFreeCount: MAX_FREE_COLLECTIONS,
+    }) === 'allowed';
 
   return {
     count,

@@ -34,6 +34,8 @@ export interface UserPreferences {
   showListIndicators: boolean; // Show bookmark badge on cards when item is in a list
   copyInsteadOfMove: boolean; // Bulk add behavior on list detail screens (true = copy, false = move)
   homeScreenLists?: HomeScreenListItem[]; // Optional, falls back to defaults
+  favoriteMovieGenreIds: number[]; // Personalized onboarding favorite movie genres
+  favoriteTVGenreIds: number[]; // Personalized onboarding favorite TV genres
   quickMarkAsWatched: boolean; // Skip modal and use current time when marking movies as watched
   defaultLaunchScreen?: LaunchScreenRoute; // Which tab to open on app launch
   hideWatchedContent: boolean; // Premium: hide watched content from search/discover
@@ -52,6 +54,8 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   blurPlotSpoilers: false,
   showListIndicators: true, // On by default for new users
   copyInsteadOfMove: false, // Off by default - bulk add moves items from source list
+  favoriteMovieGenreIds: [],
+  favoriteTVGenreIds: [],
   quickMarkAsWatched: false, // Off by default - show date selection modal
   defaultLaunchScreen: '/(tabs)/home',
   hideWatchedContent: false, // Off by default - show all content

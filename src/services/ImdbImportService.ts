@@ -68,8 +68,15 @@ class ImdbImportService {
 
     for (let index = 0; index < preparedImport.chunks.length; index += 1) {
       const chunk = preparedImport.chunks[index];
-      const result = await this.importCallable(chunk);
-      runtimeStats = mergeImdbImportStats(runtimeStats, result.data);
+      try {
+        const result = await this.importCallable(chunk);
+        runtimeStats = mergeImdbImportStats(runtimeStats, result.data);
+      } catch (error) {
+        console.error('[ImdbImportService] Failed to import chunk:', {
+          chunkIndex: index,
+          error,
+        });
+      }
 
       onProgress?.({
         completedChunks: index + 1,

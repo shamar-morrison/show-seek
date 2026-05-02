@@ -30,6 +30,11 @@ module.exports = {
           '))',
       ],
       collectCoverageFrom: [
+        'app/**/*.{ts,tsx}',
+        'src/api/**/*.{ts,tsx}',
+        'src/context/**/*.{ts,tsx}',
+        'src/firebase/**/*.{ts,tsx}',
+        'src/services/**/*.{ts,tsx}',
         'src/utils/**/*.{ts,tsx}',
         'src/hooks/**/*.{ts,tsx}',
         'src/components/**/*.{ts,tsx}',

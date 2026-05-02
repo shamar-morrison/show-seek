@@ -262,6 +262,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
           console.error('[Trakt] Sync failed:', status.errors);
         }
       }
+
+      return status;
     } catch (error) {
       console.error('[Trakt] Failed to poll sync status:', error);
     }
@@ -354,10 +356,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       }));
 
       await TraktService.triggerSync();
-      await pollSyncStatus();
+      const status = await pollSyncStatus();
 
       // Start polling for status updates
-      if (!pollIntervalRef.current) {
+      if (status && isActiveSyncStatus(status.status) && !pollIntervalRef.current) {
         pollIntervalRef.current = setInterval(
           pollSyncStatus,
           TRAKT_CONFIG.SYNC_STATUS_POLL_INTERVAL_MS

@@ -64,6 +64,7 @@ module.exports = {
   },
   Linking: {
     openURL: jest.fn(() => Promise.resolve()),
+    openSettings: jest.fn(() => Promise.resolve()),
     canOpenURL: jest.fn(() => Promise.resolve(true)),
   },
   Animated: {
