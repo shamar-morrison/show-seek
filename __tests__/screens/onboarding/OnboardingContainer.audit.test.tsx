@@ -261,9 +261,20 @@ jest.mock('@/src/screens/onboarding/OnboardingPaywallStep', () => ({
 
 jest.mock('@/src/screens/onboarding/PersonalizingScreen', () => ({
   __esModule: true,
-  default: ({ onDone }: { onDone: () => void }) => {
+  default: ({
+    onComplete,
+    onDone,
+  }: {
+    onComplete: () => Promise<void>;
+    onDone: () => void;
+  }) => {
     const React = require('react');
     const { Text } = require('react-native');
+
+    React.useEffect(() => {
+      void onComplete().catch(() => {});
+    }, [onComplete]);
+
     return React.createElement(Text, { testID: 'finish-personalizing', onPress: onDone }, 'Finish personalizing');
   },
 }));
@@ -283,6 +294,12 @@ describe('OnboardingContainer audited flows', () => {
 
   const loadScreen = () =>
     require('@/src/screens/onboarding/OnboardingContainer').default as typeof import('@/src/screens/onboarding/OnboardingContainer').default;
+
+  const waitForPersonalizingSaveToStart = async () => {
+    await waitFor(() => {
+      expect(mockSaveOnboarding).toHaveBeenCalledTimes(1);
+    });
+  };
 
   const completeHappyPath = async (getByText: (text: string) => any, getByTestId: (id: string) => any) => {
     fireEvent.press(getByText('Begin onboarding'));
@@ -308,6 +325,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByTestId('complete-paywall'));
+    await waitForPersonalizingSaveToStart();
     fireEvent.press(getByTestId('finish-personalizing'));
   };
 
@@ -370,6 +388,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByTestId('complete-paywall'));
+    await waitForPersonalizingSaveToStart();
     fireEvent.press(getByTestId('finish-personalizing'));
 
     await waitFor(() => {
@@ -405,7 +424,7 @@ describe('OnboardingContainer audited flows', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('retries onboarding save with a fresh promise after a failed save', async () => {
+  it('retries onboarding save with a fresh promise when the preload save fails', async () => {
     mockSaveOnboarding.mockRejectedValueOnce(new Error('save failed')).mockResolvedValueOnce(undefined);
     const Screen = loadScreen();
     const { getByTestId, getByText } = render(<Screen />);
@@ -413,21 +432,10 @@ describe('OnboardingContainer audited flows', () => {
     await completeHappyPath(getByText, getByTestId);
 
     await waitFor(() => {
-      expect(mockSaveOnboarding).toHaveBeenCalledTimes(1);
-      expect(Alert.alert).toHaveBeenCalledWith(
-        'Something went wrong',
-        'Something went wrong'
-      );
-    });
-    expect(mockCompletePersonalOnboarding).not.toHaveBeenCalled();
-    expect(mockReplace).not.toHaveBeenCalled();
-
-    fireEvent.press(getByTestId('finish-personalizing'));
-
-    await waitFor(() => {
       expect(mockSaveOnboarding).toHaveBeenCalledTimes(2);
       expect(mockCompletePersonalOnboarding).toHaveBeenCalledTimes(1);
       expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
     });
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });
