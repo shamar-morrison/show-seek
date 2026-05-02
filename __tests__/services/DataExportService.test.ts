@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { getDocs } from 'firebase/firestore';
+
+const mockAuditedGetDocs = jest.fn();
 
 let mockUserId: string | null = 'test-user-id';
 
@@ -28,6 +29,10 @@ jest.mock('@/src/firebase/firestore', () => ({
   getFirestoreErrorMessage: jest.fn((error) => error.message || 'Unknown error'),
 }));
 
+jest.mock('@/src/services/firestoreReadAudit', () => ({
+  auditedGetDocs: (...args: unknown[]) => mockAuditedGetDocs(...args),
+}));
+
 import { exportUserData } from '@/src/services/DataExportService';
 
 describe('DataExportService', () => {
@@ -38,7 +43,7 @@ describe('DataExportService', () => {
 
   it('writes export file even when sharing is unavailable', async () => {
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(false);
-    (getDocs as jest.Mock)
+    mockAuditedGetDocs
       .mockResolvedValueOnce({ docs: [] })
       .mockResolvedValueOnce({ docs: [] })
       .mockResolvedValueOnce({ docs: [] });
@@ -50,11 +55,28 @@ describe('DataExportService', () => {
       expect.any(String),
       { encoding: FileSystem.EncodingType.UTF8 }
     );
+    expect(mockAuditedGetDocs.mock.calls.map(([, meta]) => meta)).toEqual([
+      {
+        path: 'users/test-user-id/lists',
+        queryKey: 'exportLists',
+        callsite: 'DataExportService.fetchAllUserData',
+      },
+      {
+        path: 'users/test-user-id/ratings',
+        queryKey: 'exportRatings',
+        callsite: 'DataExportService.fetchAllUserData',
+      },
+      {
+        path: 'users/test-user-id/favorite_persons',
+        queryKey: 'exportFavoritePersons',
+        callsite: 'DataExportService.fetchAllUserData',
+      },
+    ]);
   });
 
   it('escapes CSV values with commas, quotes, and newlines', async () => {
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(true);
-    (getDocs as jest.Mock)
+    mockAuditedGetDocs
       .mockResolvedValueOnce({
         docs: [
           {
@@ -87,7 +109,7 @@ describe('DataExportService', () => {
   it('skips invalid legacy ratings during export instead of producing malformed rows', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     (Sharing.isAvailableAsync as jest.Mock).mockResolvedValueOnce(true);
-    (getDocs as jest.Mock)
+    mockAuditedGetDocs
       .mockResolvedValueOnce({ docs: [] })
       .mockResolvedValueOnce({
         docs: [

@@ -2,6 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { READ_OPTIMIZATION_FLAGS, READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
 import { usePremium } from '@/src/context/PremiumContext';
 import {
+  assertFreemiumAllowed,
   FreemiumLimitError,
   isFreemiumLimitError,
   isPremiumStatusPendingError,
@@ -104,17 +105,13 @@ const assertCanCreateReminder = async ({
     return;
   }
 
-  if (isPremiumLoading) {
-    throw new PremiumStatusPendingError();
-  }
-
-  if (reminders.length >= MAX_FREE_REMINDERS) {
-    throw new FreemiumLimitError({
-      feature: 'reminders',
-      maxFreeCount: MAX_FREE_REMINDERS,
-      currentCount: reminders.length,
-    });
-  }
+  assertFreemiumAllowed({
+    feature: 'reminders',
+    currentCount: reminders.length,
+    isPremium,
+    isPremiumLoading,
+    maxFreeCount: MAX_FREE_REMINDERS,
+  });
 };
 
 /**

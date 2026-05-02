@@ -3,6 +3,9 @@ import { getGenres } from '@/src/utils/genreCache';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+const GENRE_QUERY_CACHE_TIME =
+  process.env.NODE_ENV === 'test' ? Infinity : 30 * 24 * 60 * 60 * 1000;
+
 /**
  * Hook to fetch and cache genres for a specific media type (movie or TV).
  * Automatically updates when the media type or language changes.
@@ -13,8 +16,8 @@ export function useGenres(type: 'movie' | 'tv') {
   return useQuery({
     queryKey: ['genres', type, language],
     queryFn: () => getGenres(type),
-    staleTime: 30 * 24 * 60 * 60 * 1000, // 30 days
-    gcTime: 30 * 24 * 60 * 60 * 1000, // 30 days
+    staleTime: GENRE_QUERY_CACHE_TIME,
+    gcTime: GENRE_QUERY_CACHE_TIME,
   });
 }
 

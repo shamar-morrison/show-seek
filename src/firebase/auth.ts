@@ -43,6 +43,7 @@ export async function signInWithGoogle(): Promise<
       success: false;
       cancelled?: boolean;
       error?: string;
+      errorType: 'CANCELLED' | 'NETWORK_ERROR' | 'GENERIC_ERROR';
     }
 > {
   try {
@@ -53,11 +54,15 @@ export async function signInWithGoogle(): Promise<
     const response = await GoogleAuth.signIn();
 
     if (response.type === 'cancelled') {
-      return { success: false, cancelled: true };
+      return { success: false, cancelled: true, errorType: 'CANCELLED' };
     }
 
     if (response.type === 'noSavedCredentialFound') {
-      return { success: false, error: 'No Google account found. Please try again.' };
+      return {
+        success: false,
+        error: 'No Google account found. Please try again.',
+        errorType: 'GENERIC_ERROR',
+      };
     }
 
     // After eliminating cancelled and noSavedCredentialFound, we should have success
@@ -66,7 +71,11 @@ export async function signInWithGoogle(): Promise<
 
     // Now we know response.type === 'success' and response.data exists
     if (!successResponse.data?.idToken) {
-      return { success: false, error: 'No authentication token received. Please try again.' };
+      return {
+        success: false,
+        error: 'No authentication token received. Please try again.',
+        errorType: 'GENERIC_ERROR',
+      };
     }
 
     // Create Firebase credential from Google ID token
@@ -80,7 +89,13 @@ export async function signInWithGoogle(): Promise<
     console.error('[GoogleAuth] Error:', error);
     console.error('[GoogleAuth] Error code:', error?.code);
     console.error('[GoogleAuth] Error message:', error?.message);
-    return { success: false, error: getGoogleAuthErrorMessage(error) };
+    const errorType =
+      error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request'
+        ? 'CANCELLED'
+        : error?.code === 'auth/network-request-failed'
+          ? 'NETWORK_ERROR'
+          : 'GENERIC_ERROR';
+    return { success: false, error: getGoogleAuthErrorMessage(error), errorType };
   }
 }
 
@@ -95,6 +110,7 @@ export async function signInAsGuest(): Promise<
   | {
       success: false;
       error?: string;
+      errorType: 'NETWORK_ERROR' | 'GENERIC_ERROR';
     }
 > {
   try {
@@ -102,7 +118,11 @@ export async function signInAsGuest(): Promise<
     return { success: true, user: userCredential.user };
   } catch (error: any) {
     console.error('[GuestAuth] Error:', error);
-    return { success: false, error: 'Unable to continue as guest. Please try again.' };
+    return {
+      success: false,
+      error: 'Unable to continue as guest. Please try again.',
+      errorType: error?.code === 'auth/network-request-failed' ? 'NETWORK_ERROR' : 'GENERIC_ERROR',
+    };
   }
 }
 

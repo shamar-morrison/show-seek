@@ -64,6 +64,7 @@ export const tmdbClient = axios.create({
     api_key: TMDB_API_KEY,
     // Note: language and region are injected dynamically via interceptor
   },
+  timeout: 10000,
 });
 
 // Inject language and region parameters dynamically on every request
@@ -113,6 +114,73 @@ export const getOptimizedImageUrl = (
 
   const finalSize = dataSaver ? sizeMap[size] : size;
   return `${IMAGE_BASE_URL}${TMDB_IMAGE_SIZES[imageType][finalSize]}${path}`;
+};
+
+export type TmdbApiErrorCode = 'TMDB_API_ERROR' | 'TMDB_TIMEOUT';
+
+export class TmdbApiError extends Error {
+  code: TmdbApiErrorCode;
+  status: number | null;
+
+  constructor({
+    code,
+    message,
+    status,
+  }: {
+    code: TmdbApiErrorCode;
+    message: string;
+    status: number | null;
+  }) {
+    super(message);
+    this.name = 'TmdbApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const normalizeTmdbError = (error: unknown): TmdbApiError => {
+  const maybeError = error as {
+    code?: string;
+    message?: string;
+    response?: {
+      data?: {
+        status_message?: string;
+      };
+      status?: number;
+      statusText?: string;
+    };
+  };
+  const status = maybeError.response?.status ?? null;
+
+  if (
+    maybeError.code === 'ECONNABORTED' ||
+    maybeError.message?.toLowerCase().includes('timeout')
+  ) {
+    return new TmdbApiError({
+      code: 'TMDB_TIMEOUT',
+      message: 'TMDB request timed out',
+      status,
+    });
+  }
+
+  return new TmdbApiError({
+    code: 'TMDB_API_ERROR',
+    message:
+      maybeError.response?.data?.status_message ??
+      maybeError.response?.statusText ??
+      maybeError.message ??
+      'TMDB request failed',
+    status,
+  });
+};
+
+const tmdbRequest = async <T>(request: () => Promise<{ data: T }>): Promise<T> => {
+  try {
+    const { data } = await request();
+    return data;
+  } catch (error) {
+    throw normalizeTmdbError(error);
+  }
 };
 
 export interface Movie {
@@ -420,25 +488,27 @@ export interface Review {
 
 export const tmdbApi = {
   getTrendingMovies: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>(
-      `/trending/movie/${timeWindow}`,
-      { params: { page } }
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<Movie>>(`/trending/movie/${timeWindow}`, {
+        params: { page },
+      })
     );
-    return data;
   },
 
   getTrendingTV: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/trending/tv/${timeWindow}`, {
-      params: { page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>(`/trending/tv/${timeWindow}`, {
+        params: { page },
+      })
+    );
   },
 
   getPopularMovies: async (page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/movie/popular', {
-      params: { page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<Movie>>('/movie/popular', {
+        params: { page },
+      })
+    );
   },
 
   getTopRatedMovies: async (page: number = 1) => {
@@ -476,21 +546,23 @@ export const tmdbApi = {
   },
 
   getMovieDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`, {
-      params: {
-        append_to_response: 'release_dates',
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<MovieDetails>(`/movie/${id}`, {
+        params: {
+          append_to_response: 'release_dates',
+        },
+      })
+    );
   },
 
   getTVShowDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<TVShowDetails>(`/tv/${id}`, {
-      params: {
-        append_to_response: 'content_ratings',
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<TVShowDetails>(`/tv/${id}`, {
+        params: {
+          append_to_response: 'content_ratings',
+        },
+      })
+    );
   },
 
   getCollectionDetails: async (id: number) => {
@@ -543,17 +615,19 @@ export const tmdbApi = {
   },
 
   searchMovies: async (query: string, page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/search/movie', {
-      params: { query, page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<Movie>>('/search/movie', {
+        params: { query, page },
+      })
+    );
   },
 
   searchTV: async (query: string, page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/search/tv', {
-      params: { query, page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>('/search/tv', {
+        params: { query, page },
+      })
+    );
   },
 
   searchMulti: async (query: string, page: number = 1) => {
@@ -665,22 +739,23 @@ export const tmdbApi = {
     watchRegion?: string;
     hideUnreleased?: boolean;
   }) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
-      params: {
-        page: params?.page || 1,
-        with_genres: params?.genre,
-        primary_release_year: params?.year,
-        sort_by: params?.sortBy || 'popularity.desc',
-        'vote_average.gte': params?.voteAverageGte,
-        with_original_language: params?.withOriginalLanguage,
-        with_watch_providers: params?.withWatchProviders,
-        watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
-        'primary_release_date.lte': params?.hideUnreleased
-          ? new Date().toISOString().split('T')[0]
-          : undefined,
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<Movie>>('/discover/movie', {
+        params: {
+          page: params?.page || 1,
+          with_genres: params?.genre,
+          primary_release_year: params?.year,
+          sort_by: params?.sortBy || 'popularity.desc',
+          'vote_average.gte': params?.voteAverageGte,
+          with_original_language: params?.withOriginalLanguage,
+          with_watch_providers: params?.withWatchProviders,
+          watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+          'primary_release_date.lte': params?.hideUnreleased
+            ? new Date().toISOString().split('T')[0]
+            : undefined,
+        },
+      })
+    );
   },
 
   discoverTV: async (params?: {
@@ -694,22 +769,23 @@ export const tmdbApi = {
     watchRegion?: string;
     hideUnreleased?: boolean;
   }) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
-      params: {
-        page: params?.page || 1,
-        with_genres: params?.genre,
-        first_air_date_year: params?.year,
-        sort_by: params?.sortBy || 'popularity.desc',
-        'vote_average.gte': params?.voteAverageGte,
-        with_original_language: params?.withOriginalLanguage,
-        with_watch_providers: params?.withWatchProviders,
-        watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
-        'first_air_date.lte': params?.hideUnreleased
-          ? new Date().toISOString().split('T')[0]
-          : undefined,
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
+        params: {
+          page: params?.page || 1,
+          with_genres: params?.genre,
+          first_air_date_year: params?.year,
+          sort_by: params?.sortBy || 'popularity.desc',
+          'vote_average.gte': params?.voteAverageGte,
+          with_original_language: params?.withOriginalLanguage,
+          with_watch_providers: params?.withWatchProviders,
+          watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+          'first_air_date.lte': params?.hideUnreleased
+            ? new Date().toISOString().split('T')[0]
+            : undefined,
+        },
+      })
+    );
   },
 
   /**
@@ -781,15 +857,19 @@ export const tmdbApi = {
   },
 
   getMovieWatchProviders: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
-      `/movie/${id}/watch/providers`
+    const data = await tmdbRequest(() =>
+      tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
+        `/movie/${id}/watch/providers`
+      )
     );
     return data.results[currentRegion] || null;
   },
 
   getTVWatchProviders: async (id: number) => {
-    const { data } = await tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
-      `/tv/${id}/watch/providers`
+    const data = await tmdbRequest(() =>
+      tmdbClient.get<{ results: Record<string, WatchProviderResults> }>(
+        `/tv/${id}/watch/providers`
+      )
     );
     return data.results[currentRegion] || null;
   },
@@ -810,9 +890,11 @@ export const tmdbApi = {
 
   // These are cached for 30 days since they rarely change
   getWatchProviders: async (type: 'movie' | 'tv') => {
-    const { data } = await tmdbClient.get<{
-      results: WatchProvider[];
-    }>(`/watch/providers/${type}`);
+    const data = await tmdbRequest(() =>
+      tmdbClient.get<{
+        results: WatchProvider[];
+      }>(`/watch/providers/${type}`)
+    );
     // watch_region is injected by axios interceptor
     return data.results.sort((a, b) => a.display_priority - b.display_priority);
   },

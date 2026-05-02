@@ -101,6 +101,12 @@ class OnboardingService {
    */
   async saveOnboarding(selections: OnboardingSelections): Promise<void> {
     const tasks: OnboardingTask[] = [];
+    const homeScreenLists = selections.homeScreenLists ?? [];
+    const selectedGenreIds = selections.selectedGenreIds ?? [];
+    const selectedTVGenreIds = selections.selectedTVGenreIds ?? [];
+    const selectedTVShows = selections.selectedTVShows ?? [];
+    const selectedMovies = selections.selectedMovies ?? [];
+    const selectedActors = selections.selectedActors ?? [];
 
     // 0. Display Name + Language — update Firebase Auth profile + Firestore user doc
     if (auth.currentUser) {
@@ -139,16 +145,32 @@ class OnboardingService {
     }
 
     // 1. Home Screen Lists
-    if (selections.homeScreenLists.length > 0) {
+    if (homeScreenLists.length > 0) {
       tasks.push({
         label: 'home-screen-lists',
         required: true,
-        run: () => preferencesService.updatePreference('homeScreenLists', selections.homeScreenLists),
+        run: () => preferencesService.updatePreference('homeScreenLists', homeScreenLists),
+      });
+    }
+
+    if (selectedGenreIds.length > 0) {
+      tasks.push({
+        label: 'favorite-movie-genres',
+        required: true,
+        run: () => preferencesService.updatePreference('favoriteMovieGenreIds', selectedGenreIds),
+      });
+    }
+
+    if (selectedTVGenreIds.length > 0) {
+      tasks.push({
+        label: 'favorite-tv-genres',
+        required: true,
+        run: () => preferencesService.updatePreference('favoriteTVGenreIds', selectedTVGenreIds),
       });
     }
 
     // 2. TV Shows → Currently Watching list
-    for (const show of selections.selectedTVShows) {
+    for (const show of selectedTVShows) {
       const mediaItem: Omit<ListMediaItem, 'addedAt'> = {
         id: show.id,
         title: show.name,
@@ -168,7 +190,7 @@ class OnboardingService {
     }
 
     // 3. Movies → Favorites + Already Watched
-    for (const movie of selections.selectedMovies) {
+    for (const movie of selectedMovies) {
       const mediaItem: Omit<ListMediaItem, 'addedAt'> = {
         id: movie.id,
         title: movie.title,
@@ -191,7 +213,7 @@ class OnboardingService {
     }
 
     // 4. Actors → Favorite Persons
-    for (const actor of selections.selectedActors) {
+    for (const actor of selectedActors) {
       tasks.push({
         label: `actor-${actor.id}`,
         required: false,

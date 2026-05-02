@@ -293,3 +293,27 @@ global.console = {
 
 // Mock __DEV__ for production-like testing
 global.__DEV__ = false;
+
+// Freeze the default test clock so fixed "future" fixture dates stay stable over time.
+const RealDate = Date;
+const FIXED_TEST_NOW = new RealDate('2026-01-15T12:00:00.000Z').getTime();
+
+class FixedDate extends RealDate {
+  constructor(...args) {
+    if (args.length === 0) {
+      super(FIXED_TEST_NOW);
+      return;
+    }
+
+    super(...args);
+  }
+
+  static now() {
+    return FIXED_TEST_NOW;
+  }
+}
+
+FixedDate.parse = RealDate.parse;
+FixedDate.UTC = RealDate.UTC;
+
+global.Date = FixedDate;
