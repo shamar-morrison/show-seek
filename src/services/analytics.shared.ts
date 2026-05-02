@@ -43,6 +43,55 @@ export interface TrackCreateListParams {
   hasDescription: boolean;
 }
 
+export interface PurchaseSuccessParams {
+  plan: 'monthly' | 'yearly';
+  productId: string;
+  price: number;
+  currency: string;
+}
+
+export interface PurchaseFailureParams {
+  plan: 'monthly' | 'yearly';
+  productId?: string | null;
+  reason: string;
+  code?: string | null;
+}
+
+export interface RestoreSuccessParams {
+  productId?: string | null;
+  restoredPremium: boolean;
+}
+
+export interface RestoreFailureParams {
+  reason: string;
+  code?: string | null;
+}
+
+export interface OnboardingCompleteParams {
+  language: string;
+  region: string;
+  favoriteMovieGenreCount: number;
+  favoriteTVGenreCount: number;
+  favoriteShowCount: number;
+}
+
+export interface TraktSyncCompleteParams {
+  itemsSynced: number;
+}
+
+export interface TraktSyncFailureParams {
+  category: string;
+}
+
+export interface ImdbImportCompleteParams {
+  processedActions: number;
+  processedEntities: number;
+}
+
+export interface ImdbImportFailureParams {
+  errorCode: string;
+}
+
 export const normalizeListKind = (listId: string): AnalyticsListKind => {
   return DEFAULT_LIST_KINDS.includes(listId as (typeof DEFAULT_LIST_KINDS)[number])
     ? (listId as (typeof DEFAULT_LIST_KINDS)[number])

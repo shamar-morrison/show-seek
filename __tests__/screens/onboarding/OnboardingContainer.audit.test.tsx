@@ -404,4 +404,30 @@ describe('OnboardingContainer audited flows', () => {
     });
     expect(mockReplace).not.toHaveBeenCalled();
   });
+
+  it('retries onboarding save with a fresh promise after a failed save', async () => {
+    mockSaveOnboarding.mockRejectedValueOnce(new Error('save failed')).mockResolvedValueOnce(undefined);
+    const Screen = loadScreen();
+    const { getByTestId, getByText } = render(<Screen />);
+
+    await completeHappyPath(getByText, getByTestId);
+
+    await waitFor(() => {
+      expect(mockSaveOnboarding).toHaveBeenCalledTimes(1);
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Something went wrong',
+        'Something went wrong'
+      );
+    });
+    expect(mockCompletePersonalOnboarding).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('finish-personalizing'));
+
+    await waitFor(() => {
+      expect(mockSaveOnboarding).toHaveBeenCalledTimes(2);
+      expect(mockCompletePersonalOnboarding).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/home');
+    });
+  });
 });

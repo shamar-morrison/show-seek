@@ -496,10 +496,11 @@ export const tmdbApi = {
   },
 
   getTrendingTV: async (timeWindow: 'day' | 'week' = 'week', page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>(`/trending/tv/${timeWindow}`, {
-      params: { page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>(`/trending/tv/${timeWindow}`, {
+        params: { page },
+      })
+    );
   },
 
   getPopularMovies: async (page: number = 1) => {
@@ -545,21 +546,23 @@ export const tmdbApi = {
   },
 
   getMovieDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<MovieDetails>(`/movie/${id}`, {
-      params: {
-        append_to_response: 'release_dates',
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<MovieDetails>(`/movie/${id}`, {
+        params: {
+          append_to_response: 'release_dates',
+        },
+      })
+    );
   },
 
   getTVShowDetails: async (id: number) => {
-    const { data } = await tmdbClient.get<TVShowDetails>(`/tv/${id}`, {
-      params: {
-        append_to_response: 'content_ratings',
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<TVShowDetails>(`/tv/${id}`, {
+        params: {
+          append_to_response: 'content_ratings',
+        },
+      })
+    );
   },
 
   getCollectionDetails: async (id: number) => {
@@ -620,10 +623,11 @@ export const tmdbApi = {
   },
 
   searchTV: async (query: string, page: number = 1) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/search/tv', {
-      params: { query, page },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>('/search/tv', {
+        params: { query, page },
+      })
+    );
   },
 
   searchMulti: async (query: string, page: number = 1) => {
@@ -765,22 +769,23 @@ export const tmdbApi = {
     watchRegion?: string;
     hideUnreleased?: boolean;
   }) => {
-    const { data } = await tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
-      params: {
-        page: params?.page || 1,
-        with_genres: params?.genre,
-        first_air_date_year: params?.year,
-        sort_by: params?.sortBy || 'popularity.desc',
-        'vote_average.gte': params?.voteAverageGte,
-        with_original_language: params?.withOriginalLanguage,
-        with_watch_providers: params?.withWatchProviders,
-        watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
-        'first_air_date.lte': params?.hideUnreleased
-          ? new Date().toISOString().split('T')[0]
-          : undefined,
-      },
-    });
-    return data;
+    return tmdbRequest(() =>
+      tmdbClient.get<PaginatedResponse<TVShow>>('/discover/tv', {
+        params: {
+          page: params?.page || 1,
+          with_genres: params?.genre,
+          first_air_date_year: params?.year,
+          sort_by: params?.sortBy || 'popularity.desc',
+          'vote_average.gte': params?.voteAverageGte,
+          with_original_language: params?.withOriginalLanguage,
+          with_watch_providers: params?.withWatchProviders,
+          watch_region: params?.withWatchProviders ? params?.watchRegion || 'US' : undefined,
+          'first_air_date.lte': params?.hideUnreleased
+            ? new Date().toISOString().split('T')[0]
+            : undefined,
+        },
+      })
+    );
   },
 
   /**

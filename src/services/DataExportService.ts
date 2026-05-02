@@ -1,13 +1,14 @@
 import { tmdbApi } from '@/src/api/tmdb';
 import { auth, db } from '@/src/firebase/config';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
+import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { ListMediaItem } from '@/src/services/ListService';
 import { normalizeRatingItem, type RatingItem } from '@/src/services/RatingService';
 import { FavoritePerson } from '@/src/types/favoritePerson';
 import { raceWithTimeout } from '@/src/utils/timeout';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 
 type ExportFormat = 'csv' | 'markdown';
 
@@ -25,7 +26,7 @@ interface EnrichedRating {
 type RawExportRating = Partial<RatingItem> & { id: string };
 
 /**
- * Fetch all user data directly from Firestore using getDocs (one-time fetch)
+ * Fetch all user data directly from Firestore using audited one-time reads.
  */
 async function fetchAllUserData(): Promise<{
   lists: UserList[];
@@ -40,12 +41,24 @@ async function fetchAllUserData(): Promise<{
   const userId = user.uid;
 
   try {
-    // Fetch all data in parallel using getDocs (no orderBy to avoid index requirements)
+    // Fetch all data in parallel using audited reads (no orderBy to avoid index requirements)
     const [listsSnapshot, ratingsSnapshot, favoritePersonsSnapshot] = await raceWithTimeout(
       Promise.all([
-        getDocs(collection(db, `users/${userId}/lists`)),
-        getDocs(collection(db, `users/${userId}/ratings`)),
-        getDocs(collection(db, `users/${userId}/favorite_persons`)),
+        auditedGetDocs(collection(db, `users/${userId}/lists`), {
+          path: `users/${userId}/lists`,
+          queryKey: 'exportLists',
+          callsite: 'DataExportService.fetchAllUserData',
+        }),
+        auditedGetDocs(collection(db, `users/${userId}/ratings`), {
+          path: `users/${userId}/ratings`,
+          queryKey: 'exportRatings',
+          callsite: 'DataExportService.fetchAllUserData',
+        }),
+        auditedGetDocs(collection(db, `users/${userId}/favorite_persons`), {
+          path: `users/${userId}/favorite_persons`,
+          queryKey: 'exportFavoritePersons',
+          callsite: 'DataExportService.fetchAllUserData',
+        }),
       ]),
       { ms: 10000 }
     );

@@ -173,8 +173,14 @@ export default function OnboardingContainer() {
   }, [currentStepIndex, isFirstStep, updateProgress]);
 
   const handleSaveOnboarding = useCallback(() => {
-    const savePromise =
-      saveOnboardingPromiseRef.current ?? onboardingService.saveOnboarding(selections);
+    if (saveOnboardingPromiseRef.current) {
+      return saveOnboardingPromiseRef.current;
+    }
+
+    const savePromise = onboardingService.saveOnboarding(selections).catch((error) => {
+      saveOnboardingPromiseRef.current = null;
+      throw error;
+    });
     saveOnboardingPromiseRef.current = savePromise;
 
     return savePromise;

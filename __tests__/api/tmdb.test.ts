@@ -176,4 +176,49 @@ describe('tmdb api client', () => {
       })
     );
   });
+
+  it.each([
+    {
+      label: 'getTrendingTV',
+      invoke: (api: typeof import('@/src/api/tmdb').tmdbApi) => api.getTrendingTV(),
+    },
+    {
+      label: 'getMovieDetails',
+      invoke: (api: typeof import('@/src/api/tmdb').tmdbApi) => api.getMovieDetails(12),
+    },
+    {
+      label: 'getTVShowDetails',
+      invoke: (api: typeof import('@/src/api/tmdb').tmdbApi) => api.getTVShowDetails(34),
+    },
+    {
+      label: 'searchTV',
+      invoke: (api: typeof import('@/src/api/tmdb').tmdbApi) => api.searchTV('severance', 2),
+    },
+    {
+      label: 'discoverTV',
+      invoke: (api: typeof import('@/src/api/tmdb').tmdbApi) =>
+        api.discoverTV({ genre: '18|35', page: 2 }),
+    },
+  ])('normalizes API failures for $label', async ({ invoke }) => {
+    const { tmdbApi } = loadTmdbModule();
+    mockAxiosClient.get.mockRejectedValueOnce({
+      message: 'Request failed with status code 500',
+      response: {
+        data: {
+          status_message: 'Internal error.',
+        },
+        status: 500,
+        statusText: 'Internal Server Error',
+      },
+    });
+
+    await expect(invoke(tmdbApi)).rejects.toEqual(
+      expect.objectContaining({
+        code: 'TMDB_API_ERROR',
+        message: 'Internal error.',
+        name: 'TmdbApiError',
+        status: 500,
+      })
+    );
+  });
 });

@@ -174,16 +174,20 @@ describe('analytics.android wrappers', () => {
         })
     );
 
-    const pendingTrack = analytics.trackSignOut();
+    const pendingTrackOne = analytics.trackSignOut();
+    const pendingTrackTwo = analytics.trackSignOut();
 
+    expect(mockSetAnalyticsCollectionEnabled).toHaveBeenCalledTimes(1);
     expect(mockLogEvent).not.toHaveBeenCalled();
 
     if (typeof initController.resolve === 'function') {
       initController.resolve();
     }
-    await pendingTrack;
+    await Promise.all([pendingTrackOne, pendingTrackTwo]);
 
-    expect(mockLogEvent).toHaveBeenCalledWith('sign_out', undefined);
+    expect(mockLogEvent).toHaveBeenCalledTimes(2);
+    expect(mockLogEvent).toHaveBeenNthCalledWith(1, 'sign_out', undefined);
+    expect(mockLogEvent).toHaveBeenNthCalledWith(2, 'sign_out', undefined);
 
     jest.resetModules();
     mockLogEvent.mockClear();

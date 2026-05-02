@@ -183,6 +183,84 @@ describe('ReminderService', () => {
     );
   });
 
+  it('uses on-release movie copy when the preferred reminder window has already passed', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-01T18:00:00.000Z'));
+
+    try {
+      const mockRef = { path: 'users/test-user-id/reminders/movie-123' };
+      (doc as jest.Mock).mockReturnValue(mockRef);
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await reminderService.createReminder({
+        mediaType: 'movie',
+        mediaId: 123,
+        title: 'Test Movie',
+        posterPath: null,
+        releaseDate: '2026-05-01',
+        reminderTiming: '1_day_before',
+      });
+
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.objectContaining({
+            title: '🎬 New Release Today!',
+            body: 'Test Movie releases today!',
+          }),
+          trigger: expect.objectContaining({
+            date: new Date('2026-05-01T18:01:00.000Z'),
+          }),
+        })
+      );
+      expect(setDoc).toHaveBeenCalledWith(
+        mockRef,
+        expect.objectContaining({
+          notificationScheduledFor: new Date('2026-05-01T18:01:00.000Z').getTime(),
+        })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('uses on-release episode copy when same-day fallback clamps an episode reminder', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-01T18:00:00.000Z'));
+
+    try {
+      const mockRef = { path: 'users/test-user-id/reminders/tv-555' };
+      (doc as jest.Mock).mockReturnValue(mockRef);
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await reminderService.createReminder({
+        mediaType: 'tv',
+        mediaId: 555,
+        title: 'Test Show',
+        posterPath: null,
+        releaseDate: '2026-05-01',
+        reminderTiming: '1_day_before',
+        tvFrequency: 'every_episode',
+        nextEpisode: {
+          seasonNumber: 1,
+          episodeNumber: 2,
+          episodeName: 'Second Episode',
+          airDate: '2026-05-01',
+        },
+      });
+
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.objectContaining({
+            title: '📺 New Episode Today!',
+            body: 'Test Show S1E2 - "Second Episode" airs today!',
+          }),
+        })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   describe('getActiveReminders', () => {
     it('rejects when user is not authenticated', async () => {
       mockUserId = null;

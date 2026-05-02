@@ -217,11 +217,14 @@ describe('premium entitlement gate integration', () => {
       },
     });
 
-    return ({ children }: { children: React.ReactNode }) => (
+    const PremiumTestWrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <PremiumProvider>{children}</PremiumProvider>
       </QueryClientProvider>
     );
+    PremiumTestWrapper.displayName = 'PremiumTestWrapper';
+
+    return PremiumTestWrapper;
   };
 
   const useGateSnapshot = () => ({

@@ -100,11 +100,12 @@ class ReminderService {
    */
   private getEffectiveNotificationTime(
     releaseDate: string,
-    timing: ReminderTiming
+    timing: ReminderTiming,
+    referenceNow: number = Date.now()
   ): number | null {
     const notificationTime = this.calculateNotificationTime(releaseDate, timing);
 
-    if (notificationTime >= Date.now()) {
+    if (notificationTime >= referenceNow) {
       return notificationTime;
     }
 
@@ -116,8 +117,30 @@ class ReminderService {
     const releaseWindowEnd = new Date(release);
     releaseWindowEnd.setHours(23, 59, 59, 999);
 
-    if (releaseWindowEnd.getTime() >= Date.now()) {
-      return Date.now() + 60 * 1000;
+    if (releaseWindowEnd.getTime() >= referenceNow) {
+      return referenceNow + 60 * 1000;
+    }
+
+    return null;
+  }
+
+  private getEffectiveNotificationTiming(
+    releaseDate: string,
+    timing: ReminderTiming,
+    referenceNow: number = Date.now()
+  ): ReminderTiming | null {
+    const preferredNotificationTime = this.calculateNotificationTime(releaseDate, timing);
+
+    if (preferredNotificationTime >= referenceNow || __DEV__) {
+      return timing;
+    }
+
+    const release = parseTmdbDate(releaseDate);
+    const releaseWindowEnd = new Date(release);
+    releaseWindowEnd.setHours(23, 59, 59, 999);
+
+    if (releaseWindowEnd.getTime() >= referenceNow) {
+      return 'on_release_day';
     }
 
     return null;
@@ -129,15 +152,28 @@ class ReminderService {
    */
   private async scheduleNotification(
     reminder: CreateReminderInput | Reminder,
-    notificationTimeOverride?: number | null
+    notificationTimeOverride?: number | null,
+    effectiveTimingOverride?: ReminderTiming | null
   ): Promise<string | null> {
     try {
+      const referenceNow = Date.now();
       const notificationTime =
         notificationTimeOverride ??
-        this.getEffectiveNotificationTime(reminder.releaseDate, reminder.reminderTiming);
+        this.getEffectiveNotificationTime(
+          reminder.releaseDate,
+          reminder.reminderTiming,
+          referenceNow
+        );
+      const effectiveTiming =
+        effectiveTimingOverride ??
+        this.getEffectiveNotificationTiming(
+          reminder.releaseDate,
+          reminder.reminderTiming,
+          referenceNow
+        );
 
       // Don't schedule past notifications
-      if (notificationTime === null || notificationTime < Date.now()) {
+      if (notificationTime === null || notificationTime < referenceNow || effectiveTiming === null) {
         console.log('[ReminderService] Notification time is in the past, skipping');
         return null;
       }
@@ -146,13 +182,13 @@ class ReminderService {
         content: {
           title: this.getNotificationTitle(
             reminder.mediaType,
-            reminder.reminderTiming,
+            effectiveTiming,
             'tvFrequency' in reminder ? reminder.tvFrequency : undefined
           ),
           body: this.getNotificationBody(
             reminder.title,
             reminder.mediaType,
-            reminder.reminderTiming,
+            effectiveTiming,
             'tvFrequency' in reminder ? reminder.tvFrequency : undefined,
             'nextEpisode' in reminder ? reminder.nextEpisode : undefined
           ),
@@ -295,13 +331,24 @@ class ReminderService {
 
       const reminderId = this.getReminderId(input.mediaType, input.mediaId);
       const reminderRef = this.getReminderRef(user.uid, reminderId);
+      const referenceNow = Date.now();
       const notificationTime = this.getEffectiveNotificationTime(
         input.releaseDate,
-        input.reminderTiming
+        input.reminderTiming,
+        referenceNow
+      );
+      const effectiveTiming = this.getEffectiveNotificationTiming(
+        input.releaseDate,
+        input.reminderTiming,
+        referenceNow
       );
 
       // Schedule notification
-      const localNotificationId = await this.scheduleNotification(input, notificationTime);
+      const localNotificationId = await this.scheduleNotification(
+        input,
+        notificationTime,
+        effectiveTiming
+      );
 
       const reminderData: Reminder = {
         id: reminderId,
@@ -413,16 +460,24 @@ class ReminderService {
       }
 
       // Schedule new notification
+      const referenceNow = Date.now();
       const notificationTime = this.getEffectiveNotificationTime(
         currentReminder.releaseDate,
-        timing
+        timing,
+        referenceNow
+      );
+      const effectiveTiming = this.getEffectiveNotificationTiming(
+        currentReminder.releaseDate,
+        timing,
+        referenceNow
       );
       const localNotificationId = await this.scheduleNotification(
         {
           ...currentReminder,
           reminderTiming: timing,
         },
-        notificationTime
+        notificationTime,
+        effectiveTiming
       );
 
       const updatedData: Partial<Reminder> = {
@@ -481,7 +536,13 @@ class ReminderService {
           const current = reminderSnap.data() as Reminder;
           const timing = allowedUpdates.reminderTiming || current.reminderTiming;
           const rDate = allowedUpdates.releaseDate || current.releaseDate;
-          const newTime = this.getEffectiveNotificationTime(rDate, timing);
+          const referenceNow = Date.now();
+          const newTime = this.getEffectiveNotificationTime(rDate, timing, referenceNow);
+          const effectiveTiming = this.getEffectiveNotificationTiming(
+            rDate,
+            timing,
+            referenceNow
+          );
           allowedUpdates.notificationScheduledFor =
             newTime ?? this.calculateNotificationTime(rDate, timing);
 
@@ -495,7 +556,8 @@ class ReminderService {
               reminderTiming: timing,
               releaseDate: rDate,
             },
-            newTime
+            newTime,
+            effectiveTiming
           );
           allowedUpdates.localNotificationId = newLocalId;
         }

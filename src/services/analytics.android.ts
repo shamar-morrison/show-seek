@@ -3,6 +3,15 @@ import analytics from '@react-native-firebase/analytics';
 import {
   getAnalyticsScreenName,
   type AnalyticsLoginMethod,
+  type ImdbImportCompleteParams,
+  type ImdbImportFailureParams,
+  type OnboardingCompleteParams,
+  type PurchaseFailureParams,
+  type PurchaseSuccessParams,
+  type RestoreFailureParams,
+  type RestoreSuccessParams,
+  type TraktSyncCompleteParams,
+  type TraktSyncFailureParams,
   type TrackCreateListParams,
   type TrackAddToListParams,
   type TrackCreateReminderParams,
@@ -10,15 +19,24 @@ import {
 } from './analytics.shared';
 
 export type {
-  TrackCreateListParams,
   AnalyticsListKind,
   AnalyticsLoginMethod,
   AnalyticsMediaType,
   AnalyticsReminderTiming,
   AnalyticsTVFrequency,
+  ImdbImportCompleteParams,
+  ImdbImportFailureParams,
+  OnboardingCompleteParams,
+  PurchaseFailureParams,
+  PurchaseSuccessParams,
+  RestoreFailureParams,
+  RestoreSuccessParams,
   TrackAddToListParams,
+  TrackCreateListParams,
   TrackCreateReminderParams,
   TrackSaveRatingParams,
+  TraktSyncCompleteParams,
+  TraktSyncFailureParams,
 } from './analytics.shared';
 
 export { getAnalyticsScreenName, normalizeListKind } from './analytics.shared';
@@ -182,55 +200,6 @@ export const trackPremiumPaywallView = async (): Promise<void> => {
   });
 };
 
-type PurchaseSuccessParams = {
-  plan: 'monthly' | 'yearly';
-  productId: string;
-  price: number;
-  currency: string;
-};
-
-type PurchaseFailureParams = {
-  plan: 'monthly' | 'yearly';
-  productId?: string | null;
-  reason: string;
-  code?: string | null;
-};
-
-type RestoreResultParams = {
-  productId?: string | null;
-  restoredPremium: boolean;
-};
-
-type RestoreFailureParams = {
-  reason: string;
-  code?: string | null;
-};
-
-type OnboardingCompleteParams = {
-  language: string;
-  region: string;
-  favoriteMovieGenreCount: number;
-  favoriteTVGenreCount: number;
-  favoriteShowCount: number;
-};
-
-type TraktSyncCompleteParams = {
-  itemsSynced: number;
-};
-
-type TraktSyncFailureParams = {
-  category: string;
-};
-
-type ImdbImportCompleteParams = {
-  processedActions: number;
-  processedEntities: number;
-};
-
-type ImdbImportFailureParams = {
-  errorCode: string;
-};
-
 const trackNamedEvent = async (
   context: string,
   eventName: string,
@@ -280,7 +249,7 @@ export const trackPurchaseFailure = async ({
 export const trackRestoreSuccess = async ({
   productId,
   restoredPremium,
-}: RestoreResultParams): Promise<void> => {
+}: RestoreSuccessParams): Promise<void> => {
   await trackNamedEvent('restore_success', 'restore_success', {
     product_id: productId ?? 'unknown',
     restored_premium: restoredPremium ? 1 : 0,

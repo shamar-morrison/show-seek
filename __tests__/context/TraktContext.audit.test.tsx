@@ -250,7 +250,7 @@ describe('TraktContext audited flows', () => {
       await Promise.resolve();
     });
 
-    const { clearIntervalMock, restore } = mockTimers();
+    const { clearIntervalMock, restore, setIntervalMock } = mockTimers();
 
     try {
       mockCheckSyncStatus.mockResolvedValueOnce({
@@ -265,6 +265,7 @@ describe('TraktContext audited flows', () => {
       });
 
       expect(result.current.isSyncing).toBe(true);
+      expect(setIntervalMock).toHaveBeenCalled();
 
       await act(async () => {
         await result.current.disconnectTrakt();

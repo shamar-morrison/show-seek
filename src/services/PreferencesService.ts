@@ -12,6 +12,14 @@ import { db } from '../firebase/config';
 import { DEFAULT_PREFERENCES, UserPreferences } from '../types/preferences';
 
 class PreferencesService {
+  private sanitizeGenreIds(value: unknown, fallback: number[]): number[] {
+    if (Array.isArray(value) && value.every((item) => typeof item === 'number')) {
+      return value;
+    }
+
+    return fallback;
+  }
+
   private getUserDocRef(userId: string) {
     return doc(db, 'users', userId);
   }
@@ -31,9 +39,15 @@ class PreferencesService {
       copyInsteadOfMove: data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
       homeScreenLists: data?.preferences?.homeScreenLists,
       favoriteMovieGenreIds:
-        data?.preferences?.favoriteMovieGenreIds ?? DEFAULT_PREFERENCES.favoriteMovieGenreIds,
+        this.sanitizeGenreIds(
+          data?.preferences?.favoriteMovieGenreIds,
+          DEFAULT_PREFERENCES.favoriteMovieGenreIds
+        ),
       favoriteTVGenreIds:
-        data?.preferences?.favoriteTVGenreIds ?? DEFAULT_PREFERENCES.favoriteTVGenreIds,
+        this.sanitizeGenreIds(
+          data?.preferences?.favoriteTVGenreIds,
+          DEFAULT_PREFERENCES.favoriteTVGenreIds
+        ),
       quickMarkAsWatched:
         data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
       defaultLaunchScreen:
