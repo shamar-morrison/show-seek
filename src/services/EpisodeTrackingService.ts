@@ -281,8 +281,8 @@ class EpisodeTrackingService {
   }
 
   /**
-   * Calculate progress for a specific season
-   * Excludes unaired episodes from total count
+   * Calculate progress for a specific season.
+   * Uses the full episode total when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
    */
   calculateSeasonProgress(
     seasonNumber: number,
@@ -315,8 +315,8 @@ class EpisodeTrackingService {
   }
 
   /**
-   * Calculate overall progress for a TV show
-   * Excludes unaired episodes and Season 0 (specials)
+   * Calculate overall progress for a TV show.
+   * Excludes Season 0 (specials) and uses full known episode totals only when watched-ahead episodes exist; otherwise excludes unaired episodes from the denominator.
    */
   calculateShowProgress(
     seasons: Season[],

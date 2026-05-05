@@ -74,17 +74,11 @@ jest.mock('@/src/components/ui/ProgressBar', () => ({
   },
 }));
 
+const mockUseSeasonProgress = jest.fn();
+
 // Mock useSeasonProgress
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
-  useSeasonProgress: () => ({
-    progress: {
-      watchedCount: 3,
-      totalAiredCount: 10,
-      progressTotalCount: 10,
-      totalCount: 10,
-      percentage: 30,
-    },
-  }),
+  useSeasonProgress: (...args: unknown[]) => mockUseSeasonProgress(...args),
 }));
 
 import { fireEvent, renderWithProviders, waitFor } from '@/__tests__/utils/test-utils';
@@ -163,6 +157,15 @@ const defaultProps: SeasonItemProps = {
 describe('SeasonItem', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseSeasonProgress.mockReturnValue({
+      progress: {
+        watchedCount: 3,
+        totalAiredCount: 10,
+        progressTotalCount: 10,
+        totalCount: 10,
+        percentage: 30,
+      },
+    });
   });
 
   it('renders season header correctly', () => {
@@ -357,6 +360,15 @@ describe('SeasonItem', () => {
       .spyOn(require('react-native').Alert, 'alert')
       .mockImplementation(jest.fn());
     const onMarkAllUnwatched = jest.fn();
+    mockUseSeasonProgress.mockReturnValueOnce({
+      progress: {
+        watchedCount: 1,
+        totalAiredCount: 0,
+        progressTotalCount: 1,
+        totalCount: 1,
+        percentage: 100,
+      },
+    });
     const futureOnlySeason = {
       ...mockSeason,
       episode_count: 1,

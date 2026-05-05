@@ -1,4 +1,9 @@
-import { calculateTmdbAge, formatTmdbDate, parseTmdbDate } from '@/src/utils/dateUtils';
+import {
+  calculateTmdbAge,
+  formatTmdbDate,
+  isTmdbDateOnOrBefore,
+  parseTmdbDate,
+} from '@/src/utils/dateUtils';
 
 describe('dateUtils', () => {
   describe('parseTmdbDate', () => {
@@ -77,6 +82,25 @@ describe('dateUtils', () => {
     it('should handle different months correctly', () => {
       expect(formatTmdbDate('2024-01-01')).toContain('Jan');
       expect(formatTmdbDate('2024-12-25')).toContain('Dec');
+    });
+  });
+
+  describe('isTmdbDateOnOrBefore', () => {
+    it('should return false for malformed TMDB date strings', () => {
+      const comparisonDate = new Date(2024, 5, 15, 12, 0, 0);
+
+      expect(isTmdbDateOnOrBefore('', comparisonDate)).toBe(false);
+      expect(isTmdbDateOnOrBefore('2024-6-15', comparisonDate)).toBe(false);
+      expect(isTmdbDateOnOrBefore('2024-13-01', comparisonDate)).toBe(false);
+      expect(isTmdbDateOnOrBefore('not-a-date', comparisonDate)).toBe(false);
+    });
+
+    it('should compare against the local comparison day instead of the current time', () => {
+      const comparisonDate = new Date(2024, 5, 15, 23, 59, 59);
+
+      expect(isTmdbDateOnOrBefore('2024-06-14', comparisonDate)).toBe(true);
+      expect(isTmdbDateOnOrBefore('2024-06-15', comparisonDate)).toBe(true);
+      expect(isTmdbDateOnOrBefore('2024-06-16', comparisonDate)).toBe(false);
     });
   });
 

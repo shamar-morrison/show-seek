@@ -103,11 +103,17 @@ export function isTmdbDateOnOrBefore(
   dateString: string | null | undefined,
   comparisonDate: Date
 ): boolean {
-  if (!dateString) {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     return false;
   }
 
-  return dateString <= toLocalDateKey(comparisonDate);
+  const parsedTimestamp = new Date(dateString).getTime();
+  if (!Number.isFinite(parsedTimestamp)) {
+    return false;
+  }
+
+  const comparisonTimestamp = new Date(toLocalDateKey(comparisonDate)).getTime();
+  return parsedTimestamp <= comparisonTimestamp;
 }
 
 /**

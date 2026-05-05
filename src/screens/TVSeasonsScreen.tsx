@@ -641,6 +641,7 @@ export default function TVSeasonsScreen() {
       formatDate,
       ratings,
       preferences.autoAddToWatching,
+      preferences.allowUnreleasedEpisodeWatches,
       preferences.markPreviousEpisodesWatched,
       listMembership,
       isPremium,
@@ -650,6 +651,7 @@ export default function TVSeasonsScreen() {
       styles.seasonFullOverview,
       episodeRatingsById,
       seasonProgressBySeasonNumber,
+      getProjectedSeasonProgress,
       isAnyBulkActionPending,
     ]
   );

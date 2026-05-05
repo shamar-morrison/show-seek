@@ -282,8 +282,7 @@ export function useCurrentlyWatching() {
 
         if (
           nextEpisodeNumbers &&
-          (hasWatchedAhead ||
-            totalAiredEpisodes > Math.min(furthestWatchedPosition, totalAiredEpisodes))
+          (hasWatchedAhead || totalAiredEpisodes > furthestWatchedPosition)
         ) {
           requestSeasonNumbers.add(nextEpisodeNumbers.season);
         }
