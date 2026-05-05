@@ -298,9 +298,7 @@ class EpisodeTrackingService {
     const hasWatchedAhead = watchedSeasonEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
     const watchedCount = hasWatchedAhead
       ? watchedSeasonEpisodes.length
-      : airedEpisodes.filter((ep) =>
-          this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
-        ).length;
+      : watchedSeasonEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
     const progressTotalCount = hasWatchedAhead ? totalCount : totalAiredCount;
     const percentage = progressTotalCount > 0 ? (watchedCount / progressTotalCount) * 100 : 0;
 
@@ -331,9 +329,7 @@ class EpisodeTrackingService {
     const hasWatchedAhead = watchedValidEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
     const totalWatched = hasWatchedAhead
       ? watchedValidEpisodes.length
-      : airedEpisodes.filter((ep) =>
-          this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
-        ).length;
+      : watchedValidEpisodes.filter((ep) => hasEpisodeAired(ep.air_date)).length;
 
     const totalEpisodes = validEpisodes.length;
     const totalAiredEpisodes = airedEpisodes.length;
