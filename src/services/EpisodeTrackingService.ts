@@ -1,6 +1,7 @@
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDoc, auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { normalizeEpisodeTrackingDoc } from '@/src/services/episodeTrackingNormalization';
+import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import { createTimeoutWithCleanup } from '@/src/utils/timeout';
 import { collection, deleteField, doc, setDoc, updateDoc } from 'firebase/firestore';
 import type { Episode, Season } from '../api/tmdb';
@@ -288,25 +289,27 @@ class EpisodeTrackingService {
     episodes: Episode[],
     watchedEpisodes: Record<string, WatchedEpisode>
   ): SeasonProgress {
-    const today = new Date();
-
-    // Filter to only include aired episodes
-    const airedEpisodes = episodes.filter((ep) => ep.air_date && new Date(ep.air_date) <= today);
-
-    // Count watched episodes
-    const watchedCount = airedEpisodes.filter((ep) =>
-      this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
-    ).length;
-
     const totalCount = episodes.length;
+    const airedEpisodes = episodes.filter((ep) => hasEpisodeAired(ep.air_date));
+    const watchedSeasonEpisodes = episodes.filter((ep) =>
+      this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
+    );
     const totalAiredCount = airedEpisodes.length;
-    const percentage = totalAiredCount > 0 ? (watchedCount / totalAiredCount) * 100 : 0;
+    const hasWatchedAhead = watchedSeasonEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
+    const watchedCount = hasWatchedAhead
+      ? watchedSeasonEpisodes.length
+      : airedEpisodes.filter((ep) =>
+          this.isEpisodeWatched(seasonNumber, ep.episode_number, watchedEpisodes)
+        ).length;
+    const progressTotalCount = hasWatchedAhead ? totalCount : totalAiredCount;
+    const percentage = progressTotalCount > 0 ? (watchedCount / progressTotalCount) * 100 : 0;
 
     return {
       seasonNumber,
       watchedCount,
       totalCount,
       totalAiredCount,
+      progressTotalCount,
       percentage,
     };
   }
@@ -320,22 +323,22 @@ class EpisodeTrackingService {
     allEpisodes: Episode[],
     watchedEpisodes: Record<string, WatchedEpisode>
   ): ShowProgress {
-    const today = new Date();
-
-    // Filter out Season 0 (specials) and unaired episodes
     const validEpisodes = allEpisodes.filter((ep) => ep.season_number > 0);
-    const airedEpisodes = validEpisodes.filter(
-      (ep) => ep.air_date && new Date(ep.air_date) <= today
-    );
-
-    // Count watched episodes (only from aired episodes to match denominator)
-    const totalWatched = airedEpisodes.filter((ep) =>
+    const airedEpisodes = validEpisodes.filter((ep) => hasEpisodeAired(ep.air_date));
+    const watchedValidEpisodes = validEpisodes.filter((ep) =>
       this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
-    ).length;
+    );
+    const hasWatchedAhead = watchedValidEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
+    const totalWatched = hasWatchedAhead
+      ? watchedValidEpisodes.length
+      : airedEpisodes.filter((ep) =>
+          this.isEpisodeWatched(ep.season_number, ep.episode_number, watchedEpisodes)
+        ).length;
 
     const totalEpisodes = validEpisodes.length;
     const totalAiredEpisodes = airedEpisodes.length;
-    const percentage = totalAiredEpisodes > 0 ? (totalWatched / totalAiredEpisodes) * 100 : 0;
+    const progressTotalEpisodes = hasWatchedAhead ? totalEpisodes : totalAiredEpisodes;
+    const percentage = progressTotalEpisodes > 0 ? (totalWatched / progressTotalEpisodes) * 100 : 0;
 
     // Calculate progress per season
     const seasonProgress = seasons
@@ -351,6 +354,7 @@ class EpisodeTrackingService {
       totalWatched,
       totalEpisodes,
       totalAiredEpisodes,
+      progressTotalEpisodes,
       percentage,
       seasonProgress,
     };

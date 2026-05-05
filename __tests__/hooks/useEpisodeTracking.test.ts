@@ -15,8 +15,21 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
     markAllEpisodesUnwatched: jest.fn().mockResolvedValue(undefined),
     getShowTracking: jest.fn().mockResolvedValue(null),
     isEpisodeWatched: jest.fn().mockReturnValue(false),
-    calculateSeasonProgress: jest.fn().mockReturnValue({ watched: 0, total: 10, percentage: 0 }),
-    calculateShowProgress: jest.fn().mockReturnValue({ watched: 0, total: 50, percentage: 0 }),
+    calculateSeasonProgress: jest.fn().mockReturnValue({
+      watchedCount: 0,
+      totalCount: 10,
+      totalAiredCount: 10,
+      progressTotalCount: 10,
+      percentage: 0,
+    }),
+    calculateShowProgress: jest.fn().mockReturnValue({
+      totalWatched: 0,
+      totalEpisodes: 50,
+      totalAiredEpisodes: 50,
+      progressTotalEpisodes: 50,
+      percentage: 0,
+      seasonProgress: [],
+    }),
   },
 }));
 
@@ -236,6 +249,47 @@ describe('useMarkEpisodeWatched', () => {
     // Should have 4 previous episodes
     const callArgs = (episodeTrackingService.markAllEpisodesWatched as jest.Mock).mock.calls[0];
     expect(callArgs[2]).toHaveLength(4);
+  });
+
+  it('includes earlier unreleased episodes when auto-marking previous episodes', async () => {
+    const seasonEpisodesWithFuture: Episode[] = [
+      ...mockSeasonEpisodes.slice(0, 3),
+      {
+        ...mockSeasonEpisodes[3],
+        air_date: '2999-01-22',
+      },
+      {
+        ...mockSeasonEpisodes[4],
+        air_date: '2999-01-29',
+      },
+    ];
+    const { result } = renderHook(() => useMarkEpisodeWatched());
+
+    await act(async () => {
+      result.current.mutate({
+        tvShowId: 123,
+        seasonNumber: 1,
+        episodeNumber: 5,
+        episodeData: {
+          episodeId: 5,
+          episodeName: 'Episode 5',
+          episodeAirDate: '2999-01-29',
+        },
+        showMetadata: mockShowMetadata,
+        previousEpisodesOptions: {
+          seasonEpisodes: seasonEpisodesWithFuture,
+          shouldMarkPrevious: true,
+        },
+      });
+    });
+
+    const callArgs = (episodeTrackingService.markAllEpisodesWatched as jest.Mock).mock.calls[0];
+    expect(callArgs[2]).toHaveLength(4);
+    expect(callArgs[2]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ episode_number: 4, air_date: '2999-01-22' }),
+      ])
+    );
   });
 
   it('should not mark previous episodes for episode 1', async () => {

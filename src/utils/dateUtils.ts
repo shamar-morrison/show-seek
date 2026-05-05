@@ -93,6 +93,34 @@ export function toLocalDateKey(date: Date): string {
 }
 
 /**
+ * Check whether a TMDB date is on or before a local comparison date.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @param comparisonDate - Local date to compare against
+ * @returns true when the TMDB date exists and is on/before the comparison date
+ */
+export function isTmdbDateOnOrBefore(
+  dateString: string | null | undefined,
+  comparisonDate: Date
+): boolean {
+  if (!dateString) {
+    return false;
+  }
+
+  return dateString <= toLocalDateKey(comparisonDate);
+}
+
+/**
+ * Check whether an episode air date is today or in the past using local date semantics.
+ *
+ * @param airDate - Episode air date in YYYY-MM-DD format
+ * @returns true if the episode has aired locally
+ */
+export function hasEpisodeAired(airDate: string | null | undefined): boolean {
+  return isTmdbDateOnOrBefore(airDate, new Date());
+}
+
+/**
  * Check if a media item has been released based on its date.
  * For use with client-side filtering when API date filters are unavailable.
  *
@@ -101,6 +129,5 @@ export function toLocalDateKey(date: Date): string {
  */
 export function isReleased(releaseDate: string | null | undefined): boolean {
   if (!releaseDate) return true; // fail-open: show items with no date
-  const today = toLocalDateKey(new Date());
-  return releaseDate <= today;
+  return isTmdbDateOnOrBefore(releaseDate, new Date());
 }

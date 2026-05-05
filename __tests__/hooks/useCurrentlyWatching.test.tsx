@@ -394,6 +394,77 @@ describe('useCurrentlyWatching', () => {
     expect(mockGetSeasonDetails).toHaveBeenCalledWith(704, 2);
   });
 
+  it('uses the full known total when a watched episode is ahead of the aired frontier', async () => {
+    mockGetAllWatchedShows.mockResolvedValue([
+      {
+        metadata: {
+          tvShowName: 'Watched Ahead Show',
+          posterPath: null,
+          lastUpdated: 9200,
+        },
+        episodes: {
+          '1_5': {
+            episodeId: 305,
+            tvShowId: 705,
+            seasonNumber: 1,
+            episodeNumber: 5,
+            watchedAt: 7000,
+            episodeName: 'Episode 5',
+            episodeAirDate: '2026-03-17',
+          },
+        },
+      },
+    ]);
+    mockGetTVShowDetails.mockResolvedValue(
+      buildShowDetails({
+        id: 705,
+        poster_path: '/tmdb-ahead.jpg',
+        seasons: [{ season_number: 1, episode_count: 6, air_date: '2026-03-01' }],
+        last_episode_to_air: {
+          season_number: 1,
+          episode_number: 3,
+          air_date: '2026-03-03',
+        },
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 4,
+          air_date: '2026-03-10',
+        },
+      })
+    );
+    mockGetSeasonDetails.mockResolvedValue(
+      buildSeasonDetails([
+        { season_number: 1, episode_number: 4, name: 'Episode 4', air_date: '2026-03-10' },
+        { season_number: 1, episode_number: 5, name: 'Episode 5', air_date: '2026-03-17' },
+        { season_number: 1, episode_number: 6, name: 'Episode 6', air_date: '2026-03-24' },
+      ])
+    );
+
+    const client = createQueryClient();
+    const { result } = renderHook(() => useCurrentlyWatching(), {
+      wrapper: createWrapper(client),
+    });
+
+    await waitFor(() => {
+      expect(result.current.data[0]?.nextEpisode?.airDate).toBe('2026-03-24');
+    });
+
+    expect(result.current.data[0]).toEqual(
+      expect.objectContaining({
+        tvShowId: 705,
+        posterPath: '/tmdb-ahead.jpg',
+        percentage: 83,
+        timeRemaining: 30,
+        nextEpisode: {
+          season: 1,
+          episode: 6,
+          title: 'Episode 6',
+          airDate: '2026-03-24',
+        },
+      })
+    );
+  });
+
   it('hides fully completed ended shows from the list', async () => {
     mockGetAllWatchedShows.mockResolvedValue([
       {

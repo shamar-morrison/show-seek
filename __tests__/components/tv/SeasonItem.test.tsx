@@ -77,7 +77,13 @@ jest.mock('@/src/components/ui/ProgressBar', () => ({
 // Mock useSeasonProgress
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useSeasonProgress: () => ({
-    progress: { watchedCount: 3, totalAiredCount: 10 },
+    progress: {
+      watchedCount: 3,
+      totalAiredCount: 10,
+      progressTotalCount: 10,
+      totalCount: 10,
+      percentage: 30,
+    },
   }),
 }));
 
@@ -148,6 +154,7 @@ const defaultProps: SeasonItemProps = {
   firstAirDate: '2020-01-15',
   voteAverage: 8.5,
   markPreviousEpisodesWatched: false,
+  allowUnreleasedEpisodeWatches: false,
   isPremium: false,
   currentListCount: 0,
   t: mockT,
@@ -298,6 +305,98 @@ describe('SeasonItem', () => {
       })
     );
     expect(onMarkAllUnwatched.mock.calls[0][0].episodes).toHaveLength(2);
+    alertMock.mockRestore();
+  });
+
+  it('includes future episodes in mark-all when unreleased watches are enabled', () => {
+    const alertMock = jest
+      .spyOn(require('react-native').Alert, 'alert')
+      .mockImplementation(jest.fn());
+    const onMarkAllWatched = jest.fn();
+    const futureSeason = {
+      ...mockSeason,
+      episodes: [
+        mockSeason.episodes![0],
+        mockSeason.episodes![1],
+        {
+          ...mockSeason.episodes![1],
+          id: 103,
+          episode_number: 3,
+          name: 'Episode 3',
+          air_date: '2999-01-01',
+        },
+      ],
+      episode_count: 3,
+    };
+
+    const { getByTestId } = renderWithProviders(
+      <SeasonItem
+        {...defaultProps}
+        season={futureSeason}
+        isExpanded={true}
+        showEpisodes={false}
+        allowUnreleasedEpisodeWatches={true}
+        onMarkAllWatched={onMarkAllWatched}
+      />
+    );
+
+    fireEvent.press(getByTestId('season-mark-all-button-1'));
+    const alertCall = alertMock.mock.calls[0];
+    const buttons = alertCall[2] as Array<{ text?: string; onPress?: () => void }>;
+    const confirmButton = buttons.find((button) => button.text === 'Mark all');
+
+    confirmButton?.onPress?.();
+
+    expect(onMarkAllWatched).toHaveBeenCalledTimes(1);
+    expect(onMarkAllWatched.mock.calls[0][0].episodes).toHaveLength(3);
+    alertMock.mockRestore();
+  });
+
+  it('allows unmarking watched future episodes even when unreleased watches are disabled', () => {
+    const alertMock = jest
+      .spyOn(require('react-native').Alert, 'alert')
+      .mockImplementation(jest.fn());
+    const onMarkAllUnwatched = jest.fn();
+    const futureOnlySeason = {
+      ...mockSeason,
+      episode_count: 1,
+      episodes: [
+        {
+          ...mockSeason.episodes![0],
+          air_date: '2999-01-01',
+        },
+      ],
+    };
+
+    const { getByTestId } = renderWithProviders(
+      <SeasonItem
+        {...defaultProps}
+        season={futureOnlySeason}
+        isExpanded={true}
+        showEpisodes={false}
+        episodeTracking={{
+          episodes: {
+            '1_1': {} as any,
+          },
+          metadata: {
+            tvShowName: 'Test Show',
+            posterPath: '/show-poster.jpg',
+            lastUpdated: Date.now(),
+          },
+        }}
+        onMarkAllUnwatched={onMarkAllUnwatched}
+      />
+    );
+
+    fireEvent.press(getByTestId('season-mark-all-button-1'));
+    const alertCall = alertMock.mock.calls[0];
+    const buttons = alertCall[2] as Array<{ text?: string; onPress?: () => void }>;
+    const confirmButton = buttons.find((button) => button.text === 'Unmark all');
+
+    confirmButton?.onPress?.();
+
+    expect(onMarkAllUnwatched).toHaveBeenCalledTimes(1);
+    expect(onMarkAllUnwatched.mock.calls[0][0].episodes).toHaveLength(1);
     alertMock.mockRestore();
   });
 });

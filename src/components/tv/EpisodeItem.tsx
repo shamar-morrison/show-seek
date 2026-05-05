@@ -19,6 +19,7 @@ export interface EpisodeItemProps {
   isWatched: boolean;
   isPending: boolean;
   hasAired: boolean;
+  allowUnreleasedEpisodeWatches?: boolean;
   userRating: number;
   disableWatchButton?: boolean;
   formatDate: (date: string | null) => string;
@@ -40,6 +41,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     isWatched,
     isPending,
     hasAired,
+    allowUnreleasedEpisodeWatches = false,
     userRating,
     disableWatchButton = false,
     formatDate,
@@ -51,9 +53,14 @@ export const EpisodeItem = memo<EpisodeItemProps>(
     const styles = useSeasonScreenStyles();
     const { accentColor } = useAccentColor();
     const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.small);
-    const isDisabled = isPending || disableWatchButton || (!isWatched && !hasAired);
+    const canToggleWatched = isWatched || hasAired || allowUnreleasedEpisodeWatches;
+    const isDisabled = isPending || disableWatchButton || !canToggleWatched;
 
     const handleWatchToggle = useCallback(() => {
+      if (isDisabled) {
+        return;
+      }
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (isWatched) {
@@ -61,7 +68,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
       } else {
         onMarkWatched();
       }
-    }, [isWatched, onMarkWatched, onMarkUnwatched]);
+    }, [isDisabled, isWatched, onMarkWatched, onMarkUnwatched]);
 
     return (
       <View style={styles.episodeCard}>
@@ -117,7 +124,9 @@ export const EpisodeItem = memo<EpisodeItemProps>(
                 </View>
               )}
               {episode.runtime && (
-                <Text style={styles.metaText}>• {t('common.minutesShort', { count: episode.runtime })}</Text>
+                <Text style={styles.metaText}>
+                  • {t('common.minutesShort', { count: episode.runtime })}
+                </Text>
               )}
             </View>
 
@@ -146,7 +155,7 @@ export const EpisodeItem = memo<EpisodeItemProps>(
             <Text style={styles.watchButtonText}>
               {isWatched
                 ? t('media.markAsUnwatched')
-                : !hasAired
+                : !hasAired && !allowUnreleasedEpisodeWatches
                   ? t('media.notYetAired')
                   : t('media.markAsWatched')}
             </Text>

@@ -54,12 +54,14 @@ export interface TVShowEpisodeTracking {
 export interface SeasonProgress {
   /** Season number */
   seasonNumber: number;
-  /** Number of watched episodes */
+  /** Number of watched episodes used for progress */
   watchedCount: number;
   /** Total number of episodes in season */
   totalCount: number;
   /** Total number of aired episodes (excludes unaired/future episodes) */
   totalAiredCount: number;
+  /** Denominator used for progress (aired-only unless the user has watched ahead) */
+  progressTotalCount: number;
   /** Progress percentage (0-100) */
   percentage: number;
 }
@@ -68,12 +70,14 @@ export interface SeasonProgress {
  * Overall progress data for a TV show
  */
 export interface ShowProgress {
-  /** Total watched episodes across all seasons */
+  /** Total watched episodes used for progress across all seasons */
   totalWatched: number;
   /** Total episodes across all seasons */
   totalEpisodes: number;
   /** Total aired episodes across all seasons (excludes unaired/future episodes) */
   totalAiredEpisodes: number;
+  /** Denominator used for progress (aired-only unless the user has watched ahead) */
+  progressTotalEpisodes: number;
   /** Overall progress percentage (0-100) */
   percentage: number;
   /** Progress data for each season */

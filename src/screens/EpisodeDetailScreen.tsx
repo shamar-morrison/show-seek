@@ -46,7 +46,7 @@ import { usePreferences } from '@/src/hooks/usePreferences';
 import { useProgressiveRender } from '@/src/hooks/useProgressiveRender';
 import { useEpisodeRating } from '@/src/hooks/useRatings';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { formatTmdbDate } from '@/src/utils/dateUtils';
+import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { parseEpisodeRouteParams } from '@/src/utils/episodeRouteParams';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { useQuery } from '@tanstack/react-query';
@@ -212,7 +212,14 @@ export default function EpisodeDetailScreen() {
       initialNote,
       showId: tvId,
     }),
-    [episode?.name, episodeNumber, resolvedShowPosterPath, seasonNumber, tvId, tvShow?.original_name]
+    [
+      episode?.name,
+      episodeNumber,
+      resolvedShowPosterPath,
+      seasonNumber,
+      tvId,
+      tvShow?.original_name,
+    ]
   );
   const { handleNotePress, isOpeningNote } = useNotePress({
     note,
@@ -278,10 +285,16 @@ export default function EpisodeDetailScreen() {
     },
     [navigateTo, tvId, seasonNumber]
   );
+  const hasAired = useMemo(() => {
+    return hasEpisodeAired(episode?.air_date);
+  }, [episode]);
+  const canToggleWatched = isWatched || hasAired || !!preferences?.allowUnreleasedEpisodeWatches;
+  const isPending = markWatched.isPending || markUnwatched.isPending;
 
   const handleMarkWatched = useCallback(() => {
     if (isAccountRequired()) return;
     if (!episode || !tvShow) return;
+    if (isPending || !canToggleWatched) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -336,6 +349,8 @@ export default function EpisodeDetailScreen() {
     season,
     isPremium,
     currentListCount,
+    isPending,
+    canToggleWatched,
   ]);
 
   const handleToggleFavorite = useCallback(() => {
@@ -423,11 +438,6 @@ export default function EpisodeDetailScreen() {
     return videos.find((v) => v.type === 'Trailer' && v.site === 'YouTube');
   }, [videos]);
 
-  const hasAired = useMemo(() => {
-    if (!episode?.air_date) return false;
-    return new Date(episode.air_date) <= new Date();
-  }, [episode]);
-
   if (!isReady || isLoading) {
     return (
       <SafeAreaView style={screenStyles.container} edges={['top']}>
@@ -462,7 +472,6 @@ export default function EpisodeDetailScreen() {
   }
 
   const stillUrl = getImageUrl(episode.still_path, TMDB_IMAGE_SIZES.backdrop.large);
-  const isPending = markWatched.isPending || markUnwatched.isPending;
   const headerSubtitle = t('media.seasonEpisode', { season: seasonNumber, episode: episodeNumber });
   const isNoteActionLoading = isLoadingNote || isOpeningNote;
 
@@ -622,10 +631,10 @@ export default function EpisodeDetailScreen() {
                   styles.watchButtonFull,
                   !isWatched && { backgroundColor: accentColor },
                   isWatched && styles.unwatchButton,
-                  (!hasAired || isPending) && styles.disabledButton,
+                  (!canToggleWatched || isPending) && styles.disabledButton,
                 ]}
                 onPress={handleMarkWatched}
-                disabled={!hasAired || isPending}
+                disabled={!canToggleWatched || isPending}
                 activeOpacity={ACTIVE_OPACITY}
               >
                 {isPending ? (
@@ -634,7 +643,11 @@ export default function EpisodeDetailScreen() {
                   <>
                     <Check size={20} color={COLORS.text} />
                     <Text style={styles.watchButtonText}>
-                      {isWatched ? t('media.markAsUnwatched') : t('media.markAsWatched')}
+                      {isWatched
+                        ? t('media.markAsUnwatched')
+                        : !hasAired && !preferences?.allowUnreleasedEpisodeWatches
+                          ? t('media.notYetAired')
+                          : t('media.markAsWatched')}
                     </Text>
                   </>
                 )}

@@ -14,6 +14,7 @@ import type {
 import { useSeasonProgress } from '@/src/hooks/useEpisodeTracking';
 import type { RatingItem } from '@/src/services/RatingService';
 import type { TVShowEpisodeTracking } from '@/src/types/episodeTracking';
+import { hasEpisodeAired } from '@/src/utils/dateUtils';
 import * as Haptics from 'expo-haptics';
 import type { TFunction } from 'i18next';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
@@ -60,6 +61,7 @@ export interface SeasonItemProps {
   firstAirDate: string | undefined;
   voteAverage: number | undefined;
   markPreviousEpisodesWatched: boolean;
+  allowUnreleasedEpisodeWatches: boolean;
   isPremium: boolean;
   currentListCount: number;
   showEpisodes?: boolean;
@@ -93,6 +95,7 @@ export const SeasonItem = memo<SeasonItemProps>(
     firstAirDate,
     voteAverage,
     markPreviousEpisodesWatched,
+    allowUnreleasedEpisodeWatches,
     isPremium,
     currentListCount,
     showEpisodes = true,
@@ -109,33 +112,57 @@ export const SeasonItem = memo<SeasonItemProps>(
     // Defer episode rendering to show loading indicator immediately on expand
     const { shouldRenderContent, isLoading } = useDeferredExpansion(shouldShowEpisodeList);
 
-    const airedEpisodes = useMemo(() => {
-      const today = new Date();
-      return seasonEpisodes.filter((ep) => ep.air_date && new Date(ep.air_date) <= today);
-    }, [seasonEpisodes]);
+    const markableEpisodes = useMemo(
+      () =>
+        seasonEpisodes.filter(
+          (ep) => !!ep.air_date && (allowUnreleasedEpisodeWatches || hasEpisodeAired(ep.air_date))
+        ),
+      [allowUnreleasedEpisodeWatches, seasonEpisodes]
+    );
 
-    const hasAiredEpisodes = useMemo(() => airedEpisodes.length > 0, [airedEpisodes]);
+    const watchedSeasonEpisodes = useMemo(
+      () =>
+        seasonEpisodes.filter((ep) => {
+          const episodeKey = `${season.season_number}_${ep.episode_number}`;
+          return !!episodeTracking?.episodes?.[episodeKey];
+        }),
+      [episodeTracking?.episodes, season.season_number, seasonEpisodes]
+    );
 
-    const allAiredWatched = useMemo(() => {
-      if (airedEpisodes.length === 0) return false;
+    const allMarkableEpisodesWatched = useMemo(() => {
+      if (markableEpisodes.length === 0) return false;
 
-      return airedEpisodes.every((ep) => {
+      return markableEpisodes.every((ep) => {
         const episodeKey = `${season.season_number}_${ep.episode_number}`;
         return !!episodeTracking?.episodes?.[episodeKey];
       });
-    }, [airedEpisodes, episodeTracking?.episodes, season.season_number]);
+    }, [episodeTracking?.episodes, markableEpisodes, season.season_number]);
+
+    const hasBulkMarkableEpisodes = markableEpisodes.length > 0;
+    const hasWatchedEpisodesToUnmark = watchedSeasonEpisodes.length > 0;
+    const shouldOfferUnmarkAll =
+      (markableEpisodes.length === 0 && hasWatchedEpisodesToUnmark) || allMarkableEpisodesWatched;
+    const markAllUsesGenericCopy = markableEpisodes.some((ep) => !hasEpisodeAired(ep.air_date));
+    const unmarkAllUsesGenericCopy = watchedSeasonEpisodes.some(
+      (ep) => !hasEpisodeAired(ep.air_date)
+    );
 
     const handleMarkAllPress = useCallback(() => {
-      if (!hasAiredEpisodes) return;
+      if (!hasBulkMarkableEpisodes && !hasWatchedEpisodesToUnmark) return;
 
-      if (allAiredWatched) {
+      if (shouldOfferUnmarkAll) {
         // Unmark all episodes
         Alert.alert(
           t('watched.unmarkAllEpisodesTitle'),
-          t('watched.unmarkAllAiredEpisodesConfirm', {
-            count: airedEpisodes.length,
-            seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
-          }),
+          t(
+            unmarkAllUsesGenericCopy
+              ? 'watched.unmarkAllEpisodesConfirm'
+              : 'watched.unmarkAllAiredEpisodesConfirm',
+            {
+              count: watchedSeasonEpisodes.length,
+              seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
+            }
+          ),
           [
             { text: t('common.cancel'), style: 'cancel' },
             {
@@ -146,7 +173,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                 onMarkAllUnwatched({
                   tvShowId: tvId,
                   seasonNumber: season.season_number,
-                  episodes: airedEpisodes,
+                  episodes: watchedSeasonEpisodes,
                 });
               },
             },
@@ -156,10 +183,15 @@ export const SeasonItem = memo<SeasonItemProps>(
         // Mark all episodes
         Alert.alert(
           t('watched.markAllEpisodesTitle'),
-          t('watched.markAllAiredEpisodesConfirm', {
-            count: airedEpisodes.length,
-            seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
-          }),
+          t(
+            markAllUsesGenericCopy
+              ? 'watched.markAllEpisodesConfirm'
+              : 'watched.markAllAiredEpisodesConfirm',
+            {
+              count: markableEpisodes.length,
+              seasonName: season.name || t('media.seasonNumber', { number: season.season_number }),
+            }
+          ),
           [
             { text: t('common.cancel'), style: 'cancel' },
             {
@@ -170,7 +202,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                 onMarkAllWatched({
                   tvShowId: tvId,
                   seasonNumber: season.season_number,
-                  episodes: airedEpisodes,
+                  episodes: markableEpisodes,
                   showMetadata: {
                     tvShowName: showName,
                     posterPath: showPosterPath,
@@ -182,9 +214,13 @@ export const SeasonItem = memo<SeasonItemProps>(
         );
       }
     }, [
-      airedEpisodes,
-      hasAiredEpisodes,
-      allAiredWatched,
+      hasBulkMarkableEpisodes,
+      hasWatchedEpisodesToUnmark,
+      shouldOfferUnmarkAll,
+      unmarkAllUsesGenericCopy,
+      watchedSeasonEpisodes,
+      markAllUsesGenericCopy,
+      markableEpisodes,
       season.season_number,
       season.name,
       tvId,
@@ -228,7 +264,7 @@ export const SeasonItem = memo<SeasonItemProps>(
               <View style={styles.seasonProgressContainer}>
                 <ProgressBar
                   current={progress.watchedCount}
-                  total={progress.totalAiredCount}
+                  total={progress.progressTotalCount}
                   height={4}
                   showLabel={true}
                 />
@@ -242,7 +278,7 @@ export const SeasonItem = memo<SeasonItemProps>(
           </View>
 
           <View style={styles.seasonActions}>
-            {isExpanded && hasAiredEpisodes && (
+            {isExpanded && (hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark) && (
               <TouchableOpacity
                 style={[styles.markAllButton, isBulkActionPending && styles.markAllButtonDisabled]}
                 onPress={handleMarkAllPress}
@@ -258,7 +294,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                   />
                 ) : (
                   <Text style={styles.markAllText}>
-                    {allAiredWatched ? t('watched.unmarkAll') : t('watched.markAll')}
+                    {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -293,7 +329,7 @@ export const SeasonItem = memo<SeasonItemProps>(
                     markUnwatchedVariables?.episodeNumber === episode.episode_number &&
                     markUnwatchedVariables?.seasonNumber === season.season_number);
 
-                const hasAired = episode.air_date && new Date(episode.air_date) <= new Date();
+                const hasAired = hasEpisodeAired(episode.air_date);
 
                 // Find user rating for this episode
                 const episodeDocId = `episode-${tvId}-${season.season_number}-${episode.episode_number}`;
@@ -313,13 +349,19 @@ export const SeasonItem = memo<SeasonItemProps>(
                     isWatched={!!isWatched}
                     isPending={isPending}
                     hasAired={!!hasAired}
+                    allowUnreleasedEpisodeWatches={allowUnreleasedEpisodeWatches}
                     userRating={userRating}
                     formatDate={formatDate}
                     onPress={() => onEpisodePress(episode, season.season_number)}
                     onMarkWatched={() => {
                       // Check if this will complete the season
                       const willComplete =
-                        progress && progress.watchedCount + 1 === progress.totalAiredCount;
+                        progress && progress.progressTotalCount > 0
+                          ? progress.watchedCount + 1 ===
+                            (allowUnreleasedEpisodeWatches && !hasAired
+                              ? progress.totalCount
+                              : progress.progressTotalCount)
+                          : false;
 
                       onMarkWatched(
                         {
