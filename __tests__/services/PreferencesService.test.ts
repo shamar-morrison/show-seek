@@ -33,6 +33,9 @@ describe('PreferencesService', () => {
 
     expect(preferences.favoriteMovieGenreIds).toEqual(DEFAULT_PREFERENCES.favoriteMovieGenreIds);
     expect(preferences.favoriteTVGenreIds).toEqual(DEFAULT_PREFERENCES.favoriteTVGenreIds);
+    expect(preferences.allowUnreleasedEpisodeWatches).toBe(
+      DEFAULT_PREFERENCES.allowUnreleasedEpisodeWatches
+    );
   });
 
   it('preserves valid persisted genre id arrays', async () => {
@@ -50,5 +53,20 @@ describe('PreferencesService', () => {
 
     expect(preferences.favoriteMovieGenreIds).toEqual([18, 35]);
     expect(preferences.favoriteTVGenreIds).toEqual([10765]);
+  });
+
+  it('preserves allowUnreleasedEpisodeWatches when persisted', async () => {
+    mockAuditedGetDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({
+        preferences: {
+          allowUnreleasedEpisodeWatches: true,
+        },
+      }),
+    });
+
+    const preferences = await preferencesService.fetchPreferences('user-1');
+
+    expect(preferences.allowUnreleasedEpisodeWatches).toBe(true);
   });
 });

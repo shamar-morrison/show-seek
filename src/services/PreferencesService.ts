@@ -36,18 +36,17 @@ class PreferencesService {
       blurPlotSpoilers: data?.preferences?.blurPlotSpoilers ?? DEFAULT_PREFERENCES.blurPlotSpoilers,
       showListIndicators:
         data?.preferences?.showListIndicators ?? DEFAULT_PREFERENCES.showListIndicators,
-      copyInsteadOfMove: data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
+      copyInsteadOfMove:
+        data?.preferences?.copyInsteadOfMove ?? DEFAULT_PREFERENCES.copyInsteadOfMove,
       homeScreenLists: data?.preferences?.homeScreenLists,
-      favoriteMovieGenreIds:
-        this.sanitizeGenreIds(
-          data?.preferences?.favoriteMovieGenreIds,
-          DEFAULT_PREFERENCES.favoriteMovieGenreIds
-        ),
-      favoriteTVGenreIds:
-        this.sanitizeGenreIds(
-          data?.preferences?.favoriteTVGenreIds,
-          DEFAULT_PREFERENCES.favoriteTVGenreIds
-        ),
+      favoriteMovieGenreIds: this.sanitizeGenreIds(
+        data?.preferences?.favoriteMovieGenreIds,
+        DEFAULT_PREFERENCES.favoriteMovieGenreIds
+      ),
+      favoriteTVGenreIds: this.sanitizeGenreIds(
+        data?.preferences?.favoriteTVGenreIds,
+        DEFAULT_PREFERENCES.favoriteTVGenreIds
+      ),
       quickMarkAsWatched:
         data?.preferences?.quickMarkAsWatched ?? DEFAULT_PREFERENCES.quickMarkAsWatched,
       defaultLaunchScreen:
@@ -59,6 +58,9 @@ class PreferencesService {
       markPreviousEpisodesWatched:
         data?.preferences?.markPreviousEpisodesWatched ??
         DEFAULT_PREFERENCES.markPreviousEpisodesWatched,
+      allowUnreleasedEpisodeWatches:
+        data?.preferences?.allowUnreleasedEpisodeWatches ??
+        DEFAULT_PREFERENCES.allowUnreleasedEpisodeWatches,
       hideTabLabels: data?.preferences?.hideTabLabels ?? DEFAULT_PREFERENCES.hideTabLabels,
       dataSaver: data?.preferences?.dataSaver ?? DEFAULT_PREFERENCES.dataSaver,
       showOriginalTitles:
@@ -120,7 +122,7 @@ class PreferencesService {
           path: `users/${userId}`,
           queryKey: 'preferences',
           callsite: 'PreferencesService.fetchPreferences',
-        }),
+        })
       );
 
       if (!snapshot.exists()) {
@@ -155,7 +157,7 @@ class PreferencesService {
             },
           },
           { merge: true }
-        ),
+        )
       );
     } catch (error) {
       rethrowFirestoreError('PreferencesService.updatePreference', error);

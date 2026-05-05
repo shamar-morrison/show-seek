@@ -3,6 +3,7 @@ import { useAuth } from '@/src/context/auth';
 import i18n from '@/src/i18n';
 import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { InProgressShow, WatchedEpisode } from '@/src/types/episodeTracking';
+import { isTmdbDateOnOrBefore } from '@/src/utils/dateUtils';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -17,11 +18,7 @@ const MAX_SEASONS_TO_FETCH = 2;
 type SeasonDetails = Season & { episodes: Episode[] };
 
 const isAiredOnOrBefore = (airDate: string | null | undefined, today: Date): boolean => {
-  if (!airDate) {
-    return false;
-  }
-
-  return new Date(airDate) <= today;
+  return isTmdbDateOnOrBefore(airDate, today);
 };
 
 const buildEpisodeNameFallback = (episodeNumber: number): string =>
@@ -72,8 +69,7 @@ const resolveShowLevelLastAiredEpisode = (
     lastEpisodeToAir &&
     lastEpisodeToAir.season_number > 0 &&
     lastEpisodeToAir.episode_number > 0 &&
-    lastEpisodeToAir.air_date &&
-    new Date(lastEpisodeToAir.air_date) <= today
+    isAiredOnOrBefore(lastEpisodeToAir.air_date, today)
   ) {
     return {
       seasonNumber: lastEpisodeToAir.season_number,
@@ -84,7 +80,10 @@ const resolveShowLevelLastAiredEpisode = (
   return null;
 };
 
-const getFallbackBoundarySeasonNumber = (showDetails: TVShowDetails, today: Date): number | null => {
+const getFallbackBoundarySeasonNumber = (
+  showDetails: TVShowDetails,
+  today: Date
+): number | null => {
   const fallbackSeason = showDetails.seasons
     .filter(
       (season) =>
@@ -172,7 +171,9 @@ const getNextEpisodeAfter = (
     return null;
   }
 
-  const fallbackSeason = seasonCounts.find(([season, count]) => season > currentSeason && count > 0);
+  const fallbackSeason = seasonCounts.find(
+    ([season, count]) => season > currentSeason && count > 0
+  );
   return fallbackSeason
     ? {
         season: fallbackSeason[0],
@@ -272,12 +273,17 @@ export function useCurrentlyWatching() {
           showLevelLastAiredEpisode.seasonNumber,
           showLevelLastAiredEpisode.episodeNumber
         );
-        const furthestWatchedPosition = Math.min(
-          getEpisodePosition(seasonCounts, furthestWatched.seasonNumber, furthestWatched.episodeNumber),
-          totalAiredEpisodes
+        const furthestWatchedPosition = getEpisodePosition(
+          seasonCounts,
+          furthestWatched.seasonNumber,
+          furthestWatched.episodeNumber
         );
+        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
 
-        if (nextEpisodeNumbers && totalAiredEpisodes > furthestWatchedPosition) {
+        if (
+          nextEpisodeNumbers &&
+          (hasWatchedAhead || totalAiredEpisodes > furthestWatchedPosition)
+        ) {
           requestSeasonNumbers.add(nextEpisodeNumbers.season);
         }
       } else {
@@ -327,7 +333,8 @@ export function useCurrentlyWatching() {
 
       const boundaryQueryIndex = seasonQueries.findIndex(
         (query) =>
-          query.tvShowId === showInfo.tvShowId && query.seasonNumber === fallbackBoundarySeasonNumber
+          query.tvShowId === showInfo.tvShowId &&
+          query.seasonNumber === fallbackBoundarySeasonNumber
       );
       if (boundaryQueryIndex < 0) {
         return false;
@@ -372,7 +379,9 @@ export function useCurrentlyWatching() {
     activeShowsWithInfo.forEach((showInfo, index) => {
       try {
         const { trackingDoc, tvShowId, furthestWatched } = showInfo;
-        const episodesList = Object.values(trackingDoc.episodes).filter((episode) => episode.seasonNumber > 0);
+        const episodesList = Object.values(trackingDoc.episodes).filter(
+          (episode) => episode.seasonNumber > 0
+        );
         if (episodesList.length === 0) return;
 
         const metadata = trackingDoc.metadata;
@@ -388,8 +397,9 @@ export function useCurrentlyWatching() {
         const avgRuntime = (showDetails.episode_run_time && showDetails.episode_run_time[0]) || 45;
         const seasonCounts = buildSeasonCounts(showDetails);
         const lastAiredEpisode = resolveLastAiredEpisode(showDetails, today, seasonsData);
+        const totalKnownEpisodes = seasonCounts.reduce((sum, [, count]) => sum + count, 0);
 
-        if (!lastAiredEpisode || seasonCounts.length === 0) {
+        if (!lastAiredEpisode || seasonCounts.length === 0 || totalKnownEpisodes <= 0) {
           return;
         }
 
@@ -403,12 +413,16 @@ export function useCurrentlyWatching() {
           return;
         }
 
-        const furthestWatchedPosition = Math.min(
-          getEpisodePosition(seasonCounts, furthestWatched.seasonNumber, furthestWatched.episodeNumber),
-          totalAiredEpisodes
+        const furthestWatchedPosition = getEpisodePosition(
+          seasonCounts,
+          furthestWatched.seasonNumber,
+          furthestWatched.episodeNumber
         );
-        const remainingEpisodes = Math.max(0, totalAiredEpisodes - furthestWatchedPosition);
-        const percentage = Math.round((furthestWatchedPosition / totalAiredEpisodes) * 100);
+        const hasWatchedAhead = furthestWatchedPosition > totalAiredEpisodes;
+        const progressTotalEpisodes = hasWatchedAhead ? totalKnownEpisodes : totalAiredEpisodes;
+        const progressPosition = Math.min(furthestWatchedPosition, progressTotalEpisodes);
+        const remainingEpisodes = Math.max(0, progressTotalEpisodes - progressPosition);
+        const percentage = Math.round((progressPosition / progressTotalEpisodes) * 100);
         const timeRemaining = remainingEpisodes > 0 ? remainingEpisodes * avgRuntime : 0;
 
         if (remainingEpisodes === 0 && !isShowStillActive(showDetails)) {
@@ -484,11 +498,11 @@ export function useCurrentlyWatching() {
   // Once we have computed data, it means React Query had cached data and we're good
   const data = computedData ?? [];
   const isLoading =
-    ((computedData === null &&
+    (computedData === null &&
       (trackingQuery.isLoading ||
         (showDetailsQueries.length > 0 && showDetailsQueries.some((q) => q.isLoading)) ||
         (seasonDetailsQueries.length > 0 && seasonDetailsQueries.some((q) => q.isLoading)))) ||
-      (data.length === 0 && pendingFallbackBoundaryData));
+    (data.length === 0 && pendingFallbackBoundaryData);
 
   // Track if background refetch is happening (useful for subtle refresh indicators)
   // Only show this when we already have data to display
@@ -504,9 +518,9 @@ export function useCurrentlyWatching() {
 
   const error = trackingQuery.error
     ? 'Failed to load watching progress.'
-      : allShowDetailsFailed
-        ? 'Failed to load show details.'
-        : null;
+    : allShowDetailsFailed
+      ? 'Failed to load show details.'
+      : null;
 
   // Refresh function
   const refresh = async () => {

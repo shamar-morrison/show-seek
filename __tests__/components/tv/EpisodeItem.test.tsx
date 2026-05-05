@@ -126,6 +126,31 @@ describe('EpisodeItem', () => {
     expect(getByText('Not yet aired')).toBeTruthy();
   });
 
+  it('does not allow marking a future episode when the preference is off', () => {
+    const onMarkWatched = jest.fn();
+    const { getByText } = renderWithProviders(
+      <EpisodeItem {...defaultProps} hasAired={false} onMarkWatched={onMarkWatched} />
+    );
+
+    fireEvent.press(getByText('Not yet aired'));
+    expect(onMarkWatched).not.toHaveBeenCalled();
+  });
+
+  it('allows marking a future episode when the preference is on', () => {
+    const onMarkWatched = jest.fn();
+    const { getByText } = renderWithProviders(
+      <EpisodeItem
+        {...defaultProps}
+        hasAired={false}
+        allowUnreleasedEpisodeWatches={true}
+        onMarkWatched={onMarkWatched}
+      />
+    );
+
+    fireEvent.press(getByText('Mark as Watched'));
+    expect(onMarkWatched).toHaveBeenCalled();
+  });
+
   it('calls onPress when episode is tapped', () => {
     const onPress = jest.fn();
     const { getByText } = renderWithProviders(<EpisodeItem {...defaultProps} onPress={onPress} />);

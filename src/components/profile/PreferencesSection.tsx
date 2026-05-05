@@ -168,6 +168,15 @@ export function PreferencesSection({
       />
 
       <PreferenceItem
+        label={t('profile.allowUnreleasedEpisodeWatches')}
+        subtitle={t('profile.allowUnreleasedEpisodeWatchesDescription')}
+        value={!!preferences?.allowUnreleasedEpisodeWatches}
+        onValueChange={(value) => handleUpdate('allowUnreleasedEpisodeWatches', value)}
+        loading={isLoading || isItemUpdating('allowUnreleasedEpisodeWatches')}
+        disabled={isUpdating}
+      />
+
+      <PreferenceItem
         label={t('profile.blurPlotSpoilers')}
         subtitle={t('profile.blurPlotSpoilersDescription')}
         value={!!preferences?.blurPlotSpoilers}

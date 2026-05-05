@@ -130,4 +130,35 @@ describe('PreferencesSection', () => {
 
     expect(onUpdate).toHaveBeenCalledWith('autoRemoveFromShouldWatch', false);
   });
+
+  it('renders allow unreleased episode watches preference and updates it', () => {
+    const onUpdate = jest.fn();
+    const { getByText, getAllByTestId } = renderWithProviders(
+      <PreferencesSection
+        preferences={DEFAULT_PREFERENCES}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onUpdate={onUpdate}
+        isUpdating={false}
+        isPremium={true}
+        onPremiumPress={jest.fn()}
+      />
+    );
+
+    expect(getByText('Allow unreleased episode watches')).toBeTruthy();
+
+    const preferenceItems = getAllByTestId('preference-item');
+    const preferenceItem = preferenceItems.find((item) =>
+      within(item).queryByText('Allow unreleased episode watches')
+    );
+    expect(preferenceItem).toBeTruthy();
+    if (!preferenceItem) {
+      throw new Error('Allow unreleased episode watches preference row not found');
+    }
+    const allowUnreleasedSwitch = within(preferenceItem).getByTestId('preference-switch');
+    fireEvent(allowUnreleasedSwitch, 'valueChange', true);
+
+    expect(onUpdate).toHaveBeenCalledWith('allowUnreleasedEpisodeWatches', true);
+  });
 });

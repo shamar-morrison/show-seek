@@ -7,11 +7,18 @@ const mockPush = jest.fn();
 const mockBack = jest.fn();
 const mockUseQuery = jest.fn();
 const mockIsAccountRequired = jest.fn(() => false);
+const mockMarkEpisodeWatchedMutate = jest.fn();
+const mockMarkEpisodeUnwatchedMutate = jest.fn();
 const mockEnsureNoteLoadedForEdit = jest.fn();
 const mockNoteModalPresent = jest.fn();
 const mockResolvePosterPath = jest.fn();
 const mockToggleFavoriteEpisodeMutate = jest.fn();
 const mockToggleFavoriteEpisodeMutateAsync = jest.fn();
+let mockIsWatched = false;
+let mockPreferences = {
+  showOriginalTitles: false,
+  allowUnreleasedEpisodeWatches: false,
+};
 let mockUseMediaNoteValue: any = {
   note: null,
   hasNote: false,
@@ -47,6 +54,82 @@ const mockEpisode = {
 
 const mockSeason = {
   episodes: [],
+};
+
+const setMockQueries = (episodeOverrides: Partial<typeof mockEpisode> = {}) => {
+  const episodeData = { ...mockEpisode, ...episodeOverrides };
+
+  mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
+    const lastKey = queryKey[queryKey.length - 1];
+
+    if (queryKey[0] === 'tv' && queryKey.length === 2) {
+      return {
+        data: mockTvShow,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    if (queryKey[0] === 'tv' && queryKey[2] === 'season' && queryKey.length === 4) {
+      return {
+        data: mockSeason,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    if (lastKey === 'details') {
+      return {
+        data: episodeData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    if (lastKey === 'credits') {
+      return {
+        data: { guest_stars: [], crew: [] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    if (lastKey === 'videos') {
+      return {
+        data: [],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    if (lastKey === 'images') {
+      return {
+        data: { stills: [] },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    }
+
+    return {
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: jest.fn(),
+    };
+  });
 };
 
 jest.mock('expo-router', () => {
@@ -150,9 +233,9 @@ jest.mock('@/src/hooks/useAnimatedScrollHeader', () => ({
 
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useShowEpisodeTracking: () => ({ data: null }),
-  useIsEpisodeWatched: () => ({ isWatched: false }),
-  useMarkEpisodeWatched: () => ({ mutate: jest.fn(), isPending: false }),
-  useMarkEpisodeUnwatched: () => ({ mutate: jest.fn(), isPending: false }),
+  useIsEpisodeWatched: () => ({ isWatched: mockIsWatched }),
+  useMarkEpisodeWatched: () => ({ mutate: mockMarkEpisodeWatchedMutate, isPending: false }),
+  useMarkEpisodeUnwatched: () => ({ mutate: mockMarkEpisodeUnwatchedMutate, isPending: false }),
 }));
 
 jest.mock('@/src/hooks/useFavoriteEpisodes', () => ({
@@ -178,9 +261,7 @@ jest.mock('@/src/hooks/usePosterOverrides', () => ({
 
 jest.mock('@/src/hooks/usePreferences', () => ({
   usePreferences: () => ({
-    preferences: {
-      showOriginalTitles: false,
-    },
+    preferences: mockPreferences,
   }),
 }));
 
@@ -221,7 +302,8 @@ jest.mock('@/src/components/ui/AnimatedScrollHeader', () => ({
 jest.mock('@/src/components/ui/AppErrorState', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const AppErrorState = ({ message }: { message: string }) => React.createElement(Text, null, message);
+  const AppErrorState = ({ message }: { message: string }) =>
+    React.createElement(Text, null, message);
   AppErrorState.displayName = 'AppErrorState';
   return AppErrorState;
 });
@@ -274,6 +356,11 @@ jest.mock('@/src/components/detail/VideosSection', () => ({ VideosSection: () =>
 describe('EpisodeDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockIsWatched = false;
+    mockPreferences = {
+      showOriginalTitles: false,
+      allowUnreleasedEpisodeWatches: false,
+    };
     mockResolvePosterPath.mockReturnValue('/resolved-show.jpg');
     mockUseIsEpisodeFavoritedValue = {
       isFavorited: false,
@@ -292,77 +379,7 @@ describe('EpisodeDetailScreen', () => {
     };
     mockEnsureNoteLoadedForEdit.mockResolvedValue(null);
 
-    mockUseQuery.mockImplementation(({ queryKey }: { queryKey: unknown[] }) => {
-      const lastKey = queryKey[queryKey.length - 1];
-
-      if (queryKey[0] === 'tv' && queryKey.length === 2) {
-        return {
-          data: mockTvShow,
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      if (queryKey[0] === 'tv' && queryKey[2] === 'season' && queryKey.length === 4) {
-        return {
-          data: mockSeason,
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      if (lastKey === 'details') {
-        return {
-          data: mockEpisode,
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      if (lastKey === 'credits') {
-        return {
-          data: { guest_stars: [], crew: [] },
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      if (lastKey === 'videos') {
-        return {
-          data: [],
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      if (lastKey === 'images') {
-        return {
-          data: { stills: [] },
-          isLoading: false,
-          isError: false,
-          error: null,
-          refetch: jest.fn(),
-        };
-      }
-
-      return {
-        data: undefined,
-        isLoading: false,
-        isError: false,
-        error: null,
-        refetch: jest.fn(),
-      };
-    });
+    setMockQueries();
   });
 
   it('shows a spinner and disables the favorite button while the favorite mutation is pending', () => {
@@ -385,6 +402,38 @@ describe('EpisodeDetailScreen', () => {
     expect(getByTestId('episode-favorite-action').props.disabled).toBe(false);
     expect(getByTestId('episode-favorite-action-icon')).toBeTruthy();
     expect(queryByTestId('episode-favorite-action-spinner')).toBeNull();
+  });
+
+  it('keeps a future episode locked when the unreleased watch preference is off', () => {
+    setMockQueries({ air_date: '2999-01-01' });
+
+    const { getByText } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByText('Not yet aired'));
+    expect(mockMarkEpisodeWatchedMutate).not.toHaveBeenCalled();
+  });
+
+  it('allows marking a future episode watched when the unreleased watch preference is on', () => {
+    mockPreferences = {
+      showOriginalTitles: false,
+      allowUnreleasedEpisodeWatches: true,
+    };
+    setMockQueries({ air_date: '2999-01-01' });
+
+    const { getByText } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByText('Mark as Watched'));
+    expect(mockMarkEpisodeWatchedMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows unwatching a future episode even when the unreleased watch preference is off', () => {
+    mockIsWatched = true;
+    setMockQueries({ air_date: '2999-01-01' });
+
+    const { getByText } = render(<EpisodeDetailScreen />);
+
+    fireEvent.press(getByText('Mark as Unwatched'));
+    expect(mockMarkEpisodeUnwatchedMutate).toHaveBeenCalledTimes(1);
   });
 
   it('opens the note editor with preloaded note content', async () => {

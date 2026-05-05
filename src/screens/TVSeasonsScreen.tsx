@@ -1,7 +1,11 @@
 import type { Episode } from '@/src/api/tmdb';
 import { tmdbApi } from '@/src/api/tmdb';
 import { EpisodeItem } from '@/src/components/tv/EpisodeItem';
-import { SeasonItem, type BulkSeasonActionState } from '@/src/components/tv/SeasonItem';
+import {
+  SeasonItem,
+  type BulkSeasonActionState,
+  type SeasonWithEpisodes,
+} from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
@@ -30,8 +34,10 @@ import {
   getSeasonHeaderRowIndex,
   type TVSeasonsListRow,
 } from '@/src/screens/tvSeasonsListRows';
+import { episodeTrackingService } from '@/src/services/EpisodeTrackingService';
 import { screenStyles } from '@/src/styles/screenStyles';
-import { formatTmdbDate } from '@/src/utils/dateUtils';
+import type { SeasonProgress, WatchedEpisode } from '@/src/types/episodeTracking';
+import { formatTmdbDate, hasEpisodeAired } from '@/src/utils/dateUtils';
 import { getDisplayMediaTitle } from '@/src/utils/mediaTitle';
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
@@ -263,7 +269,7 @@ export default function TVSeasonsScreen() {
   const displayShowTitle = show
     ? getDisplayMediaTitle(show, !!preferences?.showOriginalTitles)
     : '';
-  const seasons = seasonQueries.data || [];
+  const seasons: SeasonWithEpisodes[] = seasonQueries.data || [];
   const seasonRows = useMemo(
     () => buildTVSeasonsListRows(seasons, expandedSeason),
     [seasons, expandedSeason]
@@ -331,33 +337,58 @@ export default function TVSeasonsScreen() {
   }, [ratings]);
 
   const seasonProgressBySeasonNumber = useMemo(() => {
-    const progressMap = new Map<number, { watchedCount: number; totalAiredCount: number }>();
-    const watchedEpisodes = episodeTracking?.episodes;
-
-    if (!watchedEpisodes) {
-      return progressMap;
-    }
-
-    const today = new Date();
+    const progressMap = new Map<number, SeasonProgress>();
 
     seasons.forEach((seasonData) => {
-      const airedEpisodes = (seasonData.episodes || []).filter(
-        (episode) => episode.air_date && new Date(episode.air_date) <= today
+      progressMap.set(
+        seasonData.season_number,
+        episodeTrackingService.calculateSeasonProgress(
+          seasonData.season_number,
+          seasonData.episodes || [],
+          episodeTracking?.episodes || {}
+        )
       );
-
-      const watchedCount = airedEpisodes.filter((episode) => {
-        const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;
-        return watchedEpisodes[episodeKey];
-      }).length;
-
-      progressMap.set(seasonData.season_number, {
-        watchedCount,
-        totalAiredCount: airedEpisodes.length,
-      });
     });
 
     return progressMap;
   }, [seasons, episodeTracking?.episodes]);
+
+  const getProjectedSeasonProgress = useCallback(
+    (seasonData: SeasonWithEpisodes, episode: Episode): SeasonProgress => {
+      const projectedWatchedEpisodes: Record<string, WatchedEpisode> = {
+        ...(episodeTracking?.episodes || {}),
+      };
+      const episodesToMark = [episode];
+
+      if (preferences.markPreviousEpisodesWatched) {
+        episodesToMark.push(
+          ...(seasonData.episodes || []).filter(
+            (candidate) => candidate.episode_number < episode.episode_number
+          )
+        );
+      }
+
+      episodesToMark.forEach((candidate) => {
+        const episodeKey = `${seasonData.season_number}_${candidate.episode_number}`;
+        projectedWatchedEpisodes[episodeKey] = {
+          episodeId: candidate.id,
+          tvShowId: tvId,
+          seasonNumber: seasonData.season_number,
+          episodeNumber: candidate.episode_number,
+          watchedAt: Date.now(),
+          episodeName: candidate.name,
+          episodeAirDate: candidate.air_date,
+        };
+      });
+
+      return episodeTrackingService.calculateSeasonProgress(
+        seasonData.season_number,
+        seasonData.episodes || [],
+        projectedWatchedEpisodes
+      );
+    },
+    [episodeTracking?.episodes, preferences.markPreviousEpisodesWatched, tvId]
+  );
 
   useEffect(() => {
     setHasScrolledToSeason(false);
@@ -373,7 +404,12 @@ export default function TVSeasonsScreen() {
   }, []);
 
   useEffect(() => {
-    if (!targetSeasonNumber || hasScrolledToSeason || targetSeasonIndex < 0 || seasonRows.length === 0) {
+    if (
+      !targetSeasonNumber ||
+      hasScrolledToSeason ||
+      targetSeasonIndex < 0 ||
+      seasonRows.length === 0
+    ) {
       return;
     }
 
@@ -463,6 +499,7 @@ export default function TVSeasonsScreen() {
             firstAirDate={showFirstAirDate}
             voteAverage={showVoteAverage}
             markPreviousEpisodesWatched={!!preferences.markPreviousEpisodesWatched}
+            allowUnreleasedEpisodeWatches={!!preferences.allowUnreleasedEpisodeWatches}
             isPremium={isPremium}
             currentListCount={currentListCount}
             showEpisodes={false}
@@ -491,7 +528,7 @@ export default function TVSeasonsScreen() {
         (markUnwatched.isPending &&
           markUnwatched.variables?.episodeNumber === episode.episode_number &&
           markUnwatched.variables?.seasonNumber === seasonData.season_number);
-      const hasAired = !!(episode.air_date && new Date(episode.air_date) <= new Date());
+      const hasAired = hasEpisodeAired(episode.air_date);
       const episodeDocId = `episode-${tvId}-${seasonData.season_number}-${episode.episode_number}`;
       const userRating = episodeRatingsById.get(episodeDocId) || 0;
       const progress = seasonProgressBySeasonNumber.get(seasonData.season_number);
@@ -508,16 +545,20 @@ export default function TVSeasonsScreen() {
             isWatched={isWatched}
             isPending={isEpisodePending}
             hasAired={hasAired}
+            allowUnreleasedEpisodeWatches={!!preferences.allowUnreleasedEpisodeWatches}
             userRating={userRating}
             disableWatchButton={isAnyBulkActionPending}
             formatDate={formatDate}
             onPress={() => handleEpisodePress(episode, seasonData.season_number)}
             onMarkWatched={() => {
+              const projectedProgress = !isWatched
+                ? getProjectedSeasonProgress(seasonData, episode)
+                : progress;
               const willComplete =
                 !isWatched &&
-                !!progress &&
-                progress.totalAiredCount > 0 &&
-                progress.watchedCount + 1 === progress.totalAiredCount;
+                !!projectedProgress &&
+                projectedProgress.progressTotalCount > 0 &&
+                projectedProgress.watchedCount === projectedProgress.progressTotalCount;
 
               handleMarkWatched(
                 {
@@ -600,6 +641,7 @@ export default function TVSeasonsScreen() {
       formatDate,
       ratings,
       preferences.autoAddToWatching,
+      preferences.allowUnreleasedEpisodeWatches,
       preferences.markPreviousEpisodesWatched,
       listMembership,
       isPremium,
@@ -609,6 +651,7 @@ export default function TVSeasonsScreen() {
       styles.seasonFullOverview,
       episodeRatingsById,
       seasonProgressBySeasonNumber,
+      getProjectedSeasonProgress,
       isAnyBulkActionPending,
     ]
   );

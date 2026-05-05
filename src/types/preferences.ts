@@ -41,6 +41,7 @@ export interface UserPreferences {
   hideWatchedContent: boolean; // Premium: hide watched content from search/discover
   hideUnreleasedContent: boolean; // Hide unreleased movies/TV shows from search/discover
   markPreviousEpisodesWatched: boolean; // Auto-mark previous episodes when marking an episode as watched
+  allowUnreleasedEpisodeWatches: boolean; // Allow marking future-dated episodes as watched
   hideTabLabels: boolean; // Hide labels on bottom tab bar, show only icons
   dataSaver: boolean; // Load lower resolution images to save data
   showOriginalTitles: boolean; // Show movie/TV titles in original language when available
@@ -61,6 +62,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   hideWatchedContent: false, // Off by default - show all content
   hideUnreleasedContent: false, // Off by default - show unreleased content
   markPreviousEpisodesWatched: false, // Off by default - only mark selected episode
+  allowUnreleasedEpisodeWatches: false, // Off by default - future episodes remain locked
   hideTabLabels: false, // Off by default - show labels
   dataSaver: false, // Off by default - load full quality images
   showOriginalTitles: false, // Off by default - show localized titles

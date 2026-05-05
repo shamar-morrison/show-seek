@@ -104,6 +104,7 @@ jest.mock('@/src/hooks/usePreferences', () => ({
     preferences: {
       autoAddToWatching: true,
       markPreviousEpisodesWatched: false,
+      allowUnreleasedEpisodeWatches: false,
       showOriginalTitles: false,
     },
   }),
@@ -147,13 +148,7 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
 }));
 
 jest.mock('@/src/components/ui/LoadingModal', () => {
-  return function LoadingModalMock({
-    visible,
-    message,
-  }: {
-    visible: boolean;
-    message: string;
-  }) {
+  return function LoadingModalMock({ visible, message }: { visible: boolean; message: string }) {
     const { Text } = require('react-native');
     return visible ? <Text testID="bulk-loading-modal">{message}</Text> : null;
   };
