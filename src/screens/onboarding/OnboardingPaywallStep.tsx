@@ -14,6 +14,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+export const ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS = 30_000;
+
 interface OnboardingPaywallStepProps {
   displayName: string;
   onClose: () => void;
@@ -138,7 +140,7 @@ export default function OnboardingPaywallStep({
     <PremiumPaywallScreenShell
       closeButtonTestID="onboarding-paywall-close-button"
       closeButtonFadeDurationMs={450}
-      closeButtonRevealDelayMs={3000}
+      closeButtonRevealDelayMs={ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS}
       footer={
         <PremiumPaywallFooter
           accentColor={accentColor}
