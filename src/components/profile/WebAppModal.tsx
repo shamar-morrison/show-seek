@@ -1,9 +1,10 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { Globe } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface WebAppModalProps {
   /** Whether the modal is visible */
@@ -22,7 +23,13 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
   const { accentColor } = useAccentColor();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="web_app_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.webAppModalOverlay}>
         <View style={styles.webAppModalContent}>
           <View style={styles.webAppModalHeader}>
@@ -52,7 +59,7 @@ export function WebAppModal({ visible, onClose, onConfirm }: WebAppModalProps) {
           </View>
         </View>
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

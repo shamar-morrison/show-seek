@@ -127,7 +127,7 @@ export default function ReminderModal({
   };
 
   return (
-    <BaseReminderModal visible={visible} onClose={onClose}>
+    <BaseReminderModal analyticsName="movie_reminder_modal" visible={visible} onClose={onClose}>
       <DevModeBanner />
 
       {/* Movie Title */}

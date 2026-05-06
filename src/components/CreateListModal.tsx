@@ -5,6 +5,7 @@ import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { usePremium } from '@/src/context/PremiumContext';
 import { PremiumLimitError, useCreateList, useLists } from '@/src/hooks/useLists';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -33,6 +34,11 @@ interface CreateListModalProps {
   onCancel?: () => void;
 }
 
+type DismissOutcome =
+  | { type: 'success'; listId: string; listName: string }
+  | { type: 'upgrade' }
+  | null;
+
 const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
   ({ onSuccess, onCancel }, ref) => {
     const sheetRef = useRef<TrueSheet>(null);
@@ -55,15 +61,14 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
     const hasReachedLimit =
       !isPremium && !isPremiumLoading && !isListsLoading && customListCount >= MAX_FREE_LISTS;
 
-    // Track whether we should skip calling onCancel (e.g., created successfully or navigating to upgrade)
-    const skipOnCancelRef = useRef(false);
+    const dismissOutcomeRef = useRef<DismissOutcome>(null);
 
     useImperativeHandle(ref, () => ({
       present: async () => {
         setListName('');
         setListDescription('');
         setError(null);
-        skipOnCancelRef.current = false;
+        dismissOutcomeRef.current = null;
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -75,11 +80,27 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
       setListName('');
       setListDescription('');
       setError(null);
-      // Only call onCancel if we didn't create a list or navigate to upgrade
-      if (!skipOnCancelRef.current) {
+      void logModalEvent('create_list_sheet', 'dismiss');
+
+      const dismissOutcome = dismissOutcomeRef.current;
+      dismissOutcomeRef.current = null;
+
+      if (!dismissOutcome) {
         onCancel?.();
+        return;
       }
-    }, [onCancel]);
+
+      if (dismissOutcome.type === 'success') {
+        onSuccess?.(dismissOutcome.listId, dismissOutcome.listName);
+        return;
+      }
+
+      router.push('/premium');
+    }, [onCancel, onSuccess, router]);
+
+    const handleDidPresent = useCallback(() => {
+      void logModalEvent('create_list_sheet', 'present');
+    }, []);
 
     const showUpgradeAlert = useCallback(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -92,9 +113,8 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
             text: t('profile.upgradeToPremium'),
             style: 'default',
             onPress: async () => {
-              skipOnCancelRef.current = true;
+              dismissOutcomeRef.current = { type: 'upgrade' };
               await sheetRef.current?.dismiss();
-              router.push('/premium');
             },
           },
         ]
@@ -124,8 +144,11 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
           description: trimmedDescription ? trimmedDescription : undefined,
         });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        skipOnCancelRef.current = true;
-        onSuccess?.(listId, trimmedName);
+        dismissOutcomeRef.current = {
+          type: 'success',
+          listId,
+          listName: trimmedName,
+        };
         await sheetRef.current?.dismiss();
       } catch (err: any) {
         // Handle PremiumLimitError from hook as fallback (in case proactive check was bypassed)
@@ -144,6 +167,7 @@ const CreateListModal = forwardRef<CreateListModalRef, CreateListModalProps>(
         detents={[0.8]}
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
+        onDidPresent={handleDidPresent}
         onDidDismiss={handleDismiss}
         grabber={false}
       >

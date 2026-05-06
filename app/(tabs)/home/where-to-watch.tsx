@@ -21,7 +21,8 @@ import { useRouter } from 'expo-router';
 import { Check, ChevronDown, Crown, List, Tv2, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
+import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PROVIDER_LIST_GC_TIME = 1000 * 60 * 60 * 24 * 30; // 30 days
@@ -434,7 +435,8 @@ export default function WhereToWatchScreen() {
         </View>
       </SafeAreaView>
 
-      <Modal
+      <LoggedModal
+        name="where_to_watch_list_modal"
         visible={isListModalVisible}
         transparent
         animationType="fade"
@@ -520,9 +522,10 @@ export default function WhereToWatchScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </LoggedModal>
 
-      <Modal
+      <LoggedModal
+        name="where_to_watch_service_modal"
         visible={isServiceModalVisible}
         transparent
         animationType="fade"
@@ -602,7 +605,7 @@ export default function WhereToWatchScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </LoggedModal>
     </>
   );
 }

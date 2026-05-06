@@ -2,6 +2,7 @@ import { tmdbApi } from '@/src/api/tmdb';
 import { getTraktSlugByTmdbId } from '@/src/api/trakt';
 import { TraktLogo } from '@/src/components/icons/TraktLogo';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   buildOpenWithUrl,
@@ -179,10 +180,15 @@ export default function OpenWithDrawer({
   );
 
   const handleDidDismiss = useCallback(() => {
+    void logModalEvent('open_with_sheet', 'dismiss');
     if (visible) {
       onClose();
     }
   }, [onClose, visible]);
+
+  const handleDidPresent = useCallback(() => {
+    void logModalEvent('open_with_sheet', 'present');
+  }, []);
 
   return (
     <TrueSheet
@@ -190,6 +196,7 @@ export default function OpenWithDrawer({
       detents={['auto']}
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
+      onDidPresent={handleDidPresent}
       onDidDismiss={handleDidDismiss}
       grabber={true}
     >

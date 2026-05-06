@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
@@ -18,7 +19,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -76,7 +76,13 @@ export function CalendarSourceFilterModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="calendar_source_filter_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={modalLayoutStyles.container}
@@ -149,7 +155,7 @@ export function CalendarSourceFilterModal({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </LoggedModal>
   );
 }
 

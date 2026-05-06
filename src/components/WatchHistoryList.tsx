@@ -1,4 +1,5 @@
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { WatchInstance } from '@/src/types/watchedMovies';
 import { FlashList } from '@shopify/flash-list';
@@ -6,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Calendar, Pencil, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Modal, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
 import { Pressable } from 'react-native-gesture-handler';
 
 /**
@@ -161,7 +162,8 @@ export function WatchHistoryList({
       />
 
       {/* Date Picker Modal */}
-      <Modal
+      <LoggedModal
+        name="watch_history_edit_date_modal"
         visible={!!editingInstance}
         transparent
         animationType="fade"
@@ -181,7 +183,7 @@ export function WatchHistoryList({
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
-      </Modal>
+      </LoggedModal>
     </>
   );
 }

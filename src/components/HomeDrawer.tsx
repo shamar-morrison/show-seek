@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { UserAvatar } from '@/src/components/ui/UserAvatar';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -14,7 +15,6 @@ import {
   Alert,
   BackHandler,
   Dimensions,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -130,7 +130,8 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
 
   return (
     <>
-      <Modal
+      <LoggedModal
+        name="home_drawer_modal"
         visible={visible}
         transparent
         animationType="none"
@@ -249,7 +250,7 @@ export function HomeDrawer({ visible, onClose }: HomeDrawerProps) {
             </Pressable>
           </View>
         </Animated.View>
-      </Modal>
+      </LoggedModal>
     </>
   );
 }

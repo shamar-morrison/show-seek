@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -6,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { Check, Copy, X } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const CRYPTO_ADDRESSES = {
   btc: '38A7ex8s75Gmngv5L9vSVko1Ate6avqqiG',
@@ -93,7 +94,13 @@ export default function SupportDevelopmentModal({
   }, [onClose]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+    <LoggedModal
+      name="support_development_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleClose}
+    >
       <View style={modalLayoutStyles.container}>
         <ModalBackground />
         <TouchableOpacity
@@ -137,7 +144,7 @@ export default function SupportDevelopmentModal({
           </View>
         </View>
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

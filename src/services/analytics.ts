@@ -54,6 +54,11 @@ export const trackCreateList = async (_params: TrackCreateListParams): Promise<v
 
 export const trackPremiumPaywallView = async (): Promise<void> => {};
 
+export const logModalEvent = async (
+  _name: string,
+  _event: 'present' | 'dismiss'
+): Promise<void> => {};
+
 export const trackSignOut = async (): Promise<void> => {};
 
 export const trackPurchaseSuccess = async (_params: PurchaseSuccessParams): Promise<void> => {};

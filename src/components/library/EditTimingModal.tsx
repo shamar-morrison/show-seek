@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import {
   DevModeBanner,
   EPISODE_TIMING_OPTIONS,
@@ -19,7 +20,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -140,7 +140,13 @@ export default function EditTimingModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="edit_timing_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -216,7 +222,7 @@ export default function EditTimingModal({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </LoggedModal>
   );
 }
 

@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   BORDER_RADIUS,
@@ -14,7 +15,6 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -143,7 +143,13 @@ export default function MediaSortModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="media_sort_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={modalLayoutStyles.container}
@@ -211,7 +217,7 @@ export default function MediaSortModal({
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </LoggedModal>
   );
 }
 

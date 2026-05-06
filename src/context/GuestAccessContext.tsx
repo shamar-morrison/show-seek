@@ -1,9 +1,10 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface GuestAccessContextValue {
   isGuest: boolean;
@@ -76,7 +77,8 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
     <GuestAccessContext.Provider value={value}>
       {children}
 
-      <Modal
+      <LoggedModal
+        name="guest_access_modal"
         visible={isVisible}
         transparent
         animationType="fade"
@@ -119,7 +121,7 @@ export function GuestAccessProvider({ children }: GuestAccessProviderProps) {
             </Pressable>
           </View>
         </View>
-      </Modal>
+      </LoggedModal>
     </GuestAccessContext.Provider>
   );
 }

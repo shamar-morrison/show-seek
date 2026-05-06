@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useRenameList } from '@/src/hooks/useLists';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
@@ -64,6 +65,11 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
       setListDescription('');
       setOriginalDescription('');
       setError(null);
+      void logModalEvent('rename_list_sheet', 'dismiss');
+    }, []);
+
+    const handleDidPresent = useCallback(() => {
+      void logModalEvent('rename_list_sheet', 'present');
     }, []);
 
     const handleRename = async () => {
@@ -101,6 +107,7 @@ const RenameListModal = forwardRef<RenameListModalRef, RenameListModalProps>(
         detents={[0.8]}
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
+        onDidPresent={handleDidPresent}
         onDidDismiss={handleDismiss}
         grabber={false}
       >

@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, COLORS } from '@/src/constants/theme';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -6,7 +7,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -23,6 +23,8 @@ interface BaseReminderModalProps {
   onClose: () => void;
   /** Modal title (defaults to "Set Reminder") */
   title?: string;
+  /** Analytics name for lifecycle breadcrumbs */
+  analyticsName: string;
   /** Modal content */
   children: React.ReactNode;
 }
@@ -32,6 +34,7 @@ interface BaseReminderModalProps {
  * Provides the modal chrome: backdrop, container, header with title and close button.
  */
 export function BaseReminderModal({
+  analyticsName,
   visible,
   onClose,
   title,
@@ -42,7 +45,13 @@ export function BaseReminderModal({
   const resolvedTitle = title ?? t('reminder.setReminder');
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name={analyticsName}
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -65,6 +74,6 @@ export function BaseReminderModal({
           <ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </LoggedModal>
   );
 }

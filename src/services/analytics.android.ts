@@ -200,6 +200,22 @@ export const trackPremiumPaywallView = async (): Promise<void> => {
   });
 };
 
+export const logModalEvent = async (
+  name: string,
+  event: 'present' | 'dismiss'
+): Promise<void> => {
+  if (!(await ensureAnalyticsReady())) {
+    return;
+  }
+
+  await runAnalyticsCall('modal_lifecycle', async () => {
+    await analytics().logEvent('modal_lifecycle', {
+      modal_name: name,
+      modal_event: event,
+    });
+  });
+};
+
 const trackNamedEvent = async (
   context: string,
   eventName: string,

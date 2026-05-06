@@ -10,6 +10,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useGuestAccess } from '@/src/context/GuestAccessContext';
 import { useTrakt } from '@/src/context/TraktContext';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { useAddToList, useDeleteList, useLists, useRemoveFromList } from '@/src/hooks/useLists';
 import { ListMediaItem, UserList } from '@/src/services/ListService';
@@ -39,7 +40,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
+import { Pressable } from 'react-native-gesture-handler';
 
 export interface AddToListModalRef {
   present: () => Promise<void>;
@@ -153,6 +154,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const initialMembershipRef = useRef<Record<string, boolean>>({});
     // Flag to preserve state when temporarily dismissing for create list flow
     const isTransitioningToCreateRef = useRef(false);
+    const pendingDismissActionRef = useRef<(() => void | Promise<void>) | null>(null);
     // Track lifecycle semantics across a modal session
     const wasBulkSessionRef = useRef(false);
     const didCompleteRef = useRef(false);
@@ -238,6 +240,8 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       present: async () => {
         wasBulkSessionRef.current = isBulkMode;
         didCompleteRef.current = false;
+        isTransitioningToCreateRef.current = false;
+        pendingDismissActionRef.current = null;
 
         if (isBulkMode) {
           initialMembershipRef.current = {};
@@ -257,12 +261,23 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       },
     }));
 
+    const handleDidPresent = useCallback(() => {
+      void logModalEvent('add_to_list_sheet', 'present');
+    }, []);
+
     const handleDismiss = useCallback(() => {
-      // Don't reset state if we're transitioning to the create list modal
-      if (isTransitioningToCreateRef.current) {
-        isTransitioningToCreateRef.current = false;
+      void logModalEvent('add_to_list_sheet', 'dismiss');
+
+      const pendingDismissAction = pendingDismissActionRef.current;
+      pendingDismissActionRef.current = null;
+      const isTransitioningToCreate = isTransitioningToCreateRef.current;
+      isTransitioningToCreateRef.current = false;
+
+      if (isTransitioningToCreate) {
+        void pendingDismissAction?.();
         return;
       }
+
       // Reset pending selections on dismiss (discard changes silently)
       setPendingSelections({});
       initialMembershipRef.current = {};
@@ -278,7 +293,30 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
 
       didCompleteRef.current = false;
       wasBulkSessionRef.current = false;
+
+      void pendingDismissAction?.();
     }, [onComplete, onDismiss]);
+
+    const dismissThenRun = useCallback(
+      async (
+        action: () => void | Promise<void>,
+        options?: {
+          suppressDismissCallbacks?: boolean;
+        }
+      ) => {
+        isTransitioningToCreateRef.current = options?.suppressDismissCallbacks ?? false;
+        pendingDismissActionRef.current = action;
+
+        try {
+          await sheetRef.current?.dismiss();
+        } catch (error) {
+          pendingDismissActionRef.current = null;
+          isTransitioningToCreateRef.current = false;
+          console.error('[AddToListModal] Failed to dismiss sheet before follow-up action', error);
+        }
+      },
+      []
+    );
 
     // Error handler for mutations
     const handleMutationError = useCallback(
@@ -296,8 +334,9 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
                 text: t('profile.upgradeToPremium'),
                 style: 'default',
                 onPress: () => {
-                  sheetRef.current?.dismiss();
-                  router.push('/premium');
+                  void dismissThenRun(() => {
+                    router.push('/premium');
+                  });
                 },
               },
             ]
@@ -598,9 +637,12 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         return;
       }
 
-      isTransitioningToCreateRef.current = true;
-      await sheetRef.current?.dismiss();
-      await createListModalRef.current?.present();
+      await dismissThenRun(
+        () => {
+          void createListModalRef.current?.present();
+        },
+        { suppressDismissCallbacks: true }
+      );
     };
 
     const handleListCreated = async (listId: string, listName: string) => {
@@ -652,10 +694,11 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           scrollable
           cornerRadius={BORDER_RADIUS.l}
           backgroundColor={COLORS.surface}
+          onDidPresent={handleDidPresent}
           onDidDismiss={handleDismiss}
           grabber={true}
         >
-          <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>
+          <View style={[modalSheetStyles.content, { width }]}>
             <View style={modalHeaderStyles.header}>
               <Text style={modalHeaderStyles.title}>{bulkHeaderTitle}</Text>
               {isBulkMode && (
@@ -741,15 +784,16 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
             <Pressable
               style={[styles.manageListsButton, isSaving && styles.buttonDisabled]}
               onPress={() => {
-                sheetRef.current?.dismiss();
-                router.push('/manage-lists');
+                void dismissThenRun(() => {
+                  router.push('/manage-lists');
+                });
               }}
               disabled={isSaving}
             >
               <Settings2 size={20} color={COLORS.textSecondary} />
               <Text style={styles.manageListsText}>{t('library.manageLists')}</Text>
             </Pressable>
-          </GestureHandlerRootView>
+          </View>
         </TrueSheet>
 
         <CreateListModal

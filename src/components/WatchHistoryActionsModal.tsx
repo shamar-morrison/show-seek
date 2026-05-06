@@ -1,4 +1,5 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { logModalEvent } from '@/src/services/analytics';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { History, Trash2 } from 'lucide-react-native';
@@ -29,6 +30,8 @@ const WatchHistoryActionsModal = forwardRef<
 >(({ onViewHistory, onClearHistory }, ref) => {
   const { t } = useTranslation();
   const sheetRef = useRef<TrueSheet>(null);
+  const pendingActionRef = useRef<(() => void) | null>(null);
+  const isDismissingRef = useRef(false);
   const { width } = useWindowDimensions();
 
   useImperativeHandle(ref, () => ({
@@ -41,16 +44,54 @@ const WatchHistoryActionsModal = forwardRef<
   }));
 
   const handleViewHistory = useCallback(async () => {
+    if (isDismissingRef.current) {
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await sheetRef.current?.dismiss();
-    onViewHistory();
+    pendingActionRef.current = onViewHistory;
+    isDismissingRef.current = true;
+
+    try {
+      await sheetRef.current?.dismiss();
+    } catch (error) {
+      pendingActionRef.current = null;
+      isDismissingRef.current = false;
+      console.error('[WatchHistoryActionsModal] Failed to dismiss before view action', error);
+    }
   }, [onViewHistory]);
 
   const handleClearHistory = useCallback(async () => {
+    if (isDismissingRef.current) {
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await sheetRef.current?.dismiss();
-    onClearHistory();
+    pendingActionRef.current = onClearHistory;
+    isDismissingRef.current = true;
+
+    try {
+      await sheetRef.current?.dismiss();
+    } catch (error) {
+      pendingActionRef.current = null;
+      isDismissingRef.current = false;
+      console.error('[WatchHistoryActionsModal] Failed to dismiss before clear action', error);
+    }
   }, [onClearHistory]);
+
+  const handleDidPresent = useCallback(() => {
+    isDismissingRef.current = false;
+    void logModalEvent('watch_history_actions_sheet', 'present');
+  }, []);
+
+  const handleDidDismiss = useCallback(() => {
+    isDismissingRef.current = false;
+    void logModalEvent('watch_history_actions_sheet', 'dismiss');
+
+    const pendingAction = pendingActionRef.current;
+    pendingActionRef.current = null;
+    pendingAction?.();
+  }, []);
 
   const actions = [
     {
@@ -77,6 +118,8 @@ const WatchHistoryActionsModal = forwardRef<
       detents={['auto']}
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
+      onDidPresent={handleDidPresent}
+      onDidDismiss={handleDidDismiss}
       grabber={false}
     >
       <GestureHandlerRootView style={[styles.content, { width }]}>

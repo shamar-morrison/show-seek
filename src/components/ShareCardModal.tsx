@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -12,7 +13,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -158,7 +158,13 @@ export default function ShareCardModal({
   const isProcessing = state === 'sharing' || state === 'saving';
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+    <LoggedModal
+      name="share_card_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={handleClose}
+    >
       <ModalBackground />
       <Pressable style={modalLayoutStyles.backdrop} onPress={handleClose} />
 
@@ -255,7 +261,7 @@ export default function ShareCardModal({
       <View style={styles.hiddenContainer} pointerEvents="none">
         <ShareCard ref={cardRef} mediaData={mediaData} />
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

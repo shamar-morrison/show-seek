@@ -1,6 +1,7 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, HIT_SLOP, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useDeleteNote, useSaveNote } from '@/src/hooks/useNotes';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import {
   isFreemiumLimitError,
@@ -115,6 +116,11 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
     setEpisodeNumber(undefined);
     setShowId(undefined);
     setError(null);
+    void logModalEvent('notes_sheet', 'dismiss');
+  }, []);
+
+  const handleDidPresent = useCallback(() => {
+    void logModalEvent('notes_sheet', 'present');
   }, []);
 
   const handleSave = async () => {
@@ -195,6 +201,7 @@ const NoteModal = forwardRef<NoteModalRef, NoteModalProps>(({ onSave, onDelete }
       detents={[0.5]}
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
+      onDidPresent={handleDidPresent}
       onDidDismiss={handleDismiss}
       grabber={false}
     >

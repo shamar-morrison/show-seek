@@ -1,11 +1,12 @@
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
+import { logModalEvent } from '@/src/services/analytics';
 import { useIconBadgeStyles } from '@/src/styles/iconBadgeStyles';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import * as Haptics from 'expo-haptics';
 import { Ellipsis, LucideIcon } from 'lucide-react-native';
 import React, { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { GestureHandlerRootView, Pressable } from 'react-native-gesture-handler';
+import { Pressable } from 'react-native-gesture-handler';
 
 /** Standard icon to use for opening the ListActionsModal */
 export const ListActionsIcon = Ellipsis;
@@ -41,6 +42,8 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
   ({ actions }, ref) => {
     const iconBadgeStyles = useIconBadgeStyles();
     const sheetRef = useRef<TrueSheet>(null);
+    const pendingActionRef = useRef<(() => void) | null>(null);
+    const isDismissingRef = useRef(false);
     const { width } = useWindowDimensions();
 
     useImperativeHandle(ref, () => ({
@@ -53,12 +56,35 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
       },
     }));
 
-    const handleActionPress = useCallback((action: ListAction) => {
-      if (action.disabled) return;
+    const handleActionPress = useCallback(async (action: ListAction) => {
+      if (action.disabled || isDismissingRef.current) return;
+
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // Execute action first, then dismiss modal
-      action.onPress();
-      sheetRef.current?.dismiss();
+
+      pendingActionRef.current = action.onPress;
+      isDismissingRef.current = true;
+
+      try {
+        await sheetRef.current?.dismiss();
+      } catch (error) {
+        pendingActionRef.current = null;
+        isDismissingRef.current = false;
+        console.error('[ListActionsModal] Failed to dismiss sheet before action', error);
+      }
+    }, []);
+
+    const handleDidPresent = useCallback(() => {
+      isDismissingRef.current = false;
+      void logModalEvent('list_actions_sheet', 'present');
+    }, []);
+
+    const handleDidDismiss = useCallback(() => {
+      isDismissingRef.current = false;
+      void logModalEvent('list_actions_sheet', 'dismiss');
+
+      const pendingAction = pendingActionRef.current;
+      pendingActionRef.current = null;
+      pendingAction?.();
     }, []);
 
     return (
@@ -67,9 +93,11 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
         detents={['auto']}
         cornerRadius={BORDER_RADIUS.l}
         backgroundColor={COLORS.surface}
+        onDidPresent={handleDidPresent}
+        onDidDismiss={handleDidDismiss}
         grabber={false}
       >
-        <GestureHandlerRootView style={[styles.content, { width }]}>
+        <View style={[styles.content, { width }]}>
           {actions.map((action, index) => {
             const IconComponent = action.icon;
             const isDisabled = action.disabled ?? false;
@@ -94,7 +122,7 @@ const ListActionsModal = forwardRef<ListActionsModalRef, ListActionsModalProps>(
               </Pressable>
             );
           })}
-        </GestureHandlerRootView>
+        </View>
       </TrueSheet>
     );
   }

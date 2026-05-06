@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import {
   ACTIVE_OPACITY,
@@ -16,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -48,12 +48,14 @@ const FilterSelect = ({
   options,
   onSelect,
   placeholder,
+  analyticsName,
 }: {
   label: string;
   value: any;
   options: SelectOption[];
   onSelect: (val: any) => void;
   placeholder?: string;
+  analyticsName: string;
 }) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -74,7 +76,8 @@ const FilterSelect = ({
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
-      <Modal
+      <LoggedModal
+        name={analyticsName}
         visible={visible}
         transparent={true}
         animationType="fade"
@@ -127,7 +130,7 @@ const FilterSelect = ({
             />
           </View>
         </TouchableOpacity>
-      </Modal>
+      </LoggedModal>
     </View>
   );
 };
@@ -202,7 +205,13 @@ export default function WatchStatusFiltersModal({
   ];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="watch_status_filters_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={modalLayoutStyles.container}
@@ -229,6 +238,7 @@ export default function WatchStatusFiltersModal({
                 value={localFilters.mediaType}
                 options={mediaTypeOptions}
                 onSelect={(val) => updateFilter('mediaType', val)}
+                analyticsName="watch_status_filters_media_type_modal"
               />
             )}
 
@@ -238,6 +248,7 @@ export default function WatchStatusFiltersModal({
               options={genreOptions}
               onSelect={(val) => updateFilter('genre', val)}
               placeholder={t('discover.anyGenre')}
+              analyticsName="watch_status_filters_genre_modal"
             />
 
             <FilterSelect
@@ -245,6 +256,7 @@ export default function WatchStatusFiltersModal({
               value={localFilters.rating}
               options={ratingOptions}
               onSelect={(val) => updateFilter('rating', val)}
+              analyticsName="watch_status_filters_rating_modal"
             />
 
             <FilterSelect
@@ -253,6 +265,7 @@ export default function WatchStatusFiltersModal({
               options={yearOptions}
               onSelect={(val) => updateFilter('year', val)}
               placeholder={t('discover.anyYear')}
+              analyticsName="watch_status_filters_release_year_modal"
             />
           </View>
 
@@ -274,7 +287,7 @@ export default function WatchStatusFiltersModal({
           </View>
         </View>
       </KeyboardAvoidingView>
-    </Modal>
+    </LoggedModal>
   );
 }
 

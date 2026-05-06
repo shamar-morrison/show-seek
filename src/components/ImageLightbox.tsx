@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import Toast, { ToastRef } from '@/src/components/ui/Toast';
 import { ACTIVE_OPACITY, COLORS, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -11,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Dimensions,
-  Modal,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -113,7 +113,13 @@ export default function ImageLightbox({
   if (!visible || images.length === 0) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="image_lightbox_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.closeButton}
@@ -173,7 +179,7 @@ export default function ImageLightbox({
 
         <Toast ref={lightboxToastRef} />
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

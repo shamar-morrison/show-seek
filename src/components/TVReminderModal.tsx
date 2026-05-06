@@ -225,7 +225,7 @@ export default function TVReminderModal({
     !hasEpisodeChanged(currentNextEpisode, nextEpisode);
 
   return (
-    <BaseReminderModal visible={visible} onClose={onClose}>
+    <BaseReminderModal analyticsName="tv_reminder_modal" visible={visible} onClose={onClose}>
       <DevModeBanner />
 
       {/* Show Title */}

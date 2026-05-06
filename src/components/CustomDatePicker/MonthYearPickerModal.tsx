@@ -2,6 +2,7 @@
  * Bottom sheet modal for quick month and year selection.
  */
 
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useThemedStyles } from '@/src/hooks/useThemedStyles';
@@ -10,7 +11,6 @@ import { X } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -81,7 +81,13 @@ export function MonthYearPickerModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="month_year_picker_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={modalLayoutStyles.container}>
         <ModalBackground />
         <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
@@ -179,7 +185,7 @@ export function MonthYearPickerModal({
           </View>
         </View>
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

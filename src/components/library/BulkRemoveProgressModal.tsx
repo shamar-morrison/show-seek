@@ -1,10 +1,11 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { modalLayoutStyles } from '@/src/styles/modalStyles';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface BulkRemoveProgressModalProps {
   visible: boolean;
@@ -24,7 +25,8 @@ export function BulkRemoveProgressModal({
   const { t } = useTranslation();
 
   return (
-    <Modal
+    <LoggedModal
+      name="bulk_remove_progress_modal"
       visible={visible}
       transparent
       animationType="fade"
@@ -41,7 +43,7 @@ export function BulkRemoveProgressModal({
           <ProgressBar current={current} total={total} height={8} />
         </View>
       </View>
-    </Modal>
+    </LoggedModal>
   );
 }
 

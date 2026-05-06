@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { CustomDatePicker } from '@/src/components/CustomDatePicker';
 import { ModalBackground } from '@/src/components/ui/ModalBackground';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -13,7 +14,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -188,7 +188,13 @@ export default function MarkAsWatchedModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <LoggedModal
+      name="mark_as_watched_modal"
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={modalLayoutStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -303,7 +309,8 @@ export default function MarkAsWatchedModal({
       </KeyboardAvoidingView>
 
       {/* Custom Date Picker Modal */}
-      <Modal
+      <LoggedModal
+        name="mark_as_watched_date_picker_modal"
         visible={showDatePicker}
         transparent
         animationType="fade"
@@ -327,8 +334,8 @@ export default function MarkAsWatchedModal({
             />
           </View>
         </KeyboardAvoidingView>
-      </Modal>
-    </Modal>
+      </LoggedModal>
+    </LoggedModal>
   );
 }
 

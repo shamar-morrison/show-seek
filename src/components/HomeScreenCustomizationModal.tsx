@@ -12,6 +12,7 @@ import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { UserList } from '@/src/services/ListService';
+import { logModalEvent } from '@/src/services/analytics';
 import { modalHeaderStyles, modalSheetStyles } from '@/src/styles/modalStyles';
 import { HomeListType, HomeScreenListItem } from '@/src/types/preferences';
 import { TrueSheet } from '@lodev09/react-native-true-sheet';
@@ -89,6 +90,7 @@ const HomeScreenCustomizationModal = forwardRef<
   HomeScreenCustomizationModalProps
 >(({ onShowToast, resolvedHomeScreenLists, customLists }, ref) => {
   const sheetRef = useRef<TrueSheet>(null);
+  const pendingDismissActionRef = useRef<(() => void) | null>(null);
   const { width } = useWindowDimensions();
   const updateMutation = useUpdateHomeScreenLists();
   const { user } = useAuth();
@@ -129,8 +131,10 @@ const HomeScreenCustomizationModal = forwardRef<
 
       if (item.id === 'latest-trailers' && !canAccessTrailers) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        sheetRef.current?.dismiss();
-        router.push('/premium');
+        pendingDismissActionRef.current = () => {
+          router.push('/premium');
+        };
+        void sheetRef.current?.dismiss();
         return;
       }
 
@@ -176,6 +180,18 @@ const HomeScreenCustomizationModal = forwardRef<
     sheetRef.current?.dismiss();
   };
 
+  const handleDidPresent = useCallback(() => {
+    void logModalEvent('home_customization_sheet', 'present');
+  }, []);
+
+  const handleDidDismiss = useCallback(() => {
+    void logModalEvent('home_customization_sheet', 'dismiss');
+
+    const pendingDismissAction = pendingDismissActionRef.current;
+    pendingDismissActionRef.current = null;
+    pendingDismissAction?.();
+  }, []);
+
   const isSelected = (id: string) => pendingSelections.some((s) => s.id === id);
 
   return (
@@ -185,6 +201,8 @@ const HomeScreenCustomizationModal = forwardRef<
       scrollable
       cornerRadius={BORDER_RADIUS.l}
       backgroundColor={COLORS.surface}
+      onDidPresent={handleDidPresent}
+      onDidDismiss={handleDidDismiss}
       grabber={true}
     >
       <GestureHandlerRootView style={[modalSheetStyles.content, { width }]}>

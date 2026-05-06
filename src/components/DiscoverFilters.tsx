@@ -1,3 +1,4 @@
+import { LoggedModal } from '@/src/components/ui/LoggedModal';
 import { tmdbApi, WatchProvider } from '@/src/api/tmdb';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
@@ -5,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, Search, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export interface FilterState {
   sortBy: string;
@@ -37,6 +38,7 @@ interface BaseFilterSelectProps {
   onSelect: (val: any) => void;
   placeholder?: string;
   isActive?: boolean;
+  analyticsName: string;
 }
 
 interface SearchableFilterSelectProps extends BaseFilterSelectProps {
@@ -52,6 +54,7 @@ const FilterSelect = ({
   onSelect,
   placeholder,
   isActive = false,
+  analyticsName,
 }: BaseFilterSelectProps) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -72,7 +75,8 @@ const FilterSelect = ({
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
-      <Modal
+      <LoggedModal
+        name={analyticsName}
         visible={visible}
         transparent={true}
         animationType="fade"
@@ -125,7 +129,7 @@ const FilterSelect = ({
             />
           </View>
         </TouchableOpacity>
-      </Modal>
+      </LoggedModal>
     </View>
   );
 };
@@ -138,6 +142,7 @@ const SearchableFilterSelect = ({
   placeholder,
   isActive = false,
   searchPlaceholder,
+  analyticsName,
 }: SearchableFilterSelectProps) => {
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();
@@ -170,7 +175,13 @@ const SearchableFilterSelect = ({
         <ChevronDown size={20} color={COLORS.textSecondary} />
       </TouchableOpacity>
 
-      <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={handleClose}>
+      <LoggedModal
+        name={analyticsName}
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleClose}
+      >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleClose}>
           <View style={styles.searchableModalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
@@ -238,7 +249,7 @@ const SearchableFilterSelect = ({
             />
           </View>
         </TouchableOpacity>
-      </Modal>
+      </LoggedModal>
     </View>
   );
 };
@@ -338,6 +349,7 @@ export default function DiscoverFilters({
             options={sortOptions}
             onSelect={(val) => updateFilter('sortBy', val)}
             isActive={filters.sortBy !== 'popularity.desc'}
+            analyticsName="discover_filters_sort_by_modal"
           />
         </View>
         <View style={styles.col}>
@@ -348,6 +360,7 @@ export default function DiscoverFilters({
             onSelect={(val) => updateFilter('genre', val)}
             placeholder={t('discover.anyGenre')}
             isActive={filters.genre !== null}
+            analyticsName="discover_filters_genre_modal"
           />
         </View>
       </View>
@@ -360,6 +373,7 @@ export default function DiscoverFilters({
             options={ratingOptions}
             onSelect={(val) => updateFilter('rating', val)}
             isActive={filters.rating !== 0}
+            analyticsName="discover_filters_rating_modal"
           />
         </View>
         <View style={styles.col}>
@@ -371,6 +385,7 @@ export default function DiscoverFilters({
             placeholder={t('discover.anyLanguage')}
             isActive={filters.language !== null}
             searchPlaceholder={t('discover.searchLanguages')}
+            analyticsName="discover_filters_language_modal"
           />
         </View>
       </View>
@@ -384,6 +399,7 @@ export default function DiscoverFilters({
             onSelect={(val) => updateFilter('year', val)}
             placeholder={t('discover.anyYear')}
             isActive={filters.year !== null}
+            analyticsName="discover_filters_release_year_modal"
           />
         </View>
         <View style={styles.col}>
@@ -398,6 +414,7 @@ export default function DiscoverFilters({
               placeholder={t('discover.anyStreamingService')}
               isActive={filters.watchProvider !== null}
               searchPlaceholder={t('discover.searchStreamingServices')}
+              analyticsName="discover_filters_streaming_service_modal"
             />
           )}
         </View>
