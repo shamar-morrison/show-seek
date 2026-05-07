@@ -421,6 +421,24 @@ describe('useReminders hooks', () => {
         },
         ...overrides,
       });
+    const staleSeasonReminder = (overrides: Partial<Reminder> = {}): Reminder =>
+      createReminder({
+        id: 'tv-101',
+        mediaType: 'tv',
+        mediaId: 101,
+        title: 'Better Call Saul',
+        releaseDate: '2026-06-16',
+        reminderTiming: 'on_release_day',
+        notificationScheduledFor: Date.now() - 60_000,
+        tvFrequency: 'season_premiere',
+        nextEpisode: {
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Pilot',
+          airDate: '2026-06-16',
+        },
+        ...overrides,
+      });
 
     it('advances a stale every-episode reminder and updates caches immediately', async () => {
       const client = createQueryClient();
@@ -690,6 +708,97 @@ describe('useReminders hooks', () => {
           })
         );
       });
+    });
+
+    it('advances a stale season-premiere reminder only to a new season premiere and updates caches', async () => {
+      const client = createQueryClient();
+      const reminder = staleSeasonReminder();
+      const nextEpisode = {
+        seasonNumber: 2,
+        episodeNumber: 1,
+        episodeName: 'Season 2 Premiere',
+        airDate: '2026-07-01',
+      };
+      const nextNotificationScheduledFor = Date.now() + 86_400_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 2,
+          episode_number: 1,
+          name: 'Season 2 Premiere',
+          air_date: '2026-07-01',
+        },
+      });
+      mockUpdateReminderDetails.mockResolvedValueOnce({
+        releaseDate: '2026-07-01',
+        nextEpisode,
+        notificationScheduledFor: nextNotificationScheduledFor,
+        localNotificationId: 'updated-season-notification-id',
+        updatedAt: 1200,
+        noNextEpisodeFound: false,
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-101',
+            releaseDate: '2026-07-01',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+            localNotificationId: 'updated-season-notification-id',
+          })
+        );
+      });
+
+      expect(mockUpdateReminderDetails).toHaveBeenCalledWith('tv-101', {
+        releaseDate: '2026-07-01',
+        nextEpisode,
+        noNextEpisodeFound: false,
+      });
+      expect(client.getQueryData(['reminder', 'test-user-id', 'tv', 101])).toEqual(
+        expect.objectContaining({
+          id: 'tv-101',
+          releaseDate: '2026-07-01',
+          nextEpisode,
+          notificationScheduledFor: nextNotificationScheduledFor,
+        })
+      );
+    });
+
+    it('does not advance a stale season-premiere reminder when TMDB points to a later-season non-premiere episode', async () => {
+      const client = createQueryClient();
+      const reminder = staleSeasonReminder();
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 2,
+          episode_number: 2,
+          name: 'Episode 2',
+          air_date: '2026-07-08',
+        },
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(expect.objectContaining({ id: 'tv-101' }));
+      });
+
+      expect(mockUpdateReminderDetails).not.toHaveBeenCalled();
+      expect(result.current.data[0]).toEqual(
+        expect.objectContaining({
+          releaseDate: '2026-06-16',
+          nextEpisode: reminder.nextEpisode,
+        })
+      );
     });
   });
 });

@@ -9,6 +9,7 @@ import {
   MAX_FREE_REMINDERS,
   PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
+import { parseTmdbDate } from '@/src/utils/dateUtils';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
 import { resolveTVEpisodeReminderRollover } from '@/src/utils/reminderRollover';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -289,20 +290,31 @@ const useAutoUpdateReminders = (reminders: Reminder[], userId?: string) => {
 
               const nextEpisode = showDetails.next_episode_to_air;
               const nextEpisodeAirDate = nextEpisode?.air_date;
+              const nextEpisodePatch = nextEpisodeAirDate
+                ? {
+                    seasonNumber: nextEpisode.season_number,
+                    episodeNumber: nextEpisode.episode_number,
+                    episodeName: nextEpisode.name || 'TBA',
+                    airDate: nextEpisodeAirDate,
+                  }
+                : undefined;
               const isNewSeason =
-                (nextEpisode?.season_number ?? 0) > (reminder.nextEpisode?.seasonNumber || 0);
+                (nextEpisode?.season_number ?? 0) > (reminder.nextEpisode?.seasonNumber ?? 0);
               const isFutureDate =
                 !!nextEpisodeAirDate &&
-                Date.parse(nextEpisodeAirDate) > Date.parse(reminder.releaseDate);
+                parseTmdbDate(nextEpisodeAirDate).getTime() >
+                  parseTmdbDate(reminder.releaseDate).getTime();
 
               if (
                 reminder.tvFrequency === 'season_premiere' &&
                 nextEpisodeAirDate &&
+                nextEpisode?.episode_number === 1 &&
                 isNewSeason &&
                 isFutureDate
               ) {
                 const appliedUpdates = await reminderService.updateReminderDetails(reminder.id, {
                   releaseDate: nextEpisodeAirDate,
+                  nextEpisode: nextEpisodePatch,
                   noNextEpisodeFound: false,
                 });
 
@@ -311,6 +323,7 @@ const useAutoUpdateReminders = (reminders: Reminder[], userId?: string) => {
                 const updatedReminder = mergeReminderPatch(reminder, {
                   ...appliedUpdates,
                   releaseDate: nextEpisodeAirDate,
+                  nextEpisode: nextEpisodePatch,
                   noNextEpisodeFound: false,
                 });
 
