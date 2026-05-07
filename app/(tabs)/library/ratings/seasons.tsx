@@ -72,8 +72,16 @@ export default function SeasonRatingsScreen() {
     filteredItems,
   } = useHeaderSearch({
     items: seasonRatings,
-    getSearchableText: (item) =>
-      `${item.tvShowName || ''} ${item.title || ''} ${item.seasonNumber ? `season ${item.seasonNumber}` : ''}`,
+    getSearchableText: (item) => {
+      const hasSeasonNumber = typeof item.seasonNumber === 'number';
+      return [
+        item.tvShowName || '',
+        item.title || '',
+        hasSeasonNumber ? `${t('media.season')} ${item.seasonNumber}` : '',
+        hasSeasonNumber ? `${item.seasonNumber}` : '',
+        hasSeasonNumber ? `S${item.seasonNumber}` : '',
+      ].join(' ');
+    },
   });
 
   const handleShowToast = useCallback((message: string) => {

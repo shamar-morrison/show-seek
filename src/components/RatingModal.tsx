@@ -5,6 +5,7 @@ import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useTrakt } from '@/src/context/TraktContext';
+import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
   useDeleteEpisodeRating,
   useDeleteRating,
@@ -184,6 +185,7 @@ export default function RatingModal({
   const { isConnected: isTraktConnected } = useTrakt();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isAccountRequired = useAccountRequired();
   const userId = user?.uid;
   const [rating, setRating] = useState(initialRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -210,6 +212,7 @@ export default function RatingModal({
 
   const handleSubmit = async () => {
     if (rating === 0) return;
+    if (seasonData && isAccountRequired()) return;
 
     setIsSubmitting(true);
     onClose();
@@ -350,6 +353,8 @@ export default function RatingModal({
   };
 
   const handleDelete = async () => {
+    if (seasonData && isAccountRequired()) return;
+
     setIsSubmitting(true);
     onClose();
 

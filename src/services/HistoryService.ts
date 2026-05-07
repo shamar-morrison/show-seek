@@ -597,7 +597,7 @@ class HistoryService {
           r.title ||
           r.episodeName ||
           (r.mediaType === 'season' && typeof r.seasonNumber === 'number'
-            ? `Season ${r.seasonNumber}`
+            ? i18n.t('media.seasonNumber', { number: r.seasonNumber })
             : null) ||
           r.tvShowName ||
           'Unknown',

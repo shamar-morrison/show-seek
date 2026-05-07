@@ -10,6 +10,7 @@ const mockDeleteEpisodeMutateAsync = jest.fn();
 const mockRateSeasonMutateAsync = jest.fn();
 const mockDeleteSeasonMutateAsync = jest.fn();
 const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
+const mockIsAccountRequired = jest.fn(() => false);
 const addToListSpy = jest.spyOn(listService, 'addToList');
 const removeFromListSpy = jest.spyOn(listService, 'removeFromList');
 
@@ -49,6 +50,10 @@ jest.mock('@/src/context/TraktContext', () => ({
   }),
 }));
 
+jest.mock('@/src/hooks/useAccountRequired', () => ({
+  useAccountRequired: () => mockIsAccountRequired,
+}));
+
 jest.mock('@/src/components/ui/ModalBackground', () => ({
   ModalBackground: () => null,
 }));
@@ -80,6 +85,7 @@ describe('RatingModal', () => {
     mockDeleteSeasonMutateAsync.mockResolvedValue(undefined);
     addToListSpy.mockResolvedValue(undefined);
     removeFromListSpy.mockResolvedValue(undefined);
+    mockIsAccountRequired.mockReturnValue(false);
   });
 
   it('renders rating text for existing rating', () => {
@@ -239,5 +245,61 @@ describe('RatingModal', () => {
 
     expect(mockDeleteMediaMutateAsync).not.toHaveBeenCalled();
     expect(mockDeleteEpisodeMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('blocks guest season rating submissions before closing the modal', () => {
+    mockIsAccountRequired.mockReturnValue(true);
+    const onClose = jest.fn();
+
+    const { getByText } = render(
+      <RatingModal
+        visible={true}
+        onClose={onClose}
+        seasonData={{
+          tvShowId: 101,
+          seasonNumber: 2,
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: '/season.jpg',
+          airDate: '2025-01-01',
+        }}
+        initialRating={8}
+        onRatingSuccess={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    expect(mockIsAccountRequired).toHaveBeenCalled();
+    expect(mockRateSeasonMutateAsync).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('blocks guest season rating deletes before closing the modal', () => {
+    mockIsAccountRequired.mockReturnValue(true);
+    const onClose = jest.fn();
+
+    const { getByText } = render(
+      <RatingModal
+        visible={true}
+        onClose={onClose}
+        seasonData={{
+          tvShowId: 101,
+          seasonNumber: 2,
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: '/season.jpg',
+          airDate: '2025-01-01',
+        }}
+        initialRating={8}
+        onRatingSuccess={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByText('Remove Rating'));
+
+    expect(mockIsAccountRequired).toHaveBeenCalled();
+    expect(mockDeleteSeasonMutateAsync).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -7,8 +7,10 @@ import React from 'react';
 const mockPush = jest.fn();
 const mockSetOptions = jest.fn();
 const mockDeleteSeasonRatingMutateAsync = jest.fn();
+const mockUseHeaderSearch = jest.fn();
 let mockStoredViewMode: 'flat' | 'grouped' | null = 'flat';
 const mockCurrentTab = { value: 'library' as string | null | undefined };
+let latestSeasonSearchText = '';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -79,14 +81,8 @@ jest.mock('@/src/context/TabContext', () => ({
 }));
 
 jest.mock('@/src/hooks/useHeaderSearch', () => ({
-  useHeaderSearch: ({ items }: { items: any[] }) => ({
-    searchQuery: '',
-    isSearchActive: false,
-    deactivateSearch: jest.fn(),
-    setSearchQuery: jest.fn(),
-    searchButton: { onPress: jest.fn() },
-    filteredItems: items,
-  }),
+  useHeaderSearch: (options: { items: any[]; getSearchableText: (item: any) => string }) =>
+    mockUseHeaderSearch(options),
 }));
 
 const mockSeasonRatings = [
@@ -95,7 +91,7 @@ const mockSeasonRatings = [
     mediaType: 'season' as const,
     rating: 9,
     ratedAt: 200,
-    title: 'Season 1',
+    title: 'The Beginning',
     tvShowId: 101,
     seasonNumber: 1,
     tvShowName: 'Alpha Show',
@@ -106,7 +102,7 @@ const mockSeasonRatings = [
     mediaType: 'season' as const,
     rating: 8,
     ratedAt: 100,
-    title: 'Season 2',
+    title: 'Next Chapter',
     tvShowId: 202,
     seasonNumber: 2,
     tvShowName: 'Beta Show',
@@ -213,6 +209,18 @@ describe('SeasonRatingsScreen', () => {
     mockStoredViewMode = 'flat';
     mockCurrentTab.value = 'library';
     mockDeleteSeasonRatingMutateAsync.mockResolvedValue(undefined);
+    latestSeasonSearchText = '';
+    mockUseHeaderSearch.mockImplementation(({ items, getSearchableText }) => {
+      latestSeasonSearchText = items[0] ? getSearchableText(items[0]) : '';
+      return {
+        searchQuery: '',
+        isSearchActive: false,
+        deactivateSearch: jest.fn(),
+        setSearchQuery: jest.fn(),
+        searchButton: { onPress: jest.fn() },
+        filteredItems: items,
+      };
+    });
   });
 
   it('navigates to the expanded season route from the recent list view', async () => {
@@ -274,6 +282,17 @@ describe('SeasonRatingsScreen', () => {
         tvShowId: 101,
         seasonNumber: 1,
       });
+    });
+  });
+
+  it('includes localized and numeric season tokens in searchable text', async () => {
+    renderWithProviders(<SeasonRatingsScreen />);
+
+    await waitFor(() => {
+      expect(latestSeasonSearchText).toContain('Alpha Show');
+      expect(latestSeasonSearchText).toContain('The Beginning');
+      expect(latestSeasonSearchText).toContain('Season 1');
+      expect(latestSeasonSearchText).toContain('S1');
     });
   });
 });

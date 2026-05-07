@@ -1,5 +1,6 @@
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
 import { AnimatedCheck } from '@/src/components/ui/AnimatedCheck';
+import { MediaImage } from '@/src/components/ui/MediaImage';
 import { COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { usePosterOverrides } from '@/src/hooks/usePosterOverrides';
@@ -7,7 +8,6 @@ import { RatingItem } from '@/src/services/RatingService';
 import { listCardStyles } from '@/src/styles/listCardStyles';
 import React, { memo, useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { MediaImage } from '../ui/MediaImage';
 import { RatingBadge } from './RatingBadge';
 
 interface SeasonRatingCardProps {
