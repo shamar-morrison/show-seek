@@ -52,6 +52,17 @@ const episodeItem: TestItem = {
   },
 };
 
+const seasonItem: TestItem = {
+  key: 'season',
+  label: 'Season',
+  target: {
+    id: 'season-10-1',
+    mediaType: 'season',
+    tvShowId: 10,
+    seasonNumber: 1,
+  },
+};
+
 function createParams(overrides: Partial<HookParams> = {}): HookParams {
   return {
     isLoading: false,
@@ -153,7 +164,7 @@ describe('useRatingMultiSelectActions', () => {
     expect(result.current.isSelectionMode).toBe(false);
   });
 
-  it('tracks bulk removal progress and removes movie, tv, and episode targets', async () => {
+  it('tracks bulk removal progress and removes movie, tv, episode, and season targets', async () => {
     const resolvers: (() => void)[] = [];
     const removeRating = jest.fn(
       () =>
@@ -184,7 +195,11 @@ describe('useRatingMultiSelectActions', () => {
       result.current.handleItemPress(episodeItem);
     });
 
-    expect(result.current.selectedCount).toBe(3);
+    act(() => {
+      result.current.handleItemPress(seasonItem);
+    });
+
+    expect(result.current.selectedCount).toBe(4);
 
     act(() => {
       result.current.handleRemoveSelectedItems();
@@ -198,31 +213,39 @@ describe('useRatingMultiSelectActions', () => {
     });
 
     expect(result.current.isBulkRemoving).toBe(true);
-    expect(result.current.bulkRemoveProgress).toEqual({ processed: 0, total: 3 });
+    expect(result.current.bulkRemoveProgress).toEqual({ processed: 0, total: 4 });
 
     await act(async () => {
       resolvers[0]?.();
       await Promise.resolve();
     });
 
-    expect(result.current.bulkRemoveProgress).toEqual({ processed: 1, total: 3 });
+    expect(result.current.bulkRemoveProgress).toEqual({ processed: 1, total: 4 });
 
     await act(async () => {
       resolvers[1]?.();
       await Promise.resolve();
     });
 
-    expect(result.current.bulkRemoveProgress).toEqual({ processed: 2, total: 3 });
+    expect(result.current.bulkRemoveProgress).toEqual({ processed: 2, total: 4 });
 
     await act(async () => {
       resolvers[2]?.();
+      await Promise.resolve();
+    });
+
+    expect(result.current.bulkRemoveProgress).toEqual({ processed: 3, total: 4 });
+
+    await act(async () => {
+      resolvers[3]?.();
       await removePromise;
     });
 
     expect(removeRating).toHaveBeenNthCalledWith(1, movieItem.target);
     expect(removeRating).toHaveBeenNthCalledWith(2, tvItem.target);
     expect(removeRating).toHaveBeenNthCalledWith(3, episodeItem.target);
-    expect(showToast).toHaveBeenCalledWith('3 ratings removed');
+    expect(removeRating).toHaveBeenNthCalledWith(4, seasonItem.target);
+    expect(showToast).toHaveBeenCalledWith('4 ratings removed');
     expect(result.current.isBulkRemoving).toBe(false);
     expect(result.current.bulkRemoveProgress).toBeNull();
     expect(result.current.isSelectionMode).toBe(false);

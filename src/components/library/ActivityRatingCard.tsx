@@ -35,7 +35,7 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
       }
     }
 
-    if (item.mediaType === 'episode' && item.tvShowId) {
+    if ((item.mediaType === 'episode' || item.mediaType === 'season') && item.tvShowId) {
       return resolvePosterPath('tv', item.tvShowId, item.posterPath);
     }
 
@@ -49,6 +49,11 @@ export const ActivityRatingCard = memo<ActivityRatingCardProps>(({ item, onPress
   let subtitle = '';
   if (item.mediaType === 'episode' && item.seasonNumber && item.episodeNumber) {
     subtitle = t('media.seasonEpisode', { season: item.seasonNumber, episode: item.episodeNumber });
+    if (item.tvShowName) {
+      subtitle += ` • ${item.tvShowName}`;
+    }
+  } else if (item.mediaType === 'season' && item.seasonNumber) {
+    subtitle = t('media.seasonNumber', { number: item.seasonNumber });
     if (item.tvShowName) {
       subtitle += ` • ${item.tvShowName}`;
     }

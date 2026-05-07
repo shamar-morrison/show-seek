@@ -92,11 +92,13 @@ describe('LibraryScreen premium access', () => {
 
     fireEvent.press(getByTestId('library-nav-notes'));
     fireEvent.press(getByTestId('library-nav-reminders'));
+    fireEvent.press(getByTestId('library-nav-season-ratings'));
     fireEvent.press(getByTestId('library-nav-widgets'));
 
     expect(mockPush).toHaveBeenNthCalledWith(1, '/(tabs)/library/notes');
     expect(mockPush).toHaveBeenNthCalledWith(2, '/(tabs)/library/reminders');
-    expect(mockPush).toHaveBeenNthCalledWith(3, '/premium');
+    expect(mockPush).toHaveBeenNthCalledWith(3, '/(tabs)/library/ratings/seasons');
+    expect(mockPush).toHaveBeenNthCalledWith(4, '/premium');
   });
 
   it('blocks guest users from reaching premium through widgets', () => {

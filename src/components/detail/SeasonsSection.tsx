@@ -1,8 +1,9 @@
 import type { Season } from '@/src/api/tmdb';
 import { SeasonCard } from '@/src/components/SeasonCard';
 import { SPACING } from '@/src/constants/theme';
+import { useRatings } from '@/src/hooks/useRatings';
 import { FlashList } from '@shopify/flash-list';
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, ViewStyle } from 'react-native';
 import { useDetailStyles } from './detailStyles';
@@ -18,6 +19,7 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
   ({ tvShowId, seasons, onSeasonPress, style }) => {
     const { t } = useTranslation();
     const styles = useDetailStyles();
+    const { data: ratings } = useRatings();
 
     const handleSeasonPress = useCallback(
       (seasonNumber: number) => {
@@ -25,6 +27,22 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
       },
       [onSeasonPress]
     );
+
+    const seasonRatingsByNumber = useMemo(() => {
+      const map = new Map<number, number>();
+
+      (ratings || []).forEach((rating) => {
+        if (
+          rating.mediaType === 'season' &&
+          rating.tvShowId === tvShowId &&
+          typeof rating.seasonNumber === 'number'
+        ) {
+          map.set(rating.seasonNumber, rating.rating);
+        }
+      });
+
+      return map;
+    }, [ratings, tvShowId]);
 
     if (seasons.length === 0) {
       return null;
@@ -39,7 +57,12 @@ export const SeasonsSection = memo<SeasonsSectionProps>(
           data={seasons}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <SeasonCard tvShowId={tvShowId} season={item} onPress={handleSeasonPress} />
+            <SeasonCard
+              tvShowId={tvShowId}
+              season={item}
+              userRating={seasonRatingsByNumber.get(item.season_number)}
+              onPress={handleSeasonPress}
+            />
           )}
           horizontal
           showsHorizontalScrollIndicator={false}

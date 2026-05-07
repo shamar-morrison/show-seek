@@ -79,6 +79,31 @@ export default function MonthDetailScreen() {
   const currentTab = useCurrentTab();
   const { accentColor } = useAccentColor();
   const { data: monthDetail, isLoading } = useMonthDetail(month || null);
+  const addedItems = useMemo(() => {
+    if (!monthDetail) return [];
+
+    return monthDetail.items.added
+      .filter(
+        (
+          item
+        ): item is ActivityItem & {
+          mediaType: 'movie' | 'tv';
+        } => item.mediaType === 'movie' || item.mediaType === 'tv'
+      )
+      .map(
+        (item): ListMediaItem => ({
+          id: extractNumericId(item.id),
+          title: item.title,
+          poster_path: item.posterPath,
+          media_type: item.mediaType,
+          vote_average: item.voteAverage || 0,
+          release_date: item.releaseDate || '',
+          addedAt: item.timestamp,
+          genre_ids: item.genreIds,
+        })
+      );
+  }, [monthDetail]);
+  const filteredAddedCount = addedItems.length;
 
   const [activeTab, setActiveTab] = useState<TabType>('watched');
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
@@ -96,16 +121,16 @@ export default function MonthDetailScreen() {
   useLayoutEffect(() => {
     if (!monthDetail || hasInitializedTab) return;
 
-    const { watched, rated, added } = monthDetail.items;
+    const { watched, rated } = monthDetail.items;
     if (watched.length > 0) {
       setActiveTab('watched');
     } else if (rated.length > 0) {
       setActiveTab('rated');
-    } else if (added.length > 0) {
+    } else if (filteredAddedCount > 0) {
       setActiveTab('added');
     }
     setHasInitializedTab(true);
-  }, [monthDetail, hasInitializedTab]);
+  }, [filteredAddedCount, hasInitializedTab, monthDetail]);
 
   const handleItemPress = useCallback(
     (item: ActivityItem) => {
@@ -113,6 +138,14 @@ export default function MonthDetailScreen() {
 
       if (item.mediaType === 'episode' && item.tvShowId) {
         router.push(`/(tabs)/${currentTab}/tv/${item.tvShowId}` as any);
+      } else if (
+        item.mediaType === 'season' &&
+        item.tvShowId &&
+        typeof item.seasonNumber === 'number'
+      ) {
+        router.push(
+          `/(tabs)/${currentTab}/tv/${item.tvShowId}/seasons?season=${item.seasonNumber}` as any
+        );
       } else if (item.mediaType === 'movie') {
         router.push(`/(tabs)/${currentTab}/movie/${item.id}` as any);
       } else if (item.mediaType === 'tv') {
@@ -150,23 +183,6 @@ export default function MonthDetailScreen() {
     [currentTab, router]
   );
 
-  const addedItems = useMemo(() => {
-    if (!monthDetail) return [];
-
-    return monthDetail.items.added.map(
-      (item): ListMediaItem => ({
-        id: extractNumericId(item.id),
-        title: item.title,
-        poster_path: item.posterPath,
-        media_type: item.mediaType as 'movie' | 'tv',
-        vote_average: item.voteAverage || 0,
-        release_date: item.releaseDate || '',
-        addedAt: item.timestamp,
-        genre_ids: item.genreIds,
-      })
-    );
-  }, [monthDetail]);
-
   const watchedItems = useMemo(
     () =>
       monthDetail?.items.watched.map((item) => ({
@@ -193,8 +209,8 @@ export default function MonthDetailScreen() {
 
     if (activeTab === 'watched') return monthDetail.items.watched.length;
     if (activeTab === 'rated') return monthDetail.items.rated.length;
-    return monthDetail.items.added.length;
-  }, [activeTab, monthDetail]);
+    return filteredAddedCount;
+  }, [activeTab, filteredAddedCount, monthDetail]);
 
   if (isLoading) {
     return <FullScreenLoading />;
@@ -213,8 +229,8 @@ export default function MonthDetailScreen() {
     );
   }
 
-  const { watched, rated, added } = monthDetail.items;
-  const hasNoActivity = watched.length === 0 && rated.length === 0 && added.length === 0;
+  const { watched, rated } = monthDetail.items;
+  const hasNoActivity = watched.length === 0 && rated.length === 0 && filteredAddedCount === 0;
 
   if (hasNoActivity) {
     return (
@@ -248,7 +264,7 @@ export default function MonthDetailScreen() {
           </View>
           <View style={styles.summaryItem}>
             <Plus size={20} color={COLORS.success} />
-            <Text style={styles.summaryValue}>{monthDetail.stats.addedToLists}</Text>
+            <Text style={styles.summaryValue}>{filteredAddedCount}</Text>
             <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
           </View>
         </View>
@@ -281,7 +297,7 @@ export default function MonthDetailScreen() {
         />
         <TabButton
           label={t('stats.added')}
-          count={added.length}
+          count={filteredAddedCount}
           isActive={activeTab === 'added'}
           onPress={() => setActiveTab('added')}
           icon={Plus}

@@ -47,6 +47,10 @@ export default function LibraryStackLayout() {
           options={{ title: t('library.episodeRatings'), headerShown: true }}
         />
         <Stack.Screen
+          name="ratings/seasons"
+          options={{ title: t('library.seasonRatings'), headerShown: true }}
+        />
+        <Stack.Screen
           name="ratings/movies"
           options={{ title: t('library.movieRatings'), headerShown: true }}
         />

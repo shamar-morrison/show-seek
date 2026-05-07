@@ -8,10 +8,9 @@ export type TVSeasonsListRow =
       season: SeasonWithEpisodes;
     }
   | {
-      type: 'season-overview';
+      type: 'season-details';
       key: string;
       season: SeasonWithEpisodes;
-      overview: string;
     }
   | {
       type: 'episode-row';
@@ -37,14 +36,11 @@ export function buildTVSeasonsListRows(
       return;
     }
 
-    if (season.overview?.trim()) {
-      rows.push({
-        type: 'season-overview',
-        key: `season-overview-${season.season_number}`,
-        season,
-        overview: season.overview,
-      });
-    }
+    rows.push({
+      type: 'season-details',
+      key: `season-details-${season.season_number}`,
+      season,
+    });
 
     (season.episodes || []).forEach((episode) => {
       rows.push({

@@ -576,7 +576,7 @@ class HistoryService {
 
     const ratedItems: ActivityItem[] = monthRatings.map((r) => {
       // Extract the actual media ID from the rating document ID
-      // Format: "movie-123" or "tv-456" or "episode-{tvShowId}-{season}-{episode}"
+      // Format: "movie-123" or "tv-456" or "episode-{tvShowId}-{season}-{episode}" or "season-{tvShowId}-{season}"
       let mediaId: number | string = r.id;
       if (r.mediaType === 'movie' && typeof r.id === 'string') {
         mediaId = parseInt(r.id.replace('movie-', ''), 10);
@@ -585,13 +585,22 @@ class HistoryService {
       } else if (r.mediaType === 'episode' && r.tvShowId) {
         // For episodes, use tvShowId for navigation
         mediaId = r.tvShowId;
+      } else if (r.mediaType === 'season' && r.tvShowId) {
+        mediaId = r.id;
       }
 
       return {
         id: mediaId,
         type: 'rated' as const,
         mediaType: r.mediaType,
-        title: r.title || r.episodeName || r.tvShowName || 'Unknown',
+        title:
+          r.title ||
+          r.episodeName ||
+          (r.mediaType === 'season' && typeof r.seasonNumber === 'number'
+            ? i18n.t('media.seasonNumber', { number: r.seasonNumber })
+            : null) ||
+          r.tvShowName ||
+          'Unknown',
         posterPath: r.posterPath || null,
         timestamp: r.ratedAt,
         rating: r.rating,

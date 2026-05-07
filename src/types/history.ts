@@ -10,7 +10,7 @@
 export interface ActivityItem {
   id: string | number;
   type: 'watched' | 'rated' | 'added';
-  mediaType: 'movie' | 'tv' | 'episode';
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   title: string;
   posterPath: string | null;
   timestamp: number;

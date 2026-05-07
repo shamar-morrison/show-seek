@@ -408,6 +408,7 @@
     "statsAndHistory": "Stats & History",
     "ratingsSection": "Ratings",
     "episodeRatings": "Episode Ratings",
+    "seasonRatings": "Season Ratings",
     "movieRatings": "Movie Ratings",
     "tvShowRatings": "TV Show Ratings",
     "favoritesSection": "Favorites",
@@ -424,6 +425,7 @@
     "searchMoviesPlaceholder": "Search movies...",
     "searchTVShowsPlaceholder": "Search TV shows...",
     "searchEpisodesPlaceholder": "Search episodes...",
+    "searchSeasonsPlaceholder": "Search seasons...",
     "searchPeoplePlaceholder": "Search people...",
     "searchCollectionsPlaceholder": "Search collections...",
     "searchShowsPlaceholder": "Search shows...",
@@ -437,6 +439,8 @@
     "emptyWatchProgressHint": "Start watching a show to see your progress tracked here.",
     "emptyFavoritePeople": "No favorite people",
     "emptyFavoritePeopleHint": "Favorite actors and directors to see them here.",
+    "emptySeasonRatings": "No season ratings yet",
+    "emptySeasonRatingsHint": "Rate seasons to track your opinions here.",
     "watchStatusEmptyDescription": "Add movies and TV shows to your {{listName}} list to see them here.",
     "unknownShow": "Unknown Show",
     "signInToRenameList": "Sign in to edit this list",
@@ -1575,7 +1579,8 @@
     "failedToLoad": "Failed to load TV show details"
   },
   "tvSeasons": {
-    "failedToLoadSeasons": "Failed to load seasons"
+    "failedToLoadSeasons": "Failed to load seasons",
+    "rateSeason": "Rate season"
   },
   "whereToWatch": {
     "title": "Where to Watch",

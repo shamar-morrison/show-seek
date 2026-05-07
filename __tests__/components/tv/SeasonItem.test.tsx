@@ -244,12 +244,13 @@ describe('SeasonItem', () => {
   });
 
   it('renders header-only mode without episode rows', () => {
-    const { queryByText } = renderWithProviders(
+    const { queryByText, queryByTestId } = renderWithProviders(
       <SeasonItem {...defaultProps} isExpanded={true} showEpisodes={false} />
     );
 
     expect(queryByText('Pilot')).toBeNull();
     expect(queryByText('Episode 2')).toBeNull();
+    expect(queryByTestId('season-mark-all-button-1')).toBeNull();
   });
 
   it('shows spinner and disables mark-all button while bulk action is pending for the season', () => {
@@ -274,7 +275,6 @@ describe('SeasonItem', () => {
       <SeasonItem
         {...defaultProps}
         isExpanded={true}
-        showEpisodes={false}
         episodeTracking={{
           episodes: {
             '1_1': {} as any,
@@ -337,7 +337,6 @@ describe('SeasonItem', () => {
         {...defaultProps}
         season={futureSeason}
         isExpanded={true}
-        showEpisodes={false}
         allowUnreleasedEpisodeWatches={true}
         onMarkAllWatched={onMarkAllWatched}
       />
@@ -385,7 +384,6 @@ describe('SeasonItem', () => {
         {...defaultProps}
         season={futureOnlySeason}
         isExpanded={true}
-        showEpisodes={false}
         episodeTracking={{
           episodes: {
             '1_1': {} as any,

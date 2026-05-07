@@ -1,4 +1,5 @@
 import { historyService } from '@/src/services/HistoryService';
+import i18n from '@/src/i18n';
 
 const mockFetchUserCollection = jest.fn();
 const mockGetSignedInUser = jest.fn();
@@ -229,5 +230,55 @@ describe('HistoryService', () => {
         voteAverage: 8.2,
       },
     ]);
+  });
+
+  it('localizes fallback season titles in rated month detail items', async () => {
+    const originalLanguage = i18n.language;
+    const validRatedAt = new Date('2026-03-05T15:00:00Z').getTime();
+
+    await i18n.changeLanguage('fr-FR');
+
+    mockFetchUserCollection.mockImplementation(
+      async (
+        subcollectionPath: string[],
+        mapFn: (snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }) => unknown[]
+      ) => {
+        if (subcollectionPath[0] === 'episode_tracking' || subcollectionPath[0] === 'lists') {
+          return mapFn({ docs: [] });
+        }
+
+        if (subcollectionPath[0] === 'ratings') {
+          return mapFn({
+            docs: [
+              buildSnapshotDoc('season-404-3', {
+                mediaType: 'season',
+                rating: 9,
+                ratedAt: validRatedAt,
+                tvShowId: 404,
+                seasonNumber: 3,
+                tvShowName: 'Localized Show',
+                posterPath: null,
+              }),
+            ],
+          });
+        }
+
+        return [];
+      }
+    );
+
+    try {
+      const detail = await historyService.fetchMonthDetail('2026-03', {});
+
+      expect(detail?.items.rated[0]).toEqual(
+        expect.objectContaining({
+          id: 'season-404-3',
+          mediaType: 'season',
+          title: 'Saison 3',
+        })
+      );
+    } finally {
+      await i18n.changeLanguage(originalLanguage);
+    }
   });
 });

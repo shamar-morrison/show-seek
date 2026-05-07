@@ -413,9 +413,12 @@
     "emptyCollectionProgressHint": "Empieza a seguir una colección desde la página de colección de una película para ver tu progreso aquí.",
     "emptyFavoritePeople": "Sin personas favoritas",
     "emptyFavoritePeopleHint": "Marca como favoritos a actores y directores para verlos aquí.",
+    "emptySeasonRatings": "Aún no hay puntuaciones de temporadas",
+    "emptySeasonRatingsHint": "Puntúa temporadas para seguir tus opiniones aquí.",
     "emptyWatchProgress": "No hay series en progreso",
     "emptyWatchProgressHint": "Empieza a ver una serie para seguir tu progreso aquí.",
     "episodeRatings": "Puntuaciones de episodios",
+    "seasonRatings": "Puntuaciones de temporadas",
     "failedToCreateList": "No se pudo crear la lista",
     "favoriteContent": "Contenido favorito",
     "favoriteEpisodes": "Episodios favoritos",
@@ -440,6 +443,7 @@
     "ratingsSection": "Puntuaciones",
     "searchCollectionsPlaceholder": "Buscar colecciones...",
     "searchEpisodesPlaceholder": "Buscar episodios...",
+    "searchSeasonsPlaceholder": "Buscar temporadas...",
     "searchFavoritesPlaceholder": "Buscar favoritos...",
     "searchListPlaceholder": "Buscar lista...",
     "searchMoviesPlaceholder": "Buscar películas...",
@@ -1475,7 +1479,8 @@
     "failedToLoad": "No se pudieron cargar los detalles de la serie"
   },
   "tvSeasons": {
-    "failedToLoadSeasons": "No se pudieron cargar las temporadas"
+    "failedToLoadSeasons": "No se pudieron cargar las temporadas",
+    "rateSeason": "Puntuar temporada"
   },
   "whereToWatch": {
     "title": "Dónde ver",

@@ -71,12 +71,12 @@ describe('tvSeasonsListRows', () => {
     expect(rows[1].type).toBe('season-header');
   });
 
-  it('inserts overview and episode rows for the expanded season', () => {
+  it('inserts details and episode rows for the expanded season', () => {
     const rows = buildTVSeasonsListRows(mockSeasons, 1);
 
     expect(rows.map((row) => row.type)).toEqual([
       'season-header',
-      'season-overview',
+      'season-details',
       'episode-row',
       'episode-row',
       'season-header',
