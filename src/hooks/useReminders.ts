@@ -10,17 +10,18 @@ import {
   PremiumStatusPendingError,
 } from '@/src/utils/freemiumLimits';
 import { showFreemiumLimitAlert } from '@/src/utils/premiumAlert';
+import { resolveTVEpisodeReminderRollover } from '@/src/utils/reminderRollover';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
-import { auth } from '../firebase/config';
-import { canUseNonCriticalRead } from '../services/ReadBudgetGuard';
-import { reminderService } from '../services/ReminderService';
+import { auth } from '@/src/firebase/config';
+import { canUseNonCriticalRead } from '@/src/services/ReadBudgetGuard';
+import { reminderService } from '@/src/services/ReminderService';
 import {
   CreateReminderInput,
   Reminder,
   ReminderMediaType,
   ReminderTiming,
-} from '../types/reminder';
+} from '@/src/types/reminder';
 
 const getStatusReadsEnabled = () =>
   !READ_OPTIMIZATION_FLAGS.liteModeEnabled || canUseNonCriticalRead(1);
@@ -29,6 +30,53 @@ type ReminderTarget = Pick<CreateReminderInput, 'mediaType' | 'mediaId'>;
 type ReminderMutationInput = CreateReminderInput & { existingReminderId?: string | null };
 
 const getReminderId = ({ mediaType, mediaId }: ReminderTarget) => `${mediaType}-${mediaId}`;
+const getRemindersQueryKey = (userId: string) => ['reminders', userId] as const;
+const getMediaReminderQueryKey = (
+  userId: string,
+  mediaType: ReminderMediaType,
+  mediaId: number
+) => ['reminder', userId, mediaType, mediaId] as const;
+
+const createReminderScheduleKey = (reminder: Reminder) => {
+  const nextEpisodeKey = reminder.nextEpisode
+    ? `${reminder.nextEpisode.seasonNumber}-${reminder.nextEpisode.episodeNumber}-${reminder.nextEpisode.airDate}`
+    : 'none';
+
+  return `${reminder.id}:${reminder.releaseDate}:${reminder.notificationScheduledFor}:${nextEpisodeKey}`;
+};
+
+const mergeReminderPatch = (
+  reminder: Reminder,
+  updates?: Partial<Reminder> | void
+): Reminder => ({
+  ...reminder,
+  ...(updates ?? {}),
+});
+
+const updateReminderCaches = ({
+  queryClient,
+  userId,
+  updatedReminder,
+}: {
+  queryClient: ReturnType<typeof useQueryClient>;
+  userId: string;
+  updatedReminder: Reminder;
+}) => {
+  queryClient.setQueryData<Reminder[]>(getRemindersQueryKey(userId), (current) => {
+    if (!current) {
+      return current;
+    }
+
+    return current.map((reminder) =>
+      reminder.id === updatedReminder.id ? updatedReminder : reminder
+    );
+  });
+
+  queryClient.setQueryData<Reminder | null>(
+    getMediaReminderQueryKey(userId, updatedReminder.mediaType, updatedReminder.mediaId),
+    updatedReminder
+  );
+};
 
 const parseReminderId = (reminderId: string): { mediaType: ReminderMediaType; mediaId: number } | null => {
   const [rawType, rawMediaId] = reminderId.split('-');
@@ -51,7 +99,7 @@ const loadRemindersForLimitCheck = async (
   queryClient: ReturnType<typeof useQueryClient>,
   userId: string
 ): Promise<Reminder[]> => {
-  const queryKey = ['reminders', userId] as const;
+  const queryKey = getRemindersQueryKey(userId);
   return queryClient.fetchQuery({
     queryKey,
     queryFn: () => reminderService.getActiveReminders(userId),
@@ -84,7 +132,7 @@ const assertCanCreateReminder = async ({
   }
 
   const reminderId = getReminderId(reminderTarget);
-  const queryKey = ['reminders', userId] as const;
+  const queryKey = getRemindersQueryKey(userId);
   const cachedReminders = queryClient.getQueryData<Reminder[]>(queryKey) ?? [];
 
   if (cachedReminders.some((reminder) => reminder.id === reminderId)) {
@@ -136,7 +184,7 @@ export const useReminders = () => {
   /*
    * Auto-update stale reminders
    */
-  useAutoUpdateReminders(query.data || []);
+  useAutoUpdateReminders(query.data || [], userId);
 
   return {
     ...query,
@@ -149,18 +197,24 @@ export const useReminders = () => {
  * Internal hook to automatically update active reminders that have passed their notification time
  * This acts as a client-side "cron job" to roll forward reminders to the next episode
  */
-const useAutoUpdateReminders = (reminders: Reminder[]) => {
+const useAutoUpdateReminders = (reminders: Reminder[], userId?: string) => {
   const queryClient = useQueryClient();
-  const processedRef = useRef<Set<string>>(new Set());
+  const processedSchedulesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!userId) {
+      processedSchedulesRef.current.clear();
+      return;
+    }
+
     let isMounted = true;
 
-    // Prune processedRef to avoid memory leaks: remove IDs that are no longer in the current reminders list
-    const currentIds = new Set(reminders.map((r) => r.id));
-    for (const id of processedRef.current) {
-      if (!currentIds.has(id)) {
-        processedRef.current.delete(id);
+    // Prune old schedule snapshots so the same reminder document can roll over again
+    // after it advances to a new release date.
+    const currentScheduleKeys = new Set(reminders.map(createReminderScheduleKey));
+    for (const scheduleKey of processedSchedulesRef.current) {
+      if (!currentScheduleKeys.has(scheduleKey)) {
+        processedSchedulesRef.current.delete(scheduleKey);
       }
     }
 
@@ -169,92 +223,114 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
       const updatePromises: Promise<void>[] = [];
 
       for (const reminder of reminders) {
-        if (processedRef.current.has(reminder.id)) continue;
+        const scheduleKey = createReminderScheduleKey(reminder);
+        if (processedSchedulesRef.current.has(scheduleKey)) continue;
 
-        if (reminder.status === 'active' && reminder.notificationScheduledFor < now) {
-          if (reminder.mediaType === 'tv') {
-            updatePromises.push(
-              (async () => {
-                if (!isMounted) return;
-                try {
-                  console.log(`[AutoUpdate] Checking stale reminder for: ${reminder.title}`);
-                  const showDetails = await queryClient.ensureQueryData({
-                    queryKey: ['tv', reminder.mediaId],
-                    queryFn: () => tmdbApi.getTVShowDetails(reminder.mediaId),
-                  });
-
-                  if (!isMounted) return;
-
-                  const nextEpisode = showDetails.next_episode_to_air;
-
-                  if (nextEpisode && nextEpisode.air_date) {
-                    const isEveryEpisode = reminder.tvFrequency === 'every_episode';
-                    const isNewSeason =
-                      nextEpisode.season_number > (reminder.nextEpisode?.seasonNumber || 0);
-
-                    const isFutureDate =
-                      Date.parse(nextEpisode.air_date!) > Date.parse(reminder.releaseDate);
-
-                    if (
-                      (isEveryEpisode ||
-                        (reminder.tvFrequency === 'season_premiere' && isNewSeason)) &&
-                      isFutureDate
-                    ) {
-                      console.log(
-                        `[AutoUpdate] Found new episode for ${reminder.title}: S${nextEpisode.season_number}E${nextEpisode.episode_number}`
-                      );
-
-                      const newNextEpisode = {
-                        seasonNumber: nextEpisode.season_number,
-                        episodeNumber: nextEpisode.episode_number,
-                        episodeName: nextEpisode.name,
-                        airDate: nextEpisode.air_date!,
-                      };
-
-                      if (!isMounted) return;
-
-                      // Call update logic (using partial update to respect Firestore rules)
-                      await reminderService.updateReminderDetails(reminder.id, {
-                        releaseDate: nextEpisode.air_date!,
-                        nextEpisode: newNextEpisode,
-                        noNextEpisodeFound: false,
-                      });
-
-                      // Mark as processed after successful update
-                      if (isMounted) {
-                        processedRef.current.add(reminder.id);
-                      }
-                    } else {
-                      // Mark as processed even if update conditions not met (nextEpisode exists but doesn't qualify)
-                      if (isMounted) {
-                        processedRef.current.add(reminder.id);
-                      }
-                    }
-                  } else {
-                    console.log(
-                      `[AutoUpdate] No future episode found for ${reminder.title}. Marking as no upcoming episodes.`
-                    );
-                    // Update Firestore to mark that no next episode was found
-                    await reminderService.updateReminderDetails(reminder.id, {
-                      noNextEpisodeFound: true,
-                    });
-                    // Mark as processed since we checked and found nothing
-                    if (isMounted) {
-                      processedRef.current.add(reminder.id);
-                    }
-                  }
-                } catch (error) {
-                  if (isMounted) {
-                    console.error(
-                      `[AutoUpdate] Failed to update reminder for ${reminder.title}:`,
-                      error
-                    );
-                  }
-                }
-              })()
-            );
-          }
+        if (
+          reminder.status !== 'active' ||
+          reminder.notificationScheduledFor >= now ||
+          reminder.mediaType !== 'tv'
+        ) {
+          continue;
         }
+
+        updatePromises.push(
+          (async () => {
+            if (!isMounted) return;
+
+            try {
+              console.log(`[AutoUpdate] Checking stale reminder for: ${reminder.title}`);
+              const showDetails = await queryClient.ensureQueryData({
+                queryKey: ['tv', reminder.mediaId],
+                queryFn: () => tmdbApi.getTVShowDetails(reminder.mediaId),
+              });
+
+              if (!isMounted) return;
+
+              if (reminder.tvFrequency === 'every_episode') {
+                const nextEpisode = await resolveTVEpisodeReminderRollover(reminder, showDetails);
+
+                if (!isMounted) return;
+
+                if (!nextEpisode) {
+                  console.log(
+                    `[AutoUpdate] No later episode available yet for ${reminder.title}. Leaving reminder retryable.`
+                  );
+                  return;
+                }
+
+                console.log(
+                  `[AutoUpdate] Advancing ${reminder.title} to S${nextEpisode.seasonNumber}E${nextEpisode.episodeNumber}`
+                );
+
+                const appliedUpdates = await reminderService.updateReminderDetails(reminder.id, {
+                  releaseDate: nextEpisode.airDate,
+                  nextEpisode,
+                  noNextEpisodeFound: false,
+                });
+
+                if (!isMounted) return;
+
+                const updatedReminder = mergeReminderPatch(reminder, {
+                  ...appliedUpdates,
+                  releaseDate: nextEpisode.airDate,
+                  nextEpisode,
+                  noNextEpisodeFound: false,
+                });
+
+                updateReminderCaches({
+                  queryClient,
+                  userId,
+                  updatedReminder,
+                });
+                processedSchedulesRef.current.add(scheduleKey);
+                return;
+              }
+
+              const nextEpisode = showDetails.next_episode_to_air;
+              const nextEpisodeAirDate = nextEpisode?.air_date;
+              const isNewSeason =
+                (nextEpisode?.season_number ?? 0) > (reminder.nextEpisode?.seasonNumber || 0);
+              const isFutureDate =
+                !!nextEpisodeAirDate &&
+                Date.parse(nextEpisodeAirDate) > Date.parse(reminder.releaseDate);
+
+              if (
+                reminder.tvFrequency === 'season_premiere' &&
+                nextEpisodeAirDate &&
+                isNewSeason &&
+                isFutureDate
+              ) {
+                const appliedUpdates = await reminderService.updateReminderDetails(reminder.id, {
+                  releaseDate: nextEpisodeAirDate,
+                  noNextEpisodeFound: false,
+                });
+
+                if (!isMounted) return;
+
+                const updatedReminder = mergeReminderPatch(reminder, {
+                  ...appliedUpdates,
+                  releaseDate: nextEpisodeAirDate,
+                  noNextEpisodeFound: false,
+                });
+
+                updateReminderCaches({
+                  queryClient,
+                  userId,
+                  updatedReminder,
+                });
+                processedSchedulesRef.current.add(scheduleKey);
+              }
+            } catch (error) {
+              if (isMounted) {
+                console.error(
+                  `[AutoUpdate] Failed to update reminder for ${reminder.title}:`,
+                  error
+                );
+              }
+            }
+          })()
+        );
       }
 
       if (updatePromises.length > 0 && isMounted) {
@@ -267,7 +343,7 @@ const useAutoUpdateReminders = (reminders: Reminder[]) => {
     return () => {
       isMounted = false;
     };
-  }, [reminders, queryClient]);
+  }, [reminders, queryClient, userId]);
 };
 
 /**
@@ -318,9 +394,9 @@ export const useCreateReminder = () => {
       if (!userId) return;
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['reminders', userId] }),
+        queryClient.invalidateQueries({ queryKey: getRemindersQueryKey(userId) }),
         queryClient.invalidateQueries({
-          queryKey: ['reminder', userId, variables.mediaType, variables.mediaId],
+          queryKey: getMediaReminderQueryKey(userId, variables.mediaType, variables.mediaId),
         }),
       ]);
     },
@@ -374,11 +450,11 @@ export const useCancelReminder = () => {
     onSuccess: async (_data, reminderId) => {
       if (!userId) return;
 
-      await queryClient.invalidateQueries({ queryKey: ['reminders', userId] });
+      await queryClient.invalidateQueries({ queryKey: getRemindersQueryKey(userId) });
       const parsed = parseReminderId(reminderId);
       if (parsed) {
         await queryClient.invalidateQueries({
-          queryKey: ['reminder', userId, parsed.mediaType, parsed.mediaId],
+          queryKey: getMediaReminderQueryKey(userId, parsed.mediaType, parsed.mediaId),
         });
       }
     },
@@ -399,11 +475,11 @@ export const useUpdateReminder = () => {
     onSuccess: async (_data, variables) => {
       if (!userId) return;
 
-      await queryClient.invalidateQueries({ queryKey: ['reminders', userId] });
+      await queryClient.invalidateQueries({ queryKey: getRemindersQueryKey(userId) });
       const parsed = parseReminderId(variables.reminderId);
       if (parsed) {
         await queryClient.invalidateQueries({
-          queryKey: ['reminder', userId, parsed.mediaType, parsed.mediaId],
+          queryKey: getMediaReminderQueryKey(userId, parsed.mediaType, parsed.mediaId),
         });
       }
     },

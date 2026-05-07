@@ -183,6 +183,83 @@ describe('ReminderService', () => {
     );
   });
 
+  it('returns the applied reminder patch when updateReminderDetails reschedules a reminder', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2099-06-01T12:00:00.000Z'));
+
+    try {
+      const mockRef = { path: 'users/test-user-id/reminders/tv-123' };
+      const nextEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second Episode',
+        airDate: '2099-06-23',
+      };
+
+      (doc as jest.Mock).mockReturnValue(mockRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        data: () => ({
+          id: 'tv-123',
+          userId: 'test-user-id',
+          mediaType: 'tv',
+          mediaId: 123,
+          title: 'Test Show',
+          posterPath: null,
+          releaseDate: '2099-06-16',
+          reminderTiming: 'on_release_day',
+          notificationScheduledFor: new Date('2099-06-16T14:00:00.000Z').getTime(),
+          localNotificationId: 'old-notification-id',
+          status: 'active',
+          tvFrequency: 'every_episode',
+          nextEpisode: {
+            seasonNumber: 1,
+            episodeNumber: 1,
+            episodeName: 'Pilot',
+            airDate: '2099-06-16',
+          },
+          createdAt: Date.now() - 1000,
+          updatedAt: Date.now() - 1000,
+        }),
+      });
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      const appliedUpdates = await reminderService.updateReminderDetails('tv-123', {
+        releaseDate: '2099-06-23',
+        nextEpisode,
+        noNextEpisodeFound: false,
+      });
+
+      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith(
+        'old-notification-id'
+      );
+      expect(appliedUpdates).toEqual(
+        expect.objectContaining({
+          releaseDate: '2099-06-23',
+          nextEpisode,
+          noNextEpisodeFound: false,
+          notificationScheduledFor: new Date('2099-06-23T14:00:00.000Z').getTime(),
+          localNotificationId: 'notification-id',
+          updatedAt: expect.any(Number),
+        })
+      );
+      expect(setDoc).toHaveBeenCalledWith(
+        mockRef,
+        expect.objectContaining({
+          releaseDate: '2099-06-23',
+          nextEpisode,
+          noNextEpisodeFound: false,
+          notificationScheduledFor: new Date('2099-06-23T14:00:00.000Z').getTime(),
+          localNotificationId: 'notification-id',
+          updatedAt: expect.any(Number),
+        }),
+        { merge: true }
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('uses on-release movie copy when the preferred reminder window has already passed', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-05-01T18:00:00.000Z'));
