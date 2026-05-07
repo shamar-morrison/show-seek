@@ -499,7 +499,10 @@ class ReminderService {
    * Update arbitrary reminder details (for auto-updates)
    * carefully restricts to fields allowed by firestore rules
    */
-  async updateReminderDetails(reminderId: string, updates: Partial<Reminder>): Promise<void> {
+  async updateReminderDetails(
+    reminderId: string,
+    updates: Partial<Reminder>
+  ): Promise<Partial<Reminder>> {
     try {
       const user = requireSignedInUser();
 
@@ -567,8 +570,9 @@ class ReminderService {
       allowedUpdates.updatedAt = Date.now();
 
       await raceWithTimeout(setDoc(reminderRef, allowedUpdates, { merge: true }));
+      return { ...allowedUpdates };
     } catch (error) {
-      rethrowFirestoreError('ReminderService.updateReminderDetails', error);
+      return rethrowFirestoreError('ReminderService.updateReminderDetails', error);
     }
   }
 

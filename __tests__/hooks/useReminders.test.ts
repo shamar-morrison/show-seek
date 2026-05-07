@@ -1,6 +1,7 @@
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
+import type { Reminder } from '@/src/types/reminder';
 
 const mockGetActiveReminders = jest.fn();
 const mockCreateReminder = jest.fn();
@@ -8,6 +9,8 @@ const mockCancelReminder = jest.fn();
 const mockUpdateReminder = jest.fn();
 const mockUpdateReminderDetails = jest.fn();
 const mockCanUseNonCriticalRead = jest.fn();
+const mockGetTVShowDetails = jest.fn();
+const mockGetSubsequentEpisode = jest.fn();
 
 const mockAuthState = {
   currentUser: { uid: 'test-user-id' } as { uid: string } | null,
@@ -46,11 +49,20 @@ jest.mock('@/src/services/ReadBudgetGuard', () => ({
 
 jest.mock('@/src/api/tmdb', () => ({
   tmdbApi: {
-    getTVShowDetails: jest.fn(),
+    getTVShowDetails: (...args: unknown[]) => mockGetTVShowDetails(...args),
   },
 }));
 
-import { useCanCreateReminder, useCreateReminder, useMediaReminder } from '@/src/hooks/useReminders';
+jest.mock('@/src/utils/subsequentEpisodeHelpers', () => ({
+  getSubsequentEpisode: (...args: unknown[]) => mockGetSubsequentEpisode(...args),
+}));
+
+import {
+  useCanCreateReminder,
+  useCreateReminder,
+  useMediaReminder,
+  useReminders,
+} from '@/src/hooks/useReminders';
 
 const createQueryClient = () =>
   new QueryClient({
@@ -66,7 +78,8 @@ function createWrapper(client: QueryClient) {
   };
 }
 
-const createReminder = (overrides: Record<string, unknown>) => ({
+const createReminder = (overrides: Partial<Reminder> = {}): Reminder =>
+  ({
   id: 'movie-1',
   userId: 'test-user-id',
   mediaType: 'movie',
@@ -81,7 +94,7 @@ const createReminder = (overrides: Record<string, unknown>) => ({
   createdAt: Date.now(),
   updatedAt: Date.now(),
   ...overrides,
-});
+}) as Reminder;
 
 beforeAll(() => {
   notifyManager.setNotifyFunction((fn: () => void) => act(fn));
@@ -93,7 +106,14 @@ afterAll(() => {
 
 describe('useReminders hooks', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockGetActiveReminders.mockReset();
+    mockCreateReminder.mockReset();
+    mockCancelReminder.mockReset();
+    mockUpdateReminder.mockReset();
+    mockUpdateReminderDetails.mockReset();
+    mockCanUseNonCriticalRead.mockReset();
+    mockGetTVShowDetails.mockReset();
+    mockGetSubsequentEpisode.mockReset();
     mockAuthState.currentUser = { uid: 'test-user-id' };
     mockPremiumState.isPremium = false;
     mockPremiumState.isLoading = false;
@@ -116,6 +136,10 @@ describe('useReminders hooks', () => {
     mockCancelReminder.mockResolvedValue(undefined);
     mockUpdateReminder.mockResolvedValue(undefined);
     mockUpdateReminderDetails.mockResolvedValue(undefined);
+    mockGetTVShowDetails.mockResolvedValue({
+      next_episode_to_air: null,
+    });
+    mockGetSubsequentEpisode.mockResolvedValue(null);
   });
 
   describe('useMediaReminder', () => {
@@ -375,6 +399,406 @@ describe('useReminders hooks', () => {
       });
 
       expect(mockCreateReminder).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('useReminders auto-update', () => {
+    const staleEpisodeReminder = (overrides: Partial<Reminder> = {}): Reminder =>
+      createReminder({
+        id: 'tv-100',
+        mediaType: 'tv',
+        mediaId: 100,
+        title: 'Breaking Bad',
+        releaseDate: '2026-06-16',
+        reminderTiming: 'on_release_day',
+        notificationScheduledFor: Date.now() - 60_000,
+        tvFrequency: 'every_episode',
+        nextEpisode: {
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Pilot',
+          airDate: '2026-06-16',
+        },
+        ...overrides,
+      });
+    const staleSeasonReminder = (overrides: Partial<Reminder> = {}): Reminder =>
+      createReminder({
+        id: 'tv-101',
+        mediaType: 'tv',
+        mediaId: 101,
+        title: 'Better Call Saul',
+        releaseDate: '2026-06-16',
+        reminderTiming: 'on_release_day',
+        notificationScheduledFor: Date.now() - 60_000,
+        tvFrequency: 'season_premiere',
+        nextEpisode: {
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Pilot',
+          airDate: '2026-06-16',
+        },
+        ...overrides,
+      });
+
+    it('advances a stale every-episode reminder and updates caches immediately', async () => {
+      const client = createQueryClient();
+      const reminder = staleEpisodeReminder();
+      const nextEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second',
+        airDate: '2026-06-23',
+      };
+      const nextNotificationScheduledFor = Date.now() + 86_400_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 2,
+          name: 'Second',
+          air_date: '2026-06-23',
+        },
+      });
+      mockUpdateReminderDetails.mockResolvedValueOnce({
+        releaseDate: '2026-06-23',
+        nextEpisode,
+        notificationScheduledFor: nextNotificationScheduledFor,
+        localNotificationId: 'updated-notification-id',
+        updatedAt: 555,
+        noNextEpisodeFound: false,
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-100',
+            releaseDate: '2026-06-23',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+            localNotificationId: 'updated-notification-id',
+          })
+        );
+      });
+
+      expect(client.getQueryData(['reminder', 'test-user-id', 'tv', 100])).toEqual(
+        expect.objectContaining({
+          id: 'tv-100',
+          releaseDate: '2026-06-23',
+          nextEpisode,
+          notificationScheduledFor: nextNotificationScheduledFor,
+        })
+      );
+    });
+
+    it('falls back to the subsequent episode when TMDB still points at the released episode', async () => {
+      const client = createQueryClient();
+      const reminder = staleEpisodeReminder();
+      const nextEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second',
+        airDate: '2026-06-23',
+      };
+      const nextNotificationScheduledFor = Date.now() + 86_400_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 1,
+          name: 'Pilot',
+          air_date: '2026-06-16',
+        },
+      });
+      mockGetSubsequentEpisode.mockResolvedValueOnce(nextEpisode);
+      mockUpdateReminderDetails.mockResolvedValueOnce({
+        releaseDate: '2026-06-23',
+        nextEpisode,
+        notificationScheduledFor: nextNotificationScheduledFor,
+        localNotificationId: 'updated-notification-id',
+        updatedAt: 777,
+        noNextEpisodeFound: false,
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-100',
+            releaseDate: '2026-06-23',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+          })
+        );
+      });
+    });
+
+    it('keeps a stale reminder retryable when no later episode is available yet', async () => {
+      const client = createQueryClient();
+      const reminder = staleEpisodeReminder();
+      const nextEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second',
+        airDate: '2026-06-23',
+      };
+      const nextNotificationScheduledFor = Date.now() + 86_400_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 1,
+          name: 'Pilot',
+          air_date: '2026-06-16',
+        },
+      });
+      mockGetSubsequentEpisode.mockResolvedValueOnce(null).mockResolvedValueOnce(nextEpisode);
+      mockUpdateReminderDetails.mockResolvedValueOnce({
+        releaseDate: '2026-06-23',
+        nextEpisode,
+        notificationScheduledFor: nextNotificationScheduledFor,
+        localNotificationId: 'updated-notification-id',
+        updatedAt: 999,
+        noNextEpisodeFound: false,
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(client.getQueryData(['tv', 100])).toEqual(
+          expect.objectContaining({
+            next_episode_to_air: expect.objectContaining({
+              episode_number: 1,
+            }),
+          })
+        );
+      });
+
+      expect(result.current.data[0]).toEqual(expect.objectContaining({ releaseDate: '2026-06-16' }));
+
+      await act(async () => {
+        client.setQueryData(['reminders', 'test-user-id'], [
+          {
+            ...reminder,
+            updatedAt: reminder.updatedAt + 1,
+          },
+        ]);
+      });
+
+      await waitFor(() => {
+        expect(client.getQueryData(['reminders', 'test-user-id'])).toEqual([
+          expect.objectContaining({
+            releaseDate: '2026-06-23',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+          }),
+        ]);
+        expect(client.getQueryData(['reminder', 'test-user-id', 'tv', 100])).toEqual(
+          expect.objectContaining({
+            releaseDate: '2026-06-23',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+          })
+        );
+      });
+    });
+
+    it('rolls the same reminder document forward again after a later episode also becomes stale', async () => {
+      const client = createQueryClient();
+      const firstReminder = staleEpisodeReminder();
+      const secondReminder = staleEpisodeReminder({
+        releaseDate: '2026-06-23',
+        notificationScheduledFor: Date.now() - 30_000,
+        nextEpisode: {
+          seasonNumber: 1,
+          episodeNumber: 2,
+          episodeName: 'Second',
+          airDate: '2026-06-23',
+        },
+      });
+      const secondEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Second',
+        airDate: '2026-06-23',
+      };
+      const thirdEpisode = {
+        seasonNumber: 1,
+        episodeNumber: 3,
+        episodeName: 'Third',
+        airDate: '2026-06-30',
+      };
+      const secondNotificationScheduledFor = Date.now() + 86_400_000;
+      const thirdNotificationScheduledFor = Date.now() + 172_800_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([firstReminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 1,
+          episode_number: 2,
+          name: 'Second',
+          air_date: '2026-06-23',
+        },
+      });
+      mockUpdateReminderDetails
+        .mockResolvedValueOnce({
+          releaseDate: '2026-06-23',
+          nextEpisode: secondEpisode,
+          notificationScheduledFor: secondNotificationScheduledFor,
+          localNotificationId: 'updated-notification-id-2',
+          updatedAt: 1001,
+          noNextEpisodeFound: false,
+        })
+        .mockResolvedValueOnce({
+          releaseDate: '2026-06-30',
+          nextEpisode: thirdEpisode,
+          notificationScheduledFor: thirdNotificationScheduledFor,
+          localNotificationId: 'updated-notification-id-3',
+          updatedAt: 1002,
+          noNextEpisodeFound: false,
+        });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-100',
+            releaseDate: '2026-06-23',
+            nextEpisode: secondEpisode,
+            notificationScheduledFor: secondNotificationScheduledFor,
+            localNotificationId: 'updated-notification-id-2',
+          })
+        );
+      });
+
+      await act(async () => {
+        client.setQueryData(['tv', 100], {
+          next_episode_to_air: {
+            season_number: 1,
+            episode_number: 3,
+            name: 'Third',
+            air_date: '2026-06-30',
+          },
+        });
+        client.setQueryData(['reminders', 'test-user-id'], [secondReminder]);
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-100',
+            releaseDate: '2026-06-30',
+            nextEpisode: thirdEpisode,
+            notificationScheduledFor: thirdNotificationScheduledFor,
+            localNotificationId: 'updated-notification-id-3',
+          })
+        );
+      });
+    });
+
+    it('advances a stale season-premiere reminder only to a new season premiere and updates caches', async () => {
+      const client = createQueryClient();
+      const reminder = staleSeasonReminder();
+      const nextEpisode = {
+        seasonNumber: 2,
+        episodeNumber: 1,
+        episodeName: 'Season 2 Premiere',
+        airDate: '2026-07-01',
+      };
+      const nextNotificationScheduledFor = Date.now() + 86_400_000;
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 2,
+          episode_number: 1,
+          name: 'Season 2 Premiere',
+          air_date: '2026-07-01',
+        },
+      });
+      mockUpdateReminderDetails.mockResolvedValueOnce({
+        releaseDate: '2026-07-01',
+        nextEpisode,
+        notificationScheduledFor: nextNotificationScheduledFor,
+        localNotificationId: 'updated-season-notification-id',
+        updatedAt: 1200,
+        noNextEpisodeFound: false,
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(
+          expect.objectContaining({
+            id: 'tv-101',
+            releaseDate: '2026-07-01',
+            nextEpisode,
+            notificationScheduledFor: nextNotificationScheduledFor,
+            localNotificationId: 'updated-season-notification-id',
+          })
+        );
+      });
+
+      expect(mockUpdateReminderDetails).toHaveBeenCalledWith('tv-101', {
+        releaseDate: '2026-07-01',
+        nextEpisode,
+        noNextEpisodeFound: false,
+      });
+      expect(client.getQueryData(['reminder', 'test-user-id', 'tv', 101])).toEqual(
+        expect.objectContaining({
+          id: 'tv-101',
+          releaseDate: '2026-07-01',
+          nextEpisode,
+          notificationScheduledFor: nextNotificationScheduledFor,
+        })
+      );
+    });
+
+    it('does not advance a stale season-premiere reminder when TMDB points to a later-season non-premiere episode', async () => {
+      const client = createQueryClient();
+      const reminder = staleSeasonReminder();
+
+      mockGetActiveReminders.mockResolvedValueOnce([reminder]);
+      mockGetTVShowDetails.mockResolvedValueOnce({
+        next_episode_to_air: {
+          season_number: 2,
+          episode_number: 2,
+          name: 'Episode 2',
+          air_date: '2026-07-08',
+        },
+      });
+
+      const { result } = renderHook(() => useReminders(), {
+        wrapper: createWrapper(client),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data[0]).toEqual(expect.objectContaining({ id: 'tv-101' }));
+      });
+
+      expect(mockUpdateReminderDetails).not.toHaveBeenCalled();
+      expect(result.current.data[0]).toEqual(
+        expect.objectContaining({
+          releaseDate: '2026-06-16',
+          nextEpisode: reminder.nextEpisode,
+        })
+      );
     });
   });
 });

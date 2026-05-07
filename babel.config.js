@@ -3,7 +3,7 @@ module.exports = function (api) {
 
   const plugins = [];
 
-  // Remove console statements in production, keep errors/warns for crash reporting
+  // Remove console statements in production, keep errors/warns for crash reportin
   if (process.env.NODE_ENV === 'production') {
     plugins.push([
       'transform-remove-console',
