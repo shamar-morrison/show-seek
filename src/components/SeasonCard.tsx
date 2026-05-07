@@ -1,5 +1,6 @@
 import type { Season } from '@/src/api/tmdb';
 import { getImageUrl, TMDB_IMAGE_SIZES } from '@/src/api/tmdb';
+import { RatingBadge } from '@/src/components/library/RatingBadge';
 import { MediaImage } from '@/src/components/ui/MediaImage';
 import { ProgressBar } from '@/src/components/ui/ProgressBar';
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
@@ -10,10 +11,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface SeasonCardProps {
   tvShowId: number;
   season: Season;
+  userRating?: number;
   onPress: (seasonNumber: number) => void;
 }
 
-export const SeasonCard = memo<SeasonCardProps>(({ tvShowId, season, onPress }) => {
+export const SeasonCard = memo<SeasonCardProps>(({ tvShowId, season, userRating, onPress }) => {
   const { data: episodeTracking } = useShowEpisodeTracking(tvShowId);
 
   // Calculate progress based on watched episodes for this season
@@ -45,13 +47,18 @@ export const SeasonCard = memo<SeasonCardProps>(({ tvShowId, season, onPress }) 
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={ACTIVE_OPACITY}>
-      <MediaImage
-        source={{
-          uri: getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small),
-        }}
-        style={styles.poster}
-        contentFit="cover"
-      />
+      <View style={styles.posterWrapper}>
+        <MediaImage
+          source={{
+            uri: getImageUrl(season.poster_path, TMDB_IMAGE_SIZES.poster.small),
+          }}
+          style={styles.poster}
+          contentFit="cover"
+        />
+        {userRating && userRating > 0 ? (
+          <RatingBadge rating={userRating} size="small" style={styles.ratingBadge} />
+        ) : null}
+      </View>
       <Text style={styles.title} numberOfLines={1}>
         {season.name}
       </Text>
@@ -79,11 +86,21 @@ const styles = StyleSheet.create({
     width: 100,
     marginRight: SPACING.m,
   },
+  posterWrapper: {
+    width: 100,
+    height: 150,
+    marginBottom: SPACING.s,
+    position: 'relative',
+  },
   poster: {
     width: 100,
     height: 150, // 2:3 aspect ratio
     borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.s,
+  },
+  ratingBadge: {
+    position: 'absolute',
+    top: SPACING.xs,
+    right: SPACING.xs,
   },
   title: {
     color: COLORS.text,

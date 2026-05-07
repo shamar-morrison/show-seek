@@ -29,6 +29,13 @@ jest.mock('@/src/components/ui/ProgressBar', () => ({
   },
 }));
 
+jest.mock('@/src/components/library/RatingBadge', () => ({
+  RatingBadge: ({ rating }: { rating: number }) => {
+    const { Text } = require('react-native');
+    return <Text>{rating.toFixed(1)}</Text>;
+  },
+}));
+
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   useShowEpisodeTracking: jest.fn(() => ({
     data: null,
@@ -115,5 +122,27 @@ describe('SeasonCard', () => {
     );
 
     expect(queryByTestId('progress-bar')).toBeNull();
+  });
+
+  it('should render the season rating badge when a user rating is provided', () => {
+    const season = createMockSeason();
+    const { getByText } = render(
+      <SeasonCard tvShowId={123} season={season} userRating={8.5} onPress={mockOnPress} />
+    );
+
+    expect(getByText('8.5')).toBeTruthy();
+  });
+
+  it('should not render the season rating badge when the season is unrated', () => {
+    const season = createMockSeason();
+    const { queryByText, rerender } = render(
+      <SeasonCard tvShowId={123} season={season} onPress={mockOnPress} />
+    );
+
+    expect(queryByText('8.5')).toBeNull();
+
+    rerender(<SeasonCard tvShowId={123} season={season} userRating={0} onPress={mockOnPress} />);
+
+    expect(queryByText('0.0')).toBeNull();
   });
 });
