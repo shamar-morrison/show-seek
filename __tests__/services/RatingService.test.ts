@@ -274,13 +274,22 @@ describe('RatingService', () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
       (collection as jest.Mock).mockReturnValue(mockCollectionRef);
       (getDocs as jest.Mock).mockResolvedValue({
-        size: 3,
+        size: 4,
         docs: [
           buildSnapshotDoc('movie-123', {
             mediaType: 'movie',
             rating: '8',
             ratedAt: '1700000000000',
             title: 'Normalized Movie',
+          }),
+          buildSnapshotDoc('season-10-1', {
+            mediaType: 'season',
+            rating: 8.5,
+            ratedAt: 1700000000500,
+            title: 'Season 1',
+            tvShowId: 10,
+            seasonNumber: 1,
+            tvShowName: 'Show Name',
           }),
           buildSnapshotDoc('episode-10-1-2', {
             mediaType: 'episode',
@@ -305,6 +314,16 @@ describe('RatingService', () => {
           rating: 9,
           ratedAt: 1700000001000,
           episodeName: 'Pilot',
+          tvShowName: 'Show Name',
+        },
+        {
+          id: 'season-10-1',
+          mediaType: 'season',
+          rating: 8.5,
+          ratedAt: 1700000000500,
+          title: 'Season 1',
+          tvShowId: 10,
+          seasonNumber: 1,
           tvShowName: 'Show Name',
         },
         {
@@ -386,6 +405,73 @@ describe('RatingService', () => {
     });
   });
 
+  describe('getSeasonRating', () => {
+    it('returns null when the stored season rating is invalid', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/season-100-1' };
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (getDoc as jest.Mock).mockResolvedValue({
+        exists: () => true,
+        id: 'season-100-1',
+        data: () => ({
+          mediaType: 'season',
+          rating: 9,
+        }),
+      });
+
+      const result = await ratingService.getSeasonRating(100, 1);
+
+      expect(result).toBeNull();
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('saveSeasonRating', () => {
+    it('saves season rating with composite document ID', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/season-100-1' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (setDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await ratingService.saveSeasonRating(100, 1, 8.5, {
+        seasonName: 'Season 1',
+        tvShowName: 'Test Show',
+        posterPath: '/poster.jpg',
+        airDate: '2024-01-01',
+      });
+
+      expect(setDoc).toHaveBeenCalledWith(
+        mockDocRef,
+        expect.objectContaining({
+          id: 'season-100-1',
+          mediaType: 'season',
+          rating: 8.5,
+          title: 'Season 1',
+          tvShowId: 100,
+          seasonNumber: 1,
+          tvShowName: 'Test Show',
+          posterPath: '/poster.jpg',
+          releaseDate: '2024-01-01',
+          ratedAt: expect.any(Number),
+        })
+      );
+      expect(mockTrackSaveRating).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'season-100-1',
+          mediaType: 'season',
+          rating: 8.5,
+          title: 'Season 1',
+          tvShowId: 100,
+          seasonNumber: 1,
+          tvShowName: 'Test Show',
+          posterPath: '/poster.jpg',
+          releaseDate: '2024-01-01',
+          ratedAt: expect.any(Number),
+        })
+      );
+    });
+  });
+
   describe('deleteEpisodeRating', () => {
     it('should delete episode rating by composite ID', async () => {
       const mockDocRef = { path: 'users/test-user-id/ratings/episode-100-1-5' };
@@ -393,6 +479,18 @@ describe('RatingService', () => {
       (deleteDoc as jest.Mock).mockResolvedValue(undefined);
 
       await ratingService.deleteEpisodeRating(100, 1, 5);
+
+      expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
+    });
+  });
+
+  describe('deleteSeasonRating', () => {
+    it('deletes season rating by composite ID', async () => {
+      const mockDocRef = { path: 'users/test-user-id/ratings/season-100-1' };
+      (doc as jest.Mock).mockReturnValue(mockDocRef);
+      (deleteDoc as jest.Mock).mockResolvedValue(undefined);
+
+      await ratingService.deleteSeasonRating(100, 1);
 
       expect(deleteDoc).toHaveBeenCalledWith(mockDocRef);
     });

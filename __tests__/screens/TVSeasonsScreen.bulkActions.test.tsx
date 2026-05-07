@@ -147,6 +147,8 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
   }),
 }));
 
+jest.mock('@/src/components/RatingModal', () => () => null);
+
 jest.mock('@/src/components/ui/LoadingModal', () => {
   return function LoadingModalMock({ visible, message }: { visible: boolean; message: string }) {
     const { Text } = require('react-native');

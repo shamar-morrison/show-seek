@@ -8,8 +8,10 @@ import { useTrakt } from '@/src/context/TraktContext';
 import {
   useDeleteEpisodeRating,
   useDeleteRating,
+  useDeleteSeasonRating,
   useRateEpisode,
   useRateMedia,
+  useRateSeason,
 } from '@/src/hooks/useRatings';
 import { listService } from '@/src/services/ListService';
 import { modalHeaderStyles, modalLayoutStyles } from '@/src/styles/modalStyles';
@@ -125,6 +127,16 @@ interface RatingModalProps {
     posterPath: string | null;
   };
 
+  // For seasons
+  seasonData?: {
+    tvShowId: number;
+    seasonNumber: number;
+    seasonName: string;
+    tvShowName: string;
+    posterPath: string | null;
+    airDate: string | null;
+  };
+
   initialRating?: number;
   onRatingSuccess: (rating: number) => void;
   onShowToast?: (message: string) => void;
@@ -161,6 +173,7 @@ export default function RatingModal({
   mediaId,
   mediaType,
   episodeData,
+  seasonData,
   initialRating = 0,
   onRatingSuccess,
   onShowToast,
@@ -180,6 +193,8 @@ export default function RatingModal({
   const deleteMediaMutation = useDeleteRating();
   const rateEpisodeMutation = useRateEpisode();
   const deleteEpisodeMutation = useDeleteEpisodeRating();
+  const rateSeasonMutation = useRateSeason();
+  const deleteSeasonMutation = useDeleteSeasonRating();
 
   useEffect(() => {
     if (visible) {
@@ -211,6 +226,18 @@ export default function RatingModal({
             episodeName: episodeData.episodeName,
             tvShowName: episodeData.tvShowName,
             posterPath: episodeData.posterPath,
+          },
+        });
+      } else if (seasonData) {
+        await rateSeasonMutation.mutateAsync({
+          tvShowId: seasonData.tvShowId,
+          seasonNumber: seasonData.seasonNumber,
+          rating,
+          seasonMetadata: {
+            seasonName: seasonData.seasonName,
+            tvShowName: seasonData.tvShowName,
+            posterPath: seasonData.posterPath,
+            airDate: seasonData.airDate,
           },
         });
       } else if (mediaId !== undefined && mediaType) {
@@ -334,6 +361,11 @@ export default function RatingModal({
           seasonNumber: episodeData.seasonNumber,
           episodeNumber: episodeData.episodeNumber,
         });
+      } else if (seasonData) {
+        await deleteSeasonMutation.mutateAsync({
+          tvShowId: seasonData.tvShowId,
+          seasonNumber: seasonData.seasonNumber,
+        });
       } else if (mediaId !== undefined && mediaType) {
         maybeWarnTraktManagedRatingEdit(
           isTraktConnected,
@@ -369,6 +401,8 @@ export default function RatingModal({
 
   const rateTypeLabel = episodeData
     ? t('media.episode')
+    : seasonData
+      ? t('media.season')
     : mediaType === 'tv'
       ? t('media.tvShow')
       : t('media.movie');

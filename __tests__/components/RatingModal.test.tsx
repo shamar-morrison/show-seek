@@ -7,6 +7,8 @@ const mockRateMediaMutateAsync = jest.fn();
 const mockDeleteMediaMutateAsync = jest.fn();
 const mockRateEpisodeMutateAsync = jest.fn();
 const mockDeleteEpisodeMutateAsync = jest.fn();
+const mockRateSeasonMutateAsync = jest.fn();
+const mockDeleteSeasonMutateAsync = jest.fn();
 const mockInvalidateQueries = jest.fn().mockResolvedValue(undefined);
 const addToListSpy = jest.spyOn(listService, 'addToList');
 const removeFromListSpy = jest.spyOn(listService, 'removeFromList');
@@ -25,6 +27,8 @@ jest.mock('@/src/hooks/useRatings', () => ({
   useDeleteRating: () => ({ mutateAsync: mockDeleteMediaMutateAsync }),
   useRateEpisode: () => ({ mutateAsync: mockRateEpisodeMutateAsync }),
   useDeleteEpisodeRating: () => ({ mutateAsync: mockDeleteEpisodeMutateAsync }),
+  useRateSeason: () => ({ mutateAsync: mockRateSeasonMutateAsync }),
+  useDeleteSeasonRating: () => ({ mutateAsync: mockDeleteSeasonMutateAsync }),
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -72,6 +76,8 @@ describe('RatingModal', () => {
     mockDeleteMediaMutateAsync.mockResolvedValue(undefined);
     mockRateEpisodeMutateAsync.mockResolvedValue(undefined);
     mockDeleteEpisodeMutateAsync.mockResolvedValue(undefined);
+    mockRateSeasonMutateAsync.mockResolvedValue(undefined);
+    mockDeleteSeasonMutateAsync.mockResolvedValue(undefined);
     addToListSpy.mockResolvedValue(undefined);
     removeFromListSpy.mockResolvedValue(undefined);
   });
@@ -164,5 +170,74 @@ describe('RatingModal', () => {
       expect(mockRateMediaMutateAsync).toHaveBeenCalled();
     });
     expect(removeFromListSpy).not.toHaveBeenCalled();
+  });
+
+  it('saves season ratings through the season mutation path', async () => {
+    const { getByText } = render(
+      <RatingModal
+        visible={true}
+        onClose={jest.fn()}
+        seasonData={{
+          tvShowId: 101,
+          seasonNumber: 2,
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: '/season.jpg',
+          airDate: '2025-01-01',
+        }}
+        initialRating={8}
+        onRatingSuccess={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByText('Confirm Rating'));
+
+    await waitFor(() => {
+      expect(mockRateSeasonMutateAsync).toHaveBeenCalledWith({
+        tvShowId: 101,
+        seasonNumber: 2,
+        rating: 8,
+        seasonMetadata: {
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: '/season.jpg',
+          airDate: '2025-01-01',
+        },
+      });
+    });
+
+    expect(mockRateMediaMutateAsync).not.toHaveBeenCalled();
+    expect(mockRateEpisodeMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('deletes season ratings through the season mutation path', async () => {
+    const { getByText } = render(
+      <RatingModal
+        visible={true}
+        onClose={jest.fn()}
+        seasonData={{
+          tvShowId: 101,
+          seasonNumber: 2,
+          seasonName: 'Season 2',
+          tvShowName: 'Season Show',
+          posterPath: '/season.jpg',
+          airDate: '2025-01-01',
+        }}
+        initialRating={8}
+        onRatingSuccess={jest.fn()}
+      />
+    );
+
+    fireEvent.press(getByText('Remove Rating'));
+
+    await waitFor(() => {
+      expect(mockDeleteSeasonMutateAsync).toHaveBeenCalledWith({
+        tvShowId: 101,
+        seasonNumber: 2,
+      });
+    });
+
+    expect(mockDeleteMediaMutateAsync).not.toHaveBeenCalled();
+    expect(mockDeleteEpisodeMutateAsync).not.toHaveBeenCalled();
   });
 });

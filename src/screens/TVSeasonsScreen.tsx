@@ -7,6 +7,7 @@ import {
   type SeasonWithEpisodes,
 } from '@/src/components/tv/SeasonItem';
 import { useSeasonScreenStyles } from '@/src/components/tv/seasonScreenStyles';
+import RatingModal from '@/src/components/RatingModal';
 import AppErrorState from '@/src/components/ui/AppErrorState';
 import { FullScreenLoading } from '@/src/components/ui/FullScreenLoading';
 import LoadingModal from '@/src/components/ui/LoadingModal';
@@ -43,10 +44,10 @@ import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCROLL_INITIAL_DELAY = 300;
@@ -120,6 +121,9 @@ export default function TVSeasonsScreen() {
   const deferredBulkActionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasScrolledToSeason, setHasScrolledToSeason] = useState(false);
   const [optimisticBulkAction, setOptimisticBulkAction] = useState<OptimisticBulkAction>(null);
+  const [selectedSeasonForRating, setSelectedSeasonForRating] = useState<SeasonWithEpisodes | null>(
+    null
+  );
 
   const handleEpisodePress = useCallback(
     (episode: Episode, seasonNumber: number) => {
@@ -336,6 +340,29 @@ export default function TVSeasonsScreen() {
     return map;
   }, [ratings]);
 
+  const seasonRatingsById = useMemo(() => {
+    const map = new Map<string, number>();
+
+    (ratings || []).forEach((rating) => {
+      if (rating.mediaType === 'season') {
+        map.set(rating.id, rating.rating);
+      }
+    });
+
+    return map;
+  }, [ratings]);
+
+  const handleOpenSeasonRating = useCallback(
+    (seasonData: SeasonWithEpisodes) => {
+      if (isAccountRequired()) {
+        return;
+      }
+
+      setSelectedSeasonForRating(seasonData);
+    },
+    [isAccountRequired]
+  );
+
   const seasonProgressBySeasonNumber = useMemo(() => {
     const progressMap = new Map<number, SeasonProgress>();
 
@@ -509,10 +536,186 @@ export default function TVSeasonsScreen() {
         );
       }
 
-      if (item.type === 'season-overview') {
+      if (item.type === 'season-details') {
+        const seasonData = item.season;
+        const seasonEpisodes = seasonData.episodes || [];
+        const markableEpisodes = seasonEpisodes.filter(
+          (episode) =>
+            !!episode.air_date &&
+            (!!preferences.allowUnreleasedEpisodeWatches || hasEpisodeAired(episode.air_date))
+        );
+        const watchedSeasonEpisodes = seasonEpisodes.filter((episode) => {
+          const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;
+          return !!episodeTracking?.episodes?.[episodeKey];
+        });
+        const allMarkableEpisodesWatched =
+          markableEpisodes.length > 0 &&
+          markableEpisodes.every((episode) => {
+            const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;
+            return !!episodeTracking?.episodes?.[episodeKey];
+          });
+        const hasBulkMarkableEpisodes = markableEpisodes.length > 0;
+        const hasWatchedEpisodesToUnmark = watchedSeasonEpisodes.length > 0;
+        const shouldOfferUnmarkAll =
+          (markableEpisodes.length === 0 && hasWatchedEpisodesToUnmark) || allMarkableEpisodesWatched;
+        const markAllUsesGenericCopy = markableEpisodes.some(
+          (episode) => !hasEpisodeAired(episode.air_date)
+        );
+        const unmarkAllUsesGenericCopy = watchedSeasonEpisodes.some(
+          (episode) => !hasEpisodeAired(episode.air_date)
+        );
+        const shouldShowMarkAllButton = hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark;
+        const isBulkActionPending =
+          !!bulkActionState.isPending &&
+          bulkActionState.seasonNumber === seasonData.season_number &&
+          !!bulkActionState.action;
+        const seasonDocId = `season-${tvId}-${seasonData.season_number}`;
+        const seasonUserRating = seasonRatingsById.get(seasonDocId) || 0;
+        const displaySeasonUserRating = Number.isInteger(seasonUserRating)
+          ? seasonUserRating.toString()
+          : seasonUserRating.toFixed(1);
+
+        const handleMarkAllPress = () => {
+          if (!hasBulkMarkableEpisodes && !hasWatchedEpisodesToUnmark) return;
+
+          if (shouldOfferUnmarkAll) {
+            Alert.alert(
+              t('watched.unmarkAllEpisodesTitle'),
+              t(
+                unmarkAllUsesGenericCopy
+                  ? 'watched.unmarkAllEpisodesConfirm'
+                  : 'watched.unmarkAllAiredEpisodesConfirm',
+                {
+                  count: watchedSeasonEpisodes.length,
+                  seasonName:
+                    seasonData.name ||
+                    t('media.seasonNumber', { number: seasonData.season_number }),
+                }
+              ),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('watched.unmarkAll'),
+                  onPress: () => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                    handleMarkAllUnwatched({
+                      tvShowId: tvId,
+                      seasonNumber: seasonData.season_number,
+                      episodes: watchedSeasonEpisodes,
+                    });
+                  },
+                },
+              ]
+            );
+            return;
+          }
+
+          Alert.alert(
+            t('watched.markAllEpisodesTitle'),
+            t(
+              markAllUsesGenericCopy
+                ? 'watched.markAllEpisodesConfirm'
+                : 'watched.markAllAiredEpisodesConfirm',
+              {
+                count: markableEpisodes.length,
+                seasonName:
+                  seasonData.name || t('media.seasonNumber', { number: seasonData.season_number }),
+              }
+            ),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              {
+                text: t('watched.markAll'),
+                onPress: () => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+                  handleMarkAllWatched({
+                    tvShowId: tvId,
+                    seasonNumber: seasonData.season_number,
+                    episodes: markableEpisodes,
+                    showMetadata: {
+                      tvShowName: showName,
+                      posterPath: showPosterPath,
+                    },
+                  });
+                },
+              },
+            ]
+          );
+        };
+
         return (
           <View style={styles.seasonExpandedContentRow}>
-            <Text style={styles.seasonFullOverview}>{item.overview}</Text>
+            {seasonData.overview ? (
+              <Text style={styles.seasonFullOverview}>{seasonData.overview}</Text>
+            ) : null}
+            <View style={styles.seasonExpandedActionsRow}>
+              {shouldShowMarkAllButton ? (
+                <TouchableOpacity
+                  style={[
+                    styles.seasonActionButton,
+                    isBulkActionPending && styles.seasonActionButtonDisabled,
+                  ]}
+                  onPress={handleMarkAllPress}
+                  disabled={isBulkActionPending}
+                  activeOpacity={ACTIVE_OPACITY}
+                  testID={`season-mark-all-button-${seasonData.season_number}`}
+                >
+                  {isBulkActionPending ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={COLORS.white}
+                      testID={`season-mark-all-spinner-${seasonData.season_number}`}
+                    />
+                  ) : (
+                    <Text style={styles.seasonActionButtonText}>
+                      {shouldOfferUnmarkAll ? t('watched.unmarkAll') : t('watched.markAll')}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={[
+                  styles.seasonActionButton,
+                  styles.seasonActionButtonSecondary,
+                  !shouldShowMarkAllButton && { flex: 0, alignSelf: 'flex-start', minWidth: 140 },
+                ]}
+                onPress={() => handleOpenSeasonRating(seasonData)}
+                activeOpacity={ACTIVE_OPACITY}
+                testID={`season-rate-button-${seasonData.season_number}`}
+              >
+                <View style={styles.seasonActionButtonContent}>
+                  {seasonUserRating > 0 ? (
+                    <>
+                      <Star
+                        size={14}
+                        color={styles.seasonActionButtonIcon.color}
+                        fill={styles.seasonActionButtonIcon.color}
+                        testID={`season-rate-icon-${seasonData.season_number}`}
+                      />
+                      <Text
+                        style={[
+                          styles.seasonActionButtonText,
+                          styles.seasonActionButtonTextSecondary,
+                        ]}
+                      >
+                        {displaySeasonUserRating}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text
+                      style={[
+                        styles.seasonActionButtonText,
+                        styles.seasonActionButtonTextSecondary,
+                      ]}
+                    >
+                      {t('tvSeasons.rateSeason')}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         );
       }
@@ -633,6 +836,7 @@ export default function TVSeasonsScreen() {
       handleMarkUnwatched,
       handleMarkAllWatched,
       handleMarkAllUnwatched,
+      handleOpenSeasonRating,
       episodeTracking,
       markWatched.isPending,
       markWatched.variables,
@@ -649,10 +853,17 @@ export default function TVSeasonsScreen() {
       bulkActionState,
       t,
       styles.seasonFullOverview,
+      styles.seasonExpandedActionsRow,
+      styles.seasonActionButton,
+      styles.seasonActionButtonDisabled,
+      styles.seasonActionButtonSecondary,
+      styles.seasonActionButtonText,
+      styles.seasonActionButtonTextSecondary,
       episodeRatingsById,
       seasonProgressBySeasonNumber,
       getProjectedSeasonProgress,
       isAnyBulkActionPending,
+      preferences.allowUnreleasedEpisodeWatches,
     ]
   );
 
@@ -706,6 +917,28 @@ export default function TVSeasonsScreen() {
       />
 
       <LoadingModal visible={isAnyBulkActionPending} message={loadingModalMessage} />
+      {show && selectedSeasonForRating ? (
+        <RatingModal
+          visible={true}
+          onClose={() => setSelectedSeasonForRating(null)}
+          seasonData={{
+            tvShowId: tvId,
+            seasonNumber: selectedSeasonForRating.season_number,
+            seasonName:
+              selectedSeasonForRating.name ||
+              t('media.seasonNumber', { number: selectedSeasonForRating.season_number }),
+            tvShowName: showName,
+            posterPath: showPosterPath,
+            airDate: selectedSeasonForRating.air_date ?? null,
+          }}
+          initialRating={
+            seasonRatingsById.get(
+              `season-${tvId}-${selectedSeasonForRating.season_number}`
+            ) || 0
+          }
+          onRatingSuccess={() => {}}
+        />
+      ) : null}
     </View>
   );
 }

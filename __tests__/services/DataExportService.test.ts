@@ -124,6 +124,17 @@ describe('DataExportService', () => {
             }),
           },
           {
+            id: 'season-10-1',
+            data: () => ({
+              mediaType: 'season',
+              rating: 8.5,
+              ratedAt: 1700000000002,
+              title: 'Season 1',
+              tvShowName: 'Loaded Show',
+              seasonNumber: 1,
+            }),
+          },
+          {
             id: 'movie-99',
             data: () => ({
               rating: 8,
@@ -138,6 +149,7 @@ describe('DataExportService', () => {
 
     const writtenContent = (FileSystem.writeAsStringAsync as jest.Mock).mock.calls[0][1];
     expect(writtenContent).toContain('Rating,Loaded Show - Pilot,Episode,9');
+    expect(writtenContent).toContain('Rating,Loaded Show - Season 1,Season,8.5');
     expect(writtenContent).not.toContain('movie-99');
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();

@@ -10,7 +10,7 @@ const DEFAULT_LIST_KINDS = [
 
 export type AnalyticsLoginMethod = 'google' | 'email' | 'guest';
 export type AnalyticsListKind = (typeof DEFAULT_LIST_KINDS)[number] | 'custom';
-export type AnalyticsMediaType = 'movie' | 'tv' | 'episode';
+export type AnalyticsMediaType = 'movie' | 'tv' | 'episode' | 'season';
 export type AnalyticsReminderTiming = 'on_release_day' | '1_day_before' | '1_week_before';
 export type AnalyticsTVFrequency = 'every_episode' | 'season_premiere';
 

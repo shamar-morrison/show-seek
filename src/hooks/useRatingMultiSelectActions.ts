@@ -26,6 +26,12 @@ export type RatingMultiSelectTarget =
       tvShowId: number;
       seasonNumber: number;
       episodeNumber: number;
+    }
+  | {
+      id: string;
+      mediaType: 'season';
+      tvShowId: number;
+      seasonNumber: number;
     };
 
 interface UseRatingMultiSelectActionsOptions<TItem, TTarget extends RatingMultiSelectTarget> {

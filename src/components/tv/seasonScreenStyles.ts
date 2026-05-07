@@ -110,6 +110,47 @@ export const useSeasonScreenStyles = () =>
     seasonExpandedContentRow: {
       backgroundColor: COLORS.surface,
     },
+    seasonExpandedActionsRow: {
+      flexDirection: 'row',
+      gap: SPACING.s,
+      paddingHorizontal: SPACING.m,
+      paddingBottom: SPACING.m,
+    },
+    seasonActionButton: {
+      flex: 1,
+      backgroundColor: accentColor,
+      paddingVertical: SPACING.s,
+      paddingHorizontal: SPACING.m,
+      borderRadius: BORDER_RADIUS.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+    },
+    seasonActionButtonSecondary: {
+      backgroundColor: COLORS.surfaceLight,
+      borderWidth: 1,
+      borderColor: accentColor,
+    },
+    seasonActionButtonDisabled: {
+      opacity: 0.7,
+    },
+    seasonActionButtonText: {
+      color: COLORS.white,
+      fontSize: FONT_SIZE.s,
+      fontWeight: '600',
+    },
+    seasonActionButtonTextSecondary: {
+      color: accentColor,
+    },
+    seasonActionButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: SPACING.xs,
+    },
+    seasonActionButtonIcon: {
+      color: COLORS.warning,
+    },
     episodesContainer: {
       paddingTop: SPACING.s,
       backgroundColor: COLORS.surface,

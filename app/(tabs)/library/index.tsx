@@ -99,6 +99,12 @@ export default function LibraryScreen() {
             route: '/(tabs)/library/ratings/episodes',
           },
           {
+            id: 'season-ratings',
+            icon: Layers,
+            title: t('library.seasonRatings'),
+            route: '/(tabs)/library/ratings/seasons',
+          },
+          {
             id: 'movie-ratings',
             icon: Film,
             title: t('library.movieRatings'),

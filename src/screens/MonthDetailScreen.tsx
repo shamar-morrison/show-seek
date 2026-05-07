@@ -113,6 +113,14 @@ export default function MonthDetailScreen() {
 
       if (item.mediaType === 'episode' && item.tvShowId) {
         router.push(`/(tabs)/${currentTab}/tv/${item.tvShowId}` as any);
+      } else if (
+        item.mediaType === 'season' &&
+        item.tvShowId &&
+        typeof item.seasonNumber === 'number'
+      ) {
+        router.push(
+          `/(tabs)/${currentTab}/tv/${item.tvShowId}/seasons?season=${item.seasonNumber}` as any
+        );
       } else if (item.mediaType === 'movie') {
         router.push(`/(tabs)/${currentTab}/movie/${item.id}` as any);
       } else if (item.mediaType === 'tv') {

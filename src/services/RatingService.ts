@@ -12,17 +12,17 @@ import { collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface RatingItem {
-  id: string; // mediaId for movies/TV, composite ID for episodes
-  mediaType: 'movie' | 'tv' | 'episode';
+  id: string; // mediaId for movies/TV, composite ID for episodes/seasons
+  mediaType: 'movie' | 'tv' | 'episode' | 'season';
   rating: number;
   ratedAt: number;
 
-  // Common metadata for all media types (movies, TV, episodes)
+  // Common metadata for all media types (movies, TV, episodes, seasons)
   title?: string;
   posterPath?: string | null;
   releaseDate?: string | null;
 
-  // Episode-specific metadata (only present when mediaType === 'episode')
+  // Episode/season-specific metadata
   tvShowId?: number;
   seasonNumber?: number;
   episodeNumber?: number;
@@ -32,7 +32,7 @@ export interface RatingItem {
 
 type RatingMediaType = RatingItem['mediaType'];
 
-const VALID_MEDIA_TYPES: readonly RatingMediaType[] = ['movie', 'tv', 'episode'];
+const VALID_MEDIA_TYPES: readonly RatingMediaType[] = ['movie', 'tv', 'episode', 'season'];
 
 const toFiniteNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -74,7 +74,7 @@ const getNormalizedRatingId = (
     return null;
   }
 
-  if (mediaType === 'episode') {
+  if (mediaType === 'episode' || mediaType === 'season') {
     return fallbackDocId;
   }
 
@@ -322,6 +322,21 @@ class RatingService {
   }
 
   /**
+   * Helper to create season document ID
+   */
+  private getSeasonDocumentId(tvShowId: number, seasonNumber: number): string {
+    return `season-${tvShowId}-${seasonNumber}`;
+  }
+
+  /**
+   * Get reference for season rating
+   */
+  private getUserSeasonRatingRef(userId: string, tvShowId: number, seasonNumber: number) {
+    const docId = this.getSeasonDocumentId(tvShowId, seasonNumber);
+    return doc(db, 'users', userId, 'ratings', docId);
+  }
+
+  /**
    * Save or update a rating for an episode
    */
   async saveEpisodeRating(
@@ -369,6 +384,47 @@ class RatingService {
   }
 
   /**
+   * Save or update a rating for a season
+   */
+  async saveSeasonRating(
+    tvShowId: number,
+    seasonNumber: number,
+    rating: number,
+    seasonMetadata: {
+      seasonName: string;
+      tvShowName: string;
+      posterPath: string | null;
+      airDate: string | null;
+    }
+  ): Promise<RatingItem> {
+    try {
+      const user = requireSignedInUser();
+
+      const ratingRef = this.getUserSeasonRatingRef(user.uid, tvShowId, seasonNumber);
+      const seasonId = this.getSeasonDocumentId(tvShowId, seasonNumber);
+
+      const ratingData: RatingItem = {
+        id: seasonId,
+        mediaType: 'season',
+        rating,
+        ratedAt: Date.now(),
+        title: seasonMetadata.seasonName,
+        posterPath: seasonMetadata.posterPath,
+        releaseDate: seasonMetadata.airDate,
+        tvShowId,
+        seasonNumber,
+        tvShowName: seasonMetadata.tvShowName,
+      };
+
+      await raceWithTimeout(setDoc(ratingRef, ratingData));
+      void trackSaveRating(ratingData);
+      return ratingData;
+    } catch (error) {
+      return rethrowFirestoreError('RatingService.saveSeasonRating', error);
+    }
+  }
+
+  /**
    * Delete a rating for an episode
    */
   async deleteEpisodeRating(tvShowId: number, seasonNumber: number, episodeNumber: number) {
@@ -385,6 +441,21 @@ class RatingService {
       await raceWithTimeout(deleteDoc(ratingRef));
     } catch (error) {
       return rethrowFirestoreError('RatingService.deleteEpisodeRating', error);
+    }
+  }
+
+  /**
+   * Delete a rating for a season
+   */
+  async deleteSeasonRating(tvShowId: number, seasonNumber: number) {
+    try {
+      const user = requireSignedInUser();
+
+      const ratingRef = this.getUserSeasonRatingRef(user.uid, tvShowId, seasonNumber);
+
+      await raceWithTimeout(deleteDoc(ratingRef));
+    } catch (error) {
+      return rethrowFirestoreError('RatingService.deleteSeasonRating', error);
     }
   }
 
@@ -455,6 +526,64 @@ class RatingService {
         error,
       });
       console.error('[RatingService] getEpisodeRating error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get a single rating for a season
+   */
+  async getSeasonRating(tvShowId: number, seasonNumber: number): Promise<RatingItem | null> {
+    try {
+      const user = getSignedInUser();
+      if (!user) return null;
+
+      const ratingRef = this.getUserSeasonRatingRef(user.uid, tvShowId, seasonNumber);
+      this.logDebug('getSeasonRating:start', {
+        userId: user.uid,
+        tvShowId,
+        seasonNumber,
+        path: `users/${user.uid}/ratings/season-${tvShowId}-${seasonNumber}`,
+      });
+
+      const docSnap = await raceWithTimeout(
+        auditedGetDoc(ratingRef, {
+          path: `users/${user.uid}/ratings/season-${tvShowId}-${seasonNumber}`,
+          queryKey: 'ratingBySeason',
+          callsite: 'RatingService.getSeasonRating',
+        })
+      );
+
+      if (docSnap.exists()) {
+        const rating = normalizeRatingItem(
+          docSnap.data(),
+          docSnap.id,
+          'RatingService.getSeasonRating'
+        );
+        this.logDebug('getSeasonRating:result', {
+          userId: user.uid,
+          tvShowId,
+          seasonNumber,
+          exists: rating !== null,
+        });
+        return rating;
+      }
+
+      this.logDebug('getSeasonRating:result', {
+        userId: user.uid,
+        tvShowId,
+        seasonNumber,
+        exists: false,
+      });
+
+      return null;
+    } catch (error) {
+      this.logDebug('getSeasonRating:error', {
+        tvShowId,
+        seasonNumber,
+        error,
+      });
+      console.error('[RatingService] getSeasonRating error:', error);
       return null;
     }
   }

@@ -278,7 +278,7 @@ export const SeasonItem = memo<SeasonItemProps>(
           </View>
 
           <View style={styles.seasonActions}>
-            {isExpanded && (hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark) && (
+            {showEpisodes && isExpanded && (hasBulkMarkableEpisodes || hasWatchedEpisodesToUnmark) && (
               <TouchableOpacity
                 style={[styles.markAllButton, isBulkActionPending && styles.markAllButtonDisabled]}
                 onPress={handleMarkAllPress}

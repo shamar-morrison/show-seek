@@ -104,12 +104,18 @@ async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<Enri
   const movieRatings = validRatings.filter((r) => r.mediaType === 'movie');
   const tvRatings = validRatings.filter((r) => r.mediaType === 'tv');
   const episodeRatings = validRatings.filter((r) => r.mediaType === 'episode');
+  const seasonRatings = validRatings.filter((r) => r.mediaType === 'season');
 
   // Episodes already have metadata stored (no API calls needed)
   const episodeEnriched = episodeRatings.map((rating) => {
     const showName = rating.tvShowName || 'Unknown Show';
     const epName = rating.episodeName || `S${rating.seasonNumber}E${rating.episodeNumber}`;
     return { rating, title: `${showName} - ${epName}` };
+  });
+  const seasonEnriched = seasonRatings.map((rating) => {
+    const showName = rating.tvShowName || 'Unknown Show';
+    const seasonName = rating.title || `Season ${rating.seasonNumber ?? '?'}`;
+    return { rating, title: `${showName} - ${seasonName}` };
   });
 
   // Fetch movie titles with timeout protection
@@ -144,7 +150,7 @@ async function enrichRatingsWithTitles(ratings: RawExportRating[]): Promise<Enri
     { ms: 30000, message: 'Title enrichment timed out' }
   );
 
-  return [...movieResults, ...tvResults, ...episodeEnriched];
+  return [...movieResults, ...tvResults, ...episodeEnriched, ...seasonEnriched];
 }
 
 function generateMarkdown(
@@ -182,6 +188,7 @@ function generateMarkdown(
     const movieRatings = enrichedRatings.filter((r) => r.rating.mediaType === 'movie');
     const tvRatings = enrichedRatings.filter((r) => r.rating.mediaType === 'tv');
     const episodeRatings = enrichedRatings.filter((r) => r.rating.mediaType === 'episode');
+    const seasonRatings = enrichedRatings.filter((r) => r.rating.mediaType === 'season');
 
     if (movieRatings.length > 0) {
       md += '### Movies\n';
@@ -200,6 +207,13 @@ function generateMarkdown(
     if (episodeRatings.length > 0) {
       md += '### Episodes\n';
       episodeRatings.forEach(({ rating, title }) => {
+        md += `- **${title}**: ${rating.rating}/10\n`;
+      });
+      md += '\n';
+    }
+    if (seasonRatings.length > 0) {
+      md += '### Seasons\n';
+      seasonRatings.forEach(({ rating, title }) => {
         md += `- **${title}**: ${rating.rating}/10\n`;
       });
       md += '\n';
@@ -250,7 +264,13 @@ function generateCSV(
   // 2. Ratings
   enrichedRatings.forEach(({ rating, title }) => {
     const type =
-      rating.mediaType === 'movie' ? 'Movie' : rating.mediaType === 'tv' ? 'TV' : 'Episode';
+      rating.mediaType === 'movie'
+        ? 'Movie'
+        : rating.mediaType === 'tv'
+          ? 'TV'
+          : rating.mediaType === 'season'
+            ? 'Season'
+            : 'Episode';
     csv += `Rating,${escapeCsv(title)},${type},${rating.rating}\n`;
   });
 

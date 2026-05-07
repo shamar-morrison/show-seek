@@ -403,6 +403,7 @@
     "statsAndHistory": "Estatísticas e Histórico",
     "ratingsSection": "Avaliações",
     "episodeRatings": "Avaliações de episódios",
+    "seasonRatings": "Avaliações de temporadas",
     "movieRatings": "Avaliações de filmes",
     "tvShowRatings": "Avaliações de séries",
     "favoritesSection": "Favoritos",
@@ -419,6 +420,7 @@
     "searchMoviesPlaceholder": "Pesquisar filmes...",
     "searchTVShowsPlaceholder": "Pesquisar séries...",
     "searchEpisodesPlaceholder": "Pesquisar episódios...",
+    "searchSeasonsPlaceholder": "Pesquisar temporadas...",
     "searchPeoplePlaceholder": "Pesquisar pessoas...",
     "searchCollectionsPlaceholder": "Pesquisar coleções...",
     "searchShowsPlaceholder": "Pesquisar séries...",
@@ -431,6 +433,8 @@
     "emptyWatchProgressHint": "Comece a assistir uma série para acompanhar seu progresso aqui.",
     "emptyFavoritePeople": "Nenhuma pessoa favorita",
     "emptyFavoritePeopleHint": "Favorite atores e diretores para vê-los aqui.",
+    "emptySeasonRatings": "Nenhuma avaliação de temporada ainda",
+    "emptySeasonRatingsHint": "Avalie temporadas para acompanhar suas opiniões aqui.",
     "watchStatusEmptyDescription": "Adicione filmes e séries à sua lista {{listName}} para vê-los aqui.",
     "unknownShow": "Série desconhecida",
     "signInToRenameList": "Entre para editar esta lista",
@@ -1475,7 +1479,8 @@
     "failedToLoad": "Falha ao carregar detalhes da série"
   },
   "tvSeasons": {
-    "failedToLoadSeasons": "Falha ao carregar temporadas"
+    "failedToLoadSeasons": "Falha ao carregar temporadas",
+    "rateSeason": "Avaliar temporada"
   },
   "whereToWatch": {
     "title": "Onde assistir",
