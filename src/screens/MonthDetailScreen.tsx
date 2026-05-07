@@ -103,6 +103,7 @@ export default function MonthDetailScreen() {
         })
       );
   }, [monthDetail]);
+  const filteredAddedCount = addedItems.length;
 
   const [activeTab, setActiveTab] = useState<TabType>('watched');
   const [hasInitializedTab, setHasInitializedTab] = useState(false);
@@ -125,11 +126,11 @@ export default function MonthDetailScreen() {
       setActiveTab('watched');
     } else if (rated.length > 0) {
       setActiveTab('rated');
-    } else if (addedItems.length > 0) {
+    } else if (filteredAddedCount > 0) {
       setActiveTab('added');
     }
     setHasInitializedTab(true);
-  }, [addedItems.length, hasInitializedTab, monthDetail]);
+  }, [filteredAddedCount, hasInitializedTab, monthDetail]);
 
   const handleItemPress = useCallback(
     (item: ActivityItem) => {
@@ -208,8 +209,8 @@ export default function MonthDetailScreen() {
 
     if (activeTab === 'watched') return monthDetail.items.watched.length;
     if (activeTab === 'rated') return monthDetail.items.rated.length;
-    return addedItems.length;
-  }, [activeTab, addedItems.length, monthDetail]);
+    return filteredAddedCount;
+  }, [activeTab, filteredAddedCount, monthDetail]);
 
   if (isLoading) {
     return <FullScreenLoading />;
@@ -229,7 +230,7 @@ export default function MonthDetailScreen() {
   }
 
   const { watched, rated } = monthDetail.items;
-  const hasNoActivity = watched.length === 0 && rated.length === 0 && addedItems.length === 0;
+  const hasNoActivity = watched.length === 0 && rated.length === 0 && filteredAddedCount === 0;
 
   if (hasNoActivity) {
     return (
@@ -263,7 +264,7 @@ export default function MonthDetailScreen() {
           </View>
           <View style={styles.summaryItem}>
             <Plus size={20} color={COLORS.success} />
-            <Text style={styles.summaryValue}>{monthDetail.stats.addedToLists}</Text>
+            <Text style={styles.summaryValue}>{filteredAddedCount}</Text>
             <Text style={styles.summaryLabel}>{t('stats.added')}</Text>
           </View>
         </View>
@@ -296,7 +297,7 @@ export default function MonthDetailScreen() {
         />
         <TabButton
           label={t('stats.added')}
-          count={addedItems.length}
+          count={filteredAddedCount}
           isActive={activeTab === 'added'}
           onPress={() => setActiveTab('added')}
           icon={Plus}

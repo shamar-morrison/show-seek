@@ -142,7 +142,7 @@ describe('MonthDetailScreen', () => {
     expect(getAllByText('4')).toHaveLength(2);
   });
 
-  it('filters unsupported added-item media types from the added tab and its count', async () => {
+  it('filters unsupported added-item media types from the added summary and tab count', async () => {
     mockUseMonthDetail.mockReturnValue({
       data: {
         month: '2026-03',
@@ -197,6 +197,6 @@ describe('MonthDetailScreen', () => {
 
     expect(queryByText('Filtered Season')).toBeNull();
     expect(getAllByText('Valid Added Movie')).toHaveLength(1);
-    expect(getAllByText('1')).toHaveLength(1);
+    expect(getAllByText('1')).toHaveLength(2);
   });
 });
