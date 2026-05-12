@@ -481,7 +481,17 @@
     "removeRatingsConfirm_other": "¿Quitar {{count}} calificaciones seleccionadas?",
     "ratingsRemoved": "{{count}} calificaciones quitadas",
     "ratingsRemoved_one": "{{count}} calificación quitada",
-    "ratingsRemoved_other": "{{count}} calificaciones quitadas"
+    "ratingsRemoved_other": "{{count}} calificaciones quitadas",
+    "deleteListsTitle": "Eliminar listas",
+    "deleteListsConfirm": "¿Eliminar {{count}} listas seleccionadas? Esta acción no se puede deshacer.",
+    "deleteListsConfirm_one": "¿Eliminar {{count}} lista seleccionada? Esta acción no se puede deshacer.",
+    "deleteListsConfirm_other": "¿Eliminar {{count}} listas seleccionadas? Esta acción no se puede deshacer.",
+    "watchProgressError": "Error al cargar el progreso de visionado",
+    "deletingListsTitle": "Eliminando listas",
+    "deletingListsProgress": "Eliminando listas {{current}} de {{total}}.",
+    "listsDeleted": "{{count}} listas eliminadas",
+    "listsDeleted_one": "{{count}} lista eliminada",
+    "listsDeleted_other": "{{count}} listas eliminadas"
   },
   "rating": {
     "title": "Calificar",
@@ -804,7 +814,12 @@
       "description": "¿Continuar a la app web de ShowSeek?"
     },
     "defaultBulkAction": "Acción masiva predeterminada: {{mode}}",
-    "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista."
+    "defaultBulkActionDescription": "Elige qué sucede cuando agregas elementos en bloque desde una lista.",
+    "clearCache": "Borrar caché de imágenes",
+    "clearCacheTitle": "¿Borrar la caché de imágenes?",
+    "clearCacheMessage": "Esto solo borra pósteres/fondos descargados y otras imágenes en caché. Tus listas, cuenta y configuraciones no se ven afectadas.",
+    "cacheCleared": "La caché de imágenes se borró correctamente.",
+    "clearCacheFailed": "No se pudo borrar la caché de imágenes. Inténtalo de nuevo."
   },
   "imdbImport": {
     "title": "Importa tus datos de IMDb",
@@ -936,6 +951,49 @@
     "previewUnavailable": "Vista previa no disponible",
     "getStarted": "Comenzar"
   },
+  "personalOnboarding": {
+    "welcomePrefix": "Te damos la bienvenida a ",
+    "welcomeAppName": "ShowSeek 🍿",
+    "welcomeSubtitle": "Personalicemos tu experiencia",
+    "regionTitle": "¿De dónde eres?",
+    "regionSubtitle": "Esto nos ayuda a mostrarte contenido disponible en tu región.",
+    "otherRegion": "Otra",
+    "listsTitle": "¿Qué quieres ver?",
+    "listsSubtitle": "Elige las listas que aparecerán en tu pantalla de inicio.",
+    "languagesTitle": "¿Qué idioma debemos usar?",
+    "languagesSubtitle": "Lo usaremos para los títulos y descripciones de películas y series de TMDB.",
+    "tvShowsTitle": "¿Qué series estás viendo ahora mismo?",
+    "tvShowsSubtitle": "Las vamos a agregar a tu lista Viendo.",
+    "moviesTitle": "¿Qué películas te encantan?",
+    "moviesSubtitle": "Las vamos a agregar a tus favoritos.",
+    "actorsTitle": "¿Hay actores que te encantan?",
+    "actorsSubtitle": "Los vamos a guardar en tus Personas favoritas.",
+    "accentColorTitle": "Elige tu color de acento",
+    "accentColorSubtitle": "Esto cambia botones, resaltados y otros elementos de acento.",
+    "streamingProvidersTitle": "¿Dónde ves contenido?",
+    "streamingProvidersSubtitle": "Selecciona los servicios que usas para ver películas y series.",
+    "genresTitle": "¿Qué géneros de películas te encantan?",
+    "genresSubtitle": "Elige hasta 3 géneros de películas para ayudarnos a encontrarte películas que te van a gustar.",
+    "tvGenresTitle": "¿Qué géneros de series te encantan?",
+    "tvGenresSubtitle": "Elige hasta 3 géneros para ayudarnos a encontrarte series que te van a gustar.",
+    "genresMaxReached": "Has seleccionado el máximo de 3 géneros",
+    "displayNameTitle": "¿Cómo debemos llamarte?",
+    "displayNameSubtitle": "Así aparecerá tu nombre en la app.",
+    "displayNamePlaceholder": "Tu nombre",
+    "back": "Regresar",
+    "continue": "Continuar",
+    "skip": "Omitir",
+    "letsGo": "Vamos",
+    "selected": "Seleccionados: {{count}}",
+    "personalizing": {
+      "title": "Estamos preparando todo para ti...",
+      "curatingLists": "Preparando tus listas...",
+      "personalizingRecommendations": "Personalizando recomendaciones...",
+      "settingUpCalendar": "Configurando tu calendario de estrenos...",
+      "finetuning": "Afinando tu experiencia...",
+      "almostThere": "Casi listo..."
+    }
+  },
   "errors": {
     "generic": "Algo salió mal",
     "networkError": "Error de red. Revisa tu conexión.",
@@ -953,6 +1011,7 @@
     "unableToOpenVideo": "No se pudo abrir el vídeo",
     "unexpectedError": "Error inesperado",
     "tryAgain": "Reintentar",
+    "reloadApp": "Recargar aplicación",
     "goBack": "Regresar"
   },
   "empty": {
@@ -1050,7 +1109,12 @@
       "customLists": "Listas personalizadas",
       "episodeProgress": "Progreso de episodios",
       "watchedMoviesAndShows": "Películas y series vistas"
-    }
+    },
+    "noChangesTitle": "No se encontraron cambios en Trakt",
+    "noChangesDescription": "Todo ya coincide con tus datos más recientes de Trakt.",
+    "localListEditWarning": "Esta lista está sincronizada con Trakt. Los cambios locales pueden sobrescribirse en la próxima sincronización.",
+    "localRatingEditWarning": "Las calificaciones se sincronizan con Trakt mientras estás conectado. Los cambios locales pueden sobrescribirse en la próxima sincronización.",
+    "localWatchedEditWarning": "El historial de visualización se sincroniza con Trakt mientras estás conectado. Los cambios locales pueden sobrescribirse en la próxima sincronización."
   },
   "homeCustomization": {
     "title": "Personalizar inicio",
@@ -1490,6 +1554,7 @@
     "selectListTitle": "Seleccionar una lista",
     "selectServiceTitle": "Seleccionar un servicio de streaming",
     "updatingAvailability": "Actualizando disponibilidad...",
+    "fetchError": "No se pueden cargar los servicios de streaming en este momento.",
     "emptyNoListTitle": "Elige una lista",
     "emptyNoListDescription": "Elige una de tus listas para empezar a filtrar por servicio de streaming.",
     "emptyNoServiceTitle": "Elige un servicio",
