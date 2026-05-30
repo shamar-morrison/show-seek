@@ -18,7 +18,7 @@ import { TrueSheet } from '@lodev09/react-native-true-sheet';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Check, Plus, Settings2 } from 'lucide-react-native';
+import { Check, Plus, Search, Settings2, X } from 'lucide-react-native';
 import React, {
   forwardRef,
   memo,
@@ -36,6 +36,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -137,6 +138,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
     const [operationError, setOperationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const bulkMediaItems = mediaItems ?? [];
     const isBulkMode = !!sourceListId && bulkMediaItems.length > 0;
@@ -222,6 +224,13 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       }));
     }, [isBulkMode, lists, sourceListId]);
 
+    const filteredListsWithCounts = useMemo<ListWithCount[]>(() => {
+      const normalizedQuery = searchQuery.trim().toLowerCase();
+      if (!normalizedQuery) return listsWithCounts;
+
+      return listsWithCounts.filter((list) => list.name.toLowerCase().includes(normalizedQuery));
+    }, [listsWithCounts, searchQuery]);
+
     // Check if there are unsaved changes
     const hasChanges = useMemo(() => {
       if (isBulkMode) {
@@ -250,6 +259,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
         setSuccessMessage(null);
         setOperationError(null);
         setIsSaving(false);
+        setSearchQuery('');
         await sheetRef.current?.present();
       },
       dismiss: async () => {
@@ -268,6 +278,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       initialMembershipRef.current = {};
       setOperationError(null);
       setIsSaving(false);
+      setSearchQuery('');
       onDismiss?.();
 
       // For bulk mode sessions, dismissing the modal is treated as ending the selection flow.
@@ -650,6 +661,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
           ref={sheetRef}
           detents={[0.8]}
           scrollable
+          keyboardMode="pan"
           cornerRadius={BORDER_RADIUS.l}
           backgroundColor={COLORS.surface}
           onDidDismiss={handleDismiss}
@@ -680,16 +692,50 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
               </View>
             )}
 
+            {!isLoadingLists && listsWithCounts.length > 0 && (
+              <View style={styles.searchContainer}>
+                <Search size={18} color={COLORS.textSecondary} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={t('library.searchListPlaceholder')}
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  editable={!isSaving}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  testID="add-to-list-search-input"
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable
+                    onPress={() => setSearchQuery('')}
+                    disabled={isSaving}
+                    hitSlop={8}
+                    testID="add-to-list-clear-search-button"
+                  >
+                    <X size={18} color={COLORS.textSecondary} />
+                  </Pressable>
+                )}
+              </View>
+            )}
+
             {isLoadingLists ? (
               <ActivityIndicator size="large" color={accentColor} style={styles.loader} />
             ) : (
               <FlatList
                 ref={listRef}
-                data={listsWithCounts}
+                data={filteredListsWithCounts}
                 keyExtractor={(item) => item.id}
                 style={styles.listContainer}
                 showsVerticalScrollIndicator
                 nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                ListEmptyComponent={
+                  searchQuery.trim() ? (
+                    <Text style={styles.emptySearchText}>{t('common.noResults')}</Text>
+                  ) : null
+                }
                 renderItem={({ item: list }) => (
                   <ListItemRow
                     list={list}
@@ -776,6 +822,27 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     maxHeight: MODAL_LIST_HEIGHT,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.s,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    paddingHorizontal: SPACING.m,
+    marginBottom: SPACING.s,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: FONT_SIZE.m,
+    paddingVertical: SPACING.m,
+  },
+  emptySearchText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.m,
+    textAlign: 'center',
+    paddingVertical: SPACING.xl,
   },
   listItem: {
     flexDirection: 'row',

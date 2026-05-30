@@ -75,6 +75,7 @@ jest.mock('react-native', () => {
 
   const FlatList = ({ data = [], renderItem, keyExtractor, ...props }: any) => (
     <View {...props}>
+      {data.length === 0 && props.ListEmptyComponent}
       {data.map((item: any, index: number) => (
         <View key={keyExtractor ? keyExtractor(item, index) : String(index)}>
           {renderItem({ item, index })}
@@ -85,6 +86,7 @@ jest.mock('react-native', () => {
 
   const View = createComponent('View');
   const Text = createComponent('Text');
+  const TextInput = createComponent('TextInput');
 
   return {
     StyleSheet: {
@@ -93,6 +95,7 @@ jest.mock('react-native', () => {
     },
     View,
     Text,
+    TextInput,
     Pressable,
     FlatList,
     ActivityIndicator: createComponent('ActivityIndicator'),
@@ -345,6 +348,52 @@ describe('AddToListModal (bulk mode)', () => {
     });
 
     expect(getByText('Add to List')).toBeTruthy();
+  });
+
+  it('filters lists by search text and can clear the search', async () => {
+    const selected = createMediaItem(2);
+
+    mockListsState.data = [
+      {
+        id: 'watchlist',
+        name: 'Watchlist',
+        items: {},
+        createdAt: 1,
+      },
+      {
+        id: 'favorites',
+        name: 'Favorites',
+        items: {},
+        createdAt: 2,
+      },
+      {
+        id: 'currently-watching',
+        name: 'Currently Watching',
+        items: {},
+        createdAt: 3,
+      },
+    ];
+
+    const ref = createRef<AddToListModalRef>();
+    const { getByTestId, queryByTestId } = render(
+      <AddToListModal ref={ref} mediaItem={selected} />
+    );
+
+    await act(async () => {
+      await ref.current?.present();
+    });
+
+    fireEvent.changeText(getByTestId('add-to-list-search-input'), 'fav');
+
+    expect(queryByTestId('add-to-list-row-watchlist')).toBeNull();
+    expect(getByTestId('add-to-list-row-favorites')).toBeTruthy();
+    expect(queryByTestId('add-to-list-row-currently-watching')).toBeNull();
+
+    fireEvent.press(getByTestId('add-to-list-clear-search-button'));
+
+    expect(getByTestId('add-to-list-row-watchlist')).toBeTruthy();
+    expect(getByTestId('add-to-list-row-favorites')).toBeTruthy();
+    expect(getByTestId('add-to-list-row-currently-watching')).toBeTruthy();
   });
 
   it('reconciles list queries after create-list success in single-item mode', async () => {
