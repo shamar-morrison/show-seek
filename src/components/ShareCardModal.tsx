@@ -128,8 +128,8 @@ export default function ShareCardModal({
     setState('saving');
 
     try {
-      // Request permission
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      // Request permission (write-only)
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
 
       if (status !== 'granted') {
         onShowToast?.(t('shareCard.permissionDenied'));
@@ -137,7 +137,7 @@ export default function ShareCardModal({
         return;
       }
 
-      // Save to gallery
+      // Save to gallery directly
       await MediaLibrary.saveToLibraryAsync(imageUri);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

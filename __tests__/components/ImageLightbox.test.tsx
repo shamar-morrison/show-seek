@@ -51,10 +51,10 @@ describe('ImageLightbox', () => {
     mockToastShow.mockClear();
     mockAttachToastRef = true;
     (MediaLibrary.requestPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (MediaLibrary.saveToLibraryAsync as jest.Mock).mockResolvedValue(undefined);
     (FileSystem.downloadAsync as jest.Mock).mockResolvedValue({
       uri: 'file:///cache/lightbox-image-0.jpg',
     });
-    (MediaLibrary.saveToLibraryAsync as jest.Mock).mockResolvedValue(undefined);
     (FileSystem.deleteAsync as jest.Mock).mockResolvedValue(undefined);
   });
 
@@ -79,7 +79,7 @@ describe('ImageLightbox', () => {
     fireEvent.press(screen.getByTestId('image-lightbox-download-button'));
 
     await waitFor(() => {
-      expect(MediaLibrary.requestPermissionsAsync).toHaveBeenCalled();
+      expect(MediaLibrary.requestPermissionsAsync).toHaveBeenCalledWith(true);
       expect(FileSystem.downloadAsync).toHaveBeenCalledWith(
         'https://example.com/image-1.jpg',
         'file:///cache/lightbox-image-0.jpg'

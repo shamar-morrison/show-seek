@@ -12,9 +12,9 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -76,7 +76,7 @@ export default function ImageLightbox({
     setIsDownloading(true);
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         showToast(t('shareCard.permissionDenied'));
         return;
@@ -115,19 +115,23 @@ export default function ImageLightbox({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity
-          style={styles.closeButton}
+        <Pressable
+          style={({ pressed }) => [
+            styles.closeButton,
+            pressed && { opacity: ACTIVE_OPACITY },
+          ]}
           onPress={onClose}
-          activeOpacity={ACTIVE_OPACITY}
           testID="image-lightbox-close-button"
         >
           <X size={32} color={COLORS.white} />
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity
-          style={styles.downloadButton}
+        <Pressable
+          style={({ pressed }) => [
+            styles.downloadButton,
+            pressed && { opacity: ACTIVE_OPACITY },
+          ]}
           onPress={handleDownload}
-          activeOpacity={ACTIVE_OPACITY}
           disabled={isDownloading}
           testID="image-lightbox-download-button"
         >
@@ -136,7 +140,7 @@ export default function ImageLightbox({
           ) : (
             <Download size={26} color={COLORS.white} />
           )}
-        </TouchableOpacity>
+        </Pressable>
 
         <ScrollView
           horizontal

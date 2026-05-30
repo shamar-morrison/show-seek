@@ -66,6 +66,12 @@ jest.mock('expo-updates', () => ({
   reloadAsync: jest.fn(() => Promise.resolve()),
 }));
 
+// Mock expo-sharing
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(true)),
+  shareAsync: jest.fn(() => Promise.resolve()),
+}));
+
 // Mock expo-router
 jest.mock('expo-router', () => ({
   useRouter: () => ({
