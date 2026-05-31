@@ -70,6 +70,7 @@
       ],
       "./withWidgetManifestFix.js",
       "./withSharedDataPackage.js",
+      "./withAndroidPermissionsFilter.js",
       "expo-updates",
       "react-native-google-auth",
       [
