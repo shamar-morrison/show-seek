@@ -659,7 +659,7 @@ const AddToListModal = forwardRef<AddToListModalRef, AddToListModalProps>(
       <>
         <TrueSheet
           ref={sheetRef}
-          detents={[0.8]}
+          detents={[0.9]}
           scrollable
           keyboardMode="pan"
           cornerRadius={BORDER_RADIUS.l}
