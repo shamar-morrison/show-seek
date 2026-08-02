@@ -29,7 +29,7 @@ import { useTrakt } from '@/src/context/TraktContext';
 import { TraktRequestError } from '@/src/services/TraktService';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { formatDistanceToNow } from 'date-fns';
-import { enUS, es, fr, pt, ptBR } from 'date-fns/locale';
+import { enUS, es, fr, pt, ptBR, tr } from 'date-fns/locale';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -94,6 +94,8 @@ export default function TraktSettingsScreen() {
         return ptBR;
       case 'pt-PT':
         return pt;
+      case 'tr-TR':
+        return tr;
       default:
         return enUS;
     }

@@ -23,6 +23,7 @@ import esMX from './locales/es-MX.json';
 import frFR from './locales/fr-FR.json';
 import ptBR from './locales/pt-BR.json';
 import ptPT from './locales/pt-PT.json';
+import trTR from './locales/tr-TR.json';
 
 // Map locale codes to their translation resources
 const resources = {
@@ -32,6 +33,7 @@ const resources = {
   'es-MX': { translation: esMX },
   'pt-BR': { translation: ptBR },
   'pt-PT': { translation: ptPT },
+  'tr-TR': { translation: trTR },
 } as const;
 
 // Supported language codes (used for validation)

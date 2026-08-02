@@ -4,6 +4,7 @@ import esMX from '@/src/i18n/locales/es-MX.json';
 import frFR from '@/src/i18n/locales/fr-FR.json';
 import ptBR from '@/src/i18n/locales/pt-BR.json';
 import ptPT from '@/src/i18n/locales/pt-PT.json';
+import trTR from '@/src/i18n/locales/tr-TR.json';
 
 function collectLeafKeys(value: unknown, prefix = ''): string[] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -26,6 +27,7 @@ describe('locale parity', () => {
     ['fr-FR', frFR],
     ['pt-BR', ptBR],
     ['pt-PT', ptPT],
+    ['tr-TR', trTR],
   ])('%s mirrors the en-US locale key shape', (_locale, locale) => {
     expect(collectLeafKeys(locale)).toEqual(referenceKeys);
   });
