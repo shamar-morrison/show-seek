@@ -13,6 +13,7 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { useInAppReview } from '@/src/hooks/useInAppReview';
 import { useLists } from '@/src/hooks/useLists';
 import { usePreferences, useUpdateHomeScreenLists } from '@/src/hooks/usePreferences';
 import { ListMediaItem } from '@/src/services/ListService';
@@ -48,6 +49,9 @@ export default function HomeScreen() {
   });
   const repairHomeScreenLists = useUpdateHomeScreenLists();
   const isAccountRequired = useAccountRequired();
+
+  // In-app review prompt: checks eligibility on Home tab focus with a short delay
+  useInAppReview();
   const { isPremium } = usePremium();
   const { t } = useTranslation();
   const { accentColor } = useAccentColor();

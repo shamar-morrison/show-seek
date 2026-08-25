@@ -1,6 +1,7 @@
 import { MAX_FREE_ITEMS_PER_LIST } from '@/src/constants/lists';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { recordEngagement } from '@/src/services/reviewPromptService';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { Episode, Season } from '../api/tmdb';
@@ -300,6 +301,9 @@ export const useMarkEpisodeWatched = () => {
       }
     },
     onSuccess: async (_result, params) => {
+      // Record engagement for in-app review prompt
+      void recordEngagement();
+
       const userId = getUserId();
       if (userId) {
         await Promise.all([

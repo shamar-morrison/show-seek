@@ -1,4 +1,5 @@
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { recordEngagement } from '@/src/services/reviewPromptService';
 import {
   filterCustomLists,
   isDefaultList,
@@ -256,6 +257,9 @@ export const useAddToList = () => {
 
     // Prefetch TV show details for the Calendar feature
     onSuccess: async (_data, { mediaItem }, context) => {
+      // Record engagement for in-app review prompt
+      void recordEngagement();
+
       // Only prefetch for TV shows - movies already have release_date in the list item
       if (mediaItem.media_type === 'tv') {
         queryClient.prefetchQuery({
