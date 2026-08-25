@@ -169,6 +169,13 @@ jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: jest.fn(),
 }));
 
+// Mock expo-store-review (native module — EventEmitter unavailable in Jest)
+jest.mock('expo-store-review', () => ({
+  isAvailableAsync: jest.fn(() => Promise.resolve(false)),
+  requestReview: jest.fn(() => Promise.resolve()),
+  hasAction: jest.fn(() => Promise.resolve(false)),
+}));
+
 // Mock react-native-svg (required for lucide-react-native icons)
 jest.mock('react-native-svg', () => {
   const React = require('react');

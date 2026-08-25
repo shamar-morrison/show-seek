@@ -15,6 +15,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+  // Tri-state: null = unresolved (loading/timeout), true = completed, false = not completed.
+  // Mirrors PremiumContext's cachedPremiumStatus pattern.
+  // The router must only redirect to personalized onboarding on explicit `false`, never on `null`.
   const [hasCompletedPersonalOnboarding, setHasCompletedPersonalOnboarding] = useState<
     boolean | null
   >(null);
@@ -121,7 +124,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         return;
       }
 
-      setHasCompletedPersonalOnboarding(false);
+      // Mirror PremiumContext's null-on-unresolved pattern.
+      // null = "not yet determined" — prevents the router from acting on a stale default.
+      // Only set false when Firestore has been successfully read and explicitly returned false.
+      setHasCompletedPersonalOnboarding(null);
       setLoading(true);
 
       const uid = currentUser.uid;
@@ -140,16 +146,31 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         console.error('Error reading personal onboarding cache', error);
       }
 
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error('Personal onboarding check timed out'));
-        }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
-      });
+      // Check personal onboarding status from Firestore (with one retry on timeout).
+      // Mirrors PremiumContext's null-on-miss/timeout pattern to prevent defaulting to false
+      // and incorrectly routing existing users through onboarding.
+      // NOTE: initTimeoutMs is currently 3s — tight on cold start over slow networks.
+      // Consider increasing separately if timeouts remain frequent.
+      const fetchWithTimeout = (): Promise<ReturnType<typeof getDoc>> => {
+        let tid: ReturnType<typeof setTimeout> | null = null;
+        const tp = new Promise<never>((_, reject) => {
+          tid = setTimeout(() => {
+            reject(new Error('Personal onboarding check timed out'));
+          }, READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+        });
+        return Promise.race([getDoc(doc(db, 'users', uid)), tp]).finally(() => {
+          if (tid) clearTimeout(tid);
+        });
+      };
 
-      // Check personal onboarding status from Firestore
       try {
-        const userDoc = await Promise.race([getDoc(doc(db, 'users', uid)), timeoutPromise]);
+        let userDoc: Awaited<ReturnType<typeof getDoc>>;
+        try {
+          userDoc = await fetchWithTimeout();
+        } catch {
+          // Retry once — initTimeoutMs (3s) may be too tight on cold start.
+          userDoc = await fetchWithTimeout();
+        }
         if (!isCurrentSession()) {
           return;
         }
@@ -164,17 +185,16 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         console.warn(
           hasCachedPersonalOnboarding
             ? '[Auth] Personal onboarding check failed, keeping cached state:'
-            : '[Auth] Personal onboarding check failed, defaulting to false:',
+            : '[Auth] Personal onboarding check failed after retry, leaving unresolved (null):',
           e
         );
-        // Default to false on error so new users do not skip personalized onboarding.
+        // Mirror PremiumContext: leave as null (unresolved) on failure without cache.
+        // null prevents the router from redirecting to onboarding incorrectly.
+        // AsyncStorage is NOT written here — next launch will retry from scratch.
         if (!hasCachedPersonalOnboarding) {
-          setHasCompletedPersonalOnboarding(false);
+          setHasCompletedPersonalOnboarding(null);
         }
       } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
         if (isCurrentSession() && !hasCachedPersonalOnboarding) {
           setLoading(false);
         }

@@ -473,7 +473,9 @@ function ResolvedRootLayoutNav({
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
     } else if (user && hasCompletedPersonalOnboarding === false && !isPersonalOnboarding) {
-      // If logged in but hasn't completed personal onboarding, go there
+      // hasCompletedPersonalOnboarding is tri-state: null (unresolved), true, false.
+      // === false is intentional: only redirect when Firestore has confirmed the user hasn't
+      // completed onboarding. null (timeout/unresolved) must NOT trigger a redirect.
       router.replace('/personalized-onboarding');
     } else if (user && (inAuthGroup || isOnboarding)) {
       // If logged in and in auth/onboarding, go to preferred launch screen
