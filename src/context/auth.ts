@@ -151,7 +151,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // and incorrectly routing existing users through onboarding.
       // NOTE: initTimeoutMs is currently 3s — tight on cold start over slow networks.
       // Consider increasing separately if timeouts remain frequent.
-      const fetchWithTimeout = (): Promise<ReturnType<typeof getDoc>> => {
+      const fetchWithTimeout = () => {
         let tid: ReturnType<typeof setTimeout> | null = null;
         const tp = new Promise<never>((_, reject) => {
           tid = setTimeout(() => {
@@ -164,7 +164,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       };
 
       try {
-        let userDoc: Awaited<ReturnType<typeof getDoc>>;
+        let userDoc: Awaited<ReturnType<typeof fetchWithTimeout>>;
         try {
           userDoc = await fetchWithTimeout();
         } catch {
@@ -174,7 +174,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         if (!isCurrentSession()) {
           return;
         }
-        const userData = userDoc.data();
+        const userData = userDoc.data() as Record<string, unknown> | undefined;
         const hasCompletedPersonalOnboarding = userData?.hasCompletedPersonalOnboarding === true;
         setHasCompletedPersonalOnboarding(hasCompletedPersonalOnboarding);
         persistPersonalOnboardingState(uid, hasCompletedPersonalOnboarding);
