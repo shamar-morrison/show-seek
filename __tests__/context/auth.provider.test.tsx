@@ -168,7 +168,7 @@ describe('AuthProvider', () => {
       );
     });
 
-    it('should keep personal onboarding incomplete when Firestore check times out without cache', async () => {
+    it('should leave personal onboarding unresolved (null) when Firestore check times out without cache', async () => {
       jest.useFakeTimers();
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
@@ -184,17 +184,27 @@ describe('AuthProvider', () => {
           await Promise.resolve();
         });
 
+        // Advance past first timeout (triggers retry)
+        await act(async () => {
+          jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+          await Promise.resolve();
+        });
+
+        // Advance past retry timeout
         await act(async () => {
           jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
           await Promise.resolve();
         });
 
         expect(result.current.loading).toBe(false);
-        expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
+        // Should be null (unresolved), not false — mirrors PremiumContext's pattern
+        expect(result.current.hasCompletedPersonalOnboarding).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-          '[Auth] Personal onboarding check failed, defaulting to false:',
+          '[Auth] Personal onboarding check failed after retry, leaving unresolved (null):',
           expect.any(Error)
         );
+        // Should have attempted getDoc twice (initial + retry)
+        expect(getDoc).toHaveBeenCalledTimes(2);
       } finally {
         consoleWarnSpy.mockRestore();
         jest.useRealTimers();
@@ -226,6 +236,13 @@ describe('AuthProvider', () => {
         expect(result.current.loading).toBe(false);
         expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
 
+        // Advance past first timeout (triggers retry)
+        await act(async () => {
+          jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+          await Promise.resolve();
+        });
+
+        // Advance past retry timeout
         await act(async () => {
           jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
           await Promise.resolve();
@@ -239,6 +256,54 @@ describe('AuthProvider', () => {
         );
       } finally {
         consoleWarnSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    it('should succeed on retry when first Firestore read times out', async () => {
+      jest.useFakeTimers();
+      const mockUser = { uid: 'test-user-123', email: 'test@example.com' };
+      let callCount = 0;
+
+      try {
+        mockCurrentUser = mockUser;
+        (getDoc as jest.Mock).mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) {
+            // First call: never resolves (will timeout)
+            return new Promise(() => {});
+          }
+          // Second call (retry): resolves immediately
+          return Promise.resolve({
+            data: () => ({ hasCompletedPersonalOnboarding: true }),
+          });
+        });
+
+        const { result } = renderHook(() => useAuth(), { wrapper });
+
+        await act(async () => {
+          capturedAuthCallback?.(mockUser);
+          await Promise.resolve();
+        });
+
+        // Advance past first timeout — triggers the retry
+        await act(async () => {
+          jest.advanceTimersByTime(READ_OPTIMIZATION_FLAGS.initTimeoutMs);
+          await Promise.resolve();
+        });
+
+        await waitFor(() => {
+          expect(result.current.loading).toBe(false);
+        });
+
+        // Retry succeeded with Firestore value
+        expect(result.current.hasCompletedPersonalOnboarding).toBe(true);
+        expect(getDoc).toHaveBeenCalledTimes(2);
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+          'hasCompletedPersonalOnboarding:test-user-123',
+          'true'
+        );
+      } finally {
         jest.useRealTimers();
       }
     });
@@ -278,8 +343,8 @@ describe('AuthProvider', () => {
       });
 
       expect(result.current.loading).toBe(true);
-      expect(result.current.hasCompletedPersonalOnboarding).toBe(false);
-      expect(getDoc).toHaveBeenCalledTimes(1);
+      // Initial state is null (unresolved), not false — mirrors PremiumContext's pattern
+      expect(result.current.hasCompletedPersonalOnboarding).toBeNull();
 
       await act(async () => {
         resolveGetDoc?.({

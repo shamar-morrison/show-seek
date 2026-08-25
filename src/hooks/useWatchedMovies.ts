@@ -1,5 +1,6 @@
 import { db } from '@/src/firebase/config';
 import { READ_QUERY_CACHE_WINDOWS } from '@/src/config/readOptimization';
+import { recordEngagement } from '@/src/services/reviewPromptService';
 import { getFirestoreErrorMessage } from '@/src/firebase/firestore';
 import { auditedGetDocs } from '@/src/services/firestoreReadAudit';
 import { collectionTrackingService } from '@/src/services/CollectionTrackingService';
@@ -175,6 +176,9 @@ export const useAddWatch = (movieId: number) => {
       throw new Error(message);
     },
     onSuccess: async () => {
+      // Record engagement for in-app review prompt
+      void recordEngagement();
+
       await queryClient.invalidateQueries({
         queryKey: getWatchedMoviesQueryKey(userId, movieId),
       });

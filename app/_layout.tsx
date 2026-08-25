@@ -39,6 +39,10 @@ import {
   startReadAuditSession,
 } from '@/src/utils/readAuditCollector';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
+import {
+  initializeSession as initializeReviewSession,
+  recordNegativeEvent,
+} from '@/src/services/reviewPromptService';
 
 import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -247,9 +251,20 @@ function ResolvedRootLayoutNav({
 }: ResolvedRootLayoutNavProps) {
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const lastTrackedScreenRef = useRef<string | null>(null);
+  const hasInitializedReviewSessionRef = useRef(false);
   const [debugTimeoutTriggered, setDebugTimeoutTriggered] = useState(false);
   const [debugForceContinue, setDebugForceContinue] = useState(false);
   const [debugSnapshot, setDebugSnapshot] = useState<InitDebugSnapshot | null>(null);
+
+  // Initialize review prompt session counter on cold start.
+  // ResolvedRootLayoutNav only renders after all init gates clear,
+  // so this naturally only fires on fully-initialized cold starts.
+  useEffect(() => {
+    if (!hasInitializedReviewSessionRef.current) {
+      hasInitializedReviewSessionRef.current = true;
+      void initializeReviewSession();
+    }
+  }, []);
 
   const gateReasons = useMemo(() => {
     const reasons: string[] = [];
@@ -458,7 +473,9 @@ function ResolvedRootLayoutNav({
       // If onboarded but not logged in, go to sign-in
       router.replace('/(auth)/sign-in');
     } else if (user && hasCompletedPersonalOnboarding === false && !isPersonalOnboarding) {
-      // If logged in but hasn't completed personal onboarding, go there
+      // hasCompletedPersonalOnboarding is tri-state: null (unresolved), true, false.
+      // === false is intentional: only redirect when Firestore has confirmed the user hasn't
+      // completed onboarding. null (timeout/unresolved) must NOT trigger a redirect.
       router.replace('/personalized-onboarding');
     } else if (user && (inAuthGroup || isOnboarding)) {
       // If logged in and in auth/onboarding, go to preferred launch screen
@@ -756,7 +773,7 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary onError={() => { void recordNegativeEvent(); }}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <QueryCacheBootstrap>

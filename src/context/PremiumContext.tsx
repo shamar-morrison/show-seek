@@ -10,6 +10,7 @@ import { auth, db } from '@/src/firebase/config';
 import { createUserDocument } from '@/src/firebase/user';
 import { auditedOnSnapshot } from '@/src/services/firestoreReadAudit';
 import { configureRevenueCat } from '@/src/services/revenueCat';
+import { recordNegativeEvent as recordReviewNegativeEvent } from '@/src/services/reviewPromptService';
 import { getCachedUserDocument } from '@/src/services/UserDocumentCache';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -660,6 +661,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
           return false;
         }
 
+        void recordReviewNegativeEvent();
         throw err;
       }
     },
@@ -691,6 +693,7 @@ export const [PremiumProvider, usePremium] = createContextHook<PremiumState>(() 
       return hasRevenueCatPremium;
     } catch (error) {
       console.error('[PremiumContext] Restore failed:', error);
+      void recordReviewNegativeEvent();
       throw error;
     }
   }, [applyCustomerInfo, user]);
