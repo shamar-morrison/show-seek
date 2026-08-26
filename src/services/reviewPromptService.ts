@@ -70,7 +70,7 @@ async function writeState(state: ReviewPromptState): Promise<void> {
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Called once per cold start from `ResolvedRootLayoutNav` after init gates clear.
+ * Called once per cold start from `RootLayoutNav` after init gates clear.
  * Sets `firstOpenTimestamp` on the very first session and increments `sessionCount`.
  */
 export async function initializeSession(): Promise<void> {
