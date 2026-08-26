@@ -251,20 +251,9 @@ function ResolvedRootLayoutNav({
 }: ResolvedRootLayoutNavProps) {
   const { preferences, isLoading: preferencesLoading } = usePreferences();
   const lastTrackedScreenRef = useRef<string | null>(null);
-  const hasInitializedReviewSessionRef = useRef(false);
   const [debugTimeoutTriggered, setDebugTimeoutTriggered] = useState(false);
   const [debugForceContinue, setDebugForceContinue] = useState(false);
   const [debugSnapshot, setDebugSnapshot] = useState<InitDebugSnapshot | null>(null);
-
-  // Initialize review prompt session counter on cold start.
-  // ResolvedRootLayoutNav only renders after all init gates clear,
-  // so this naturally only fires on fully-initialized cold starts.
-  useEffect(() => {
-    if (!hasInitializedReviewSessionRef.current) {
-      hasInitializedReviewSessionRef.current = true;
-      void initializeReviewSession();
-    }
-  }, []);
 
   const gateReasons = useMemo(() => {
     const reasons: string[] = [];
@@ -594,12 +583,36 @@ function RootLayoutNav() {
   const authTransitionCleanupSequenceRef = useRef(0);
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
   const [isAuthTransitioning, setIsAuthTransitioning] = useState(false);
+  const hasInitializedReviewSessionRef = useRef(false);
 
   const currentUid = user?.uid ?? null;
   const previousUid = previousUidRef.current;
   const isSignOut = !!previousUid && !currentUid;
   const isAccountSwitch = !!previousUid && !!currentUid && previousUid !== currentUid;
   const shouldBlockForAuthTransition = isAuthTransitioning || isSignOut || isAccountSwitch;
+
+  // Initialize review prompt session counter once per cold start.
+  // Lives in RootLayoutNav (not ResolvedRootLayoutNav) so auth transitions
+  // — which unmount ResolvedRootLayoutNav — cannot reset the guard ref.
+  // Gated on initialization state so it only fires after all startup gates clear.
+  useEffect(() => {
+    if (hasInitializedReviewSessionRef.current) {
+      return;
+    }
+
+    if (
+      loading ||
+      hasCompletedOnboarding === null ||
+      !isLanguageReady ||
+      !isRegionReady ||
+      !isAccentReady
+    ) {
+      return;
+    }
+
+    hasInitializedReviewSessionRef.current = true;
+    void initializeReviewSession();
+  }, [loading, hasCompletedOnboarding, isLanguageReady, isRegionReady, isAccentReady]);
 
   useDeepLinking();
   useQuickActions();
