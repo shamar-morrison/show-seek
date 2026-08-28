@@ -30,6 +30,30 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
+jest.mock('expo-blur', () => ({
+  BlurView: 'BlurView',
+}));
+
+jest.mock('expo-notifications', () => ({
+  scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+  AndroidNotificationPriority: { HIGH: 'high' },
+}));
+
+jest.mock('@/src/hooks/useOnboardingReengagement', () => ({
+  useOnboardingReengagement: jest.fn(),
+}));
+
+jest.mock('@/src/utils/onboardingStepCache', () => ({
+  persistOnboardingProgress: jest.fn(),
+  readOnboardingProgress: jest.fn().mockResolvedValue(null),
+  clearOnboardingProgress: jest.fn(),
+  persistOnboardingStepIndex: jest.fn(),
+  readOnboardingStepIndex: jest.fn().mockResolvedValue(null),
+  clearOnboardingStepIndex: jest.fn(),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
@@ -250,6 +274,15 @@ jest.mock('@/src/screens/onboarding/AccentColorStep', () => ({
   },
 }));
 
+jest.mock('@/src/screens/onboarding/NotificationPermissionStep', () => ({
+  __esModule: true,
+  default: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+    return React.createElement(Text, null, 'Notifications step');
+  },
+}));
+
 jest.mock('@/src/screens/onboarding/OnboardingPaywallStep', () => ({
   __esModule: true,
   default: ({ onClose }: { onClose: () => void }) => {
@@ -318,6 +351,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByTestId('select-movie-genres'));
     fireEvent.press(getByText('Continue'));
     fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByText('Skip'));
     fireEvent.press(getByTestId('select-tv-genres'));
     fireEvent.press(getByText('Continue'));
     fireEvent.press(getByTestId('select-tv-shows'));
@@ -381,6 +415,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByText('Continue'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
+    fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));

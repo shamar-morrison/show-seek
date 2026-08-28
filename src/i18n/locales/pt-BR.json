@@ -971,6 +971,10 @@
       "exitButton": "Exit Anyway"
     }
   },
+  "reengagement": {
+    "title": "Sua lista está esperando 🎬",
+    "body": "Termine a configuração em menos de um minuto e receba recomendações personalizadas para você."
+  },
   "personalOnboarding": {
     "welcomePrefix": "Boas-vindas ao ",
     "welcomeAppName": "ShowSeek 🍿",
@@ -1005,6 +1009,9 @@
     "skip": "Pular",
     "letsGo": "Vamos lá",
     "selected": "Selecionados: {{count}}",
+    "notificationsTitle": "Nunca perca um lançamento",
+    "notificationsSubtitle": "Receba notificações quando seus filmes favoritos chegarem aos cinemas e novos episódios forem lançados.",
+    "notificationsEnable": "Ativar notificações",
     "personalizing": {
       "title": "Estamos preparando tudo para você...",
       "curatingLists": "Organizando suas listas...",

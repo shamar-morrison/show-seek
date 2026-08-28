@@ -963,6 +963,10 @@
       "exitButton": "Exit Anyway"
     }
   },
+  "reengagement": {
+    "title": "İzleme listeniz sizi bekliyor 🎬",
+    "body": "Kurulumu bir dakikadan kısa sürede tamamlayın ve size özel öneriler alın."
+  },
   "personalOnboarding": {
     "welcomePrefix": "Hoş geldiniz ",
     "welcomeAppName": "ShowSeek 🍿",
@@ -995,8 +999,11 @@
     "back": "Geri",
     "continue": "Devam et",
     "skip": "Atla",
-    "letsGo": "Başlayalım",
+    "letsGo": "Hadi Başlayalım",
     "selected": "{{count}} seçildi",
+    "notificationsTitle": "Hiçbir yayını kaçırmayın",
+    "notificationsSubtitle": "Favori filmleriniz sinemalara geldiğinde ve yeni bölümler yayınlandığında bildirim alın.",
+    "notificationsEnable": "Bildirimleri Aç",
     "personalizing": {
       "title": "Sizin için hazırlanıyor...",
       "curatingLists": "Listeleriniz düzenleniyor...",

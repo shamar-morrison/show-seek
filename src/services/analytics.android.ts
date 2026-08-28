@@ -8,6 +8,7 @@ import {
   type OnboardingCompleteParams,
   type OnboardingExitIntentDecisionParams,
   type OnboardingExitIntentParams,
+  type OnboardingReengagementParams,
   type PurchaseFailureParams,
   type PurchaseSuccessParams,
   type RestoreFailureParams,
@@ -33,6 +34,7 @@ export type {
   OnboardingExitIntentParams,
   OnboardingExitIntentScreen,
   OnboardingExitIntentVariant,
+  OnboardingReengagementParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -345,5 +347,43 @@ export const trackOnboardingExitIntentDecision = async ({
     screen,
     variant,
     decision,
+  });
+};
+
+export const trackOnboardingReengagementScheduled = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent(
+    'onboarding_reengagement_scheduled',
+    'onboarding_reengagement_scheduled',
+    {
+      step_index: stepIndex,
+      step_id: stepId,
+    }
+  );
+};
+
+export const trackOnboardingReengagementCancelled = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent(
+    'onboarding_reengagement_cancelled',
+    'onboarding_reengagement_cancelled',
+    {
+      step_index: stepIndex,
+      step_id: stepId,
+    }
+  );
+};
+
+export const trackOnboardingReengagementTapped = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent('onboarding_reengagement_tapped', 'onboarding_reengagement_tapped', {
+    step_index: stepIndex,
+    step_id: stepId,
   });
 };

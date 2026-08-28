@@ -18,7 +18,12 @@ import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
-import { getAnalyticsScreenName, initializeAnalytics, trackScreen } from '@/src/services/analytics';
+import {
+  getAnalyticsScreenName,
+  initializeAnalytics,
+  trackOnboardingReengagementTapped,
+  trackScreen,
+} from '@/src/services/analytics';
 import {
   clearFirestoreReadAuditEvents,
   logFirestoreReadAuditReport,
@@ -39,6 +44,7 @@ import {
   startReadAuditSession,
 } from '@/src/utils/readAuditCollector';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
+import { ONBOARDING_STEPS } from '@/src/types/onboarding';
 import {
   initializeSession as initializeReviewSession,
   recordNegativeEvent,
@@ -627,6 +633,15 @@ function RootLayoutNav() {
         // Use timeout to ensure navigation is ready
         setTimeout(() => {
           router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
+        }, 100);
+      }
+
+      if (data.type === 'onboarding_reengagement') {
+        const stepIndex = typeof data.stepIndex === 'number' ? data.stepIndex : 0;
+        const stepId = ONBOARDING_STEPS[stepIndex]?.id ?? 'unknown';
+        void trackOnboardingReengagementTapped({ stepIndex, stepId });
+        setTimeout(() => {
+          router.push(`/personalized-onboarding?step=${stepIndex}` as any);
         }, 100);
       }
     });

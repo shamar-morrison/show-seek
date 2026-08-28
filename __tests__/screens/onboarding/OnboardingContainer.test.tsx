@@ -38,6 +38,30 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
+jest.mock('expo-blur', () => ({
+  BlurView: 'BlurView',
+}));
+
+jest.mock('expo-notifications', () => ({
+  scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+  SchedulableTriggerInputTypes: { DATE: 'date' },
+  AndroidNotificationPriority: { HIGH: 'high' },
+}));
+
+jest.mock('@/src/hooks/useOnboardingReengagement', () => ({
+  useOnboardingReengagement: jest.fn(),
+}));
+
+jest.mock('@/src/utils/onboardingStepCache', () => ({
+  persistOnboardingProgress: jest.fn(),
+  readOnboardingProgress: jest.fn().mockResolvedValue(null),
+  clearOnboardingProgress: jest.fn(),
+  persistOnboardingStepIndex: jest.fn(),
+  readOnboardingStepIndex: jest.fn().mockResolvedValue(null),
+  clearOnboardingStepIndex: jest.fn(),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
@@ -229,6 +253,16 @@ jest.mock('@/src/screens/onboarding/PersonalizingScreen', () => ({
   },
 }));
 
+jest.mock('@/src/screens/onboarding/NotificationPermissionStep', () => ({
+  __esModule: true,
+  default: () => {
+    const React = require('react');
+    const { Text } = require('react-native');
+
+    return React.createElement(Text, null, 'Notifications step');
+  },
+}));
+
 jest.mock('@/src/screens/onboarding/OnboardingPaywallStep', () => ({
   __esModule: true,
   default: ({ displayName }: { displayName: string }) => {
@@ -262,7 +296,7 @@ describe('OnboardingContainer', () => {
     fireEvent.changeText(getByTestId('display-name-input'), 'Jordan');
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -278,7 +312,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -322,7 +356,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Begin onboarding'));
 
     expect(getByText('Region step')).toBeTruthy();
-    expect(getByText('1/12')).toBeTruthy();
+    expect(getByText('1/13')).toBeTruthy();
 
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
@@ -338,12 +372,16 @@ describe('OnboardingContainer', () => {
 
     fireEvent.press(getByText('Skip'));
 
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    fireEvent.press(getByText('Skip'));
+
     expect(getByText('TV Genres step')).toBeTruthy();
 
     fireEvent.press(getByText('Skip'));
 
     expect(getByText('TV step')).toBeTruthy();
-    expect(getByText('9/12')).toBeTruthy();
+    expect(getByText('10/13')).toBeTruthy();
   });
 
   it('waits for premium verification before skipping the onboarding paywall', async () => {
@@ -357,7 +395,7 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
-    for (let stepIndex = 0; stepIndex < 9; stepIndex += 1) {
+    for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
       fireEvent.press(getByText('Skip'));
     }
 
@@ -374,5 +412,40 @@ describe('OnboardingContainer', () => {
     await waitFor(() => {
       expect(rendered.getByText('Personalizing')).toBeTruthy();
     });
+  });
+
+  it('rehydrates saved selections and step index on mount', async () => {
+    const { readOnboardingProgress } = require('@/src/utils/onboardingStepCache');
+    readOnboardingProgress.mockResolvedValueOnce({
+      stepIndex: 1, // Display name step
+      selections: {
+        region: 'CA',
+        displayName: 'Preloaded Name',
+        homeScreenLists: [],
+        language: 'en-US',
+        selectedGenreIds: [],
+        selectedTVGenreIds: [],
+        selectedTVShows: [],
+        selectedMovies: [],
+        selectedActors: [],
+        accentColor: null,
+      },
+    });
+
+    const { getByTestId } = render(<OnboardingContainer />);
+
+    await waitFor(() => {
+      expect(getByTestId('display-name-input').props.value).toBe('Preloaded Name');
+    });
+  });
+
+  it('does not prematurely overwrite saved selections with empty state on deep-link mount', async () => {
+    const { persistOnboardingProgress, readOnboardingProgress } = require('@/src/utils/onboardingStepCache');
+    readOnboardingProgress.mockResolvedValueOnce(null);
+
+    render(<OnboardingContainer initialStepIndex={5} />);
+
+    // On mount, before any step transition occurs, persist should not have been called with initial empty selections
+    expect(persistOnboardingProgress).not.toHaveBeenCalled();
   });
 });

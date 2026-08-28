@@ -5,6 +5,7 @@ import type {
   OnboardingCompleteParams,
   OnboardingExitIntentDecisionParams,
   OnboardingExitIntentParams,
+  OnboardingReengagementParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -30,6 +31,7 @@ export type {
   OnboardingExitIntentParams,
   OnboardingExitIntentScreen,
   OnboardingExitIntentVariant,
+  OnboardingReengagementParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -92,4 +94,16 @@ export const trackOnboardingExitIntentShown = async (
 
 export const trackOnboardingExitIntentDecision = async (
   _params: OnboardingExitIntentDecisionParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementScheduled = async (
+  _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementCancelled = async (
+  _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementTapped = async (
+  _params: OnboardingReengagementParams
 ): Promise<void> => {};
