@@ -943,6 +943,26 @@
     "previewUnavailable": "Önizleme kullanılamıyor",
     "getStarted": "Başlayın"
   },
+  "exitIntent": {
+    "variantA": {
+      "headline": "You're almost there!",
+      "subtext": "Just a few more steps and your personalized movie & TV experience will be ready.",
+      "continueButton": "Continue Setup",
+      "exitButton": "Exit Anyway"
+    },
+    "variantB": {
+      "headline": "Your perfect watchlist awaits",
+      "subtext": "Finish setup to get personalized picks, release reminders, and smart recommendations.",
+      "continueButton": "Keep Going",
+      "exitButton": "Maybe Later"
+    },
+    "variantC": {
+      "headline": "Setup isn't complete yet",
+      "subtext": "Without finishing, you'll miss out on recommendations tailored just for you.",
+      "continueButton": "Finish Setup",
+      "exitButton": "Exit Anyway"
+    }
+  },
   "personalOnboarding": {
     "welcomePrefix": "Hoş geldiniz ",
     "welcomeAppName": "ShowSeek 🍿",

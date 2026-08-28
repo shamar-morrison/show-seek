@@ -1,9 +1,11 @@
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { ExitIntentModal } from '@/src/components/ExitIntentModal';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
+import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
 import { onboardingService } from '@/src/services/OnboardingService';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
@@ -14,9 +16,9 @@ import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
@@ -75,6 +77,33 @@ export default function OnboardingContainer() {
 
   // Determine accent color for UI (use selected or default)
   const displayAccentColor = selections.accentColor || COLORS.primary;
+
+  // Exit-intent modal — only active on the first step. On later steps,
+  // the hardware back button navigates to the previous step instead.
+  const { isExitModalVisible, onContinue, onExit } = useOnboardingExitGuard({
+    screenName: 'personalized-onboarding',
+    enabled: isFirstStep && !showWelcome && !isPersonalizing,
+  });
+
+  // Hardware back button: navigate between steps on non-first steps.
+  // This runs separately from the exit guard (which handles the first-step case).
+  useEffect(() => {
+    if (Platform.OS !== 'android' || isFirstStep || showWelcome || isPersonalizing) {
+      return;
+    }
+
+    const handleBackPress = (): boolean => {
+      const prevIndex = currentStepIndex - 1;
+      setCurrentStepIndex(prevIndex);
+      // Update progress bar to match the new step
+      const pct = ((prevIndex + 1) / totalSteps) * 100;
+      progressWidth.value = withTiming(pct, { duration: 300 });
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => subscription.remove();
+  }, [currentStepIndex, isFirstStep, isPersonalizing, progressWidth, showWelcome, totalSteps]);
 
   // Animated progress bar style
   const progressAnimStyle = useAnimatedStyle(() => ({
@@ -413,6 +442,12 @@ export default function OnboardingContainer() {
           </Text>
         </Pressable>
       </View>
+
+      <ExitIntentModal
+        visible={isExitModalVisible}
+        onContinue={onContinue}
+        onExit={onExit}
+      />
     </SafeAreaView>
   );
 }

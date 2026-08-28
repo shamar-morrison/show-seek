@@ -1,5 +1,7 @@
 import { ACTIVE_OPACITY, BORDER_RADIUS, COLORS, FONT_SIZE, SPACING } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/auth';
+import { ExitIntentModal } from '@/src/components/ExitIntentModal';
+import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -170,6 +172,10 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { t } = useTranslation();
 
+  const { isExitModalVisible, onContinue, onExit } = useOnboardingExitGuard({
+    screenName: 'onboarding',
+  });
+
   const maxCardWidth = Math.min(width * 0.74, 280);
   const maxCardHeight = height * 0.52;
   const cardWidth = Math.min(maxCardWidth, maxCardHeight * VIDEO_ASPECT_RATIO);
@@ -318,6 +324,12 @@ export default function OnboardingScreen() {
           <ChevronRight color={COLORS.white} size={20} />
         </TouchableOpacity>
       </SafeAreaView>
+
+      <ExitIntentModal
+        visible={isExitModalVisible}
+        onContinue={onContinue}
+        onExit={onExit}
+      />
     </View>
   );
 }

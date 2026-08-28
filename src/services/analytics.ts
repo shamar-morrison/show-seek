@@ -3,6 +3,8 @@ import type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -24,6 +26,10 @@ export type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
+  OnboardingExitIntentScreen,
+  OnboardingExitIntentVariant,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -79,3 +85,11 @@ export const trackImdbImportComplete = async (
 ): Promise<void> => {};
 
 export const trackImdbImportFailure = async (_params: ImdbImportFailureParams): Promise<void> => {};
+
+export const trackOnboardingExitIntentShown = async (
+  _params: OnboardingExitIntentParams
+): Promise<void> => {};
+
+export const trackOnboardingExitIntentDecision = async (
+  _params: OnboardingExitIntentDecisionParams
+): Promise<void> => {};

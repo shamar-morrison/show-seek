@@ -6,6 +6,8 @@ import {
   type ImdbImportCompleteParams,
   type ImdbImportFailureParams,
   type OnboardingCompleteParams,
+  type OnboardingExitIntentDecisionParams,
+  type OnboardingExitIntentParams,
   type PurchaseFailureParams,
   type PurchaseSuccessParams,
   type RestoreFailureParams,
@@ -27,6 +29,10 @@ export type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
+  OnboardingExitIntentScreen,
+  OnboardingExitIntentVariant,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -317,5 +323,27 @@ export const trackImdbImportFailure = async ({
 }: ImdbImportFailureParams): Promise<void> => {
   await trackNamedEvent('imdb_import_failure', 'imdb_import_failure', {
     error_code: errorCode,
+  });
+};
+
+export const trackOnboardingExitIntentShown = async ({
+  screen,
+  variant,
+}: OnboardingExitIntentParams): Promise<void> => {
+  await trackNamedEvent('onboarding_exit_intent_shown', 'onboarding_exit_intent_shown', {
+    screen,
+    variant,
+  });
+};
+
+export const trackOnboardingExitIntentDecision = async ({
+  screen,
+  variant,
+  decision,
+}: OnboardingExitIntentDecisionParams): Promise<void> => {
+  await trackNamedEvent('onboarding_exit_intent_decision', 'onboarding_exit_intent_decision', {
+    screen,
+    variant,
+    decision,
   });
 };

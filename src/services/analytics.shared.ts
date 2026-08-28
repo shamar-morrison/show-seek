@@ -92,6 +92,18 @@ export interface ImdbImportFailureParams {
   errorCode: string;
 }
 
+export type OnboardingExitIntentScreen = 'onboarding' | 'personalized-onboarding';
+export type OnboardingExitIntentVariant = 'a' | 'b' | 'c';
+
+export interface OnboardingExitIntentParams {
+  screen: OnboardingExitIntentScreen;
+  variant: OnboardingExitIntentVariant;
+}
+
+export interface OnboardingExitIntentDecisionParams extends OnboardingExitIntentParams {
+  decision: 'continue' | 'exit';
+}
+
 export const normalizeListKind = (listId: string): AnalyticsListKind => {
   return DEFAULT_LIST_KINDS.includes(listId as (typeof DEFAULT_LIST_KINDS)[number])
     ? (listId as (typeof DEFAULT_LIST_KINDS)[number])
