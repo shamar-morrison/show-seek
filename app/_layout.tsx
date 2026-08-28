@@ -49,6 +49,7 @@ import {
   initializeSession as initializeReviewSession,
   recordNegativeEvent,
 } from '@/src/services/reviewPromptService';
+import { cancelPendingReengagementNotification } from '@/src/utils/onboardingStepCache';
 
 import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -740,6 +741,11 @@ function RootLayoutNav() {
     previousUidRef.current = currentUid;
   }, [currentUid, isAccountSwitch, isSignOut, persistedQuerySyncController, previousUid]);
 
+  // Cancel any pending onboarding re-engagement notification on cold start
+  useEffect(() => {
+    void cancelPendingReengagementNotification();
+  }, []);
+
   useEffect(() => {
     if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
       return;
@@ -762,6 +768,7 @@ function RootLayoutNav() {
       }
 
       if (isForegroundTransition) {
+        void cancelPendingReengagementNotification();
         logFirestoreReadAuditReport('app-foreground');
         logReadAuditSessionReport('app-foreground');
       }

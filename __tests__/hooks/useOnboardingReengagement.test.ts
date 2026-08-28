@@ -3,10 +3,13 @@ import { AppState, type AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useOnboardingReengagement } from '@/src/hooks/useOnboardingReengagement';
 import {
-  trackOnboardingReengagementCancelled,
   trackOnboardingReengagementScheduled,
 } from '@/src/services/analytics';
-import { persistOnboardingProgress } from '@/src/utils/onboardingStepCache';
+import {
+  cancelPendingReengagementNotification,
+  persistOnboardingProgress,
+  persistPendingReengagementNotificationId,
+} from '@/src/utils/onboardingStepCache';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 
 jest.mock('expo-notifications', () => ({
@@ -25,6 +28,8 @@ jest.mock('@/src/services/analytics', () => ({
 jest.mock('@/src/utils/onboardingStepCache', () => ({
   persistOnboardingProgress: jest.fn().mockResolvedValue(undefined),
   persistOnboardingStepIndex: jest.fn().mockResolvedValue(undefined),
+  persistPendingReengagementNotificationId: jest.fn().mockResolvedValue(undefined),
+  cancelPendingReengagementNotification: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('@/src/firebase/config', () => ({
@@ -71,7 +76,7 @@ describe('useOnboardingReengagement', () => {
     expect(mockRemove).toHaveBeenCalled();
   });
 
-  it('schedules notification and persists progress on active -> background transition', async () => {
+  it('schedules notification, cancels prior one, and persists ID + progress on active -> background transition', async () => {
     (AppState as any).currentState = 'active';
     renderHook(() => useOnboardingReengagement(2, mockSelections, true));
 
@@ -81,6 +86,7 @@ describe('useOnboardingReengagement', () => {
     appStateListener!('background');
 
     await waitFor(() => {
+      expect(cancelPendingReengagementNotification).toHaveBeenCalled();
       expect(persistOnboardingProgress).toHaveBeenCalledWith('test-user-123', {
         stepIndex: 2,
         selections: mockSelections,
@@ -96,48 +102,11 @@ describe('useOnboardingReengagement', () => {
           }),
         })
       );
+      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
       expect(trackOnboardingReengagementScheduled).toHaveBeenCalledWith({
         stepIndex: 2,
         stepId: 'streaming-providers',
       });
-    });
-  });
-
-  it('cancels pending notification on background -> active transition', async () => {
-    (AppState as any).currentState = 'active';
-    renderHook(() => useOnboardingReengagement(4, mockSelections));
-
-    // First go to background to schedule
-    appStateListener!('background');
-    await waitFor(() => {
-      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
-    });
-
-    // Then return to active
-    appStateListener!('active');
-
-    await waitFor(() => {
-      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notification-id-123');
-      expect(trackOnboardingReengagementCancelled).toHaveBeenCalledWith({
-        stepIndex: 4,
-        stepId: 'languages',
-      });
-    });
-  });
-
-  it('cancels pending notification on unmount', async () => {
-    (AppState as any).currentState = 'active';
-    const { unmount } = renderHook(() => useOnboardingReengagement(1, mockSelections));
-
-    appStateListener!('background');
-    await waitFor(() => {
-      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
-    });
-
-    unmount();
-
-    await waitFor(() => {
-      expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notification-id-123');
     });
   });
 
@@ -162,6 +131,7 @@ describe('useOnboardingReengagement', () => {
         selectedViaOther: true,
       });
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
     });
   });
 
@@ -176,6 +146,7 @@ describe('useOnboardingReengagement', () => {
     await waitFor(() => {
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
       expect(persistOnboardingProgress).not.toHaveBeenCalled();
+      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
     });
   });
 });

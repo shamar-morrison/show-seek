@@ -15,6 +15,7 @@ import type { Movie, Person, TVShow } from '@/src/api/tmdb';
 import type { SupportedLanguageCode } from '@/src/constants/supportedLanguages';
 import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
 import {
+  cancelPendingReengagementNotification,
   clearOnboardingProgress,
   persistOnboardingProgress,
   readOnboardingProgress,
@@ -316,10 +317,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
     seedHomeScreenListsCache(queryClient, user?.uid, selections.homeScreenLists);
 
-    // Clear persisted onboarding progress since onboarding is complete
+    // Clear persisted onboarding progress and cancel any pending notification since onboarding is complete
     if (user?.uid) {
       void clearOnboardingProgress(user.uid);
     }
+    void cancelPendingReengagementNotification();
 
     try {
       await completePersonalOnboarding();

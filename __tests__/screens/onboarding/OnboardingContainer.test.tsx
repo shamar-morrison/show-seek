@@ -57,6 +57,7 @@ jest.mock('@/src/utils/onboardingStepCache', () => ({
   persistOnboardingProgress: jest.fn(),
   readOnboardingProgress: jest.fn().mockResolvedValue(null),
   clearOnboardingProgress: jest.fn(),
+  cancelPendingReengagementNotification: jest.fn().mockResolvedValue(undefined),
   persistOnboardingStepIndex: jest.fn(),
   readOnboardingStepIndex: jest.fn().mockResolvedValue(null),
   clearOnboardingStepIndex: jest.fn(),

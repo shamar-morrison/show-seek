@@ -1,10 +1,11 @@
-import {
-  trackOnboardingReengagementCancelled,
-  trackOnboardingReengagementScheduled,
-} from '@/src/services/analytics';
+import { trackOnboardingReengagementScheduled } from '@/src/services/analytics';
 import { ONBOARDING_STEPS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
-import { persistOnboardingProgress } from '@/src/utils/onboardingStepCache';
+import {
+  cancelPendingReengagementNotification,
+  persistOnboardingProgress,
+  persistPendingReengagementNotificationId,
+} from '@/src/utils/onboardingStepCache';
 import { auth } from '@/src/firebase/config';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useRef } from 'react';
@@ -35,9 +36,8 @@ const resolveStepId = (stepIndex: number): string => {
  * Hook that schedules a local re-engagement notification when the user
  * backgrounds the app during personalized onboarding.
  *
- * - On background: cancel any existing pending notification, persist progress (if rehydrated), then schedule a new one
- * - On foreground: cancel the pending notification
- * - On unmount (onboarding complete): cancel the pending notification
+ * - On background: cancel any existing pending notification, persist progress (if rehydrated), schedule new notification, and store ID durably in AsyncStorage
+ * - Universal cancellation on foreground/cold start is handled globally at the app root in `_layout.tsx`
  *
  * Follows the same pattern as `useOnboardingExitGuard`.
  */
@@ -48,7 +48,6 @@ export function useOnboardingReengagement(
   hasRehydratedRef?: React.RefObject<boolean> | React.MutableRefObject<boolean>
 ) {
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
-  const pendingNotificationIdRef = useRef<string | null>(null);
   const stepIndexRef = useRef(currentStepIndex);
   stepIndexRef.current = currentStepIndex;
 
@@ -66,25 +65,15 @@ export function useOnboardingReengagement(
       return;
     }
 
-    const cancelPendingNotification = async (): Promise<void> => {
-      const notificationId = pendingNotificationIdRef.current;
-      if (!notificationId) return;
-
-      pendingNotificationIdRef.current = null;
-
-      try {
-        await Notifications.cancelScheduledNotificationAsync(notificationId);
-      } catch (error) {
-        console.warn('[Reengagement] Failed to cancel notification:', error);
-      }
-    };
-
     const scheduleNotification = async (): Promise<void> => {
       const stepIndex = stepIndexRef.current;
       const stepId = resolveStepId(stepIndex);
       const currentSelections = selectionsRef.current;
       const currentSelectedViaOther = selectedViaOtherRef.current;
       const isRehydrated = rehydratedRef.current ? rehydratedRef.current.current : true;
+
+      // Cancel any existing scheduled notification first
+      await cancelPendingReengagementNotification();
 
       // Persist combined progress (step index + selections) for deep-link resume if rehydrated
       const userId = auth.currentUser?.uid;
@@ -119,7 +108,8 @@ export function useOnboardingReengagement(
           },
         });
 
-        pendingNotificationIdRef.current = notificationId;
+        // Store notification ID durably in AsyncStorage so it survives app kills
+        await persistPendingReengagementNotificationId(notificationId);
 
         console.log(
           `[Reengagement] Scheduled notification ${notificationId} for step ${stepIndex} (${stepId})`
@@ -137,25 +127,9 @@ export function useOnboardingReengagement(
 
       const isBackgroundTransition =
         previousState === 'active' && (nextState === 'inactive' || nextState === 'background');
-      const isForegroundTransition =
-        (previousState === 'inactive' || previousState === 'background') && nextState === 'active';
 
       if (isBackgroundTransition) {
-        // Cancel any existing, then schedule a fresh notification
-        void (async () => {
-          await cancelPendingNotification();
-          await scheduleNotification();
-        })();
-      }
-
-      if (isForegroundTransition && pendingNotificationIdRef.current) {
-        const stepIndex = stepIndexRef.current;
-        const stepId = resolveStepId(stepIndex);
-
-        console.log(`[Reengagement] User returned, cancelling pending notification`);
-
-        void cancelPendingNotification();
-        void trackOnboardingReengagementCancelled({ stepIndex, stepId });
+        void scheduleNotification();
       }
     };
 
@@ -163,11 +137,6 @@ export function useOnboardingReengagement(
 
     return () => {
       subscription.remove();
-
-      // Cleanup on unmount (onboarding complete or navigated away)
-      if (pendingNotificationIdRef.current) {
-        void cancelPendingNotification();
-      }
     };
   }, []);
 

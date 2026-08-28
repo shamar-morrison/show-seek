@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import { trackOnboardingReengagementCancelled } from '@/src/services/analytics';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 
 export interface OnboardingProgress {
@@ -10,6 +12,7 @@ export interface OnboardingProgress {
 const getProgressKey = (userId: string) => `onboardingProgress:${userId}`;
 // Legacy key for backwards compatibility / cleanup
 const getLegacyStepIndexKey = (userId: string) => `onboardingStepIndex:${userId}`;
+const REENGAGEMENT_NOTIFICATION_ID_KEY = 'onboardingReengagementNotificationId';
 
 /**
  * Persist the user's combined onboarding progress (step index + selections) as a single atomic unit.
@@ -81,6 +84,71 @@ export const clearOnboardingProgress = async (userId: string): Promise<void> => 
     ]);
   } catch (error) {
     console.warn('[onboardingCache] Failed to clear onboarding progress:', error);
+  }
+};
+
+/**
+ * Persist scheduled re-engagement notification ID to AsyncStorage so it survives app kills.
+ */
+export const persistPendingReengagementNotificationId = async (
+  notificationId: string
+): Promise<void> => {
+  try {
+    await AsyncStorage.setItem(REENGAGEMENT_NOTIFICATION_ID_KEY, notificationId);
+  } catch (error) {
+    console.warn('[onboardingCache] Failed to persist pending notification ID:', error);
+  }
+};
+
+/**
+ * Read scheduled re-engagement notification ID from AsyncStorage.
+ */
+export const readPendingReengagementNotificationId = async (): Promise<string | null> => {
+  try {
+    return await AsyncStorage.getItem(REENGAGEMENT_NOTIFICATION_ID_KEY);
+  } catch (error) {
+    console.warn('[onboardingCache] Failed to read pending notification ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Clear scheduled re-engagement notification ID from AsyncStorage.
+ */
+export const clearPendingReengagementNotificationId = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem(REENGAGEMENT_NOTIFICATION_ID_KEY);
+  } catch (error) {
+    console.warn('[onboardingCache] Failed to clear pending notification ID:', error);
+  }
+};
+
+/**
+ * Universal cancellation helper:
+ * Reads any durable pending notification ID from AsyncStorage,
+ * cancels it via expo-notifications, and cleans up storage.
+ * Safe to call repeatedly and across app cold starts/foreground transitions.
+ */
+export const cancelPendingReengagementNotification = async (params?: {
+  stepIndex?: number;
+  stepId?: string;
+}): Promise<void> => {
+  try {
+    const notificationId = await readPendingReengagementNotificationId();
+    if (notificationId) {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+      await clearPendingReengagementNotificationId();
+      console.log(`[Reengagement] Cancelled pending notification: ${notificationId}`);
+
+      if (params?.stepIndex !== undefined && params?.stepId) {
+        void trackOnboardingReengagementCancelled({
+          stepIndex: params.stepIndex,
+          stepId: params.stepId,
+        });
+      }
+    }
+  } catch (error) {
+    console.warn('[Reengagement] Failed to cancel pending notification:', error);
   }
 };
 
