@@ -4,13 +4,11 @@ import {
   cancelPendingReengagementNotification,
   clearOnboardingProgress,
   clearOnboardingStepIndex,
-  clearPendingReengagementNotificationId,
+  ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
   persistOnboardingProgress,
   persistOnboardingStepIndex,
-  persistPendingReengagementNotificationId,
   readOnboardingProgress,
   readOnboardingStepIndex,
-  readPendingReengagementNotificationId,
 } from '@/src/utils/onboardingStepCache';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 
@@ -35,7 +33,7 @@ const mockSelections: OnboardingSelections = {
   accentColor: '#E50914',
 };
 
-describe('onboardingStepCache (combined progress & notification persistence)', () => {
+describe('onboardingStepCache (combined progress & constant notification ID cancellation)', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
     jest.clearAllMocks();
@@ -88,25 +86,11 @@ describe('onboardingStepCache (combined progress & notification persistence)', (
     expect(cleared).toBeNull();
   });
 
-  it('persists, reads, and clears pending notification IDs durably', async () => {
-    await persistPendingReengagementNotificationId('notif-123');
-    expect(await readPendingReengagementNotificationId()).toBe('notif-123');
-
-    await clearPendingReengagementNotificationId();
-    expect(await readPendingReengagementNotificationId()).toBeNull();
-  });
-
-  it('cancelPendingReengagementNotification cancels scheduled notification and purges storage', async () => {
-    await persistPendingReengagementNotificationId('notif-456');
-
+  it('cancelPendingReengagementNotification cancels scheduled notification by constant ID', async () => {
     await cancelPendingReengagementNotification({ stepIndex: 2, stepId: 'streaming-providers' });
 
-    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('notif-456');
-    expect(await readPendingReengagementNotificationId()).toBeNull();
-  });
-
-  it('cancelPendingReengagementNotification is safe no-op when no notification is pending', async () => {
-    await cancelPendingReengagementNotification();
-    expect(Notifications.cancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith(
+      ONBOARDING_REENGAGEMENT_NOTIFICATION_ID
+    );
   });
 });

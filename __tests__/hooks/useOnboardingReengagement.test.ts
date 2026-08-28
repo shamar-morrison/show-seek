@@ -7,13 +7,13 @@ import {
 } from '@/src/services/analytics';
 import {
   cancelPendingReengagementNotification,
+  ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
   persistOnboardingProgress,
-  persistPendingReengagementNotificationId,
 } from '@/src/utils/onboardingStepCache';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 
 jest.mock('expo-notifications', () => ({
-  scheduleNotificationAsync: jest.fn().mockResolvedValue('notification-id-123'),
+  scheduleNotificationAsync: jest.fn().mockResolvedValue('onboarding-reengagement'),
   cancelScheduledNotificationAsync: jest.fn().mockResolvedValue(undefined),
   SchedulableTriggerInputTypes: { DATE: 'date' },
   AndroidNotificationPriority: { HIGH: 'high' },
@@ -26,9 +26,9 @@ jest.mock('@/src/services/analytics', () => ({
 }));
 
 jest.mock('@/src/utils/onboardingStepCache', () => ({
+  ONBOARDING_REENGAGEMENT_NOTIFICATION_ID: 'onboarding-reengagement',
   persistOnboardingProgress: jest.fn().mockResolvedValue(undefined),
   persistOnboardingStepIndex: jest.fn().mockResolvedValue(undefined),
-  persistPendingReengagementNotificationId: jest.fn().mockResolvedValue(undefined),
   cancelPendingReengagementNotification: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -76,7 +76,7 @@ describe('useOnboardingReengagement', () => {
     expect(mockRemove).toHaveBeenCalled();
   });
 
-  it('schedules notification, cancels prior one, and persists ID + progress on active -> background transition', async () => {
+  it('schedules notification with constant identifier and persists progress on active -> background transition', async () => {
     (AppState as any).currentState = 'active';
     renderHook(() => useOnboardingReengagement(2, mockSelections, true));
 
@@ -94,6 +94,7 @@ describe('useOnboardingReengagement', () => {
       });
       expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
         expect.objectContaining({
+          identifier: ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
           content: expect.objectContaining({
             data: expect.objectContaining({
               type: 'onboarding_reengagement',
@@ -102,7 +103,6 @@ describe('useOnboardingReengagement', () => {
           }),
         })
       );
-      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
       expect(trackOnboardingReengagementScheduled).toHaveBeenCalledWith({
         stepIndex: 2,
         stepId: 'streaming-providers',
@@ -130,8 +130,11 @@ describe('useOnboardingReengagement', () => {
         selections: mockSelections,
         selectedViaOther: true,
       });
-      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
-      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
+        })
+      );
     });
   });
 
@@ -144,9 +147,12 @@ describe('useOnboardingReengagement', () => {
     appStateListener!('background');
 
     await waitFor(() => {
-      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+      expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identifier: ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
+        })
+      );
       expect(persistOnboardingProgress).not.toHaveBeenCalled();
-      expect(persistPendingReengagementNotificationId).toHaveBeenCalledWith('notification-id-123');
     });
   });
 });

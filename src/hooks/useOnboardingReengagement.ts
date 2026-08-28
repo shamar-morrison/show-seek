@@ -3,8 +3,8 @@ import { ONBOARDING_STEPS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
 import {
   cancelPendingReengagementNotification,
+  ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
   persistOnboardingProgress,
-  persistPendingReengagementNotificationId,
 } from '@/src/utils/onboardingStepCache';
 import { auth } from '@/src/firebase/config';
 import * as Notifications from 'expo-notifications';
@@ -36,7 +36,8 @@ const resolveStepId = (stepIndex: number): string => {
  * Hook that schedules a local re-engagement notification when the user
  * backgrounds the app during personalized onboarding.
  *
- * - On background: cancel any existing pending notification, persist progress (if rehydrated), schedule new notification, and store ID durably in AsyncStorage
+ * - Schedules with a constant identifier (`ONBOARDING_REENGAGEMENT_NOTIFICATION_ID`) to ensure deterministic cancellation and prevent duplicates
+ * - On background: cancels any existing notification and schedules the re-engagement notification
  * - Universal cancellation on foreground/cold start is handled globally at the app root in `_layout.tsx`
  *
  * Follows the same pattern as `useOnboardingExitGuard`.
@@ -72,7 +73,7 @@ export function useOnboardingReengagement(
       const currentSelectedViaOther = selectedViaOtherRef.current;
       const isRehydrated = rehydratedRef.current ? rehydratedRef.current.current : true;
 
-      // Cancel any existing scheduled notification first
+      // Cancel any existing scheduled notification under this constant ID first
       await cancelPendingReengagementNotification();
 
       // Persist combined progress (step index + selections) for deep-link resume if rehydrated
@@ -91,6 +92,7 @@ export function useOnboardingReengagement(
 
       try {
         const notificationId = await Notifications.scheduleNotificationAsync({
+          identifier: ONBOARDING_REENGAGEMENT_NOTIFICATION_ID,
           content: {
             title: 'Your watchlist is waiting 🎬',
             body: 'Finish setup in under a minute and get personalized picks just for you.',
@@ -107,9 +109,6 @@ export function useOnboardingReengagement(
             ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
           },
         });
-
-        // Store notification ID durably in AsyncStorage so it survives app kills
-        await persistPendingReengagementNotificationId(notificationId);
 
         console.log(
           `[Reengagement] Scheduled notification ${notificationId} for step ${stepIndex} (${stepId})`
