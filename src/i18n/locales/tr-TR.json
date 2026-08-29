@@ -965,7 +965,20 @@
   },
   "reengagement": {
     "title": "İzleme listeniz sizi bekliyor 🎬",
-    "body": "Kurulumu bir dakikadan kısa sürede tamamlayın ve size özel öneriler alın."
+    "body": "Kurulumu bir dakikadan kısa sürede tamamlayın ve size özel önerilere ulaşın."
+  },
+  "winbackOffer": {
+    "headline": "Bekleyin! ShowSeek Premium'a İndirimle Sahip Olun",
+    "subtext": "Gelişmiş takip, widget'lar ve Trakt senkronizasyonuna özel haftalık fiyatımızla sınırsız erişin.",
+    "priceLabel": "{{price}} / hafta",
+    "perWeek": "/ hafta",
+    "regularPriceLabel": "Normal fiyat: $2.99 / hafta",
+    "discountBadge": "Özel Fırsat",
+    "timerLabel": "Teklifin kalan süresi:",
+    "expiredBadge": "Teklifin süresi doldu",
+    "claimButton": "Özel Teklifi Al",
+    "declineButton": "Hayır teşekkürler, uygulamadan çık",
+    "closeButton": "Çıkış"
   },
   "personalOnboarding": {
     "welcomePrefix": "Hoş geldiniz ",

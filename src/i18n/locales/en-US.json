@@ -975,6 +975,19 @@
     "title": "Your watchlist is waiting 🎬",
     "body": "Finish setup in under a minute and get personalized picks just for you."
   },
+  "winbackOffer": {
+    "headline": "Wait! Unlock ShowSeek Premium for Less",
+    "subtext": "Get unlimited access to advanced tracking, widgets, and Trakt sync at our special weekly price.",
+    "priceLabel": "{{price}} / week",
+    "perWeek": "/ week",
+    "regularPriceLabel": "Regular price: $2.99 / week",
+    "discountBadge": "Special Offer",
+    "timerLabel": "Offer expires in:",
+    "expiredBadge": "Offer has expired",
+    "claimButton": "Claim Special Offer",
+    "declineButton": "No thanks, exit app",
+    "closeButton": "Exit App"
+  },
   "personalOnboarding": {
     "welcomePrefix": "Welcome to ",
     "welcomeAppName": "ShowSeek 🍿",

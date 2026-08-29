@@ -169,6 +169,47 @@ jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: jest.fn(),
 }));
 
+// Mock expo-blur
+jest.mock('expo-blur', () => {
+  const React = require('react');
+  return {
+    BlurView: ({ children, ...props }) => React.createElement('BlurView', props, children),
+  };
+});
+
+// Mock react-native-purchases
+jest.mock('react-native-purchases', () => {
+  return {
+    __esModule: true,
+    default: {
+      configure: jest.fn(),
+      setLogLevel: jest.fn(),
+      getOfferings: jest.fn(() => Promise.resolve({ all: {}, current: null })),
+      getCustomerInfo: jest.fn(() => Promise.resolve({ entitlements: { active: {}, all: {} } })),
+      purchaseSubscriptionOption: jest.fn(() =>
+        Promise.resolve({ customerInfo: { entitlements: { active: {} } } })
+      ),
+      purchasePackage: jest.fn(() =>
+        Promise.resolve({ customerInfo: { entitlements: { active: {} } } })
+      ),
+      restorePurchases: jest.fn(() => Promise.resolve({ entitlements: { active: {} } })),
+      addCustomerInfoUpdateListener: jest.fn(() => jest.fn()),
+      removeCustomerInfoUpdateListener: jest.fn(),
+      logIn: jest.fn(() => Promise.resolve({ customerInfo: { entitlements: { active: {} } } })),
+      logOut: jest.fn(() => Promise.resolve({ customerInfo: { entitlements: { active: {} } } })),
+    },
+    LOG_LEVEL: {
+      DEBUG: 'DEBUG',
+      INFO: 'INFO',
+      WARN: 'WARN',
+      ERROR: 'ERROR',
+    },
+    PURCHASES_ERROR_CODE: {
+      PURCHASE_CANCELLED_ERROR: '1',
+    },
+  };
+});
+
 // Mock expo-store-review (native module — EventEmitter unavailable in Jest)
 jest.mock('expo-store-review', () => ({
   isAvailableAsync: jest.fn(() => Promise.resolve(false)),
@@ -208,6 +249,18 @@ jest.mock('react-native-svg', () => {
     Mask: createMockComponent('Mask'),
   };
 });
+
+// Mock react-native-google-auth
+jest.mock('react-native-google-auth', () => ({
+  GoogleAuth: {
+    configure: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getCurrentUser: jest.fn(),
+    hasPlayServices: jest.fn(() => Promise.resolve(true)),
+  },
+  GoogleAuthScopes: {},
+}));
 
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({

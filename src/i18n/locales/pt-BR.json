@@ -972,8 +972,21 @@
     }
   },
   "reengagement": {
-    "title": "Sua lista está esperando 🎬",
-    "body": "Termine a configuração em menos de um minuto e receba recomendações personalizadas para você."
+    "title": "Sua lista de favoritos está esperando 🎬",
+    "body": "Termine a configuração em menos de um minuto e receba recomendações para você."
+  },
+  "winbackOffer": {
+    "headline": "Espere! Desbloqueie o ShowSeek Premium com desconto",
+    "subtext": "Tenha acesso completo a rastreamento avançado, widgets e sincronização com o Trakt pelo nosso preço semanal especial.",
+    "priceLabel": "{{price}} / semana",
+    "perWeek": "/ semana",
+    "regularPriceLabel": "Preço normal: $2.99 / semana",
+    "discountBadge": "Oferta Especial",
+    "timerLabel": "A oferta expira em:",
+    "expiredBadge": "Oferta expirada",
+    "claimButton": "Garantir oferta especial",
+    "declineButton": "Não, obrigado. Sair do app",
+    "closeButton": "Sair"
   },
   "personalOnboarding": {
     "welcomePrefix": "Boas-vindas ao ",

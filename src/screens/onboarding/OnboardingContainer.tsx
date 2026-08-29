@@ -176,10 +176,17 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     enabled: isFirstStep && !showWelcome && !isPersonalizing,
   });
 
-  // Hardware back button: navigate between steps on non-first steps.
-  // This runs separately from the exit guard (which handles the first-step case).
+  // Hardware back button: navigate between steps on non-first steps (except paywall step).
+  // This runs separately from the exit guard (first step) and paywall exit guard (paywall step).
   useEffect(() => {
-    if (Platform.OS !== 'android' || isFirstStep || showWelcome || isPersonalizing) {
+    const isPaywallStep = currentStep?.id === 'premium-paywall';
+    if (
+      Platform.OS !== 'android' ||
+      isFirstStep ||
+      isPaywallStep ||
+      showWelcome ||
+      isPersonalizing
+    ) {
       return;
     }
 
@@ -194,7 +201,15 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => subscription.remove();
-  }, [currentStepIndex, isFirstStep, isPersonalizing, progressWidth, showWelcome, totalSteps]);
+  }, [
+    currentStep?.id,
+    currentStepIndex,
+    isFirstStep,
+    isPersonalizing,
+    progressWidth,
+    showWelcome,
+    totalSteps,
+  ]);
 
   // Animated progress bar style
   const progressAnimStyle = useAnimatedStyle(() => ({

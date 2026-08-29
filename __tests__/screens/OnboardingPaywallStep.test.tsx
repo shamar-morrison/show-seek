@@ -1,6 +1,6 @@
 import { act, fireEvent, render, within } from '@testing-library/react-native';
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 const mockPurchasePremium = jest.fn();
 const mockRestorePurchases = jest.fn();
@@ -48,6 +48,10 @@ const mockPremiumState = {
   },
   checkPremiumFeature: () => true,
 };
+
+jest.mock('@/src/context/auth', () => ({
+  useAuth: () => ({ user: { uid: 'test-user-id' } }),
+}));
 
 jest.mock('@/src/context/PremiumContext', () => ({
   usePremium: () => mockPremiumState,
@@ -197,6 +201,28 @@ describe('OnboardingPaywallStep', () => {
 
     fireEvent.press(getByTestId('onboarding-paywall-close-button'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts close button to show winback modal on Android when eligible', async () => {
+    const originalPlatform = Platform.OS;
+    Platform.OS = 'android';
+
+    try {
+      const onClose = jest.fn();
+      const { getByTestId, getByText } = render(
+        <OnboardingPaywallStep displayName="Taylor" onClose={onClose} />
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      fireEvent.press(getByTestId('onboarding-paywall-close-button'));
+      expect(getByText('Wait! Unlock ShowSeek Premium for Less')).toBeTruthy();
+      expect(onClose).not.toHaveBeenCalled();
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 
   it('subscribes to the selected plan from the footer', () => {

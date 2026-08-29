@@ -9,6 +9,8 @@ import {
   type OnboardingExitIntentDecisionParams,
   type OnboardingExitIntentParams,
   type OnboardingReengagementParams,
+  type PaywallWinbackDecisionParams,
+  type PaywallWinbackShownParams,
   type PurchaseFailureParams,
   type PurchaseSuccessParams,
   type RestoreFailureParams,
@@ -35,6 +37,9 @@ export type {
   OnboardingExitIntentScreen,
   OnboardingExitIntentVariant,
   OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackScreen,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -386,4 +391,49 @@ export const trackOnboardingReengagementTapped = async ({
     step_index: stepIndex,
     step_id: stepId,
   });
+};
+
+export const trackPaywallWinbackShown = async (
+  params?: PaywallWinbackShownParams
+): Promise<void> => {
+  const eventParams: Record<string, string | number> = {
+    screen: params?.screen ?? 'onboarding-paywall',
+  };
+
+  if (params?.offerId) {
+    eventParams.offer_id = params.offerId;
+  }
+  if (typeof params?.price === 'number') {
+    eventParams.price = params.price;
+  }
+  if (params?.currency) {
+    eventParams.currency = params.currency;
+  }
+
+  await trackNamedEvent('paywall_winback_shown', 'paywall_winback_shown', eventParams);
+};
+
+export const trackPaywallWinbackDecision = async ({
+  decision,
+  screen = 'onboarding-paywall',
+  offerId,
+  price,
+  currency,
+}: PaywallWinbackDecisionParams): Promise<void> => {
+  const eventParams: Record<string, string | number> = {
+    decision,
+    screen,
+  };
+
+  if (offerId) {
+    eventParams.offer_id = offerId;
+  }
+  if (typeof price === 'number') {
+    eventParams.price = price;
+  }
+  if (currency) {
+    eventParams.currency = currency;
+  }
+
+  await trackNamedEvent('paywall_winback_decision', 'paywall_winback_decision', eventParams);
 };

@@ -6,6 +6,8 @@ import type {
   OnboardingExitIntentDecisionParams,
   OnboardingExitIntentParams,
   OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -32,6 +34,9 @@ export type {
   OnboardingExitIntentScreen,
   OnboardingExitIntentVariant,
   OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackScreen,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -106,4 +111,12 @@ export const trackOnboardingReengagementCancelled = async (
 
 export const trackOnboardingReengagementTapped = async (
   _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackPaywallWinbackShown = async (
+  _params?: PaywallWinbackShownParams
+): Promise<void> => {};
+
+export const trackPaywallWinbackDecision = async (
+  _params: PaywallWinbackDecisionParams
 ): Promise<void> => {};
