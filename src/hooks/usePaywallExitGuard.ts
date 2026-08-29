@@ -80,7 +80,12 @@ export function usePaywallExitGuard({
 
   const hasShownRef = useRef(false);
   const screenNameRef = useRef(screenName);
-  screenNameRef.current = screenName;
+  const readPromiseRef = useRef<Promise<boolean> | null>(null);
+  const isEvaluatingRef = useRef(false);
+
+  useEffect(() => {
+    screenNameRef.current = screenName;
+  }, [screenName]);
 
   const isEligible =
     Platform.OS === 'android' &&
@@ -104,27 +109,69 @@ export function usePaywallExitGuard({
 
     if (Platform.OS !== 'android' || isPremium) {
       setHasSeenWinback(true);
+      readPromiseRef.current = Promise.resolve(true);
       return;
     }
 
-    void (async () => {
+    const promise = (async () => {
       try {
         const seen = await readHasSeenPaywallWinback(user?.uid);
         if (!isCancelled) {
           setHasSeenWinback(seen);
         }
+        return seen;
       } catch (error) {
         console.warn('[usePaywallExitGuard] Failed to check winback seen status:', error);
         if (!isCancelled) {
           setHasSeenWinback(false);
         }
+        return false;
       }
     })();
 
+    readPromiseRef.current = promise;
+
     return () => {
       isCancelled = true;
+      readPromiseRef.current = null;
     };
   }, [isPremium, user?.uid]);
+
+  const executeDecisionForSeenStatus = useCallback(
+    (seenStatus: boolean) => {
+      if (isWinbackModalVisible) {
+        setIsWinbackModalVisible(false);
+        exitAction();
+        return;
+      }
+
+      const eligible =
+        Platform.OS === 'android' &&
+        !isPremium &&
+        !seenStatus &&
+        !hasShownRef.current;
+
+      if (!eligible) {
+        // Ineligible or already shown — proceed with exit
+        exitAction();
+        return;
+      }
+
+      // First exit attempt: show modal and mark as seen
+      hasShownRef.current = true;
+      setHasSeenWinback(true);
+      setIsWinbackModalVisible(true);
+
+      if (user?.uid) {
+        void markHasSeenPaywallWinback(user.uid);
+      }
+
+      void trackPaywallWinbackShown({
+        screen: screenNameRef.current,
+      });
+    },
+    [exitAction, isPremium, isWinbackModalVisible, user?.uid]
+  );
 
   const triggerWinbackOffer = useCallback((): boolean => {
     // If modal is already showing, second back press allows exit
@@ -134,27 +181,53 @@ export function usePaywallExitGuard({
       return true;
     }
 
-    if (!isEligible) {
-      // Ineligible or already shown — proceed with exit
+    // Ineligible regardless of seen status (non-Android, premium, or already shown)
+    if (Platform.OS !== 'android' || isPremium || hasShownRef.current) {
       exitAction();
       return true;
     }
 
-    // First exit attempt: show modal and mark as seen
-    hasShownRef.current = true;
-    setHasSeenWinback(true);
-    setIsWinbackModalVisible(true);
-
-    if (user?.uid) {
-      void markHasSeenPaywallWinback(user.uid);
+    // If seen status has resolved
+    if (hasSeenWinback !== null) {
+      executeDecisionForSeenStatus(hasSeenWinback);
+      return true;
     }
 
-    void trackPaywallWinbackShown({
-      screen: screenNameRef.current,
-    });
+    // If seen status is still pending (null), defer the decision until read resolves
+    if (isEvaluatingRef.current) {
+      // Rapid second attempt while read is pending: allow exit
+      exitAction();
+      return true;
+    }
+
+    isEvaluatingRef.current = true;
+    const inFlightPromise =
+      readPromiseRef.current ??
+      readHasSeenPaywallWinback(user?.uid).catch((error) => {
+        console.warn('[usePaywallExitGuard] Failed to check winback seen status:', error);
+        return false;
+      });
+
+    void inFlightPromise
+      .then((seen) => {
+        executeDecisionForSeenStatus(seen);
+      })
+      .catch(() => {
+        executeDecisionForSeenStatus(false);
+      })
+      .finally(() => {
+        isEvaluatingRef.current = false;
+      });
 
     return true;
-  }, [exitAction, isEligible, isWinbackModalVisible, user?.uid]);
+  }, [
+    executeDecisionForSeenStatus,
+    exitAction,
+    hasSeenWinback,
+    isPremium,
+    isWinbackModalVisible,
+    user?.uid,
+  ]);
 
   // Intercept Android hardware back button
   useEffect(() => {

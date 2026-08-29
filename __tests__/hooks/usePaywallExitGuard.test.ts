@@ -188,6 +188,97 @@ describe('usePaywallExitGuard', () => {
     expect(mockExitApp).toHaveBeenCalledTimes(1);
   });
 
+  it('defers exit decision when back pressed before readHasSeenPaywallWinback resolves and shows modal if eligible', async () => {
+    let resolveRead!: (seen: boolean) => void;
+    mockReadHasSeenPaywallWinback.mockReturnValueOnce(
+      new Promise((res) => {
+        resolveRead = res;
+      })
+    );
+
+    const { result } = renderHook(() => usePaywallExitGuard());
+
+    // Back press happens before read resolves
+    let handled = false;
+    act(() => {
+      handled = backPressHandler!();
+    });
+
+    expect(handled).toBe(true);
+    expect(result.current.isWinbackModalVisible).toBe(false);
+    expect(mockExitApp).not.toHaveBeenCalled();
+
+    // Now storage read resolves to false (eligible)
+    await act(async () => {
+      resolveRead(false);
+      await Promise.resolve();
+    });
+
+    expect(result.current.isWinbackModalVisible).toBe(true);
+    expect(mockMarkHasSeenPaywallWinback).toHaveBeenCalledWith('test-user-123');
+    expect(mockTrackPaywallWinbackShown).toHaveBeenCalledWith({
+      screen: 'onboarding-paywall',
+    });
+    expect(mockExitApp).not.toHaveBeenCalled();
+  });
+
+  it('defers exit decision when back pressed before read resolves and exits app if ineligible', async () => {
+    let resolveRead!: (seen: boolean) => void;
+    mockReadHasSeenPaywallWinback.mockReturnValueOnce(
+      new Promise((res) => {
+        resolveRead = res;
+      })
+    );
+
+    const { result } = renderHook(() => usePaywallExitGuard());
+
+    act(() => {
+      backPressHandler!();
+    });
+
+    expect(result.current.isWinbackModalVisible).toBe(false);
+    expect(mockExitApp).not.toHaveBeenCalled();
+
+    // Storage read resolves to true (already seen)
+    await act(async () => {
+      resolveRead(true);
+      await Promise.resolve();
+    });
+
+    expect(result.current.isWinbackModalVisible).toBe(false);
+    expect(mockTrackPaywallWinbackShown).not.toHaveBeenCalled();
+    expect(mockExitApp).toHaveBeenCalledTimes(1);
+  });
+
+  it('exits app immediately if second back press occurs while initial read is still resolving', async () => {
+    let resolveRead!: (seen: boolean) => void;
+    mockReadHasSeenPaywallWinback.mockReturnValueOnce(
+      new Promise((res) => {
+        resolveRead = res;
+      })
+    );
+
+    renderHook(() => usePaywallExitGuard());
+
+    // First back press (defers)
+    act(() => {
+      backPressHandler!();
+    });
+    expect(mockExitApp).not.toHaveBeenCalled();
+
+    // Second back press before resolution
+    act(() => {
+      backPressHandler!();
+    });
+    expect(mockExitApp).toHaveBeenCalledTimes(1);
+
+    // Later resolve
+    await act(async () => {
+      resolveRead(false);
+      await Promise.resolve();
+    });
+  });
+
   it('does not register back handler when disabled or non-Android', () => {
     Platform.OS = 'ios';
     renderHook(() => usePaywallExitGuard({ enabled: true }));

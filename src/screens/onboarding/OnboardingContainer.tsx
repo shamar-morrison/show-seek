@@ -92,10 +92,12 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   // Refs for live state and rehydration synchronization
   const hasRehydratedRef = useRef(false);
   const selectionsRef = useRef(selections);
-  selectionsRef.current = selections;
-
   const selectedViaOtherRef = useRef(selectedViaOther);
-  selectedViaOtherRef.current = selectedViaOther;
+
+  useEffect(() => {
+    selectionsRef.current = selections;
+    selectedViaOtherRef.current = selectedViaOther;
+  }, [selections, selectedViaOther]);
 
   // Re-engagement notification hook — schedules notification on background (reads live hasRehydratedRef)
   useOnboardingReengagement(currentStepIndex, selections, selectedViaOther, hasRehydratedRef);

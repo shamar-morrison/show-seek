@@ -59,7 +59,7 @@ export function ExitIntentModal({
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onContinue}
+      onRequestClose={onExit}
     >
       <Pressable style={styles.overlay} onPress={onContinue}>
         <ModalBackground />
