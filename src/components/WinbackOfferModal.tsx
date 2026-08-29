@@ -232,9 +232,6 @@ export function WinbackOfferModal({
                 {t('winbackOffer.perWeek', '/ week')}
               </Text>
             </View>
-            <Text style={styles.regularPrice}>
-              {t('winbackOffer.regularPriceLabel', 'Regular price: $2.99 / week')}
-            </Text>
           </View>
 
           {/* Timer Section */}
@@ -379,12 +376,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.m,
     color: COLORS.textSecondary,
     fontWeight: '600',
-  },
-  regularPrice: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textMuted,
-    textDecorationLine: 'line-through',
-    marginTop: 4,
   },
   timerContainer: {
     flexDirection: 'row',
