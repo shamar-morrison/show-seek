@@ -7,6 +7,7 @@ import {
 import { act, fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 import { Alert, AppState } from 'react-native';
+import { cancelAnimation } from 'react-native-reanimated';
 
 const mockGetWinbackSubscriptionOption = getWinbackSubscriptionOption as jest.Mock;
 const mockPurchaseWinbackOffer = purchaseWinbackOffer as jest.Mock;
@@ -61,7 +62,7 @@ describe('WinbackOfferModal', () => {
   });
 
   it('renders discount offer details and initial 5-minute countdown', async () => {
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <WinbackOfferModal
         visible={true}
         onDecline={jest.fn()}
@@ -73,11 +74,13 @@ describe('WinbackOfferModal', () => {
       await Promise.resolve();
     });
 
+    expect(getByText('🎁')).toBeTruthy();
     expect(getByText('Wait! Unlock ShowSeek Premium for Less')).toBeTruthy();
     expect(getByText('$0.99')).toBeTruthy();
     expect(getByText('05:00')).toBeTruthy();
     expect(getByText('Claim Special Offer')).toBeTruthy();
-    expect(getByText('No thanks, exit app')).toBeTruthy();
+    expect(queryByText('No thanks, exit app')).toBeNull();
+    expect(queryByText('ONE-TIME OFFER')).toBeNull();
   });
 
   it('ticks the countdown timer down each second', async () => {
@@ -157,7 +160,7 @@ describe('WinbackOfferModal', () => {
 
     expect(getByText('Offer has expired')).toBeTruthy();
     expect(queryByText('Claim Special Offer')).toBeNull();
-    expect(getByText('Exit App')).toBeTruthy();
+    expect(queryByText('Exit App')).toBeNull();
   });
 
   it('completes purchase successfully and triggers onSuccess', async () => {
@@ -270,10 +273,10 @@ describe('WinbackOfferModal', () => {
     );
   });
 
-  it('calls onDecline when decline button is pressed', async () => {
+  it('calls onDecline when backdrop overlay is pressed', async () => {
     const onDecline = jest.fn();
 
-    const { getByText } = render(
+    const { getByTestId } = render(
       <WinbackOfferModal
         visible={true}
         onDecline={onDecline}
@@ -285,7 +288,36 @@ describe('WinbackOfferModal', () => {
       await Promise.resolve();
     });
 
-    fireEvent.press(getByText('No thanks, exit app'));
+    fireEvent.press(getByTestId('winback-modal-overlay'));
     expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels all pulse animations when visible becomes false', async () => {
+    (cancelAnimation as jest.Mock).mockClear();
+
+    const { rerender } = render(
+      <WinbackOfferModal
+        visible={true}
+        onDecline={jest.fn()}
+        onSuccess={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(cancelAnimation).not.toHaveBeenCalled();
+
+    rerender(
+      <WinbackOfferModal
+        visible={false}
+        onDecline={jest.fn()}
+        onSuccess={jest.fn()}
+      />
+    );
+
+    expect(cancelAnimation).toHaveBeenCalledWith(expect.objectContaining({ value: expect.anything() }));
+    expect(cancelAnimation).toHaveBeenCalledTimes(6);
   });
 });

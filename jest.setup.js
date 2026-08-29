@@ -47,9 +47,67 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 // Mock react-native-reanimated
 jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock');
-  Reanimated.default.call = () => {};
-  return Reanimated;
+  const React = require('react');
+  const { View, Text, Image, ScrollView } = require('react-native');
+
+  const createAnimatedComponent = (comp) => comp;
+
+  return {
+    __esModule: true,
+    default: {
+      View: React.forwardRef((props, ref) => React.createElement(View, { ...props, ref })),
+      Text: React.forwardRef((props, ref) => React.createElement(Text, { ...props, ref })),
+      Image: React.forwardRef((props, ref) => React.createElement(Image, { ...props, ref })),
+      ScrollView: React.forwardRef((props, ref) => React.createElement(ScrollView, { ...props, ref })),
+      createAnimatedComponent,
+      call: () => {},
+    },
+    useSharedValue: (init) => {
+      const ref = React.useRef(null);
+      if (!ref.current) {
+        ref.current = { value: init };
+      }
+      return ref.current;
+    },
+    useAnimatedStyle: (fn) => (typeof fn === 'function' ? fn() : {}),
+    useDerivedValue: (fn) => ({ value: typeof fn === 'function' ? fn() : fn }),
+    useAnimatedProps: (fn) => (typeof fn === 'function' ? fn() : {}),
+    useAnimatedScrollHandler: () => () => {},
+    withTiming: (toValue) => toValue,
+    withSpring: (toValue) => toValue,
+    withRepeat: (anim) => anim,
+    withSequence: (...anims) => anims[0],
+    withDelay: (_delay, anim) => anim,
+    cancelAnimation: jest.fn(),
+    runOnJS: (fn) => fn,
+    runOnUI: (fn) => fn,
+    Easing: {
+      linear: (t) => t,
+      ease: (t) => t,
+      quad: (t) => t,
+      cubic: (t) => t,
+      poly: () => (t) => t,
+      sin: (t) => t,
+      circle: (t) => t,
+      exp: (t) => t,
+      elastic: () => (t) => t,
+      back: () => (t) => t,
+      bounce: (t) => t,
+      bezier: () => (t) => t,
+      in: (fn) => fn,
+      out: (fn) => fn,
+      inOut: (fn) => fn,
+    },
+    FadeIn: { duration: () => ({ delay: () => ({}) }) },
+    FadeInDown: { duration: () => ({ delay: () => ({}) }) },
+    FadeInUp: { duration: () => ({ delay: () => ({}) }) },
+    FadeOut: { duration: () => ({ delay: () => ({}) }) },
+    FadeOutDown: { duration: () => ({ delay: () => ({}) }) },
+    FadeOutUp: { duration: () => ({ delay: () => ({}) }) },
+    SlideInRight: { duration: () => ({ delay: () => ({}) }) },
+    SlideOutLeft: { duration: () => ({ delay: () => ({}) }) },
+    Layout: { duration: () => ({}) },
+  };
 });
 
 // Mock expo-linear-gradient

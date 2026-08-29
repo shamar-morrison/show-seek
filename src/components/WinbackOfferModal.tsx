@@ -10,7 +10,7 @@ import {
   purchaseWinbackOffer,
   type SubscriptionOption,
 } from '@/src/services/winbackOffer';
-import { Clock, Sparkles, AlertCircle } from 'lucide-react-native';
+import { AlertCircle, Clock } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +24,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 export const WINBACK_OFFER_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -61,8 +70,68 @@ export function WinbackOfferModal({
   const [secondsLeft, setSecondsLeft] = useState(Math.floor(WINBACK_OFFER_DURATION_MS / 1000));
   const [isExpired, setIsExpired] = useState(false);
 
+  const giftScale = useSharedValue(1);
+  const buttonScale = useSharedValue(1);
+  const buttonGlow = useSharedValue(0.3);
+
   const expiresAtRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Pulse animations for gift emoji and claim button
+  useEffect(() => {
+    if (visible) {
+      giftScale.value = withRepeat(
+        withSequence(
+          withTiming(1.15, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+      buttonScale.value = withRepeat(
+        withSequence(
+          withTiming(1.03, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+      buttonGlow.value = withRepeat(
+        withSequence(
+          withTiming(0.7, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.3, { duration: 900, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
+      );
+    } else {
+      cancelAnimation(giftScale);
+      cancelAnimation(buttonScale);
+      cancelAnimation(buttonGlow);
+      giftScale.value = 1;
+      buttonScale.value = 1;
+      buttonGlow.value = 0.3;
+    }
+
+    return () => {
+      cancelAnimation(giftScale);
+      cancelAnimation(buttonScale);
+      cancelAnimation(buttonGlow);
+    };
+  }, [visible, giftScale, buttonScale, buttonGlow]);
+
+  const animatedGiftStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: giftScale.value }],
+  }));
+
+  const animatedButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+    shadowColor: accentColor,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: buttonGlow.value,
+    shadowRadius: 10,
+    elevation: 4,
+  }));
 
   // Initialize or reset expiration timestamp when modal opens
   useEffect(() => {
@@ -198,18 +267,19 @@ export function WinbackOfferModal({
       statusBarTranslucent
       onRequestClose={onDecline}
     >
-      <Pressable style={styles.overlay} onPress={onDecline}>
+      <Pressable
+        style={styles.overlay}
+        onPress={onDecline}
+        testID="winback-modal-overlay"
+      >
         <ModalBackground />
 
         {/* Prevent press propagation on the card */}
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
-          {/* Header Badge */}
-          <View style={[styles.badge, { backgroundColor: `${accentColor}20`, borderColor: accentColor }]}>
-            <Sparkles size={14} color={accentColor} />
-            <Text style={[styles.badgeText, { color: accentColor }]}>
-              {t('winbackOffer.discountBadge', 'ONE-TIME OFFER')}
-            </Text>
-          </View>
+          {/* Animated Gift Emoji */}
+          <Animated.View style={[styles.giftContainer, animatedGiftStyle]}>
+            <Text style={styles.giftEmoji}>🎁</Text>
+          </Animated.View>
 
           {/* Headline & Subtext */}
           <Text style={styles.headline}>
@@ -257,43 +327,30 @@ export function WinbackOfferModal({
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.buttonContainer}>
-            {!isExpired ? (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.claimButton,
-                  { backgroundColor: accentColor },
-                  (isPurchasing || isLoadingOption) && styles.buttonDisabled,
-                  pressed && styles.buttonPressed,
-                ]}
-                onPress={handlePurchase}
-                disabled={isPurchasing || isLoadingOption}
-              >
-                {isPurchasing || isLoadingOption ? (
-                  <ActivityIndicator size="small" color={COLORS.black} />
-                ) : (
-                  <Text style={styles.claimButtonText}>
-                    {t('winbackOffer.claimButton', 'Claim Special Offer')}
-                  </Text>
-                )}
-              </Pressable>
-            ) : null}
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.declineButton,
-                pressed && styles.declineButtonPressed,
-              ]}
-              onPress={onDecline}
-              disabled={isPurchasing}
-            >
-              <Text style={styles.declineButtonText}>
-                {isExpired
-                  ? t('winbackOffer.closeButton', 'Exit App')
-                  : t('winbackOffer.declineButton', 'No thanks, exit app')}
-              </Text>
-            </Pressable>
-          </View>
+          {!isExpired ? (
+            <View style={styles.buttonContainer}>
+              <Animated.View style={[styles.claimButtonWrapper, animatedButtonStyle]}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.claimButton,
+                    { backgroundColor: accentColor },
+                    (isPurchasing || isLoadingOption) && styles.buttonDisabled,
+                    pressed && styles.buttonPressed,
+                  ]}
+                  onPress={handlePurchase}
+                  disabled={isPurchasing || isLoadingOption}
+                >
+                  {isPurchasing || isLoadingOption ? (
+                    <ActivityIndicator size="small" color={COLORS.black} />
+                  ) : (
+                    <Text style={styles.claimButtonText}>
+                      {t('winbackOffer.claimButton', 'Claim Special Offer')}
+                    </Text>
+                  )}
+                </Pressable>
+              </Animated.View>
+            </View>
+          ) : null}
         </Pressable>
       </Pressable>
     </Modal>
@@ -319,21 +376,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
-  badge: {
-    flexDirection: 'row',
+  giftContainer: {
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: SPACING.m,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.round,
-    borderWidth: 1,
+    justifyContent: 'center',
     marginBottom: SPACING.m,
   },
-  badgeText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  giftEmoji: {
+    fontSize: 58,
+    lineHeight: 68,
+    textAlign: 'center',
   },
   headline: {
     fontSize: FONT_SIZE.xl,
@@ -409,7 +460,12 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: SPACING.s,
   },
+  claimButtonWrapper: {
+    width: '100%',
+    borderRadius: BORDER_RADIUS.m,
+  },
   claimButton: {
+    width: '100%',
     paddingVertical: 14,
     borderRadius: BORDER_RADIUS.m,
     alignItems: 'center',
@@ -425,19 +481,5 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.85,
-  },
-  declineButton: {
-    paddingVertical: SPACING.m,
-    borderRadius: BORDER_RADIUS.m,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  declineButtonPressed: {
-    opacity: 0.7,
-  },
-  declineButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
   },
 });
