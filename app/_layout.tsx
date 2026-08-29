@@ -18,7 +18,12 @@ import { TraktProvider } from '@/src/context/TraktContext';
 import { useDeepLinking } from '@/src/hooks/useDeepLinking';
 import { usePreferences } from '@/src/hooks/usePreferences';
 import { useQuickActions } from '@/src/hooks/useQuickActions';
-import { getAnalyticsScreenName, initializeAnalytics, trackScreen } from '@/src/services/analytics';
+import {
+  getAnalyticsScreenName,
+  initializeAnalytics,
+  trackOnboardingReengagementTapped,
+  trackScreen,
+} from '@/src/services/analytics';
 import {
   clearFirestoreReadAuditEvents,
   logFirestoreReadAuditReport,
@@ -39,10 +44,12 @@ import {
   startReadAuditSession,
 } from '@/src/utils/readAuditCollector';
 import { initializeReminderSync } from '@/src/utils/reminderSync';
+import { ONBOARDING_STEPS } from '@/src/types/onboarding';
 import {
   initializeSession as initializeReviewSession,
   recordNegativeEvent,
 } from '@/src/services/reviewPromptService';
+import { cancelPendingReengagementNotification } from '@/src/utils/onboardingStepCache';
 
 import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
@@ -563,7 +570,7 @@ function ResolvedRootLayoutNav({
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="personalized-onboarding" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </>
@@ -627,6 +634,15 @@ function RootLayoutNav() {
         // Use timeout to ensure navigation is ready
         setTimeout(() => {
           router.push(`/(tabs)/home/${data.mediaType}/${data.mediaId}` as any);
+        }, 100);
+      }
+
+      if (data.type === 'onboarding_reengagement') {
+        const stepIndex = typeof data.stepIndex === 'number' ? data.stepIndex : 0;
+        const stepId = ONBOARDING_STEPS[stepIndex]?.id ?? 'unknown';
+        void trackOnboardingReengagementTapped({ stepIndex, stepId });
+        setTimeout(() => {
+          router.push(`/personalized-onboarding?step=${stepIndex}` as any);
         }, 100);
       }
     });
@@ -725,6 +741,11 @@ function RootLayoutNav() {
     previousUidRef.current = currentUid;
   }, [currentUid, isAccountSwitch, isSignOut, persistedQuerySyncController, previousUid]);
 
+  // Cancel any pending onboarding re-engagement notification on cold start
+  useEffect(() => {
+    void cancelPendingReengagementNotification();
+  }, []);
+
   useEffect(() => {
     if (READ_OPTIMIZATION_FLAGS.debugDisableAppStateAuditLogging) {
       return;
@@ -747,6 +768,7 @@ function RootLayoutNav() {
       }
 
       if (isForegroundTransition) {
+        void cancelPendingReengagementNotification();
         logFirestoreReadAuditReport('app-foreground');
         logReadAuditSessionReport('app-foreground');
       }

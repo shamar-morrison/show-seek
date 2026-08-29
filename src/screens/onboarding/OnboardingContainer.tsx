@@ -1,9 +1,12 @@
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '@/src/constants/theme';
+import { ExitIntentModal } from '@/src/components/ExitIntentModal';
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { useLanguage } from '@/src/context/LanguageProvider';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useRegion } from '@/src/context/RegionProvider';
+import { useOnboardingExitGuard } from '@/src/hooks/useOnboardingExitGuard';
+import { useOnboardingReengagement } from '@/src/hooks/useOnboardingReengagement';
 import { onboardingService } from '@/src/services/OnboardingService';
 import { ONBOARDING_STEPS, EMPTY_ONBOARDING_SELECTIONS } from '@/src/types/onboarding';
 import type { OnboardingSelections } from '@/src/types/onboarding';
@@ -11,12 +14,18 @@ import type { HomeScreenListItem } from '@/src/types/preferences';
 import type { Movie, Person, TVShow } from '@/src/api/tmdb';
 import type { SupportedLanguageCode } from '@/src/constants/supportedLanguages';
 import { seedHomeScreenListsCache } from '@/src/utils/preferencesCache';
+import {
+  cancelPendingReengagementNotification,
+  clearOnboardingProgress,
+  persistOnboardingProgress,
+  readOnboardingProgress,
+} from '@/src/utils/onboardingStepCache';
 import { resolvePreferredDisplayName } from '@/src/utils/userUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
@@ -36,12 +45,17 @@ import TVShowsStep from './TVShowsStep';
 import MoviesStep from './MoviesStep';
 import ActorsStep from './ActorsStep';
 import AccentColorStep from './AccentColorStep';
+import NotificationPermissionStep from './NotificationPermissionStep';
 import OnboardingPaywallStep from './OnboardingPaywallStep';
 import PersonalizingScreen from './PersonalizingScreen';
 import WelcomeIntroScreen from './WelcomeIntroScreen';
 import { ChevronLeft } from 'lucide-react-native';
 
-export default function OnboardingContainer() {
+interface OnboardingContainerProps {
+  initialStepIndex?: number;
+}
+
+export default function OnboardingContainer({ initialStepIndex }: OnboardingContainerProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, completePersonalOnboarding } = useAuth();
@@ -51,14 +65,21 @@ export default function OnboardingContainer() {
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const queryClient = useQueryClient();
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // If deep-linked with a step index, skip the welcome screen and start at that step
+  const hasInitialStep =
+    initialStepIndex !== undefined &&
+    Number.isFinite(initialStepIndex) &&
+    initialStepIndex >= 0 &&
+    initialStepIndex < ONBOARDING_STEPS.length;
+
+  const [currentStepIndex, setCurrentStepIndex] = useState(hasInitialStep ? initialStepIndex : 0);
   const [selections, setSelections] = useState<OnboardingSelections>(() => ({
     ...EMPTY_ONBOARDING_SELECTIONS,
     language,
   }));
   const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(!hasInitialStep);
   const saveOnboardingPromiseRef = useRef<Promise<void> | null>(null);
 
   const progressWidth = useSharedValue(0);
@@ -67,6 +88,80 @@ export default function OnboardingContainer() {
   const currentStep = ONBOARDING_STEPS[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isFirstStep = currentStepIndex === 0;
+
+  // Refs for live state and rehydration synchronization
+  const hasRehydratedRef = useRef(false);
+  const selectionsRef = useRef(selections);
+  const selectedViaOtherRef = useRef(selectedViaOther);
+
+  useEffect(() => {
+    selectionsRef.current = selections;
+    selectedViaOtherRef.current = selectedViaOther;
+  }, [selections, selectedViaOther]);
+
+  // Re-engagement notification hook — schedules notification on background (reads live hasRehydratedRef)
+  useOnboardingReengagement(currentStepIndex, selections, selectedViaOther, hasRehydratedRef);
+
+  // On mount, restore progress (step index + selections) from AsyncStorage before allowing any persist writes
+  useEffect(() => {
+    const userId = user?.uid;
+    if (!userId) {
+      hasRehydratedRef.current = true;
+      return;
+    }
+
+    let isCancelled = false;
+
+    void (async () => {
+      try {
+        const savedProgress = await readOnboardingProgress(userId);
+        if (!savedProgress || isCancelled) return;
+
+        if (savedProgress.selections) {
+          setSelections((prev) => ({
+            ...prev,
+            ...savedProgress.selections,
+          }));
+        }
+
+        if (typeof savedProgress.selectedViaOther === 'boolean') {
+          setSelectedViaOther(savedProgress.selectedViaOther);
+        }
+
+        // Target step index: use explicit deep-link param if present, otherwise restore saved index
+        const targetStep = hasInitialStep ? initialStepIndex : savedProgress.stepIndex;
+        if (targetStep !== undefined && targetStep > 0 && targetStep < ONBOARDING_STEPS.length) {
+          setCurrentStepIndex(targetStep);
+          setShowWelcome(false);
+          updateProgress(targetStep);
+        }
+      } catch (error) {
+        console.warn('[OnboardingContainer] Failed to restore onboarding progress:', error);
+      } finally {
+        if (!isCancelled) {
+          hasRehydratedRef.current = true;
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist combined onboarding progress (step index + selections) ON STEP TRANSITIONS ONLY
+  // Guarded so it never writes before rehydration completes on initial mount
+  useEffect(() => {
+    const userId = user?.uid;
+    if (!userId || !hasRehydratedRef.current || showWelcome || isPersonalizing) return;
+
+    void persistOnboardingProgress(userId, {
+      stepIndex: currentStepIndex,
+      selections: selectionsRef.current,
+      selectedViaOther: selectedViaOtherRef.current,
+    });
+  }, [currentStepIndex, user?.uid, showWelcome, isPersonalizing]);
   const paywallDisplayName = resolvePreferredDisplayName(
     selections.displayName,
     user?.displayName,
@@ -75,6 +170,48 @@ export default function OnboardingContainer() {
 
   // Determine accent color for UI (use selected or default)
   const displayAccentColor = selections.accentColor || COLORS.primary;
+
+  // Exit-intent modal — only active on the first step. On later steps,
+  // the hardware back button navigates to the previous step instead.
+  const { isExitModalVisible, onContinue, onExit } = useOnboardingExitGuard({
+    screenName: 'personalized-onboarding',
+    enabled: isFirstStep && !showWelcome && !isPersonalizing,
+  });
+
+  // Hardware back button: navigate between steps on non-first steps (except paywall step).
+  // This runs separately from the exit guard (first step) and paywall exit guard (paywall step).
+  useEffect(() => {
+    const isPaywallStep = currentStep?.id === 'premium-paywall';
+    if (
+      Platform.OS !== 'android' ||
+      isFirstStep ||
+      isPaywallStep ||
+      showWelcome ||
+      isPersonalizing
+    ) {
+      return;
+    }
+
+    const handleBackPress = (): boolean => {
+      const prevIndex = currentStepIndex - 1;
+      setCurrentStepIndex(prevIndex);
+      // Update progress bar to match the new step
+      const pct = ((prevIndex + 1) / totalSteps) * 100;
+      progressWidth.value = withTiming(pct, { duration: 300 });
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => subscription.remove();
+  }, [
+    currentStep?.id,
+    currentStepIndex,
+    isFirstStep,
+    isPersonalizing,
+    progressWidth,
+    showWelcome,
+    totalSteps,
+  ]);
 
   // Animated progress bar style
   const progressAnimStyle = useAnimatedStyle(() => ({
@@ -197,6 +334,12 @@ export default function OnboardingContainer() {
 
     seedHomeScreenListsCache(queryClient, user?.uid, selections.homeScreenLists);
 
+    // Clear persisted onboarding progress and cancel any pending notification since onboarding is complete
+    if (user?.uid) {
+      void clearOnboardingProgress(user.uid);
+    }
+    void cancelPendingReengagementNotification();
+
     try {
       await completePersonalOnboarding();
       router.replace('/(tabs)/home' as any);
@@ -248,6 +391,8 @@ export default function OnboardingContainer() {
         return selections.selectedActors.length > 0;
       case 'accent-color':
         return selections.accentColor !== null;
+      case 'notifications':
+        return true; // Always continuable — skip or enable
       default:
         return false;
     }
@@ -353,6 +498,13 @@ export default function OnboardingContainer() {
             onSelect={handleAccentColorSelect}
           />
         );
+      case 'notifications':
+        return (
+          <NotificationPermissionStep
+            onPermissionGranted={handleNext}
+            accentColor={displayAccentColor}
+          />
+        );
       default:
         return null;
     }
@@ -413,6 +565,12 @@ export default function OnboardingContainer() {
           </Text>
         </Pressable>
       </View>
+
+      <ExitIntentModal
+        visible={isExitModalVisible}
+        onContinue={onContinue}
+        onExit={onExit}
+      />
     </SafeAreaView>
   );
 }

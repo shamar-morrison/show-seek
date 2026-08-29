@@ -951,6 +951,43 @@
     "previewUnavailable": "Pré-visualização indisponível",
     "getStarted": "Começar"
   },
+  "exitIntent": {
+    "variantA": {
+      "headline": "You're almost there!",
+      "subtext": "Just a few more steps and your personalized movie & TV experience will be ready.",
+      "continueButton": "Continue Setup",
+      "exitButton": "Exit Anyway"
+    },
+    "variantB": {
+      "headline": "Your perfect watchlist awaits",
+      "subtext": "Finish setup to get personalized picks, release reminders, and smart recommendations.",
+      "continueButton": "Keep Going",
+      "exitButton": "Maybe Later"
+    },
+    "variantC": {
+      "headline": "Setup isn't complete yet",
+      "subtext": "Without finishing, you'll miss out on recommendations tailored just for you.",
+      "continueButton": "Finish Setup",
+      "exitButton": "Exit Anyway"
+    }
+  },
+  "reengagement": {
+    "title": "A tua lista de favoritos está à espera 🎬",
+    "body": "Termina a configuração em menos de um minuto e recebe recomendações para ti."
+  },
+  "winbackOffer": {
+    "headline": "Espera! Desbloqueia o ShowSeek Premium com desconto",
+    "subtext": "Tem acesso completo a rastreio avançado, widgets e sincronização com o Trakt ao nosso preço semanal especial.",
+    "priceLabel": "{{price}} / semana",
+    "perWeek": "/ semana",
+    "regularPriceLabel": "Preço normal: $2.99 / semana",
+    "discountBadge": "Oferta Especial",
+    "timerLabel": "A oferta expira em:",
+    "expiredBadge": "Oferta expirada",
+    "claimButton": "Aproveitar oferta especial",
+    "declineButton": "Não, obrigado. Sair da app",
+    "closeButton": "Sair"
+  },
   "personalOnboarding": {
     "welcomePrefix": "Damos-lhe as boas-vindas ao ",
     "welcomeAppName": "ShowSeek 🍿",
@@ -983,8 +1020,11 @@
     "back": "Voltar",
     "continue": "Continuar",
     "skip": "Ignorar",
-    "letsGo": "Vamos a isso",
-    "selected": "Selecionados: {{count}}",
+    "letsGo": "Vamos lá",
+    "selected": "{{count}} selecionados",
+    "notificationsTitle": "Nunca perca um lançamento",
+    "notificationsSubtitle": "Receba notificações quando os seus filmes favoritos chegarem aos cinemas e novos episódios forem lançados.",
+    "notificationsEnable": "Ativar notificações",
     "personalizing": {
       "title": "Estamos a preparar tudo para si...",
       "curatingLists": "A organizar as suas listas...",

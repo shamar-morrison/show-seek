@@ -1,6 +1,10 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+jest.mock('expo-blur', () => ({
+  BlurView: 'BlurView',
+}));
+
 const mockReplace = jest.fn();
 const mockCompleteOnboarding = jest.fn();
 

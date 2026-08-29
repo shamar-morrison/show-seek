@@ -10,6 +10,8 @@ import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { isPremiumAuthRequiredError, type PremiumPlan } from '@/src/context/premiumBilling';
 import { usePremium } from '@/src/context/PremiumContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
+import { usePaywallExitGuard } from '@/src/hooks/usePaywallExitGuard';
+import { WinbackOfferModal } from '@/src/components/WinbackOfferModal';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
@@ -40,6 +42,16 @@ export default function OnboardingPaywallStep({
   const [selectedPlan, setSelectedPlan] = React.useState<PremiumPlan>('yearly');
   const [isRestoring, setIsRestoring] = React.useState(false);
   const wasPremiumRef = React.useRef(isPremium);
+
+  const {
+    isWinbackModalVisible,
+    handleDecline,
+    handleCloseAttempt,
+    dismissWinbackModal,
+  } = usePaywallExitGuard({
+    screenName: 'onboarding-paywall',
+    onExit: onClose,
+  });
 
   const monthlyPrice = prices.monthly || t('premium.monthlyPriceFallback');
   const yearlyPrice = prices.yearly || t('premium.yearlyPriceFallback');
@@ -137,27 +149,36 @@ export default function OnboardingPaywallStep({
   ];
 
   return (
-    <PremiumPaywallScreenShell
-      closeButtonTestID="onboarding-paywall-close-button"
-      closeButtonFadeDurationMs={450}
-      closeButtonRevealDelayMs={ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS}
-      footer={
-        <PremiumPaywallFooter
-          accentColor={accentColor}
-          billingDisclosure={selectedPlanDisclosure}
-          isRestoring={isRestoring}
-          onRestore={handleRestore}
-          onSubscribe={handlePurchase}
-          plans={plans}
-          subscribeButtonLabel={t('premium.subscribeButton')}
-          subscribeButtonTestID="onboarding-subscribe-button"
-        />
-      }
-      onClose={onClose}
-      subtitle={t('premium.onboardingUnlockSubtitle')}
-      title={readyTitle}
-    >
-      <PremiumFeaturesSection />
-    </PremiumPaywallScreenShell>
+    <>
+      <PremiumPaywallScreenShell
+        closeButtonTestID="onboarding-paywall-close-button"
+        closeButtonFadeDurationMs={450}
+        closeButtonRevealDelayMs={ONBOARDING_PAYWALL_CLOSE_BUTTON_REVEAL_DELAY_MS}
+        footer={
+          <PremiumPaywallFooter
+            accentColor={accentColor}
+            billingDisclosure={selectedPlanDisclosure}
+            isRestoring={isRestoring}
+            onRestore={handleRestore}
+            onSubscribe={handlePurchase}
+            plans={plans}
+            subscribeButtonLabel={t('premium.subscribeButton')}
+            subscribeButtonTestID="onboarding-subscribe-button"
+          />
+        }
+        onClose={handleCloseAttempt}
+        subtitle={t('premium.onboardingUnlockSubtitle')}
+        title={readyTitle}
+      >
+        <PremiumFeaturesSection />
+      </PremiumPaywallScreenShell>
+
+      <WinbackOfferModal
+        visible={isWinbackModalVisible}
+        onDecline={handleDecline}
+        onSuccess={dismissWinbackModal}
+        screenName="onboarding-paywall"
+      />
+    </>
   );
 }

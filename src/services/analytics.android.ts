@@ -6,6 +6,11 @@ import {
   type ImdbImportCompleteParams,
   type ImdbImportFailureParams,
   type OnboardingCompleteParams,
+  type OnboardingExitIntentDecisionParams,
+  type OnboardingExitIntentParams,
+  type OnboardingReengagementParams,
+  type PaywallWinbackDecisionParams,
+  type PaywallWinbackShownParams,
   type PurchaseFailureParams,
   type PurchaseSuccessParams,
   type RestoreFailureParams,
@@ -27,6 +32,14 @@ export type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
+  OnboardingExitIntentScreen,
+  OnboardingExitIntentVariant,
+  OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackScreen,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -318,4 +331,109 @@ export const trackImdbImportFailure = async ({
   await trackNamedEvent('imdb_import_failure', 'imdb_import_failure', {
     error_code: errorCode,
   });
+};
+
+export const trackOnboardingExitIntentShown = async ({
+  screen,
+  variant,
+}: OnboardingExitIntentParams): Promise<void> => {
+  await trackNamedEvent('onboarding_exit_intent_shown', 'onboarding_exit_intent_shown', {
+    screen,
+    variant,
+  });
+};
+
+export const trackOnboardingExitIntentDecision = async ({
+  screen,
+  variant,
+  decision,
+}: OnboardingExitIntentDecisionParams): Promise<void> => {
+  await trackNamedEvent('onboarding_exit_intent_decision', 'onboarding_exit_intent_decision', {
+    screen,
+    variant,
+    decision,
+  });
+};
+
+export const trackOnboardingReengagementScheduled = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent(
+    'onboarding_reengagement_scheduled',
+    'onboarding_reengagement_scheduled',
+    {
+      step_index: stepIndex,
+      step_id: stepId,
+    }
+  );
+};
+
+export const trackOnboardingReengagementCancelled = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent(
+    'onboarding_reengagement_cancelled',
+    'onboarding_reengagement_cancelled',
+    {
+      step_index: stepIndex,
+      step_id: stepId,
+    }
+  );
+};
+
+export const trackOnboardingReengagementTapped = async ({
+  stepIndex,
+  stepId,
+}: OnboardingReengagementParams): Promise<void> => {
+  await trackNamedEvent('onboarding_reengagement_tapped', 'onboarding_reengagement_tapped', {
+    step_index: stepIndex,
+    step_id: stepId,
+  });
+};
+
+export const trackPaywallWinbackShown = async (
+  params?: PaywallWinbackShownParams
+): Promise<void> => {
+  const eventParams: Record<string, string | number> = {
+    screen: params?.screen ?? 'onboarding-paywall',
+  };
+
+  if (params?.offerId) {
+    eventParams.offer_id = params.offerId;
+  }
+  if (typeof params?.price === 'number') {
+    eventParams.price = params.price;
+  }
+  if (params?.currency) {
+    eventParams.currency = params.currency;
+  }
+
+  await trackNamedEvent('paywall_winback_shown', 'paywall_winback_shown', eventParams);
+};
+
+export const trackPaywallWinbackDecision = async ({
+  decision,
+  screen = 'onboarding-paywall',
+  offerId,
+  price,
+  currency,
+}: PaywallWinbackDecisionParams): Promise<void> => {
+  const eventParams: Record<string, string | number> = {
+    decision,
+    screen,
+  };
+
+  if (offerId) {
+    eventParams.offer_id = offerId;
+  }
+  if (typeof price === 'number') {
+    eventParams.price = price;
+  }
+  if (currency) {
+    eventParams.currency = currency;
+  }
+
+  await trackNamedEvent('paywall_winback_decision', 'paywall_winback_decision', eventParams);
 };

@@ -3,6 +3,11 @@ import type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
+  OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -24,6 +29,14 @@ export type {
   ImdbImportCompleteParams,
   ImdbImportFailureParams,
   OnboardingCompleteParams,
+  OnboardingExitIntentDecisionParams,
+  OnboardingExitIntentParams,
+  OnboardingExitIntentScreen,
+  OnboardingExitIntentVariant,
+  OnboardingReengagementParams,
+  PaywallWinbackDecisionParams,
+  PaywallWinbackScreen,
+  PaywallWinbackShownParams,
   PurchaseFailureParams,
   PurchaseSuccessParams,
   RestoreFailureParams,
@@ -79,3 +92,31 @@ export const trackImdbImportComplete = async (
 ): Promise<void> => {};
 
 export const trackImdbImportFailure = async (_params: ImdbImportFailureParams): Promise<void> => {};
+
+export const trackOnboardingExitIntentShown = async (
+  _params: OnboardingExitIntentParams
+): Promise<void> => {};
+
+export const trackOnboardingExitIntentDecision = async (
+  _params: OnboardingExitIntentDecisionParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementScheduled = async (
+  _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementCancelled = async (
+  _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackOnboardingReengagementTapped = async (
+  _params: OnboardingReengagementParams
+): Promise<void> => {};
+
+export const trackPaywallWinbackShown = async (
+  _params?: PaywallWinbackShownParams
+): Promise<void> => {};
+
+export const trackPaywallWinbackDecision = async (
+  _params: PaywallWinbackDecisionParams
+): Promise<void> => {};

@@ -44,14 +44,14 @@ export interface TrackCreateListParams {
 }
 
 export interface PurchaseSuccessParams {
-  plan: 'monthly' | 'yearly';
+  plan: 'monthly' | 'yearly' | 'weekly' | 'winback';
   productId: string;
   price: number;
   currency: string;
 }
 
 export interface PurchaseFailureParams {
-  plan: 'monthly' | 'yearly';
+  plan: 'monthly' | 'yearly' | 'weekly' | 'winback';
   productId?: string | null;
   reason: string;
   code?: string | null;
@@ -90,6 +90,40 @@ export interface ImdbImportCompleteParams {
 
 export interface ImdbImportFailureParams {
   errorCode: string;
+}
+
+export type OnboardingExitIntentScreen = 'onboarding' | 'personalized-onboarding';
+export type OnboardingExitIntentVariant = 'a' | 'b' | 'c';
+
+export interface OnboardingExitIntentParams {
+  screen: OnboardingExitIntentScreen;
+  variant: OnboardingExitIntentVariant;
+}
+
+export interface OnboardingExitIntentDecisionParams extends OnboardingExitIntentParams {
+  decision: 'continue' | 'exit';
+}
+
+export interface OnboardingReengagementParams {
+  stepIndex: number;
+  stepId: string;
+}
+
+export type PaywallWinbackScreen = 'onboarding-paywall' | 'premium-paywall';
+
+export interface PaywallWinbackShownParams {
+  screen?: PaywallWinbackScreen | string;
+  offerId?: string;
+  price?: number;
+  currency?: string;
+}
+
+export interface PaywallWinbackDecisionParams {
+  decision: 'accept' | 'decline';
+  screen?: PaywallWinbackScreen | string;
+  offerId?: string;
+  price?: number;
+  currency?: string;
 }
 
 export const normalizeListKind = (listId: string): AnalyticsListKind => {

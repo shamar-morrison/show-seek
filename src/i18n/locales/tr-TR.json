@@ -943,6 +943,43 @@
     "previewUnavailable": "Önizleme kullanılamıyor",
     "getStarted": "Başlayın"
   },
+  "exitIntent": {
+    "variantA": {
+      "headline": "You're almost there!",
+      "subtext": "Just a few more steps and your personalized movie & TV experience will be ready.",
+      "continueButton": "Continue Setup",
+      "exitButton": "Exit Anyway"
+    },
+    "variantB": {
+      "headline": "Your perfect watchlist awaits",
+      "subtext": "Finish setup to get personalized picks, release reminders, and smart recommendations.",
+      "continueButton": "Keep Going",
+      "exitButton": "Maybe Later"
+    },
+    "variantC": {
+      "headline": "Setup isn't complete yet",
+      "subtext": "Without finishing, you'll miss out on recommendations tailored just for you.",
+      "continueButton": "Finish Setup",
+      "exitButton": "Exit Anyway"
+    }
+  },
+  "reengagement": {
+    "title": "İzleme listeniz sizi bekliyor 🎬",
+    "body": "Kurulumu bir dakikadan kısa sürede tamamlayın ve size özel önerilere ulaşın."
+  },
+  "winbackOffer": {
+    "headline": "Bekleyin! ShowSeek Premium'a İndirimle Sahip Olun",
+    "subtext": "Gelişmiş takip, widget'lar ve Trakt senkronizasyonuna özel haftalık fiyatımızla sınırsız erişin.",
+    "priceLabel": "{{price}} / hafta",
+    "perWeek": "/ hafta",
+    "regularPriceLabel": "Normal fiyat: $2.99 / hafta",
+    "discountBadge": "Özel Fırsat",
+    "timerLabel": "Teklifin kalan süresi:",
+    "expiredBadge": "Teklifin süresi doldu",
+    "claimButton": "Özel Teklifi Al",
+    "declineButton": "Hayır teşekkürler, uygulamadan çık",
+    "closeButton": "Çıkış"
+  },
   "personalOnboarding": {
     "welcomePrefix": "Hoş geldiniz ",
     "welcomeAppName": "ShowSeek 🍿",
@@ -975,8 +1012,11 @@
     "back": "Geri",
     "continue": "Devam et",
     "skip": "Atla",
-    "letsGo": "Başlayalım",
+    "letsGo": "Hadi Başlayalım",
     "selected": "{{count}} seçildi",
+    "notificationsTitle": "Hiçbir yayını kaçırmayın",
+    "notificationsSubtitle": "Favori filmleriniz sinemalara geldiğinde ve yeni bölümler yayınlandığında bildirim alın.",
+    "notificationsEnable": "Bildirimleri Aç",
     "personalizing": {
       "title": "Sizin için hazırlanıyor...",
       "curatingLists": "Listeleriniz düzenleniyor...",

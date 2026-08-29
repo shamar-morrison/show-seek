@@ -47,9 +47,67 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 // Mock react-native-reanimated
 jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock');
-  Reanimated.default.call = () => {};
-  return Reanimated;
+  const React = require('react');
+  const { View, Text, Image, ScrollView } = require('react-native');
+
+  const createAnimatedComponent = (comp) => comp;
+
+  return {
+    __esModule: true,
+    default: {
+      View: React.forwardRef((props, ref) => React.createElement(View, { ...props, ref })),
+      Text: React.forwardRef((props, ref) => React.createElement(Text, { ...props, ref })),
+      Image: React.forwardRef((props, ref) => React.createElement(Image, { ...props, ref })),
+      ScrollView: React.forwardRef((props, ref) => React.createElement(ScrollView, { ...props, ref })),
+      createAnimatedComponent,
+      call: () => {},
+    },
+    useSharedValue: (init) => {
+      const ref = React.useRef(null);
+      if (!ref.current) {
+        ref.current = { value: init };
+      }
+      return ref.current;
+    },
+    useAnimatedStyle: (fn) => (typeof fn === 'function' ? fn() : {}),
+    useDerivedValue: (fn) => ({ value: typeof fn === 'function' ? fn() : fn }),
+    useAnimatedProps: (fn) => (typeof fn === 'function' ? fn() : {}),
+    useAnimatedScrollHandler: () => () => {},
+    withTiming: (toValue) => toValue,
+    withSpring: (toValue) => toValue,
+    withRepeat: (anim) => anim,
+    withSequence: (...anims) => anims[0],
+    withDelay: (_delay, anim) => anim,
+    cancelAnimation: jest.fn(),
+    runOnJS: (fn) => fn,
+    runOnUI: (fn) => fn,
+    Easing: {
+      linear: (t) => t,
+      ease: (t) => t,
+      quad: (t) => t,
+      cubic: (t) => t,
+      poly: () => (t) => t,
+      sin: (t) => t,
+      circle: (t) => t,
+      exp: (t) => t,
+      elastic: () => (t) => t,
+      back: () => (t) => t,
+      bounce: (t) => t,
+      bezier: () => (t) => t,
+      in: (fn) => fn,
+      out: (fn) => fn,
+      inOut: (fn) => fn,
+    },
+    FadeIn: { duration: () => ({ delay: () => ({}) }) },
+    FadeInDown: { duration: () => ({ delay: () => ({}) }) },
+    FadeInUp: { duration: () => ({ delay: () => ({}) }) },
+    FadeOut: { duration: () => ({ delay: () => ({}) }) },
+    FadeOutDown: { duration: () => ({ delay: () => ({}) }) },
+    FadeOutUp: { duration: () => ({ delay: () => ({}) }) },
+    SlideInRight: { duration: () => ({ delay: () => ({}) }) },
+    SlideOutLeft: { duration: () => ({ delay: () => ({}) }) },
+    Layout: { duration: () => ({}) },
+  };
 });
 
 // Mock expo-linear-gradient
@@ -169,6 +227,47 @@ jest.mock('expo-web-browser', () => ({
   openAuthSessionAsync: jest.fn(),
 }));
 
+// Mock expo-blur
+jest.mock('expo-blur', () => {
+  const React = require('react');
+  return {
+    BlurView: ({ children, ...props }) => React.createElement('BlurView', props, children),
+  };
+});
+
+// Mock react-native-purchases
+jest.mock('react-native-purchases', () => {
+  return {
+    __esModule: true,
+    default: {
+      configure: jest.fn(),
+      setLogLevel: jest.fn(),
+      getOfferings: jest.fn(() => Promise.resolve({ all: {}, current: null })),
+      getCustomerInfo: jest.fn(() => Promise.resolve({ entitlements: { active: {}, all: {} } })),
+      purchaseSubscriptionOption: jest.fn(() =>
+        Promise.resolve({ customerInfo: { entitlements: { active: {} } } })
+      ),
+      purchasePackage: jest.fn(() =>
+        Promise.resolve({ customerInfo: { entitlements: { active: {} } } })
+      ),
+      restorePurchases: jest.fn(() => Promise.resolve({ entitlements: { active: {} } })),
+      addCustomerInfoUpdateListener: jest.fn(() => jest.fn()),
+      removeCustomerInfoUpdateListener: jest.fn(),
+      logIn: jest.fn(() => Promise.resolve({ customerInfo: { entitlements: { active: {} } } })),
+      logOut: jest.fn(() => Promise.resolve({ customerInfo: { entitlements: { active: {} } } })),
+    },
+    LOG_LEVEL: {
+      DEBUG: 'DEBUG',
+      INFO: 'INFO',
+      WARN: 'WARN',
+      ERROR: 'ERROR',
+    },
+    PURCHASES_ERROR_CODE: {
+      PURCHASE_CANCELLED_ERROR: '1',
+    },
+  };
+});
+
 // Mock expo-store-review (native module — EventEmitter unavailable in Jest)
 jest.mock('expo-store-review', () => ({
   isAvailableAsync: jest.fn(() => Promise.resolve(false)),
@@ -208,6 +307,18 @@ jest.mock('react-native-svg', () => {
     Mask: createMockComponent('Mask'),
   };
 });
+
+// Mock react-native-google-auth
+jest.mock('react-native-google-auth', () => ({
+  GoogleAuth: {
+    configure: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+    getCurrentUser: jest.fn(),
+    hasPlayServices: jest.fn(() => Promise.resolve(true)),
+  },
+  GoogleAuthScopes: {},
+}));
 
 // Mock Firebase Auth
 jest.mock('firebase/auth', () => ({
