@@ -28,8 +28,8 @@ jest.mock('react-native', () => {
   return {
     ...actual,
     BackHandler: {
-      exitApp: (...args: unknown[]) => mockExitApp(...args),
-      addEventListener: (...args: unknown[]) => mockAddEventListener(...args),
+      exitApp: () => mockExitApp(),
+      addEventListener: (event: any, handler: any) => mockAddEventListener(event, handler),
     },
   };
 });

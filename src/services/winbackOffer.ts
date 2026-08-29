@@ -11,6 +11,8 @@ import Purchases, {
   type SubscriptionOption,
 } from 'react-native-purchases';
 
+export type { PurchasesOffering, SubscriptionOption };
+
 export const WINBACK_OFFERING_IDENTIFIER = 'paywall_winback';
 export const WINBACK_PACKAGE_IDENTIFIER = '$rc_weekly';
 export const WINBACK_PRODUCT_ID = 'showseek_weekly_plan';

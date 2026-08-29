@@ -49,6 +49,7 @@ export function useOnboardingReengagement(
   hasRehydratedRef?: React.RefObject<boolean> | React.MutableRefObject<boolean>
 ) {
   const appStateRef = useRef<AppStateStatus>(AppState?.currentState ?? 'active');
+  const scheduleGenerationRef = useRef(0);
   const stepIndexRef = useRef(currentStepIndex);
   stepIndexRef.current = currentStepIndex;
 
@@ -66,7 +67,7 @@ export function useOnboardingReengagement(
       return;
     }
 
-    const scheduleNotification = async (): Promise<void> => {
+    const scheduleNotification = async (generation: number): Promise<void> => {
       const stepIndex = stepIndexRef.current;
       const stepId = resolveStepId(stepIndex);
       const currentSelections = selectionsRef.current;
@@ -75,6 +76,14 @@ export function useOnboardingReengagement(
 
       // Cancel any existing scheduled notification under this constant ID first
       await cancelPendingReengagementNotification();
+
+      // Guard: bail out if the app returned to foreground or a newer generation started
+      if (
+        generation !== scheduleGenerationRef.current ||
+        (appStateRef.current !== 'background' && appStateRef.current !== 'inactive')
+      ) {
+        return;
+      }
 
       // Persist combined progress (step index + selections) for deep-link resume if rehydrated
       const userId = auth.currentUser?.uid;
@@ -88,6 +97,15 @@ export function useOnboardingReengagement(
         } catch (error) {
           console.warn('[Reengagement] Failed to persist onboarding progress:', error);
         }
+      }
+
+      // Guard: re-check immediately before scheduling to prevent orphaned notifications
+      // if the user returned to the foreground while progress persistence was running
+      if (
+        generation !== scheduleGenerationRef.current ||
+        (appStateRef.current !== 'background' && appStateRef.current !== 'inactive')
+      ) {
+        return;
       }
 
       try {
@@ -126,9 +144,16 @@ export function useOnboardingReengagement(
 
       const isBackgroundTransition =
         previousState === 'active' && (nextState === 'inactive' || nextState === 'background');
+      const isForegroundTransition =
+        (previousState === 'inactive' || previousState === 'background') && nextState === 'active';
 
       if (isBackgroundTransition) {
-        void scheduleNotification();
+        scheduleGenerationRef.current += 1;
+        const currentGeneration = scheduleGenerationRef.current;
+        void scheduleNotification(currentGeneration);
+      } else if (isForegroundTransition) {
+        scheduleGenerationRef.current += 1;
+        void cancelPendingReengagementNotification();
       }
     };
 
