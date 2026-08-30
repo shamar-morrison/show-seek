@@ -198,7 +198,7 @@ Hermes reads bytecode lazily via mmap:
 ```tsx
 // Check if chunk loaded correctly
 ScriptManager.shared.on('loading', (scriptId) => {
-  console.log(`Loading: ${scriptId}`);
+  console.error(`Loading: ${scriptId}`);
 });
 
 ScriptManager.shared.on('loaded', (scriptId) => {
