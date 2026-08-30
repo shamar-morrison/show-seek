@@ -47,21 +47,22 @@ export const useNotificationPermissions = () => {
     }
 
     try {
-      const { status: existingStatus } = await raceWithTimeout(
-        Notifications.getPermissionsAsync(),
-        {
-          ms: 5000,
-          message: 'Operation timed out',
-        }
-      );
+      const {
+        status: existingStatus,
+        canAskAgain,
+        granted,
+      } = await raceWithTimeout(Notifications.getPermissionsAsync(), {
+        ms: 5000,
+        message: 'Operation timed out',
+      });
 
-      if (existingStatus === 'granted') {
+      if (granted || existingStatus === 'granted') {
         setPermissionStatus('granted');
         return true;
       }
 
-      if (existingStatus === 'denied') {
-        // Permission previously denied, need to open settings
+      // If permission cannot be requested natively (e.g. permanently denied), open settings
+      if (canAskAgain === false) {
         Alert.alert(
           t('notifications.permissionRequiredTitle'),
           t('notifications.permissionRequiredMessage'),

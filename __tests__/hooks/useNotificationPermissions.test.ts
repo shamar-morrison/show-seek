@@ -102,12 +102,12 @@ describe('useNotificationPermissions', () => {
     );
   });
 
-  // Verifies denied permissions route users to settings and use the platform-specific settings API.
-  it('opens the settings redirect path when permission was previously denied', async () => {
+  // Verifies denied permissions without ability to ask again route users to settings.
+  it('opens the settings redirect path when permission was previously denied (canAskAgain is false)', async () => {
     (Platform as { OS: string }).OS = 'android';
     (Notifications.getPermissionsAsync as jest.Mock)
       .mockResolvedValueOnce({ status: 'granted' })
-      .mockResolvedValueOnce({ status: 'denied' });
+      .mockResolvedValueOnce({ status: 'denied', canAskAgain: false });
 
     const { result } = await loadHook();
 
@@ -115,23 +115,72 @@ describe('useNotificationPermissions', () => {
       await result.current.requestPermission();
     });
 
-    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as Array<{
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0]?.[2] as {
       onPress?: () => void;
       text: string;
-    }>;
+    }[];
     const openSettingsButton = buttons.find((button) => button.text === 'Open Settings');
 
     openSettingsButton?.onPress?.();
 
     expect(Linking.openSettings).toHaveBeenCalledTimes(1);
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  // Verifies Android 13+ fresh ask (status: 'denied', canAskAgain: true) prompts natively rather than opening settings.
+  it('requests permission natively on Android 13+ fresh ask (status: denied, canAskAgain: true)', async () => {
+    (Platform as { OS: string }).OS = 'android';
+    (Notifications.getPermissionsAsync as jest.Mock)
+      .mockResolvedValueOnce({ status: 'denied', canAskAgain: true })
+      .mockResolvedValueOnce({ status: 'denied', canAskAgain: true });
+    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+      status: 'granted',
+      granted: true,
+    });
+
+    const { result } = await loadHook();
+
+    let allowed = false;
+    await act(async () => {
+      allowed = await result.current.requestPermission();
+    });
+
+    expect(allowed).toBe(true);
+    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(Linking.openSettings).not.toHaveBeenCalled();
+    expect(result.current.permissionStatus).toBe('granted');
+  });
+
+  // Verifies iOS fresh ask (status: 'undetermined', canAskAgain: true) prompts natively rather than opening settings.
+  it('requests permission natively on iOS fresh ask (status: undetermined, canAskAgain: true)', async () => {
+    (Platform as { OS: string }).OS = 'ios';
+    (Notifications.getPermissionsAsync as jest.Mock)
+      .mockResolvedValueOnce({ status: 'undetermined', canAskAgain: true })
+      .mockResolvedValueOnce({ status: 'undetermined', canAskAgain: true });
+    (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
+      status: 'granted',
+      granted: true,
+    });
+
+    const { result } = await loadHook();
+
+    let allowed = false;
+    await act(async () => {
+      allowed = await result.current.requestPermission();
+    });
+
+    expect(allowed).toBe(true);
+    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    expect(Linking.openURL).not.toHaveBeenCalled();
+    expect(result.current.permissionStatus).toBe('granted');
   });
 
   // Verifies a denied user can grant permission after visiting settings and the hook refreshes to the granted state.
   it('updates to granted after a denied user later enables notifications in settings', async () => {
     (Notifications.getPermissionsAsync as jest.Mock)
-      .mockResolvedValueOnce({ status: 'denied' })
-      .mockResolvedValueOnce({ status: 'denied' })
-      .mockResolvedValueOnce({ status: 'granted' });
+      .mockResolvedValueOnce({ status: 'denied', canAskAgain: false })
+      .mockResolvedValueOnce({ status: 'denied', canAskAgain: false })
+      .mockResolvedValueOnce({ status: 'granted', canAskAgain: true });
 
     const { result } = await loadHook();
 
@@ -151,9 +200,10 @@ describe('useNotificationPermissions', () => {
   it('alerts when the user denies the runtime permission prompt', async () => {
     (Notifications.getPermissionsAsync as jest.Mock)
       .mockResolvedValueOnce({ status: 'granted' })
-      .mockResolvedValueOnce({ status: 'undetermined' });
+      .mockResolvedValueOnce({ status: 'undetermined', canAskAgain: true });
     (Notifications.requestPermissionsAsync as jest.Mock).mockResolvedValueOnce({
       status: 'denied',
+      granted: false,
     });
 
     const { result } = await loadHook();
