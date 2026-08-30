@@ -5385,6 +5385,39 @@ describe('Trakt sync Firestore sanitization', () => {
   });
 
   describe('Post-June 30 2026 Trakt API Updates (Pagination & extended=progress)', () => {
+    describe('toFirestoreTimestamp helper', () => {
+      it('returns Timestamp for valid ISO date strings', () => {
+        const iso = '2026-07-15T10:30:00.000Z';
+        const ts = __test__.toFirestoreTimestamp(iso);
+        expect(ts).toBeInstanceOf(MockTimestamp);
+        expect(ts.toMillis()).toBe(new Date(iso).getTime());
+      });
+
+      it('returns current Timestamp when value is undefined, null, or empty string', () => {
+        const before = Date.now();
+        const tsNull = __test__.toFirestoreTimestamp(null);
+        const tsUndef = __test__.toFirestoreTimestamp(undefined);
+        const tsEmpty = __test__.toFirestoreTimestamp('');
+        const after = Date.now();
+
+        expect(tsNull.toMillis()).toBeGreaterThanOrEqual(before);
+        expect(tsNull.toMillis()).toBeLessThanOrEqual(after);
+        expect(tsUndef.toMillis()).toBeGreaterThanOrEqual(before);
+        expect(tsUndef.toMillis()).toBeLessThanOrEqual(after);
+        expect(tsEmpty.toMillis()).toBeGreaterThanOrEqual(before);
+        expect(tsEmpty.toMillis()).toBeLessThanOrEqual(after);
+      });
+
+      it('returns current Timestamp when value is an invalid date string', () => {
+        const before = Date.now();
+        const ts = __test__.toFirestoreTimestamp('not-a-valid-date');
+        const after = Date.now();
+
+        expect(ts.toMillis()).toBeGreaterThanOrEqual(before);
+        expect(ts.toMillis()).toBeLessThanOrEqual(after);
+      });
+    });
+
     it('buildEpisodeTrackingDoc handles undefined seasons without throwing TypeError', () => {
       const showWithoutSeasons = {
         last_updated_at: '2026-07-01T00:00:00.000Z',
@@ -5543,11 +5576,38 @@ describe('Trakt sync Firestore sanitization', () => {
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
 
+    it('traktPaginatedRequest warns when totalPages exceeds MAX_PAGINATION_PAGES', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      (global.fetch as jest.Mock).mockImplementation(() =>
+        Promise.resolve({
+          headers: {
+            get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? '75' : null),
+          },
+          json: jest.fn().mockResolvedValue([{ id: 1 }]),
+          ok: true,
+          status: 200,
+        })
+      );
+
+      await __test__.traktPaginatedRequest<any>({
+        accessToken: 'test-token',
+        endpoint: '/sync/watched/movies',
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Total pages reported (75) exceeds MAX_PAGINATION_PAGES (50) for endpoint /sync/watched/movies')
+      );
+
+      warnSpy.mockRestore();
+    });
+
     it('end-to-end mirror sync succeeds with >100 items watch history and captures all items and episode progress', async () => {
       const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
       const batchCommit = jest.fn().mockResolvedValue(undefined);
       const listSet = jest.fn().mockResolvedValue(undefined);
       const episodeTrackingSet = jest.fn().mockResolvedValue(undefined);
+      const requestedWatchedShowUrls: string[] = [];
 
       // Generate 120 watched movies across 2 pages
       const moviesPage1 = Array.from({ length: 100 }, (_, i) => ({
@@ -5725,8 +5785,7 @@ describe('Trakt sync Firestore sanitization', () => {
         }
 
         if (url.includes('/sync/watched/shows')) {
-          // Verify extended=progress was requested
-          expect(url).toContain('extended=progress');
+          requestedWatchedShowUrls.push(url);
           return Promise.resolve({
             headers: {
               get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? '1' : null),
@@ -5758,6 +5817,12 @@ describe('Trakt sync Firestore sanitization', () => {
           retryReason: undefined,
         })
       ).resolves.toBeUndefined();
+
+      // Verify extended=progress was requested on all watched-show requests
+      expect(requestedWatchedShowUrls.length).toBeGreaterThan(0);
+      requestedWatchedShowUrls.forEach((url) => {
+        expect(url).toContain('extended=progress');
+      });
 
       // Verify sync completed with all 120 movies + 2 shows = 122 total items and 3 episodes
       const completedWrite = batchSet.mock.calls

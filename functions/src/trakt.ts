@@ -1282,6 +1282,11 @@ const traktPaginatedRequest = async <T>({
   const allItems: T[] = [...(firstPageData as T[])];
 
   if (Number.isFinite(totalPages) && totalPages > 1) {
+    if (totalPages > MAX_PAGINATION_PAGES) {
+      console.warn(
+        `[TraktSync] Total pages reported (${totalPages}) exceeds MAX_PAGINATION_PAGES (${MAX_PAGINATION_PAGES}) for endpoint ${endpoint}. Fetching capped to ${MAX_PAGINATION_PAGES} pages.`
+      );
+    }
     const pagesToFetch = Math.min(totalPages, MAX_PAGINATION_PAGES);
     for (let page = 2; page <= pagesToFetch; page++) {
       const pageEndpoint = appendPaginationParams(endpoint, page, limit);
@@ -1558,15 +1563,24 @@ const hasActivityGroupChanged = (
 
 const normalizeChangedListIds = (listIds: string[]): string[] => Array.from(new Set(listIds.filter(Boolean)));
 
+const toFirestoreTimestamp = (value: string | null | undefined): FirebaseFirestore.Timestamp => {
+  if (!value) {
+    return Timestamp.now();
+  }
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    return Timestamp.now();
+  }
+  return Timestamp.fromDate(date);
+};
+
 const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, unknown> | null => {
   if (!traktMovie?.movie?.ids?.tmdb) {
     return null;
   }
 
   return stripUndefinedDeep({
-    addedAt: traktMovie.last_watched_at
-      ? Timestamp.fromDate(new Date(traktMovie.last_watched_at))
-      : Timestamp.now(),
+    addedAt: toFirestoreTimestamp(traktMovie.last_watched_at),
     id: traktMovie.movie.ids.tmdb,
     media_type: 'movie',
     release_date: traktMovie.movie.year ? `${traktMovie.movie.year}-01-01` : undefined,
@@ -1580,9 +1594,7 @@ const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string, unkno
   }
 
   return stripUndefinedDeep({
-    addedAt: traktShow.last_watched_at
-      ? Timestamp.fromDate(new Date(traktShow.last_watched_at))
-      : Timestamp.now(),
+    addedAt: toFirestoreTimestamp(traktShow.last_watched_at),
     first_air_date: traktShow.show.year ? `${traktShow.show.year}-01-01` : undefined,
     id: traktShow.show.ids.tmdb,
     media_type: 'tv',
@@ -1619,9 +1631,7 @@ const transformRating = (traktRating: TraktRating): Record<string, unknown> | nu
     docId: `${mediaType}-${tmdbId}`,
     id: String(tmdbId),
     mediaType,
-    ratedAt: traktRating.rated_at
-      ? Timestamp.fromDate(new Date(traktRating.rated_at))
-      : Timestamp.now(),
+    ratedAt: toFirestoreTimestamp(traktRating.rated_at),
     rating: traktRating.rating,
     title,
   };
@@ -1658,9 +1668,7 @@ const transformListItem = (
   }
 
   return stripUndefinedDeep({
-    addedAt: traktItem.listed_at
-      ? Timestamp.fromDate(new Date(traktItem.listed_at))
-      : Timestamp.now(),
+    addedAt: toFirestoreTimestamp(traktItem.listed_at),
     mediaType,
     title,
     tmdbId,
@@ -1703,9 +1711,7 @@ const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, u
   }
 
   return stripUndefinedDeep({
-    addedAt: traktItem.listed_at
-      ? Timestamp.fromDate(new Date(traktItem.listed_at))
-      : Timestamp.now(),
+    addedAt: toFirestoreTimestamp(traktItem.listed_at),
     id: tmdbId,
     media_type: mediaType,
     release_date: releaseDate,
@@ -1739,9 +1745,7 @@ const transformFavorite = (traktFavorite: TraktFavorite): Record<string, unknown
   }
 
   return {
-    addedAt: traktFavorite.listed_at
-      ? Timestamp.fromDate(new Date(traktFavorite.listed_at))
-      : Timestamp.now(),
+    addedAt: toFirestoreTimestamp(traktFavorite.listed_at),
     id: tmdbId,
     media_type: mediaType,
     title,
@@ -4241,5 +4245,6 @@ export const __test__ = {
   sanitizeSyncStatusForWrite,
   syncCustomLists,
   syncTraktImport,
+  toFirestoreTimestamp,
   traktPaginatedRequest,
 };
