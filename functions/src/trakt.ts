@@ -232,7 +232,7 @@ interface TraktWatchedEpisode {
 }
 
 interface TraktWatchedSeason {
-  episodes: TraktWatchedEpisode[];
+  episodes?: TraktWatchedEpisode[];
   number: number;
 }
 
@@ -240,7 +240,7 @@ interface TraktWatchedShow {
   last_updated_at: string;
   last_watched_at: string;
   plays: number;
-  seasons: TraktWatchedSeason[];
+  seasons?: TraktWatchedSeason[];
   show: TraktShow;
 }
 
@@ -1117,12 +1117,35 @@ const consumeOAuthState = async (state: string): Promise<string> => {
   });
 };
 
-const traktRequest = async <T>({
+const getHeaderValue = (headers: unknown, name: string): string | null => {
+  if (!headers) {
+    return null;
+  }
+  if (typeof (headers as { get?: unknown }).get === 'function') {
+    return (headers as { get: (headerName: string) => string | null }).get(name);
+  }
+  if (typeof headers === 'object') {
+    const target = name.toLowerCase();
+    for (const [key, val] of Object.entries(headers as Record<string, unknown>)) {
+      if (key.toLowerCase() === target && typeof val === 'string') {
+        return val;
+      }
+    }
+  }
+  return null;
+};
+
+interface TraktRawResponse<T> {
+  data: T;
+  headers: globalThis.Headers | unknown;
+}
+
+const traktRequestRaw = async <T>({
   accessToken,
   endpoint,
   method = 'GET',
   body,
-}: TraktRequestOptions): Promise<T> => {
+}: TraktRequestOptions): Promise<TraktRawResponse<T>> => {
   const { clientId } = getOAuthConfig();
   let response: globalThis.Response;
   const hasJsonBody = body !== undefined;
@@ -1145,12 +1168,14 @@ const traktRequest = async <T>({
   }
 
   if (response.ok) {
-    return response.json() as Promise<T>;
+    const data = (await response.json()) as T;
+    return { data, headers: response.headers };
   }
 
-  const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
-  const cfRay = response.headers.get('cf-ray') ?? undefined;
-  const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get('retry-after'));
+  const rawHeaders = response.headers;
+  const contentType = (getHeaderValue(rawHeaders, 'content-type') ?? '').toLowerCase();
+  const cfRay = getHeaderValue(rawHeaders, 'cf-ray') ?? undefined;
+  const retryAfterSeconds = parseRetryAfterSeconds(getHeaderValue(rawHeaders, 'retry-after'));
   const rawBody = await response.text();
   const snippet = sanitizeSnippet(rawBody);
 
@@ -1210,6 +1235,74 @@ const traktRequest = async <T>({
   });
 };
 
+const traktRequest = async <T>(options: TraktRequestOptions): Promise<T> => {
+  const { data } = await traktRequestRaw<T>(options);
+  return data;
+};
+
+const MAX_PAGINATION_PAGES = 50;
+
+const appendPaginationParams = (endpoint: string, page: number, limit = 100): string => {
+  const [basePath, queryString] = endpoint.split('?');
+  const searchParams = new URLSearchParams(queryString || '');
+  searchParams.set('page', String(page));
+  searchParams.set('limit', String(limit));
+  return `${basePath}?${searchParams.toString()}`;
+};
+
+const traktPaginatedRequest = async <T>({
+  accessToken,
+  endpoint,
+  limit = 100,
+}: {
+  accessToken: string;
+  endpoint: string;
+  limit?: number;
+}): Promise<T[]> => {
+  const firstPageEndpoint = appendPaginationParams(endpoint, 1, limit);
+  const { data: firstPageData, headers } = await traktRequestRaw<unknown>({
+    accessToken,
+    endpoint: firstPageEndpoint,
+  });
+
+  if (!Array.isArray(firstPageData)) {
+    if (firstPageData !== null && firstPageData !== undefined) {
+      console.warn(
+        `[TraktSync] Expected array response from paginated endpoint ${endpoint}, received ${typeof firstPageData}`
+      );
+    }
+    return [];
+  }
+
+  const pageCountStr =
+    getHeaderValue(headers, 'x-pagination-page-count') ||
+    getHeaderValue(headers, 'X-Pagination-Page-Count');
+  const totalPages = pageCountStr ? parseInt(pageCountStr, 10) : 1;
+
+  const allItems: T[] = [...(firstPageData as T[])];
+
+  if (Number.isFinite(totalPages) && totalPages > 1) {
+    const pagesToFetch = Math.min(totalPages, MAX_PAGINATION_PAGES);
+    for (let page = 2; page <= pagesToFetch; page++) {
+      const pageEndpoint = appendPaginationParams(endpoint, page, limit);
+      const { data: pageData } = await traktRequestRaw<unknown>({
+        accessToken,
+        endpoint: pageEndpoint,
+      });
+
+      if (Array.isArray(pageData)) {
+        allItems.push(...(pageData as T[]));
+      } else {
+        console.warn(
+          `[TraktSync] Expected array on page ${page} from paginated endpoint ${endpoint}, received ${typeof pageData}`
+        );
+      }
+    }
+  }
+
+  return allItems;
+};
+
 const getUserProfile = async (accessToken: string): Promise<UserProfileResponse['user']> => {
   const response = await traktRequest<UserProfileResponse>({
     accessToken,
@@ -1219,43 +1312,43 @@ const getUserProfile = async (accessToken: string): Promise<UserProfileResponse[
 };
 
 const getWatchedMovies = (accessToken: string): Promise<TraktWatchedMovie[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktWatchedMovie>({
     accessToken,
     endpoint: '/sync/watched/movies',
   });
 
 const getWatchedShows = (accessToken: string): Promise<TraktWatchedShow[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktWatchedShow>({
     accessToken,
-    endpoint: '/sync/watched/shows?extended=full',
+    endpoint: '/sync/watched/shows?extended=progress',
   });
 
 const getRatings = (accessToken: string): Promise<TraktRating[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktRating>({
     accessToken,
     endpoint: '/sync/ratings',
   });
 
 const getUserLists = (accessToken: string, username: string): Promise<TraktList[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktList>({
     accessToken,
     endpoint: `/users/${username}/lists`,
   });
 
 const getListItems = (accessToken: string, username: string, listId: string): Promise<TraktListItem[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktListItem>({
     accessToken,
     endpoint: `/users/${username}/lists/${listId}/items`,
   });
 
 const getWatchlist = (accessToken: string): Promise<TraktWatchlistItem[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktWatchlistItem>({
     accessToken,
     endpoint: '/sync/watchlist',
   });
 
 const getFavorites = (accessToken: string): Promise<TraktFavorite[]> =>
-  traktRequest({
+  traktPaginatedRequest<TraktFavorite>({
     accessToken,
     endpoint: '/sync/favorites',
   });
@@ -1466,12 +1559,14 @@ const hasActivityGroupChanged = (
 const normalizeChangedListIds = (listIds: string[]): string[] => Array.from(new Set(listIds.filter(Boolean)));
 
 const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, unknown> | null => {
-  if (!traktMovie.movie.ids.tmdb) {
+  if (!traktMovie?.movie?.ids?.tmdb) {
     return null;
   }
 
   return stripUndefinedDeep({
-    addedAt: Timestamp.fromDate(new Date(traktMovie.last_watched_at)),
+    addedAt: traktMovie.last_watched_at
+      ? Timestamp.fromDate(new Date(traktMovie.last_watched_at))
+      : Timestamp.now(),
     id: traktMovie.movie.ids.tmdb,
     media_type: 'movie',
     release_date: traktMovie.movie.year ? `${traktMovie.movie.year}-01-01` : undefined,
@@ -1480,12 +1575,14 @@ const transformWatchedMovie = (traktMovie: TraktWatchedMovie): Record<string, un
 };
 
 const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string, unknown> | null => {
-  if (!traktShow.show.ids.tmdb) {
+  if (!traktShow?.show?.ids?.tmdb) {
     return null;
   }
 
   return stripUndefinedDeep({
-    addedAt: Timestamp.fromDate(new Date(traktShow.last_watched_at)),
+    addedAt: traktShow.last_watched_at
+      ? Timestamp.fromDate(new Date(traktShow.last_watched_at))
+      : Timestamp.now(),
     first_air_date: traktShow.show.year ? `${traktShow.show.year}-01-01` : undefined,
     id: traktShow.show.ids.tmdb,
     media_type: 'tv',
@@ -1494,16 +1591,20 @@ const transformWatchedShow = (traktShow: TraktWatchedShow): Record<string, unkno
 };
 
 const transformRating = (traktRating: TraktRating): Record<string, unknown> | null => {
+  if (!traktRating) {
+    return null;
+  }
+
   let tmdbId: number | undefined;
   let mediaType: 'movie' | 'tv';
   let title: string;
 
   if (traktRating.movie) {
-    tmdbId = traktRating.movie.ids.tmdb;
+    tmdbId = traktRating.movie.ids?.tmdb;
     mediaType = 'movie';
     title = traktRating.movie.title;
   } else if (traktRating.show) {
-    tmdbId = traktRating.show.ids.tmdb;
+    tmdbId = traktRating.show.ids?.tmdb;
     mediaType = 'tv';
     title = traktRating.show.title;
   } else {
@@ -1518,7 +1619,9 @@ const transformRating = (traktRating: TraktRating): Record<string, unknown> | nu
     docId: `${mediaType}-${tmdbId}`,
     id: String(tmdbId),
     mediaType,
-    ratedAt: Timestamp.fromDate(new Date(traktRating.rated_at)),
+    ratedAt: traktRating.rated_at
+      ? Timestamp.fromDate(new Date(traktRating.rated_at))
+      : Timestamp.now(),
     rating: traktRating.rating,
     title,
   };
@@ -1527,21 +1630,25 @@ const transformRating = (traktRating: TraktRating): Record<string, unknown> | nu
 const transformListItem = (
   traktItem: TraktListItem
 ): { addedAt: FirebaseFirestore.Timestamp; mediaType: 'movie' | 'tv'; title: string; tmdbId: number; traktId?: number } | null => {
+  if (!traktItem) {
+    return null;
+  }
+
   let tmdbId: number | undefined;
   let mediaType: 'movie' | 'tv';
   let title: string;
   let traktId: number | undefined;
 
   if (traktItem.movie) {
-    tmdbId = traktItem.movie.ids.tmdb;
+    tmdbId = traktItem.movie.ids?.tmdb;
     mediaType = 'movie';
     title = traktItem.movie.title;
-    traktId = traktItem.movie.ids.trakt;
+    traktId = traktItem.movie.ids?.trakt;
   } else if (traktItem.show) {
-    tmdbId = traktItem.show.ids.tmdb;
+    tmdbId = traktItem.show.ids?.tmdb;
     mediaType = 'tv';
     title = traktItem.show.title;
-    traktId = traktItem.show.ids.trakt;
+    traktId = traktItem.show.ids?.trakt;
   } else {
     return null;
   }
@@ -1551,7 +1658,9 @@ const transformListItem = (
   }
 
   return stripUndefinedDeep({
-    addedAt: Timestamp.fromDate(new Date(traktItem.listed_at)),
+    addedAt: traktItem.listed_at
+      ? Timestamp.fromDate(new Date(traktItem.listed_at))
+      : Timestamp.now(),
     mediaType,
     title,
     tmdbId,
@@ -1566,18 +1675,22 @@ const transformListItem = (
 };
 
 const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, unknown> | null => {
+  if (!traktItem) {
+    return null;
+  }
+
   let tmdbId: number | undefined;
   let mediaType: 'movie' | 'tv';
   let title: string;
   let releaseDate: string | undefined;
 
   if (traktItem.movie) {
-    tmdbId = traktItem.movie.ids.tmdb;
+    tmdbId = traktItem.movie.ids?.tmdb;
     mediaType = 'movie';
     title = traktItem.movie.title;
     releaseDate = traktItem.movie.year ? `${traktItem.movie.year}-01-01` : undefined;
   } else if (traktItem.show) {
-    tmdbId = traktItem.show.ids.tmdb;
+    tmdbId = traktItem.show.ids?.tmdb;
     mediaType = 'tv';
     title = traktItem.show.title;
     releaseDate = traktItem.show.year ? `${traktItem.show.year}-01-01` : undefined;
@@ -1590,7 +1703,9 @@ const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, u
   }
 
   return stripUndefinedDeep({
-    addedAt: Timestamp.fromDate(new Date(traktItem.listed_at)),
+    addedAt: traktItem.listed_at
+      ? Timestamp.fromDate(new Date(traktItem.listed_at))
+      : Timestamp.now(),
     id: tmdbId,
     media_type: mediaType,
     release_date: releaseDate,
@@ -1599,16 +1714,20 @@ const transformWatchlistItem = (traktItem: TraktWatchlistItem): Record<string, u
 };
 
 const transformFavorite = (traktFavorite: TraktFavorite): Record<string, unknown> | null => {
+  if (!traktFavorite) {
+    return null;
+  }
+
   let tmdbId: number | undefined;
   let mediaType: 'movie' | 'tv';
   let title: string;
 
   if (traktFavorite.movie) {
-    tmdbId = traktFavorite.movie.ids.tmdb;
+    tmdbId = traktFavorite.movie.ids?.tmdb;
     mediaType = 'movie';
     title = traktFavorite.movie.title;
   } else if (traktFavorite.show) {
-    tmdbId = traktFavorite.show.ids.tmdb;
+    tmdbId = traktFavorite.show.ids?.tmdb;
     mediaType = 'tv';
     title = traktFavorite.show.title;
   } else {
@@ -1620,7 +1739,9 @@ const transformFavorite = (traktFavorite: TraktFavorite): Record<string, unknown
   }
 
   return {
-    addedAt: Timestamp.fromDate(new Date(traktFavorite.listed_at)),
+    addedAt: traktFavorite.listed_at
+      ? Timestamp.fromDate(new Date(traktFavorite.listed_at))
+      : Timestamp.now(),
     id: tmdbId,
     media_type: mediaType,
     title,
@@ -1987,8 +2108,12 @@ const buildManagedListItemsMap = (
 ): Record<string, Record<string, unknown>> => {
   const mappedItems: Record<string, Record<string, unknown>> = {};
 
+  if (!Array.isArray(items)) {
+    return mappedItems;
+  }
+
   items.forEach((item) => {
-    if (!item) {
+    if (!item || typeof item !== 'object') {
       return;
     }
 
@@ -2007,28 +2132,42 @@ const buildManagedListItemsMap = (
 const buildAlreadyWatchedItemsMap = (
   watchedMovies: TraktWatchedMovie[],
   watchedShows: TraktWatchedShow[]
-): Record<string, Record<string, unknown>> =>
-  buildManagedListItemsMap([
-    ...watchedMovies.map((item) => transformWatchedMovie(item)),
-    ...watchedShows.map((item) => transformWatchedShow(item)),
+): Record<string, Record<string, unknown>> => {
+  const safeMovies = Array.isArray(watchedMovies) ? watchedMovies : [];
+  const safeShows = Array.isArray(watchedShows) ? watchedShows : [];
+  return buildManagedListItemsMap([
+    ...safeMovies.map((item) => (item ? transformWatchedMovie(item) : null)),
+    ...safeShows.map((item) => (item ? transformWatchedShow(item) : null)),
   ]);
+};
 
 const buildWatchlistItemsMap = (
   traktWatchlist: TraktWatchlistItem[]
-): Record<string, Record<string, unknown>> =>
-  buildManagedListItemsMap(traktWatchlist.map((item) => transformWatchlistItem(item)));
+): Record<string, Record<string, unknown>> => {
+  const safeWatchlist = Array.isArray(traktWatchlist) ? traktWatchlist : [];
+  return buildManagedListItemsMap(safeWatchlist.map((item) => (item ? transformWatchlistItem(item) : null)));
+};
 
 const buildFavoriteItemsMap = (
   traktFavorites: TraktFavorite[]
-): Record<string, Record<string, unknown>> =>
-  buildManagedListItemsMap(traktFavorites.map((item) => transformFavorite(item)));
+): Record<string, Record<string, unknown>> => {
+  const safeFavorites = Array.isArray(traktFavorites) ? traktFavorites : [];
+  return buildManagedListItemsMap(safeFavorites.map((item) => (item ? transformFavorite(item) : null)));
+};
 
 const buildCustomListItemsMap = (
   traktItems: TraktListItem[]
 ): Record<string, Record<string, unknown>> => {
   const items: Record<string, Record<string, unknown>> = {};
 
+  if (!Array.isArray(traktItems)) {
+    return items;
+  }
+
   for (const traktItem of traktItems) {
+    if (!traktItem) {
+      continue;
+    }
     const transformed = transformListItem(traktItem);
     if (!transformed) {
       continue;
@@ -2052,25 +2191,46 @@ const buildCustomListItemsMap = (
 const buildEpisodeTrackingDoc = (
   traktShow: TraktWatchedShow
 ): { metadata: { tvShowName: string }; showId: string; episodes: Record<string, Record<string, unknown>> } | null => {
-  if (!traktShow.show.ids.tmdb) {
+  if (!traktShow?.show?.ids?.tmdb) {
     return null;
   }
 
   const episodes: Record<string, Record<string, unknown>> = {};
-  traktShow.seasons.forEach((season) => {
-    season.episodes.forEach((episode) => {
-      const key = `${season.number}_${episode.number}`;
-      episodes[key] = {
-        watched: true,
-        watchedAt: Timestamp.fromDate(new Date(episode.last_watched_at)),
-      };
+
+  if (Array.isArray(traktShow.seasons)) {
+    traktShow.seasons.forEach((season) => {
+      if (!season) {
+        return;
+      }
+      if (Array.isArray(season.episodes)) {
+        season.episodes.forEach((episode) => {
+          if (!episode || typeof season.number !== 'number' || typeof episode.number !== 'number') {
+            return;
+          }
+          const key = `${season.number}_${episode.number}`;
+          const watchedAtDate = episode.last_watched_at ? new Date(episode.last_watched_at) : new Date();
+          const validDate = !Number.isNaN(watchedAtDate.getTime()) ? watchedAtDate : new Date();
+          episodes[key] = {
+            watched: true,
+            watchedAt: Timestamp.fromDate(validDate),
+          };
+        });
+      } else if (season.episodes !== undefined && season.episodes !== null) {
+        console.warn(
+          `[TraktSync] Expected season.episodes to be an array for season ${season.number} of show "${traktShow.show.title}" (endpoint: /sync/watched/shows?extended=progress)`
+        );
+      }
     });
-  });
+  } else if (traktShow.seasons !== undefined && traktShow.seasons !== null) {
+    console.warn(
+      `[TraktSync] Expected traktShow.seasons to be an array for show "${traktShow.show.title}" (endpoint: /sync/watched/shows?extended=progress)`
+    );
+  }
 
   return {
     episodes,
     metadata: {
-      tvShowName: traktShow.show.title,
+      tvShowName: traktShow.show.title ?? '',
     },
     showId: traktShow.show.ids.tmdb.toString(),
   };
@@ -2079,7 +2239,14 @@ const buildEpisodeTrackingDoc = (
 const buildRatingsMap = (traktRatings: TraktRating[]): Record<string, Record<string, unknown>> => {
   const remoteRatings: Record<string, Record<string, unknown>> = {};
 
+  if (!Array.isArray(traktRatings)) {
+    return remoteRatings;
+  }
+
   traktRatings.forEach((traktRating) => {
+    if (!traktRating) {
+      return;
+    }
     const transformed = transformRating(traktRating);
     if (!transformed) {
       return;
@@ -2603,84 +2770,124 @@ const syncTraktImport = async (
   let customListsState = currentIncrementalState?.customLists ?? {};
 
   if (shouldSyncWatched) {
-    const watchedMovies = await getWatchedMovies(accessToken);
-    const watchedShows = await getWatchedShows(accessToken);
-    const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watchedMovies, watchedShows);
-    const alreadyWatchedResult = await reconcileManagedList(
-      userId,
-      'already-watched',
-      alreadyWatchedItems,
-      {
-        id: 'already-watched',
-        name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
-      },
-      undefined,
-      {
-        preserveLocalItems: true,
-        recencyField: 'addedAt',
+    try {
+      const watchedMovies = await getWatchedMovies(accessToken);
+      const watchedShows = await getWatchedShows(accessToken);
+      const alreadyWatchedItems = buildAlreadyWatchedItemsMap(watchedMovies, watchedShows);
+      const alreadyWatchedResult = await reconcileManagedList(
+        userId,
+        'already-watched',
+        alreadyWatchedItems,
+        {
+          id: 'already-watched',
+          name: TRAKT_MANAGED_DEFAULT_LIST_NAMES['already-watched'],
+        },
+        undefined,
+        {
+          preserveLocalItems: true,
+          recencyField: 'addedAt',
+        }
+      );
+      const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
+
+      itemsSynced.movies =
+        summaryMode === 'bootstrap'
+          ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
+          : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
+      itemsSynced.shows =
+        summaryMode === 'bootstrap'
+          ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
+          : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
+      itemsSynced.episodes =
+        summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
+
+      if (alreadyWatchedResult.shouldEnrich) {
+        listsToEnrich.push('already-watched');
       }
-    );
-    const episodeTrackingResult = await reconcileEpisodeTracking(userId, watchedShows);
-
-    itemsSynced.movies =
-      summaryMode === 'bootstrap'
-        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'movie')
-        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'movie');
-    itemsSynced.shows =
-      summaryMode === 'bootstrap'
-        ? countManagedListItemsByMediaType(alreadyWatchedItems, 'tv')
-        : countMediaTypeChanges(alreadyWatchedResult.changedMediaTypes, 'tv');
-    itemsSynced.episodes =
-      summaryMode === 'bootstrap' ? episodeTrackingResult.itemCount : episodeTrackingResult.changedCount;
-
-    if (alreadyWatchedResult.shouldEnrich) {
-      listsToEnrich.push('already-watched');
+    } catch (error) {
+      console.error('[TraktSync] Error during watched items sync step (/sync/watched/movies, /sync/watched/shows?extended=progress):', {
+        error,
+        userId,
+      });
+      throw error;
     }
   }
 
   if (shouldSyncRatings) {
-    const ratings = await getRatings(accessToken);
-    const result = await reconcileRatings(userId, ratings);
-    itemsSynced.ratings = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
+    try {
+      const ratings = await getRatings(accessToken);
+      const result = await reconcileRatings(userId, ratings);
+      itemsSynced.ratings = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
+    } catch (error) {
+      console.error('[TraktSync] Error during ratings sync step (/sync/ratings):', {
+        error,
+        userId,
+      });
+      throw error;
+    }
   }
 
   if (shouldSyncWatchlist) {
-    const watchlist = await getWatchlist(accessToken);
-    const result = await syncWatchlist(userId, watchlist);
-    itemsSynced.watchlistItems =
-      summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
-    if (result.shouldEnrich) {
-      listsToEnrich.push('watchlist');
+    try {
+      const watchlist = await getWatchlist(accessToken);
+      const result = await syncWatchlist(userId, watchlist);
+      itemsSynced.watchlistItems =
+        summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
+      if (result.shouldEnrich) {
+        listsToEnrich.push('watchlist');
+      }
+    } catch (error) {
+      console.error('[TraktSync] Error during watchlist sync step (/sync/watchlist):', {
+        error,
+        userId,
+      });
+      throw error;
     }
   }
 
   if (shouldSyncFavorites) {
-    const favorites = await getFavorites(accessToken);
-    const result = await syncFavorites(userId, favorites);
-    itemsSynced.favorites = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
-    if (result.shouldEnrich) {
-      listsToEnrich.push('favorites');
+    try {
+      const favorites = await getFavorites(accessToken);
+      const result = await syncFavorites(userId, favorites);
+      itemsSynced.favorites = summaryMode === 'bootstrap' ? result.itemCount : result.changedCount;
+      if (result.shouldEnrich) {
+        listsToEnrich.push('favorites');
+      }
+    } catch (error) {
+      console.error('[TraktSync] Error during favorites sync step (/sync/favorites):', {
+        error,
+        userId,
+      });
+      throw error;
     }
   }
 
   if (shouldSyncCustomLists) {
-    const userProfile = await getUserProfile(accessToken);
-    const traktLists = await getUserLists(accessToken, userProfile.username);
-    const customListsResult = await reconcileCustomLists(
-      userId,
-      accessToken,
-      userProfile.username,
-      traktLists,
-      currentIncrementalState?.customLists ?? {},
-      bootstrap
-    );
+    try {
+      const userProfile = await getUserProfile(accessToken);
+      const traktLists = await getUserLists(accessToken, userProfile.username);
+      const customListsResult = await reconcileCustomLists(
+        userId,
+        accessToken,
+        userProfile.username,
+        traktLists,
+        currentIncrementalState?.customLists ?? {},
+        bootstrap
+      );
 
-    itemsSynced.lists =
-      summaryMode === 'bootstrap'
-        ? Object.keys(customListsResult.customLists).length
-        : customListsResult.changedCount;
-    customListsState = customListsResult.customLists;
-    listsToEnrich.push(...customListsResult.listsToEnrich);
+      itemsSynced.lists =
+        summaryMode === 'bootstrap'
+          ? Object.keys(customListsResult.customLists).length
+          : customListsResult.changedCount;
+      customListsState = customListsResult.customLists;
+      listsToEnrich.push(...customListsResult.listsToEnrich);
+    } catch (error) {
+      console.error('[TraktSync] Error during custom lists sync step (/users/{username}/lists):', {
+        error,
+        userId,
+      });
+      throw error;
+    }
   }
 
   return {
@@ -4024,10 +4231,15 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
 );
 
 export const __test__ = {
+  buildEpisodeTrackingDoc,
   enrichEpisodeTracking,
   getAllowedCorsOrigin,
+  getWatchedMovies,
+  getWatchedShows,
   reconcileManagedList,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
   syncCustomLists,
+  syncTraktImport,
+  traktPaginatedRequest,
 };

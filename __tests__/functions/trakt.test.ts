@@ -836,7 +836,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: any) => {
       const url = String(input);
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -855,7 +855,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({}),
           ok: true,
@@ -863,7 +863,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -886,7 +886,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -909,7 +909,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/favorites')) {
+      if (url.includes('/sync/favorites')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -933,9 +933,9 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
-        url.endsWith('/sync/watched/shows?extended=full') ||
-        url.endsWith('/sync/ratings') ||
-        url.endsWith('/users/tester/lists')
+        url.includes('/sync/watched/shows') ||
+        url.includes('/sync/ratings') ||
+        url.includes('/users/tester/lists')
       ) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
@@ -1221,7 +1221,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({}),
           ok: true,
@@ -1229,7 +1229,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1252,7 +1252,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/shows?extended=full')) {
+      if (url.includes('/sync/watched/shows')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1292,7 +1292,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/ratings')) {
+      if (url.includes('/sync/ratings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1315,7 +1315,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1338,7 +1338,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/favorites')) {
+      if (url.includes('/sync/favorites')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1361,7 +1361,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -1380,7 +1380,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists')) {
+      if (url.includes('/users/tester/lists') && !url.includes('/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1400,7 +1400,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+      if (url.includes('/users/tester/lists/custom-list/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -1969,7 +1969,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivitiesAfter),
           ok: true,
@@ -1977,7 +1977,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2000,7 +2000,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/shows?extended=full')) {
+      if (url.includes('/sync/watched/shows')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
           ok: true,
@@ -2008,7 +2008,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2031,7 +2031,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/favorites')) {
+      if (url.includes('/sync/favorites')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2202,7 +2202,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivitiesAfter),
           ok: true,
@@ -2210,7 +2210,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -2229,7 +2229,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists')) {
+      if (url.includes('/users/tester/lists') && !url.includes('/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2249,7 +2249,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+      if (url.includes('/users/tester/lists/custom-list/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2429,7 +2429,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivitiesAfter),
           ok: true,
@@ -2437,7 +2437,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -2456,7 +2456,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists')) {
+      if (url.includes('/users/tester/lists') && !url.includes('/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2476,7 +2476,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+      if (url.includes('/users/tester/lists/custom-list/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2656,7 +2656,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivitiesAfter),
           ok: true,
@@ -2664,7 +2664,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/ratings')) {
+      if (url.includes('/sync/ratings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -2840,7 +2840,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivities),
           ok: true,
@@ -2997,7 +2997,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: unknown) => {
       const url = String(input);
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue(lastActivitiesAfter),
           ok: true,
@@ -3005,7 +3005,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3227,7 +3227,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: any) => {
       const url = String(input);
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -3246,7 +3246,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({}),
           ok: true,
@@ -3254,7 +3254,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3277,7 +3277,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3300,7 +3300,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/favorites')) {
+      if (url.includes('/sync/favorites')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3324,9 +3324,9 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
-        url.endsWith('/sync/watched/shows?extended=full') ||
-        url.endsWith('/sync/ratings') ||
-        url.endsWith('/users/tester/lists')
+        url.includes('/sync/watched/shows') ||
+        url.includes('/sync/ratings') ||
+        url.includes('/users/tester/lists')
       ) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
@@ -3468,7 +3468,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: any) => {
       const url = String(input);
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -3487,7 +3487,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({}),
           ok: true,
@@ -3495,7 +3495,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3518,7 +3518,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watchlist')) {
+      if (url.includes('/sync/watchlist')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3541,7 +3541,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/favorites')) {
+      if (url.includes('/sync/favorites')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -3565,9 +3565,9 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
-        url.endsWith('/sync/watched/shows?extended=full') ||
-        url.endsWith('/sync/ratings') ||
-        url.endsWith('/users/tester/lists')
+        url.includes('/sync/watched/shows') ||
+        url.includes('/sync/ratings') ||
+        url.includes('/users/tester/lists')
       ) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
@@ -4861,7 +4861,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/last_activities')) {
+      if (url.includes('/sync/last_activities')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({}),
           ok: true,
@@ -4869,7 +4869,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -4892,7 +4892,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/watched/shows?extended=full')) {
+      if (url.includes('/sync/watched/shows')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
           ok: true,
@@ -5038,7 +5038,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: any) => {
       const url = String(input);
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -5057,15 +5057,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/sync/last_activities')) {
-        return Promise.resolve({
-          json: jest.fn().mockResolvedValue({}),
-          ok: true,
-          status: 200,
-        });
-      }
-
-      if (url.endsWith('/sync/watched/movies')) {
+      if (url.includes('/sync/watched/movies')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -5089,12 +5081,12 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
-        url.endsWith('/sync/last_activities') ||
-        url.endsWith('/sync/watched/shows?extended=full') ||
-        url.endsWith('/sync/ratings') ||
-        url.endsWith('/sync/watchlist') ||
-        url.endsWith('/sync/favorites') ||
-        url.endsWith('/users/tester/lists')
+        url.includes('/sync/last_activities') ||
+        url.includes('/sync/watched/shows') ||
+        url.includes('/sync/ratings') ||
+        url.includes('/sync/watchlist') ||
+        url.includes('/sync/favorites') ||
+        url.includes('/users/tester/lists')
       ) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
@@ -5240,7 +5232,7 @@ describe('Trakt sync Firestore sanitization', () => {
     (global.fetch as jest.Mock).mockImplementation((input: any) => {
       const url = String(input);
 
-      if (url.endsWith('/users/settings')) {
+      if (url.includes('/users/settings')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue({
             user: {
@@ -5260,12 +5252,12 @@ describe('Trakt sync Firestore sanitization', () => {
       }
 
       if (
-        url.endsWith('/sync/last_activities') ||
-        url.endsWith('/sync/watched/movies') ||
-        url.endsWith('/sync/watched/shows?extended=full') ||
-        url.endsWith('/sync/ratings') ||
-        url.endsWith('/sync/watchlist') ||
-        url.endsWith('/sync/favorites')
+        url.includes('/sync/last_activities') ||
+        url.includes('/sync/watched/movies') ||
+        url.includes('/sync/watched/shows') ||
+        url.includes('/sync/ratings') ||
+        url.includes('/sync/watchlist') ||
+        url.includes('/sync/favorites')
       ) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([]),
@@ -5274,7 +5266,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists')) {
+      if (url.includes('/users/tester/lists') && !url.includes('/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -5294,7 +5286,7 @@ describe('Trakt sync Firestore sanitization', () => {
         });
       }
 
-      if (url.endsWith('/users/tester/lists/custom-list/items')) {
+      if (url.includes('/users/tester/lists/custom-list/items')) {
         return Promise.resolve({
           json: jest.fn().mockResolvedValue([
             {
@@ -5391,4 +5383,401 @@ describe('Trakt sync Firestore sanitization', () => {
     expect(response.setHeader).toHaveBeenCalledWith('Vary', 'Origin');
     expect(response.status).toHaveBeenCalledWith(404);
   });
+
+  describe('Post-June 30 2026 Trakt API Updates (Pagination & extended=progress)', () => {
+    it('buildEpisodeTrackingDoc handles undefined seasons without throwing TypeError', () => {
+      const showWithoutSeasons = {
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-07-01T00:00:00.000Z',
+        plays: 1,
+        show: {
+          ids: {
+            slug: 'breaking-bad',
+            tmdb: 1396,
+            trakt: 1,
+          },
+          title: 'Breaking Bad',
+          year: 2008,
+        },
+      };
+
+      const result = __test__.buildEpisodeTrackingDoc(showWithoutSeasons as any);
+      expect(result).not.toBeNull();
+      expect(result?.showId).toBe('1396');
+      expect(result?.metadata.tvShowName).toBe('Breaking Bad');
+      expect(result?.episodes).toEqual({});
+    });
+
+    it('buildEpisodeTrackingDoc handles seasons with undefined episodes gracefully', () => {
+      const showWithMalformedSeasons = {
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-07-01T00:00:00.000Z',
+        plays: 1,
+        seasons: [
+          {
+            number: 1,
+          },
+        ],
+        show: {
+          ids: {
+            slug: 'better-call-saul',
+            tmdb: 60059,
+            trakt: 2,
+          },
+          title: 'Better Call Saul',
+          year: 2015,
+        },
+      };
+
+      const result = __test__.buildEpisodeTrackingDoc(showWithMalformedSeasons as any);
+      expect(result).not.toBeNull();
+      expect(result?.showId).toBe('60059');
+      expect(result?.episodes).toEqual({});
+    });
+
+    it('buildEpisodeTrackingDoc populates episodes when extended=progress data is present', () => {
+      const showWithProgress = {
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-07-01T00:00:00.000Z',
+        plays: 5,
+        seasons: [
+          {
+            episodes: [
+              {
+                last_watched_at: '2026-06-01T12:00:00.000Z',
+                number: 1,
+                plays: 1,
+              },
+              {
+                last_watched_at: '2026-06-02T12:00:00.000Z',
+                number: 2,
+                plays: 2,
+              },
+            ],
+            number: 1,
+          },
+          {
+            episodes: [
+              {
+                last_watched_at: '2026-06-10T12:00:00.000Z',
+                number: 1,
+                plays: 1,
+              },
+            ],
+            number: 2,
+          },
+        ],
+        show: {
+          ids: {
+            slug: 'severance',
+            tmdb: 93405,
+            trakt: 3,
+          },
+          title: 'Severance',
+          year: 2022,
+        },
+      };
+
+      const result = __test__.buildEpisodeTrackingDoc(showWithProgress as any);
+      expect(result).not.toBeNull();
+      expect(result?.showId).toBe('93405');
+      expect(Object.keys(result?.episodes ?? {})).toEqual(['1_1', '1_2', '2_1']);
+      expect(result?.episodes['1_1'].watched).toBe(true);
+      expect(result?.episodes['1_2'].watched).toBe(true);
+      expect(result?.episodes['2_1'].watched).toBe(true);
+    });
+
+    it('traktPaginatedRequest fetches and combines multiple pages using pagination headers', async () => {
+      const page1Items = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
+      const page2Items = Array.from({ length: 25 }, (_, i) => ({ id: i + 101, name: `Item ${i + 101}` }));
+
+      (global.fetch as jest.Mock).mockImplementation((input: any) => {
+        const url = String(input);
+        if (url.includes('page=1')) {
+          return Promise.resolve({
+            headers: {
+              get: (header: string) => {
+                const lower = header.toLowerCase();
+                if (lower === 'x-pagination-page') return '1';
+                if (lower === 'x-pagination-limit') return '100';
+                if (lower === 'x-pagination-page-count') return '2';
+                if (lower === 'x-pagination-item-count') return '125';
+                return null;
+              },
+            },
+            json: jest.fn().mockResolvedValue(page1Items),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        if (url.includes('page=2')) {
+          return Promise.resolve({
+            headers: {
+              get: (header: string) => {
+                const lower = header.toLowerCase();
+                if (lower === 'x-pagination-page') return '2';
+                if (lower === 'x-pagination-limit') return '100';
+                if (lower === 'x-pagination-page-count') return '2';
+                if (lower === 'x-pagination-item-count') return '125';
+                return null;
+              },
+            },
+            json: jest.fn().mockResolvedValue(page2Items),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected URL: ${url}`);
+      });
+
+      const results = await __test__.traktPaginatedRequest<any>({
+        accessToken: 'test-token',
+        endpoint: '/sync/watched/movies',
+      });
+
+      expect(results).toHaveLength(125);
+      expect(results[0].id).toBe(1);
+      expect(results[124].id).toBe(125);
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('end-to-end mirror sync succeeds with >100 items watch history and captures all items and episode progress', async () => {
+      const batchSet = jest.fn((_ref, data) => assertNoUndefined(data));
+      const batchCommit = jest.fn().mockResolvedValue(undefined);
+      const listSet = jest.fn().mockResolvedValue(undefined);
+      const episodeTrackingSet = jest.fn().mockResolvedValue(undefined);
+
+      // Generate 120 watched movies across 2 pages
+      const moviesPage1 = Array.from({ length: 100 }, (_, i) => ({
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-07-01T00:00:00.000Z',
+        movie: {
+          ids: { slug: `movie-${i + 1}`, tmdb: 1000 + i + 1, trakt: 2000 + i + 1 },
+          title: `Movie ${i + 1}`,
+          year: 2020 + (i % 5),
+        },
+        plays: 1,
+      }));
+      const moviesPage2 = Array.from({ length: 20 }, (_, i) => ({
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-07-01T00:00:00.000Z',
+        movie: {
+          ids: { slug: `movie-${i + 101}`, tmdb: 1000 + i + 101, trakt: 2000 + i + 101 },
+          title: `Movie ${i + 101}`,
+          year: 2024,
+        },
+        plays: 1,
+      }));
+
+      // Generate 5 watched shows with extended=progress season/episode data
+      const watchedShows = [
+        {
+          last_updated_at: '2026-07-01T00:00:00.000Z',
+          last_watched_at: '2026-07-01T00:00:00.000Z',
+          plays: 10,
+          seasons: [
+            {
+              episodes: [
+                { last_watched_at: '2026-06-01T00:00:00.000Z', number: 1, plays: 1 },
+                { last_watched_at: '2026-06-02T00:00:00.000Z', number: 2, plays: 1 },
+              ],
+              number: 1,
+            },
+            {
+              episodes: [
+                { last_watched_at: '2026-06-15T00:00:00.000Z', number: 1, plays: 1 },
+              ],
+              number: 2,
+            },
+          ],
+          show: {
+            ids: { slug: 'mega-show-1', tmdb: 5001, trakt: 6001 },
+            title: 'Mega Show 1',
+            year: 2021,
+          },
+        },
+        {
+          // Show with undefined seasons (defensive check)
+          last_updated_at: '2026-07-01T00:00:00.000Z',
+          last_watched_at: '2026-07-01T00:00:00.000Z',
+          plays: 1,
+          show: {
+            ids: { slug: 'mega-show-2', tmdb: 5002, trakt: 6002 },
+            title: 'Mega Show 2',
+            year: 2022,
+          },
+        },
+      ];
+
+      const episodeTrackingCollection = {
+        doc: jest.fn((id: string) => ({
+          id,
+          path: `users/user-1/episode_tracking/${id}`,
+          set: episodeTrackingSet,
+        })),
+        get: jest.fn().mockResolvedValue({ docs: [] }),
+      };
+
+      const listsCollection = {
+        doc: jest.fn((id: string) => ({
+          get: jest.fn().mockResolvedValue({ data: () => undefined, exists: false }),
+          id,
+          path: `users/user-1/lists/${id}`,
+          set: listSet,
+        })),
+        get: jest.fn().mockResolvedValue({ docs: [] }),
+      };
+
+      const userRef = {
+        collection: jest.fn((name: string) => {
+          if (name === 'traktSyncRuns') {
+            return {
+              doc: jest.fn((id: string) => ({ id, path: `users/user-1/traktSyncRuns/${id}` })),
+            };
+          }
+          if (name === 'traktEnrichmentRuns') {
+            return {
+              doc: jest.fn((id = 'enrich-1') => ({ id, path: `users/user-1/traktEnrichmentRuns/${id}` })),
+            };
+          }
+          if (name === 'lists') {
+            return listsCollection;
+          }
+          if (name === 'episode_tracking') {
+            return episodeTrackingCollection;
+          }
+          if (name === 'ratings') {
+            return { get: jest.fn().mockResolvedValue({ docs: [] }) };
+          }
+          throw new Error(`Unexpected collection ${name}`);
+        }),
+        get: jest.fn().mockResolvedValue({
+          data: () => ({
+            traktAccessToken: 'test-token',
+            traktConnected: true,
+            traktSyncStatus: { runId: 'run-1' },
+            traktTokenExpiresAt: MockTimestamp.fromMillis(Date.now() + 2 * 60 * 60 * 1000),
+          }),
+          exists: true,
+        }),
+        path: 'users/user-1',
+      };
+
+      firestoreFn.mockImplementation(() => ({
+        batch: jest.fn(() => ({
+          commit: batchCommit,
+          delete: jest.fn(),
+          set: batchSet,
+        })),
+        collection: jest.fn((name: string) => {
+          if (name !== 'users') throw new Error(`Unexpected collection ${name}`);
+          return { doc: jest.fn(() => userRef) };
+        }),
+        runTransaction: jest.fn().mockResolvedValue({
+          kind: 'active',
+          status: { runId: 'enrich-1', status: 'in_progress' },
+          userData: {},
+        }),
+      }));
+
+      (global.fetch as jest.Mock).mockImplementation((input: any) => {
+        const url = String(input);
+
+        if (url.includes('/users/settings')) {
+          return Promise.resolve({
+            json: jest.fn().mockResolvedValue({
+              user: { ids: { slug: 'tester' }, name: 'Tester', private: false, username: 'tester', vip: false, vip_ep: false },
+            }),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        if (url.includes('/sync/last_activities')) {
+          return Promise.resolve({
+            json: jest.fn().mockResolvedValue({}),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        if (url.includes('/sync/watched/movies')) {
+          if (url.includes('page=2')) {
+            return Promise.resolve({
+              headers: {
+                get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? '2' : null),
+              },
+              json: jest.fn().mockResolvedValue(moviesPage2),
+              ok: true,
+              status: 200,
+            });
+          }
+          return Promise.resolve({
+            headers: {
+              get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? '2' : null),
+            },
+            json: jest.fn().mockResolvedValue(moviesPage1),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        if (url.includes('/sync/watched/shows')) {
+          // Verify extended=progress was requested
+          expect(url).toContain('extended=progress');
+          return Promise.resolve({
+            headers: {
+              get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? '1' : null),
+            },
+            json: jest.fn().mockResolvedValue(watchedShows),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        if (url.includes('/sync/ratings') || url.includes('/sync/watchlist') || url.includes('/sync/favorites') || url.includes('/users/tester/lists')) {
+          return Promise.resolve({
+            headers: {
+              get: () => '1',
+            },
+            json: jest.fn().mockResolvedValue([]),
+            ok: true,
+            status: 200,
+          });
+        }
+
+        throw new Error(`Unexpected fetch URL ${url}`);
+      });
+
+      await expect(
+        (runTraktSync as any)({
+          data: { runId: 'run-1', userId: 'user-1' },
+          retryCount: 0,
+          retryReason: undefined,
+        })
+      ).resolves.toBeUndefined();
+
+      // Verify sync completed with all 120 movies + 2 shows = 122 total items and 3 episodes
+      const completedWrite = batchSet.mock.calls
+        .map(([_ref, data]) => ('traktSyncStatus' in data ? data.traktSyncStatus : data))
+        .find((data) => data?.status === 'completed') as any;
+
+      expect(completedWrite).toBeDefined();
+      expect(completedWrite.status).toBe('completed');
+      expect(completedWrite.itemsSynced.movies).toBe(120);
+      expect(completedWrite.itemsSynced.shows).toBe(2);
+      expect(completedWrite.itemsSynced.episodes).toBe(3);
+
+      // Verify already-watched list contains all 120 movies + 2 shows
+      const alreadyWatchedCall = listSet.mock.calls.find(
+        ([data]) => data?.id === 'already-watched'
+      );
+      expect(alreadyWatchedCall).toBeDefined();
+      const alreadyWatchedItems = alreadyWatchedCall[0].items;
+      expect(Object.keys(alreadyWatchedItems)).toHaveLength(122);
+    });
+  });
 });
+
