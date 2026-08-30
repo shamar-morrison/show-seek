@@ -35,6 +35,7 @@ import {
   getWatchedMovies,
   getWatchedShows,
   traktPaginatedRequest,
+  traktRequestRaw,
 } from './client';
 import {
   buildEnrichmentResponseBody,
@@ -72,12 +73,14 @@ import {
 import {
   enqueueSyncRun,
   maybeRefreshAccessToken,
+  reconcileCustomLists,
   reconcileManagedList,
-  syncCustomLists,
   syncTraktImport,
 } from './sync';
 import {
   toFirestoreTimestamp,
+  transformFavorite,
+  transformRating,
 } from './transforms';
 import type {
   EnrichmentTaskPayload,
@@ -1094,11 +1097,14 @@ export const __test__ = {
   getAllowedCorsOrigin,
   getWatchedMovies,
   getWatchedShows,
+  reconcileCustomLists,
   reconcileManagedList,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
-  syncCustomLists,
   syncTraktImport,
   toFirestoreTimestamp,
   traktPaginatedRequest,
+  traktRequestRaw,
+  transformFavorite,
+  transformRating,
 };

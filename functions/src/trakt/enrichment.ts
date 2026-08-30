@@ -241,7 +241,7 @@ export const enrichEpisodeTracking = async (
 
   for (const [seasonNumber, keys] of Object.entries(bySeason)) {
     const seasonData = await fetchTMDBJson<TMDBSeasonResponse>(`/tv/${showId}/season/${seasonNumber}`);
-    if (!seasonData) {
+    if (!seasonData || !Array.isArray(seasonData.episodes)) {
       continue;
     }
 

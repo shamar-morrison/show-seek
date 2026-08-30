@@ -4475,6 +4475,7 @@ describe('Trakt sync Firestore sanitization', () => {
               }),
               set: listSet,
             })),
+            get: jest.fn().mockResolvedValue({ docs: [] }),
           };
         }),
       })),
@@ -4516,19 +4517,26 @@ describe('Trakt sync Firestore sanitization', () => {
       text: jest.fn(),
     });
 
-    await (__test__ as any).syncCustomLists('user-1', 'access-token', 'showseek-user', [
-      {
-        created_at: '2024-01-01T00:00:00.000Z',
-        description: 'Custom list',
-        ids: {
-          slug: 'favorites',
-          trakt: 55,
+    await (__test__ as any).reconcileCustomLists(
+      'user-1',
+      'access-token',
+      'showseek-user',
+      [
+        {
+          created_at: '2024-01-01T00:00:00.000Z',
+          description: 'Custom list',
+          ids: {
+            slug: 'favorites',
+            trakt: 55,
+          },
+          name: 'Favorites',
+          privacy: 'public',
+          updated_at: '2024-01-02T00:00:00.000Z',
         },
-        name: 'Favorites',
-        privacy: 'public',
-        updated_at: '2024-01-02T00:00:00.000Z',
-      },
-    ]);
+      ],
+      {},
+      true
+    );
 
     const payload = listSet.mock.calls[0][0];
     expect(payload.createdAt.toMillis()).toBe(new Date('2024-01-01T00:00:00.000Z').getTime());
@@ -5520,6 +5528,54 @@ describe('Trakt sync Firestore sanitization', () => {
       expect(result?.episodes['2_1'].watched).toBe(true);
     });
 
+    it('buildEpisodeTrackingDoc reuses show-level last_watched_at or omits watchedAt when episode last_watched_at is missing/invalid', () => {
+      const show = {
+        last_updated_at: '2026-07-01T00:00:00.000Z',
+        last_watched_at: '2026-05-01T12:00:00.000Z',
+        plays: 2,
+        seasons: [
+          {
+            episodes: [
+              {
+                number: 1,
+                plays: 1,
+              },
+              {
+                last_watched_at: 'invalid-date',
+                number: 2,
+                plays: 1,
+              },
+            ],
+            number: 1,
+          },
+        ],
+        show: {
+          ids: {
+            slug: 'severance',
+            tmdb: 93405,
+            trakt: 3,
+          },
+          title: 'Severance',
+          year: 2022,
+        },
+      };
+
+      const result = __test__.buildEpisodeTrackingDoc(show as any);
+      expect(result).not.toBeNull();
+      expect(result?.episodes['1_1'].watched).toBe(true);
+      expect(result?.episodes['1_1'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
+      expect(result?.episodes['1_2'].watched).toBe(true);
+      expect(result?.episodes['1_2'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
+
+      const showWithoutShowWatchedAt = {
+        ...show,
+        last_watched_at: undefined,
+      };
+      const result2 = __test__.buildEpisodeTrackingDoc(showWithoutShowWatchedAt as any);
+      expect(result2?.episodes['1_1'].watched).toBe(true);
+      expect(result2?.episodes['1_1'].watchedAt).toBeUndefined();
+    });
+
     it('traktPaginatedRequest fetches and combines multiple pages using pagination headers', async () => {
       const page1Items = Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
       const page2Items = Array.from({ length: 25 }, (_, i) => ({ id: i + 101, name: `Item ${i + 101}` }));
@@ -5598,8 +5654,120 @@ describe('Trakt sync Firestore sanitization', () => {
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Total pages reported (75) exceeds MAX_PAGINATION_PAGES (50) for endpoint /sync/watched/movies')
       );
+      expect(global.fetch).toHaveBeenCalledTimes(50);
 
       warnSpy.mockRestore();
+    });
+
+    it('traktPaginatedRequest warns when x-pagination-page-count is missing or invalid', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        headers: {
+          get: () => null,
+        },
+        json: jest.fn().mockResolvedValue([{ id: 1 }]),
+        ok: true,
+        status: 200,
+      });
+
+      await __test__.traktPaginatedRequest<any>({
+        accessToken: 'test-token',
+        endpoint: '/sync/watched/movies',
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Missing x-pagination-page-count header for endpoint /sync/watched/movies')
+      );
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        headers: {
+          get: (h: string) => (h.toLowerCase() === 'x-pagination-page-count' ? 'not-a-number' : null),
+        },
+        json: jest.fn().mockResolvedValue([{ id: 1 }]),
+        ok: true,
+        status: 200,
+      });
+
+      await __test__.traktPaginatedRequest<any>({
+        accessToken: 'test-token',
+        endpoint: '/sync/watched/movies',
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Invalid x-pagination-page-count header "not-a-number" for endpoint /sync/watched/movies')
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('traktRequestRaw throws TraktSyncError when response is 200 OK but JSON parsing fails', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        headers: {
+          get: () => null,
+        },
+        json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token < in JSON at position 0')),
+        ok: true,
+        status: 200,
+      });
+
+      await expect(
+        __test__.traktRequestRaw({
+          accessToken: 'test-token',
+          endpoint: '/sync/watched/movies',
+        })
+      ).rejects.toMatchObject({
+        category: 'upstream_unavailable',
+        message: 'Trakt returned an invalid JSON response.',
+        retryable: true,
+      });
+    });
+
+    it('enrichEpisodeTracking handles missing or non-array seasonData.episodes gracefully', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        headers: {
+          get: () => null,
+        },
+        json: jest.fn().mockResolvedValue({
+          episodes: null,
+        }),
+        ok: true,
+        status: 200,
+      });
+
+      const result = await __test__.enrichEpisodeTracking(99, {
+        '1_1': { watched: true },
+      });
+
+      expect(result['1_1']).toEqual({ watched: true });
+    });
+
+    it('transformRating and transformFavorite strip undefined fields', () => {
+      const ratingWithUndefined = __test__.transformRating({
+        movie: {
+          ids: { slug: 'movie-slug', tmdb: 100, trakt: 200 },
+          title: undefined as any,
+          year: 2024,
+        },
+        rated_at: '2024-01-01T00:00:00.000Z',
+        rating: 8,
+        type: 'movie',
+      });
+      expect(ratingWithUndefined).toBeDefined();
+      expect('title' in (ratingWithUndefined ?? {})).toBe(false);
+
+      const favWithUndefined = __test__.transformFavorite({
+        id: 1,
+        listed_at: '2024-01-01T00:00:00.000Z',
+        movie: {
+          ids: { slug: 'movie-slug', tmdb: 100, trakt: 200 },
+          title: undefined as any,
+          year: 2024,
+        },
+        type: 'movie',
+      });
+      expect(favWithUndefined).toBeDefined();
+      expect('title' in (favWithUndefined ?? {})).toBe(false);
     });
 
     it('end-to-end mirror sync succeeds with >100 items watch history and captures all items and episode progress', async () => {

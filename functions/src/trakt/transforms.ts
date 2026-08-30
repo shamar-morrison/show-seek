@@ -301,14 +301,17 @@ export const transformRating = (traktRating: TraktRating): Record<string, unknow
     return null;
   }
 
-  return {
-    docId: `${mediaType}-${tmdbId}`,
-    id: String(tmdbId),
-    mediaType,
-    ratedAt: toFirestoreTimestamp(traktRating.rated_at),
-    rating: traktRating.rating,
-    title,
-  };
+  return stripUndefinedDeep(
+    {
+      docId: `${mediaType}-${tmdbId}`,
+      id: String(tmdbId),
+      mediaType,
+      ratedAt: toFirestoreTimestamp(traktRating.rated_at),
+      rating: traktRating.rating,
+      title,
+    },
+    true
+  ) as Record<string, unknown>;
 };
 
 export const transformListItem = (
@@ -418,10 +421,13 @@ export const transformFavorite = (traktFavorite: TraktFavorite): Record<string, 
     return null;
   }
 
-  return {
-    addedAt: toFirestoreTimestamp(traktFavorite.listed_at),
-    id: tmdbId,
-    media_type: mediaType,
-    title,
-  };
+  return stripUndefinedDeep(
+    {
+      addedAt: toFirestoreTimestamp(traktFavorite.listed_at),
+      id: tmdbId,
+      media_type: mediaType,
+      title,
+    },
+    true
+  ) as Record<string, unknown>;
 };

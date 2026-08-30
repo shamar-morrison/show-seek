@@ -124,11 +124,14 @@ export const buildEpisodeTrackingDoc = (
             return;
           }
           const key = `${season.number}_${episode.number}`;
-          const watchedAtDate = episode.last_watched_at ? new Date(episode.last_watched_at) : new Date();
-          const validDate = !Number.isNaN(watchedAtDate.getTime()) ? watchedAtDate : new Date();
+          const episodeDate = episode.last_watched_at ? new Date(episode.last_watched_at) : null;
+          const validEpisodeDate = episodeDate && !Number.isNaN(episodeDate.getTime()) ? episodeDate : null;
+          const showDate = traktShow.last_watched_at ? new Date(traktShow.last_watched_at) : null;
+          const validShowDate = showDate && !Number.isNaN(showDate.getTime()) ? showDate : null;
+          const validDate = validEpisodeDate ?? validShowDate;
           episodes[key] = {
             watched: true,
-            watchedAt: Timestamp.fromDate(validDate),
+            ...(validDate ? { watchedAt: Timestamp.fromDate(validDate) } : {}),
           };
         });
       } else if (season.episodes !== undefined && season.episodes !== null) {

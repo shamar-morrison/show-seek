@@ -422,7 +422,7 @@ export interface SecretLike {
 
 export interface TraktRawResponse<T> {
   data: T;
-  headers: globalThis.Headers | unknown;
+  headers: globalThis.Headers;
 }
 
 export interface ReconcileManagedListOptions {

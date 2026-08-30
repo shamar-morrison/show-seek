@@ -366,8 +366,15 @@ export const traktRequestRaw = async <T>({
   }
 
   if (response.ok) {
-    const data = (await response.json()) as T;
-    return { data, headers: response.headers };
+    try {
+      const data = (await response.json()) as T;
+      return { data, headers: response.headers };
+    } catch {
+      throw new TraktSyncError('Trakt returned an invalid JSON response.', 'upstream_unavailable', true, {
+        endpoint,
+        statusCode: response.status,
+      });
+    }
   }
 
   const rawHeaders = response.headers;
@@ -470,10 +477,23 @@ export const traktPaginatedRequest = async <T>({
     return [];
   }
 
-  const pageCountStr =
-    getHeaderValue(headers, 'x-pagination-page-count') ||
-    getHeaderValue(headers, 'X-Pagination-Page-Count');
-  const totalPages = pageCountStr ? parseInt(pageCountStr, 10) : 1;
+  const pageCountStr = getHeaderValue(headers, 'x-pagination-page-count');
+  let totalPages = 1;
+
+  if (pageCountStr !== null && pageCountStr !== undefined && pageCountStr.trim() !== '') {
+    const parsed = parseInt(pageCountStr, 10);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      totalPages = parsed;
+    } else {
+      console.warn(
+        `[TraktSync] Invalid x-pagination-page-count header "${pageCountStr}" for endpoint ${endpoint}, defaulting totalPages to 1`
+      );
+    }
+  } else {
+    console.warn(
+      `[TraktSync] Missing x-pagination-page-count header for endpoint ${endpoint}, defaulting totalPages to 1`
+    );
+  }
 
   const allItems: T[] = [...(firstPageData as T[])];
 

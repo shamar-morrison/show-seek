@@ -423,43 +423,6 @@ export const syncFavorites = async (
   };
 };
 
-export const syncCustomLists = async (
-  userId: string,
-  accessToken: string,
-  username: string,
-  traktLists: TraktList[]
-): Promise<number> => {
-  let changedCount = 0;
-
-  for (const traktList of traktLists) {
-    const listItems = await getListItems(accessToken, username, traktList.ids.slug);
-    const result = await reconcileManagedList(
-      userId,
-      `trakt_${traktList.ids.trakt}`,
-      buildCustomListItemsMap(listItems),
-      {
-        createdAt: Timestamp.fromDate(new Date(traktList.created_at)),
-        description: traktList.description || '',
-        isCustom: true,
-        name: traktList.name,
-        privacy: traktList.privacy === 'public' ? 'public' : 'private',
-        traktId: traktList.ids.trakt,
-        updatedAt: Timestamp.fromDate(new Date(traktList.updated_at)),
-      },
-      undefined,
-      {
-        countBaseDataChangesAsRemoteChange: true,
-      }
-    );
-
-    if (result.didRemoteChange) {
-      changedCount += 1;
-    }
-  }
-
-  return changedCount;
-};
-
 export const reconcileCustomLists = async (
   userId: string,
   accessToken: string,
