@@ -1,0 +1,540 @@
+import AdmZip = require('adm-zip');
+import {
+  aggregateCustomLists,
+  aggregateEpisodeHistory,
+  aggregateFavorites,
+  aggregateMovieHistory,
+  aggregateRatings,
+  aggregateWatchlist,
+  buildTraktMovieWatchDocId,
+  parseTraktDateToMs,
+} from '../../functions/src/trakt/zipAggregator';
+import {
+  classifyZipEntry,
+  parseTraktZipBuffer,
+} from '../../functions/src/trakt/zipParser';
+
+const SafeAdmZip = (AdmZip as unknown as { default?: typeof AdmZip }).default || AdmZip;
+
+describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
+  describe('buildTraktMovieWatchDocId', () => {
+    it('generates deterministic doc IDs matching the trakt-{movieId}-{watchedAtMs} format with millisecond precision', () => {
+      const docId = buildTraktMovieWatchDocId(12345, 1696161600000);
+      expect(docId).toBe('trakt-12345-1696161600000');
+    });
+
+    it('handles string movieId and trims whitespace safely', () => {
+      const docId = buildTraktMovieWatchDocId(' 872585 ', 1700000000123);
+      expect(docId).toBe('trakt-872585-1700000000123');
+    });
+
+    it('truncates non-integer millisecond timestamps', () => {
+      const docId = buildTraktMovieWatchDocId(999, 1696161600000.85);
+      expect(docId).toBe('trakt-999-1696161600000');
+    });
+  });
+
+  describe('parseTraktDateToMs', () => {
+    it('parses ISO date strings to UTC millisecond timestamps', () => {
+      const ms = parseTraktDateToMs('2023-10-01T12:00:00.000Z');
+      expect(ms).toBe(Date.parse('2023-10-01T12:00:00.000Z'));
+    });
+
+    it('returns null for empty, undefined, or malformed strings', () => {
+      expect(parseTraktDateToMs('')).toBeNull();
+      expect(parseTraktDateToMs(null)).toBeNull();
+      expect(parseTraktDateToMs(undefined)).toBeNull();
+      expect(parseTraktDateToMs('invalid-date')).toBeNull();
+    });
+
+    it('accepts finite positive millisecond numbers directly', () => {
+      expect(parseTraktDateToMs(1696161600000)).toBe(1696161600000);
+    });
+  });
+
+  describe('aggregateMovieHistory', () => {
+    it('groups multiple plays of the same movie and computes plays and max last_watched_at', () => {
+      const rawEvents = [
+        {
+          action: 'watch',
+          id: 101,
+          movie: {
+            ids: { imdb: 'tt0111161', slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 1 },
+            title: 'The Shawshank Redemption',
+            year: 1994,
+          },
+          watched_at: '2022-01-01T10:00:00.000Z',
+        },
+        {
+          action: 'watch',
+          id: 102,
+          movie: {
+            ids: { imdb: 'tt0111161', slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 1 },
+            title: 'The Shawshank Redemption',
+            year: 1994,
+          },
+          watched_at: '2023-05-15T20:30:00.000Z',
+        },
+        {
+          action: 'watch',
+          id: 103,
+          movie: {
+            ids: { imdb: 'tt1375666', slug: 'inception-2010', tmdb: 27205, trakt: 2 },
+            title: 'Inception',
+            year: 2010,
+          },
+          watched_at: '2023-06-01T18:00:00.000Z',
+        },
+      ];
+
+      const { movieWatches, watchedMovies } = aggregateMovieHistory(rawEvents);
+
+      expect(watchedMovies).toHaveLength(2);
+
+      const shawshank = watchedMovies.find((m) => m.movie.ids.tmdb === 278);
+      expect(shawshank).toBeDefined();
+      expect(shawshank?.plays).toBe(2);
+      expect(shawshank?.last_watched_at).toBe('2023-05-15T20:30:00.000Z');
+      expect(shawshank?.movie.title).toBe('The Shawshank Redemption');
+      expect(shawshank?.movie.year).toBe(1994);
+
+      const inception = watchedMovies.find((m) => m.movie.ids.tmdb === 27205);
+      expect(inception).toBeDefined();
+      expect(inception?.plays).toBe(1);
+      expect(inception?.last_watched_at).toBe('2023-06-01T18:00:00.000Z');
+
+      expect(movieWatches).toHaveLength(3);
+      expect(movieWatches[0].docId).toBe(`trakt-278-${Date.parse('2022-01-01T10:00:00.000Z')}`);
+      expect(movieWatches[1].docId).toBe(`trakt-278-${Date.parse('2023-05-15T20:30:00.000Z')}`);
+      expect(movieWatches[2].docId).toBe(`trakt-27205-${Date.parse('2023-06-01T18:00:00.000Z')}`);
+    });
+
+    it('deduplicates identical watch events for the same timestamp and movie', () => {
+      const rawEvents = [
+        {
+          movie: { ids: { tmdb: 550 }, title: 'Fight Club', year: 1999 },
+          watched_at: '2023-01-01T12:00:00.000Z',
+        },
+        {
+          movie: { ids: { tmdb: 550 }, title: 'Fight Club', year: 1999 },
+          watched_at: '2023-01-01T12:00:00.000Z',
+        },
+      ];
+
+      const { movieWatches, watchedMovies } = aggregateMovieHistory(rawEvents);
+      expect(watchedMovies[0].plays).toBe(2);
+      expect(movieWatches).toHaveLength(1); // Unique watch document by docId
+    });
+
+    it('skips events missing tmdb IDs or with malformed dates', () => {
+      const rawEvents = [
+        {
+          movie: { ids: { trakt: 123 }, title: 'Missing TMDB' },
+          watched_at: '2023-01-01T12:00:00.000Z',
+        },
+        {
+          movie: { ids: { tmdb: 999 }, title: 'Invalid Date' },
+          watched_at: 'not-a-real-date',
+        },
+      ];
+
+      const { movieWatches, watchedMovies } = aggregateMovieHistory(rawEvents);
+      expect(watchedMovies).toHaveLength(0);
+      expect(movieWatches).toHaveLength(0);
+    });
+  });
+
+  describe('aggregateEpisodeHistory', () => {
+    it('groups flat episode events into hierarchical TraktWatchedShow[] with sorted seasons and episodes', () => {
+      const rawEvents = [
+        {
+          episode: { number: 1, season: 1, title: 'Pilot' },
+          show: {
+            ids: { imdb: 'tt0903747', slug: 'breaking-bad', tmdb: 1396, trakt: 1388 },
+            title: 'Breaking Bad',
+            year: 2008,
+          },
+          watched_at: '2021-01-01T20:00:00.000Z',
+        },
+        {
+          episode: { number: 2, season: 1, title: "Cat's in the Bag..." },
+          show: {
+            ids: { imdb: 'tt0903747', slug: 'breaking-bad', tmdb: 1396, trakt: 1388 },
+            title: 'Breaking Bad',
+            year: 2008,
+          },
+          watched_at: '2021-01-02T21:00:00.000Z',
+        },
+        {
+          episode: { number: 1, season: 2, title: 'Seven Thirty-Seven' },
+          show: {
+            ids: { imdb: 'tt0903747', slug: 'breaking-bad', tmdb: 1396, trakt: 1388 },
+            title: 'Breaking Bad',
+            year: 2008,
+          },
+          watched_at: '2022-03-01T22:00:00.000Z',
+        },
+      ];
+
+      const watchedShows = aggregateEpisodeHistory(rawEvents);
+
+      expect(watchedShows).toHaveLength(1);
+      const bb = watchedShows[0];
+      expect(bb.show.ids.tmdb).toBe(1396);
+      expect(bb.show.title).toBe('Breaking Bad');
+      expect(bb.plays).toBe(3);
+      expect(bb.last_watched_at).toBe('2022-03-01T22:00:00.000Z');
+
+      expect(bb.seasons).toHaveLength(2);
+      expect(bb.seasons?.[0].number).toBe(1);
+      expect(bb.seasons?.[0].episodes).toHaveLength(2);
+      expect(bb.seasons?.[0].episodes?.[0].number).toBe(1);
+      expect(bb.seasons?.[0].episodes?.[0].last_watched_at).toBe('2021-01-01T20:00:00.000Z');
+      expect(bb.seasons?.[0].episodes?.[1].number).toBe(2);
+
+      expect(bb.seasons?.[1].number).toBe(2);
+      expect(bb.seasons?.[1].episodes?.[0].number).toBe(1);
+    });
+
+    it('tracks episode rewatches by incrementing episode plays and updating last_watched_at', () => {
+      const rawEvents = [
+        {
+          episode: { number: 1, season: 1 },
+          show: { ids: { tmdb: 1396 }, title: 'Breaking Bad' },
+          watched_at: '2020-01-01T10:00:00.000Z',
+        },
+        {
+          episode: { number: 1, season: 1 },
+          show: { ids: { tmdb: 1396 }, title: 'Breaking Bad' },
+          watched_at: '2023-01-01T10:00:00.000Z',
+        },
+      ];
+
+      const watchedShows = aggregateEpisodeHistory(rawEvents);
+      expect(watchedShows).toHaveLength(1);
+      expect(watchedShows[0].plays).toBe(2);
+      expect(watchedShows[0].seasons?.[0].episodes?.[0].plays).toBe(2);
+      expect(watchedShows[0].seasons?.[0].episodes?.[0].last_watched_at).toBe(
+        '2023-01-01T10:00:00.000Z'
+      );
+    });
+
+    it('skips episode events missing season or number or show tmdb id', () => {
+      const rawEvents = [
+        {
+          episode: { number: 1 }, // Missing season
+          show: { ids: { tmdb: 1396 } },
+          watched_at: '2023-01-01T10:00:00.000Z',
+        },
+        {
+          episode: { number: 1, season: 1 },
+          show: { ids: { trakt: 1388 } }, // Missing TMDB ID
+          watched_at: '2023-01-01T10:00:00.000Z',
+        },
+      ];
+
+      const watchedShows = aggregateEpisodeHistory(rawEvents);
+      expect(watchedShows).toHaveLength(0);
+    });
+  });
+
+  describe('aggregateRatings', () => {
+    it('aggregates movie and show ratings and preserves the latest rating when duplicates occur', () => {
+      const rawRatings = [
+        {
+          movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+          rated_at: '2020-01-01T12:00:00.000Z',
+          rating: 8,
+          type: 'movie',
+        },
+        {
+          movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+          rated_at: '2023-01-01T12:00:00.000Z',
+          rating: 10,
+          type: 'movie',
+        },
+        {
+          rated_at: '2022-05-01T15:00:00.000Z',
+          rating: 9,
+          show: { ids: { tmdb: 1396 }, title: 'Breaking Bad', year: 2008 },
+          type: 'show',
+        },
+      ];
+
+      const ratings = aggregateRatings(rawRatings);
+
+      expect(ratings).toHaveLength(2);
+      const movieRating = ratings.find((r) => r.type === 'movie');
+      expect(movieRating?.rating).toBe(10);
+      expect(movieRating?.rated_at).toBe('2023-01-01T12:00:00.000Z');
+
+      const showRating = ratings.find((r) => r.type === 'show');
+      expect(showRating?.rating).toBe(9);
+      expect(showRating?.show?.ids.tmdb).toBe(1396);
+    });
+
+    it('rejects invalid rating numbers (e.g. < 1, > 10, non-integers) and invalid dates', () => {
+      const rawRatings = [
+        {
+          movie: { ids: { tmdb: 100 } },
+          rated_at: '2023-01-01T12:00:00.000Z',
+          rating: 0,
+          type: 'movie',
+        },
+        {
+          movie: { ids: { tmdb: 101 } },
+          rated_at: '2023-01-01T12:00:00.000Z',
+          rating: 11,
+          type: 'movie',
+        },
+        {
+          movie: { ids: { tmdb: 102 } },
+          rated_at: '2023-01-01T12:00:00.000Z',
+          rating: 7.5,
+          type: 'movie',
+        },
+        {
+          movie: { ids: { tmdb: 103 } },
+          rated_at: 'invalid-date',
+          rating: 9,
+          type: 'movie',
+        },
+      ];
+
+      const ratings = aggregateRatings(rawRatings);
+      expect(ratings).toHaveLength(0);
+    });
+  });
+
+  describe('aggregateWatchlist & aggregateFavorites', () => {
+    it('aggregates watchlist items and deduplicates overlapping items', () => {
+      const rawWatchlist = [
+        {
+          id: 1,
+          listed_at: '2022-01-01T10:00:00.000Z',
+          movie: { ids: { tmdb: 872585 }, title: 'Oppenheimer', year: 2023 },
+          type: 'movie',
+        },
+        {
+          id: 1,
+          listed_at: '2023-08-01T10:00:00.000Z',
+          movie: { ids: { tmdb: 872585 }, title: 'Oppenheimer', year: 2023 },
+          type: 'movie',
+        },
+      ];
+
+      const watchlist = aggregateWatchlist(rawWatchlist);
+      expect(watchlist).toHaveLength(1);
+      expect(watchlist[0].listed_at).toBe('2023-08-01T10:00:00.000Z');
+      expect(watchlist[0].movie?.ids.tmdb).toBe(872585);
+    });
+
+    it('aggregates favorites and filters entries without tmdb ids', () => {
+      const rawFavorites = [
+        {
+          listed_at: '2023-01-01T10:00:00.000Z',
+          movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption' },
+          type: 'movie',
+        },
+        {
+          listed_at: '2023-01-01T10:00:00.000Z',
+          movie: { ids: { trakt: 999 }, title: 'No TMDB' },
+          type: 'movie',
+        },
+      ];
+
+      const favorites = aggregateFavorites(rawFavorites);
+      expect(favorites).toHaveLength(1);
+      expect(favorites[0].movie?.ids.tmdb).toBe(278);
+    });
+  });
+
+  describe('aggregateCustomLists', () => {
+    it('aggregates custom lists with metadata and list items', () => {
+      const rawLists = [
+        {
+          created_at: '2023-01-01T00:00:00.000Z',
+          description: 'Best Sci-Fi of all time',
+          ids: { slug: 'sci-fi-classics', trakt: 777 },
+          items: [
+            {
+              listed_at: '2023-01-02T00:00:00.000Z',
+              movie: { ids: { tmdb: 157336 }, title: 'Interstellar', year: 2014 },
+              type: 'movie',
+            },
+            {
+              listed_at: '2023-01-03T00:00:00.000Z',
+              show: { ids: { tmdb: 60625 }, title: 'Rick and Morty', year: 2013 },
+              type: 'show',
+            },
+          ],
+          name: 'Sci-Fi Classics',
+          privacy: 'public',
+          updated_at: '2023-02-01T00:00:00.000Z',
+        },
+      ];
+
+      const customLists = aggregateCustomLists(rawLists);
+
+      expect(customLists).toHaveLength(1);
+      const listObj = customLists[0];
+      expect(listObj.list.name).toBe('Sci-Fi Classics');
+      expect(listObj.list.ids.trakt).toBe(777);
+      expect(listObj.list.privacy).toBe('public');
+      expect(listObj.items).toHaveLength(2);
+      expect(listObj.items[0].movie?.ids.tmdb).toBe(157336);
+      expect(listObj.items[1].show?.ids.tmdb).toBe(60625);
+    });
+  });
+
+  describe('classifyZipEntry', () => {
+    it('correctly classifies standard Trakt export file names', () => {
+      expect(classifyZipEntry('ratings-movies-1.json')).toBe('ratings_movies');
+      expect(classifyZipEntry('ratings_movies.json')).toBe('ratings_movies');
+      expect(classifyZipEntry('ratings/movies.json')).toBe('ratings_movies');
+
+      expect(classifyZipEntry('ratings-shows-1.json')).toBe('ratings_shows');
+      expect(classifyZipEntry('ratings-episodes.json')).toBe('ratings_episodes');
+      expect(classifyZipEntry('ratings-seasons.json')).toBe('ratings_seasons');
+
+      expect(classifyZipEntry('history-movies-1.json')).toBe('history_movies');
+      expect(classifyZipEntry('watched-movies.json')).toBe('history_movies');
+
+      expect(classifyZipEntry('history-episodes-1.json')).toBe('history_episodes');
+      expect(classifyZipEntry('watched-shows.json')).toBe('history_episodes');
+
+      expect(classifyZipEntry('watchlist-movies-1.json')).toBe('watchlist');
+      expect(classifyZipEntry('watchlist.json')).toBe('watchlist');
+
+      expect(classifyZipEntry('favorites.json')).toBe('favorites');
+
+      expect(classifyZipEntry('lists.json')).toBe('lists');
+      expect(classifyZipEntry('personal-lists/my-favorites.json')).toBe('lists');
+      expect(classifyZipEntry('lists/top-movies.json')).toBe('lists');
+    });
+
+    it('ignores macOS metadata and non-json files', () => {
+      expect(classifyZipEntry('__MACOSX/._ratings-movies-1.json')).toBe('ignored');
+      expect(classifyZipEntry('.DS_Store')).toBe('ignored');
+      expect(classifyZipEntry('README.txt')).toBe('ignored');
+    });
+  });
+
+  describe('parseTraktZipBuffer (End-to-End Zip Stream Extraction)', () => {
+    it('extracts and aggregates all datasets from a synthetic Trakt export zip buffer', () => {
+      const zip = new SafeAdmZip();
+
+      // Add movie history
+      zip.addFile(
+        'history-movies-1.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              action: 'watch',
+              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+              watched_at: '2023-01-01T12:00:00.000Z',
+            },
+          ])
+        )
+      );
+
+      // Add episode history
+      zip.addFile(
+        'history-episodes-1.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              action: 'watch',
+              episode: { number: 1, season: 1 },
+              show: { ids: { tmdb: 1396 }, title: 'Breaking Bad', year: 2008 },
+              watched_at: '2023-02-01T12:00:00.000Z',
+            },
+          ])
+        )
+      );
+
+      // Add ratings
+      zip.addFile(
+        'ratings-movies-1.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+              rated_at: '2023-01-01T12:00:00.000Z',
+              rating: 10,
+              type: 'movie',
+            },
+          ])
+        )
+      );
+
+      // Add watchlist
+      zip.addFile(
+        'watchlist.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              listed_at: '2023-03-01T12:00:00.000Z',
+              movie: { ids: { tmdb: 872585 }, title: 'Oppenheimer', year: 2023 },
+              type: 'movie',
+            },
+          ])
+        )
+      );
+
+      // Add custom list
+      zip.addFile(
+        'personal-lists/top-movies.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              created_at: '2023-01-01T00:00:00.000Z',
+              ids: { slug: 'top-movies', trakt: 123 },
+              items: [
+                {
+                  listed_at: '2023-01-01T00:00:00.000Z',
+                  movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+                  type: 'movie',
+                },
+              ],
+              name: 'Top Movies',
+            },
+          ])
+        )
+      );
+
+      // Add macOS metadata entry that should be ignored
+      zip.addFile('__MACOSX/._watchlist.json', Buffer.from('metadata'));
+
+      const zipBuffer = zip.toBuffer();
+      const result = parseTraktZipBuffer(zipBuffer);
+
+      expect(result.watchedMovies).toHaveLength(1);
+      expect(result.watchedMovies[0].movie.ids.tmdb).toBe(278);
+      expect(result.watchedMovieEvents).toHaveLength(1);
+
+      expect(result.watchedShows).toHaveLength(1);
+      expect(result.watchedShows[0].show.ids.tmdb).toBe(1396);
+
+      expect(result.ratings).toHaveLength(1);
+      expect(result.ratings[0].rating).toBe(10);
+
+      expect(result.watchlist).toHaveLength(1);
+      expect(result.watchlist[0].movie?.ids.tmdb).toBe(872585);
+
+      expect(result.customLists).toHaveLength(1);
+      expect(result.customLists[0].list.name).toBe('Top Movies');
+
+      expect(result.stats).toEqual({
+        customLists: 1,
+        episodes: 1,
+        favorites: 0,
+        movieWatches: 1,
+        movies: 1,
+        ratings: 1,
+        shows: 1,
+        watchlistItems: 1,
+      });
+    });
+  });
+});
