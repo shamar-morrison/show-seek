@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check authentication
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check ownership
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isNonAnonymousOwner(userId) {
+      return isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // Helper function to block writes from anonymous/guest sessions
+    function canWriteUserData(userId) {
+      return isNonAnonymousOwner(userId);
+    }
+
+    // Helper function to validate zip file upload constraints (size <= 200MB and zip mime type)
+    function isValidZipUpload() {
+      return request.resource.size <= 200 * 1024 * 1024
+        && request.resource.contentType in [
+          'application/zip',
+          'application/x-zip-compressed'
+        ];
+    }
+
+    // Trakt import zip archives - each user can only read/write their own import archives
+    match /users/{userId}/imports/{fileName} {
+      allow read: if isOwner(userId);
+      allow create, update: if canWriteUserData(userId) && isValidZipUpload();
+      allow delete: if canWriteUserData(userId);
+    }
+  }
+}

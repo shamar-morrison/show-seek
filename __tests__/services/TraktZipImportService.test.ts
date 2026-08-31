@@ -46,6 +46,11 @@ describe('TraktZipImportService', () => {
         size: 512000,
         uri: 'file:///cache/trakt-export-2026.zip',
       });
+      expect(mockGetDocumentAsync).toHaveBeenCalledWith({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: '*/*',
+      });
     });
 
     it('returns null when document picker is canceled', async () => {

@@ -92,14 +92,7 @@ export class TraktZipImportService {
     const result = await documentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: false,
-      type: [
-        'application/zip',
-        'application/x-zip-compressed',
-        'application/x-zip',
-        'multipart/x-zip',
-        'application/octet-stream',
-        '*/*',
-      ],
+      type: '*/*',
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) {
