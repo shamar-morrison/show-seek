@@ -96,7 +96,7 @@ import { scheduleOnUI } from 'react-native-worklets';
 const triggerAnimation = () => {
   scheduleOnUI(() => {
     'worklet';
-    console.log('Running on UI thread');
+    console.info('Running on UI thread');
     // Direct UI manipulations here
   });
 };
