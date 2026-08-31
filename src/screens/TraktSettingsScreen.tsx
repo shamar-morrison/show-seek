@@ -38,6 +38,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronRight,
+  FileArchive,
   Link2,
   RefreshCw,
   Sparkles,
@@ -162,6 +164,21 @@ export default function TraktSettingsScreen() {
 
     void handleConnect();
   }, [handleConnect, isPremium, isPremiumLoading, router]);
+
+  const handleZipImportPress = useCallback(() => {
+    if (isPremiumLoading) {
+      return;
+    }
+
+    if (!isPremium) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push('/premium');
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/trakt-zip-import');
+  }, [isPremium, isPremiumLoading, router]);
 
   const handleSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -419,6 +436,27 @@ export default function TraktSettingsScreen() {
             )}
           </TouchableOpacity>
 
+          {/* Alternative Zip Import Card */}
+          <TouchableOpacity
+            style={styles.zipImportCard}
+            onPress={handleZipImportPress}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+              <FileArchive size={22} color={accentColor} />
+            </View>
+            <View style={styles.zipImportCardContent}>
+              <View style={styles.zipImportTitleRow}>
+                <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
+              </View>
+              <Text style={styles.zipImportCardSubtitle}>
+                Have an export backup from Trakt? Upload your zip file directly without connecting your account.
+              </Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+
           <CollapsibleCategory title={t('trakt.whatWillBeSyncedTitle')} defaultExpanded>
             <CollapsibleFeatureItem
               text={t('trakt.willSync.watchedMoviesAndShows')}
@@ -514,6 +552,27 @@ export default function TraktSettingsScreen() {
           >
             <RefreshCw size={20} color={COLORS.white} />
             <Text style={styles.primaryButtonText}>{t('trakt.importButton')}</Text>
+          </TouchableOpacity>
+
+          {/* Alternative Zip Import Card */}
+          <TouchableOpacity
+            style={styles.zipImportCard}
+            onPress={handleZipImportPress}
+            activeOpacity={ACTIVE_OPACITY}
+          >
+            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+              <FileArchive size={22} color={accentColor} />
+            </View>
+            <View style={styles.zipImportCardContent}>
+              <View style={styles.zipImportTitleRow}>
+                <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
+              </View>
+              <Text style={styles.zipImportCardSubtitle}>
+                Have an export backup from Trakt? Upload your zip file directly without connecting your account.
+              </Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -680,6 +739,27 @@ export default function TraktSettingsScreen() {
             </Text>
           </View>
         )}
+
+        {/* Alternative Zip Import Card */}
+        <TouchableOpacity
+          style={styles.zipImportCard}
+          onPress={handleZipImportPress}
+          activeOpacity={ACTIVE_OPACITY}
+        >
+          <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+            <FileArchive size={22} color={accentColor} />
+          </View>
+          <View style={styles.zipImportCardContent}>
+            <View style={styles.zipImportTitleRow}>
+              <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+              {!isPremium && !isPremiumLoading && <PremiumBadge />}
+            </View>
+            <Text style={styles.zipImportCardSubtitle}>
+              Manually import or restore your library from a Trakt zip export archive.
+            </Text>
+          </View>
+          <ChevronRight size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.disconnectButton}
@@ -1020,5 +1100,43 @@ const styles = StyleSheet.create({
   enrichedText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.success,
+  },
+  zipImportCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderColor: hexToRGBA(COLORS.white, 0.08),
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: SPACING.l,
+    padding: SPACING.m,
+  },
+  zipImportIconCircle: {
+    alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    marginRight: SPACING.m,
+    width: 40,
+  },
+  zipImportCardContent: {
+    flex: 1,
+    marginRight: SPACING.s,
+  },
+  zipImportTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    marginBottom: 2,
+  },
+  zipImportCardTitle: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+  zipImportCardSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 16,
   },
 });
