@@ -1183,7 +1183,7 @@
         "watched": "Filmes e séries assistidos",
         "watchedDesc": "Seu histórico completo de filmes e séries assistidos",
         "granularHistory": "Histórico detalhado",
-        "granularHistoryDesc": "Cada reprodução individual com data e contagem",
+        "granularHistoryDesc": "Cada reprodução individual com data e hora e contagem",
         "episodeProgress": "Progresso de episódios",
         "episodeProgressDesc": "Marcadores de temporadas e episódios concluídos",
         "ratings": "Avaliações",

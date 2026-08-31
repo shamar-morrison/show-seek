@@ -76,14 +76,15 @@ const formatFileSize = (bytes?: number): string => {
 interface StatTileProps {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  value?: number | null;
 }
 
 function StatTile({ icon, label, value }: StatTileProps) {
+  const safeValue = typeof value === 'number' && Number.isFinite(value) ? value : 0;
   return (
     <View style={styles.statTile}>
       <View style={styles.statTileIconWrapper}>{icon}</View>
-      <Text style={styles.statTileValue}>{value.toLocaleString()}</Text>
+      <Text style={styles.statTileValue}>{safeValue.toLocaleString()}</Text>
       <Text style={styles.statTileLabel}>{label}</Text>
     </View>
   );
@@ -442,15 +443,27 @@ export default function TraktZipImportScreen() {
   );
 
   const renderCompletedView = () => {
-    const stats: TraktZipImportStats = progressDoc?.stats || {
-      customLists: 0,
-      episodes: 0,
-      favorites: 0,
-      movies: 0,
-      movieWatches: 0,
-      ratings: 0,
-      shows: 0,
-      watchlist: 0,
+    const rawStats = progressDoc?.stats;
+    const normalizeStat = (val: unknown): number => {
+      if (typeof val === 'number' && Number.isFinite(val)) {
+        return val;
+      }
+      if (typeof val === 'string') {
+        const parsed = Number(val);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const stats: TraktZipImportStats = {
+      customLists: normalizeStat(rawStats?.customLists),
+      episodes: normalizeStat(rawStats?.episodes),
+      favorites: normalizeStat(rawStats?.favorites),
+      movies: normalizeStat(rawStats?.movies),
+      movieWatches: normalizeStat(rawStats?.movieWatches),
+      ratings: normalizeStat(rawStats?.ratings),
+      shows: normalizeStat(rawStats?.shows),
+      watchlist: normalizeStat(rawStats?.watchlist),
     };
 
     return (

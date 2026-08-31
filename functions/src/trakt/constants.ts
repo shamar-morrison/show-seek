@@ -25,6 +25,9 @@ export const TRAKT_ENRICHMENT_QUEUE_FUNCTION = 'locations/us-central1/functions/
 export const TRAKT_ZIP_IMPORT_QUEUE_FUNCTION = 'locations/us-central1/functions/runTraktZipImport';
 export const TRAKT_ZIP_IMPORT_QUEUE_REGION = 'us-central1';
 export const TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS = 1800;
+export const MAX_ZIP_SIZE_BYTES = 200 * 1024 * 1024;
+export const MAX_ZIP_UNCOMPRESSED_ENTRY_SIZE_BYTES = 100 * 1024 * 1024;
+export const MAX_ZIP_TOTAL_UNCOMPRESSED_SIZE_BYTES = 500 * 1024 * 1024;
 
 export const buildTraktZipImportStoragePath = (userId: string, importId: string): string =>
   `users/${userId}/imports/${importId}.zip`;

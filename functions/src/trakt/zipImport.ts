@@ -6,6 +6,7 @@ import { onTaskDispatched, type Request as TaskRequest } from 'firebase-function
 import {
   buildTraktZipImportDocPath,
   buildTraktZipImportStoragePath,
+  MAX_ZIP_SIZE_BYTES,
   TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
   TRAKT_ZIP_IMPORT_QUEUE_FUNCTION,
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
@@ -138,7 +139,6 @@ export const runTraktZipImportHandler = async (
     const [metadata] = await file.getMetadata();
     const rawSize = metadata.size;
     const size = typeof rawSize === 'number' ? rawSize : parseInt(String(rawSize || '0'), 10);
-    const MAX_ZIP_SIZE_BYTES = 200 * 1024 * 1024;
     if (size > MAX_ZIP_SIZE_BYTES) {
       throw new Error(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
     }

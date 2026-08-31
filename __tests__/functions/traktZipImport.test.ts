@@ -547,7 +547,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
           data: { importId, userId },
         } as any);
 
-        const progressDoc = store.get(progressDocPath);
+        const progressDoc = store.get(progressDocPath) as any;
         expect(progressDoc).toBeDefined();
         expect(progressDoc?.status).toBe('failed');
         expect(progressDoc?.progress?.phase).toBe('failed');
@@ -571,7 +571,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         data: { importId, userId },
       } as any);
 
-      const progressDoc = store.get(progressDocPath);
+      const progressDoc = store.get(progressDocPath) as any;
       expect(progressDoc).toBeDefined();
       expect(progressDoc?.status).toBe('failed');
       expect(progressDoc?.progress?.phase).toBe('failed');

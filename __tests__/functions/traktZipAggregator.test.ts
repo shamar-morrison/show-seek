@@ -732,5 +732,55 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       expect(result.stats.movieWatches).toBe(4);
       expect(result.watchedMovieEvents).toHaveLength(4);
     });
+
+    describe('decompressed size limits', () => {
+      it('throws an error when a single zip entry exceeds maxEntrySizeBytes', () => {
+        const zip = new SafeAdmZip();
+        const moviePayload = JSON.stringify([
+          {
+            action: 'watch',
+            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+            watched_at: '2023-01-01T12:00:00.000Z',
+          },
+        ]);
+        zip.addFile('history-movies-1.json', Buffer.from(moviePayload));
+        const zipBuffer = zip.toBuffer();
+
+        expect(() =>
+          parseTraktZipBuffer(zipBuffer, {
+            maxEntrySizeBytes: 20, // artificially small limit
+          })
+        ).toThrow(/decompressed size.*exceeds the maximum allowed limit/i);
+      });
+
+      it('throws an error when aggregate uncompressed bytes exceed maxTotalUncompressedSizeBytes', () => {
+        const zip = new SafeAdmZip();
+        const moviePayload = JSON.stringify([
+          {
+            action: 'watch',
+            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+            watched_at: '2023-01-01T12:00:00.000Z',
+          },
+        ]);
+        const ratingsPayload = JSON.stringify([
+          {
+            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+            rated_at: '2023-01-01T12:00:00.000Z',
+            rating: 10,
+            type: 'movie',
+          },
+        ]);
+        zip.addFile('history-movies-1.json', Buffer.from(moviePayload));
+        zip.addFile('ratings-movies-1.json', Buffer.from(ratingsPayload));
+        const zipBuffer = zip.toBuffer();
+
+        expect(() =>
+          parseTraktZipBuffer(zipBuffer, {
+            maxEntrySizeBytes: 10 * 1024,
+            maxTotalUncompressedSizeBytes: 50, // artificially small aggregate limit
+          })
+        ).toThrow(/aggregate decompressed size.*exceeds the maximum allowed limit/i);
+      });
+    });
   });
 });
