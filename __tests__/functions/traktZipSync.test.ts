@@ -579,6 +579,84 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
       expect(movieRating?.rating).toBe(10);
     });
 
+    it('enrolls lists in listsToEnrich when they already have needsEnrichment: true even with 0 new items', async () => {
+      // Pre-seed already-watched with needsEnrichment: true and matching item
+      const watchedAt = new MockTimestamp(Date.parse('2024-01-01T00:00:00.000Z'));
+      store.set(`users/${userId}/lists/already-watched`, {
+        id: 'already-watched',
+        items: {
+          'movie-278': {
+            addedAt: watchedAt,
+            id: 278,
+            media_type: 'movie',
+            title: 'The Shawshank Redemption',
+          },
+        },
+        metadata: {
+          itemCount: 1,
+          needsEnrichment: true,
+        },
+        name: 'Already Watched',
+      });
+
+      // Zip import contains the identical item (addedOrUpdatedCount will be 0)
+      const zipDataWithIdenticalMovie: Partial<AggregatedTraktData> = {
+        watchedMovies: [
+          {
+            last_updated_at: '2024-01-01T00:00:00.000Z',
+            last_watched_at: '2024-01-01T00:00:00.000Z',
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
+            plays: 1,
+          },
+        ],
+      };
+
+      const result = await syncTraktZipImport(userId, zipDataWithIdenticalMovie);
+
+      // Should still be enqueued for enrichment because it needs enrichment
+      expect(result.listsToEnrich).toContain('already-watched');
+    });
+
+    it('does not re-enroll lists in listsToEnrich when they are already fully enriched (needsEnrichment: false) and 0 new items are added', async () => {
+      // Pre-seed already-watched with needsEnrichment: false and matching item
+      const watchedAt = new MockTimestamp(Date.parse('2024-01-01T00:00:00.000Z'));
+      store.set(`users/${userId}/lists/already-watched`, {
+        id: 'already-watched',
+        items: {
+          'movie-278': {
+            addedAt: watchedAt,
+            id: 278,
+            media_type: 'movie',
+            poster_path: '/poster.jpg',
+            release_date: '1994-01-01',
+            title: 'The Shawshank Redemption',
+          },
+        },
+        metadata: {
+          itemCount: 1,
+          needsEnrichment: false,
+        },
+        name: 'Already Watched',
+      });
+
+      // Zip import contains the identical item (addedOrUpdatedCount will be 0)
+      const zipDataWithIdenticalMovie: Partial<AggregatedTraktData> = {
+        watchedMovies: [
+          {
+            last_updated_at: '2024-01-01T00:00:00.000Z',
+            last_watched_at: '2024-01-01T00:00:00.000Z',
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
+            plays: 1,
+          },
+        ],
+      };
+
+      const result = await syncTraktZipImport(userId, zipDataWithIdenticalMovie);
+
+      // Should NOT be enqueued for enrichment because it is already enriched
+      expect(result.listsToEnrich).not.toContain('already-watched');
+    });
+
     it('handles empty or partial aggregated input gracefully without throwing', async () => {
       const emptyZipData: Partial<AggregatedTraktData> = {};
 

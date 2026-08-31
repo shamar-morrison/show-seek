@@ -86,6 +86,7 @@ export interface TraktEnrichmentStatus {
   maxAttempts: number;
   nextAllowedEnrichAt?: FirebaseFirestore.Timestamp;
   nextRetryAt?: FirebaseFirestore.Timestamp;
+  pendingLists?: string[];
   runId: string;
   startedAt?: FirebaseFirestore.Timestamp;
   status: SyncStatusState;

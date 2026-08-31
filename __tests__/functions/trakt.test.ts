@@ -3983,7 +3983,15 @@ describe('Trakt sync Firestore sanitization', () => {
       response
     );
 
-    expect(transactionSet).not.toHaveBeenCalled();
+    expect(transactionSet).toHaveBeenCalledWith(
+      userRef,
+      expect.objectContaining({
+        traktEnrichmentStatus: expect.objectContaining({
+          pendingLists: expect.arrayContaining(['already-watched', 'watchlist', 'favorites']),
+        }),
+      }),
+      { merge: true }
+    );
     expect(mockEnqueue).not.toHaveBeenCalled();
     expect(response.status).toHaveBeenCalledWith(202);
     expect(response.json).toHaveBeenCalledWith(

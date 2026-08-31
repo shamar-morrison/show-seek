@@ -44,6 +44,12 @@ jest.mock('@/src/context/AccentColorProvider', () => ({
   }),
 }));
 
+jest.mock('@/src/context/TraktContext', () => ({
+  useTrakt: () => ({
+    isEnriching: false,
+  }),
+}));
+
 jest.mock('@/src/hooks/useAccountRequired', () => ({
   useAccountRequired: () => mockRequireAccount,
 }));
@@ -91,7 +97,7 @@ describe('TraktZipImportScreen', () => {
       uri: 'file:///trakt.zip',
     });
 
-    jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValueOnce();
+    jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValueOnce('users/test/imports/zip_123.zip');
 
     jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
       (_userId, _importId, onProgress) => {

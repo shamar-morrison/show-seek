@@ -181,8 +181,9 @@ class MockCollectionRef {
     private readonly backingStore: Map<string, Record<string, unknown>>
   ) {}
 
-  doc(id: string) {
-    return new MockDocRef(`${this.path}/${id}`, this.backingStore);
+  doc(id?: string) {
+    const docId = id ?? Math.random().toString(36).substring(2, 12);
+    return new MockDocRef(`${this.path}/${docId}`, this.backingStore);
   }
 
   async get() {
@@ -231,10 +232,24 @@ function isDirectChildDocPath(collectionPath: string, docPath: string): boolean 
   return !relative.includes('/');
 }
 
+class MockTransaction {
+  constructor(private readonly backingStore: Map<string, Record<string, unknown>>) {}
+
+  async get(docRef: MockDocRef) {
+    return docRef.get();
+  }
+
+  set(docRef: MockDocRef, data: Record<string, unknown>, options?: { merge?: boolean }) {
+    docRef.set(data, options);
+    return this;
+  }
+}
+
 const mockFirestore = {
   batch: () => new MockWriteBatch(),
   collection: (name: string) => new MockCollectionRef(name, store),
   doc: (path: string) => new MockDocRef(path, store),
+  runTransaction: jest.fn(async (cb: (t: MockTransaction) => Promise<unknown>) => cb(new MockTransaction(store))),
 };
 
 firestoreFn.mockImplementation(() => mockFirestore);
@@ -488,6 +503,82 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
 
       // 2. Verify storage cleanup was called
       expect(fileDeleteCalls).toContain(storagePath);
+
+      // 3. Verify enrichment was prepared on the user doc and dispatched with matching runId
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktEnrichmentStatus).toBeDefined();
+      expect(userDoc?.traktEnrichmentStatus?.status).toBe('queued');
+      expect(userDoc?.traktEnrichmentStatus?.lists).toEqual(['already-watched']);
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeEpisodes: false,
+          lists: ['already-watched'],
+          runId: userDoc.traktEnrichmentStatus.runId,
+          userId,
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('prepares and dispatches enrichment even when user has a pre-existing runId and future cooldown timestamp', async () => {
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      // Pre-seed user with an older runId and future nextAllowedEnrichAt cooldown
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktEnrichmentStatus: {
+          nextAllowedEnrichAt: MockTimestamp.fromMillis(Date.now() + 86400000),
+          runId: 'old_oauth_enrichment_run_999',
+          status: 'completed',
+        },
+      });
+
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktEnrichmentStatus?.status).toBe('queued');
+      expect(userDoc?.traktEnrichmentStatus?.runId).not.toBe('old_oauth_enrichment_run_999');
+
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includeEpisodes: false,
+          lists: ['already-watched'],
+          runId: userDoc.traktEnrichmentStatus.runId,
+          userId,
+        }),
+        expect.any(Object)
+      );
+    });
+
+    it('merges new lists into pendingLists when an enrichment run is currently active', async () => {
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      // Pre-seed user with an active (in_progress) enrichment run
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktEnrichmentStatus: {
+          lists: ['watchlist'],
+          pendingLists: ['favorites'],
+          runId: 'active_run_123',
+          status: 'in_progress',
+        },
+      });
+
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktEnrichmentStatus?.status).toBe('in_progress');
+      expect(userDoc?.traktEnrichmentStatus?.runId).toBe('active_run_123');
+      // Should have merged existing pendingLists ('favorites') and newly added lists ('already-watched')
+      expect(userDoc?.traktEnrichmentStatus?.pendingLists).toEqual(
+        expect.arrayContaining(['favorites', 'already-watched'])
+      );
     });
 
     it('writes failed status with a usable error message when Storage download fails, and cleans up storage', async () => {

@@ -11,7 +11,7 @@ import {
   TRAKT_ZIP_IMPORT_QUEUE_FUNCTION,
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
 } from './constants';
-import { enqueueEnrichmentRun } from './enrichment';
+import { dispatchEnrichmentRun, prepareEnrichmentRun } from './enrichment';
 import type {
   StartTraktZipImportRequest,
   TraktZipImportTaskPayload,
@@ -194,12 +194,24 @@ export const runTraktZipImportHandler = async (
     // Post-import enrichment in an isolated try/catch block so failure cannot overwrite status
     if (syncResult.listsToEnrich.length > 0) {
       try {
-        await enqueueEnrichmentRun({
-          includeEpisodes: false,
-          lists: syncResult.listsToEnrich,
-          runId: `enrich_zip_${importId}`,
-          userId,
+        const enrichmentRun = await prepareEnrichmentRun(userId, syncResult.listsToEnrich, false, {
+          bypassCooldown: true,
         });
+        if (enrichmentRun.kind === 'queued') {
+          console.info('[runTraktZipImport] Auto-queued post-import enrichment', {
+            includeEpisodes: enrichmentRun.status.includeEpisodes,
+            listCount: enrichmentRun.status.lists.length,
+            runId: enrichmentRun.status.runId,
+            userId,
+          });
+          await dispatchEnrichmentRun(enrichmentRun.status);
+        } else if (enrichmentRun.kind === 'merged') {
+          console.info('[runTraktZipImport] Merged lists into active post-import enrichment run', {
+            pendingListCount: enrichmentRun.pendingLists.length,
+            runId: enrichmentRun.status.runId,
+            userId,
+          });
+        }
       } catch (enrichError) {
         console.warn(
           `[runTraktZipImport] Failed to enqueue post-import enrichment for user ${userId}:`,

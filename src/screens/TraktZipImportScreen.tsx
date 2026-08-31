@@ -16,6 +16,7 @@ import {
 import { useAccentColor } from '@/src/context/AccentColorProvider';
 import { useAuth } from '@/src/context/auth';
 import { usePremium } from '@/src/context/PremiumContext';
+import { useTrakt } from '@/src/context/TraktContext';
 import { useAccountRequired } from '@/src/hooks/useAccountRequired';
 import {
   generateImportId,
@@ -98,6 +99,7 @@ export default function TraktZipImportScreen() {
   const requireAccount = useAccountRequired();
   const { isPremium, isLoading: isPremiumLoading } = usePremium();
   const { accentColor } = useAccentColor();
+  const { isEnriching } = useTrakt();
 
   const [uiState, setUiState] = useState<ImportUIState>('idle');
   const [selectedFile, setSelectedFile] = useState<SelectedZipFile | null>(null);
@@ -474,6 +476,15 @@ export default function TraktZipImportScreen() {
           </View>
           <Text style={styles.heroTitle}>{t('trakt.zipImport.completeTitle')}</Text>
           <Text style={styles.heroSubtitle}>{t('trakt.zipImport.completeSubtitle')}</Text>
+          {isEnriching && (
+            <View style={styles.enrichingBadge}>
+              <Text style={styles.enrichingBadgeText}>
+                {t('trakt.zipImport.enrichingBackground', {
+                  defaultValue: 'Fetching posters in the background...',
+                })}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Stats Summary Grid */}
@@ -896,5 +907,17 @@ const styles = StyleSheet.create({
   },
   syncingSpinner: {
     marginTop: SPACING.xl,
+  },
+  enrichingBadge: {
+    backgroundColor: hexToRGBA(COLORS.white, 0.08),
+    borderRadius: BORDER_RADIUS.m,
+    marginTop: SPACING.s,
+    paddingHorizontal: SPACING.m,
+    paddingVertical: SPACING.xs,
+  },
+  enrichingBadgeText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '500',
   },
 });

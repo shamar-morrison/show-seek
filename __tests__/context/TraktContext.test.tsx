@@ -47,11 +47,20 @@ jest.mock('@/src/services/TraktService', () => ({
 
 import { TraktProvider, useTrakt } from '@/src/context/TraktContext';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 describe('TraktContext', () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     jest.clearAllMocks();
     capturedAuthCallback = null;
     mockCurrentUser = null;
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
     (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
     (AsyncStorage.setItem as jest.Mock).mockResolvedValue(undefined);
     (AsyncStorage.removeItem as jest.Mock).mockResolvedValue(undefined);
@@ -70,7 +79,9 @@ describe('TraktContext', () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TraktProvider>{children}</TraktProvider>
+    <QueryClientProvider client={queryClient}>
+      <TraktProvider>{children}</TraktProvider>
+    </QueryClientProvider>
   );
 
   it('rejects anonymous users from all user-triggered Trakt actions without calling TraktService', async () => {
@@ -138,5 +149,66 @@ describe('TraktContext', () => {
     expect(result.current.isConnected).toBe(true);
     expect(mockTriggerSync).not.toHaveBeenCalled();
     expect(mockCheckSyncStatus).not.toHaveBeenCalled();
+  });
+
+  it('invalidates library queries and updates isEnriching when background enrichment transitions to completed', async () => {
+    let capturedSnapshotCallback: ((snapshot: any) => void) | null = null;
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      capturedSnapshotCallback = callback;
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-enrich-1' };
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // 1. Initial snapshot: status is in_progress
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktEnrichmentStatus: {
+            status: 'in_progress',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.isEnriching).toBe(true);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+
+    // 2. Snapshot transitions to completed
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktEnrichmentStatus: {
+            completedAt: { toDate: () => new Date('2026-08-31T16:00:00Z') },
+            status: 'completed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.isEnriching).toBe(false);
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['lists', 'user-enrich-1'] })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['ratings', 'user-enrich-1'] })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['watchedMovies', 'user-enrich-1'] })
+    );
   });
 });
