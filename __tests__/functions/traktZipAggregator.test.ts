@@ -124,7 +124,7 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       ];
 
       const { movieWatches, watchedMovies } = aggregateMovieHistory(rawEvents);
-      expect(watchedMovies[0].plays).toBe(2);
+      expect(watchedMovies[0].plays).toBe(1);
       expect(movieWatches).toHaveLength(1); // Unique watch document by docId
     });
 
@@ -273,6 +273,25 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       const showRating = ratings.find((r) => r.type === 'show');
       expect(showRating?.rating).toBe(9);
       expect(showRating?.show?.ids.tmdb).toBe(1396);
+    });
+
+    it('folds season ratings into parent show rating using show tmdb id', () => {
+      const rawRatings = [
+        {
+          rated_at: '2023-03-01T12:00:00.000Z',
+          rating: 8,
+          season: { ids: { tmdb: 12345 }, number: 1 },
+          show: { ids: { tmdb: 1396 }, title: 'Breaking Bad', year: 2008 },
+          type: 'season',
+        },
+      ];
+
+      const ratings = aggregateRatings(rawRatings);
+
+      expect(ratings).toHaveLength(1);
+      expect(ratings[0].type).toBe('show');
+      expect(ratings[0].show?.ids.tmdb).toBe(1396);
+      expect(ratings[0].rating).toBe(8);
     });
 
     it('rejects invalid rating numbers (e.g. < 1, > 10, non-integers) and invalid dates', () => {
@@ -645,14 +664,15 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       );
     });
 
-    it('correctly extracts and aggregates real Trakt export files from trakt-export folder', () => {
-      const exportDir = path.resolve(__dirname, '../../trakt-export');
-      if (!fs.existsSync(exportDir)) {
-        return;
-      }
+    const exportDir = path.resolve(__dirname, '../../trakt-export');
+    const hasExportDir = fs.existsSync(exportDir);
 
-      const zip = new SafeAdmZip();
-      const files = fs.readdirSync(exportDir);
+    // Manual prerequisite: requires unzipped export JSON files located in <repo-root>/trakt-export/
+    (hasExportDir ? it : it.skip)(
+      'correctly extracts and aggregates real Trakt export files from trakt-export folder',
+      () => {
+        const zip = new SafeAdmZip();
+        const files = fs.readdirSync(exportDir);
 
       for (const file of files) {
         if (file.endsWith('.json')) {

@@ -34,11 +34,12 @@ describe('TraktZipImportService', () => {
         functions: {},
         storage: {},
       }));
-      jest.doMock('expo-document-picker', () => ({
-        getDocumentAsync: mockGetDocumentAsync,
-      }));
 
       const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+      traktZipImportService.setDocumentPickerModuleForTest({
+        getDocumentAsync: mockGetDocumentAsync,
+      } as any);
+
       const file = await traktZipImportService.pickZipFile();
 
       expect(file).toEqual({
@@ -64,11 +65,12 @@ describe('TraktZipImportService', () => {
         functions: {},
         storage: {},
       }));
-      jest.doMock('expo-document-picker', () => ({
-        getDocumentAsync: mockGetDocumentAsync,
-      }));
 
       const { traktZipImportService } = require('@/src/services/TraktZipImportService');
+      traktZipImportService.setDocumentPickerModuleForTest({
+        getDocumentAsync: mockGetDocumentAsync,
+      } as any);
+
       const file = await traktZipImportService.pickZipFile();
 
       expect(file).toBeNull();
@@ -91,11 +93,11 @@ describe('TraktZipImportService', () => {
         functions: {},
         storage: {},
       }));
-      jest.doMock('expo-document-picker', () => ({
-        getDocumentAsync: mockGetDocumentAsync,
-      }));
 
       const { traktZipImportService, TraktZipImportError } = require('@/src/services/TraktZipImportService');
+      traktZipImportService.setDocumentPickerModuleForTest({
+        getDocumentAsync: mockGetDocumentAsync,
+      } as any);
 
       await expect(traktZipImportService.pickZipFile()).rejects.toThrow(TraktZipImportError);
     });

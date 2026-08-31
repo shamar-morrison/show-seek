@@ -14,6 +14,7 @@ export const COLORS = {
   transparent: 'transparent',
   overlay: 'rgba(0,0,0,0.5)',
   overlaySubtle: 'rgba(0,0,0,0.12)',
+  trakt: '#ED1C24',
 } as const;
 
 export const SPACING = {

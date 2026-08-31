@@ -63,8 +63,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type ImportUIState = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed';
 
-const TRAKT_BRAND_COLOR = '#ED1C24';
-
 const formatFileSize = (bytes?: number): string => {
   if (!bytes || bytes <= 0) {
     return '';
@@ -223,6 +221,13 @@ export default function TraktZipImportScreen() {
         },
         (subscriptionError) => {
           console.error('[TraktZipImportScreen] Progress subscription error:', subscriptionError);
+          setUiState('failed');
+          setErrorMessage(
+            subscriptionError instanceof Error && subscriptionError.message
+              ? subscriptionError.message
+              : t('trakt.zipImport.failedFallback')
+          );
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
       );
 
@@ -346,7 +351,7 @@ export default function TraktZipImportScreen() {
         style={({ pressed }) => [
           styles.primaryButton,
           {
-            backgroundColor: selectedFile ? TRAKT_BRAND_COLOR : COLORS.surfaceLight,
+            backgroundColor: selectedFile ? COLORS.trakt : COLORS.surfaceLight,
           },
           pressed && selectedFile ? { opacity: ACTIVE_OPACITY } : null,
         ]}
@@ -422,13 +427,13 @@ export default function TraktZipImportScreen() {
 
   const renderProcessingView = () => (
     <View style={styles.centerContainer}>
-      <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(TRAKT_BRAND_COLOR, 0.15) }]}>
-        <RefreshCw size={36} color={TRAKT_BRAND_COLOR} />
+      <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(COLORS.trakt, 0.15) }]}>
+        <RefreshCw size={36} color={COLORS.trakt} />
       </View>
       <Text style={styles.statusTitle}>{t('trakt.zipImport.processingTitle')}</Text>
       <Text style={styles.statusSubtitle}>{getPhaseText(progressDoc?.progress?.phase)}</Text>
 
-      <ActivityIndicator size="large" color={TRAKT_BRAND_COLOR} style={styles.syncingSpinner} />
+      <ActivityIndicator size="large" color={COLORS.trakt} style={styles.syncingSpinner} />
 
       <View style={styles.estimateContainer}>
         <Text style={styles.estimateText}>{t('trakt.zipImport.processingTip')}</Text>
@@ -546,7 +551,7 @@ export default function TraktZipImportScreen() {
       <Pressable
         style={({ pressed }) => [
           styles.primaryButton,
-          { backgroundColor: TRAKT_BRAND_COLOR, width: '100%' },
+          { backgroundColor: COLORS.trakt, width: '100%' },
           pressed && { opacity: ACTIVE_OPACITY },
         ]}
         onPress={handleReset}

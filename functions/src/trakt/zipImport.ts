@@ -47,8 +47,9 @@ export const startTraktZipImportHandler = async (
   const userId = request.auth.uid;
   const importId = request.data?.importId?.trim();
 
-  if (!importId) {
-    throw new HttpsError('invalid-argument', 'Missing importId.');
+  const IMPORT_ID_REGEX = /^zip_[a-z0-9]+_[a-z0-9]+$/;
+  if (!importId || !IMPORT_ID_REGEX.test(importId)) {
+    throw new HttpsError('invalid-argument', 'Missing or invalid importId format.');
   }
 
   const db = admin.firestore();
@@ -134,6 +135,14 @@ export const runTraktZipImportHandler = async (
       { merge: true }
     );
 
+    const [metadata] = await file.getMetadata();
+    const rawSize = metadata.size;
+    const size = typeof rawSize === 'number' ? rawSize : parseInt(String(rawSize || '0'), 10);
+    const MAX_ZIP_SIZE_BYTES = 200 * 1024 * 1024;
+    if (size > MAX_ZIP_SIZE_BYTES) {
+      throw new Error(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
+    }
+
     const [downloadBuffer] = await file.download();
 
     // Phase 2: Parsing
@@ -209,6 +218,9 @@ export const runTraktZipImportHandler = async (
       {
         error: friendlyMessage,
         failedAt: Timestamp.now(),
+        progress: {
+          phase: 'failed',
+        },
         status: 'failed',
         updatedAt: Timestamp.now(),
       },

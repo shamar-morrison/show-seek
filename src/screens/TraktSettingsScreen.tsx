@@ -58,9 +58,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Trakt brand color
-const TRAKT_COLOR = '#ED1C24';
-
 export default function TraktSettingsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -342,7 +339,7 @@ export default function TraktSettingsScreen() {
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
-            <RefreshCw size={48} color={TRAKT_COLOR} />
+            <RefreshCw size={48} color={COLORS.trakt} />
           </View>
           <Text style={styles.syncingTitle}>
             {isRetryingSync ? t('trakt.retryingTitle') : t('trakt.syncingTitle')}
@@ -350,7 +347,7 @@ export default function TraktSettingsScreen() {
           <Text style={styles.syncingSubtitle}>
             {isRetryingSync ? t('trakt.retryingSubtitle') : t('trakt.syncingSubtitle')}
           </Text>
-          <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
+          <ActivityIndicator size="large" color={COLORS.trakt} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
             <Text style={styles.estimateText}>
@@ -420,7 +417,7 @@ export default function TraktSettingsScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
             onPress={handleConnectPress}
             activeOpacity={ACTIVE_OPACITY}
             disabled={isConnecting || isPremiumLoading}
@@ -441,17 +438,18 @@ export default function TraktSettingsScreen() {
             style={styles.zipImportCard}
             onPress={handleZipImportPress}
             activeOpacity={ACTIVE_OPACITY}
+            disabled={isPremiumLoading}
           >
             <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
               <FileArchive size={22} color={accentColor} />
             </View>
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
-                <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+                <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                Have an export backup from Trakt? Upload your zip file directly without connecting your account.
+                {t('trakt.zipImportCard.subtitleDisconnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -546,7 +544,7 @@ export default function TraktSettingsScreen() {
           ) : null}
 
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
             onPress={handleSync}
             activeOpacity={ACTIVE_OPACITY}
           >
@@ -559,17 +557,18 @@ export default function TraktSettingsScreen() {
             style={styles.zipImportCard}
             onPress={handleZipImportPress}
             activeOpacity={ACTIVE_OPACITY}
+            disabled={isPremiumLoading}
           >
             <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
               <FileArchive size={22} color={accentColor} />
             </View>
             <View style={styles.zipImportCardContent}>
               <View style={styles.zipImportTitleRow}>
-                <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+                <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </View>
               <Text style={styles.zipImportCardSubtitle}>
-                Have an export backup from Trakt? Upload your zip file directly without connecting your account.
+                {t('trakt.zipImportCard.subtitleConnected')}
               </Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
@@ -683,7 +682,7 @@ export default function TraktSettingsScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+          style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
           onPress={handleSync}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -745,17 +744,18 @@ export default function TraktSettingsScreen() {
           style={styles.zipImportCard}
           onPress={handleZipImportPress}
           activeOpacity={ACTIVE_OPACITY}
+          disabled={isPremiumLoading}
         >
           <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
             <FileArchive size={22} color={accentColor} />
           </View>
           <View style={styles.zipImportCardContent}>
             <View style={styles.zipImportTitleRow}>
-              <Text style={styles.zipImportCardTitle}>Import Trakt Export (.zip)</Text>
+              <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
               {!isPremium && !isPremiumLoading && <PremiumBadge />}
             </View>
             <Text style={styles.zipImportCardSubtitle}>
-              Manually import or restore your library from a Trakt zip export archive.
+              {t('trakt.zipImportCard.subtitleSynced')}
             </Text>
           </View>
           <ChevronRight size={20} color={COLORS.textSecondary} />

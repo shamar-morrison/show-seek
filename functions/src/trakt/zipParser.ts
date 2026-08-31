@@ -272,7 +272,8 @@ export const parseTraktZipBuffer = (zipBuffer: Buffer | string): AggregatedTrakt
           const traktId = parseInt(match[1], 10);
           const slug = match[2]?.trim();
           if (Number.isFinite(traktId)) {
-            rawListItemsByTraktId.set(traktId, items);
+            const existing = rawListItemsByTraktId.get(traktId) || [];
+            rawListItemsByTraktId.set(traktId, [...existing, ...items]);
           }
           if (slug) {
             rawListItemsBySlug.set(slug, items);

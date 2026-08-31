@@ -234,6 +234,7 @@ export const aggregateMovieHistory = (
     {
       movie: TraktMovie;
       playsDeclared: number;
+      uniqueDocIds: Set<string>;
       watches: { event: RawMovieHistoryEvent; watchedAtMs: number }[];
     }
   >();
@@ -272,6 +273,7 @@ export const aggregateMovieHistory = (
     const eventPlays = typeof rawEvent.plays === 'number' && rawEvent.plays > 0 ? rawEvent.plays : 1;
     if (existingGroup) {
       existingGroup.watches.push({ event: rawEvent, watchedAtMs });
+      existingGroup.uniqueDocIds.add(docId);
       existingGroup.playsDeclared = Math.max(existingGroup.playsDeclared, eventPlays);
     } else {
       eventsByMovieTmdbId.set(tmdbId, {
@@ -287,6 +289,7 @@ export const aggregateMovieHistory = (
           year,
         },
         playsDeclared: eventPlays,
+        uniqueDocIds: new Set([docId]),
         watches: [{ event: rawEvent, watchedAtMs }],
       });
     }
@@ -294,7 +297,7 @@ export const aggregateMovieHistory = (
 
   const watchedMovies: TraktWatchedMovie[] = [];
 
-  for (const [tmdbId, { movie, playsDeclared, watches }] of eventsByMovieTmdbId.entries()) {
+  for (const [tmdbId, { movie, playsDeclared, uniqueDocIds, watches }] of eventsByMovieTmdbId.entries()) {
     const latestWatchedAtMs = Math.max(...watches.map((w) => w.watchedAtMs));
     const latestWatchedAtIso = new Date(latestWatchedAtMs).toISOString();
 
@@ -309,7 +312,7 @@ export const aggregateMovieHistory = (
         title: movie.title,
         year: movie.year,
       },
-      plays: Math.max(watches.length, playsDeclared),
+      plays: Math.max(uniqueDocIds.size, playsDeclared),
     });
   }
 
@@ -577,7 +580,11 @@ export const aggregateRatings = (rawRatings: RawRatingEvent[]): TraktRating[] =>
       continue;
     }
 
-    if (rawRating.type === 'show' || (showTmdbId && !rawRating.type && !rawRating.episode && !rawRating.season)) {
+    if (
+      rawRating.type === 'show' ||
+      rawRating.type === 'season' ||
+      (showTmdbId && !rawRating.type && !rawRating.episode)
+    ) {
       if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
         continue;
       }

@@ -2,6 +2,7 @@ let store: Map<string, Record<string, unknown>>;
 let storageFiles: Map<string, { exists: boolean; content: Buffer }>;
 let fileDeleteCalls: string[];
 let mockFileDownloadOverride: (() => Promise<[Buffer]>) | null = null;
+let mockFileMetadataOverride: (() => Promise<[{ size: number }]>) | null = null;
 
 const mockDefineSecret = jest.fn(() => ({
   value: () => 'test-secret',
@@ -258,6 +259,13 @@ const mockBucket = {
       const fileData = storageFiles.get(filePath);
       return [Boolean(fileData?.exists)];
     }),
+    getMetadata: jest.fn(async () => {
+      if (mockFileMetadataOverride) {
+        return mockFileMetadataOverride();
+      }
+      const fileData = storageFiles.get(filePath);
+      return [{ size: fileData?.content.length ?? 0 }];
+    }),
     name: filePath,
   }),
 };
@@ -300,7 +308,7 @@ const SafeAdmZip = (AdmZip as unknown as { default?: typeof AdmZip }).default ||
 
 describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
   const userId = 'user-premium-123';
-  const importId = 'import-abc-789';
+  const importId = 'zip_123456789_abcdef';
   const storagePath = `users/${userId}/imports/${importId}.zip`;
   const progressDocPath = `users/${userId}/trakt_imports/${importId}`;
 
@@ -309,6 +317,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
     storageFiles = new Map<string, { exists: boolean; content: Buffer }>();
     fileDeleteCalls = [];
     mockFileDownloadOverride = null;
+    mockFileMetadataOverride = null;
     jest.clearAllMocks();
     firestoreFn.mockImplementation(() => mockFirestore);
   });
@@ -340,6 +349,26 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       ).rejects.toMatchObject({
         code: 'permission-denied',
         message: 'Trakt zip import requires Premium.',
+      });
+    });
+
+    it('rejects missing or malformed importId', async () => {
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId: '' },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'invalid-argument',
+      });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId: '../invalid/path' },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'invalid-argument',
       });
     });
 
@@ -513,6 +542,31 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         set: jest.fn(),
       } as any);
 
+      try {
+        await runTraktZipImportHandler({
+          data: { importId, userId },
+        } as any);
+
+        const progressDoc = store.get(progressDocPath);
+        expect(progressDoc).toBeDefined();
+        expect(progressDoc?.status).toBe('failed');
+        expect(progressDoc?.progress?.phase).toBe('failed');
+        expect(progressDoc?.error).toContain('Firestore write quota exceeded');
+        expect(progressDoc?.failedAt).toBeDefined();
+
+        // Storage cleanup occurred in finally block
+        expect(fileDeleteCalls).toContain(storagePath);
+      } finally {
+        mockFirestore.batch = originalBatch;
+      }
+    });
+
+    it('rejects oversized archives before downloading and writes failed status', async () => {
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      mockFileMetadataOverride = jest.fn().mockResolvedValueOnce([{ size: 250 * 1024 * 1024 }]);
+
       await runTraktZipImportHandler({
         data: { importId, userId },
       } as any);
@@ -520,13 +574,11 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       const progressDoc = store.get(progressDocPath);
       expect(progressDoc).toBeDefined();
       expect(progressDoc?.status).toBe('failed');
-      expect(progressDoc?.error).toContain('Firestore write quota exceeded');
-      expect(progressDoc?.failedAt).toBeDefined();
+      expect(progressDoc?.progress?.phase).toBe('failed');
+      expect(progressDoc?.error).toContain('exceeds the 200MB maximum allowed limit');
 
       // Storage cleanup occurred in finally block
       expect(fileDeleteCalls).toContain(storagePath);
-
-      mockFirestore.batch = originalBatch;
     });
 
     it('still writes completed status even if post-import enrichment dispatch fails afterward', async () => {

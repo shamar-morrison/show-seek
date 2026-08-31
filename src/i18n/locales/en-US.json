@@ -1155,6 +1155,12 @@
       "episodeProgress": "Episode progress",
       "watchedMoviesAndShows": "Watched movies & shows"
     },
+    "zipImportCard": {
+      "title": "Import Trakt Export (.zip)",
+      "subtitleDisconnected": "Have an export backup from Trakt? Upload your zip file directly without connecting your account.",
+      "subtitleConnected": "Have an export backup from Trakt? Upload your zip file directly to import additional history.",
+      "subtitleSynced": "Manually import or restore your library from a Trakt zip export archive."
+    },
     "zipImport": {
       "title": "Trakt Zip Import",
       "heroTitle": "Trakt Zip Import",

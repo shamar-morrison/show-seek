@@ -87,6 +87,15 @@ export class TraktZipImportService {
     { importId: string }
   >(functions, 'startTraktZipImport');
 
+  constructor(
+    private readonly documentPickerLoader: () => Promise<DocumentPickerModule> = () =>
+      import('expo-document-picker')
+  ) {}
+
+  setDocumentPickerModuleForTest(module: DocumentPickerModule | null): void {
+    this.documentPickerModulePromise = module ? Promise.resolve(module) : null;
+  }
+
   async pickZipFile(): Promise<SelectedZipFile | null> {
     const documentPicker = await this.getDocumentPickerModule();
     const result = await documentPicker.getDocumentAsync({
@@ -227,18 +236,11 @@ export class TraktZipImportService {
 
   private getDocumentPickerModule(): Promise<DocumentPickerModule> {
     if (!this.documentPickerModulePromise) {
-      this.documentPickerModulePromise = shouldUseRequireForLazyImports()
-        ? // eslint-disable-next-line @typescript-eslint/no-require-imports
-          Promise.resolve(require('expo-document-picker') as DocumentPickerModule)
-        : import('expo-document-picker');
+      this.documentPickerModulePromise = this.documentPickerLoader();
     }
 
     return this.documentPickerModulePromise;
   }
-}
-
-function shouldUseRequireForLazyImports(): boolean {
-  return typeof process !== 'undefined' && typeof process.env.JEST_WORKER_ID === 'string';
 }
 
 export const traktZipImportService = new TraktZipImportService();
