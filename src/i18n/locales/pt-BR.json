@@ -1154,7 +1154,76 @@
     "noChangesDescription": "Tudo já corresponde aos seus dados mais recentes do Trakt.",
     "localListEditWarning": "Esta lista é espelhada do Trakt. Alterações locais podem ser sobrescritas na próxima sincronização.",
     "localRatingEditWarning": "As avaliações são espelhadas do Trakt enquanto você estiver conectado. Alterações locais podem ser sobrescritas na próxima sincronização.",
-    "localWatchedEditWarning": "O histórico assistido é espelhado do Trakt enquanto você estiver conectado. Alterações locais podem ser sobrescritas na próxima sincronização."
+    "localWatchedEditWarning": "O histórico assistido é espelhado do Trakt enquanto você estiver conectado. Alterações locais podem ser sobrescritas na próxima sincronização.",
+    "zipImportCard": {
+      "title": "Importar exportação do Trakt (.zip)",
+      "subtitleDisconnected": "Tem um backup do Trakt? Envie seu arquivo zip diretamente sem conectar sua conta.",
+      "subtitleConnected": "Tem um backup do Trakt? Envie seu arquivo zip diretamente para importar histórico adicional.",
+      "subtitleSynced": "Importe ou restaure manualmente sua biblioteca a partir de um arquivo zip do Trakt."
+    },
+    "zipImport": {
+      "title": "Importação Zip do Trakt",
+      "heroTitle": "Importação Zip do Trakt",
+      "heroSubtitle": "Importe seu histórico completo de filmes, séries, episódios, avaliações e listas diretamente de um arquivo do Trakt.",
+      "selectFile": "Selecionar exportação do Trakt (.zip)",
+      "selectFileSubtitle": "Toque para procurar o arquivo zip do Trakt no seu dispositivo",
+      "replaceFile": "Trocar arquivo",
+      "removeFile": "Remover arquivo",
+      "readyBadge": "Arquivo Zip pronto",
+      "startImport": "Iniciar importação",
+      "howToGetTitle": "Como obter seu arquivo do Trakt",
+      "steps": {
+        "step1": "Abra trakt.tv no seu navegador e faça login.",
+        "step2": "Vá em Configurações e selecione Avançado.",
+        "step3": "Clique em \"Export My Data\" para baixar o arquivo zip.",
+        "step4": "Selecione o arquivo .zip baixado acima para importar."
+      },
+      "whatWillBeImportedTitle": "O que será importado",
+      "features": {
+        "watched": "Filmes e séries assistidos",
+        "watchedDesc": "Seu histórico completo de filmes e séries assistidos",
+        "granularHistory": "Histórico detalhado",
+        "granularHistoryDesc": "Cada reprodução individual com data e hora e contagem",
+        "episodeProgress": "Progresso de episódios",
+        "episodeProgressDesc": "Marcadores de temporadas e episódios concluídos",
+        "ratings": "Avaliações",
+        "ratingsDesc": "Todas as avaliações de filmes, séries, temporadas e episódios",
+        "watchlistAndFavorites": "Quero Assistir e Favoritos",
+        "watchlistAndFavoritesDesc": "Títulos salvos e favoritos pessoais",
+        "customLists": "Listas personalizadas",
+        "customListsDesc": "Listas criadas pelo usuário e coleções pessoais"
+      },
+      "uploadingTitle": "Enviando arquivo",
+      "uploadingSubtitle": "Enviando seu arquivo zip do Trakt para o armazenamento seguro. Mantenha o ShowSeek aberto.",
+      "processingTitle": "Importando seus dados",
+      "processingTip": "Processar históricos grandes pode levar alguns instantes. Você pode acompanhar o progresso nesta tela.",
+      "phases": {
+        "downloading": "Baixando arquivo no servidor...",
+        "parsing": "Lendo arquivos de filmes, séries, episódios, avaliações e listas...",
+        "syncing": "Reconciliando histórico e salvando na biblioteca...",
+        "pending": "Inicializando importação..."
+      },
+      "completeTitle": "Importação concluída",
+      "completeSubtitle": "Seu arquivo do Trakt foi importado com sucesso para a biblioteca do ShowSeek.",
+      "summaryTitle": "Resumo da importação",
+      "stats": {
+        "movies": "Filmes",
+        "shows": "Séries",
+        "episodes": "Episódios",
+        "ratings": "Avaliações",
+        "watchlist": "Quero Assistir",
+        "favorites": "Favoritos",
+        "customLists": "Listas personalizadas",
+        "movieWatches": "Reproduções registradas"
+      },
+      "viewLibrary": "Ver biblioteca",
+      "done": "Concluído",
+      "failedTitle": "Falha na importação",
+      "failedFallback": "Ocorreu um erro ao importar seu arquivo do Trakt.",
+      "uploadFailed": "Falha ao enviar o arquivo zip. Verifique sua conexão e tente novamente.",
+      "tryAgain": "Tentar novamente",
+      "backToSettings": "Voltar para Configurações"
+    }
   },
   "homeCustomization": {
     "title": "Personalizar início",

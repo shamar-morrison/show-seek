@@ -1154,6 +1154,75 @@
       "customLists": "Custom lists",
       "episodeProgress": "Episode progress",
       "watchedMoviesAndShows": "Watched movies & shows"
+    },
+    "zipImportCard": {
+      "title": "Import Trakt Export (.zip)",
+      "subtitleDisconnected": "Have an export backup from Trakt? Upload your zip file directly without connecting your account.",
+      "subtitleConnected": "Have an export backup from Trakt? Upload your zip file directly to import additional history.",
+      "subtitleSynced": "Manually import or restore your library from a Trakt zip export archive."
+    },
+    "zipImport": {
+      "title": "Trakt Zip Import",
+      "heroTitle": "Trakt Zip Import",
+      "heroSubtitle": "Import your complete movie, TV show, episode, rating, and list history directly from a Trakt export archive.",
+      "selectFile": "Select Trakt Export (.zip)",
+      "selectFileSubtitle": "Tap to browse your device files for your Trakt export zip",
+      "replaceFile": "Change File",
+      "removeFile": "Remove File",
+      "readyBadge": "Zip Archive Ready",
+      "startImport": "Start Import",
+      "howToGetTitle": "How to get your Trakt archive",
+      "steps": {
+        "step1": "Open trakt.tv in your web browser and sign in.",
+        "step2": "Go to Settings, then select Advanced.",
+        "step3": "Click \"Export My Data\" to download your zip archive.",
+        "step4": "Select the downloaded .zip file above to import."
+      },
+      "whatWillBeImportedTitle": "What will be imported",
+      "features": {
+        "watched": "Watched Movies & Shows",
+        "watchedDesc": "Your complete movie and show watch history",
+        "granularHistory": "Granular Watch History",
+        "granularHistoryDesc": "Every individual play with timestamps and watch counts",
+        "episodeProgress": "Episode Progress",
+        "episodeProgressDesc": "Season and episode completion markers",
+        "ratings": "Ratings",
+        "ratingsDesc": "All movie, show, season, and episode ratings",
+        "watchlistAndFavorites": "Watchlist & Favorites",
+        "watchlistAndFavoritesDesc": "Saved titles to watch and personal favorites",
+        "customLists": "Custom Lists",
+        "customListsDesc": "User-created lists and personal collections"
+      },
+      "uploadingTitle": "Uploading Archive",
+      "uploadingSubtitle": "Uploading your Trakt zip file to secure storage. Please keep ShowSeek open.",
+      "processingTitle": "Importing Your Data",
+      "processingTip": "Processing large watch histories may take a moment. You can stay on this screen to view progress.",
+      "phases": {
+        "downloading": "Downloading archive on server...",
+        "parsing": "Reading movie, show, episode, rating, and list files...",
+        "syncing": "Reconciling watch history and saving to your library...",
+        "pending": "Initializing import..."
+      },
+      "completeTitle": "Import Complete",
+      "completeSubtitle": "Your Trakt archive has been successfully imported into your ShowSeek library.",
+      "summaryTitle": "Import Summary",
+      "stats": {
+        "movies": "Movies",
+        "shows": "TV Shows",
+        "episodes": "Episodes",
+        "ratings": "Ratings",
+        "watchlist": "Watchlist",
+        "favorites": "Favorites",
+        "customLists": "Custom Lists",
+        "movieWatches": "Logged Watches"
+      },
+      "viewLibrary": "View Library",
+      "done": "Done",
+      "failedTitle": "Import Failed",
+      "failedFallback": "An error occurred while importing your Trakt archive.",
+      "uploadFailed": "Failed to upload the zip archive. Please verify your internet connection and try again.",
+      "tryAgain": "Try Again",
+      "backToSettings": "Back to Settings"
     }
   },
   "homeCustomization": {

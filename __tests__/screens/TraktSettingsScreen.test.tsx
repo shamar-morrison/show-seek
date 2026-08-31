@@ -331,4 +331,66 @@ describe('TraktSettingsScreen', () => {
     alertSpy.mockRestore();
     consoleErrorSpy.mockRestore();
   });
+
+  describe('Trakt Zip Import Card', () => {
+    it('routes non-Premium user to /premium when tapping zip import card in not-connected state', () => {
+      mockTraktState.isConnected = false;
+      mockPremiumState.isPremium = false;
+      mockPremiumState.isLoading = false;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Import Trakt Export (.zip)'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/premium');
+    });
+
+    it('routes Premium user to /(tabs)/profile/trakt-zip-import when tapping zip import card in not-connected state', () => {
+      mockTraktState.isConnected = false;
+      mockPremiumState.isPremium = true;
+      mockPremiumState.isLoading = false;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Import Trakt Export (.zip)'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/(tabs)/profile/trakt-zip-import');
+    });
+
+    it('routes non-Premium user to /premium when tapping zip import card in connected state', () => {
+      mockTraktState.isConnected = true;
+      mockPremiumState.isPremium = false;
+      mockPremiumState.isLoading = false;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Import Trakt Export (.zip)'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/premium');
+    });
+
+    it('routes Premium user to /(tabs)/profile/trakt-zip-import when tapping zip import card in connected state', () => {
+      mockTraktState.isConnected = true;
+      mockPremiumState.isPremium = true;
+      mockPremiumState.isLoading = false;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Import Trakt Export (.zip)'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith('/(tabs)/profile/trakt-zip-import');
+    });
+
+    it('does not route anywhere when premium status is loading', () => {
+      mockTraktState.isConnected = false;
+      mockPremiumState.isPremium = false;
+      mockPremiumState.isLoading = true;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Import Trakt Export (.zip)'));
+
+      expect(mockRouterPush).not.toHaveBeenCalled();
+    });
+  });
 });

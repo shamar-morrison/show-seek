@@ -204,7 +204,7 @@ export const reconcileManagedList = async (
       changedMediaTypes: [],
       didRemoteChange: false,
       didWrite: false,
-      shouldEnrich: false,
+      shouldEnrich: nextNeedsEnrichment,
     };
   }
 
@@ -234,7 +234,7 @@ export const reconcileManagedList = async (
     changedMediaTypes,
     didRemoteChange,
     didWrite: true,
-    shouldEnrich: addedOrUpdatedCount > 0,
+    shouldEnrich: nextNeedsEnrichment,
   };
 };
 

@@ -11,14 +11,17 @@
  */
 
 import { TRAKT_CONFIG, TRAKT_STORAGE_KEYS } from '@/src/config/trakt';
-import { auth } from '@/src/firebase/config';
+import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
+import { auth, db } from '@/src/firebase/config';
 import { TraktRequestError } from '@/src/services/TraktService';
 import * as TraktService from '@/src/services/TraktService';
 import type { SyncStatus, TraktContextValue } from '@/src/types/trakt';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const isActiveSyncStatus = (status?: SyncStatus['status']): boolean =>
@@ -34,6 +37,7 @@ const isLockedAccountStatus = (status?: SyncStatus | null): boolean =>
 const hasEligibleTraktUser = (user: User | null): user is User => Boolean(user && !user.isAnonymous);
 
 export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(() => {
+  const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
@@ -46,12 +50,78 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasAttemptedAutoSync = useRef(false);
+  const prevEnrichmentStatusRef = useRef<string | undefined>(undefined);
 
   // Monitor auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => unsubscribe();
   }, []);
+
+  // Real-time observer for background TMDB enrichment status on the user document
+  useEffect(() => {
+    if (!hasEligibleTraktUser(user)) {
+      setIsEnriching(false);
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          return;
+        }
+
+        const data = snapshot.data();
+        const enrichmentStatus = data?.traktEnrichmentStatus;
+        const currentStatus = enrichmentStatus?.status as
+          | 'idle'
+          | 'queued'
+          | 'in_progress'
+          | 'retrying'
+          | 'completed'
+          | 'failed'
+          | undefined;
+
+        const prevStatus = prevEnrichmentStatusRef.current;
+        prevEnrichmentStatusRef.current = currentStatus;
+
+        const isCurrentlyEnriching = isActiveEnrichmentStatus(currentStatus);
+        setIsEnriching(isCurrentlyEnriching);
+
+        if (currentStatus === 'completed') {
+          if (enrichmentStatus?.completedAt) {
+            const enrichedDate =
+              typeof enrichmentStatus.completedAt?.toDate === 'function'
+                ? enrichmentStatus.completedAt.toDate()
+                : new Date(enrichmentStatus.completedAt);
+            setLastEnrichedAt(enrichedDate);
+            void AsyncStorage.setItem(TRAKT_STORAGE_KEYS.LAST_ENRICHED, enrichedDate.toISOString());
+          }
+
+          // If transitioning from an active state (queued/in_progress) to completed, invalidate library queries
+          if (prevStatus && prevStatus !== 'completed') {
+            console.log('[Trakt] Background enrichment completed. Invalidating library queries.');
+            void Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['lists', user.uid] }),
+              queryClient.invalidateQueries({
+                queryKey: [LIST_MEMBERSHIP_INDEX_QUERY_KEY, user.uid],
+              }),
+              queryClient.invalidateQueries({ queryKey: ['ratings', user.uid] }),
+              queryClient.invalidateQueries({ queryKey: ['watchedMovies', user.uid] }),
+              queryClient.invalidateQueries({ queryKey: ['episodeTracking'] }),
+            ]);
+          }
+        }
+      },
+      (error) => {
+        console.warn('[Trakt] Error observing user document for enrichment status:', error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, queryClient]);
 
   // Load persisted state from AsyncStorage
   useEffect(() => {

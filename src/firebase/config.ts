@@ -3,6 +3,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth, initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
+import { getStorage } from 'firebase/storage';
 
 // Import getReactNativePersistence from the correct path
 // @ts-ignore - Firebase types may not expose this in all environments
@@ -34,3 +35,4 @@ try {
 export { auth };
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+export const storage = getStorage(app);

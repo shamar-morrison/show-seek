@@ -38,6 +38,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronRight,
+  FileArchive,
   Link2,
   RefreshCw,
   Sparkles,
@@ -55,9 +57,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-// Trakt brand color
-const TRAKT_COLOR = '#ED1C24';
 
 export default function TraktSettingsScreen() {
   const router = useRouter();
@@ -162,6 +161,21 @@ export default function TraktSettingsScreen() {
 
     void handleConnect();
   }, [handleConnect, isPremium, isPremiumLoading, router]);
+
+  const handleZipImportPress = useCallback(() => {
+    if (isPremiumLoading) {
+      return;
+    }
+
+    if (!isPremium) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push('/premium');
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/(tabs)/profile/trakt-zip-import');
+  }, [isPremium, isPremiumLoading, router]);
 
   const handleSync = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -325,7 +339,7 @@ export default function TraktSettingsScreen() {
         </View>
         <View style={styles.syncingContainer}>
           <View style={styles.syncingIconContainer}>
-            <RefreshCw size={48} color={TRAKT_COLOR} />
+            <RefreshCw size={48} color={COLORS.trakt} />
           </View>
           <Text style={styles.syncingTitle}>
             {isRetryingSync ? t('trakt.retryingTitle') : t('trakt.syncingTitle')}
@@ -333,7 +347,7 @@ export default function TraktSettingsScreen() {
           <Text style={styles.syncingSubtitle}>
             {isRetryingSync ? t('trakt.retryingSubtitle') : t('trakt.syncingSubtitle')}
           </Text>
-          <ActivityIndicator size="large" color={TRAKT_COLOR} style={styles.syncingSpinner} />
+          <ActivityIndicator size="large" color={COLORS.trakt} style={styles.syncingSpinner} />
 
           <View style={styles.estimateContainer}>
             <Text style={styles.estimateText}>
@@ -403,7 +417,7 @@ export default function TraktSettingsScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
             onPress={handleConnectPress}
             activeOpacity={ACTIVE_OPACITY}
             disabled={isConnecting || isPremiumLoading}
@@ -417,6 +431,28 @@ export default function TraktSettingsScreen() {
                 {!isPremium && !isPremiumLoading && <PremiumBadge />}
               </>
             )}
+          </TouchableOpacity>
+
+          {/* Alternative Zip Import Card */}
+          <TouchableOpacity
+            style={styles.zipImportCard}
+            onPress={handleZipImportPress}
+            activeOpacity={ACTIVE_OPACITY}
+            disabled={isPremiumLoading}
+          >
+            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+              <FileArchive size={22} color={accentColor} />
+            </View>
+            <View style={styles.zipImportCardContent}>
+              <View style={styles.zipImportTitleRow}>
+                <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
+              </View>
+              <Text style={styles.zipImportCardSubtitle}>
+                {t('trakt.zipImportCard.subtitleDisconnected')}
+              </Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <CollapsibleCategory title={t('trakt.whatWillBeSyncedTitle')} defaultExpanded>
@@ -508,12 +544,34 @@ export default function TraktSettingsScreen() {
           ) : null}
 
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+            style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
             onPress={handleSync}
             activeOpacity={ACTIVE_OPACITY}
           >
             <RefreshCw size={20} color={COLORS.white} />
             <Text style={styles.primaryButtonText}>{t('trakt.importButton')}</Text>
+          </TouchableOpacity>
+
+          {/* Alternative Zip Import Card */}
+          <TouchableOpacity
+            style={styles.zipImportCard}
+            onPress={handleZipImportPress}
+            activeOpacity={ACTIVE_OPACITY}
+            disabled={isPremiumLoading}
+          >
+            <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+              <FileArchive size={22} color={accentColor} />
+            </View>
+            <View style={styles.zipImportCardContent}>
+              <View style={styles.zipImportTitleRow}>
+                <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
+              </View>
+              <Text style={styles.zipImportCardSubtitle}>
+                {t('trakt.zipImportCard.subtitleConnected')}
+              </Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -624,7 +682,7 @@ export default function TraktSettingsScreen() {
         )}
 
         <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: TRAKT_COLOR }]}
+          style={[styles.primaryButton, { backgroundColor: COLORS.trakt }]}
           onPress={handleSync}
           activeOpacity={ACTIVE_OPACITY}
         >
@@ -680,6 +738,28 @@ export default function TraktSettingsScreen() {
             </Text>
           </View>
         )}
+
+        {/* Alternative Zip Import Card */}
+        <TouchableOpacity
+          style={styles.zipImportCard}
+          onPress={handleZipImportPress}
+          activeOpacity={ACTIVE_OPACITY}
+          disabled={isPremiumLoading}
+        >
+          <View style={[styles.zipImportIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+            <FileArchive size={22} color={accentColor} />
+          </View>
+          <View style={styles.zipImportCardContent}>
+            <View style={styles.zipImportTitleRow}>
+              <Text style={styles.zipImportCardTitle}>{t('trakt.zipImportCard.title')}</Text>
+              {!isPremium && !isPremiumLoading && <PremiumBadge />}
+            </View>
+            <Text style={styles.zipImportCardSubtitle}>
+              {t('trakt.zipImportCard.subtitleSynced')}
+            </Text>
+          </View>
+          <ChevronRight size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.disconnectButton}
@@ -1020,5 +1100,43 @@ const styles = StyleSheet.create({
   enrichedText: {
     fontSize: FONT_SIZE.s,
     color: COLORS.success,
+  },
+  zipImportCard: {
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderColor: hexToRGBA(COLORS.white, 0.08),
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
+    flexDirection: 'row',
+    marginBottom: SPACING.l,
+    padding: SPACING.m,
+  },
+  zipImportIconCircle: {
+    alignItems: 'center',
+    borderRadius: 20,
+    height: 40,
+    justifyContent: 'center',
+    marginRight: SPACING.m,
+    width: 40,
+  },
+  zipImportCardContent: {
+    flex: 1,
+    marginRight: SPACING.s,
+  },
+  zipImportTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.xs,
+    marginBottom: 2,
+  },
+  zipImportCardTitle: {
+    color: COLORS.white,
+    fontSize: FONT_SIZE.m,
+    fontWeight: '600',
+  },
+  zipImportCardSubtitle: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.xs,
+    lineHeight: 16,
   },
 });

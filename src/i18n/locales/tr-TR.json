@@ -1146,6 +1146,75 @@
       "customLists": "Özel listeler",
       "episodeProgress": "Bölüm ilerlemesi",
       "watchedMoviesAndShows": "İzlenen filmler ve diziler"
+    },
+    "zipImportCard": {
+      "title": "Trakt Dışa Aktarımını İçe Aktar (.zip)",
+      "subtitleDisconnected": "Trakt yedeğiniz mi var? Hesabınızı bağlamadan doğrudan zip dosyanızı yükleyin.",
+      "subtitleConnected": "Trakt yedeğiniz mi var? Ek geçmişi içe aktarmak için doğrudan zip dosyanızı yükleyin.",
+      "subtitleSynced": "Kitaplığınızı bir Trakt zip dışa aktarım arşivinden manuel olarak içe aktarın veya geri yükleyin."
+    },
+    "zipImport": {
+      "title": "Trakt Zip İçe Aktarımı",
+      "heroTitle": "Trakt Zip İçe Aktarımı",
+      "heroSubtitle": "Tüm film, dizi, bölüm, puanlama ve liste geçmişinizi doğrudan bir Trakt arşivinden içe aktarın.",
+      "selectFile": "Trakt Dışa Aktarımını Seç (.zip)",
+      "selectFileSubtitle": "Cihazınızdaki Trakt zip dosyasını seçmek için dokunun"
+      ,"replaceFile": "Dosyayı Değiştir",
+      "removeFile": "Dosyayı Kaldır",
+      "readyBadge": "Zip Arşivi Hazır",
+      "startImport": "İçe Aktarmayı Başlat",
+      "howToGetTitle": "Trakt arşivinizi nasıl alırsınız",
+      "steps": {
+        "step1": "Web tarayıcınızda trakt.tv adresini açın ve giriş yapın.",
+        "step2": "Ayarlar'a gidin, ardından Gelişmiş'i seçin.",
+        "step3": "Zip arşivinizi indirmek için \"Export My Data\" seçeneğine tıklayın.",
+        "step4": "İçe aktarmak için yukarıdan indirilen .zip dosyasını seçin."
+      },
+      "whatWillBeImportedTitle": "Neler içe aktarılacak",
+      "features": {
+        "watched": "İzlenen Filmler ve Diziler",
+        "watchedDesc": "Tüm film ve dizi izleme geçmişiniz",
+        "granularHistory": "Ayrıntılı İzleme Geçmişi",
+        "granularHistoryDesc": "Zaman damgaları ve izleme sayılarıyla her oynatma",
+        "episodeProgress": "Bölüm İlerlemesi",
+        "episodeProgressDesc": "Sezon ve bölüm tamamlanma işaretleri",
+        "ratings": "Puanlamalar",
+        "ratingsDesc": "Tüm film, dizi, sezon ve bölüm puanlamaları",
+        "watchlistAndFavorites": "İzleme Listesi ve Favoriler",
+        "watchlistAndFavoritesDesc": "Kaydedilen başlıklar ve kişisel favoriler",
+        "customLists": "Özel Listeler",
+        "customListsDesc": "Kullanıcı tarafından oluşturulan listeler ve koleksiyonlar"
+      },
+      "uploadingTitle": "Arşiv Yükleniyor",
+      "uploadingSubtitle": "Trakt zip dosyanız güvenli depolama alanına yükleniyor. Lütfen ShowSeek'i açık tutun.",
+      "processingTitle": "Verileriniz İçe Aktarılıyor",
+      "processingTip": "Büyük izleme geçmişlerinin işlenmesi biraz zaman alabilir. İlerlemeyi görmek için bu ekranda kalabilirsiniz.",
+      "phases": {
+        "downloading": "Arşiv sunucuya indiriliyor...",
+        "parsing": "Film, dizi, bölüm, puanlama ve liste dosyaları okunuyor...",
+        "syncing": "İzleme geçmişi uzlaştırılıyor ve kitaplığınıza kaydediliyor...",
+        "pending": "İçe aktarma başlatılıyor..."
+      },
+      "completeTitle": "İçe Aktarma Tamamlandı",
+      "completeSubtitle": "Trakt arşiviniz ShowSeek kitaplığınıza başarıyla aktarıldı.",
+      "summaryTitle": "İçe Aktarma Özeti",
+      "stats": {
+        "movies": "Filmler",
+        "shows": "Diziler",
+        "episodes": "Bölümler",
+        "ratings": "Puanlamalar",
+        "watchlist": "İzleme Listesi",
+        "favorites": "Favoriler",
+        "customLists": "Özel Listeler",
+        "movieWatches": "Kayıtlı İzlemeler"
+      },
+      "viewLibrary": "Kitaplığı Görüntüle",
+      "done": "Tamam",
+      "failedTitle": "İçe Aktarma Başarısız",
+      "failedFallback": "Trakt arşiviniz içe aktarılırken bir hata oluştu.",
+      "uploadFailed": "Zip arşivi yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
+      "tryAgain": "Tekrar Dene",
+      "backToSettings": "Ayarlara Dön"
     }
   },
   "homeCustomization": {

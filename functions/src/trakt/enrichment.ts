@@ -424,15 +424,20 @@ export const buildEnrichmentResponseBody = async (
   };
 };
 
+export type PrepareEnrichmentRunResult =
+  | { kind: 'active'; status: Partial<TraktEnrichmentStatus>; userData: TraktUserDoc }
+  | { kind: 'merged'; pendingLists: string[]; status: Partial<TraktEnrichmentStatus>; userData: TraktUserDoc }
+  | { kind: 'queued'; status: TraktEnrichmentStatus }
+  | { kind: 'rate_limited'; nextAllowedEnrichAt: FirebaseFirestore.Timestamp; userData: TraktUserDoc };
+
 export const prepareEnrichmentRun = async (
   userId: string,
   requestedListIds?: string[],
-  includeEpisodes = true
-): Promise<
-  | { kind: 'active'; status: Partial<TraktEnrichmentStatus>; userData: TraktUserDoc }
-  | { kind: 'queued'; status: TraktEnrichmentStatus }
-  | { kind: 'rate_limited'; nextAllowedEnrichAt: FirebaseFirestore.Timestamp; userData: TraktUserDoc }
-> => {
+  includeEpisodes = true,
+  options?: {
+    bypassCooldown?: boolean;
+  }
+): Promise<PrepareEnrichmentRunResult> => {
   const listIds = await resolveEnrichmentListIds(userId, requestedListIds);
   const db = admin.firestore();
   const userRef = db.collection('users').doc(userId);
@@ -444,15 +449,39 @@ export const prepareEnrichmentRun = async (
     const existingStatus = userData.traktEnrichmentStatus;
 
     if (existingStatus?.status && ACTIVE_RUN_STATUSES.has(existingStatus.status)) {
+      const mergedPendingLists = normalizeListIds([
+        ...(existingStatus.pendingLists ?? []),
+        ...listIds,
+      ]);
+      const updatedStatus: Partial<TraktEnrichmentStatus> = {
+        ...existingStatus,
+        pendingLists: mergedPendingLists,
+        updatedAt: Timestamp.now(),
+      };
+      const updatedStatusForWrite = sanitizeEnrichmentStatusForWrite(updatedStatus as TraktEnrichmentStatus);
+
+      transaction.set(
+        userRef,
+        {
+          traktEnrichmentStatus: updatedStatusForWrite,
+        },
+        { merge: true }
+      );
+
       return {
-        kind: 'active' as const,
-        status: existingStatus,
+        kind: 'merged' as const,
+        pendingLists: mergedPendingLists,
+        status: updatedStatus,
         userData,
       };
     }
 
     const nextAllowedEnrichAt = existingStatus?.nextAllowedEnrichAt;
-    if (nextAllowedEnrichAt instanceof Timestamp && nextAllowedEnrichAt.toMillis() > Date.now()) {
+    if (
+      !options?.bypassCooldown &&
+      nextAllowedEnrichAt instanceof Timestamp &&
+      nextAllowedEnrichAt.toMillis() > Date.now()
+    ) {
       return {
         kind: 'rate_limited' as const,
         nextAllowedEnrichAt,

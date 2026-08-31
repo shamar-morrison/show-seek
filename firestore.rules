@@ -330,6 +330,11 @@ service cloud.firestore {
         allow delete: if canWriteUserData(userId)
           && resource.data.userId == userId;
       }
+
+      // Trakt zip import progress documents
+      match /trakt_imports/{importId} {
+        allow read: if isNonAnonymousOwner(userId);
+      }
     }
   }
 }

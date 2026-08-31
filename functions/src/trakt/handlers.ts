@@ -78,6 +78,7 @@ import {
   syncTraktImport,
 } from './sync';
 import {
+  normalizeListIds,
   toFirestoreTimestamp,
   transformFavorite,
   transformRating,
@@ -560,7 +561,7 @@ export const handleEnrichPost = async (request: Request, response: ExpressRespon
 
     const transactionResult = await prepareEnrichmentRun(userId, requestedLists, includeEpisodes);
 
-    if (transactionResult.kind === 'active') {
+    if (transactionResult.kind === 'active' || transactionResult.kind === 'merged') {
       applyCorsHeaders(request, response);
       response.status(202).json(await buildEnrichmentResponseBody(userId, transactionResult.userData));
       return;
@@ -997,17 +998,87 @@ export const runTraktEnrichment = onTaskDispatched<EnrichmentTaskPayload>(
         userId,
       });
 
-      const counts = await runTraktEnrichmentJob(userId, lists, includeEpisodes, runId);
+      let currentListsToEnrich = lists;
+      const accumulatedCounts = emptyEnrichmentCounts();
+      let pass = 0;
+      const MAX_DRAIN_PASSES = 10;
+      const MAX_EXECUTION_TIME_MS = 25 * 60 * 1000;
+      const runStartTime = Date.now();
+      const allEnrichedLists: string[] = [];
+
+      while (currentListsToEnrich.length > 0 && pass < MAX_DRAIN_PASSES) {
+        pass += 1;
+        allEnrichedLists.push(...currentListsToEnrich);
+        const passCounts = await runTraktEnrichmentJob(
+          userId,
+          currentListsToEnrich,
+          includeEpisodes && pass === 1,
+          runId
+        );
+        accumulatedCounts.episodes += passCounts.episodes;
+        accumulatedCounts.items += passCounts.items;
+        accumulatedCounts.lists += passCounts.lists;
+
+        if (Date.now() - runStartTime > MAX_EXECUTION_TIME_MS) {
+          console.warn('[TraktEnrichment] Approaching execution timeout during drain loop', {
+            pass,
+            runId,
+            userId,
+          });
+          break;
+        }
+
+        // Transactionally check and drain pendingLists from the user doc
+        currentListsToEnrich = await db.runTransaction(async (transaction) => {
+          const freshUserDoc = await transaction.get(userRef);
+          const freshUserData = (freshUserDoc.data() ?? {}) as TraktUserDoc;
+          const freshStatus = freshUserData.traktEnrichmentStatus;
+
+          if (freshStatus?.runId !== runId) {
+            return [];
+          }
+
+          const pendingLists = freshStatus?.pendingLists;
+          if (!Array.isArray(pendingLists) || pendingLists.length === 0) {
+            return [];
+          }
+
+          transaction.set(
+            userRef,
+            {
+              traktEnrichmentStatus: {
+                ...freshStatus,
+                pendingLists: [],
+                updatedAt: Timestamp.now(),
+              },
+            },
+            { merge: true }
+          );
+
+          return normalizeListIds(pendingLists);
+        });
+
+        if (currentListsToEnrich.length > 0) {
+          console.info('[TraktEnrichment] Draining pending lists in active enrichment run', {
+            drainedListCount: currentListsToEnrich.length,
+            pass,
+            runId,
+            userId,
+          });
+        }
+      }
+
       const completedAt = Timestamp.now();
 
       await writeEnrichmentStatus(userId, runId, {
         attempt,
         completedAt,
-        counts,
+        counts: accumulatedCounts,
         includeEpisodes,
-        lists,
+        lists: normalizeListIds(allEnrichedLists),
         maxAttempts: TRAKT_ENRICHMENT_QUEUE_MAX_ATTEMPTS,
         nextAllowedEnrichAt,
+        pendingLists: [],
         runId,
         startedAt,
         status: 'completed',

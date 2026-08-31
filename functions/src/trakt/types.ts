@@ -86,6 +86,7 @@ export interface TraktEnrichmentStatus {
   maxAttempts: number;
   nextAllowedEnrichAt?: FirebaseFirestore.Timestamp;
   nextRetryAt?: FirebaseFirestore.Timestamp;
+  pendingLists?: string[];
   runId: string;
   startedAt?: FirebaseFirestore.Timestamp;
   status: SyncStatusState;
@@ -430,3 +431,42 @@ export interface ReconcileManagedListOptions {
   preserveLocalItems?: boolean;
   recencyField?: string;
 }
+
+export interface StartTraktZipImportRequest {
+  importId?: string;
+}
+
+export interface TraktZipImportTaskPayload {
+  importId: string;
+  userId: string;
+}
+
+export type TraktZipImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type TraktZipImportPhase = 'pending' | 'downloading' | 'parsing' | 'syncing' | 'completed' | 'failed';
+
+export interface TraktZipImportProgressDoc {
+  completedAt?: FirebaseFirestore.Timestamp;
+  createdAt: FirebaseFirestore.Timestamp;
+  error?: string;
+  failedAt?: FirebaseFirestore.Timestamp;
+  id: string;
+  progress: {
+    current: number;
+    phase: TraktZipImportPhase;
+    total: number;
+  };
+  stats: {
+    customLists: number;
+    episodes: number;
+    favorites: number;
+    movies: number;
+    movieWatches: number;
+    ratings: number;
+    shows: number;
+    watchlist: number;
+  };
+  status: TraktZipImportStatus;
+  updatedAt: FirebaseFirestore.Timestamp;
+  userId: string;
+}
+

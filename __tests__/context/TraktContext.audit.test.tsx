@@ -49,10 +49,23 @@ jest.mock('@/src/services/TraktService', () => ({
 }));
 
 import { TraktProvider, useTrakt } from '@/src/context/TraktContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 describe('TraktContext audited flows', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+  });
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <TraktProvider>{children}</TraktProvider>
+    <QueryClientProvider client={queryClient}>
+      <TraktProvider>{children}</TraktProvider>
+    </QueryClientProvider>
   );
 
   const mockTimers = () => {

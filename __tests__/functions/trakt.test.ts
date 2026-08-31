@@ -46,6 +46,7 @@ jest.mock(
 jest.mock(
   'firebase-functions/v2/https',
   () => ({
+    onCall: jest.fn((_options, handler) => handler),
     onRequest: mockOnRequest,
   }),
   { virtual: true }
@@ -3982,7 +3983,15 @@ describe('Trakt sync Firestore sanitization', () => {
       response
     );
 
-    expect(transactionSet).not.toHaveBeenCalled();
+    expect(transactionSet).toHaveBeenCalledWith(
+      userRef,
+      expect.objectContaining({
+        traktEnrichmentStatus: expect.objectContaining({
+          pendingLists: expect.arrayContaining(['already-watched', 'watchlist', 'favorites']),
+        }),
+      }),
+      { merge: true }
+    );
     expect(mockEnqueue).not.toHaveBeenCalled();
     expect(response.status).toHaveBeenCalledWith(202);
     expect(response.json).toHaveBeenCalledWith(
@@ -5562,18 +5571,20 @@ describe('Trakt sync Firestore sanitization', () => {
 
       const result = __test__.buildEpisodeTrackingDoc(show as any);
       expect(result).not.toBeNull();
-      expect(result?.episodes['1_1'].watched).toBe(true);
-      expect(result?.episodes['1_1'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
-      expect(result?.episodes['1_2'].watched).toBe(true);
-      expect(result?.episodes['1_2'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
+      const episodes = (result?.episodes ?? {}) as any;
+      expect(episodes['1_1'].watched).toBe(true);
+      expect(episodes['1_1'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
+      expect(episodes['1_2'].watched).toBe(true);
+      expect(episodes['1_2'].watchedAt.toMillis()).toBe(new Date('2026-05-01T12:00:00.000Z').getTime());
 
       const showWithoutShowWatchedAt = {
         ...show,
         last_watched_at: undefined,
       };
       const result2 = __test__.buildEpisodeTrackingDoc(showWithoutShowWatchedAt as any);
-      expect(result2?.episodes['1_1'].watched).toBe(true);
-      expect(result2?.episodes['1_1'].watchedAt).toBeUndefined();
+      const episodes2 = (result2?.episodes ?? {}) as any;
+      expect(episodes2['1_1'].watched).toBe(true);
+      expect(episodes2['1_1'].watchedAt).toBeUndefined();
     });
 
     it('traktPaginatedRequest fetches and combines multiple pages using pagination headers', async () => {
@@ -5764,6 +5775,7 @@ describe('Trakt sync Firestore sanitization', () => {
           title: undefined as any,
           year: 2024,
         },
+        rank: 1,
         type: 'movie',
       });
       expect(favWithUndefined).toBeDefined();
