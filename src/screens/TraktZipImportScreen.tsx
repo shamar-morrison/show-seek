@@ -1,3 +1,9 @@
+import { TraktLogo } from '@/src/components/icons/TraktLogo';
+import {
+  CollapsibleCategory,
+  CollapsibleFeatureItem,
+} from '@/src/components/ui/CollapsibleCategory';
+import { PremiumBadge } from '@/src/components/ui/PremiumBadge';
 import { LIST_MEMBERSHIP_INDEX_QUERY_KEY } from '@/src/constants/queryKeys';
 import {
   ACTIVE_OPACITY,
@@ -22,32 +28,35 @@ import {
 import { screenStyles } from '@/src/styles/screenStyles';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Check,
   CheckCircle2,
   FileArchive,
   Film,
   FolderPlus,
   Heart,
-  HelpCircle,
   List,
   RefreshCw,
   Star,
   Tv,
+  Upload,
   UploadCloud,
   X,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -66,8 +75,25 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+interface StatTileProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+}
+
+function StatTile({ icon, label, value }: StatTileProps) {
+  return (
+    <View style={styles.statTile}>
+      <View style={styles.statTileIconWrapper}>{icon}</View>
+      <Text style={styles.statTileValue}>{value.toLocaleString()}</Text>
+      <Text style={styles.statTileLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function TraktZipImportScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const requireAccount = useAccountRequired();
@@ -123,8 +149,8 @@ export default function TraktZipImportScreen() {
       const msg =
         error instanceof Error
           ? error.message
-          : 'Unable to select the zip archive. Please try again.';
-      Alert.alert('File Selection', msg);
+          : t('trakt.zipImport.failedFallback');
+      Alert.alert(t('trakt.zipImport.title'), msg);
     } finally {
       setIsPickingFile(false);
     }
@@ -190,8 +216,7 @@ export default function TraktZipImportScreen() {
           } else if (data.status === 'failed') {
             setUiState('failed');
             setErrorMessage(
-              data.error ||
-                'Import processing was unable to finish. Please check your zip file and try again.'
+              data.error || t('trakt.zipImport.failedFallback')
             );
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           }
@@ -210,14 +235,12 @@ export default function TraktZipImportScreen() {
       setUiState('failed');
 
       if (error instanceof TraktZipUploadError) {
-        setErrorMessage(
-          'Failed to upload the zip archive. Please verify your internet connection and try again.'
-        );
+        setErrorMessage(t('trakt.zipImport.uploadFailed'));
       } else {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : 'An unexpected error occurred while initiating the import.'
+            : t('trakt.zipImport.failedFallback')
         );
       }
 
@@ -240,141 +263,140 @@ export default function TraktZipImportScreen() {
   const getPhaseText = (phase?: string): string => {
     switch (phase) {
       case 'downloading':
-        return 'Downloading archive on server...';
+        return t('trakt.zipImport.phases.downloading');
       case 'parsing':
-        return 'Reading movie, show, episode, rating, and list files...';
+        return t('trakt.zipImport.phases.parsing');
       case 'syncing':
-        return 'Reconciling watch history and saving to your library...';
+        return t('trakt.zipImport.phases.syncing');
       case 'pending':
       default:
-        return 'Initializing import...';
+        return t('trakt.zipImport.phases.pending');
     }
   };
 
   const renderIdleView = () => (
     <View style={styles.sectionContainer}>
-      <View style={styles.heroCard}>
-        <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(TRAKT_BRAND_COLOR, 0.15) }]}>
-          <FileArchive size={36} color={TRAKT_BRAND_COLOR} />
+      <View style={styles.heroSection}>
+        <View style={styles.syncIconsContainer}>
+          <TraktLogo size={65} />
+          <ArrowRight size={24} color={COLORS.textSecondary} style={styles.arrowIcon} />
+          <View style={styles.showSeekIconCircle}>
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={styles.showSeekIcon}
+              contentFit="contain"
+            />
+          </View>
         </View>
-        <Text style={styles.heroTitle}>Trakt Zip Import</Text>
-        <Text style={styles.heroSubtitle}>
-          Import your complete movie, TV show, episode, rating, and list history directly from a Trakt export archive.
-        </Text>
+        <Text style={styles.heroTitle}>{t('trakt.zipImport.heroTitle')}</Text>
+        <Text style={styles.heroSubtitle}>{t('trakt.zipImport.heroSubtitle')}</Text>
       </View>
 
-      {/* File Picker Box */}
+      {/* File Picker Box / Selected File Preview */}
       {selectedFile ? (
         <View style={styles.selectedFileCard}>
-          <View style={styles.fileIconWrapper}>
-            <FileArchive size={28} color={accentColor} />
+          <View style={[styles.fileIconWrapper, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
+            <FileArchive size={26} color={accentColor} />
           </View>
           <View style={styles.fileDetails}>
             <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
               {selectedFile.name}
             </Text>
             <Text style={styles.fileMeta}>
-              {formatFileSize(selectedFile.size) || 'Zip Archive Ready'}
+              {formatFileSize(selectedFile.size) || t('trakt.zipImport.readyBadge')}
             </Text>
           </View>
-          <TouchableOpacity
+          <Pressable
             onPress={() => setSelectedFile(null)}
-            style={styles.removeFileButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={({ pressed }) => [styles.removeFileButton, pressed && { opacity: ACTIVE_OPACITY }]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={t('trakt.zipImport.removeFile')}
           >
-            <X size={18} color={COLORS.textSecondary} />
-          </TouchableOpacity>
+            <X size={20} color={COLORS.textSecondary} />
+          </Pressable>
         </View>
       ) : (
-        <TouchableOpacity
-          style={styles.pickerBox}
+        <Pressable
+          style={({ pressed }) => [
+            styles.pickerBox,
+            pressed && { borderColor: accentColor, opacity: ACTIVE_OPACITY },
+          ]}
           onPress={handlePickFile}
-          activeOpacity={ACTIVE_OPACITY}
-          disabled={isPickingFile}
+          disabled={isPickingFile || isPremiumLoading}
         >
           {isPickingFile ? (
             <ActivityIndicator color={accentColor} size="small" />
           ) : (
             <>
-              <UploadCloud size={36} color={accentColor} />
-              <Text style={styles.pickerBoxTitle}>Select Trakt Export (.zip)</Text>
+              <UploadCloud size={40} color={accentColor} />
+              <View style={styles.pickerTitleRow}>
+                <Text style={styles.pickerBoxTitle}>{t('trakt.zipImport.selectFile')}</Text>
+                {!isPremium && !isPremiumLoading && <PremiumBadge />}
+              </View>
               <Text style={styles.pickerBoxSubtitle}>
-                Tap to browse your device files for your Trakt export zip
+                {t('trakt.zipImport.selectFileSubtitle')}
               </Text>
             </>
           )}
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {/* Action Button */}
-      <TouchableOpacity
-        style={[
+      <Pressable
+        style={({ pressed }) => [
           styles.primaryButton,
           {
-            backgroundColor: selectedFile ? TRAKT_BRAND_COLOR : hexToRGBA(COLORS.textSecondary, 0.3),
+            backgroundColor: selectedFile ? TRAKT_BRAND_COLOR : COLORS.surfaceLight,
           },
+          pressed && selectedFile ? { opacity: ACTIVE_OPACITY } : null,
         ]}
         onPress={handleStartImport}
         disabled={!selectedFile}
-        activeOpacity={ACTIVE_OPACITY}
       >
-        <Text style={styles.primaryButtonText}>Start Import</Text>
-      </TouchableOpacity>
+        <Upload size={20} color={selectedFile ? COLORS.white : COLORS.textSecondary} />
+        <Text
+          style={[
+            styles.primaryButtonText,
+            !selectedFile && { color: COLORS.textSecondary },
+          ]}
+        >
+          {t('trakt.zipImport.startImport')}
+        </Text>
+      </Pressable>
 
-      {/* Instructions Accordion / Card */}
-      <View style={styles.instructionsCard}>
-        <View style={styles.instructionsHeader}>
-          <HelpCircle size={18} color={COLORS.textSecondary} />
-          <Text style={styles.instructionsTitle}>How to get your Trakt archive</Text>
-        </View>
-        <View style={styles.instructionStep}>
-          <Text style={styles.stepNumber}>1.</Text>
-          <Text style={styles.stepText}>Open trakt.tv in your web browser and sign in.</Text>
-        </View>
-        <View style={styles.instructionStep}>
-          <Text style={styles.stepNumber}>2.</Text>
-          <Text style={styles.stepText}>Go to Settings, then select Advanced.</Text>
-        </View>
-        <View style={styles.instructionStep}>
-          <Text style={styles.stepNumber}>3.</Text>
-          <Text style={styles.stepText}>Click &quot;Export My Data&quot; to download your zip archive.</Text>
-        </View>
-        <View style={styles.instructionStep}>
-          <Text style={styles.stepNumber}>4.</Text>
-          <Text style={styles.stepText}>Select the downloaded .zip file above to import.</Text>
-        </View>
-      </View>
-
-      {/* Supported Items Info */}
-      <View style={styles.supportedCard}>
-        <Text style={styles.supportedTitle}>What will be imported</Text>
-        <View style={styles.supportedGrid}>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Watched Movies & Shows</Text>
-          </View>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Granular Watch History</Text>
-          </View>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Episode Progress</Text>
-          </View>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Ratings</Text>
-          </View>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Watchlist & Favorites</Text>
-          </View>
-          <View style={styles.supportedItem}>
-            <CheckCircle2 size={16} color={COLORS.success} />
-            <Text style={styles.supportedItemText}>Custom Lists</Text>
-          </View>
-        </View>
-      </View>
+      {/* What Will Be Imported Collapsible Category */}
+      <CollapsibleCategory title={t('trakt.zipImport.whatWillBeImportedTitle')} defaultExpanded>
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.watched')}
+          description={t('trakt.zipImport.features.watchedDesc')}
+          icon="checkmark-circle"
+        />
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.granularHistory')}
+          description={t('trakt.zipImport.features.granularHistoryDesc')}
+          icon="checkmark-circle"
+        />
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.episodeProgress')}
+          description={t('trakt.zipImport.features.episodeProgressDesc')}
+          icon="checkmark-circle"
+        />
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.ratings')}
+          description={t('trakt.zipImport.features.ratingsDesc')}
+          icon="checkmark-circle"
+        />
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.watchlistAndFavorites')}
+          description={t('trakt.zipImport.features.watchlistAndFavoritesDesc')}
+          icon="checkmark-circle"
+        />
+        <CollapsibleFeatureItem
+          text={t('trakt.zipImport.features.customLists')}
+          description={t('trakt.zipImport.features.customListsDesc')}
+          icon="checkmark-circle"
+        />
+      </CollapsibleCategory>
     </View>
   );
 
@@ -383,10 +405,8 @@ export default function TraktZipImportScreen() {
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(accentColor, 0.15) }]}>
         <UploadCloud size={40} color={accentColor} />
       </View>
-      <Text style={styles.statusTitle}>Uploading Archive</Text>
-      <Text style={styles.statusSubtitle}>
-        Uploading your Trakt zip file to secure storage. Please keep ShowSeek open.
-      </Text>
+      <Text style={styles.statusTitle}>{t('trakt.zipImport.uploadingTitle')}</Text>
+      <Text style={styles.statusSubtitle}>{t('trakt.zipImport.uploadingSubtitle')}</Text>
 
       <View style={styles.progressBarWrapper}>
         <View
@@ -405,15 +425,13 @@ export default function TraktZipImportScreen() {
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(TRAKT_BRAND_COLOR, 0.15) }]}>
         <RefreshCw size={36} color={TRAKT_BRAND_COLOR} />
       </View>
-      <Text style={styles.statusTitle}>Importing Your Data</Text>
+      <Text style={styles.statusTitle}>{t('trakt.zipImport.processingTitle')}</Text>
       <Text style={styles.statusSubtitle}>{getPhaseText(progressDoc?.progress?.phase)}</Text>
 
-      <ActivityIndicator size="large" color={TRAKT_BRAND_COLOR} style={styles.spinner} />
+      <ActivityIndicator size="large" color={TRAKT_BRAND_COLOR} style={styles.syncingSpinner} />
 
-      <View style={styles.tipCard}>
-        <Text style={styles.tipText}>
-          Processing large watch histories may take a moment. You can stay on this screen to view progress.
-        </Text>
+      <View style={styles.estimateContainer}>
+        <Text style={styles.estimateText}>{t('trakt.zipImport.processingTip')}</Text>
       </View>
     </View>
   );
@@ -432,79 +450,82 @@ export default function TraktZipImportScreen() {
 
     return (
       <View style={styles.sectionContainer}>
-        <View style={styles.successHeader}>
-          <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(COLORS.success, 0.15) }]}>
-            <Check size={36} color={COLORS.success} />
+        <View style={styles.heroSection}>
+          <View style={[styles.iconCircle, { backgroundColor: COLORS.success }]}>
+            <Check size={32} color={COLORS.white} />
           </View>
-          <Text style={styles.statusTitle}>Import Complete</Text>
-          <Text style={styles.statusSubtitle}>
-            Your Trakt archive has been successfully imported into your ShowSeek library.
-          </Text>
+          <Text style={styles.heroTitle}>{t('trakt.zipImport.completeTitle')}</Text>
+          <Text style={styles.heroSubtitle}>{t('trakt.zipImport.completeSubtitle')}</Text>
         </View>
 
         {/* Stats Summary Grid */}
         <View style={styles.statsCard}>
-          <Text style={styles.statsCardTitle}>Import Summary</Text>
+          <Text style={styles.statsCardTitle}>{t('trakt.zipImport.summaryTitle')}</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Film size={20} color={accentColor} />
-              <Text style={styles.statValue}>{stats.movies}</Text>
-              <Text style={styles.statLabel}>Movies</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Tv size={20} color={accentColor} />
-              <Text style={styles.statValue}>{stats.shows}</Text>
-              <Text style={styles.statLabel}>TV Shows</Text>
-            </View>
-            <View style={styles.statBox}>
-              <CheckCircle2 size={20} color={accentColor} />
-              <Text style={styles.statValue}>{stats.episodes}</Text>
-              <Text style={styles.statLabel}>Episodes</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Star size={20} color={COLORS.warning} />
-              <Text style={styles.statValue}>{stats.ratings}</Text>
-              <Text style={styles.statLabel}>Ratings</Text>
-            </View>
-            <View style={styles.statBox}>
-              <List size={20} color={accentColor} />
-              <Text style={styles.statValue}>{stats.watchlist}</Text>
-              <Text style={styles.statLabel}>Watchlist</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Heart size={20} color={COLORS.error} />
-              <Text style={styles.statValue}>{stats.favorites}</Text>
-              <Text style={styles.statLabel}>Favorites</Text>
-            </View>
-            <View style={styles.statBox}>
-              <FolderPlus size={20} color={accentColor} />
-              <Text style={styles.statValue}>{stats.customLists}</Text>
-              <Text style={styles.statLabel}>Custom Lists</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Film size={20} color={COLORS.success} />
-              <Text style={styles.statValue}>{stats.movieWatches}</Text>
-              <Text style={styles.statLabel}>Logged Watches</Text>
-            </View>
+            <StatTile
+              icon={<Film size={22} color={accentColor} />}
+              label={t('trakt.zipImport.stats.movies')}
+              value={stats.movies}
+            />
+            <StatTile
+              icon={<Tv size={22} color={accentColor} />}
+              label={t('trakt.zipImport.stats.shows')}
+              value={stats.shows}
+            />
+            <StatTile
+              icon={<CheckCircle2 size={22} color={accentColor} />}
+              label={t('trakt.zipImport.stats.episodes')}
+              value={stats.episodes}
+            />
+            <StatTile
+              icon={<Star size={22} color={COLORS.warning} />}
+              label={t('trakt.zipImport.stats.ratings')}
+              value={stats.ratings}
+            />
+            <StatTile
+              icon={<List size={22} color={accentColor} />}
+              label={t('trakt.zipImport.stats.watchlist')}
+              value={stats.watchlist}
+            />
+            <StatTile
+              icon={<Heart size={22} color={COLORS.error} />}
+              label={t('trakt.zipImport.stats.favorites')}
+              value={stats.favorites}
+            />
+            <StatTile
+              icon={<FolderPlus size={22} color={accentColor} />}
+              label={t('trakt.zipImport.stats.customLists')}
+              value={stats.customLists}
+            />
+            <StatTile
+              icon={<Film size={22} color={COLORS.success} />}
+              label={t('trakt.zipImport.stats.movieWatches')}
+              value={stats.movieWatches}
+            />
           </View>
         </View>
 
         {/* Navigation Buttons */}
-        <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: accentColor }]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.primaryButton,
+            { backgroundColor: accentColor },
+            pressed && { opacity: ACTIVE_OPACITY },
+          ]}
           onPress={() => router.push('/(tabs)/library')}
-          activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.primaryButtonText}>View Library</Text>
-        </TouchableOpacity>
+          <Text style={styles.primaryButtonText}>{t('trakt.zipImport.viewLibrary')}</Text>
+        </Pressable>
 
-        <TouchableOpacity
-          style={styles.secondaryButton}
+        <Pressable
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && { opacity: ACTIVE_OPACITY },
+          ]}
           onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
         >
-          <Text style={styles.secondaryButtonText}>Done</Text>
-        </TouchableOpacity>
+          <Text style={styles.secondaryButtonText}>{t('trakt.zipImport.done')}</Text>
+        </Pressable>
       </View>
     );
   };
@@ -514,40 +535,50 @@ export default function TraktZipImportScreen() {
       <View style={[styles.heroIconCircle, { backgroundColor: hexToRGBA(COLORS.error, 0.15) }]}>
         <AlertCircle size={40} color={COLORS.error} />
       </View>
-      <Text style={styles.statusTitle}>Import Failed</Text>
-      <Text style={styles.errorDescription}>
-        {errorMessage || 'An error occurred while importing your Trakt archive.'}
-      </Text>
+      <Text style={styles.statusTitle}>{t('trakt.zipImport.failedTitle')}</Text>
 
-      <TouchableOpacity
-        style={[styles.primaryButton, { backgroundColor: TRAKT_BRAND_COLOR, width: '100%' }]}
+      <View style={styles.errorCard}>
+        <Text style={styles.errorDescription}>
+          {errorMessage || t('trakt.zipImport.failedFallback')}
+        </Text>
+      </View>
+
+      <Pressable
+        style={({ pressed }) => [
+          styles.primaryButton,
+          { backgroundColor: TRAKT_BRAND_COLOR, width: '100%' },
+          pressed && { opacity: ACTIVE_OPACITY },
+        ]}
         onPress={handleReset}
-        activeOpacity={ACTIVE_OPACITY}
       >
-        <Text style={styles.primaryButtonText}>Try Again</Text>
-      </TouchableOpacity>
+        <RefreshCw size={18} color={COLORS.white} />
+        <Text style={styles.primaryButtonText}>{t('trakt.zipImport.tryAgain')}</Text>
+      </Pressable>
 
-      <TouchableOpacity
-        style={[styles.secondaryButton, { width: '100%' }]}
+      <Pressable
+        style={({ pressed }) => [
+          styles.secondaryButton,
+          { width: '100%' },
+          pressed && { opacity: ACTIVE_OPACITY },
+        ]}
         onPress={() => router.back()}
-        activeOpacity={ACTIVE_OPACITY}
       >
-        <Text style={styles.secondaryButtonText}>Back to Settings</Text>
-      </TouchableOpacity>
+        <Text style={styles.secondaryButtonText}>{t('trakt.zipImport.backToSettings')}</Text>
+      </Pressable>
     </View>
   );
 
   return (
     <SafeAreaView style={screenStyles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
-        <TouchableOpacity
+        <Pressable
           onPress={() => router.back()}
-          activeOpacity={ACTIVE_OPACITY}
-          style={styles.backButton}
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: ACTIVE_OPACITY }]}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trakt Zip Import</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>{t('trakt.zipImport.title')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -562,6 +593,9 @@ export default function TraktZipImportScreen() {
 }
 
 const styles = StyleSheet.create({
+  arrowIcon: {
+    marginHorizontal: SPACING.s,
+  },
   backButton: {
     padding: SPACING.xs,
   },
@@ -569,14 +603,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: SPACING.m,
+    paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.xl,
   },
+  errorCard: {
+    backgroundColor: hexToRGBA(COLORS.error, 0.1),
+    borderColor: hexToRGBA(COLORS.error, 0.25),
+    borderRadius: BORDER_RADIUS.m,
+    borderWidth: 1,
+    marginBottom: SPACING.xl,
+    padding: SPACING.m,
+    width: '100%',
+  },
   errorDescription: {
-    color: COLORS.textSecondary,
+    color: COLORS.error,
     fontSize: FONT_SIZE.m,
     lineHeight: 22,
-    marginBottom: SPACING.xl,
+    textAlign: 'center',
+  },
+  estimateContainer: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    marginTop: SPACING.xl,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.s,
+  },
+  estimateText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.s,
+    lineHeight: 20,
     textAlign: 'center',
   },
   fileDetails: {
@@ -584,11 +639,16 @@ const styles = StyleSheet.create({
     marginRight: SPACING.s,
   },
   fileIconWrapper: {
+    alignItems: 'center',
+    borderRadius: BORDER_RADIUS.m,
+    height: 48,
+    justifyContent: 'center',
     marginRight: SPACING.m,
+    width: 48,
   },
   fileMeta: {
     color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
+    fontSize: FONT_SIZE.s,
     marginTop: 2,
   },
   fileName: {
@@ -598,105 +658,104 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    borderBottomColor: hexToRGBA(COLORS.white, 0.1),
+    borderBottomColor: COLORS.surfaceLight,
     borderBottomWidth: 1,
     flexDirection: 'row',
-    paddingHorizontal: SPACING.m,
-    paddingVertical: SPACING.s,
+    gap: SPACING.m,
+    paddingHorizontal: SPACING.l,
+    paddingVertical: SPACING.m,
   },
   headerTitle: {
     color: COLORS.white,
+    flex: 1,
     fontSize: FONT_SIZE.l,
-    fontWeight: '700',
-    marginLeft: SPACING.s,
-  },
-  heroCard: {
-    alignItems: 'center',
-    marginBottom: SPACING.l,
+    fontWeight: 'bold',
   },
   heroIconCircle: {
     alignItems: 'center',
-    borderRadius: 36,
-    height: 72,
+    borderRadius: 40,
+    height: 80,
     justifyContent: 'center',
-    marginBottom: SPACING.m,
-    width: 72,
+    marginBottom: SPACING.l,
+    width: 80,
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
   },
   heroSubtitle: {
     color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    lineHeight: 20,
+    fontSize: FONT_SIZE.m,
+    lineHeight: 22,
     marginTop: SPACING.xs,
     textAlign: 'center',
   },
   heroTitle: {
     color: COLORS.white,
-    fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
+    fontSize: FONT_SIZE.l,
+    fontWeight: 'bold',
+    marginBottom: SPACING.s,
     textAlign: 'center',
   },
-  instructionStep: {
-    flexDirection: 'row',
-    marginBottom: SPACING.xs,
-  },
-  instructionsCard: {
-    backgroundColor: hexToRGBA(COLORS.white, 0.05),
-    borderRadius: BORDER_RADIUS.m,
-    marginBottom: SPACING.m,
-    padding: SPACING.m,
-  },
-  instructionsHeader: {
+  iconCircle: {
     alignItems: 'center',
-    flexDirection: 'row',
-    marginBottom: SPACING.s,
-  },
-  instructionsTitle: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '600',
-    marginLeft: SPACING.xs,
+    borderRadius: 40,
+    height: 80,
+    justifyContent: 'center',
+    marginBottom: SPACING.l,
+    width: 80,
   },
   pickerBox: {
     alignItems: 'center',
-    borderColor: hexToRGBA(COLORS.white, 0.2),
-    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+    borderColor: hexToRGBA(COLORS.white, 0.15),
+    borderRadius: BORDER_RADIUS.l,
     borderStyle: 'dashed',
     borderWidth: 1.5,
     justifyContent: 'center',
-    marginBottom: SPACING.m,
-    paddingHorizontal: SPACING.m,
+    marginBottom: SPACING.l,
+    paddingHorizontal: SPACING.l,
     paddingVertical: SPACING.xl,
   },
   pickerBoxSubtitle: {
     color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-    marginTop: 4,
+    fontSize: FONT_SIZE.s,
+    lineHeight: 20,
+    marginTop: 6,
     textAlign: 'center',
   },
   pickerBoxTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
-    marginTop: SPACING.s,
+  },
+  pickerTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.s,
+    marginTop: SPACING.m,
   },
   primaryButton: {
     alignItems: 'center',
-    borderRadius: BORDER_RADIUS.m,
+    borderRadius: BORDER_RADIUS.l,
+    flexDirection: 'row',
+    gap: SPACING.s,
     justifyContent: 'center',
     marginBottom: SPACING.m,
+    paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.m,
   },
   primaryButtonText: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontWeight: 'bold',
   },
   progressBarFill: {
     borderRadius: 4,
     height: 8,
   },
   progressBarWrapper: {
-    backgroundColor: hexToRGBA(COLORS.white, 0.1),
+    backgroundColor: COLORS.surfaceLight,
     borderRadius: 4,
     height: 8,
     marginVertical: SPACING.m,
@@ -712,14 +771,16 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
   },
   scrollContent: {
-    padding: SPACING.m,
+    padding: SPACING.l,
+    paddingBottom: SPACING.xxl,
   },
   secondaryButton: {
     alignItems: 'center',
     borderColor: hexToRGBA(COLORS.white, 0.2),
-    borderRadius: BORDER_RADIUS.m,
+    borderRadius: BORDER_RADIUS.l,
     borderWidth: 1,
     justifyContent: 'center',
+    marginBottom: SPACING.m,
     paddingVertical: SPACING.m,
   },
   secondaryButtonText: {
@@ -732,44 +793,60 @@ const styles = StyleSheet.create({
   },
   selectedFileCard: {
     alignItems: 'center',
-    backgroundColor: hexToRGBA(COLORS.white, 0.08),
-    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+    borderColor: hexToRGBA(COLORS.white, 0.1),
+    borderRadius: BORDER_RADIUS.l,
+    borderWidth: 1,
     flexDirection: 'row',
-    marginBottom: SPACING.m,
+    marginBottom: SPACING.l,
     padding: SPACING.m,
   },
-  spinner: {
-    marginVertical: SPACING.l,
+  showSeekIcon: {
+    height: 93,
+    width: 93,
   },
-  statBox: {
+  showSeekIconCircle: {
     alignItems: 'center',
-    backgroundColor: hexToRGBA(COLORS.white, 0.04),
-    borderRadius: BORDER_RADIUS.s,
+    backgroundColor: COLORS.surface,
+    borderRadius: 35,
+    height: 70,
     justifyContent: 'center',
-    padding: SPACING.s,
+    overflow: 'hidden',
+    width: 70,
+  },
+  statTile: {
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: BORDER_RADIUS.m,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.s,
+    paddingVertical: SPACING.m,
     width: '48%',
   },
-  statLabel: {
+  statTileIconWrapper: {
+    marginBottom: SPACING.xs,
+  },
+  statTileLabel: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.xs,
     marginTop: 2,
+    textAlign: 'center',
   },
-  statValue: {
+  statTileValue: {
     color: COLORS.white,
     fontSize: FONT_SIZE.l,
-    fontWeight: '700',
-    marginTop: 4,
+    fontWeight: 'bold',
   },
   statsCard: {
-    backgroundColor: hexToRGBA(COLORS.white, 0.05),
-    borderRadius: BORDER_RADIUS.m,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.l,
     marginBottom: SPACING.l,
-    padding: SPACING.m,
+    padding: SPACING.l,
   },
   statsCardTitle: {
     color: COLORS.white,
     fontSize: FONT_SIZE.m,
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: SPACING.m,
     textAlign: 'center',
   },
@@ -781,8 +858,8 @@ const styles = StyleSheet.create({
   },
   statusSubtitle: {
     color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    lineHeight: 20,
+    fontSize: FONT_SIZE.m,
+    lineHeight: 22,
     marginTop: SPACING.xs,
     textAlign: 'center',
   },
@@ -792,63 +869,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  stepNumber: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.s,
-    fontWeight: '700',
-    marginRight: SPACING.xs,
-    width: 18,
-  },
-  stepText: {
-    color: COLORS.textSecondary,
-    flex: 1,
-    fontSize: FONT_SIZE.s,
-    lineHeight: 18,
-  },
-  successHeader: {
+  syncIconsContainer: {
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: SPACING.m,
+    justifyContent: 'center',
     marginBottom: SPACING.l,
   },
-  supportedCard: {
-    backgroundColor: hexToRGBA(COLORS.white, 0.03),
-    borderRadius: BORDER_RADIUS.m,
-    padding: SPACING.m,
-  },
-  supportedGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-    marginTop: SPACING.xs,
-  },
-  supportedItem: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    width: '48%',
-  },
-  supportedItemText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-    marginLeft: SPACING.xs,
-  },
-  supportedTitle: {
-    color: COLORS.white,
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: SPACING.xs,
-    textTransform: 'uppercase',
-  },
-  tipCard: {
-    backgroundColor: hexToRGBA(COLORS.white, 0.05),
-    borderRadius: BORDER_RADIUS.m,
-    marginTop: SPACING.l,
-    padding: SPACING.m,
-    width: '100%',
-  },
-  tipText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.xs,
-    lineHeight: 18,
-    textAlign: 'center',
+  syncingSpinner: {
+    marginTop: SPACING.xl,
   },
 });
