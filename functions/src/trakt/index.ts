@@ -7,3 +7,7 @@ export * from './status';
 export * from './enrichment';
 export * from './sync';
 export * from './handlers';
+export * from './zipAggregator';
+export * from './zipParser';
+export * from './zipSync';
+export * from './zipImport';

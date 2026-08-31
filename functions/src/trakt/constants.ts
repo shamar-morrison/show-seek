@@ -22,6 +22,16 @@ export const TRAKT_ENRICHMENT_QUEUE_MAX_BACKOFF_SECONDS = 900;
 export const TRAKT_SYNC_QUEUE_REGION = 'us-central1';
 export const TRAKT_SYNC_QUEUE_FUNCTION = 'locations/us-central1/functions/runTraktSync';
 export const TRAKT_ENRICHMENT_QUEUE_FUNCTION = 'locations/us-central1/functions/runTraktEnrichment';
+export const TRAKT_ZIP_IMPORT_QUEUE_FUNCTION = 'locations/us-central1/functions/runTraktZipImport';
+export const TRAKT_ZIP_IMPORT_QUEUE_REGION = 'us-central1';
+export const TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS = 1800;
+
+export const buildTraktZipImportStoragePath = (userId: string, importId: string): string =>
+  `users/${userId}/imports/${importId}.zip`;
+
+export const buildTraktZipImportDocPath = (userId: string, importId: string): string =>
+  `users/${userId}/trakt_imports/${importId}`;
+
 export const TRAKT_SYNC_QUEUE_DEADLINE_SECONDS = 1800;
 export const TRAKT_SYNC_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 export const TRAKT_ENRICHMENT_COOLDOWN_MS = 24 * 60 * 60 * 1000;

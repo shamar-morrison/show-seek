@@ -511,4 +511,11 @@ export const deleteAccount = onCall({}, deleteAccountHandler);
 
 export { importImdbChunk } from './imdbImport';
 export { revenuecatWebhook } from './revenuecatWebhook';
-export { runTraktEnrichment, runTraktSync, traktApi, traktCallback } from './trakt';
+export {
+  runTraktEnrichment,
+  runTraktSync,
+  runTraktZipImport,
+  startTraktZipImport,
+  traktApi,
+  traktCallback,
+} from './trakt';

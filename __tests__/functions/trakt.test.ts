@@ -46,6 +46,7 @@ jest.mock(
 jest.mock(
   'firebase-functions/v2/https',
   () => ({
+    onCall: jest.fn((_options, handler) => handler),
     onRequest: mockOnRequest,
   }),
   { virtual: true }
