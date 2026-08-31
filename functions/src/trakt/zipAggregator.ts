@@ -55,11 +55,13 @@ export interface AggregatedMovieWatch {
 export interface RawMovieHistoryEvent {
   action?: string;
   id?: number;
+  last_watched_at?: string;
   movie?: {
     ids?: Partial<TraktIds>;
     title?: string;
     year?: number;
   };
+  plays?: number;
   type?: string;
   watched_at?: string;
 }
@@ -73,6 +75,8 @@ export interface RawEpisodeHistoryEvent {
     title?: string;
   };
   id?: number;
+  last_watched_at?: string;
+  plays?: number;
   show?: {
     ids?: Partial<TraktIds>;
     title?: string;
@@ -124,6 +128,10 @@ export interface RawWatchlistItem {
   };
   notes?: string;
   rank?: number;
+  season?: {
+    ids?: Partial<TraktIds>;
+    number?: number;
+  };
   show?: {
     ids?: Partial<TraktIds>;
     title?: string;
@@ -142,12 +150,34 @@ export interface RawFavoriteItem {
   };
   notes?: string;
   rank?: number;
+  season?: {
+    ids?: Partial<TraktIds>;
+    number?: number;
+  };
   show?: {
     ids?: Partial<TraktIds>;
     title?: string;
     year?: number;
   };
-  type?: 'movie' | 'show' | string;
+  type?: 'movie' | 'show' | 'season' | 'episode' | string;
+}
+
+export interface RawCustomListMetadata {
+  allow_comments?: boolean;
+  comment_count?: number;
+  created_at?: string;
+  description?: string;
+  display_numbers?: boolean;
+  ids?: Partial<TraktIds>;
+  item_count?: number;
+  likes?: number;
+  name?: string;
+  privacy?: 'friends' | 'private' | 'public' | string;
+  share_link?: string;
+  sort_by?: string;
+  sort_how?: string;
+  type?: string;
+  updated_at?: string;
 }
 
 export interface RawCustomList {
@@ -203,6 +233,7 @@ export const aggregateMovieHistory = (
     number,
     {
       movie: TraktMovie;
+      playsDeclared: number;
       watches: { event: RawMovieHistoryEvent; watchedAtMs: number }[];
     }
   >();
@@ -218,7 +249,8 @@ export const aggregateMovieHistory = (
       continue;
     }
 
-    const watchedAtMs = parseTraktDateToMs(rawEvent.watched_at);
+    const watchedAtRaw = rawEvent.watched_at || rawEvent.last_watched_at;
+    const watchedAtMs = parseTraktDateToMs(watchedAtRaw);
     if (watchedAtMs === null) {
       continue;
     }
@@ -237,8 +269,10 @@ export const aggregateMovieHistory = (
     }
 
     const existingGroup = eventsByMovieTmdbId.get(tmdbId);
+    const eventPlays = typeof rawEvent.plays === 'number' && rawEvent.plays > 0 ? rawEvent.plays : 1;
     if (existingGroup) {
       existingGroup.watches.push({ event: rawEvent, watchedAtMs });
+      existingGroup.playsDeclared = Math.max(existingGroup.playsDeclared, eventPlays);
     } else {
       eventsByMovieTmdbId.set(tmdbId, {
         movie: {
@@ -252,6 +286,7 @@ export const aggregateMovieHistory = (
           title,
           year,
         },
+        playsDeclared: eventPlays,
         watches: [{ event: rawEvent, watchedAtMs }],
       });
     }
@@ -259,7 +294,7 @@ export const aggregateMovieHistory = (
 
   const watchedMovies: TraktWatchedMovie[] = [];
 
-  for (const [tmdbId, { movie, watches }] of eventsByMovieTmdbId.entries()) {
+  for (const [tmdbId, { movie, playsDeclared, watches }] of eventsByMovieTmdbId.entries()) {
     const latestWatchedAtMs = Math.max(...watches.map((w) => w.watchedAtMs));
     const latestWatchedAtIso = new Date(latestWatchedAtMs).toISOString();
 
@@ -274,7 +309,7 @@ export const aggregateMovieHistory = (
         title: movie.title,
         year: movie.year,
       },
-      plays: watches.length,
+      plays: Math.max(watches.length, playsDeclared),
     });
   }
 
@@ -304,6 +339,7 @@ export const aggregateEpisodeHistory = (
   interface ShowAggregate {
     episodesByKey: Map<string, EpisodeAggregate>;
     latestWatchedAtMs: number;
+    playsDeclared: number;
     show: TraktShow;
     totalWatches: number;
   }
@@ -333,20 +369,22 @@ export const aggregateEpisodeHistory = (
       continue;
     }
 
-    const watchedAtMs = parseTraktDateToMs(rawEvent.watched_at);
+    const watchedAtRaw = rawEvent.watched_at || rawEvent.last_watched_at;
+    const watchedAtMs = parseTraktDateToMs(watchedAtRaw);
     if (watchedAtMs === null) {
       continue;
     }
 
     const showTitle = rawEvent.show?.title?.trim() || 'Untitled Show';
     const showYear = typeof rawEvent.show?.year === 'number' ? rawEvent.show.year : 0;
-    const episodeKey = `${seasonNumber}_${episodeNumber}`;
+    const eventPlays = typeof rawEvent.plays === 'number' && rawEvent.plays > 0 ? rawEvent.plays : 1;
 
     let showAgg = showsByTmdbId.get(showTmdbId);
     if (!showAgg) {
       showAgg = {
         episodesByKey: new Map<string, EpisodeAggregate>(),
         latestWatchedAtMs: watchedAtMs,
+        playsDeclared: eventPlays,
         show: {
           ids: {
             imdb: rawEvent.show?.ids?.imdb,
@@ -361,11 +399,14 @@ export const aggregateEpisodeHistory = (
         totalWatches: 0,
       };
       showsByTmdbId.set(showTmdbId, showAgg);
+    } else {
+      showAgg.playsDeclared = Math.max(showAgg.playsDeclared, eventPlays);
     }
 
-    showAgg.totalWatches += 1;
     showAgg.latestWatchedAtMs = Math.max(showAgg.latestWatchedAtMs, watchedAtMs);
+    showAgg.totalWatches += 1;
 
+    const episodeKey = `${seasonNumber}_${episodeNumber}`;
     const existingEp = showAgg.episodesByKey.get(episodeKey);
     if (existingEp) {
       existingEp.plays += 1;
@@ -411,13 +452,64 @@ export const aggregateEpisodeHistory = (
     watchedShows.push({
       last_updated_at: showLastWatchedIso,
       last_watched_at: showLastWatchedIso,
-      plays: showAgg.totalWatches,
-      seasons,
+      plays: Math.max(showAgg.totalWatches, showAgg.playsDeclared),
+      seasons: seasons.length > 0 ? seasons : undefined,
       show: showAgg.show,
     });
   }
 
   return watchedShows;
+};
+
+/**
+ * Aggregates summary show entries (fallback when granular episode history is absent).
+ */
+export const aggregateShowSummaries = (
+  rawShows: RawEpisodeHistoryEvent[]
+): TraktWatchedShow[] => {
+  if (!Array.isArray(rawShows)) {
+    return [];
+  }
+
+  const showsByTmdbId = new Map<number, TraktWatchedShow>();
+
+  for (const rawShow of rawShows) {
+    if (!rawShow || typeof rawShow !== 'object') {
+      continue;
+    }
+
+    const showTmdbId = rawShow.show?.ids?.tmdb;
+    if (typeof showTmdbId !== 'number' || !Number.isFinite(showTmdbId) || showTmdbId <= 0) {
+      continue;
+    }
+
+    const watchedAtRaw = rawShow.watched_at || rawShow.last_watched_at;
+    const watchedAtMs = parseTraktDateToMs(watchedAtRaw) ?? Date.now();
+    const watchedAtIso = new Date(watchedAtMs).toISOString();
+
+    const showTitle = rawShow.show?.title?.trim() || 'Untitled Show';
+    const showYear = typeof rawShow.show?.year === 'number' ? rawShow.show.year : 0;
+    const plays = typeof rawShow.plays === 'number' && rawShow.plays > 0 ? rawShow.plays : 1;
+
+    showsByTmdbId.set(showTmdbId, {
+      last_updated_at: watchedAtIso,
+      last_watched_at: watchedAtIso,
+      plays,
+      show: {
+        ids: {
+          imdb: rawShow.show?.ids?.imdb,
+          slug: rawShow.show?.ids?.slug || String(showTmdbId),
+          tmdb: showTmdbId,
+          trakt: rawShow.show?.ids?.trakt ?? 0,
+          tvdb: rawShow.show?.ids?.tvdb,
+        },
+        title: showTitle,
+        year: showYear,
+      },
+    });
+  }
+
+  return Array.from(showsByTmdbId.values());
 };
 
 /**
@@ -589,7 +681,7 @@ export const aggregateWatchlist = (rawItems: RawWatchlistItem[]): TraktWatchlist
     const movieTmdbId = rawItem.movie?.ids?.tmdb;
     const showTmdbId = rawItem.show?.ids?.tmdb;
 
-    if (rawItem.type === 'movie' || (movieTmdbId && !rawItem.type)) {
+    if (rawItem.type === 'movie' || (movieTmdbId && !rawItem.type && !rawItem.show)) {
       if (typeof movieTmdbId !== 'number' || movieTmdbId <= 0) {
         continue;
       }
@@ -622,7 +714,12 @@ export const aggregateWatchlist = (rawItems: RawWatchlistItem[]): TraktWatchlist
       continue;
     }
 
-    if (rawItem.type === 'show' || (showTmdbId && !rawItem.type)) {
+    if (
+      rawItem.type === 'show' ||
+      rawItem.type === 'season' ||
+      rawItem.type === 'episode' ||
+      (showTmdbId && !rawItem.type && !rawItem.movie)
+    ) {
       if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
         continue;
       }
@@ -678,7 +775,7 @@ export const aggregateFavorites = (rawItems: RawFavoriteItem[]): TraktFavorite[]
     const movieTmdbId = rawItem.movie?.ids?.tmdb;
     const showTmdbId = rawItem.show?.ids?.tmdb;
 
-    if (rawItem.type === 'movie' || (movieTmdbId && !rawItem.type)) {
+    if (rawItem.type === 'movie' || (movieTmdbId && !rawItem.type && !rawItem.show)) {
       if (typeof movieTmdbId !== 'number' || movieTmdbId <= 0) {
         continue;
       }
@@ -711,7 +808,12 @@ export const aggregateFavorites = (rawItems: RawFavoriteItem[]): TraktFavorite[]
       continue;
     }
 
-    if (rawItem.type === 'show' || (showTmdbId && !rawItem.type)) {
+    if (
+      rawItem.type === 'show' ||
+      rawItem.type === 'season' ||
+      rawItem.type === 'episode' ||
+      (showTmdbId && !rawItem.type && !rawItem.movie)
+    ) {
       if (typeof showTmdbId !== 'number' || showTmdbId <= 0) {
         continue;
       }

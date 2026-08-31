@@ -326,7 +326,7 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
               {
                 id: 27205,
                 listed_at: '2023-01-01T00:00:00.000Z',
-                movie: { ids: { tmdb: 27205 }, title: 'Inception', year: 2010 },
+                movie: { ids: { slug: 'inception-2010', tmdb: 27205, trakt: 16662 }, title: 'Inception', year: 2010 },
                 rank: 1,
                 type: 'movie',
               },
@@ -345,13 +345,14 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
           {
             id: 278,
             listed_at: '2023-01-01T10:00:00.000Z',
-            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
+            rank: 1,
             type: 'movie',
           },
         ],
         ratings: [
           {
-            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
             rated_at: '2023-01-01T12:00:00.000Z',
             rating: 10,
             type: 'movie',
@@ -359,7 +360,7 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
           {
             rated_at: '2023-01-02T12:00:00.000Z',
             rating: 9,
-            show: { ids: { tmdb: 1396 }, title: 'Breaking Bad', year: 2008 },
+            show: { ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1388 }, title: 'Breaking Bad', year: 2008 },
             type: 'show',
           },
         ],
@@ -391,32 +392,33 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
           {
             last_updated_at: '2023-07-01T12:00:00.000Z',
             last_watched_at: '2023-07-01T12:00:00.000Z',
-            movie: { ids: { tmdb: 278, slug: 'the-shawshank-redemption-1994', trakt: 1 }, title: 'The Shawshank Redemption', year: 1994 },
+            movie: { ids: { tmdb: 278, slug: 'the-shawshank-redemption-1994', trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
             plays: 2,
           },
         ],
         watchedShows: [
           {
-            last_updated_at: '2023-02-01T12:00:00.000Z',
-            last_watched_at: '2023-02-01T12:00:00.000Z',
+            last_updated_at: '2023-01-02T10:00:00.000Z',
+            last_watched_at: '2023-01-02T10:00:00.000Z',
             plays: 2,
             seasons: [
               {
                 episodes: [
-                  { last_watched_at: '2023-01-01T12:00:00.000Z', number: 1, plays: 1 },
-                  { last_watched_at: '2023-02-01T12:00:00.000Z', number: 2, plays: 1 },
+                  { last_watched_at: '2023-01-01T10:00:00.000Z', number: 1, plays: 1 },
+                  { last_watched_at: '2023-01-02T10:00:00.000Z', number: 2, plays: 1 },
                 ],
                 number: 1,
               },
             ],
-            show: { ids: { tmdb: 1396, slug: 'breaking-bad', trakt: 1388 }, title: 'Breaking Bad', year: 2008 },
+            show: { ids: { slug: 'breaking-bad', tmdb: 1396, trakt: 1388 }, title: 'Breaking Bad', year: 2008 },
           },
         ],
         watchlist: [
           {
             id: 872585,
             listed_at: '2023-08-01T10:00:00.000Z',
-            movie: { ids: { tmdb: 872585 }, title: 'Oppenheimer', year: 2023 },
+            movie: { ids: { slug: 'oppenheimer-2023', tmdb: 872585, trakt: 7890 }, title: 'Oppenheimer', year: 2023 },
+            rank: 1,
             type: 'movie',
           },
         ],
@@ -532,7 +534,7 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
       const zipDataWithOlderRating: Partial<AggregatedTraktData> = {
         ratings: [
           {
-            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption' },
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
             rated_at: '2022-01-01T00:00:00.000Z',
             rating: 10,
             type: 'movie',
@@ -562,7 +564,7 @@ describe('Trakt Zip Sync Orchestrator (Stage 2)', () => {
       const zipDataWithNewerRating: Partial<AggregatedTraktData> = {
         ratings: [
           {
-            movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption' },
+            movie: { ids: { slug: 'the-shawshank-redemption-1994', tmdb: 278, trakt: 300 }, title: 'The Shawshank Redemption', year: 1994 },
             rated_at: '2024-06-01T00:00:00.000Z',
             rating: 10,
             type: 'movie',

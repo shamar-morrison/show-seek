@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import AdmZip = require('adm-zip');
 import {
   aggregateCustomLists,
@@ -388,7 +390,7 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
   });
 
   describe('classifyZipEntry', () => {
-    it('correctly classifies standard Trakt export file names', () => {
+    it('correctly classifies standard and real Trakt export file names', () => {
       expect(classifyZipEntry('ratings-movies-1.json')).toBe('ratings_movies');
       expect(classifyZipEntry('ratings_movies.json')).toBe('ratings_movies');
       expect(classifyZipEntry('ratings/movies.json')).toBe('ratings_movies');
@@ -397,20 +399,26 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       expect(classifyZipEntry('ratings-episodes.json')).toBe('ratings_episodes');
       expect(classifyZipEntry('ratings-seasons.json')).toBe('ratings_seasons');
 
+      expect(classifyZipEntry('watched-history.json')).toBe('history_events');
+      expect(classifyZipEntry('history.json')).toBe('history_events');
       expect(classifyZipEntry('history-movies-1.json')).toBe('history_movies');
       expect(classifyZipEntry('watched-movies.json')).toBe('history_movies');
 
       expect(classifyZipEntry('history-episodes-1.json')).toBe('history_episodes');
       expect(classifyZipEntry('watched-shows.json')).toBe('history_episodes');
 
+      expect(classifyZipEntry('lists-watchlist.json')).toBe('watchlist');
       expect(classifyZipEntry('watchlist-movies-1.json')).toBe('watchlist');
       expect(classifyZipEntry('watchlist.json')).toBe('watchlist');
 
+      expect(classifyZipEntry('lists-favorites.json')).toBe('favorites');
       expect(classifyZipEntry('favorites.json')).toBe('favorites');
 
-      expect(classifyZipEntry('lists.json')).toBe('lists');
-      expect(classifyZipEntry('personal-lists/my-favorites.json')).toBe('lists');
-      expect(classifyZipEntry('lists/top-movies.json')).toBe('lists');
+      expect(classifyZipEntry('lists-lists.json')).toBe('lists_metadata');
+      expect(classifyZipEntry('lists.json')).toBe('lists_metadata');
+      expect(classifyZipEntry('lists-list-30504620-trakt-shows.json')).toBe('list_items');
+      expect(classifyZipEntry('personal-lists/my-favorites.json')).toBe('legacy_custom_list');
+      expect(classifyZipEntry('lists/top-movies.json')).toBe('legacy_custom_list');
     });
 
     it('ignores macOS metadata and non-json files', () => {
@@ -421,120 +429,288 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
   });
 
   describe('parseTraktZipBuffer (End-to-End Zip Stream Extraction)', () => {
-    it('extracts and aggregates all datasets from a synthetic Trakt export zip buffer', () => {
+    it('extracts and aggregates all datasets from a real Trakt export format archive', () => {
       const zip = new SafeAdmZip();
 
-      // Add movie history
+      // Granular history events
       zip.addFile(
-        'history-movies-1.json',
+        'watched-history.json',
         Buffer.from(
           JSON.stringify([
             {
               action: 'watch',
-              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
-              watched_at: '2023-01-01T12:00:00.000Z',
+              id: 101,
+              movie: { ids: { tmdb: 493922 }, title: 'Hereditary', year: 2018 },
+              type: 'movie',
+              watched_at: '2026-03-22T22:27:00.000Z',
+            },
+            {
+              action: 'watch',
+              id: 102,
+              movie: { ids: { tmdb: 493922 }, title: 'Hereditary', year: 2018 },
+              type: 'movie',
+              watched_at: '2018-06-08T17:00:00.000Z',
+            },
+            {
+              action: 'watch',
+              episode: { ids: { tmdb: 3460128 }, number: 10, season: 1, title: 'Finale' },
+              id: 103,
+              show: { ids: { tmdb: 124364 }, title: 'FROM', year: 2022 },
+              type: 'episode',
+              watched_at: '2026-02-06T19:37:00.000Z',
             },
           ])
         )
       );
 
-      // Add episode history
+      // Ratings
       zip.addFile(
-        'history-episodes-1.json',
+        'ratings-movies.json',
         Buffer.from(
           JSON.stringify([
             {
-              action: 'watch',
-              episode: { number: 1, season: 1 },
+              movie: { ids: { tmdb: 1368166 }, title: 'The Housemaid', year: 2025 },
+              rated_at: '2026-01-01T12:00:00.000Z',
+              rating: 6,
+              type: 'movie',
+            },
+          ])
+        )
+      );
+
+      // Watchlist (with show and movie items, including season/episode granularity)
+      zip.addFile(
+        'lists-watchlist.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              id: 201,
+              listed_at: '2025-01-26T07:45:16.000Z',
+              season: { ids: { tmdb: 3573 }, number: 2 },
               show: { ids: { tmdb: 1396 }, title: 'Breaking Bad', year: 2008 },
-              watched_at: '2023-02-01T12:00:00.000Z',
+              type: 'season',
             },
-          ])
-        )
-      );
-
-      // Add ratings
-      zip.addFile(
-        'ratings-movies-1.json',
-        Buffer.from(
-          JSON.stringify([
             {
-              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
-              rated_at: '2023-01-01T12:00:00.000Z',
-              rating: 10,
+              id: 202,
+              listed_at: '2025-01-28T02:26:17.000Z',
+              movie: { ids: { tmdb: 426063 }, title: 'Nosferatu', year: 2024 },
               type: 'movie',
             },
           ])
         )
       );
 
-      // Add watchlist
+      // Favorites
       zip.addFile(
-        'watchlist.json',
+        'lists-favorites.json',
         Buffer.from(
           JSON.stringify([
             {
-              listed_at: '2023-03-01T12:00:00.000Z',
-              movie: { ids: { tmdb: 872585 }, title: 'Oppenheimer', year: 2023 },
+              id: 301,
+              listed_at: '2025-12-22T16:36:52.000Z',
+              movie: { ids: { tmdb: 812583 }, title: 'Wake Up Dead Man', year: 2025 },
               type: 'movie',
             },
           ])
         )
       );
 
-      // Add custom list
+      // Custom Lists (metadata + split item files)
       zip.addFile(
-        'personal-lists/top-movies.json',
+        'lists-lists.json',
         Buffer.from(
           JSON.stringify([
             {
-              created_at: '2023-01-01T00:00:00.000Z',
-              ids: { slug: 'top-movies', trakt: 123 },
-              items: [
-                {
-                  listed_at: '2023-01-01T00:00:00.000Z',
-                  movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
-                  type: 'movie',
-                },
-              ],
-              name: 'Top Movies',
+              created_at: '2025-01-26T07:45:07.000Z',
+              ids: { slug: 'trakt-shows', trakt: 30504620 },
+              name: 'trakt Shows',
+              privacy: 'public',
+              updated_at: '2025-12-25T14:30:52.000Z',
+            },
+            {
+              created_at: '2025-01-28T02:26:42.000Z',
+              ids: { slug: 'empty-list', trakt: 99999999 },
+              name: 'Empty List',
+              privacy: 'private',
+              updated_at: '2025-01-28T02:26:42.000Z',
             },
           ])
         )
       );
 
-      // Add macOS metadata entry that should be ignored
-      zip.addFile('__MACOSX/._watchlist.json', Buffer.from('metadata'));
+      zip.addFile(
+        'lists-list-30504620-trakt-shows.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              id: 401,
+              listed_at: '2025-01-28T02:27:31.000Z',
+              show: { ids: { tmdb: 1429 }, title: 'Attack on Titan', year: 2013 },
+              type: 'show',
+            },
+          ])
+        )
+      );
+
+      const zipBuffer = zip.toBuffer();
+      const result = parseTraktZipBuffer(zipBuffer);
+
+      // 1 movie with 2 plays
+      expect(result.watchedMovies).toHaveLength(1);
+      expect(result.watchedMovies[0].movie.ids.tmdb).toBe(493922);
+      expect(result.watchedMovies[0].plays).toBe(2);
+      expect(result.watchedMovieEvents).toHaveLength(2);
+
+      // 1 show with 1 episode
+      expect(result.watchedShows).toHaveLength(1);
+      expect(result.watchedShows[0].show.ids.tmdb).toBe(124364);
+      expect(result.watchedShows[0].seasons?.[0].episodes).toHaveLength(1);
+
+      // 1 rating
+      expect(result.ratings).toHaveLength(1);
+      expect(result.ratings[0].rating).toBe(6);
+
+      // 2 watchlist items (movie + folded show)
+      expect(result.watchlist).toHaveLength(2);
+      expect(result.watchlist.some((item) => item.show?.ids.tmdb === 1396)).toBe(true);
+      expect(result.watchlist.some((item) => item.movie?.ids.tmdb === 426063)).toBe(true);
+
+      // 1 favorite
+      expect(result.favorites).toHaveLength(1);
+      expect(result.favorites[0].movie?.ids.tmdb).toBe(812583);
+
+      // 2 custom lists (1 with items, 1 empty list handled gracefully)
+      expect(result.customLists).toHaveLength(2);
+      const traktShows = result.customLists.find((l) => l.list.ids.trakt === 30504620);
+      expect(traktShows?.items).toHaveLength(1);
+      expect(traktShows?.items[0].show?.ids.tmdb).toBe(1429);
+      const emptyList = result.customLists.find((l) => l.list.ids.trakt === 99999999);
+      expect(emptyList?.items).toHaveLength(0);
+    });
+
+    it('falls back to summary files when granular history events are absent', () => {
+      const zip = new SafeAdmZip();
+
+      zip.addFile(
+        'watched-movies.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              last_watched_at: '2026-03-22T22:27:00.000Z',
+              movie: { ids: { tmdb: 493922 }, title: 'Hereditary', year: 2018 },
+              plays: 3,
+            },
+          ])
+        )
+      );
+
+      zip.addFile(
+        'watched-shows.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              last_watched_at: '2026-02-06T19:37:00.000Z',
+              plays: 28,
+              show: { ids: { tmdb: 124364 }, title: 'FROM', year: 2022 },
+            },
+          ])
+        )
+      );
 
       const zipBuffer = zip.toBuffer();
       const result = parseTraktZipBuffer(zipBuffer);
 
       expect(result.watchedMovies).toHaveLength(1);
-      expect(result.watchedMovies[0].movie.ids.tmdb).toBe(278);
-      expect(result.watchedMovieEvents).toHaveLength(1);
-
+      expect(result.watchedMovies[0].plays).toBe(3);
       expect(result.watchedShows).toHaveLength(1);
-      expect(result.watchedShows[0].show.ids.tmdb).toBe(1396);
+      expect(result.watchedShows[0].plays).toBe(28);
+    });
 
-      expect(result.ratings).toHaveLength(1);
-      expect(result.ratings[0].rating).toBe(10);
+    it('throws descriptive integrity check errors when populated files produce 0 items', () => {
+      const zip = new SafeAdmZip();
 
-      expect(result.watchlist).toHaveLength(1);
-      expect(result.watchlist[0].movie?.ids.tmdb).toBe(872585);
+      // Add watchlist with invalid items (no valid TMDB id or recognizable media)
+      zip.addFile(
+        'lists-watchlist.json',
+        Buffer.from(
+          JSON.stringify([
+            { id: 999, movie: { ids: { imdb: 'unknown' } }, type: 'movie' },
+          ])
+        )
+      );
 
-      expect(result.customLists).toHaveLength(1);
-      expect(result.customLists[0].list.name).toBe('Top Movies');
+      const zipBuffer = zip.toBuffer();
+      expect(() => parseTraktZipBuffer(zipBuffer)).toThrow(
+        /Trakt zip parsing integrity check failed: watchlist contained 1 items but produced 0 valid watchlist entries/
+      );
+    });
 
-      expect(result.stats).toEqual({
-        customLists: 1,
-        episodes: 1,
-        favorites: 0,
-        movieWatches: 1,
-        movies: 1,
-        ratings: 1,
-        shows: 1,
-        watchlistItems: 1,
-      });
+    it('correctly extracts and aggregates real Trakt export files from trakt-export folder', () => {
+      const exportDir = path.resolve(__dirname, '../../trakt-export');
+      if (!fs.existsSync(exportDir)) {
+        return;
+      }
+
+      const zip = new SafeAdmZip();
+      const files = fs.readdirSync(exportDir);
+
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          const filePath = path.join(exportDir, file);
+          const content = fs.readFileSync(filePath);
+          zip.addFile(file, content);
+        }
+      }
+
+      const zipBuffer = zip.toBuffer();
+      const result = parseTraktZipBuffer(zipBuffer);
+
+      // Verify exact numbers matching OAuth mirror sync baseline:
+      // 2 Movies: Hereditary (493922), September 5 (1211472)
+      expect(result.stats.movies).toBe(2);
+      expect(result.watchedMovies).toHaveLength(2);
+      const movieIds = result.watchedMovies.map((m) => m.movie.ids.tmdb).sort((a, b) => (a ?? 0) - (b ?? 0));
+      expect(movieIds).toEqual([493922, 1211472]);
+
+      // 4 TV Shows: Naruto (306684), FROM (124364), Day of the Jackal (222766), Loki (84958)
+      expect(result.stats.shows).toBe(4);
+      expect(result.watchedShows).toHaveLength(4);
+      const showIds = result.watchedShows.map((s) => s.show.ids.tmdb).sort((a, b) => (a ?? 0) - (b ?? 0));
+      expect(showIds).toEqual([84958, 124364, 222766, 306684]);
+
+      // 62 Episodes: 12 Naruto + 28 FROM + 10 Day of the Jackal + 12 Loki
+      expect(result.stats.episodes).toBe(62);
+
+      // 4 Parsed Ratings: The Housemaid (1 movie) + Breaking Bad (3 episode ratings)
+      // Note: During sync to Firestore, reconcileRatings folds the 3 episode ratings onto tv-1396, resulting in 2 ratings records
+      expect(result.stats.ratings).toBe(4);
+      expect(result.ratings).toHaveLength(4);
+
+      // 8 Watchlist Items:
+      // Movies (5): Nosferatu, Moana 2, Star Trek Section 31, Gladiator II, The Substance
+      // Shows (3): Breaking Bad (folded from season/episode entries), Attack on Titan, IT: Welcome to Derry
+      expect(result.stats.watchlistItems).toBe(8);
+      expect(result.watchlist).toHaveLength(8);
+
+      // 1 Favorite: Wake Up Dead Man (movie: 812583)
+      expect(result.stats.favorites).toBe(1);
+      expect(result.favorites[0].movie?.ids.tmdb).toBe(812583);
+
+      // 2 Custom Lists: trakt Shows (30504620), Follow me (30520152)
+      expect(result.stats.customLists).toBe(2);
+      expect(result.customLists).toHaveLength(2);
+      const listSlugs = result.customLists.map((l) => l.list.ids.slug).sort();
+      expect(listSlugs).toEqual(['follow-me', 'trakt-shows']);
+
+      // Check items in custom lists
+      const traktShowsList = result.customLists.find((l) => l.list.ids.slug === 'trakt-shows');
+      expect(traktShowsList?.items.length).toBeGreaterThan(0);
+      const followMeList = result.customLists.find((l) => l.list.ids.slug === 'follow-me');
+      expect(followMeList?.items.length).toBeGreaterThan(0);
+
+      // Granular movie watches (4 watches: 3 for Hereditary, 1 for September 5)
+      expect(result.stats.movieWatches).toBe(4);
+      expect(result.watchedMovieEvents).toHaveLength(4);
     });
   });
 });

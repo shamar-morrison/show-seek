@@ -11,6 +11,7 @@ expo-env.d.ts
 functions/lib/
 functions/service-account-key.json
 .firebase/
+trakt-export
 
 # Android
 *.apk

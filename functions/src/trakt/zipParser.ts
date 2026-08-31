@@ -6,17 +6,25 @@ import {
   aggregateFavorites,
   aggregateMovieHistory,
   aggregateRatings,
+  aggregateShowSummaries,
   aggregateWatchlist,
+  type AggregatedMovieWatch,
   type AggregatedTraktData,
   type RawCustomList,
+  type RawCustomListMetadata,
   type RawEpisodeHistoryEvent,
   type RawFavoriteItem,
   type RawMovieHistoryEvent,
   type RawRatingEvent,
   type RawWatchlistItem,
 } from './zipAggregator';
+import type {
+  TraktWatchedMovie,
+  TraktWatchedShow,
+} from './types';
 
 export type ZipEntryCategory =
+  | 'history_events'
   | 'history_movies'
   | 'history_episodes'
   | 'ratings_movies'
@@ -25,7 +33,9 @@ export type ZipEntryCategory =
   | 'ratings_episodes'
   | 'watchlist'
   | 'favorites'
-  | 'lists'
+  | 'lists_metadata'
+  | 'list_items'
+  | 'legacy_custom_list'
   | 'ignored';
 
 /**
@@ -64,7 +74,26 @@ export const classifyZipEntry = (entryPath: string): ZipEntryCategory => {
     return 'ratings_episodes';
   }
 
-  // History / Plays
+  // Watchlist (supports lists-watchlist, watchlist, watchlist-movies, etc.)
+  if (/^(lists[-_])?watchlist([-_].+)?$/.test(baseName) || normalized.includes('watchlist/')) {
+    return 'watchlist';
+  }
+
+  // Favorites (supports lists-favorites, favorites, favorites-movies, etc.)
+  if (/^(lists[-_])?favorites([-_].+)?$/.test(baseName) || normalized.includes('favorites/')) {
+    return 'favorites';
+  }
+
+  // Watched History Events (granular per-play events for movies and episodes in one file)
+  if (
+    /^watched[-_]history(-\d+)?$/.test(baseName) ||
+    /^history(-\d+)?$/.test(baseName) ||
+    normalized.includes('history/all')
+  ) {
+    return 'history_events';
+  }
+
+  // History / Watched Movies summaries
   if (
     /^history[-_]movies(-\d+)?$/.test(baseName) ||
     /^watched[-_]movies(-\d+)?$/.test(baseName) ||
@@ -72,6 +101,8 @@ export const classifyZipEntry = (entryPath: string): ZipEntryCategory => {
   ) {
     return 'history_movies';
   }
+
+  // History / Watched Shows summaries
   if (
     /^history[-_]episodes(-\d+)?$/.test(baseName) ||
     /^watched[-_]episodes(-\d+)?$/.test(baseName) ||
@@ -83,24 +114,23 @@ export const classifyZipEntry = (entryPath: string): ZipEntryCategory => {
     return 'history_episodes';
   }
 
-  // Watchlist
-  if (/^watchlist([-_].+)?$/.test(baseName) || normalized.includes('watchlist/')) {
-    return 'watchlist';
+  // Custom List Definitions Metadata (lists-lists.json or lists.json)
+  if (/^lists[-_]lists(-\d+)?$/.test(baseName) || /^lists(-\d+)?$/.test(baseName)) {
+    return 'lists_metadata';
   }
 
-  // Favorites
-  if (/^favorites([-_].+)?$/.test(baseName) || normalized.includes('favorites/')) {
-    return 'favorites';
+  // Custom List Items (lists-list-{id}-{slug}.json)
+  if (/^lists[-_]list[-_]\d+/.test(baseName)) {
+    return 'list_items';
   }
 
-  // Custom Lists
+  // Legacy / Folder-based custom lists
   if (
-    /^lists(-\d+)?$/.test(baseName) ||
     normalized.startsWith('personal-lists/') ||
     normalized.startsWith('lists/') ||
     /^list[-_]/.test(baseName)
   ) {
-    return 'lists';
+    return 'legacy_custom_list';
   }
 
   return 'ignored';
@@ -114,12 +144,27 @@ export const parseTraktZipBuffer = (zipBuffer: Buffer | string): AggregatedTrakt
   const zip = new ZipConstructor(zipBuffer);
   const entries = zip.getEntries();
 
-  const rawMovieHistory: RawMovieHistoryEvent[] = [];
-  const rawEpisodeHistory: RawEpisodeHistoryEvent[] = [];
+  const rawHistoryEvents: (RawMovieHistoryEvent | RawEpisodeHistoryEvent)[] = [];
+  const rawSummaryMovies: RawMovieHistoryEvent[] = [];
+  const rawSummaryShows: RawEpisodeHistoryEvent[] = [];
   const rawRatings: RawRatingEvent[] = [];
   const rawWatchlist: RawWatchlistItem[] = [];
   const rawFavorites: RawFavoriteItem[] = [];
-  const rawCustomLists: RawCustomList[] = [];
+  const rawListsMetadata: RawCustomListMetadata[] = [];
+  const rawListItemsByTraktId = new Map<number, RawWatchlistItem[]>();
+  const rawListItemsBySlug = new Map<string, RawWatchlistItem[]>();
+  const rawLegacyCustomLists: RawCustomList[] = [];
+
+  // Track raw counts present in zip to enforce safety net integrity checks
+  const inputCounts = {
+    favorites: 0,
+    historyEvents: 0,
+    listsMetadata: 0,
+    ratings: 0,
+    summaryMovies: 0,
+    summaryShows: 0,
+    watchlist: 0,
+  };
 
   for (const entry of entries) {
     if (entry.isDirectory) {
@@ -140,20 +185,36 @@ export const parseTraktZipBuffer = (zipBuffer: Buffer | string): AggregatedTrakt
       continue;
     }
 
+    const baseName = entry.entryName.split('/').pop()?.replace(/\.json$/, '').toLowerCase() ?? '';
+
     switch (category) {
+      case 'history_events':
+        if (Array.isArray(parsedData)) {
+          inputCounts.historyEvents += parsedData.length;
+          rawHistoryEvents.push(...(parsedData as (RawMovieHistoryEvent | RawEpisodeHistoryEvent)[]));
+        } else if (parsedData && typeof parsedData === 'object') {
+          inputCounts.historyEvents += 1;
+          rawHistoryEvents.push(parsedData as RawMovieHistoryEvent | RawEpisodeHistoryEvent);
+        }
+        break;
+
       case 'history_movies':
         if (Array.isArray(parsedData)) {
-          rawMovieHistory.push(...(parsedData as RawMovieHistoryEvent[]));
+          inputCounts.summaryMovies += parsedData.length;
+          rawSummaryMovies.push(...(parsedData as RawMovieHistoryEvent[]));
         } else if (parsedData && typeof parsedData === 'object') {
-          rawMovieHistory.push(parsedData as RawMovieHistoryEvent);
+          inputCounts.summaryMovies += 1;
+          rawSummaryMovies.push(parsedData as RawMovieHistoryEvent);
         }
         break;
 
       case 'history_episodes':
         if (Array.isArray(parsedData)) {
-          rawEpisodeHistory.push(...(parsedData as RawEpisodeHistoryEvent[]));
+          inputCounts.summaryShows += parsedData.length;
+          rawSummaryShows.push(...(parsedData as RawEpisodeHistoryEvent[]));
         } else if (parsedData && typeof parsedData === 'object') {
-          rawEpisodeHistory.push(parsedData as RawEpisodeHistoryEvent);
+          inputCounts.summaryShows += 1;
+          rawSummaryShows.push(parsedData as RawEpisodeHistoryEvent);
         }
         break;
 
@@ -162,44 +223,187 @@ export const parseTraktZipBuffer = (zipBuffer: Buffer | string): AggregatedTrakt
       case 'ratings_seasons':
       case 'ratings_episodes':
         if (Array.isArray(parsedData)) {
+          inputCounts.ratings += parsedData.length;
           rawRatings.push(...(parsedData as RawRatingEvent[]));
         } else if (parsedData && typeof parsedData === 'object') {
+          inputCounts.ratings += 1;
           rawRatings.push(parsedData as RawRatingEvent);
         }
         break;
 
       case 'watchlist':
         if (Array.isArray(parsedData)) {
+          inputCounts.watchlist += parsedData.length;
           rawWatchlist.push(...(parsedData as RawWatchlistItem[]));
         } else if (parsedData && typeof parsedData === 'object') {
+          inputCounts.watchlist += 1;
           rawWatchlist.push(parsedData as RawWatchlistItem);
         }
         break;
 
       case 'favorites':
         if (Array.isArray(parsedData)) {
+          inputCounts.favorites += parsedData.length;
           rawFavorites.push(...(parsedData as RawFavoriteItem[]));
         } else if (parsedData && typeof parsedData === 'object') {
+          inputCounts.favorites += 1;
           rawFavorites.push(parsedData as RawFavoriteItem);
         }
         break;
 
-      case 'lists':
+      case 'lists_metadata':
         if (Array.isArray(parsedData)) {
-          rawCustomLists.push(...(parsedData as RawCustomList[]));
+          inputCounts.listsMetadata += parsedData.length;
+          rawListsMetadata.push(...(parsedData as RawCustomListMetadata[]));
         } else if (parsedData && typeof parsedData === 'object') {
-          rawCustomLists.push(parsedData as RawCustomList);
+          inputCounts.listsMetadata += 1;
+          rawListsMetadata.push(parsedData as RawCustomListMetadata);
+        }
+        break;
+
+      case 'list_items': {
+        const items = Array.isArray(parsedData)
+          ? (parsedData as RawWatchlistItem[])
+          : parsedData && typeof parsedData === 'object'
+            ? [parsedData as RawWatchlistItem]
+            : [];
+        const match = baseName.match(/^lists[-_]list[-_](\d+)(?:[-_](.+))?$/);
+        if (match) {
+          const traktId = parseInt(match[1], 10);
+          const slug = match[2]?.trim();
+          if (Number.isFinite(traktId)) {
+            rawListItemsByTraktId.set(traktId, items);
+          }
+          if (slug) {
+            rawListItemsBySlug.set(slug, items);
+          }
+        }
+        break;
+      }
+
+      case 'legacy_custom_list':
+        if (Array.isArray(parsedData)) {
+          rawLegacyCustomLists.push(...(parsedData as RawCustomList[]));
+        } else if (parsedData && typeof parsedData === 'object') {
+          rawLegacyCustomLists.push(parsedData as RawCustomList);
         }
         break;
     }
   }
 
-  const { movieWatches, watchedMovies } = aggregateMovieHistory(rawMovieHistory);
-  const watchedShows = aggregateEpisodeHistory(rawEpisodeHistory);
+  // 1. Watched History Resolution:
+  // Use granular watched-history events as primary authority; fall back to summary files if absent.
+  let movieWatches: AggregatedMovieWatch[] = [];
+  let watchedMovies: TraktWatchedMovie[] = [];
+  let watchedShows: TraktWatchedShow[] = [];
+
+  if (rawHistoryEvents.length > 0) {
+    const rawMovieHistory: RawMovieHistoryEvent[] = [];
+    const rawEpisodeHistory: RawEpisodeHistoryEvent[] = [];
+
+    for (const event of rawHistoryEvents) {
+      if (!event || typeof event !== 'object') {
+        continue;
+      }
+      if (event.type === 'movie' || (event as RawMovieHistoryEvent).movie) {
+        rawMovieHistory.push(event as RawMovieHistoryEvent);
+      } else if (
+        event.type === 'episode' ||
+        (event as RawEpisodeHistoryEvent).episode ||
+        (event as RawEpisodeHistoryEvent).show
+      ) {
+        rawEpisodeHistory.push(event as RawEpisodeHistoryEvent);
+      }
+    }
+
+    const movieResult = aggregateMovieHistory(rawMovieHistory);
+    movieWatches = movieResult.movieWatches;
+    watchedMovies = movieResult.watchedMovies;
+    watchedShows = aggregateEpisodeHistory(rawEpisodeHistory);
+  } else {
+    const movieResult = aggregateMovieHistory(rawSummaryMovies);
+    movieWatches = movieResult.movieWatches;
+    watchedMovies = movieResult.watchedMovies;
+    // Check if summary shows have episode structures or are top-level summaries
+    const hasNestedEpisodes = rawSummaryShows.some((s) => s.episode?.season !== undefined);
+    watchedShows = hasNestedEpisodes
+      ? aggregateEpisodeHistory(rawSummaryShows)
+      : aggregateShowSummaries(rawSummaryShows);
+  }
+
+  // 2. Custom Lists Assembly:
+  // Correlate lists-lists.json metadata with lists-list-*.json items
+  const rawAssembledLists: RawCustomList[] = [];
+
+  if (rawListsMetadata.length > 0) {
+    for (const meta of rawListsMetadata) {
+      if (!meta || typeof meta !== 'object' || !meta.name) {
+        continue;
+      }
+      const traktId = meta.ids?.trakt;
+      const slug = meta.ids?.slug;
+      const pairedItems =
+        (typeof traktId === 'number' ? rawListItemsByTraktId.get(traktId) : undefined) ||
+        (slug ? rawListItemsBySlug.get(slug) : undefined) ||
+        [];
+
+      rawAssembledLists.push({
+        created_at: meta.created_at,
+        description: meta.description,
+        ids: meta.ids,
+        items: pairedItems,
+        name: meta.name,
+        privacy: meta.privacy,
+        updated_at: meta.updated_at,
+      });
+    }
+  }
+
+  rawAssembledLists.push(...rawLegacyCustomLists);
+
   const ratings = aggregateRatings(rawRatings);
   const watchlist = aggregateWatchlist(rawWatchlist);
   const favorites = aggregateFavorites(rawFavorites);
-  const customLists = aggregateCustomLists(rawCustomLists);
+  const customLists = aggregateCustomLists(rawAssembledLists);
+
+  // 3. Safety Net / Integrity Checks:
+  // If an input file is present and non-empty in the archive, it MUST produce parsed items,
+  // otherwise throw a descriptive error to prevent silent failed imports.
+  if (inputCounts.historyEvents > 0 && watchedMovies.length === 0 && watchedShows.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: watched-history contained ${inputCounts.historyEvents} events but produced 0 valid movies and TV shows.`
+    );
+  }
+  if (inputCounts.summaryMovies > 0 && rawHistoryEvents.length === 0 && watchedMovies.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: watched-movies contained ${inputCounts.summaryMovies} items but produced 0 valid movies.`
+    );
+  }
+  if (inputCounts.summaryShows > 0 && rawHistoryEvents.length === 0 && watchedShows.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: watched-shows contained ${inputCounts.summaryShows} items but produced 0 valid TV shows.`
+    );
+  }
+  if (inputCounts.ratings > 0 && ratings.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: ratings contained ${inputCounts.ratings} items but produced 0 valid ratings.`
+    );
+  }
+  if (inputCounts.watchlist > 0 && watchlist.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: watchlist contained ${inputCounts.watchlist} items but produced 0 valid watchlist entries.`
+    );
+  }
+  if (inputCounts.favorites > 0 && favorites.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: favorites contained ${inputCounts.favorites} items but produced 0 valid favorite entries.`
+    );
+  }
+  if (inputCounts.listsMetadata > 0 && customLists.length === 0) {
+    throw new Error(
+      `Trakt zip parsing integrity check failed: custom lists metadata contained ${inputCounts.listsMetadata} lists but produced 0 valid custom lists.`
+    );
+  }
 
   const totalEpisodesWatched = watchedShows.reduce((sum, s) => sum + (s.plays || 0), 0);
 

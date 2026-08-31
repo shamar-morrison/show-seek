@@ -541,7 +541,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       } as any);
 
       // Verify progress doc status remains 'completed' and did NOT regress to 'failed'
-      const progressDoc = store.get(progressDocPath);
+      const progressDoc = store.get(progressDocPath) as any;
       expect(progressDoc).toBeDefined();
       expect(progressDoc?.status).toBe('completed');
       expect(progressDoc?.stats?.movies).toBe(1);
