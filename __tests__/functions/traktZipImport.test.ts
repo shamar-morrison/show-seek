@@ -485,6 +485,56 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
+    it('recovers and starts a new import if previous pending import is stale (> 5 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 6 * 60 * 1000);
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: 'zip_stale_1',
+          status: 'pending',
+          updatedAt: staleTime,
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        status: 'pending',
+      });
+    });
+
+    it('recovers and starts a new import if previous processing import is stale (> 35 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 40 * 60 * 1000);
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: 'zip_stale_2',
+          status: 'processing',
+          updatedAt: staleTime,
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    });
+
     it('cleans up and marks progress and user doc failed when task enqueue fails', async () => {
       store.set(`users/${userId}`, {
         premium: { isPremium: true },

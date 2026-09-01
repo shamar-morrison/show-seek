@@ -247,6 +247,120 @@ describe('Trakt sync Firestore sanitization', () => {
     );
   });
 
+  it('rejects sync when a Trakt zip import is active', async () => {
+    const recentTime = MockTimestamp.fromMillis(Date.now() - 30_000);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktZipImportStatus: {
+          createdAt: recentTime,
+          id: 'zip_1',
+          status: 'pending',
+          updatedAt: recentTime,
+        },
+      }),
+    });
+    const transactionSet = jest.fn();
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => ({
+          collection: jest.fn(() => ({
+            doc: jest.fn(() => ({ id: 'run-1', path: 'users/user-1/traktSyncRuns/run-1' })),
+          })),
+          path: 'users/user-1',
+        })),
+      })),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(transactionSet).not.toHaveBeenCalled();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'A Trakt zip import is currently in progress.',
+        errorCategory: 'storage_limit',
+      })
+    );
+  });
+
+  it('allows sync when previous Trakt zip import is stale (> 5 minutes for pending)', async () => {
+    const staleTime = MockTimestamp.fromMillis(Date.now() - 6 * 60 * 1000);
+    const transactionGet = jest.fn().mockResolvedValue({
+      data: () => ({
+        traktAccessToken: 'token',
+        traktConnected: true,
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: 'zip_stale',
+          status: 'pending',
+          updatedAt: staleTime,
+        },
+      }),
+    });
+    const transactionSet = jest.fn((_ref, data) => assertNoUndefined(data));
+    const runRef = {
+      id: 'run-1',
+      path: 'users/user-1/traktSyncRuns/run-1',
+    };
+    const userRef = {
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => runRef),
+      })),
+      path: 'users/user-1',
+    };
+
+    firestoreFn.mockImplementation(() => ({
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => userRef),
+      })),
+      runTransaction: jest.fn(async (callback: any) =>
+        callback({
+          get: transactionGet,
+          set: transactionSet,
+        })
+      ),
+    }));
+
+    const response = createResponse();
+
+    await (traktApi as any)(
+      {
+        body: {},
+        header: (name: string) => (name.toLowerCase() === 'authorization' ? 'Bearer token' : undefined),
+        method: 'POST',
+        path: '/sync',
+      },
+      response
+    );
+
+    expect(transactionSet).toHaveBeenCalledTimes(2);
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      { runId: 'run-1', userId: 'user-1' },
+      expect.objectContaining({ id: 'run-1' })
+    );
+    expect(response.status).toHaveBeenCalledWith(202);
+  });
+
   it('allows a new sync after a non-rate-limited failure even if a cooldown timestamp still exists', async () => {
     const futureCooldown = MockTimestamp.fromMillis(Date.now() + 60_000);
     const transactionGet = jest.fn().mockResolvedValue({

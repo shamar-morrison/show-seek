@@ -12,6 +12,7 @@ import {
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
 } from './constants';
 import { dispatchEnrichmentRun, prepareEnrichmentRun } from './enrichment';
+import { isZipImportActive } from './status';
 import type {
   StartTraktZipImportRequest,
   TraktUserDoc,
@@ -84,8 +85,8 @@ export const startTraktZipImportHandler = async (
       throw new HttpsError('already-exists', 'A Trakt sync is already in progress.');
     }
 
-    const activeZip = userData.traktZipImportStatus?.status;
-    if (activeZip === 'pending' || activeZip === 'processing') {
+    const activeZip = userData.traktZipImportStatus;
+    if (isZipImportActive(activeZip)) {
       throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
     }
 
@@ -140,32 +141,42 @@ export const startTraktZipImportHandler = async (
   } catch (enqueueError) {
     console.error('[startTraktZipImport] Task enqueue failed:', enqueueError);
     const failureNow = Timestamp.now();
-    await Promise.all([
-      progressDocRef.set(
-        {
-          error: 'Failed to enqueue background processing task.',
-          failedAt: failureNow,
-          status: 'failed',
-          updatedAt: failureNow,
-        },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            error: 'Failed to enqueue background processing task.',
-            failedAt: failureNow,
-            id: importId,
-            phase: 'failed',
-            status: 'failed',
-            updatedAt: failureNow,
-          },
-        },
-        { merge: true }
-      ),
-    ]).catch((cleanupError) => {
-      console.error('[startTraktZipImport] Error during failure cleanup:', cleanupError);
-    });
+    const failurePayload = {
+      error: 'Failed to enqueue background processing task.',
+      failedAt: failureNow,
+      status: 'failed' as const,
+      updatedAt: failureNow,
+    };
+
+    // Attempt durable cleanup with retries
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        await Promise.all([
+          progressDocRef.set(failurePayload, { merge: true }),
+          userDocRef.set(
+            {
+              traktZipImportStatus: {
+                ...failurePayload,
+                id: importId,
+                phase: 'failed' as const,
+              },
+            },
+            { merge: true }
+          ),
+        ]);
+        break;
+      } catch (cleanupError) {
+        console.error(
+          `[startTraktZipImport] Error during failure cleanup (attempt ${attempt}):`,
+          cleanupError
+        );
+        if (attempt === 2) {
+          console.error(
+            `[startTraktZipImport] CRITICAL: Failed to write failure status for import ${importId} user ${userId}. Stale recovery will reclaim on subsequent requests.`
+          );
+        }
+      }
+    }
 
     if (enqueueError instanceof HttpsError) {
       throw enqueueError;

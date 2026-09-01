@@ -7,6 +7,8 @@ import {
   TRAKT_INCREMENTAL_SCHEMA_VERSION,
   TRAKT_SYNC_QUEUE_MAX_ATTEMPTS,
   TRAKT_SYNC_STORAGE_LIMIT_MESSAGE,
+  TRAKT_ZIP_IMPORT_PENDING_STALE_MS,
+  TRAKT_ZIP_IMPORT_PROCESSING_STALE_MS,
 } from './constants';
 import { isPlainObject, stripUndefinedDeep } from './transforms';
 import {
@@ -23,6 +25,7 @@ import {
   TraktSyncError,
   TraktSyncStatus,
   TraktUserDoc,
+  TraktUserZipImportStatus,
 } from './types';
 
 export const getManualSyncCooldownTimestamp = (
@@ -459,4 +462,52 @@ export const normalizeSyncError = (error: unknown): TraktSyncError => {
   }
 
   return new TraktSyncError('Unknown Trakt sync error.', 'internal', false);
+};
+
+export const isZipImportStatusStale = (
+  status?: Partial<TraktUserZipImportStatus> | null,
+  nowMs: number = Date.now()
+): boolean => {
+  if (!status || !status.status) {
+    return false;
+  }
+  if (status.status !== 'pending' && status.status !== 'processing') {
+    return false;
+  }
+  const timestamp = status.updatedAt ?? status.createdAt;
+  if (!timestamp) {
+    return false;
+  }
+  const timeMillis =
+    typeof timestamp.toMillis === 'function'
+      ? timestamp.toMillis()
+      : typeof (timestamp as any).toDate === 'function'
+        ? (timestamp as any).toDate().getTime()
+        : new Date(timestamp as any).getTime();
+
+  if (isNaN(timeMillis)) {
+    return false;
+  }
+
+  const ageMs = nowMs - timeMillis;
+  if (status.status === 'pending') {
+    return ageMs >= TRAKT_ZIP_IMPORT_PENDING_STALE_MS;
+  }
+  if (status.status === 'processing') {
+    return ageMs >= TRAKT_ZIP_IMPORT_PROCESSING_STALE_MS;
+  }
+  return false;
+};
+
+export const isZipImportActive = (
+  status?: Partial<TraktUserZipImportStatus> | null,
+  nowMs: number = Date.now()
+): boolean => {
+  if (!status || !status.status) {
+    return false;
+  }
+  if (status.status !== 'pending' && status.status !== 'processing') {
+    return false;
+  }
+  return !isZipImportStatusStale(status, nowMs);
 };

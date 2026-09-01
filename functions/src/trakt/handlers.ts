@@ -62,6 +62,7 @@ import {
   getRateLimitedSyncCooldownTimestamp,
   getSyncResponseBody,
   getSyncSummaryMode,
+  isZipImportActive,
   normalizeSyncError,
   sanitizeEnrichmentStatusForWrite,
   sanitizeSyncStatusForWrite,
@@ -354,8 +355,8 @@ export const handleSyncPost = async (request: Request, response: ExpressResponse
         throw new TraktSyncError('Trakt not connected for this user.', 'auth_invalid', false);
       }
 
-      const activeZipStatus = userData.traktZipImportStatus?.status;
-      if (activeZipStatus === 'pending' || activeZipStatus === 'processing') {
+      const activeZipStatus = userData.traktZipImportStatus;
+      if (isZipImportActive(activeZipStatus)) {
         throw new TraktSyncError('A Trakt zip import is currently in progress.', 'storage_limit', false);
       }
 
