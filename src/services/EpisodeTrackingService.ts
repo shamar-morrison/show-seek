@@ -229,6 +229,106 @@ class EpisodeTrackingService {
   }
 
   /**
+   * Mark multiple episodes across seasons as watched in chunks with delays and cancellation support.
+   */
+  async markMultipleEpisodesWatched(
+    tvShowId: number,
+    episodesToMark: Array<{ seasonNumber: number; episode: Episode }>,
+    showMetadata: {
+      tvShowName: string;
+      posterPath: string | null;
+    },
+    options?: {
+      batchSize?: number;
+      delayMs?: number;
+      isCancelled?: () => boolean;
+      onProgress?: (markedCount: number, totalCount: number) => void;
+    }
+  ): Promise<{ markedCount: number; wasCancelled: boolean }> {
+    const user = auth.currentUser;
+    if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
+    if (episodesToMark.length === 0) return { markedCount: 0, wasCancelled: false };
+
+    const batchSize =
+      typeof options?.batchSize === 'number' &&
+      Number.isInteger(options.batchSize) &&
+      options.batchSize > 0
+        ? options.batchSize
+        : 10;
+    const delayMs =
+      typeof options?.delayMs === 'number' &&
+      Number.isFinite(options.delayMs) &&
+      options.delayMs >= 0
+        ? options.delayMs
+        : 300;
+    const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
+    let markedCount = 0;
+    let wasCancelled = false;
+
+    for (let i = 0; i < episodesToMark.length; i += batchSize) {
+      if (options?.isCancelled?.()) {
+        wasCancelled = true;
+        break;
+      }
+
+      const chunk = episodesToMark.slice(i, i + batchSize);
+      const now = Date.now();
+      const episodesMap: Record<string, WatchedEpisode> = {};
+
+      chunk.forEach(({ seasonNumber, episode }) => {
+        const episodeKey = this.getEpisodeKey(seasonNumber, episode.episode_number);
+        episodesMap[episodeKey] = {
+          episodeId: episode.id,
+          tvShowId,
+          seasonNumber,
+          episodeNumber: episode.episode_number,
+          watchedAt: now,
+          episodeName: episode.name,
+          episodeAirDate: episode.air_date,
+        };
+      });
+
+      const metadata: EpisodeTrackingMetadata = {
+        tvShowName: showMetadata.tvShowName,
+        posterPath: showMetadata.posterPath,
+        lastUpdated: now,
+      };
+
+      const timeout = createTimeoutWithCleanup(10000);
+      try {
+        await Promise.race([
+          setDoc(
+            trackingRef,
+            {
+              episodes: episodesMap,
+              metadata,
+            },
+            { merge: true }
+          ),
+          timeout.promise,
+        ]);
+      } catch (error) {
+        throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        timeout.cancel();
+      }
+
+      markedCount += chunk.length;
+      options?.onProgress?.(markedCount, episodesToMark.length);
+
+      if (i + batchSize < episodesToMark.length) {
+        if (options?.isCancelled?.()) {
+          wasCancelled = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    return { markedCount, wasCancelled };
+  }
+
+  /**
    * Mark all episodes in a season as unwatched (single batch operation)
    */
   async markAllEpisodesUnwatched(

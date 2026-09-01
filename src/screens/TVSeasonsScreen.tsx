@@ -23,6 +23,7 @@ import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useMarkShowAllEpisodesWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { useLists, useMediaLists } from '@/src/hooks/useLists';
@@ -44,10 +45,10 @@ import { FlashList, type FlashListRef, type ListRenderItemInfo } from '@shopify/
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ArrowLeft, Star } from 'lucide-react-native';
+import { ArrowLeft, Check, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SCROLL_INITIAL_DELAY = 300;
@@ -90,6 +91,7 @@ export default function TVSeasonsScreen() {
   const markUnwatched = useMarkEpisodeUnwatched();
   const markAllWatched = useMarkAllEpisodesWatched();
   const markAllUnwatched = useMarkAllEpisodesUnwatched();
+  const markShowAllWatched = useMarkShowAllEpisodesWatched();
 
   // Auto-add to Watching list hooks
   const { preferences } = usePreferences();
@@ -121,6 +123,13 @@ export default function TVSeasonsScreen() {
   const deferredBulkActionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hasScrolledToSeason, setHasScrolledToSeason] = useState(false);
   const [optimisticBulkAction, setOptimisticBulkAction] = useState<OptimisticBulkAction>(null);
+  const [showWideMarkState, setShowWideMarkState] = useState<{
+    isPending: boolean;
+    isCancelling: boolean;
+    current: number;
+    total: number;
+  } | null>(null);
+  const cancelTokenRef = useRef<{ isCancelled: boolean }>({ isCancelled: false });
   const [selectedSeasonForRating, setSelectedSeasonForRating] = useState<SeasonWithEpisodes | null>(
     null
   );
@@ -283,6 +292,40 @@ export default function TVSeasonsScreen() {
     [seasonRows, targetSeasonNumber]
   );
 
+  const regularSeasons = useMemo(() => {
+    return seasons.filter((s) => s.season_number > 0);
+  }, [seasons]);
+
+  const unwatchedMarkableShowEpisodes = useMemo(() => {
+    const result: Array<{ seasonNumber: number; episode: Episode }> = [];
+    const allowUnreleased = !!preferences?.allowUnreleasedEpisodeWatches;
+    const trackedEpisodes = episodeTracking?.episodes || {};
+
+    regularSeasons.forEach((seasonData) => {
+      (seasonData.episodes || []).forEach((episode) => {
+        const episodeKey = `${seasonData.season_number}_${episode.episode_number}`;
+        const isWatched = !!trackedEpisodes[episodeKey];
+        if (isWatched) return;
+
+        const isEligible =
+          allowUnreleased || (!!episode.air_date && hasEpisodeAired(episode.air_date));
+        if (isEligible) {
+          result.push({
+            seasonNumber: seasonData.season_number,
+            episode,
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [regularSeasons, episodeTracking?.episodes, preferences?.allowUnreleasedEpisodeWatches]);
+
+  const isShowFullyWatched = useMemo(() => {
+    if (regularSeasons.length === 0) return true;
+    return unwatchedMarkableShowEpisodes.length === 0;
+  }, [regularSeasons.length, unwatchedMarkableShowEpisodes.length]);
+
   const bulkActionState = useMemo<BulkSeasonActionState>(() => {
     if (optimisticBulkAction) {
       return {
@@ -321,7 +364,106 @@ export default function TVSeasonsScreen() {
     markAllUnwatched.variables,
   ]);
 
-  const isAnyBulkActionPending = bulkActionState.isPending;
+  const isAnyBulkActionPending =
+    bulkActionState.isPending || !!showWideMarkState?.isPending || markShowAllWatched.isPending;
+
+  const handleCancelShowWideMark = useCallback(() => {
+    cancelTokenRef.current.isCancelled = true;
+    setShowWideMarkState((current) => (current ? { ...current, isCancelling: true } : null));
+  }, []);
+
+  const handleHeaderMarkAllPress = useCallback(() => {
+    if (isAccountRequired()) {
+      return;
+    }
+
+    if (unwatchedMarkableShowEpisodes.length === 0 || isAnyBulkActionPending) {
+      return;
+    }
+
+    const allowUnreleased = !!preferences?.allowUnreleasedEpisodeWatches;
+    const title = t('watched.markAllEpisodesTitle');
+    const message = allowUnreleased
+      ? t('watched.markAllShowEpisodesWithUnreleasedConfirm')
+      : t('watched.markAllShowEpisodesConfirm', { count: unwatchedMarkableShowEpisodes.length });
+
+    Alert.alert(title, message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('watched.markAll'),
+        onPress: () => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          cancelTokenRef.current = { isCancelled: false };
+          setShowWideMarkState({
+            isPending: true,
+            isCancelling: false,
+            current: 0,
+            total: unwatchedMarkableShowEpisodes.length,
+          });
+
+          markShowAllWatched.mutate(
+            {
+              tvShowId: tvId,
+              episodesToMark: unwatchedMarkableShowEpisodes,
+              showMetadata: {
+                tvShowName: showName,
+                posterPath: showPosterPath,
+              },
+              autoAddOptions: {
+                showStatus,
+                shouldAutoAdd: preferences?.autoAddToWatching,
+                listMembership,
+                firstAirDate: showFirstAirDate,
+                voteAverage: showVoteAverage,
+                genreIds: showGenreIds,
+                isPremium,
+                currentListCount,
+              },
+              options: {
+                batchSize: 10,
+                delayMs: 300,
+                isCancelled: () => cancelTokenRef.current.isCancelled,
+                onProgress: (markedCount, totalCount) => {
+                  setShowWideMarkState((current) =>
+                    current
+                      ? {
+                          ...current,
+                          current: markedCount,
+                          total: totalCount,
+                        }
+                      : null
+                  );
+                },
+              },
+            },
+            {
+              onSettled: () => {
+                setShowWideMarkState(null);
+              },
+            }
+          );
+        },
+      },
+    ]);
+  }, [
+    isAccountRequired,
+    unwatchedMarkableShowEpisodes,
+    isAnyBulkActionPending,
+    preferences?.allowUnreleasedEpisodeWatches,
+    preferences?.autoAddToWatching,
+    t,
+    markShowAllWatched,
+    tvId,
+    showName,
+    showPosterPath,
+    showStatus,
+    listMembership,
+    showFirstAirDate,
+    showVoteAverage,
+    showGenreIds,
+    isPremium,
+    currentListCount,
+  ]);
 
   const loadingModalMessage =
     bulkActionState.action === 'unmark'
@@ -903,6 +1045,26 @@ export default function TVSeasonsScreen() {
           </Text>
           <Text style={styles.headerSubtitle}>{t('media.seasonsAndEpisodes')}</Text>
         </View>
+        <Pressable
+          style={({ pressed }) => [
+            styles.headerActionButton,
+            (isShowFullyWatched || isAnyBulkActionPending) && styles.headerActionButtonDisabled,
+            pressed && !isShowFullyWatched && !isAnyBulkActionPending && { opacity: 0.7 },
+          ]}
+          onPress={handleHeaderMarkAllPress}
+          disabled={isShowFullyWatched || isAnyBulkActionPending}
+          accessibilityState={{ disabled: isShowFullyWatched || isAnyBulkActionPending }}
+          aria-disabled={isShowFullyWatched || isAnyBulkActionPending}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('watched.markAll')}
+          testID="header-mark-all-button"
+        >
+          <Check
+            size={22}
+            color={isShowFullyWatched ? COLORS.textSecondary : COLORS.white}
+          />
+        </Pressable>
       </SafeAreaView>
 
       <FlashList
@@ -916,7 +1078,27 @@ export default function TVSeasonsScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <LoadingModal visible={isAnyBulkActionPending} message={loadingModalMessage} />
+      <LoadingModal
+        visible={isAnyBulkActionPending}
+        message={
+          showWideMarkState?.isPending
+            ? showWideMarkState.isCancelling
+              ? t('watched.cancelling')
+              : `${t('watched.markAll')}...`
+            : loadingModalMessage
+        }
+        progressText={
+          showWideMarkState?.isPending
+            ? t('watched.markAllShowEpisodesProgress', {
+                current: showWideMarkState.current,
+                total: showWideMarkState.total,
+              })
+            : undefined
+        }
+        onCancel={showWideMarkState?.isPending ? handleCancelShowWideMark : undefined}
+        cancelText={t('common.cancel')}
+        isCancelling={showWideMarkState?.isCancelling}
+      />
       {show && selectedSeasonForRating ? (
         <RatingModal
           visible={true}

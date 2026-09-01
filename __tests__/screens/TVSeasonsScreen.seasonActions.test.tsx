@@ -106,6 +106,11 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
     isPending: false,
     variables: undefined,
   }),
+  useMarkShowAllEpisodesWatched: () => ({
+    mutate: jest.fn(),
+    isPending: false,
+    variables: undefined,
+  }),
 }));
 
 jest.mock('@/src/components/RatingModal', () => {

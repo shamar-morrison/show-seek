@@ -1,11 +1,13 @@
 import { act, fireEvent, renderWithProviders } from '@/__tests__/utils/test-utils';
 import TVSeasonsScreen from '@/src/screens/TVSeasonsScreen';
 import React from 'react';
+import { Alert } from 'react-native';
 
 const mockMarkEpisodeWatchedMutate = jest.fn();
 const mockMarkEpisodeUnwatchedMutate = jest.fn();
 const mockMarkAllWatchedMutate = jest.fn();
 const mockMarkAllUnwatchedMutate = jest.fn();
+const mockMarkShowAllWatchedMutate = jest.fn();
 const mockUseQuery = jest.fn();
 const mockUseMediaLists = jest.fn();
 const mockUseLists = jest.fn();
@@ -91,6 +93,9 @@ jest.mock('@/src/hooks/useNavigation', () => ({
   useCurrentTab: () => 'home',
 }));
 
+const mockUsePreferences = jest.fn();
+const mockUseShowEpisodeTracking = jest.fn();
+
 jest.mock('@/src/hooks/useAccountRequired', () => ({
   useAccountRequired: () => () => false,
 }));
@@ -100,14 +105,7 @@ jest.mock('@/src/hooks/useProgressiveRender', () => ({
 }));
 
 jest.mock('@/src/hooks/usePreferences', () => ({
-  usePreferences: () => ({
-    preferences: {
-      autoAddToWatching: true,
-      markPreviousEpisodesWatched: false,
-      allowUnreleasedEpisodeWatches: false,
-      showOriginalTitles: false,
-    },
-  }),
+  usePreferences: () => mockUsePreferences(),
 }));
 
 jest.mock('@/src/hooks/useLists', () => ({
@@ -124,7 +122,7 @@ jest.mock('@/src/hooks/useRatings', () => ({
 }));
 
 jest.mock('@/src/hooks/useEpisodeTracking', () => ({
-  useShowEpisodeTracking: () => ({ data: null }),
+  useShowEpisodeTracking: () => mockUseShowEpisodeTracking(),
   useMarkEpisodeWatched: () => ({
     mutate: mockMarkEpisodeWatchedMutate,
     isPending: false,
@@ -145,14 +143,46 @@ jest.mock('@/src/hooks/useEpisodeTracking', () => ({
     isPending: false,
     variables: undefined,
   }),
+  useMarkShowAllEpisodesWatched: () => ({
+    mutate: mockMarkShowAllWatchedMutate,
+    isPending: false,
+    variables: undefined,
+  }),
 }));
 
 jest.mock('@/src/components/RatingModal', () => () => null);
 
 jest.mock('@/src/components/ui/LoadingModal', () => {
-  return function LoadingModalMock({ visible, message }: { visible: boolean; message: string }) {
-    const { Text } = require('react-native');
-    return visible ? <Text testID="bulk-loading-modal">{message}</Text> : null;
+  return function LoadingModalMock({
+    visible,
+    message,
+    progressText,
+    onCancel,
+    isCancelling,
+  }: {
+    visible: boolean;
+    message: string;
+    progressText?: string;
+    onCancel?: () => void;
+    isCancelling?: boolean;
+  }) {
+    const { Text, TouchableOpacity, View } = require('react-native');
+    if (!visible) return null;
+    return (
+      <View testID="bulk-loading-modal-container">
+        <Text testID="bulk-loading-modal">{message}</Text>
+        {progressText ? <Text testID="bulk-loading-progress">{progressText}</Text> : null}
+        {onCancel ? (
+          <TouchableOpacity
+            testID="bulk-loading-cancel-button"
+            onPress={onCancel}
+            disabled={isCancelling}
+          >
+            <Text>{isCancelling ? 'Cancelling...' : 'Cancel'}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
   };
 });
 
@@ -206,6 +236,16 @@ describe('TVSeasonsScreen bulk-action deferral', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    mockUsePreferences.mockReturnValue({
+      preferences: {
+        autoAddToWatching: true,
+        markPreviousEpisodesWatched: false,
+        allowUnreleasedEpisodeWatches: false,
+        showOriginalTitles: false,
+      },
+    });
+    mockUseShowEpisodeTracking.mockReturnValue({ data: null });
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockUseMediaLists.mockReturnValue({ membership: {} });
     mockUseLists.mockReturnValue({
       data: [{ id: 'currently-watching', items: { 201: { id: 201 }, 202: { id: 202 } } }],
@@ -338,4 +378,237 @@ describe('TVSeasonsScreen bulk-action deferral', () => {
 
     expect(queryByTestId('bulk-loading-modal')).toBeNull();
   });
+
+  describe('Show-wide Mark All header action', () => {
+    const multiSeasonData = [
+      {
+        id: 100,
+        season_number: 0,
+        name: 'Specials',
+        episode_count: 1,
+        episodes: [
+          {
+            id: 1001,
+            episode_number: 1,
+            name: 'Special 1',
+            air_date: '2019-01-01',
+            season_number: 0,
+          },
+        ],
+      },
+      {
+        id: 1,
+        season_number: 1,
+        name: 'Season 1',
+        episode_count: 2,
+        episodes: [
+          {
+            id: 11,
+            episode_number: 1,
+            name: 'S1 E1',
+            air_date: '2020-01-01',
+            season_number: 1,
+          },
+          {
+            id: 12,
+            episode_number: 2,
+            name: 'S1 E2',
+            air_date: '2020-01-08',
+            season_number: 1,
+          },
+        ],
+      },
+      {
+        id: 2,
+        season_number: 2,
+        name: 'Season 2',
+        episode_count: 2,
+        episodes: [
+          {
+            id: 21,
+            episode_number: 1,
+            name: 'S2 E1',
+            air_date: '2021-01-01',
+            season_number: 2,
+          },
+          {
+            id: 22,
+            episode_number: 2,
+            name: 'S2 E2',
+            air_date: '2099-01-01', // Future / unreleased episode
+            season_number: 2,
+          },
+        ],
+      },
+    ];
+
+    beforeEach(() => {
+      mockUseQuery.mockImplementation(({ queryKey }: any) => {
+        if (Array.isArray(queryKey) && queryKey[2] === 'all-seasons') {
+          return {
+            data: multiSeasonData,
+            isLoading: false,
+            isError: false,
+          } as any;
+        }
+        return {
+          data: mockShow,
+          isLoading: false,
+          isError: false,
+        } as any;
+      });
+    });
+
+    it('renders the header Mark All button enabled when unwatched episodes exist', () => {
+      const { getByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      expect(headerButton).toBeTruthy();
+      expect(headerButton.props.accessibilityState?.disabled).toBeFalsy();
+    });
+
+    it('disables the header Mark All button when all eligible episodes across regular seasons are watched', () => {
+      mockUseShowEpisodeTracking.mockReturnValue({
+        data: {
+          episodes: {
+            '1_1': { episodeId: 11, watchedAt: Date.now() },
+            '1_2': { episodeId: 12, watchedAt: Date.now() },
+            '2_1': { episodeId: 21, watchedAt: Date.now() },
+          },
+        },
+      });
+
+      const { getByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      expect(headerButton.props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('shows confirmation alert for aired episodes only when allowUnreleased is false', () => {
+      mockUsePreferences.mockReturnValue({
+        preferences: {
+          autoAddToWatching: true,
+          markPreviousEpisodesWatched: false,
+          allowUnreleasedEpisodeWatches: false,
+          showOriginalTitles: false,
+        },
+      });
+
+      const { getByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      act(() => {
+        fireEvent.press(headerButton);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Mark all as watched?',
+        'Mark all 3 aired episodes across all seasons as watched?',
+        expect.any(Array)
+      );
+    });
+
+    it('shows unreleased notice in confirmation alert when allowUnreleased is true', () => {
+      mockUsePreferences.mockReturnValue({
+        preferences: {
+          autoAddToWatching: true,
+          markPreviousEpisodesWatched: false,
+          allowUnreleasedEpisodeWatches: true,
+          showOriginalTitles: false,
+        },
+      });
+
+      const { getByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      act(() => {
+        fireEvent.press(headerButton);
+      });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Mark all as watched?',
+        "This will mark all episodes across all seasons as watched, including episodes that haven't aired yet.",
+        expect.any(Array)
+      );
+    });
+
+    it('excludes Season 0 and skips already-watched episodes when triggering mutation', () => {
+      mockUseShowEpisodeTracking.mockReturnValue({
+        data: {
+          episodes: {
+            '1_1': { episodeId: 11, watchedAt: Date.now() }, // already watched
+          },
+        },
+      });
+
+      const { getByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      act(() => {
+        fireEvent.press(headerButton);
+      });
+
+      // Find the confirm button action from Alert.alert
+      const alertCall = (Alert.alert as jest.Mock).mock.calls[0];
+      const confirmButton = alertCall[2].find((btn: any) => btn.text === 'Mark all');
+
+      act(() => {
+        confirmButton.onPress();
+      });
+
+      expect(mockMarkShowAllWatchedMutate).toHaveBeenCalledTimes(1);
+      const mutateArgs = mockMarkShowAllWatchedMutate.mock.calls[0][0];
+
+      // Should only include unwatched regular season episodes (S1E2 and S2E1)
+      expect(mutateArgs.episodesToMark).toHaveLength(2);
+      expect(mutateArgs.episodesToMark).toEqual([
+        { seasonNumber: 1, episode: expect.objectContaining({ episode_number: 2 }) },
+        { seasonNumber: 2, episode: expect.objectContaining({ episode_number: 1 }) },
+      ]);
+    });
+
+    it('shows live progress in modal and updates to Cancelling on cancel tap', () => {
+      const { getByTestId, queryByTestId } = renderWithProviders(<TVSeasonsScreen />);
+      const headerButton = getByTestId('header-mark-all-button');
+
+      act(() => {
+        fireEvent.press(headerButton);
+      });
+
+      const alertCall = (Alert.alert as jest.Mock).mock.calls[0];
+      const confirmButton = alertCall[2].find((btn: any) => btn.text === 'Mark all');
+
+      act(() => {
+        confirmButton.onPress();
+      });
+
+      expect(getByTestId('bulk-loading-modal').props.children).toBe('Mark all...');
+      expect(getByTestId('bulk-loading-progress').props.children).toBe('0/3 marked');
+
+      // Simulate progress update from service
+      const mutateArgs = mockMarkShowAllWatchedMutate.mock.calls[0][0];
+      act(() => {
+        mutateArgs.options.onProgress(2, 3);
+      });
+
+      expect(getByTestId('bulk-loading-progress').props.children).toBe('2/3 marked');
+
+      // Tap Cancel in loading modal
+      act(() => {
+        fireEvent.press(getByTestId('bulk-loading-cancel-button'));
+      });
+
+      expect(getByTestId('bulk-loading-modal').props.children).toBe('Cancelling');
+      expect(mutateArgs.options.isCancelled()).toBe(true);
+
+      // Settle mutation
+      const mutateOptions = mockMarkShowAllWatchedMutate.mock.calls[0][1];
+      act(() => {
+        mutateOptions?.onSettled?.();
+      });
+
+      expect(queryByTestId('bulk-loading-modal')).toBeNull();
+    });
+  });
 });
+

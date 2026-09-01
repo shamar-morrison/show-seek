@@ -109,6 +109,25 @@ export interface MarkAllEpisodesWatchedParams {
 }
 
 /**
+ * Parameters for marking all episodes across all seasons in a TV show as watched
+ */
+export interface MarkShowAllEpisodesWatchedParams {
+  tvShowId: number;
+  episodesToMark: Array<{ seasonNumber: number; episode: Episode }>;
+  showMetadata: {
+    tvShowName: string;
+    posterPath: string | null;
+  };
+  autoAddOptions?: WatchingAutoAddOptions;
+  options?: {
+    batchSize?: number;
+    delayMs?: number;
+    isCancelled?: () => boolean;
+    onProgress?: (markedCount: number, totalCount: number) => void;
+  };
+}
+
+/**
  * Parameters for marking all episodes in a season as unwatched
  */
 export interface MarkAllEpisodesUnwatchedParams {
@@ -129,7 +148,7 @@ const maybeAutoAddToWatching = async ({
     posterPath: string | null;
   };
   autoAddOptions?: WatchingAutoAddOptions;
-  logPrefix: 'useMarkEpisodeWatched' | 'useMarkAllEpisodesWatched';
+  logPrefix: 'useMarkEpisodeWatched' | 'useMarkAllEpisodesWatched' | 'useMarkShowAllEpisodesWatched';
 }) => {
   const shouldAutoAdd = autoAddOptions?.shouldAutoAdd ?? true;
 
@@ -398,3 +417,53 @@ export const useMarkAllEpisodesUnwatched = () => {
     },
   });
 };
+
+/**
+ * Mutation hook for marking all episodes across all seasons in a TV show as watched
+ */
+export const useMarkShowAllEpisodesWatched = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: MarkShowAllEpisodesWatchedParams) => {
+      const result = await episodeTrackingService.markMultipleEpisodesWatched(
+        params.tvShowId,
+        params.episodesToMark,
+        params.showMetadata,
+        params.options
+      );
+
+      if (result.markedCount > 0) {
+        await maybeAutoAddToWatching({
+          tvShowId: params.tvShowId,
+          showMetadata: params.showMetadata,
+          autoAddOptions: params.autoAddOptions,
+          logPrefix: 'useMarkShowAllEpisodesWatched',
+        });
+      }
+
+      return result;
+    },
+    onSuccess: async (_result, params) => {
+      void recordEngagement();
+
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+    onError: async (_error, params) => {
+      const userId = getUserId();
+      if (userId) {
+        await Promise.all([
+          invalidateEpisodeTrackingQueries(queryClient, userId, params.tvShowId),
+          invalidateListQueries(queryClient, userId),
+        ]);
+      }
+    },
+  });
+};
+

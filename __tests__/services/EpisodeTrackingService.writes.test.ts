@@ -243,4 +243,114 @@ describe('EpisodeTrackingService write operations', () => {
       )
     ).rejects.toThrow('batch failed');
   });
+
+  it('marks multiple episodes across seasons in batches of 10 with progress updates', async () => {
+    const { episodeTrackingService } = loadService();
+    const { setDoc } = loadFirestore();
+    const onProgress = jest.fn();
+
+    // Create 15 episodes across 2 seasons
+    const episodesToMark = Array.from({ length: 15 }, (_, i) => ({
+      seasonNumber: i < 8 ? 1 : 2,
+      episode: {
+        id: 1000 + i,
+        name: `Episode ${i + 1}`,
+        episode_number: (i % 8) + 1,
+        season_number: i < 8 ? 1 : 2,
+        air_date: '2026-05-01',
+      } as any,
+    }));
+
+    const resultPromise = episodeTrackingService.markMultipleEpisodesWatched(
+      999,
+      episodesToMark,
+      { tvShowName: 'Multi Show', posterPath: '/multi.jpg' },
+      { batchSize: 10, delayMs: 300, onProgress }
+    );
+
+    // Fast-forward through delays
+    await jest.advanceTimersByTimeAsync(400);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ markedCount: 15, wasCancelled: false });
+    expect(setDoc).toHaveBeenCalledTimes(2);
+    expect(onProgress).toHaveBeenCalledWith(10, 15);
+    expect(onProgress).toHaveBeenCalledWith(15, 15);
+  });
+
+  it('stops processing when cancellation is requested without rolling back completed chunks', async () => {
+    const { episodeTrackingService } = loadService();
+    const { setDoc } = loadFirestore();
+    const onProgress = jest.fn();
+    let cancelled = false;
+
+    const episodesToMark = Array.from({ length: 25 }, (_, i) => ({
+      seasonNumber: 1,
+      episode: {
+        id: 2000 + i,
+        name: `Episode ${i + 1}`,
+        episode_number: i + 1,
+        season_number: 1,
+        air_date: '2026-05-01',
+      } as any,
+    }));
+
+    const resultPromise = episodeTrackingService.markMultipleEpisodesWatched(
+      999,
+      episodesToMark,
+      { tvShowName: 'Cancel Show', posterPath: null },
+      {
+        batchSize: 10,
+        delayMs: 300,
+        isCancelled: () => cancelled,
+        onProgress: (count) => {
+          onProgress(count);
+          if (count === 10) {
+            // Cancel after first chunk completes
+            cancelled = true;
+          }
+        },
+      }
+    );
+
+    await jest.advanceTimersByTimeAsync(400);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ markedCount: 10, wasCancelled: true });
+    expect(setDoc).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenCalledWith(10);
+  });
+
+  it('safely falls back to default batchSize (10) and delayMs (300) on invalid inputs', async () => {
+    const { episodeTrackingService } = loadService();
+    const { setDoc } = loadFirestore();
+
+    const episodesToMark = Array.from({ length: 12 }, (_, i) => ({
+      seasonNumber: 1,
+      episode: {
+        id: 3000 + i,
+        name: `Episode ${i + 1}`,
+        episode_number: i + 1,
+        season_number: 1,
+        air_date: '2026-05-01',
+      } as any,
+    }));
+
+    const resultPromise = episodeTrackingService.markMultipleEpisodesWatched(
+      999,
+      episodesToMark,
+      { tvShowName: 'Fallback Show', posterPath: null },
+      { batchSize: -5 as any, delayMs: -100 as any }
+    );
+
+    await jest.advanceTimersByTimeAsync(400);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ markedCount: 12, wasCancelled: false });
+    // 12 episodes batched in chunks of default 10 should produce 2 calls to setDoc
+    expect(setDoc).toHaveBeenCalledTimes(2);
+  });
 });
+
+

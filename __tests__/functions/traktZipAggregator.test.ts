@@ -686,11 +686,11 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       const result = parseTraktZipBuffer(zipBuffer);
 
       // Verify exact numbers matching OAuth mirror sync baseline:
-      // 2 Movies: Hereditary (493922), September 5 (1211472)
-      expect(result.stats.movies).toBe(2);
-      expect(result.watchedMovies).toHaveLength(2);
+      // 3 Movies: Nosferatu (426063), Hereditary (493922), September 5 (1211472)
+      expect(result.stats.movies).toBe(3);
+      expect(result.watchedMovies).toHaveLength(3);
       const movieIds = result.watchedMovies.map((m) => m.movie.ids.tmdb).sort((a, b) => (a ?? 0) - (b ?? 0));
-      expect(movieIds).toEqual([493922, 1211472]);
+      expect(movieIds).toEqual([426063, 493922, 1211472]);
 
       // 4 TV Shows: Naruto (306684), FROM (124364), Day of the Jackal (222766), Loki (84958)
       expect(result.stats.shows).toBe(4);
@@ -706,11 +706,11 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       expect(result.stats.ratings).toBe(4);
       expect(result.ratings).toHaveLength(4);
 
-      // 8 Watchlist Items:
-      // Movies (5): Nosferatu, Moana 2, Star Trek Section 31, Gladiator II, The Substance
+      // 7 Watchlist Items:
+      // Movies (4): Moana 2, Star Trek Section 31, Gladiator II, The Substance
       // Shows (3): Breaking Bad (folded from season/episode entries), Attack on Titan, IT: Welcome to Derry
-      expect(result.stats.watchlistItems).toBe(8);
-      expect(result.watchlist).toHaveLength(8);
+      expect(result.stats.watchlistItems).toBe(7);
+      expect(result.watchlist).toHaveLength(7);
 
       // 1 Favorite: Wake Up Dead Man (movie: 812583)
       expect(result.stats.favorites).toBe(1);
@@ -728,9 +728,9 @@ describe('Trakt Zip Aggregator & Parser (Stage 1)', () => {
       const followMeList = result.customLists.find((l) => l.list.ids.slug === 'follow-me');
       expect(followMeList?.items.length).toBeGreaterThan(0);
 
-      // Granular movie watches (4 watches: 3 for Hereditary, 1 for September 5)
-      expect(result.stats.movieWatches).toBe(4);
-      expect(result.watchedMovieEvents).toHaveLength(4);
+      // Granular movie watches (7 watches: 3 for Nosferatu, 3 for Hereditary, 1 for September 5)
+      expect(result.stats.movieWatches).toBe(7);
+      expect(result.watchedMovieEvents).toHaveLength(7);
     });
 
     describe('decompressed size limits', () => {
