@@ -354,6 +354,11 @@ export const handleSyncPost = async (request: Request, response: ExpressResponse
         throw new TraktSyncError('Trakt not connected for this user.', 'auth_invalid', false);
       }
 
+      const activeZipStatus = userData.traktZipImportStatus?.status;
+      if (activeZipStatus === 'pending' || activeZipStatus === 'processing') {
+        throw new TraktSyncError('A Trakt zip import is currently in progress.', 'storage_limit', false);
+      }
+
       const existingStatus = userData.traktSyncStatus;
       if (existingStatus?.status && ACTIVE_RUN_STATUSES.has(existingStatus.status)) {
         return {

@@ -1151,16 +1151,21 @@
       "episodeProgress": "Bölüm ilerlemesi",
       "watchedMoviesAndShows": "İzlenen filmler ve diziler"
     },
+    "zipImportRunningTitle": "Trakt Zip İçe Aktarımı Devam Ediyor",
+    "zipImportRunningDescription": "Bir Trakt zip arşivi şu anda içe aktarılıyor. Eşitlemeyi başlatmadan önce lütfen bitmesini bekleyin.",
     "zipImportCard": {
       "title": "Trakt Dışa Aktarımını İçe Aktar (.zip)",
       "subtitleDisconnected": "Trakt yedeğiniz mi var? Hesabınızı bağlamadan doğrudan zip dosyanızı yükleyin.",
       "subtitleConnected": "Trakt yedeğiniz mi var? Ek geçmişi içe aktarmak için doğrudan zip dosyanızı yükleyin.",
-      "subtitleSynced": "Kitaplığınızı bir Trakt zip dışa aktarım arşivinden manuel olarak içe aktarın veya geri yükleyin."
+      "subtitleSynced": "Kitaplığınızı bir Trakt zip dışa aktarım arşivinden manuel olarak içe aktarın veya geri yükleyin.",
+      "subtitleImporting": "Bir içe aktarma devam ediyor. Canlı ilerlemeyi görmek için dokunun."
     },
     "zipImport": {
       "title": "Trakt Zip İçe Aktarımı",
       "heroTitle": "Trakt Zip İçe Aktarımı",
       "heroSubtitle": "Tüm film, dizi, bölüm, puanlama ve liste geçmişinizi doğrudan bir Trakt arşivinden içe aktarın.",
+      "syncRunningTitle": "Trakt Eşitlemesi Devam Ediyor",
+      "syncRunningDescription": "Bir Trakt eşitlemesi devam ediyor. Zip içe aktarmayı başlatmadan önce lütfen bitmesini bekleyin.",
       "selectFile": "Trakt Dışa Aktarımını Seç (.zip)",
       "selectFileSubtitle": "Cihazınızdaki Trakt zip dosyasını seçmek için dokunun"
       ,"replaceFile": "Dosyayı Değiştir",

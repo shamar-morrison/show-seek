@@ -1159,16 +1159,21 @@
     "localListEditWarning": "Esta lista está sincronizada con Trakt. Los cambios locales pueden sobrescribirse en la próxima sincronización.",
     "localRatingEditWarning": "Las calificaciones se sincronizan con Trakt mientras estás conectado. Los cambios locales pueden sobrescribirse en la próxima sincronización.",
     "localWatchedEditWarning": "El historial de visualización se sincroniza con Trakt mientras estás conectado. Los cambios locales pueden sobrescribirse en la próxima sincronización.",
+    "zipImportRunningTitle": "Importación Zip de Trakt en curso",
+    "zipImportRunningDescription": "Se está importando un archivo zip de Trakt. Espera a que finalice antes de iniciar una sincronización.",
     "zipImportCard": {
       "title": "Importar exportación de Trakt (.zip)",
       "subtitleDisconnected": "¿Tienes un respaldo de Trakt? Sube tu archivo zip directamente sin conectar tu cuenta.",
       "subtitleConnected": "¿Tienes un respaldo de Trakt? Sube tu archivo zip directamente para importar historial adicional.",
-      "subtitleSynced": "Importa o restaura manualmente tu biblioteca desde un archivo zip de exportación de Trakt."
+      "subtitleSynced": "Importa o restaura manualmente tu biblioteca desde un archivo zip de exportación de Trakt.",
+      "subtitleImporting": "Una importación está en curso. Toca para ver el progreso en vivo."
     },
     "zipImport": {
       "title": "Importación Zip de Trakt",
       "heroTitle": "Importación Zip de Trakt",
       "heroSubtitle": "Importa tu historial completo de películas, series, episodios, calificaciones y listas directamente desde un archivo de exportación de Trakt.",
+      "syncRunningTitle": "Sincronización de Trakt en curso",
+      "syncRunningDescription": "Una sincronización de Trakt está en curso. Espera a que finalice antes de iniciar una importación zip.",
       "selectFile": "Seleccionar exportación de Trakt (.zip)",
       "selectFileSubtitle": "Toca para buscar en los archivos de tu dispositivo el archivo zip de exportación de Trakt",
       "replaceFile": "Cambiar archivo",

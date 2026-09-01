@@ -123,6 +123,27 @@ export interface TraktIncrementalState {
   updatedAt: FirebaseFirestore.Timestamp;
 }
 
+export interface TraktUserZipImportStatus {
+  completedAt?: FirebaseFirestore.Timestamp;
+  createdAt?: FirebaseFirestore.Timestamp;
+  error?: string;
+  failedAt?: FirebaseFirestore.Timestamp;
+  id: string;
+  phase: TraktZipImportPhase;
+  stats?: {
+    customLists: number;
+    episodes: number;
+    favorites: number;
+    movies: number;
+    movieWatches: number;
+    ratings: number;
+    shows: number;
+    watchlist: number;
+  };
+  status: TraktZipImportStatus;
+  updatedAt: FirebaseFirestore.Timestamp;
+}
+
 export interface TraktUserDoc {
   traktAccessToken?: string;
   traktConnected?: boolean;
@@ -133,6 +154,7 @@ export interface TraktUserDoc {
   traktRefreshToken?: string;
   traktSyncStatus?: Partial<TraktSyncStatus>;
   traktTokenExpiresAt?: FirebaseFirestore.Timestamp;
+  traktZipImportStatus?: Partial<TraktUserZipImportStatus>;
 }
 
 export interface TraktOAuthStateDoc {

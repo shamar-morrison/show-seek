@@ -13,6 +13,7 @@ const mockTraktState = {
   isEnriching: false,
   isLoading: false,
   isSyncing: false,
+  isZipImporting: false,
   lastEnrichedAt: null as Date | null,
   lastSyncedAt: null as Date | null,
   syncNow: jest.fn(),
@@ -391,6 +392,43 @@ describe('TraktSettingsScreen', () => {
       fireEvent.press(getByText('Import Trakt Export (.zip)'));
 
       expect(mockRouterPush).not.toHaveBeenCalled();
+    });
+
+    it('shows the zip import running banner and importing subtitle when isZipImporting is true', () => {
+      mockTraktState.isConnected = true;
+      mockTraktState.lastSyncedAt = new Date();
+      mockTraktState.isZipImporting = true;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      expect(getByText(/Trakt Zip Import In Progress/i)).toBeTruthy();
+      expect(
+        getByText(
+          /A Trakt zip archive is currently being imported. Please wait for it to finish before starting a sync./i
+        )
+      ).toBeTruthy();
+      expect(
+        getByText('An import is currently in progress. Tap to view live progress.')
+      ).toBeTruthy();
+    });
+
+    it('alerts and prevents sync when isZipImporting is true', async () => {
+      const alertSpy = jest.spyOn(Alert, 'alert');
+      mockTraktState.isConnected = true;
+      mockTraktState.lastSyncedAt = new Date();
+      mockTraktState.isZipImporting = true;
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      fireEvent.press(getByText('Mirror Now'));
+
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Trakt Zip Import In Progress',
+        'A Trakt zip archive is currently being imported. Please wait for it to finish before starting a sync.'
+      );
+      expect(mockTraktState.syncNow).not.toHaveBeenCalled();
+
+      alertSpy.mockRestore();
     });
   });
 });

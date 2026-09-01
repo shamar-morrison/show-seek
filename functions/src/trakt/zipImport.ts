@@ -14,6 +14,7 @@ import {
 import { dispatchEnrichmentRun, prepareEnrichmentRun } from './enrichment';
 import type {
   StartTraktZipImportRequest,
+  TraktUserDoc,
   TraktZipImportTaskPayload,
 } from './types';
 import { parseTraktZipBuffer } from './zipParser';
@@ -54,7 +55,23 @@ export const startTraktZipImportHandler = async (
   }
 
   const db = admin.firestore();
-  await assertPremiumUser(db, userId);
+  const userDocRef = db.collection('users').doc(userId);
+  const userDoc = await userDocRef.get();
+  const userData = (userDoc.data() ?? {}) as TraktUserDoc & { premium?: { isPremium?: boolean } };
+
+  if (!userData?.premium?.isPremium) {
+    throw new HttpsError('permission-denied', 'Trakt zip import requires Premium.');
+  }
+
+  const activeSync = userData.traktSyncStatus?.status;
+  if (activeSync === 'queued' || activeSync === 'in_progress' || activeSync === 'retrying') {
+    throw new HttpsError('already-exists', 'A Trakt sync is already in progress.');
+  }
+
+  const activeZip = userData.traktZipImportStatus?.status;
+  if (activeZip === 'pending' || activeZip === 'processing') {
+    throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
+  }
 
   const storagePath = buildTraktZipImportStoragePath(userId, importId);
   const bucket = admin.storage().bucket();
@@ -71,28 +88,42 @@ export const startTraktZipImportHandler = async (
   const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
   const now = Timestamp.now();
 
-  await progressDocRef.set({
-    createdAt: now,
-    id: importId,
-    progress: {
-      current: 0,
-      phase: 'pending',
-      total: 100,
-    },
-    stats: {
-      customLists: 0,
-      episodes: 0,
-      favorites: 0,
-      movies: 0,
-      movieWatches: 0,
-      ratings: 0,
-      shows: 0,
-      watchlist: 0,
-    },
-    status: 'pending',
-    updatedAt: now,
-    userId,
-  });
+  await Promise.all([
+    progressDocRef.set({
+      createdAt: now,
+      id: importId,
+      progress: {
+        current: 0,
+        phase: 'pending',
+        total: 100,
+      },
+      stats: {
+        customLists: 0,
+        episodes: 0,
+        favorites: 0,
+        movies: 0,
+        movieWatches: 0,
+        ratings: 0,
+        shows: 0,
+        watchlist: 0,
+      },
+      status: 'pending',
+      updatedAt: now,
+      userId,
+    }),
+    userDocRef.set(
+      {
+        traktZipImportStatus: {
+          createdAt: now,
+          id: importId,
+          phase: 'pending',
+          status: 'pending',
+          updatedAt: now,
+        },
+      },
+      { merge: true }
+    ),
+  ]);
 
   await getFunctions()
     .taskQueue<TraktZipImportTaskPayload>(TRAKT_ZIP_IMPORT_QUEUE_FUNCTION)
@@ -120,6 +151,7 @@ export const runTraktZipImportHandler = async (
   }
 
   const db = admin.firestore();
+  const userDocRef = db.collection('users').doc(userId);
   const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
   const storagePath = buildTraktZipImportStoragePath(userId, importId);
   const bucket = admin.storage().bucket();
@@ -127,14 +159,28 @@ export const runTraktZipImportHandler = async (
 
   try {
     // Phase 1: Downloading
-    await progressDocRef.set(
-      {
-        progress: { current: 10, phase: 'downloading', total: 100 },
-        status: 'processing',
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
+    const downloadTime = Timestamp.now();
+    await Promise.all([
+      progressDocRef.set(
+        {
+          progress: { current: 10, phase: 'downloading', total: 100 },
+          status: 'processing',
+          updatedAt: downloadTime,
+        },
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            id: importId,
+            phase: 'downloading',
+            status: 'processing',
+            updatedAt: downloadTime,
+          },
+        },
+        { merge: true }
+      ),
+    ]);
 
     const [metadata] = await file.getMetadata();
     const rawSize = metadata.size;
@@ -146,50 +192,95 @@ export const runTraktZipImportHandler = async (
     const [downloadBuffer] = await file.download();
 
     // Phase 2: Parsing
-    await progressDocRef.set(
-      {
-        progress: { current: 35, phase: 'parsing', total: 100 },
-        status: 'processing',
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
+    const parseTime = Timestamp.now();
+    await Promise.all([
+      progressDocRef.set(
+        {
+          progress: { current: 35, phase: 'parsing', total: 100 },
+          status: 'processing',
+          updatedAt: parseTime,
+        },
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            id: importId,
+            phase: 'parsing',
+            status: 'processing',
+            updatedAt: parseTime,
+          },
+        },
+        { merge: true }
+      ),
+    ]);
 
     const parsedData = parseTraktZipBuffer(downloadBuffer);
 
     // Phase 3: Syncing
-    await progressDocRef.set(
-      {
-        progress: { current: 65, phase: 'syncing', total: 100 },
-        status: 'processing',
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
+    const syncTime = Timestamp.now();
+    await Promise.all([
+      progressDocRef.set(
+        {
+          progress: { current: 65, phase: 'syncing', total: 100 },
+          status: 'processing',
+          updatedAt: syncTime,
+        },
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            id: importId,
+            phase: 'syncing',
+            status: 'processing',
+            updatedAt: syncTime,
+          },
+        },
+        { merge: true }
+      ),
+    ]);
 
     const syncResult = await syncTraktZipImport(userId, parsedData);
 
     // Phase 4: Completed
     const completedAt = Timestamp.now();
-    await progressDocRef.set(
-      {
-        completedAt,
-        progress: { current: 100, phase: 'completed', total: 100 },
-        stats: {
-          customLists: syncResult.customListsSynced,
-          episodes: syncResult.episodesSynced,
-          favorites: syncResult.favoritesSynced,
-          movies: syncResult.moviesSynced,
-          movieWatches: syncResult.movieWatchesSynced,
-          ratings: syncResult.ratingsSynced,
-          shows: syncResult.showsSynced,
-          watchlist: syncResult.watchlistSynced,
+    const stats = {
+      customLists: syncResult.customListsSynced,
+      episodes: syncResult.episodesSynced,
+      favorites: syncResult.favoritesSynced,
+      movies: syncResult.moviesSynced,
+      movieWatches: syncResult.movieWatchesSynced,
+      ratings: syncResult.ratingsSynced,
+      shows: syncResult.showsSynced,
+      watchlist: syncResult.watchlistSynced,
+    };
+
+    await Promise.all([
+      progressDocRef.set(
+        {
+          completedAt,
+          progress: { current: 100, phase: 'completed', total: 100 },
+          stats,
+          status: 'completed',
+          updatedAt: completedAt,
         },
-        status: 'completed',
-        updatedAt: completedAt,
-      },
-      { merge: true }
-    );
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            completedAt,
+            id: importId,
+            phase: 'completed',
+            stats,
+            status: 'completed',
+            updatedAt: completedAt,
+          },
+        },
+        { merge: true }
+      ),
+    ]);
 
     // Post-import enrichment in an isolated try/catch block so failure cannot overwrite status
     if (syncResult.listsToEnrich.length > 0) {
@@ -226,18 +317,34 @@ export const runTraktZipImportHandler = async (
         ? error.message
         : 'An error occurred while importing your Trakt archive.';
 
-    await progressDocRef.set(
-      {
-        error: friendlyMessage,
-        failedAt: Timestamp.now(),
-        progress: {
-          phase: 'failed',
+    const failedAt = Timestamp.now();
+    await Promise.all([
+      progressDocRef.set(
+        {
+          error: friendlyMessage,
+          failedAt,
+          progress: {
+            phase: 'failed',
+          },
+          status: 'failed',
+          updatedAt: failedAt,
         },
-        status: 'failed',
-        updatedAt: Timestamp.now(),
-      },
-      { merge: true }
-    );
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            error: friendlyMessage,
+            failedAt,
+            id: importId,
+            phase: 'failed',
+            status: 'failed',
+            updatedAt: failedAt,
+          },
+        },
+        { merge: true }
+      ),
+    ]);
   } finally {
     // Phase 5: Storage cleanup in finally block
     try {
