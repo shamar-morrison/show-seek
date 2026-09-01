@@ -54,25 +54,6 @@ export const startTraktZipImportHandler = async (
     throw new HttpsError('invalid-argument', 'Missing or invalid importId format.');
   }
 
-  const db = admin.firestore();
-  const userDocRef = db.collection('users').doc(userId);
-  const userDoc = await userDocRef.get();
-  const userData = (userDoc.data() ?? {}) as TraktUserDoc & { premium?: { isPremium?: boolean } };
-
-  if (!userData?.premium?.isPremium) {
-    throw new HttpsError('permission-denied', 'Trakt zip import requires Premium.');
-  }
-
-  const activeSync = userData.traktSyncStatus?.status;
-  if (activeSync === 'queued' || activeSync === 'in_progress' || activeSync === 'retrying') {
-    throw new HttpsError('already-exists', 'A Trakt sync is already in progress.');
-  }
-
-  const activeZip = userData.traktZipImportStatus?.status;
-  if (activeZip === 'pending' || activeZip === 'processing') {
-    throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
-  }
-
   const storagePath = buildTraktZipImportStoragePath(userId, importId);
   const bucket = admin.storage().bucket();
   const file = bucket.file(storagePath);
@@ -85,11 +66,30 @@ export const startTraktZipImportHandler = async (
     );
   }
 
+  const db = admin.firestore();
+  const userDocRef = db.collection('users').doc(userId);
   const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
   const now = Timestamp.now();
 
-  await Promise.all([
-    progressDocRef.set({
+  await db.runTransaction(async (transaction) => {
+    const userDoc = await transaction.get(userDocRef);
+    const userData = (userDoc.data() ?? {}) as TraktUserDoc & { premium?: { isPremium?: boolean } };
+
+    if (!userData?.premium?.isPremium) {
+      throw new HttpsError('permission-denied', 'Trakt zip import requires Premium.');
+    }
+
+    const activeSync = userData.traktSyncStatus?.status;
+    if (activeSync === 'queued' || activeSync === 'in_progress' || activeSync === 'retrying') {
+      throw new HttpsError('already-exists', 'A Trakt sync is already in progress.');
+    }
+
+    const activeZip = userData.traktZipImportStatus?.status;
+    if (activeZip === 'pending' || activeZip === 'processing') {
+      throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
+    }
+
+    transaction.set(progressDocRef, {
       createdAt: now,
       id: importId,
       progress: {
@@ -110,8 +110,10 @@ export const startTraktZipImportHandler = async (
       status: 'pending',
       updatedAt: now,
       userId,
-    }),
-    userDocRef.set(
+    });
+
+    transaction.set(
+      userDocRef,
       {
         traktZipImportStatus: {
           createdAt: now,
@@ -122,18 +124,54 @@ export const startTraktZipImportHandler = async (
         },
       },
       { merge: true }
-    ),
-  ]);
-
-  await getFunctions()
-    .taskQueue<TraktZipImportTaskPayload>(TRAKT_ZIP_IMPORT_QUEUE_FUNCTION)
-    .enqueue(
-      { importId, userId },
-      {
-        dispatchDeadlineSeconds: TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
-        id: `zip_import_${importId}`,
-      }
     );
+  });
+
+  try {
+    await getFunctions()
+      .taskQueue<TraktZipImportTaskPayload>(TRAKT_ZIP_IMPORT_QUEUE_FUNCTION)
+      .enqueue(
+        { importId, userId },
+        {
+          dispatchDeadlineSeconds: TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
+          id: `zip_import_${importId}`,
+        }
+      );
+  } catch (enqueueError) {
+    console.error('[startTraktZipImport] Task enqueue failed:', enqueueError);
+    const failureNow = Timestamp.now();
+    await Promise.all([
+      progressDocRef.set(
+        {
+          error: 'Failed to enqueue background processing task.',
+          failedAt: failureNow,
+          status: 'failed',
+          updatedAt: failureNow,
+        },
+        { merge: true }
+      ),
+      userDocRef.set(
+        {
+          traktZipImportStatus: {
+            error: 'Failed to enqueue background processing task.',
+            failedAt: failureNow,
+            id: importId,
+            phase: 'failed',
+            status: 'failed',
+            updatedAt: failureNow,
+          },
+        },
+        { merge: true }
+      ),
+    ]).catch((cleanupError) => {
+      console.error('[startTraktZipImport] Error during failure cleanup:', cleanupError);
+    });
+
+    if (enqueueError instanceof HttpsError) {
+      throw enqueueError;
+    }
+    throw new HttpsError('internal', 'Failed to start background import task. Please try again.');
+  }
 
   return { importId };
 };

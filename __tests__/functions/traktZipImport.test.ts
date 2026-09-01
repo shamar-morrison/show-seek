@@ -355,6 +355,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         email: 'free@example.com',
         premium: { isPremium: false },
       });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
 
       await expect(
         startTraktZipImportHandler({
@@ -442,6 +443,76 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
           id: `zip_import_${importId}`,
         })
       );
+    });
+
+    it('rejects when a Trakt sync is already active', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktSyncStatus: { status: 'in_progress' },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'already-exists',
+        message: 'A Trakt sync is already in progress.',
+      });
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('rejects when another Trakt zip import is already active', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: { id: 'zip_old_1', status: 'processing' },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'already-exists',
+        message: 'A Trakt zip import is already in progress.',
+      });
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('cleans up and marks progress and user doc failed when task enqueue fails', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      mockEnqueue.mockRejectedValueOnce(new Error('Task queue unavailable'));
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'internal',
+        message: 'Failed to start background import task. Please try again.',
+      });
+
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        phase: 'failed',
+        status: 'failed',
+      });
+
+      const progressDoc = store.get(progressDocPath);
+      expect(progressDoc?.status).toBe('failed');
+      expect(progressDoc?.error).toContain('Failed to enqueue');
     });
   });
 

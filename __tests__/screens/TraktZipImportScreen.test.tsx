@@ -3,6 +3,8 @@ import React from 'react';
 import TraktZipImportScreen from '@/src/screens/TraktZipImportScreen';
 import { traktZipImportService } from '@/src/services/TraktZipImportService';
 
+import type { TraktZipImportUIState } from '@/src/types/trakt';
+
 const mockBack = jest.fn();
 const mockPush = jest.fn();
 const mockRequireAccount = jest.fn(() => false);
@@ -14,7 +16,7 @@ let mockTraktContextState = {
   isEnriching: false,
   isSyncing: false,
   isZipImporting: false,
-  zipImportUiState: 'idle' as const,
+  zipImportUiState: 'idle' as TraktZipImportUIState,
   zipUploadProgress: 0,
   zipImportDoc: null as any,
   zipImportError: null as string | null,

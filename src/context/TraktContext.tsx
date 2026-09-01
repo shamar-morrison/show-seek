@@ -140,7 +140,17 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   // Real-time observer for background TMDB enrichment and zip import status on the user document
   useEffect(() => {
     if (!hasEligibleTraktUser(user)) {
+      if (activeZipImportSubscriptionRef.current) {
+        activeZipImportSubscriptionRef.current();
+        activeZipImportSubscriptionRef.current = null;
+      }
+      activeZipImportIdRef.current = null;
       setIsEnriching(false);
+      setZipImportUiState('idle');
+      setSelectedZipFile(null);
+      setZipUploadProgress(0);
+      setZipImportDoc(null);
+      setZipImportError(null);
       return;
     }
 
@@ -210,7 +220,19 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (activeZipImportSubscriptionRef.current) {
+        activeZipImportSubscriptionRef.current();
+        activeZipImportSubscriptionRef.current = null;
+      }
+      activeZipImportIdRef.current = null;
+      setZipImportUiState('idle');
+      setSelectedZipFile(null);
+      setZipUploadProgress(0);
+      setZipImportDoc(null);
+      setZipImportError(null);
+    };
   }, [user, invalidateUserLibraryQueries, subscribeToZipProgress]);
 
   // Load persisted state from AsyncStorage
