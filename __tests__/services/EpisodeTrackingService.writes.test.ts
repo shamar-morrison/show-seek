@@ -321,5 +321,36 @@ describe('EpisodeTrackingService write operations', () => {
     expect(onProgress).toHaveBeenCalledTimes(1);
     expect(onProgress).toHaveBeenCalledWith(10);
   });
+
+  it('safely falls back to default batchSize (10) and delayMs (300) on invalid inputs', async () => {
+    const { episodeTrackingService } = loadService();
+    const { setDoc } = loadFirestore();
+
+    const episodesToMark = Array.from({ length: 12 }, (_, i) => ({
+      seasonNumber: 1,
+      episode: {
+        id: 3000 + i,
+        name: `Episode ${i + 1}`,
+        episode_number: i + 1,
+        season_number: 1,
+        air_date: '2026-05-01',
+      } as any,
+    }));
+
+    const resultPromise = episodeTrackingService.markMultipleEpisodesWatched(
+      999,
+      episodesToMark,
+      { tvShowName: 'Fallback Show', posterPath: null },
+      { batchSize: -5 as any, delayMs: -100 as any }
+    );
+
+    await jest.advanceTimersByTimeAsync(400);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ markedCount: 12, wasCancelled: false });
+    // 12 episodes batched in chunks of default 10 should produce 2 calls to setDoc
+    expect(setDoc).toHaveBeenCalledTimes(2);
+  });
 });
+
 

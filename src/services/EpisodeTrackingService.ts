@@ -249,8 +249,18 @@ class EpisodeTrackingService {
     if (!user || user.isAnonymous) throw new Error('Please sign in to continue');
     if (episodesToMark.length === 0) return { markedCount: 0, wasCancelled: false };
 
-    const batchSize = options?.batchSize ?? 10;
-    const delayMs = options?.delayMs ?? 300;
+    const batchSize =
+      typeof options?.batchSize === 'number' &&
+      Number.isInteger(options.batchSize) &&
+      options.batchSize > 0
+        ? options.batchSize
+        : 10;
+    const delayMs =
+      typeof options?.delayMs === 'number' &&
+      Number.isFinite(options.delayMs) &&
+      options.delayMs >= 0
+        ? options.delayMs
+        : 300;
     const trackingRef = this.getShowTrackingRef(user.uid, tvShowId);
     let markedCount = 0;
     let wasCancelled = false;
@@ -296,11 +306,11 @@ class EpisodeTrackingService {
             { merge: true }
           ),
           timeout.promise,
-        ]).finally(() => {
-          timeout.cancel();
-        });
+        ]);
       } catch (error) {
         throw new Error(getFirestoreErrorMessage(error));
+      } finally {
+        timeout.cancel();
       }
 
       markedCount += chunk.length;
