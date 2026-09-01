@@ -35,6 +35,16 @@ export const useSeasonScreenStyles = () =>
       fontSize: FONT_SIZE.s,
       color: COLORS.textSecondary,
     },
+    headerActionButton: {
+      padding: SPACING.s,
+      marginLeft: SPACING.s,
+      borderRadius: BORDER_RADIUS.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerActionButtonDisabled: {
+      opacity: 0.35,
+    },
     scrollView: {
       flex: 1,
     },

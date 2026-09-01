@@ -13,6 +13,9 @@ jest.mock('@/src/services/EpisodeTrackingService', () => ({
     markEpisodeUnwatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesWatched: jest.fn().mockResolvedValue(undefined),
     markAllEpisodesUnwatched: jest.fn().mockResolvedValue(undefined),
+    markMultipleEpisodesWatched: jest
+      .fn()
+      .mockResolvedValue({ markedCount: 5, wasCancelled: false }),
     getShowTracking: jest.fn().mockResolvedValue(null),
     isEpisodeWatched: jest.fn().mockReturnValue(false),
     calculateSeasonProgress: jest.fn().mockReturnValue({
@@ -86,6 +89,7 @@ import {
   useMarkAllEpisodesWatched,
   useMarkEpisodeUnwatched,
   useMarkEpisodeWatched,
+  useMarkShowAllEpisodesWatched,
   useShowEpisodeTracking,
 } from '@/src/hooks/useEpisodeTracking';
 import { act, renderHook } from '@testing-library/react-native';
@@ -577,4 +581,43 @@ describe('useMarkEpisodeWatched', () => {
       })
     );
   });
+
+  it('marks show all episodes watched and auto-adds to watching', async () => {
+    const { result } = renderHook(() => useMarkShowAllEpisodesWatched());
+    const episodesToMark = mockSeasonEpisodes.map((ep) => ({
+      seasonNumber: 1,
+      episode: ep,
+    }));
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        tvShowId: 123,
+        episodesToMark,
+        showMetadata: mockShowMetadata,
+        autoAddOptions: mockWatchingAutoAddOptions,
+      });
+    });
+
+    expect(episodeTrackingService.markMultipleEpisodesWatched).toHaveBeenCalledWith(
+      123,
+      episodesToMark,
+      mockShowMetadata,
+      undefined
+    );
+    expect(listService.addToList).toHaveBeenCalledWith(
+      'currently-watching',
+      expect.objectContaining({
+        id: 123,
+        title: 'Test Show',
+      }),
+      'Watching'
+    );
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'test-user-123', 123],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['episodeTracking', 'allShows', 'test-user-123'],
+    });
+  });
 });
+
