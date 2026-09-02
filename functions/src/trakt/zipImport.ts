@@ -12,7 +12,7 @@ import {
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
 } from './constants';
 import { dispatchEnrichmentRun, prepareEnrichmentRun } from './enrichment';
-import { isZipImportActive } from './status';
+import { isZipImportActive, isZipImportStatusStale } from './status';
 import type {
   StartTraktZipImportRequest,
   TraktUserDoc,
@@ -187,6 +187,258 @@ export const startTraktZipImportHandler = async (
   return { importId };
 };
 
+export interface ClaimLeaseResult {
+  activeImportId?: string;
+  claimed: boolean;
+  reason?: 'obsolete_id' | 'duplicate_active_lease' | 'already_completed';
+}
+
+export const claimZipImportLease = async (
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  leaseToken: string
+): Promise<ClaimLeaseResult> => {
+  const userDocRef = db.collection('users').doc(userId);
+  const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
+
+  return db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userDocRef);
+    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+    const currentZipStatus = userData.traktZipImportStatus;
+
+    if (currentZipStatus?.id && currentZipStatus.id !== importId) {
+      return { activeImportId: currentZipStatus.id, claimed: false, reason: 'obsolete_id' };
+    }
+
+    if (currentZipStatus?.id === importId && currentZipStatus.status === 'completed') {
+      return { activeImportId: currentZipStatus.id, claimed: false, reason: 'already_completed' };
+    }
+
+    if (
+      currentZipStatus?.id === importId &&
+      currentZipStatus.status === 'processing' &&
+      !isZipImportStatusStale(currentZipStatus)
+    ) {
+      return { activeImportId: currentZipStatus.id, claimed: false, reason: 'duplicate_active_lease' };
+    }
+
+    const downloadTime = Timestamp.now();
+    transaction.set(
+      progressDocRef,
+      {
+        leaseToken,
+        progress: { current: 10, phase: 'downloading', total: 100 },
+        status: 'processing',
+        updatedAt: downloadTime,
+      },
+      { merge: true }
+    );
+    transaction.set(
+      userDocRef,
+      {
+        traktZipImportStatus: {
+          id: importId,
+          leaseToken,
+          phase: 'downloading',
+          status: 'processing',
+          updatedAt: downloadTime,
+        },
+      },
+      { merge: true }
+    );
+
+    return { claimed: true };
+  });
+};
+
+export const updateZipImportProgressWithLease = async (
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  leaseToken: string,
+  options: {
+    percent: number;
+    phase: 'downloading' | 'parsing' | 'syncing';
+    updatedAt: FirebaseFirestore.Timestamp;
+  }
+): Promise<boolean> => {
+  const userDocRef = db.collection('users').doc(userId);
+  const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
+
+  return db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userDocRef);
+    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+    const currentZipStatus = userData.traktZipImportStatus;
+
+    if (currentZipStatus?.id !== importId || currentZipStatus?.leaseToken !== leaseToken) {
+      return false;
+    }
+
+    transaction.set(
+      progressDocRef,
+      {
+        leaseToken,
+        progress: { current: options.percent, phase: options.phase, total: 100 },
+        status: 'processing',
+        updatedAt: options.updatedAt,
+      },
+      { merge: true }
+    );
+    transaction.set(
+      userDocRef,
+      {
+        traktZipImportStatus: {
+          id: importId,
+          leaseToken,
+          phase: options.phase,
+          status: 'processing',
+          updatedAt: options.updatedAt,
+        },
+      },
+      { merge: true }
+    );
+
+    return true;
+  });
+};
+
+export const verifyZipImportLeaseOwnership = async (
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  leaseToken: string
+): Promise<boolean> => {
+  const userSnapshot = await db.collection('users').doc(userId).get();
+  const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+  const currentZipStatus = userData.traktZipImportStatus;
+
+  return currentZipStatus?.id === importId && currentZipStatus?.leaseToken === leaseToken;
+};
+
+export const completeZipImportWithLease = async (
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  leaseToken: string,
+  options: {
+    completedAt: FirebaseFirestore.Timestamp;
+    stats: {
+      customLists: number;
+      episodes: number;
+      favorites: number;
+      movies: number;
+      movieWatches: number;
+      ratings: number;
+      shows: number;
+      watchlist: number;
+    };
+  }
+): Promise<boolean> => {
+  const userDocRef = db.collection('users').doc(userId);
+  const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
+
+  return db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userDocRef);
+    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+    const currentZipStatus = userData.traktZipImportStatus;
+
+    if (currentZipStatus?.id !== importId || currentZipStatus?.leaseToken !== leaseToken) {
+      return false;
+    }
+
+    transaction.set(
+      progressDocRef,
+      {
+        completedAt: options.completedAt,
+        leaseToken,
+        progress: { current: 100, phase: 'completed', total: 100 },
+        stats: options.stats,
+        status: 'completed',
+        updatedAt: options.completedAt,
+      },
+      { merge: true }
+    );
+    transaction.set(
+      userDocRef,
+      {
+        traktZipImportStatus: {
+          completedAt: options.completedAt,
+          id: importId,
+          leaseToken,
+          phase: 'completed',
+          stats: options.stats,
+          status: 'completed',
+          updatedAt: options.completedAt,
+        },
+      },
+      { merge: true }
+    );
+
+    return true;
+  });
+};
+
+export const failZipImportWithLease = async (
+  db: FirebaseFirestore.Firestore,
+  userId: string,
+  importId: string,
+  leaseToken: string,
+  options: {
+    error: string;
+    failedAt: FirebaseFirestore.Timestamp;
+  }
+): Promise<boolean> => {
+  const userDocRef = db.collection('users').doc(userId);
+  const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
+
+  await progressDocRef.set(
+    {
+      error: options.error,
+      failedAt: options.failedAt,
+      progress: {
+        phase: 'failed',
+      },
+      status: 'failed',
+      updatedAt: options.failedAt,
+    },
+    { merge: true }
+  ).catch((err) => {
+    console.error('[runTraktZipImport] Failed to update progressDoc on failure:', err);
+  });
+
+  return db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userDocRef);
+    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
+    const currentZipStatus = userData.traktZipImportStatus;
+
+    if (currentZipStatus?.id !== importId || currentZipStatus?.leaseToken !== leaseToken) {
+      return false;
+    }
+
+    transaction.set(
+      userDocRef,
+      {
+        traktZipImportStatus: {
+          error: options.error,
+          failedAt: options.failedAt,
+          id: importId,
+          leaseToken,
+          phase: 'failed',
+          status: 'failed',
+          updatedAt: options.failedAt,
+        },
+      },
+      { merge: true }
+    );
+
+    return true;
+  }).catch((err) => {
+    console.error('[runTraktZipImport] Failed to update userDoc on failure:', err);
+    return false;
+  });
+};
+
 /**
  * Background Cloud Task handler that processes the uploaded Trakt zip archive end-to-end.
  */
@@ -200,67 +452,37 @@ export const runTraktZipImportHandler = async (
   }
 
   const db = admin.firestore();
-  const userDocRef = db.collection('users').doc(userId);
-  const progressDocRef = db.doc(buildTraktZipImportDocPath(userId, importId));
   const storagePath = buildTraktZipImportStoragePath(userId, importId);
   const bucket = admin.storage().bucket();
   const file = bucket.file(storagePath);
 
-  // Atomically claim the import task and verify it is not obsolete
-  const claimResult = await db.runTransaction(async (transaction) => {
-    const userSnapshot = await transaction.get(userDocRef);
-    const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
-    const currentZipStatus = userData.traktZipImportStatus;
+  const leaseToken = `lease_${Math.random().toString(36).substring(2, 12)}_${Date.now()}`;
+  const claimResult = await claimZipImportLease(db, userId, importId, leaseToken);
 
-    if (currentZipStatus?.id && currentZipStatus.id !== importId) {
-      return { currentId: currentZipStatus.id, obsolete: true };
-    }
-
-    const downloadTime = Timestamp.now();
-    transaction.set(
-      progressDocRef,
-      {
-        progress: { current: 10, phase: 'downloading', total: 100 },
-        status: 'processing',
-        updatedAt: downloadTime,
-      },
-      { merge: true }
-    );
-    transaction.set(
-      userDocRef,
-      {
-        traktZipImportStatus: {
-          id: importId,
-          phase: 'downloading',
-          status: 'processing',
-          updatedAt: downloadTime,
-        },
-      },
-      { merge: true }
-    );
-
-    return { obsolete: false };
-  });
-
-  if (claimResult.obsolete) {
-    console.info('[runTraktZipImport] Skipping obsolete import task', {
-      activeImportId: claimResult.currentId,
+  if (!claimResult.claimed) {
+    console.info('[runTraktZipImport] Skipping duplicate or obsolete import task', {
+      activeImportId: claimResult.activeImportId,
       importId,
+      reason: claimResult.reason,
       userId,
     });
-    try {
-      const [exists] = await file.exists();
-      if (exists) {
-        await file.delete();
+    if (claimResult.reason === 'obsolete_id') {
+      try {
+        const [exists] = await file.exists();
+        if (exists) {
+          await file.delete();
+        }
+      } catch (cleanupError) {
+        console.warn(
+          `[runTraktZipImport] Failed to clean up obsolete zip file at ${storagePath}:`,
+          cleanupError
+        );
       }
-    } catch (cleanupError) {
-      console.warn(
-        `[runTraktZipImport] Failed to clean up obsolete zip file at ${storagePath}:`,
-        cleanupError
-      );
     }
     return;
   }
+
+  let hasOwnership = true;
 
   try {
     const [metadata] = await file.getMetadata();
@@ -274,53 +496,48 @@ export const runTraktZipImportHandler = async (
 
     // Phase 2: Parsing
     const parseTime = Timestamp.now();
-    await Promise.all([
-      progressDocRef.set(
-        {
-          progress: { current: 35, phase: 'parsing', total: 100 },
-          status: 'processing',
-          updatedAt: parseTime,
-        },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            id: importId,
-            phase: 'parsing',
-            status: 'processing',
-            updatedAt: parseTime,
-          },
-        },
-        { merge: true }
-      ),
-    ]);
+    hasOwnership = await updateZipImportProgressWithLease(db, userId, importId, leaseToken, {
+      percent: 35,
+      phase: 'parsing',
+      updatedAt: parseTime,
+    });
+    if (!hasOwnership) {
+      console.warn('[runTraktZipImport] Lost lease ownership before parsing; aborting worker.', {
+        importId,
+        userId,
+      });
+      return;
+    }
 
     const parsedData = parseTraktZipBuffer(downloadBuffer);
 
     // Phase 3: Syncing
     const syncTime = Timestamp.now();
-    await Promise.all([
-      progressDocRef.set(
+    hasOwnership = await updateZipImportProgressWithLease(db, userId, importId, leaseToken, {
+      percent: 65,
+      phase: 'syncing',
+      updatedAt: syncTime,
+    });
+    if (!hasOwnership) {
+      console.warn('[runTraktZipImport] Lost lease ownership before syncing; aborting worker.', {
+        importId,
+        userId,
+      });
+      return;
+    }
+
+    // Persist and validate the token before syncTraktZipImport
+    const stillOwner = await verifyZipImportLeaseOwnership(db, userId, importId, leaseToken);
+    if (!stillOwner) {
+      console.warn(
+        '[runTraktZipImport] Lost lease ownership immediately before syncTraktZipImport; aborting without writes.',
         {
-          progress: { current: 65, phase: 'syncing', total: 100 },
-          status: 'processing',
-          updatedAt: syncTime,
-        },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            id: importId,
-            phase: 'syncing',
-            status: 'processing',
-            updatedAt: syncTime,
-          },
-        },
-        { merge: true }
-      ),
-    ]);
+          importId,
+          userId,
+        }
+      );
+      return;
+    }
 
     const syncResult = await syncTraktZipImport(userId, parsedData);
 
@@ -337,31 +554,20 @@ export const runTraktZipImportHandler = async (
       watchlist: syncResult.watchlistSynced,
     };
 
-    await Promise.all([
-      progressDocRef.set(
+    hasOwnership = await completeZipImportWithLease(db, userId, importId, leaseToken, {
+      completedAt,
+      stats,
+    });
+    if (!hasOwnership) {
+      console.warn(
+        '[runTraktZipImport] Lost lease ownership before writing completion; skipping user doc update.',
         {
-          completedAt,
-          progress: { current: 100, phase: 'completed', total: 100 },
-          stats,
-          status: 'completed',
-          updatedAt: completedAt,
-        },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            completedAt,
-            id: importId,
-            phase: 'completed',
-            stats,
-            status: 'completed',
-            updatedAt: completedAt,
-          },
-        },
-        { merge: true }
-      ),
-    ]);
+          importId,
+          userId,
+        }
+      );
+      return;
+    }
 
     // Post-import enrichment in an isolated try/catch block so failure cannot overwrite status
     if (syncResult.listsToEnrich.length > 0) {
@@ -399,33 +605,10 @@ export const runTraktZipImportHandler = async (
         : 'An error occurred while importing your Trakt archive.';
 
     const failedAt = Timestamp.now();
-    await Promise.all([
-      progressDocRef.set(
-        {
-          error: friendlyMessage,
-          failedAt,
-          progress: {
-            phase: 'failed',
-          },
-          status: 'failed',
-          updatedAt: failedAt,
-        },
-        { merge: true }
-      ),
-      userDocRef.set(
-        {
-          traktZipImportStatus: {
-            error: friendlyMessage,
-            failedAt,
-            id: importId,
-            phase: 'failed',
-            status: 'failed',
-            updatedAt: failedAt,
-          },
-        },
-        { merge: true }
-      ),
-    ]);
+    await failZipImportWithLease(db, userId, importId, leaseToken, {
+      error: friendlyMessage,
+      failedAt,
+    });
   } finally {
     // Phase 5: Storage cleanup in finally block
     try {

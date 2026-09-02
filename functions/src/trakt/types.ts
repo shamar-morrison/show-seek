@@ -129,6 +129,7 @@ export interface TraktUserZipImportStatus {
   error?: string;
   failedAt?: FirebaseFirestore.Timestamp;
   id: string;
+  leaseToken?: string;
   phase: TraktZipImportPhase;
   stats?: {
     customLists: number;

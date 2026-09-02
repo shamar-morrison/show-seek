@@ -854,5 +854,114 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       // Verify obsolete storage zip file was cleaned up
       expect(fileDeleteCalls).toContain(oldStoragePath);
     });
+
+    it('rejects duplicate same-ID tasks when an active processing lease already exists', async () => {
+      const recentTime = MockTimestamp.fromMillis(Date.now() - 30_000);
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: recentTime,
+          id: importId,
+          leaseToken: 'lease_active_worker_1',
+          phase: 'syncing',
+          status: 'processing',
+          updatedAt: recentTime,
+        },
+      });
+
+      // Execute duplicate runTraktZipImport task for same importId
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify the active worker's leaseToken was NOT overwritten
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        leaseToken: 'lease_active_worker_1',
+        phase: 'syncing',
+        status: 'processing',
+      });
+    });
+
+    it('allows a new same-ID task to replace a paused worker when the processing lease is explicitly stale (> 35 minutes)', async () => {
+      const staleTime = MockTimestamp.fromMillis(Date.now() - 40 * 60 * 1000);
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: staleTime,
+          id: importId,
+          leaseToken: 'lease_stale_paused_worker',
+          phase: 'downloading',
+          status: 'processing',
+          updatedAt: staleTime,
+        },
+      });
+
+      // Execute new runTraktZipImport task for same importId
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify new worker acquired lease and completed successfully
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        phase: 'completed',
+        status: 'completed',
+      });
+      expect(userDoc?.traktZipImportStatus?.leaseToken).not.toBe('lease_stale_paused_worker');
+    });
+
+    it('aborts worker without writes when lease ownership is lost before syncTraktZipImport', async () => {
+      const zipBuffer = createValidZipBuffer();
+      storageFiles.set(storagePath, { content: zipBuffer, exists: true });
+
+      store.set(`users/${userId}`, {
+        email: 'pro@example.com',
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          createdAt: MockTimestamp.now(),
+          id: importId,
+          phase: 'pending',
+          status: 'pending',
+          updatedAt: MockTimestamp.now(),
+        },
+      });
+
+      // In the middle of processing, another task claims the lease
+      const originalDocSet = store.set.bind(store);
+      store.set = jest.fn((key: string, value: Record<string, unknown>) => {
+        if (key === `users/${userId}` && (value as any)?.traktZipImportStatus?.phase === 'parsing') {
+          // Simulate a newer worker taking over the lease before syncing
+          const hijacked = {
+            ...value,
+            traktZipImportStatus: {
+              ...(value as any).traktZipImportStatus,
+              leaseToken: 'lease_newer_takeover_token',
+            },
+          };
+          return originalDocSet(key, hijacked);
+        }
+        return originalDocSet(key, value);
+      });
+
+      await runTraktZipImportHandler({
+        data: { importId, userId },
+      } as any);
+
+      // Verify the user doc was NOT completed by the lost worker
+      const userDoc = store.get(`users/${userId}`);
+      expect(userDoc?.traktZipImportStatus?.leaseToken).toBe('lease_newer_takeover_token');
+      expect(userDoc?.traktZipImportStatus?.status).not.toBe('completed');
+    });
   });
 });
