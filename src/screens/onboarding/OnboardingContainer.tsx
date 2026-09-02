@@ -80,6 +80,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const [selectedViaOther, setSelectedViaOther] = useState(false);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(!hasInitialStep);
+  const [hasInteractedWithNotifications, setHasInteractedWithNotifications] = useState(false);
   const saveOnboardingPromiseRef = useRef<Promise<void> | null>(null);
 
   const progressWidth = useSharedValue(0);
@@ -88,16 +89,19 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
   const currentStep = ONBOARDING_STEPS[currentStepIndex];
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isFirstStep = currentStepIndex === 0;
+  const isNotificationStep = currentStep?.id === 'notifications';
 
   // Refs for live state and rehydration synchronization
   const hasRehydratedRef = useRef(false);
   const selectionsRef = useRef(selections);
   const selectedViaOtherRef = useRef(selectedViaOther);
+  const hasInteractedWithNotificationsRef = useRef(false);
 
   useEffect(() => {
     selectionsRef.current = selections;
     selectedViaOtherRef.current = selectedViaOther;
-  }, [selections, selectedViaOther]);
+    hasInteractedWithNotificationsRef.current = hasInteractedWithNotifications;
+  }, [selections, selectedViaOther, hasInteractedWithNotifications]);
 
   // Re-engagement notification hook — schedules notification on background (reads live hasRehydratedRef)
   useOnboardingReengagement(currentStepIndex, selections, selectedViaOther, hasRehydratedRef);
@@ -126,6 +130,14 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
 
         if (typeof savedProgress.selectedViaOther === 'boolean') {
           setSelectedViaOther(savedProgress.selectedViaOther);
+        }
+
+        if (typeof savedProgress.hasInteractedWithNotifications === 'boolean') {
+          setHasInteractedWithNotifications(savedProgress.hasInteractedWithNotifications);
+          hasInteractedWithNotificationsRef.current = savedProgress.hasInteractedWithNotifications;
+        } else if (typeof savedProgress.stepIndex === 'number' && savedProgress.stepIndex > 7) {
+          setHasInteractedWithNotifications(true);
+          hasInteractedWithNotificationsRef.current = true;
         }
 
         // Target step index: use explicit deep-link param if present, otherwise restore saved index
@@ -160,8 +172,9 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       stepIndex: currentStepIndex,
       selections: selectionsRef.current,
       selectedViaOther: selectedViaOtherRef.current,
+      hasInteractedWithNotifications: hasInteractedWithNotificationsRef.current,
     });
-  }, [currentStepIndex, user?.uid, showWelcome, isPersonalizing]);
+  }, [currentStepIndex, user?.uid, showWelcome, isPersonalizing, hasInteractedWithNotifications]);
   const paywallDisplayName = resolvePreferredDisplayName(
     selections.displayName,
     user?.displayName,
@@ -309,6 +322,12 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
     updateProgress(prevIndex);
   }, [currentStepIndex, isFirstStep, updateProgress]);
 
+  const handleNotificationPermissionGranted = useCallback(() => {
+    setHasInteractedWithNotifications(true);
+    hasInteractedWithNotificationsRef.current = true;
+    handleNext();
+  }, [handleNext]);
+
   const handleSaveOnboarding = useCallback(() => {
     if (saveOnboardingPromiseRef.current) {
       return saveOnboardingPromiseRef.current;
@@ -392,11 +411,11 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       case 'accent-color':
         return selections.accentColor !== null;
       case 'notifications':
-        return true; // Always continuable — skip or enable
+        return hasInteractedWithNotifications;
       default:
         return false;
     }
-  }, [currentStep?.id, selections]);
+  }, [currentStep?.id, hasInteractedWithNotifications, selections]);
 
   React.useEffect(() => {
     if (
@@ -501,7 +520,7 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
       case 'notifications':
         return (
           <NotificationPermissionStep
-            onPermissionGranted={handleNext}
+            onPermissionGranted={handleNotificationPermissionGranted}
             accentColor={displayAccentColor}
           />
         );
@@ -547,8 +566,14 @@ export default function OnboardingContainer({ initialStepIndex }: OnboardingCont
           </Pressable>
         )}
 
-        <Pressable style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipText}>{t('personalOnboarding.skip')}</Text>
+        <Pressable
+          style={[styles.skipButton, isNotificationStep && styles.skipButtonDisabled]}
+          onPress={isNotificationStep ? undefined : handleSkip}
+          disabled={isNotificationStep}
+        >
+          <Text style={[styles.skipText, isNotificationStep && styles.skipTextDisabled]}>
+            {t('personalOnboarding.skip')}
+          </Text>
         </Pressable>
 
         <Pressable
@@ -620,10 +645,16 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.m,
     paddingHorizontal: SPACING.s,
   },
+  skipButtonDisabled: {
+    opacity: 0.35,
+  },
   skipText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.m,
     fontWeight: '600',
+  },
+  skipTextDisabled: {
+    color: COLORS.textSecondary,
   },
   backButton: {
     flexDirection: 'row',

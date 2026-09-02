@@ -55,6 +55,13 @@ jest.mock('@/src/utils/onboardingStepCache', () => ({
   clearOnboardingStepIndex: jest.fn(),
 }));
 
+jest.mock('@/src/hooks/useNotificationPermissions', () => ({
+  useNotificationPermissions: () => ({
+    permissionStatus: 'undetermined',
+    requestPermission: jest.fn().mockResolvedValue(true),
+  }),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
@@ -277,10 +284,14 @@ jest.mock('@/src/screens/onboarding/AccentColorStep', () => ({
 
 jest.mock('@/src/screens/onboarding/NotificationPermissionStep', () => ({
   __esModule: true,
-  default: () => {
+  default: ({ onPermissionGranted }: { onPermissionGranted?: () => void }) => {
     const React = require('react');
     const { Text } = require('react-native');
-    return React.createElement(Text, null, 'Notifications step');
+    return React.createElement(
+      Text,
+      { testID: 'notifications-step', onPress: onPermissionGranted },
+      'Notifications step'
+    );
   },
 }));
 
@@ -352,7 +363,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByTestId('select-movie-genres'));
     fireEvent.press(getByText('Continue'));
     fireEvent.press(getByText('Skip'));
-    fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByTestId('notifications-step'));
     fireEvent.press(getByTestId('select-tv-genres'));
     fireEvent.press(getByText('Continue'));
     fireEvent.press(getByTestId('select-tv-shows'));
@@ -419,6 +430,7 @@ describe('OnboardingContainer audited flows', () => {
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
+    fireEvent.press(getByTestId('notifications-step'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Skip'));

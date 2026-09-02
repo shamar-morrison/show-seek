@@ -7,6 +7,7 @@ export interface OnboardingProgress {
   stepIndex: number;
   selections: OnboardingSelections;
   selectedViaOther?: boolean;
+  hasInteractedWithNotifications?: boolean;
 }
 
 const getProgressKey = (userId: string) => `onboardingProgress:${userId}`;

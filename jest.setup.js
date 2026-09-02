@@ -202,6 +202,11 @@ jest.mock('expo-notifications', () => ({
   },
 }));
 
+// Mock expo-device
+jest.mock('expo-device', () => ({
+  isDevice: true,
+}));
+
 // Mock expo-haptics
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),

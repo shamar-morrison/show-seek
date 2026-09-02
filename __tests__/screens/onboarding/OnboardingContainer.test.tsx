@@ -254,13 +254,30 @@ jest.mock('@/src/screens/onboarding/PersonalizingScreen', () => ({
   },
 }));
 
+let mockNotificationPermissionStatus: 'granted' | 'denied' | 'undetermined' | 'checking' =
+  'undetermined';
+
+jest.mock('@/src/hooks/useNotificationPermissions', () => ({
+  useNotificationPermissions: () => ({
+    permissionStatus: mockNotificationPermissionStatus,
+    requestPermission: jest.fn(),
+  }),
+}));
+
 jest.mock('@/src/screens/onboarding/NotificationPermissionStep', () => ({
   __esModule: true,
-  default: () => {
+  default: ({ onPermissionGranted }: { onPermissionGranted?: () => void }) => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return React.createElement(Text, null, 'Notifications step');
+    return React.createElement(
+      Text,
+      {
+        testID: 'notifications-step',
+        onPress: onPermissionGranted,
+      },
+      'Notifications step'
+    );
   },
 }));
 
@@ -290,7 +307,7 @@ describe('OnboardingContainer', () => {
   });
 
   it('passes the collected display name to the onboarding paywall step', async () => {
-    const { getByText, getByTestId } = render(<OnboardingContainer />);
+    const { getByText, getByTestId, queryByTestId } = render(<OnboardingContainer />);
 
     fireEvent.press(getByText('Begin onboarding'));
     fireEvent.press(getByText('Skip'));
@@ -298,7 +315,11 @@ describe('OnboardingContainer', () => {
     fireEvent.press(getByText('Continue'));
 
     for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
-      fireEvent.press(getByText('Skip'));
+      if (queryByTestId('notifications-step')) {
+        fireEvent.press(getByTestId('notifications-step'));
+      } else {
+        fireEvent.press(getByText('Skip'));
+      }
     }
 
     await waitFor(() => {
@@ -307,14 +328,18 @@ describe('OnboardingContainer', () => {
   });
 
   it('falls back to the email prefix on the onboarding paywall when step 2 is skipped', async () => {
-    const { getByText, getByTestId } = render(<OnboardingContainer />);
+    const { getByText, getByTestId, queryByTestId } = render(<OnboardingContainer />);
 
     fireEvent.press(getByText('Begin onboarding'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
     for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
-      fireEvent.press(getByText('Skip'));
+      if (queryByTestId('notifications-step')) {
+        fireEvent.press(getByTestId('notifications-step'));
+      } else {
+        fireEvent.press(getByText('Skip'));
+      }
     }
 
     await waitFor(() => {
@@ -352,7 +377,7 @@ describe('OnboardingContainer', () => {
   });
 
   it('orders movies before TV genres and TV shows with the updated step count', () => {
-    const { getByText } = render(<OnboardingContainer />);
+    const { getByText, getByTestId } = render(<OnboardingContainer />);
 
     fireEvent.press(getByText('Begin onboarding'));
 
@@ -375,7 +400,12 @@ describe('OnboardingContainer', () => {
 
     expect(getByText('Notifications step')).toBeTruthy();
 
+    // Skip is disabled on notifications step — pressing it stays on step 8
     fireEvent.press(getByText('Skip'));
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    // Advancing requires resolving notifications
+    fireEvent.press(getByTestId('notifications-step'));
 
     expect(getByText('TV Genres step')).toBeTruthy();
 
@@ -390,14 +420,18 @@ describe('OnboardingContainer', () => {
     mockPremiumState.isLoading = true;
 
     const rendered = render(<OnboardingContainer />);
-    const { getByText, getByTestId, queryByText, rerender } = rendered;
+    const { getByText, getByTestId, queryByTestId, queryByText, rerender } = rendered;
 
     fireEvent.press(getByText('Begin onboarding'));
     fireEvent.press(getByText('Skip'));
     fireEvent.press(getByText('Continue'));
 
     for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
-      fireEvent.press(getByText('Skip'));
+      if (queryByTestId('notifications-step')) {
+        fireEvent.press(getByTestId('notifications-step'));
+      } else {
+        fireEvent.press(getByText('Skip'));
+      }
     }
 
     await waitFor(() => {
@@ -448,5 +482,88 @@ describe('OnboardingContainer', () => {
 
     // On mount, before any step transition occurs, persist should not have been called with initial empty selections
     expect(persistOnboardingProgress).not.toHaveBeenCalled();
+  });
+
+  it('disables Skip and Continue on step 8 when notification permission is undetermined', () => {
+    mockNotificationPermissionStatus = 'undetermined';
+    const { getByText, queryByText } = render(<OnboardingContainer initialStepIndex={7} />);
+
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    // Skip is pressed, should remain on Notifications step
+    fireEvent.press(getByText('Skip'));
+    expect(getByText('Notifications step')).toBeTruthy();
+    expect(queryByText('TV Genres step')).toBeNull();
+
+    // Continue is pressed, should remain on Notifications step
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('Notifications step')).toBeTruthy();
+    expect(queryByText('TV Genres step')).toBeNull();
+  });
+
+  it('disables Skip and Continue on step 8 for a brand new user even if system permission is granted', () => {
+    mockNotificationPermissionStatus = 'granted';
+    const { getByText, queryByText } = render(<OnboardingContainer initialStepIndex={7} />);
+
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    // Skip is pressed, should remain on Notifications step
+    fireEvent.press(getByText('Skip'));
+    expect(getByText('Notifications step')).toBeTruthy();
+    expect(queryByText('TV Genres step')).toBeNull();
+
+    // Continue is pressed, should remain on Notifications step because user hasn't interacted with step 8
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('Notifications step')).toBeTruthy();
+    expect(queryByText('TV Genres step')).toBeNull();
+  });
+
+  it('allows Continue on step 8 after navigating back if notifications were resolved', () => {
+    mockNotificationPermissionStatus = 'undetermined';
+    const { getByText, getByTestId } = render(<OnboardingContainer initialStepIndex={7} />);
+
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    // Advance by resolving notifications
+    fireEvent.press(getByTestId('notifications-step'));
+    expect(getByText('TV Genres step')).toBeTruthy();
+
+    // Go back to notifications step
+    fireEvent.press(getByText('Back'));
+    expect(getByText('Notifications step')).toBeTruthy();
+
+    // Continue should now be enabled and allow proceeding to step 9
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('TV Genres step')).toBeTruthy();
+  });
+
+  it('enables Continue on step 8 after rehydrating when hasInteractedWithNotifications was saved', async () => {
+    const { readOnboardingProgress } = require('@/src/utils/onboardingStepCache');
+    readOnboardingProgress.mockResolvedValueOnce({
+      stepIndex: 7,
+      hasInteractedWithNotifications: true,
+      selections: {
+        region: 'US',
+        displayName: 'Test',
+        homeScreenLists: [],
+        language: 'en-US',
+        selectedGenreIds: [],
+        selectedTVGenreIds: [],
+        selectedTVShows: [],
+        selectedMovies: [],
+        selectedActors: [],
+        accentColor: null,
+      },
+    });
+
+    const { getByText } = render(<OnboardingContainer initialStepIndex={7} />);
+
+    await waitFor(() => {
+      expect(getByText('Notifications step')).toBeTruthy();
+    });
+
+    // Continue is enabled because hasInteractedWithNotifications was rehydrated as true
+    fireEvent.press(getByText('Continue'));
+    expect(getByText('TV Genres step')).toBeTruthy();
   });
 });
