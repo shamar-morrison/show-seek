@@ -1,3 +1,4 @@
+import { SectionSeparator } from '@/src/components/ui/SectionSeparator';
 import { BORDER_RADIUS, COLORS, SPACING } from '@/src/constants/theme';
 import { screenStyles } from '@/src/styles/screenStyles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -83,6 +84,8 @@ export const DetailScreenSkeleton = memo(() => {
           </View>
           <Animated.View style={[styles.trailerButton, { opacity: shimmerOpacity }]} />
         </View>
+
+        <SectionSeparator />
 
         {/* Overview placeholder */}
         <Animated.View style={[styles.sectionTitle, { opacity: shimmerOpacity }]} />
@@ -172,7 +175,7 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     gap: SPACING.s,
-    marginBottom: SPACING.xl,
+    marginBottom: 0,
   },
   actionRow: {
     flexDirection: 'row',

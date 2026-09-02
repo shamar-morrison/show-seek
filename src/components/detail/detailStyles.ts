@@ -541,7 +541,7 @@ export const useDetailStyles = () =>
     actionButtons: {
       flexDirection: 'column',
       gap: SPACING.s,
-      marginBottom: SPACING.xl,
+      marginBottom: 0,
     },
     // Secondary action buttons row (Rating, Add to List, Reminder, Notes)
     secondaryActionsRow: {
