@@ -24,7 +24,11 @@ jest.mock(
   'firebase-functions/v2/https',
   () => ({
     HttpsError: class HttpsError extends Error {
-      constructor(readonly code: string, message: string) {
+      constructor(
+        readonly code: string,
+        message: string,
+        readonly details?: unknown
+      ) {
         super(message);
         this.name = 'HttpsError';
       }
@@ -318,6 +322,11 @@ import {
   runTraktZipImportHandler,
   startTraktZipImportHandler,
 } from '../../functions/src/trakt/zipImport';
+import {
+  parseTraktZipBuffer,
+  TraktZipCorruptArchiveError,
+  TraktZipSizeLimitError,
+} from '../../functions/src/trakt/zipParser';
 
 const SafeAdmZip = (AdmZip as unknown as { default?: typeof AdmZip }).default || AdmZip;
 
@@ -485,6 +494,81 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(mockEnqueue).not.toHaveBeenCalled();
     });
 
+    it('rejects with resource-exhausted and retry details when the 6-hour import cooldown is active', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          error: 'sync exploded mid-flight',
+          errorCategory: 'in_flight',
+          failedAt: MockTimestamp.now(),
+          id: 'zip_old_1',
+          nextAllowedImportAt: MockTimestamp.fromMillis(Date.now() + 60 * 60 * 1000),
+          phase: 'failed',
+          status: 'failed',
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'resource-exhausted',
+        message: 'Please wait before starting another Trakt zip import.',
+        details: { nextAllowedImportAt: expect.any(String) },
+      });
+
+      expect(mockEnqueue).not.toHaveBeenCalled();
+    });
+
+    it('checks the cooldown only after the active-import guard (active import wins)', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          id: 'zip_old_1',
+          nextAllowedImportAt: MockTimestamp.fromMillis(Date.now() + 60 * 60 * 1000),
+          status: 'processing',
+          updatedAt: MockTimestamp.now(),
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      await expect(
+        startTraktZipImportHandler({
+          auth: { uid: userId },
+          data: { importId },
+        } as any)
+      ).rejects.toMatchObject({
+        code: 'already-exists',
+      });
+    });
+
+    it('allows a new import once the cooldown has expired', async () => {
+      store.set(`users/${userId}`, {
+        premium: { isPremium: true },
+        traktZipImportStatus: {
+          error: 'sync exploded mid-flight',
+          errorCategory: 'in_flight',
+          failedAt: MockTimestamp.fromMillis(Date.now() - 7 * 60 * 60 * 1000),
+          id: 'zip_old_1',
+          nextAllowedImportAt: MockTimestamp.fromMillis(Date.now() - 60 * 60 * 1000),
+          phase: 'failed',
+          status: 'failed',
+        },
+      });
+      storageFiles.set(storagePath, { content: Buffer.from('zip-content'), exists: true });
+
+      const response = await startTraktZipImportHandler({
+        auth: { uid: userId },
+        data: { importId },
+      } as any);
+
+      expect(response).toEqual({ importId });
+      expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    });
+
     it('recovers and starts a new import if previous pending import is stale (> 5 minutes)', async () => {
       const staleTime = MockTimestamp.fromMillis(Date.now() - 6 * 60 * 1000);
       store.set(`users/${userId}`, {
@@ -622,6 +706,18 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
         watchlist: 0,
       });
 
+      // 1b. Verify the 6-hour import cooldown was written to both documents
+      const cooldownFloor = Date.now() + 6 * 60 * 60 * 1000 - 60_000;
+      const cooldownCeiling = Date.now() + 6 * 60 * 60 * 1000 + 60_000;
+      const progressCooldown = (progressDoc?.nextAllowedImportAt as any)?.toMillis?.();
+      expect(progressCooldown).toBeGreaterThanOrEqual(cooldownFloor);
+      expect(progressCooldown).toBeLessThanOrEqual(cooldownCeiling);
+
+      const userZipCooldown = (store.get(`users/${userId}`) as any)?.traktZipImportStatus
+        ?.nextAllowedImportAt?.toMillis?.();
+      expect(userZipCooldown).toBeGreaterThanOrEqual(cooldownFloor);
+      expect(userZipCooldown).toBeLessThanOrEqual(cooldownCeiling);
+
       // 2. Verify storage cleanup was called
       expect(fileDeleteCalls).toContain(storagePath);
 
@@ -718,6 +814,18 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(progressDoc?.error).toContain('Network connection timeout during Storage download');
       expect(progressDoc?.failedAt).toBeDefined();
 
+      // In-flight failures apply the 6-hour cooldown on the user doc status
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        errorCategory: 'in_flight',
+        phase: 'failed',
+        status: 'failed',
+      });
+      const cooldown = userDoc?.traktZipImportStatus?.nextAllowedImportAt?.toMillis?.();
+      expect(cooldown).toBeGreaterThanOrEqual(Date.now() + 6 * 60 * 60 * 1000 - 60_000);
+      expect(cooldown).toBeLessThanOrEqual(Date.now() + 6 * 60 * 60 * 1000 + 60_000);
+
       // Storage cleanup occurred in finally block
       expect(fileDeleteCalls).toContain(storagePath);
     });
@@ -737,6 +845,17 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(progressDoc?.status).toBe('failed');
       expect(progressDoc?.error).toBeDefined();
       expect(progressDoc?.failedAt).toBeDefined();
+
+      // Corrupt archives are pre-flight failures: classified, but no cooldown applied
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        errorCategory: 'pre_flight',
+        phase: 'failed',
+        status: 'failed',
+      });
+      expect(userDoc?.traktZipImportStatus?.error).toContain('Failed to read Trakt export archive');
+      expect('nextAllowedImportAt' in (userDoc?.traktZipImportStatus ?? {})).toBe(false);
 
       // Verify storage cleanup was still called in finally block
       expect(fileDeleteCalls).toContain(storagePath);
@@ -788,6 +907,15 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       expect(progressDoc?.status).toBe('failed');
       expect(progressDoc?.progress?.phase).toBe('failed');
       expect(progressDoc?.error).toContain('exceeds the 200MB maximum allowed limit');
+
+      // Oversized archives are pre-flight failures: classified, but no cooldown applied
+      const userDoc = store.get(`users/${userId}`) as any;
+      expect(userDoc?.traktZipImportStatus).toMatchObject({
+        id: importId,
+        errorCategory: 'pre_flight',
+        status: 'failed',
+      });
+      expect('nextAllowedImportAt' in (userDoc?.traktZipImportStatus ?? {})).toBe(false);
 
       // Storage cleanup occurred in finally block
       expect(fileDeleteCalls).toContain(storagePath);
@@ -912,7 +1040,7 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       } as any);
 
       // Verify new worker acquired lease and completed successfully
-      const userDoc = store.get(`users/${userId}`);
+      const userDoc = store.get(`users/${userId}`) as any;
       expect(userDoc?.traktZipImportStatus).toMatchObject({
         id: importId,
         phase: 'completed',
@@ -959,9 +1087,83 @@ describe('Trakt Zip Import Cloud Functions (Stage 3)', () => {
       } as any);
 
       // Verify the user doc was NOT completed by the lost worker
-      const userDoc = store.get(`users/${userId}`);
+      const userDoc = store.get(`users/${userId}`) as any;
       expect(userDoc?.traktZipImportStatus?.leaseToken).toBe('lease_newer_takeover_token');
       expect(userDoc?.traktZipImportStatus?.status).not.toBe('completed');
+    });
+  });
+
+  describe('zipParser pre-flight error classes', () => {
+    const createValidZipBuffer = (): Buffer => {
+      const zip = new SafeAdmZip();
+      zip.addFile(
+        'history-movies-1.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              action: 'watch',
+              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+              watched_at: '2023-01-01T12:00:00.000Z',
+            },
+          ])
+        )
+      );
+      return zip.toBuffer();
+    };
+
+    it('classifies unreadable archives as TraktZipCorruptArchiveError (pre-flight)', () => {
+      expect.assertions(4);
+      try {
+        parseTraktZipBuffer(Buffer.from('this is not a zip file archive'));
+        fail('expected parseTraktZipBuffer to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(TraktZipCorruptArchiveError);
+        expect(error).not.toBeInstanceOf(TraktZipSizeLimitError);
+        expect((error as TraktZipCorruptArchiveError).isPreFlight).toBe(true);
+        expect((error as Error).message).toContain('Failed to read Trakt export archive');
+      }
+    });
+
+    it('classifies size-limit violations as TraktZipSizeLimitError (pre-flight)', () => {
+      expect.assertions(4);
+      try {
+        parseTraktZipBuffer(createValidZipBuffer(), { maxEntrySizeBytes: 10 });
+        fail('expected parseTraktZipBuffer to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(TraktZipSizeLimitError);
+        expect(error).not.toBeInstanceOf(TraktZipCorruptArchiveError);
+        expect((error as TraktZipSizeLimitError).isPreFlight).toBe(true);
+        expect((error as Error).message).toContain('exceeds the maximum allowed limit');
+      }
+    });
+
+    it('leaves integrity-check failures as plain errors (in-flight classification)', () => {
+      expect.assertions(3);
+      // A ratings file whose only entry is invalid (rating out of range) produces
+      // zero valid ratings, tripping the integrity check after real parsing.
+      const zip = new SafeAdmZip();
+      zip.addFile(
+        'ratings-movies-1.json',
+        Buffer.from(
+          JSON.stringify([
+            {
+              movie: { ids: { tmdb: 278 }, title: 'The Shawshank Redemption', year: 1994 },
+              rated_at: '2023-01-01T12:00:00.000Z',
+              rating: 99,
+              type: 'movie',
+            },
+          ])
+        )
+      );
+
+      try {
+        parseTraktZipBuffer(zip.toBuffer());
+        fail('expected parseTraktZipBuffer to throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect(error).not.toBeInstanceOf(TraktZipSizeLimitError);
+        expect((error as Error).message).toContain('integrity check failed');
+      }
     });
   });
 });

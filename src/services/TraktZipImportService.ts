@@ -30,6 +30,7 @@ export interface TraktZipImportProgressDoc {
   error?: string;
   failedAt?: { seconds: number; nanoseconds: number } | number | Date;
   id: string;
+  nextAllowedImportAt?: { seconds: number; nanoseconds: number } | number | Date;
   progress: {
     current: number;
     phase: TraktZipImportPhase;
@@ -58,6 +59,13 @@ export class TraktZipImportError extends Error {
   constructor(message: string, readonly originalError?: unknown) {
     super(message);
     this.name = 'TraktZipImportError';
+  }
+}
+
+export class TraktZipRateLimitedError extends Error {
+  constructor(message: string, readonly nextAllowedImportAt?: string) {
+    super(message);
+    this.name = 'TraktZipRateLimitedError';
   }
 }
 
@@ -182,6 +190,14 @@ export class TraktZipImportService {
       const result = await this.startImportCallable({ importId });
       return result.data;
     } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === 'functions/resource-exhausted' || code === 'resource-exhausted') {
+        const details = (error as { details?: { nextAllowedImportAt?: unknown } } | null)?.details;
+        throw new TraktZipRateLimitedError(
+          'Please wait before starting another Trakt zip import.',
+          typeof details?.nextAllowedImportAt === 'string' ? details.nextAllowedImportAt : undefined
+        );
+      }
       const message =
         error instanceof Error
           ? error.message
@@ -212,6 +228,7 @@ export class TraktZipImportService {
           error: rawData.error,
           failedAt: rawData.failedAt,
           id: rawData.id || importId,
+          nextAllowedImportAt: rawData.nextAllowedImportAt,
           progress: rawData.progress || {
             current: 0,
             phase: 'pending',

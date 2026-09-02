@@ -1166,7 +1166,8 @@
       "subtitleDisconnected": "Tem uma cópia de segurança do Trakt? Envie o seu ficheiro zip diretamente sem ligar a sua conta.",
       "subtitleConnected": "Tem uma cópia de segurança do Trakt? Envie o seu ficheiro zip diretamente para importar histórico adicional.",
       "subtitleSynced": "Importe ou restaure manualmente a sua biblioteca a partir de um ficheiro zip do Trakt.",
-      "subtitleImporting": "Uma importação está em curso. Toque para ver o progresso."
+      "subtitleImporting": "Uma importação está em curso. Toque para ver o progresso.",
+      "subtitleRateLimited": "Período de espera da importação ativo. Poderá iniciar outra importação {{time}}."
     },
     "zipImport": {
       "title": "Importação Zip do Trakt",
@@ -1174,6 +1175,8 @@
       "heroSubtitle": "Importe o seu histórico completo de filmes, séries, episódios, avaliações e listas diretamente de um ficheiro de exportação do Trakt.",
       "syncRunningTitle": "Sincronização do Trakt em curso",
       "syncRunningDescription": "Uma sincronização do Trakt está em curso. Aguarde a conclusão antes de iniciar uma importação zip.",
+      "rateLimitedTitle": "Período de espera da importação ativo",
+      "rateLimitedDescription": "Iniciou recentemente uma importação zip do Trakt. Aguarde o fim do período de espera antes de iniciar outra.",
       "selectFile": "Selecionar exportação do Trakt (.zip)",
       "selectFileSubtitle": "Toque para procurar o ficheiro zip do Trakt no seu dispositivo",
       "replaceFile": "Substituir ficheiro",

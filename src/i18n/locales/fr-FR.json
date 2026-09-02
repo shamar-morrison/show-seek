@@ -1227,7 +1227,8 @@
       "subtitleDisconnected": "Vous avez une sauvegarde Trakt ? Téléversez votre fichier zip directement sans connecter votre compte.",
       "subtitleConnected": "Vous avez une sauvegarde Trakt ? Téléversez votre fichier zip directement pour importer un historique supplémentaire.",
       "subtitleSynced": "Importez ou restaurez manuellement votre bibliothèque depuis une archive d'exportation Trakt.",
-      "subtitleImporting": "Une importation est en cours. Appuyez pour suivre la progression."
+      "subtitleImporting": "Une importation est en cours. Appuyez pour suivre la progression.",
+      "subtitleRateLimited": "Délai d'attente actif. Vous pourrez lancer une nouvelle importation {{time}}."
     },
     "zipImport": {
       "title": "Importation Zip Trakt",
@@ -1235,6 +1236,8 @@
       "heroSubtitle": "Importez votre historique complet de films, séries, épisodes, notes et listes directement depuis une archive Trakt.",
       "syncRunningTitle": "Synchronisation Trakt en cours",
       "syncRunningDescription": "Une synchronisation Trakt est actuellement en cours. Veuillez attendre sa fin avant de lancer une importation zip.",
+      "rateLimitedTitle": "Délai d'attente d'importation actif",
+      "rateLimitedDescription": "Vous avez récemment lancé une importation zip Trakt. Veuillez attendre la fin du délai d'attente avant d'en lancer une nouvelle.",
       "selectFile": "Sélectionner l'export Trakt (.zip)",
       "selectFileSubtitle": "Appuyez pour parcourir vos fichiers et choisir votre zip d'exportation Trakt",
       "replaceFile": "Changer de fichier",

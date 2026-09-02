@@ -1166,7 +1166,8 @@
       "subtitleDisconnected": "Have an export backup from Trakt? Upload your zip file directly without connecting your account.",
       "subtitleConnected": "Have an export backup from Trakt? Upload your zip file directly to import additional history.",
       "subtitleSynced": "Manually import or restore your library from a Trakt zip export archive.",
-      "subtitleImporting": "An import is currently in progress. Tap to view live progress."
+      "subtitleImporting": "An import is currently in progress. Tap to view live progress.",
+      "subtitleRateLimited": "Import cooldown active. You can start another import {{time}}."
     },
     "zipImport": {
       "title": "Trakt Zip Import",
@@ -1174,6 +1175,8 @@
       "heroSubtitle": "Import your complete movie, TV show, episode, rating, and list history directly from a Trakt export archive.",
       "syncRunningTitle": "Trakt Sync In Progress",
       "syncRunningDescription": "A Trakt sync is currently in progress. Please wait for it to complete before starting a zip import.",
+      "rateLimitedTitle": "Import Cooldown Active",
+      "rateLimitedDescription": "You have recently started a Trakt zip import. Please wait for the cooldown to end before starting another.",
       "selectFile": "Select Trakt Export (.zip)",
       "selectFileSubtitle": "Tap to browse your device files for your Trakt export zip",
       "replaceFile": "Change File",

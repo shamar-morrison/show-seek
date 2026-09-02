@@ -14,6 +14,8 @@ const mockTraktState = {
   isLoading: false,
   isSyncing: false,
   isZipImporting: false,
+  isZipImportRateLimited: false,
+  nextAllowedZipImportAt: null as Date | null,
   lastEnrichedAt: null as Date | null,
   lastSyncedAt: null as Date | null,
   syncNow: jest.fn(),
@@ -71,6 +73,9 @@ describe('TraktSettingsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTraktState.isSyncing = false;
+    mockTraktState.isZipImporting = false;
+    mockTraktState.isZipImportRateLimited = false;
+    mockTraktState.nextAllowedZipImportAt = null;
     mockTraktState.isConnected = true;
     mockTraktState.syncStatus = null;
     mockTraktState.lastSyncedAt = null;
@@ -429,6 +434,48 @@ describe('TraktSettingsScreen', () => {
       expect(mockTraktState.syncNow).not.toHaveBeenCalled();
 
       alertSpy.mockRestore();
+    });
+
+    it('shows the rate-limited subtitle on the zip import card when isZipImportRateLimited is true', () => {
+      mockTraktState.isConnected = true;
+      mockTraktState.lastSyncedAt = new Date();
+      mockTraktState.isZipImporting = false;
+      mockTraktState.isZipImportRateLimited = true;
+      mockTraktState.nextAllowedZipImportAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      expect(
+        getByText(/Import cooldown active\. You can start another import/i)
+      ).toBeTruthy();
+    });
+
+    it('prioritizes importing subtitle over rate-limited subtitle when import is active', () => {
+      mockTraktState.isConnected = true;
+      mockTraktState.lastSyncedAt = new Date();
+      mockTraktState.isZipImporting = true;
+      mockTraktState.isZipImportRateLimited = true;
+      mockTraktState.nextAllowedZipImportAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+      const { getByText, queryByText } = render(<TraktSettingsScreen />);
+
+      expect(
+        getByText('An import is currently in progress. Tap to view live progress.')
+      ).toBeTruthy();
+      expect(queryByText(/Import cooldown active/i)).toBeNull();
+    });
+
+    it('shows the rate-limited subtitle in disconnected state when isZipImportRateLimited is true', () => {
+      mockTraktState.isConnected = false;
+      mockTraktState.isZipImporting = false;
+      mockTraktState.isZipImportRateLimited = true;
+      mockTraktState.nextAllowedZipImportAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+      const { getByText } = render(<TraktSettingsScreen />);
+
+      expect(
+        getByText(/Import cooldown active\. You can start another import/i)
+      ).toBeTruthy();
     });
   });
 });

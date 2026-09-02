@@ -20,6 +20,7 @@ import {
   SelectedZipFile,
   traktZipImportService,
   TraktZipImportProgressDoc,
+  TraktZipRateLimitedError,
   TraktZipUploadError,
 } from '@/src/services/TraktZipImportService';
 import type {
@@ -30,6 +31,7 @@ import type {
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatDistanceToNow } from 'date-fns';
 import * as WebBrowser from 'expo-web-browser';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -64,6 +66,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const [zipUploadProgress, setZipUploadProgress] = useState(0);
   const [zipImportDoc, setZipImportDoc] = useState<TraktZipImportProgressDoc | null>(null);
   const [zipImportError, setZipImportError] = useState<string | null>(null);
+  const [nextAllowedZipImportAt, setNextAllowedZipImportAt] = useState<Date | null>(null);
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const enrichmentIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,6 +76,8 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
   const activeZipImportIdRef = useRef<string | null>(null);
 
   const isZipImporting = zipImportUiState === 'uploading' || zipImportUiState === 'processing';
+  const isZipImportRateLimited =
+    nextAllowedZipImportAt !== null && nextAllowedZipImportAt.getTime() > Date.now();
 
   const invalidateUserLibraryQueries = useCallback(async () => {
     if (!user?.uid) {
@@ -151,6 +156,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setZipUploadProgress(0);
       setZipImportDoc(null);
       setZipImportError(null);
+      setNextAllowedZipImportAt(null);
       return;
     }
 
@@ -213,6 +219,15 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
             setZipImportUiState('failed');
             setZipImportError(zipStatus.error || 'Import failed.');
           }
+
+          const zipNextAllowedAt = zipStatus.nextAllowedImportAt;
+          setNextAllowedZipImportAt(
+            zipNextAllowedAt && typeof zipNextAllowedAt.toDate === 'function'
+              ? zipNextAllowedAt.toDate()
+              : null
+          );
+        } else {
+          setNextAllowedZipImportAt(null);
         }
       },
       (error) => {
@@ -232,6 +247,7 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
       setZipUploadProgress(0);
       setZipImportDoc(null);
       setZipImportError(null);
+      setNextAllowedZipImportAt(null);
     };
   }, [user, invalidateUserLibraryQueries, subscribeToZipProgress]);
 
@@ -608,7 +624,16 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
         console.error('[TraktContext] Zip import error:', error);
         setZipImportUiState('failed');
 
-        if (error instanceof TraktZipUploadError) {
+        if (error instanceof TraktZipRateLimitedError) {
+          setZipImportError(
+            error.nextAllowedImportAt
+              ? `Import cooldown active. You can start another import ${formatDistanceToNow(
+                  new Date(error.nextAllowedImportAt),
+                  { addSuffix: true }
+                )}.`
+              : 'Import cooldown active. Please wait before starting another Trakt zip import.'
+          );
+        } else if (error instanceof TraktZipUploadError) {
           setZipImportError('Upload failed: Network error while uploading archive.');
         } else {
           setZipImportError(
@@ -689,8 +714,10 @@ export const [TraktProvider, useTrakt] = createContextHook<TraktContextValue>(()
     isSyncing,
     isEnriching,
     isZipImporting,
+    isZipImportRateLimited,
     lastSyncedAt,
     lastEnrichedAt,
+    nextAllowedZipImportAt,
     syncStatus,
     zipImportUiState,
     zipUploadProgress,

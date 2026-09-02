@@ -233,6 +233,62 @@ describe('TraktZipImportService', () => {
         TraktZipImportError
       );
     });
+
+    it('throws TraktZipRateLimitedError when callable throws resource-exhausted with nextAllowedImportAt', async () => {
+      const resourceExhaustedError = Object.assign(
+        new Error('Please wait before starting another Trakt zip import.'),
+        {
+          code: 'functions/resource-exhausted',
+          details: { nextAllowedImportAt: '2026-09-02T20:00:00.000Z' },
+        }
+      );
+      const mockCallable = jest.fn().mockRejectedValue(resourceExhaustedError);
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+
+      await expect(traktZipImportService.startImport('import-abc')).rejects.toMatchObject({
+        name: 'TraktZipRateLimitedError',
+        message: 'Please wait before starting another Trakt zip import.',
+        nextAllowedImportAt: '2026-09-02T20:00:00.000Z',
+      });
+    });
+
+    it('handles bare resource-exhausted code without details gracefully', async () => {
+      const resourceExhaustedError = Object.assign(
+        new Error('Rate limited'),
+        {
+          code: 'resource-exhausted',
+        }
+      );
+      const mockCallable = jest.fn().mockRejectedValue(resourceExhaustedError);
+      const mockHttpsCallable = jest.fn(() => mockCallable);
+
+      jest.doMock('@/src/firebase/config', () => ({
+        db: {},
+        functions: {},
+        storage: {},
+      }));
+      jest.doMock('firebase/functions', () => ({
+        httpsCallable: mockHttpsCallable,
+      }));
+
+      const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+
+      await expect(traktZipImportService.startImport('import-abc')).rejects.toMatchObject({
+        name: 'TraktZipRateLimitedError',
+        nextAllowedImportAt: undefined,
+      });
+    });
   });
 
   describe('subscribeToProgress', () => {

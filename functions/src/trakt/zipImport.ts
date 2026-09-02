@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { getFunctions } from 'firebase-admin/functions';
 import { type CallableRequest, HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onTaskDispatched, type Request as TaskRequest } from 'firebase-functions/v2/tasks';
@@ -7,6 +7,7 @@ import {
   buildTraktZipImportDocPath,
   buildTraktZipImportStoragePath,
   MAX_ZIP_SIZE_BYTES,
+  TRAKT_ZIP_IMPORT_COOLDOWN_MS,
   TRAKT_ZIP_IMPORT_QUEUE_DEADLINE_SECONDS,
   TRAKT_ZIP_IMPORT_QUEUE_FUNCTION,
   TRAKT_ZIP_IMPORT_QUEUE_REGION,
@@ -16,9 +17,10 @@ import { isZipImportActive, isZipImportStatusStale } from './status';
 import type {
   StartTraktZipImportRequest,
   TraktUserDoc,
+  TraktZipImportErrorCategory,
   TraktZipImportTaskPayload,
 } from './types';
-import { parseTraktZipBuffer } from './zipParser';
+import { TraktZipCorruptArchiveError, TraktZipSizeLimitError, parseTraktZipBuffer } from './zipParser';
 import { syncTraktZipImport } from './zipSync';
 
 /**
@@ -88,6 +90,13 @@ export const startTraktZipImportHandler = async (
     const activeZip = userData.traktZipImportStatus;
     if (isZipImportActive(activeZip)) {
       throw new HttpsError('already-exists', 'A Trakt zip import is already in progress.');
+    }
+
+    const nextAllowedImportAt = userData.traktZipImportStatus?.nextAllowedImportAt;
+    if (nextAllowedImportAt instanceof Timestamp && nextAllowedImportAt.toMillis() > now.toMillis()) {
+      throw new HttpsError('resource-exhausted', 'Please wait before starting another Trakt zip import.', {
+        nextAllowedImportAt: nextAllowedImportAt.toDate().toISOString(),
+      });
     }
 
     transaction.set(progressDocRef, {
@@ -347,11 +356,16 @@ export const completeZipImportWithLease = async (
       return false;
     }
 
+    const nextAllowedImportAt = Timestamp.fromMillis(
+      options.completedAt.toMillis() + TRAKT_ZIP_IMPORT_COOLDOWN_MS
+    );
+
     transaction.set(
       progressDocRef,
       {
         completedAt: options.completedAt,
         leaseToken,
+        nextAllowedImportAt,
         progress: { current: 100, phase: 'completed', total: 100 },
         stats: options.stats,
         status: 'completed',
@@ -366,6 +380,7 @@ export const completeZipImportWithLease = async (
           completedAt: options.completedAt,
           id: importId,
           leaseToken,
+          nextAllowedImportAt,
           phase: 'completed',
           stats: options.stats,
           status: 'completed',
@@ -386,6 +401,7 @@ export const failZipImportWithLease = async (
   leaseToken: string,
   options: {
     error: string;
+    errorCategory: TraktZipImportErrorCategory;
     failedAt: FirebaseFirestore.Timestamp;
   }
 ): Promise<boolean> => {
@@ -407,6 +423,11 @@ export const failZipImportWithLease = async (
     console.error('[runTraktZipImport] Failed to update progressDoc on failure:', err);
   });
 
+  const nextAllowedImportAt =
+    options.errorCategory === 'in_flight'
+      ? Timestamp.fromMillis(options.failedAt.toMillis() + TRAKT_ZIP_IMPORT_COOLDOWN_MS)
+      : FieldValue.delete();
+
   return db.runTransaction(async (transaction) => {
     const userSnapshot = await transaction.get(userDocRef);
     const userData = (userSnapshot.data() ?? {}) as TraktUserDoc;
@@ -421,9 +442,11 @@ export const failZipImportWithLease = async (
       {
         traktZipImportStatus: {
           error: options.error,
+          errorCategory: options.errorCategory,
           failedAt: options.failedAt,
           id: importId,
           leaseToken,
+          nextAllowedImportAt,
           phase: 'failed',
           status: 'failed',
           updatedAt: options.failedAt,
@@ -489,7 +512,7 @@ export const runTraktZipImportHandler = async (
     const rawSize = metadata.size;
     const size = typeof rawSize === 'number' ? rawSize : parseInt(String(rawSize || '0'), 10);
     if (size > MAX_ZIP_SIZE_BYTES) {
-      throw new Error(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
+      throw new TraktZipSizeLimitError(`Import archive size (${size} bytes) exceeds the 200MB maximum allowed limit.`);
     }
 
     const [downloadBuffer] = await file.download();
@@ -604,9 +627,15 @@ export const runTraktZipImportHandler = async (
         ? error.message
         : 'An error occurred while importing your Trakt archive.';
 
+    const errorCategory: TraktZipImportErrorCategory =
+      error instanceof TraktZipSizeLimitError || error instanceof TraktZipCorruptArchiveError
+        ? 'pre_flight'
+        : 'in_flight';
+
     const failedAt = Timestamp.now();
     await failZipImportWithLease(db, userId, importId, leaseToken, {
       error: friendlyMessage,
+      errorCategory,
       failedAt,
     });
   } finally {

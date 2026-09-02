@@ -235,8 +235,8 @@ describe('TraktContext', () => {
     const uploadSpy = jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
     let capturedProgressCallback: any = null;
     const subscribeSpy = jest.spyOn(traktZipImportService, 'subscribeToProgress').mockImplementation(
-      (_userId: string, _importId: string, onProgress: any) => {
-        capturedProgressCallback = onProgress;
+      (...args: Parameters<typeof traktZipImportService.subscribeToProgress>) => {
+        capturedProgressCallback = args[2];
         return jest.fn();
       }
     );
@@ -372,5 +372,140 @@ describe('TraktContext', () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       expect.objectContaining({ queryKey: ['watchedMovies', 'user-zip-restore'] })
     );
+  });
+
+  it('exposes nextAllowedZipImportAt date and isZipImportRateLimited from user document snapshot', async () => {
+    let capturedSnapshotCallback: ((snapshot: any) => void) | null = null;
+    const { onSnapshot } = jest.requireMock('firebase/firestore');
+    (onSnapshot as jest.Mock).mockImplementation((_ref: any, callback: any) => {
+      capturedSnapshotCallback = callback;
+      return jest.fn();
+    });
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-cooldown' };
+
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // 1. Initial snapshot with future nextAllowedImportAt
+    const futureDate = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            errorCategory: 'in_flight',
+            failedAt: { toDate: () => new Date() },
+            nextAllowedImportAt: { toDate: () => futureDate },
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toEqual(futureDate);
+    expect(result.current.isZipImportRateLimited).toBe(true);
+
+    // 2. Snapshot transitions to expired cooldown (in the past)
+    const pastDate = new Date(Date.now() - 60 * 1000);
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            nextAllowedImportAt: { toDate: () => pastDate },
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toEqual(pastDate);
+    expect(result.current.isZipImportRateLimited).toBe(false);
+
+    // 3. Snapshot with nextAllowedImportAt deleted (pre-flight failure or cleared)
+    await act(async () => {
+      capturedSnapshotCallback?.({
+        exists: () => true,
+        data: () => ({
+          traktZipImportStatus: {
+            errorCategory: 'pre_flight',
+            status: 'failed',
+          },
+        }),
+      });
+    });
+
+    expect(result.current.nextAllowedZipImportAt).toBeNull();
+    expect(result.current.isZipImportRateLimited).toBe(false);
+  });
+
+  it('sets rate-limited zipImportError when startZipImport rejects with TraktZipRateLimitedError', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const { traktZipImportService, TraktZipRateLimitedError } = require('@/src/services/TraktZipImportService');
+    jest.spyOn(traktZipImportService, 'uploadZipFile').mockResolvedValue('path/to/file.zip');
+
+    const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const startImportSpy = jest.spyOn(traktZipImportService, 'startImport').mockRejectedValue(
+      new TraktZipRateLimitedError(
+        'Please wait before starting another Trakt zip import.',
+        futureDate.toISOString()
+      )
+    );
+
+    mockCurrentUser = { isAnonymous: false, uid: 'user-zip-rate-err' };
+    const { result } = renderHook(() => useTrakt(), { wrapper });
+
+    await act(async () => {
+      capturedAuthCallback?.(mockCurrentUser);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(startImportSpy).toHaveBeenCalled();
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toContain('Import cooldown active.');
+    expect(result.current.zipImportError).toContain('You can start another import');
+
+    // Also test fallback message when TraktZipRateLimitedError has no retry ISO
+    startImportSpy.mockRejectedValueOnce(
+      new TraktZipRateLimitedError('Please wait before starting another Trakt zip import.')
+    );
+
+    await act(async () => {
+      await expect(
+        result.current.startZipImport({
+          name: 'export.zip',
+          size: 1024,
+          uri: 'file:///export.zip',
+        })
+      ).rejects.toThrow(TraktZipRateLimitedError);
+    });
+
+    expect(result.current.zipImportUiState).toBe('failed');
+    expect(result.current.zipImportError).toBe(
+      'Import cooldown active. Please wait before starting another Trakt zip import.'
+    );
+
+    consoleErrorSpy.mockRestore();
   });
 });

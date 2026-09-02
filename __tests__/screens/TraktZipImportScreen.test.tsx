@@ -16,6 +16,8 @@ let mockTraktContextState = {
   isEnriching: false,
   isSyncing: false,
   isZipImporting: false,
+  isZipImportRateLimited: false,
+  nextAllowedZipImportAt: null as Date | null,
   zipImportUiState: 'idle' as TraktZipImportUIState,
   zipUploadProgress: 0,
   zipImportDoc: null as any,
@@ -89,6 +91,8 @@ describe('TraktZipImportScreen', () => {
       isEnriching: false,
       isSyncing: false,
       isZipImporting: false,
+      isZipImportRateLimited: false,
+      nextAllowedZipImportAt: null,
       zipImportUiState: 'idle',
       zipUploadProgress: 0,
       zipImportDoc: null,
@@ -229,5 +233,43 @@ describe('TraktZipImportScreen', () => {
       size: 2048,
       uri: 'file:///trakt-export.zip',
     });
+  });
+
+  it('renders rate-limited banner when isZipImportRateLimited is true and prevents picking or starting import', async () => {
+    const pickSpy = jest.spyOn(traktZipImportService, 'pickZipFile');
+    const futureDate = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+    mockTraktContextState.isZipImportRateLimited = true;
+    mockTraktContextState.nextAllowedZipImportAt = futureDate;
+
+    const { getByText, rerender } = render(<TraktZipImportScreen />);
+
+    // 1. Cooldown banner and retry info are rendered
+    expect(getByText(/Import Cooldown Active/i)).toBeTruthy();
+    expect(
+      getByText(/You have recently started a Trakt zip import. Please wait for the cooldown to end before starting another./i)
+    ).toBeTruthy();
+    expect(getByText(/You can try again/i)).toBeTruthy();
+
+    // 2. Pressing file picker is a no-op
+    const selectFileBtn = getByText(/Select Trakt Export/i);
+    await act(async () => {
+      fireEvent.press(selectFileBtn);
+    });
+    expect(pickSpy).not.toHaveBeenCalled();
+
+    // 3. With a file selected, pressing start import is also a no-op
+    mockTraktContextState.selectedZipFile = {
+      name: 'trakt-export.zip',
+      size: 2048,
+      uri: 'file:///trakt-export.zip',
+    };
+    rerender(<TraktZipImportScreen />);
+
+    const startImportBtn = getByText(/Start Import/i);
+    await act(async () => {
+      fireEvent.press(startImportBtn);
+    });
+    expect(mockStartZipImport).not.toHaveBeenCalled();
   });
 });

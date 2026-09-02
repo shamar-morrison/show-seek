@@ -62,8 +62,10 @@ export interface TraktState {
   isSyncing: boolean;
   isEnriching: boolean;
   isZipImporting: boolean;
+  isZipImportRateLimited: boolean;
   lastSyncedAt: Date | null;
   lastEnrichedAt: Date | null;
+  nextAllowedZipImportAt: Date | null;
   syncStatus: SyncStatus | null;
   zipImportUiState: TraktZipImportUIState;
   zipUploadProgress: number;
