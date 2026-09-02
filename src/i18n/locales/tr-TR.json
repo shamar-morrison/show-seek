@@ -1168,7 +1168,8 @@
       "syncRunningTitle": "Trakt Eşitlemesi Devam Ediyor",
       "syncRunningDescription": "Bir Trakt eşitlemesi devam ediyor. Zip içe aktarmayı başlatmadan önce lütfen bitmesini bekleyin.",
       "rateLimitedTitle": "İçe aktarma bekleme süresi etkin",
-      "rateLimitedDescription": "Kısa süre önce bir Trakt zip içe aktarması başlattınız. Yenisini başlatmadan önce lütfen bekleme süresinin bitmesini bekleyin.",
+      "rateLimitedDescription": "Yeni bir içe aktarma başlatmadan önce lütfen bekleyin.",
+      "rateLimitedWithTime": "Yeni bir içe aktarmayı {{time}} başlatabilirsiniz.",
       "selectFile": "Trakt Dışa Aktarımını Seç (.zip)",
       "selectFileSubtitle": "Cihazınızdaki Trakt zip dosyasını seçmek için dokunun"
       ,"replaceFile": "Dosyayı Değiştir",

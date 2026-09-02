@@ -246,10 +246,15 @@ describe('TraktZipImportScreen', () => {
 
     // 1. Cooldown banner and retry info are rendered
     expect(getByText(/Import Cooldown Active/i)).toBeTruthy();
-    expect(
-      getByText(/You have recently started a Trakt zip import. Please wait for the cooldown to end before starting another./i)
-    ).toBeTruthy();
-    expect(getByText(/You can try again/i)).toBeTruthy();
+    expect(getByText(/You can start another import/i)).toBeTruthy();
+
+    // Fallback text when nextAllowedZipImportAt is null
+    mockTraktContextState.nextAllowedZipImportAt = null;
+    rerender(<TraktZipImportScreen />);
+    expect(getByText(/Please wait before starting another import/i)).toBeTruthy();
+
+    mockTraktContextState.nextAllowedZipImportAt = futureDate;
+    rerender(<TraktZipImportScreen />);
 
     // 2. Pressing file picker is a no-op
     const selectFileBtn = getByText(/Select Trakt Export/i);

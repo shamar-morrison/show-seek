@@ -259,22 +259,18 @@ export default function TraktZipImportScreen() {
             </Text>
           </View>
           <Text style={[styles.syncRunningDescription, { color: COLORS.warning }]}>
-            {t('trakt.zipImport.rateLimitedDescription', {
-              defaultValue:
-                'You have recently started a Trakt zip import. Please wait for the cooldown to end before starting another.',
-            })}
+            {nextAllowedZipImportAt
+              ? t('trakt.zipImport.rateLimitedWithTime', {
+                  defaultValue: 'You can start another import {{time}}.',
+                  time: formatDistanceToNow(nextAllowedZipImportAt, {
+                    addSuffix: true,
+                    locale: distanceLocale,
+                  }),
+                })
+              : t('trakt.zipImport.rateLimitedDescription', {
+                  defaultValue: 'Please wait before starting another import.',
+                })}
           </Text>
-          {nextAllowedZipImportAt && (
-            <Text style={[styles.syncRunningDescription, { color: COLORS.warning }]}>
-              {t('trakt.rateLimitedRetryAt', {
-                defaultValue: 'You can try again {{time}}.',
-                time: formatDistanceToNow(nextAllowedZipImportAt, {
-                  addSuffix: true,
-                  locale: distanceLocale,
-                }),
-              })}
-            </Text>
-          )}
         </View>
       )}
 
